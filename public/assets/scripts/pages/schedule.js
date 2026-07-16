@@ -958,7 +958,6 @@ async function refreshSchEntitlementOptions(){
   const endRaw=scheduleComposeDateTime('sch_date','sch_endTime');
   if(!ids.length||!startRaw||!endRaw){setScheduleEntitlementDropdown([], '', '自动匹配可用课包');setScheduleEntitlementAlert(hint);refreshScheduleStudentEntitlementRows({},[]);setScheduleCourseTypeReadonly(false);setScheduleSmallClassTypeReadonly(false);return;}
   const keepValue=sel.dataset.keep||sel.value||'';
-  const editId=window.editScheduleId||'';
   const payload={
     ...readSchEntitlementPayload(ids,startRaw,endRaw),
     lessonCount:scheduleCurrentLessonCount(),

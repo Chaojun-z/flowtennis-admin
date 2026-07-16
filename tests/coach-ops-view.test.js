@@ -699,8 +699,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-coach-grid\{[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),128px\)[^}]*transparent 56px/,
-  'coach schedule day grid should use the denser hour height and narrower coach columns'
+  /#page-coachschedule \.coach-ops-day-coach-grid\{[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),128px\)[^}]*transparent 28px/,
+  'coach schedule day grid should use half-hour rows and narrower coach columns'
 );
 
 assert.match(
@@ -747,8 +747,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /coach-ops-week-block[\s\S]*<div class="coach-ops-student"><span class="coach-ops-card-dot"><\/span>\$\{esc\(coachOpsScheduleStudentTitle\(s\)\)\}<\/div><div class="coach-ops-location">\$\{esc\(scheduleLocationText\(s\)\)\}<\/div>/,
-  'coach schedule week cards should show student and location instead of repeating the time'
+  /coach-ops-week-block[\s\S]*coach-ops-student-name[\s\S]*coach-ops-duration-badge[\s\S]*coach-ops-location/,
+  'coach schedule week cards should show student, duration and location instead of repeating the time'
 );
 
 assert.match(
@@ -1456,8 +1456,14 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function coachOpsCreateSlotFromLineClick\(e,date,coach\)[\s\S]*const startTime=coachOpsStartTimeFromLineClick\(e\)[\s\S]*const endMin=Math\.min\(23\*60,startMin\+\(startTime\.endsWith\(':00'\)\?120:60\)\)/,
-  'coach schedule line clicks should build a two-hour whole-hour slot or one-hour half-hour slot'
+  /function coachOpsCreateSlotFromLineClick\(e,date,coach\)[\s\S]*const startTime=coachOpsStartTimeFromLineClick\(e\)[\s\S]*const endMin=Math\.min\(23\*60,startMin\+60\)/,
+  'coach schedule line clicks should build a one-hour slot from any half-hour start'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /startTime\.endsWith\(':00'\)\?120:60/,
+  'coach schedule line clicks should not keep the old two-hour whole-hour default'
 );
 
 assert.match(

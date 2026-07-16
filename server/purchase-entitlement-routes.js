@@ -1,7 +1,25 @@
+function restoreEditingScheduleEntitlementRowsForRecommendation(entitlements=[],schedule={},currentSchedule=null,helpers={}){
+  const scheduleId=String(schedule?.scheduleId||schedule?.id||'').trim();
+  if(!scheduleId||!currentSchedule||String(currentSchedule.id||'').trim()!==scheduleId)return entitlements||[];
+  const parseLesson=typeof helpers.parseLessonValue==='function'?helpers.parseLessonValue:v=>{
+    const n=Number(v);
+    return Number.isFinite(n)?n:0;
+  };
+  const collectDeltas=typeof helpers.scheduleEntitlementDeltas==='function'?helpers.scheduleEntitlementDeltas:()=>[];
+  const rows=new Map((entitlements||[]).filter(Boolean).map(row=>[String(row.id||''),row]));
+  collectDeltas(currentSchedule).forEach(delta=>{
+    const id=String(delta.entitlementId||'').trim();
+    if(!id||!rows.has(id))return;
+    const ent=rows.get(id);
+    rows.set(id,{...ent,status:ent.status==='voided'?'voided':'active',remainingLessons:parseLesson(ent.remainingLessons)+parseLesson(delta.delta)});
+  });
+  return [...rows.values()];
+}
+
 function createPurchaseEntitlementRoutes(deps={}){
   const {
     init,sendJson,getCachedScan,getCachedRow,get,scan,put,del,filterLoadAllForUser,uuidv4,
-    isCampusScopedAdmin,parseArr,parseLessonValue,buildCoachRefs,buildOperationTrace,withOperationTrace,
+    isCampusScopedAdmin,parseArr,parseLessonValue,scheduleEntitlementDeltas,buildCoachRefs,buildOperationTrace,withOperationTrace,
     normalizeEntitlementLedgerRowsForDetailView,getIndexedActiveEntitlementsForStudents,recommendEntitlements,
     validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,buildStudentBenefitLedgerRecord,
     assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
@@ -203,12 +221,26 @@ function createPurchaseEntitlementRoutes(deps={}){
 
     if(path==='/entitlements/recommend'&&method==='POST'){
       await init();
+      const scheduleId=String(body.scheduleId||'').trim();
       const [rows,coaches,users]=await Promise.all([
         getIndexedActiveEntitlementsForStudents(parseArr(body.studentIds)),
         getCachedScan(T_COACHES).catch(()=>[]),
         getCachedScan(T_USERS).catch(()=>[])
       ]);
-      return sendJson(res,recommendEntitlements(rows,{...body,coachRefs:buildCoachRefs({coaches,users})}));
+      let recommendationRows=rows;
+      let currentSchedule=null;
+      if(scheduleId){
+        currentSchedule=await get(T_SCHEDULE,scheduleId).catch(()=>null);
+        const oldEntitlementIds=parseArr(currentSchedule?.entitlementIds);
+        if(currentSchedule?.entitlementId)oldEntitlementIds.push(currentSchedule.entitlementId);
+        const missingIds=[...new Set(oldEntitlementIds.filter(id=>id&&!recommendationRows.some(row=>String(row.id||'')===String(id))))];
+        if(missingIds.length){
+          const extraRows=(await Promise.all(missingIds.map(id=>getCachedRow(T_ENTITLEMENTS,id).catch(()=>null)))).filter(Boolean);
+          recommendationRows=[...recommendationRows,...extraRows];
+        }
+      }
+      recommendationRows=restoreEditingScheduleEntitlementRowsForRecommendation(recommendationRows,body,currentSchedule,{parseLessonValue,scheduleEntitlementDeltas});
+      return sendJson(res,recommendEntitlements(recommendationRows,{...body,coachRefs:buildCoachRefs({coaches,users})}));
     }
 
     const entManualM=path.match(/^\/entitlements\/(.+)\/manual-adjust$/);
@@ -264,4 +296,4 @@ function createPurchaseEntitlementRoutes(deps={}){
   };
 }
 
-module.exports={createPurchaseEntitlementRoutes};
+module.exports={createPurchaseEntitlementRoutes,restoreEditingScheduleEntitlementRowsForRecommendation};

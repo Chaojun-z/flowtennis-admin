@@ -10,22 +10,15 @@ let coachOpsAutoScrollDayView=false;
 let coachOpsAutoScrollWeekView=false;
 let coachOpsAutoScrollMonthView=false;
 let coachOpsPendingCreateSlot=null;
-function isCoachSchedulePage(){
-  return currentPage==='coachschedule';
-}
-function isCoachWorkloadPage(){
-  return currentPage==='coachops';
-}
+function isCoachSchedulePage(){return currentPage==='coachschedule';}
+function isCoachWorkloadPage(){return currentPage==='coachops';}
 function coachOpsDateInput(){
   return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadDate':'coachOpsDate')||document.getElementById('coachOpsDate')||document.getElementById('coachOpsWorkloadDate');
 }
 function coachOpsPickerEl(){
   return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadPicker':'coachOpsPicker')||document.getElementById('coachOpsPicker')||document.getElementById('coachOpsWorkloadPicker');
 }
-function updateCoachOpsPageChrome(){
-  const legend=document.getElementById('coachOpsLegend');
-  if(legend)legend.innerHTML=coachOpsCourseTypeLegendHtml();
-}
+function updateCoachOpsPageChrome(){const legend=document.getElementById('coachOpsLegend');if(legend)legend.innerHTML=coachOpsCourseTypeLegendHtml();}
 function setFinancePanel(panel){
   financePanel=['ledger','revenue','recognized','settlement'].includes(panel)?panel:'ledger';
   const panelMap={
@@ -63,28 +56,12 @@ function renderFinanceLedgerPageSizeFilter(){const host=document.getElementById(
 function setFinanceLedgerPageSize(value){financeLedgerPageSize=standardListPageSize(value,financeLedgerPageSize);financeLedgerPage=standardListFirstPage();renderFinanceLedger();}
 function setFinanceLedgerPage(page){financeLedgerPage=standardListPagination(financeLedgerRows().length,page,financeLedgerPageSize).page;renderFinanceLedger();}
 function resetFinanceLedgerPage(){financeLedgerPage=standardListFirstPage();}
-function financeLedgerExactTimeText(row){
-  const businessDate=String(row?.businessDate||'').trim().replace('T',' ');
-  if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(11,19);
-  if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(11,16)}:00`;
-  return '00:00:00';
-}
-function financeDateTimeDisplayText(row){
-  const businessDate=String(row?.businessDate||row?.purchaseDate||'').trim().replace('T',' ');
-  if(!businessDate)return '-';
-  if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(0,19);
-  if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(0,16)}:00`;
-  return `${businessDate.slice(0,10)} 00:00:00`;
-}
+function financeLedgerExactTimeText(row){const businessDate=String(row?.businessDate||'').trim().replace('T',' ');if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(11,19);if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(11,16)}:00`;return '00:00:00';}
+function financeDateTimeDisplayText(row){const businessDate=String(row?.businessDate||row?.purchaseDate||'').trim().replace('T',' ');if(!businessDate)return '-';if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(0,19);if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(0,16)}:00`;return `${businessDate.slice(0,10)} 00:00:00`;}
 function financeOperatorDisplayText(row){const collector=String(row?.collector||row?.operator||'').trim();const importHint=String(row?.importSource||'').trim()==='系统导入'||/导入/.test(`${row?.sourceProject||''} ${row?.notes||''} ${row?.sourceDocument||''}`);if(importHint||collector==='未记录')return '系统导入';return collector&&collector!=='系统记录'?collector:'-';}
 function financeHumanNote(note=''){const text=String(note||'').trim(),consumeRecordText='课包消耗'+'记录';if(!text)return '';const auditPattern=new RegExp(`(订场收入细项修数|会员订场修正|马坡补账|私教课CSV.*导入|来源价格\\d*：${consumeRecordText}|正确表第\\s*\\d+\\s*行|[^\\s；;]*订场（\\d+次，[\\d.]+元）#\\d+|网球兄弟.*\\.csv#\\d+|来源\\s*[^；;]*\\.csv#\\d+|用户确认：|实际扣款\\s*[\\d.]+)`);return text.split(/[；;]/).map(part=>part.trim()).filter(part=>part&&!auditPattern.test(part)).join('；');}
-function financeLedgerSortKey(row){
-  return `${String(row?.businessDate||'').slice(0,10)} ${financeLedgerExactTimeText(row)}`;
-}
-function jumpFinanceLedgerPage(value){
-  financeLedgerPage=standardListPagination(financeLedgerRows().length,value,financeLedgerPageSize).page;
-  renderFinanceLedger();
-}
+function financeLedgerSortKey(row){return `${String(row?.businessDate||'').slice(0,10)} ${financeLedgerExactTimeText(row)}`;}
+function jumpFinanceLedgerPage(value){financeLedgerPage=standardListPagination(financeLedgerRows().length,value,financeLedgerPageSize).page;renderFinanceLedger();}
 function renderFinanceRevenuePageSizeFilter(){const host=document.getElementById('financeRevenuePageSize');if(!host)return;host.innerHTML=renderPageSizeSelectorHtml('financeRevenuePageSizeValue',financeRevenuePageSize,'setFinanceRevenuePageSize');}
 function setFinanceRevenuePageSize(value){financeRevenuePageSize=standardListPageSize(value,financeRevenuePageSize);financeRevenuePage=standardListFirstPage();renderFinanceRevenueReport();}
 function setFinanceRevenuePage(page){financeRevenuePage=standardListPagination(financeRevenueRows().length,page,financeRevenuePageSize).page;renderFinanceRevenueReport();}
@@ -100,29 +77,12 @@ function setFinancePrepaidFilter(filter){
   });
   renderFinancePrepaidBalance();
 }
-function coachOpsLessonText(value){
-  const n=Number(value)||0;
-  return Number.isInteger(n)?String(n):String(Math.round(n*10)/10);
-}
-function coachOpsLedgerTimeText(row){
-  if(row?.importSource==='系统导入'&&row?.sourceDate&&row?.sourceTimeBand)return `${row.sourceDate} ${row.sourceTimeBand} · 系统导入`;
-  if(row?.importSource==='系统导入'&&row?.sourceMonth)return `${row.sourceMonth} · 系统导入`;
-  return fmtDt(row?.createdAt||row?.relatedDate);
-}
-function updateCoachOpsDateButton(){
-  const btn=document.getElementById('coachOpsDateBtn');
-  if(btn)btn.textContent=coachOpsDateLabel();
-  const workloadBtn=document.getElementById('coachOpsWorkloadDateBtn');
-  if(workloadBtn)workloadBtn.textContent=coachOpsDateLabel();
-}
-function closeCoachOpsPicker(){
-  document.getElementById('coachOpsPicker')?.classList.remove('open');
-  document.getElementById('coachOpsWorkloadPicker')?.classList.remove('open');
-}
+function coachOpsLessonText(value){const n=Number(value)||0;return Number.isInteger(n)?String(n):String(Math.round(n*10)/10);}
+function coachOpsLedgerTimeText(row){if(row?.importSource==='系统导入'&&row?.sourceDate&&row?.sourceTimeBand)return `${row.sourceDate} ${row.sourceTimeBand} · 系统导入`;if(row?.importSource==='系统导入'&&row?.sourceMonth)return `${row.sourceMonth} · 系统导入`;return fmtDt(row?.createdAt||row?.relatedDate);}
+function updateCoachOpsDateButton(){const btn=document.getElementById('coachOpsDateBtn');if(btn)btn.textContent=coachOpsDateLabel();const workloadBtn=document.getElementById('coachOpsWorkloadDateBtn');if(workloadBtn)workloadBtn.textContent=coachOpsDateLabel();}
+function closeCoachOpsPicker(){document.getElementById('coachOpsPicker')?.classList.remove('open');document.getElementById('coachOpsWorkloadPicker')?.classList.remove('open');}
 function ensureCoachOpsReportDateControls(){}
-function coachOpsPickerAnchor(){
-  return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadDateBtn':'coachOpsDateBtn')||document.getElementById('coachOpsDateBtn')||document.getElementById('coachOpsWorkloadDateBtn');
-}
+function coachOpsPickerAnchor(){return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadDateBtn':'coachOpsDateBtn')||document.getElementById('coachOpsDateBtn')||document.getElementById('coachOpsWorkloadDateBtn');}
 function positionCoachOpsPicker(){
   const pop=coachOpsPickerEl(),anchor=coachOpsPickerAnchor();
   if(!pop||!anchor)return;
@@ -462,7 +422,7 @@ function clearCoachOpsPendingCreateSlot(){
 function coachOpsCreateSlotFromLineClick(e,date,coach){
   const startTime=coachOpsStartTimeFromLineClick(e);
   const startMin=coachOpsTimeTextToMinutes(startTime);
-  const endMin=Math.min(23*60,startMin+(startTime.endsWith(':00')?120:60));
+  const endMin=Math.min(23*60,startMin+60);
   return {coach:coachName(coach),date,startTime,endTime:coachOpsMinutesToTimeText(endMin)};
 }
 function coachOpsTimeTextToMinutes(value){
@@ -472,6 +432,10 @@ function coachOpsTimeTextToMinutes(value){
 function coachOpsMinutesToTimeText(total){
   const h=Math.floor(total/60),m=total%60;
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function coachOpsDurationBadgeText(s){
+  const duration=scheduleDurationLessonUnits(s);
+  return duration>0?`${lessonUnitsText(duration)}h`:'';
 }
 function coachOpsStartTimeFromLineClick(e){
   const rect=e.currentTarget.getBoundingClientRect();
@@ -546,7 +510,8 @@ function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalM
         const endMin=(endMs-base.getTime())/60000;
         const top=Math.max(0,startMin/60*COACH_OPS_WEEK_HOUR_HEIGHT);
         const height=Math.max(28,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_WEEK_HOUR_HEIGHT-4);
-        return `<div class="coach-ops-week-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="top:${top+2}px;height:${height}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-student"><span class="coach-ops-card-dot"></span>${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
+        const durationText=coachOpsDurationBadgeText(s);
+        return `<div class="coach-ops-week-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="top:${top+2}px;height:${height}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-student"><span class="coach-ops-card-dot"></span><span class="coach-ops-student-name">${esc(coachOpsScheduleStudentTitle(s))}</span>${durationText?`<span class="coach-ops-duration-badge">${esc(durationText)}</span>`:''}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
       }).join('');
       return `<div class="coach-ops-week-coach-col" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(coachLabel)},'${ds}')">${pendingBlock}${blocks}</div>`;
     }).join('');
@@ -812,9 +777,10 @@ function renderCoachOps(){
     }else if(mode==='day'){
       const base=new Date(range.start);base.setHours(opsStartH,0,0,0);
       const dayHeight=opsTotalMin/60*COACH_OPS_DAY_HOUR_HEIGHT;
-      const timeAxis=Array.from({length:opsEndH-opsStartH+1},(_,i)=>{
-        const top=coachOpsDayTimeLabelTop(i,opsEndH-opsStartH);
-        return `<span class="coach-ops-day-time-label" style="top:${top}px">${i+opsStartH}:00</span>`;
+      const timeAxis=Array.from({length:opsTotalMin/30+1},(_,i)=>{
+        const minutes=i*30;
+        const top=Math.max(0,Math.min(minutes/60*COACH_OPS_DAY_HOUR_HEIGHT,dayHeight-16));
+        return `<span class="coach-ops-day-time-label" style="top:${top}px">${coachOpsMinutesToTimeText(opsStartH*60+minutes)}</span>`;
       }).join('');
       const columns=renderRows.map(row=>{
         const coachLabel=coachOpsRowDisplayName(row);

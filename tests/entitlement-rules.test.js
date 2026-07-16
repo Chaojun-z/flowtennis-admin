@@ -1,5 +1,6 @@
 const assert = require('assert');
 const api = require('../api/index.js');
+const { restoreEditingScheduleEntitlementRowsForRecommendation } = require('../server/purchase-entitlement-routes');
 
 const rules = api._test;
 
@@ -925,6 +926,76 @@ assert.throws(
   }),
   /剩余课时不足/,
   'depleted package cannot be consumed'
+);
+
+const editingLastLessonRows = restoreEditingScheduleEntitlementRowsForRecommendation([
+  { ...entitlement, id: 'ent-edit-last', remainingLessons: 0, usedLessons: 10, totalLessons: 10 }
+], {
+  scheduleId: 'sch-edit-last',
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coach: '朝珺',
+  campus: 'shunyi_mapo',
+  startTime: '2026-05-04 09:00',
+  endTime: '2026-05-04 10:00',
+  lessonCount: 1,
+  status: '已排课'
+}, {
+  id: 'sch-edit-last',
+  entitlementId: 'ent-edit-last',
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coach: '朝珺',
+  campus: 'shunyi_mapo',
+  startTime: '2026-05-04 09:00',
+  endTime: '2026-05-04 10:00',
+  lessonCount: 1,
+  status: '已排课'
+}, { parseLessonValue: rules.parseLessonValue, scheduleEntitlementDeltas: rules.scheduleEntitlementDeltas });
+assert.strictEqual(editingLastLessonRows[0].remainingLessons, 1, 'editing current schedule should temporarily return its already-consumed last lesson');
+assert.strictEqual(
+  rules.recommendEntitlements(editingLastLessonRows, {
+    scheduleId: 'sch-edit-last',
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coach: '朝珺',
+    campus: 'shunyi_mapo',
+    startTime: '2026-05-04 09:00',
+    endTime: '2026-05-04 10:00',
+    lessonCount: 1,
+    status: '已排课'
+  }).recommended.entitlementId,
+  'ent-edit-last',
+  'editing unchanged one-hour schedule should keep the original last-lesson package selectable'
+);
+
+assert.strictEqual(
+  rules.recommendEntitlements(editingLastLessonRows, {
+    scheduleId: 'sch-edit-last',
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coach: '朝珺',
+    campus: 'shunyi_mapo',
+    startTime: '2026-05-04 09:00',
+    endTime: '2026-05-04 10:30',
+    lessonCount: 1.5,
+    status: '已排课'
+  }).recommended,
+  null,
+  'editing the same last-lesson package to 1.5 hours should still be rejected as insufficient'
+);
+
+assert.strictEqual(
+  restoreEditingScheduleEntitlementRowsForRecommendation([
+    { ...entitlement, id: 'ent-new-schedule-empty', remainingLessons: 0, usedLessons: 10, totalLessons: 10 }
+  ], {
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    lessonCount: 1,
+    status: '已排课'
+  }, null, { parseLessonValue: rules.parseLessonValue, scheduleEntitlementDeltas: rules.scheduleEntitlementDeltas })[0].remainingLessons,
+  0,
+  'new schedules must not borrow lessons from depleted packages'
 );
 
 assert.deepStrictEqual(
