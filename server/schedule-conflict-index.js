@@ -1,4 +1,5 @@
 const { isBillableSchedule, normalizeVenue } = require('./schedule.js');
+const SCHEDULE_CONFLICT_INDEX_READY_ID='__meta|ready';
 
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
 function text(value){return String(value||'').trim();}
@@ -80,6 +81,7 @@ function staleScheduleConflictIndexRows(oldRecord={},nextRecord={},normalizeCamp
 }
 
 module.exports={
+  SCHEDULE_CONFLICT_INDEX_READY_ID,
   scheduleConflictIndexRowsForRecord,
   scheduleConflictIndexPrefixesForRecord,
   scheduleRowsFromConflictIndex,

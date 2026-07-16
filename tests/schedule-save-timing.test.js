@@ -12,6 +12,7 @@ assert.match(storageSource, /function withRequiredStorageTimeout\(/, 'schedule s
 assert.match(apiSource, /function scheduleSaveErrorStatus\(/, 'schedule save should classify user-visible save failures');
 assert.match(storageSource, /function scanByIdPrefix\(/, 'schedule save should support prefix reads for conflict indexes');
 assert.match(scheduleSaveValidationSource, /loadScheduleConflictIndexRows\(nextRec\)/, 'schedule conflict validation should read the conflict index instead of scanning all schedules');
+assert.match(scheduleSaveValidationSource, /scheduleConflictIndexReady\(\)[\s\S]*getCachedScan\(T_SCHEDULE\)/, 'schedule save should fall back to full schedule validation until the historical index is marked ready');
 assert.doesNotMatch(apiSource, /withRequiredStorageTimeout\(getCachedScan\(T_SCHEDULE\),3500,'排课校验超时，请稍后重试'\)/, 'schedule conflict validation should not scan the full schedule table during save');
 assert.match(scheduleRoutesSource, /catch\(err\)\{return sendJson\(res,\{error:String\(err\?\.message\|\|err\)\},scheduleSaveErrorStatus\(err\)\);\}/, 'schedule save validation should return JSON errors instead of falling through to the global 500 handler');
 assert.match(scheduleRoutesSource, /timed\('schedule create persist',\(\)=>put\(T_SCHEDULE,id,r\)\)/, 'schedule create should expose a persist timing segment');

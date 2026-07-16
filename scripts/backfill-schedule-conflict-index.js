@@ -3,7 +3,7 @@
 const dotenv = require('dotenv');
 const { createClientFromEnv, scanTable, putRow, deleteRow, createTableIfMissing } = require('./lib/staging-data-store');
 const { assertProductionWriteTarget } = require('./lib/production-write-guard');
-const { scheduleConflictIndexRowsForRecord } = require('../server/schedule-conflict-index');
+const { SCHEDULE_CONFLICT_INDEX_READY_ID, scheduleConflictIndexRowsForRecord } = require('../server/schedule-conflict-index');
 
 const TABLES = {
   schedule: 'ft_schedule',
@@ -24,7 +24,7 @@ function isProductionTarget(env=process.env){
 function buildBackfillPlan(schedules=[],existingIndex=[]){
   const expectedRows=(schedules||[]).flatMap(row=>scheduleConflictIndexRowsForRecord(row));
   const expectedById=new Map(expectedRows.map(row=>[row.id,row]));
-  const existingIds=new Set((existingIndex||[]).map(row=>String(row.id||'')).filter(Boolean));
+  const existingIds=new Set((existingIndex||[]).map(row=>String(row.id||'')).filter(Boolean).filter(id=>id!==SCHEDULE_CONFLICT_INDEX_READY_ID));
   return {
     expectedRows,
     staleIds:[...existingIds].filter(id=>!expectedById.has(id)),
@@ -55,6 +55,7 @@ async function main(){
   if(!write)return;
   for(const row of plan.expectedRows)await putRow(client,TABLES.conflictIndex,row);
   for(const id of plan.staleIds)await deleteRow(client,TABLES.conflictIndex,id);
+  await putRow(client,TABLES.conflictIndex,{id:SCHEDULE_CONFLICT_INDEX_READY_ID,ready:true,scheduleRows:schedules.length,indexRows:plan.expectedRows.length,updatedAt:new Date().toISOString()});
   console.log('schedule conflict index backfill done');
 }
 

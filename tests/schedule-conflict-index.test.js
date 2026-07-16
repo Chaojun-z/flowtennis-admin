@@ -1,5 +1,6 @@
 const assert = require('assert');
 const {
+  SCHEDULE_CONFLICT_INDEX_READY_ID,
   scheduleConflictIndexRowsForRecord,
   scheduleConflictIndexPrefixesForRecord,
   scheduleRowsFromConflictIndex,
@@ -48,7 +49,7 @@ assert.deepStrictEqual(
   'moving a schedule should delete only stale conflict index rows'
 );
 
-const plan = buildBackfillPlan([existing], [{ id: 'stale-index-row' }]);
+const plan = buildBackfillPlan([existing], [{ id: 'stale-index-row' }, { id: SCHEDULE_CONFLICT_INDEX_READY_ID }]);
 assert.equal(plan.expectedRows.length, 3, 'backfill should produce all active conflict rows');
 assert.deepStrictEqual(plan.staleIds, ['stale-index-row'], 'backfill should identify stale conflict rows');
 

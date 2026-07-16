@@ -543,9 +543,9 @@ const {
   collectScheduleRiskWarnings
 }=scheduleRules;
 const {validateScheduleSave,syncScheduleConflictIndexes}=createScheduleSaveValidation({
-  scanByIdPrefix,put,del,mkTable,withRequiredStorageTimeout,withTimeout,timed,getCachedScan,
+  scanByIdPrefix,put,del,get,mkTable,withRequiredStorageTimeout,withTimeout,timed,getCachedScan,
   isTableMissingError,validateScheduleConflicts,validateCourtBookingConflicts,collectScheduleRiskWarnings,
-  normalizeCampusValue,T_SCHEDULE_CONFLICT_INDEX,T_COURTS
+  normalizeCampusValue,T_SCHEDULE_CONFLICT_INDEX,T_SCHEDULE,T_COURTS
 });
 const SMALL_CLASS_TYPES=['single','bootcamp','dropin','family'];
 function isSmallGroupCourse(row={}){

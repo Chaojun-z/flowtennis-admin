@@ -1,4 +1,5 @@
 const {
+  SCHEDULE_CONFLICT_INDEX_READY_ID,
   scheduleConflictIndexRowsForRecord,
   scheduleConflictIndexPrefixesForRecord,
   scheduleRowsFromConflictIndex,
@@ -7,11 +8,19 @@ const {
 
 function createScheduleSaveValidation(deps={}){
   const {
-    scanByIdPrefix,put,del,mkTable,withRequiredStorageTimeout,withTimeout,timed,getCachedScan,
+    scanByIdPrefix,put,del,get,mkTable,withRequiredStorageTimeout,withTimeout,timed,getCachedScan,
     isTableMissingError,validateScheduleConflicts,validateCourtBookingConflicts,collectScheduleRiskWarnings,
-    normalizeCampusValue,T_SCHEDULE_CONFLICT_INDEX,T_COURTS
+    normalizeCampusValue,T_SCHEDULE_CONFLICT_INDEX,T_SCHEDULE,T_COURTS
   }=deps;
 
+  async function scheduleConflictIndexReady(){
+    try{return !!(await get(T_SCHEDULE_CONFLICT_INDEX,SCHEDULE_CONFLICT_INDEX_READY_ID));}
+    catch(err){
+      if(!isTableMissingError(err))throw err;
+      await mkTable(T_SCHEDULE_CONFLICT_INDEX);
+      return false;
+    }
+  }
   async function loadScheduleConflictIndexRows(schedule){
     const prefixes=scheduleConflictIndexPrefixesForRecord(schedule,normalizeCampusValue);
     if(!prefixes.length)return [];
@@ -47,8 +56,13 @@ function createScheduleSaveValidation(deps={}){
   }
 
   async function validateScheduleSave(nextRec){
-    const indexRows=await timed('load schedule conflict index',()=>withRequiredStorageTimeout(loadScheduleConflictIndexRows(nextRec),3500,'排课校验超时，请稍后重试'));
-    const schedules=scheduleRowsFromConflictIndex(indexRows);
+    const schedules=await timed('load schedule conflict candidates',async()=>{
+      if(await scheduleConflictIndexReady()){
+        const indexRows=await withRequiredStorageTimeout(loadScheduleConflictIndexRows(nextRec),3500,'排课校验超时，请稍后重试');
+        return scheduleRowsFromConflictIndex(indexRows);
+      }
+      return withRequiredStorageTimeout(getCachedScan(T_SCHEDULE),3500,'排课校验超时，请稍后重试');
+    });
     validateScheduleConflicts(nextRec,schedules,nextRec.id);
     validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>withTimeout(getCachedScan(T_COURTS).catch(()=>[]),2500,[])));
     return {warnings:collectScheduleRiskWarnings(nextRec,schedules,nextRec.id)};
