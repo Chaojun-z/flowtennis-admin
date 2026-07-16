@@ -689,16 +689,18 @@ function createCourtAccountListViewLoader(deps) {
   return async function loadCourtAccountListView(options = {}) {
     const sampleIds = resolveSampleIds({ sampleIds: options.sampleIds, sample: options.sample, fixedSampleAccounts });
     const useLegacy = options.useLegacy === true;
+    const scanOptions = options.forceFresh ? { fresh: true } : {};
+    const scanRows = (table) => getCachedScan(table, scanOptions).catch(() => []);
     const [campuses, students, courts, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents] = await Promise.all([
       listCampusesWithDefaults(),
-      getCachedScan(tables.students).catch(() => []),
-      getCachedScan(tables.courts).catch(() => []),
-      getCachedScan(tables.leads).catch(() => []),
-      getCachedScan(tables.membershipAccounts).catch(() => []),
-      getCachedScan(tables.membershipOrders).catch(() => []),
-      getCachedScan(tables.membershipPlans).catch(() => []),
-      getCachedScan(tables.membershipBenefitLedger).catch(() => []),
-      getCachedScan(tables.membershipAccountEvents).catch(() => [])
+      scanRows(tables.students),
+      scanRows(tables.courts),
+      scanRows(tables.leads),
+      scanRows(tables.membershipAccounts),
+      scanRows(tables.membershipOrders),
+      scanRows(tables.membershipPlans),
+      scanRows(tables.membershipBenefitLedger),
+      scanRows(tables.membershipAccountEvents)
     ]);
     return buildCourtAccountListViewFromData({
       campuses,

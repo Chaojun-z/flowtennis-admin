@@ -143,11 +143,12 @@ function createStorageServices({
   async function getCachedScan(t,options={}){
     const cfg=hotScanTables.get(t);
     const columns=normalizeProjectionColumns(options?.columns);
+    const fresh=options?.fresh===true||options?.forceFresh===true;
     if(!cfg)return scan(t,{columns});
     const now=Date.now();
     const cacheKey=hotScanCacheKey(t,columns);
     const cached=hotScanCache.get(cacheKey);
-    if(cached&&cached.expiresAt>now)return cloneCacheValue(cached.rows);
+    if(cached&&!fresh&&cached.expiresAt>now)return cloneCacheValue(cached.rows);
     const rows=await scan(t,{columns});
     hotScanCache.set(cacheKey,{rows:cloneCacheValue(rows),expiresAt:now+cfg.ttlMs});
     return rows;

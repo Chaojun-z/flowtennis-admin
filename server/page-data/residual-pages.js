@@ -54,7 +54,8 @@ function createResidualPageDataRoutes(deps={}){
       await init();
       const ids=String(query?.get('ids')||'').split(',').map(item=>String(item||'').trim()).filter(Boolean);
       const sample=String(query?.get('sample')||'').trim();
-      const view=await loadCourtAccountListView({sampleIds:ids,sample});
+      const forceFresh=query?.get('fresh')==='1'||query?.get('forceFresh')==='1';
+      const view=await loadCourtAccountListView({sampleIds:ids,sample,forceFresh});
       const scope=pageDataScopeFromQuery(query);
       if(hasPageDataScope(scope))view.summary=buildScopedCourtAccountListSummary(view,scope);
       return sendJson(res,view);

@@ -343,6 +343,8 @@ assert.match(html, /style="white-space:normal;line-height:1\.55;min-width:500px;
 assert.match(fnBody('renderCourtAccountListView'), />查看<\/span>/, 'court user list should label the account action as view');
 assert.match(html, /function openMembershipBenefitPickerModal/, 'generic consume and supplement actions should let operators choose a benefit type');
 assert.match(fnBody('saveMembershipBenefit'), /runStandardMutation\('membershipBenefitSaveBtn'/, 'benefit save action should show a submitting state through the global mutation helper');
+assert.match(fnBody('saveMembershipBenefit'), /refresh:async\(\)=>\{[\s\S]*await loadCourtReadModelGuardData\(\{force:true\}\);[\s\S]*openCourtMembershipPanel\(courtId,\{tab:'rights'\}\)/, 'benefit save should force-refresh the unified membership read model before reopening rights');
+assert.match(fnBody('saveMembershipBenefitInline'), /refresh:async\(\)=>\{[\s\S]*await loadCourtReadModelGuardData\(\{force:true\}\);[\s\S]*membershipInlineBenefitAction=\{benefitCode:'',mode:''\}/, 'inline benefit save should force-refresh the unified membership read model before redrawing rights');
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员购买记录/, 'purchase audit page should use breadcrumb-style navigation');
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员权益流水/, 'ledger audit page should use breadcrumb-style navigation');
 assert.match(html, /tms-audit-note/, 'audit pages should use a slim read-only note');

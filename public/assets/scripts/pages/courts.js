@@ -823,7 +823,8 @@ async function saveMembershipBenefit(courtId,mode,benefitCode=''){
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
   },{
     successText:'权益流水已保存',
-    refresh:()=>{
+    refresh:async()=>{
+      await loadCourtReadModelGuardData({force:true});
       renderMemberships();
       renderCourts();
       openCourtMembershipPanel(courtId,{tab:'rights'});
@@ -849,7 +850,8 @@ async function saveMembershipBenefitInline(button,courtId,mode,benefitCode=''){
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
   },{
     successText:'权益流水已保存',
-    refresh:()=>{
+    refresh:async()=>{
+      await loadCourtReadModelGuardData({force:true});
       membershipInlineBenefitAction={benefitCode:'',mode:''};
       renderMemberships();
       renderCourts();

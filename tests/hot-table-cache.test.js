@@ -26,6 +26,8 @@ assert.match(storageSource, /function scan\(t,options=\{\}\)\{[\s\S]*const nextS
 assert.match(storageSource, /const columnsToGet=columns\.length\?columns:undefined;/, 'TableStore projection reads should pass column names as strings');
 assert.doesNotMatch(storageSource, /columns\.map\(column=>\(\{columnName:column\}\)\)/, 'TableStore projection reads should not pass object column descriptors');
 assert.match(storageSource, /function getCachedScan\(t,options=\{\}\)/, 'api should expose a cached scan helper');
+assert.match(storageSource, /const fresh=options\?\.fresh===true\|\|options\?\.forceFresh===true;/, 'cached scans should support explicit fresh reads');
+assert.match(storageSource, /if\(cached&&!fresh&&cached\.expiresAt>now\)return cloneCacheValue\(cached\.rows\);/, 'fresh scans should bypass hot table cache');
 assert.match(storageSource, /function getCachedRow\(t,id\)/, 'api should expose a cached row helper');
 assert.match(storageSource, /function invalidateHotScanCache\(t\)/, 'api should expose cache invalidation');
 assert.match(storageSource, /const prefix=`\$\{t\}:`;[\s\S]*hotScanCache\.keys\(\)[\s\S]*key\.startsWith\(prefix\)[\s\S]*hotScanCache\.delete\(key\)/, 'hot table invalidation should remove all projection cache entries for the table');
@@ -103,5 +105,6 @@ assert.match(corePageDataSource, /if\(path==='\/page-data\/courts'&&method==='GE
 assert.match(corePageDataSource, /if\(path==='\/page-data\/memberships'&&method==='GET'\)\{[\s\S]*Promise\.all\(\[[\s\S]*listCampusesWithDefaults\(\)[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_COURTS\)[\s\S]*cappedScan\(T_MEMBERSHIP_ACCOUNTS\)[\s\S]*cappedScan\(T_MEMBERSHIP_ORDERS\)[\s\S]*cappedScan\(T_MEMBERSHIP_BENEFIT_LEDGER\)[\s\S]*cappedScan\(T_MEMBERSHIP_ACCOUNT_EVENTS\)[\s\S]*cappedScan\(T_MEMBERSHIP_PLANS\)[\s\S]*cappedScan\(T_COACHES\)[\s\S]*\]\)/, 'memberships page aggregate endpoint should use production capped reads and local cached scans');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/workbench'&&method==='GET'\)\{[\s\S]*const scheduleRowsPromise=user\.role==='admin'\?getScheduleListRows\(\):getCoachScheduleRowsForUser\(user,coachRefs\);[\s\S]*Promise\.all\(\[[\s\S]*listCampusesWithDefaults\(\)[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_CLASSES\)[\s\S]*scheduleRowsPromise[\s\S]*cappedScan\(T_FEEDBACKS\)[\s\S]*\]\)/, 'workbench page aggregate endpoint should merge coach schedule index with complete schedule fallback');
 assert.match(corePageDataSource, /cappedScan\(T_MEMBERSHIP_BENEFIT_LEDGER\)/, 'membership benefit ledger should keep a capped safe fallback path');
+assert.match(residualPageDataSource, /const forceFresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';[\s\S]*loadCourtAccountListView\(\{sampleIds:ids,sample,forceFresh\}\)/, 'court account read model should support fresh reads after membership benefit mutations');
 
 console.log('hot table cache tests passed');

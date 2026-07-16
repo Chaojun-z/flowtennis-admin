@@ -320,14 +320,22 @@ function scopedPageDataUrl(path,options={}){
   const query=pageDataScopeQuery(options);
   return query?`${path}?${query}`:path;
 }
+function appendPageDataQuery(url,params={}){
+  const extra=new URLSearchParams();
+  Object.entries(params||{}).forEach(([key,value])=>{if(value!==undefined&&value!==null&&value!=='')extra.set(key,String(value));});
+  const suffix=extra.toString();
+  if(!suffix)return url;
+  return `${url}${url.includes('?')?'&':'?'}${suffix}`;
+}
 function lifecycleMetricsPageDataUrl(){
   return scopedPageDataUrl('/page-data/lifecycle-metrics');
 }
 function financePageDataUrl(){
   return scopedPageDataUrl('/page-data/finance');
 }
-function courtAccountListViewPageDataUrl(){
-  return scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'});
+function courtAccountListViewPageDataUrl({fresh=false}={}){
+  const url=scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'});
+  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
 }
 function operationsPageDatasetRequestKey(){
   return 'operationsPage:'+operationsPageDataUrl();
@@ -423,7 +431,7 @@ const DATASET_LOADERS={
   ,lifecycleMetricsPage:()=>apiCall('GET',lifecycleMetricsPageDataUrl())
   ,financePage:()=>apiCall('GET',financePageDataUrl())
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
-  ,courtAccountListViewPage:()=>apiCall('GET',courtAccountListViewPageDataUrl())
+  ,courtAccountListViewPage:({fresh=false}={})=>apiCall('GET',courtAccountListViewPageDataUrl({fresh}))
   ,courtAccountListViewComparePage:()=>apiCall('GET','/page-data/court-account-list-view-compare?sample=fixed')
   ,operationsPage:()=>loadOperationsPageDataset()
   ,matchesPage:()=>apiCall('GET','/admin/matches')
@@ -1025,7 +1033,7 @@ async function loadCourtReadModelGuardData({force=false}={}){
   }
   const requestKey=datasetRequestKey('courtAccountListViewPage');
   if(courtAccountListViewData&&!force&&courtAccountListViewRequestKey===requestKey)return;
-  const view=await DATASET_LOADERS.courtAccountListViewPage();
+  const view=await DATASET_LOADERS.courtAccountListViewPage({fresh:force});
   courtAccountListViewData=view||null;
   courtAccountListViewRequestKey=requestKey;
   window.__courtAccountListViewData=courtAccountListViewData;

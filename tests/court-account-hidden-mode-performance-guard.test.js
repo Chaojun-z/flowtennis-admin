@@ -6,7 +6,7 @@ const stateSource = fs.readFileSync(path.join(__dirname, '../public/assets/scrip
 
 assert.match(
   stateSource,
-  /async function loadCourtReadModelGuardData\(\{force=false\}=\{\}\)\{[\s\S]*const view=await DATASET_LOADERS\.courtAccountListViewPage\(\);/,
+  /async function loadCourtReadModelGuardData\(\{force=false\}=\{\}\)\{[\s\S]*const view=await DATASET_LOADERS\.courtAccountListViewPage\(\{fresh:force\}\);/,
   '隐藏模式应保留单独的首屏主列表读模型加载函数'
 );
 assert.doesNotMatch(
