@@ -813,8 +813,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours\{grid-template-columns:repeat\(7,160px\)\}/,
-  'coach schedule month header should keep 160px weekday columns'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours span\{width:auto;min-width:0;max-width:none\}/,
+  'coach schedule month weekday labels should stretch with fluid columns'
 );
 
 assert.match(
@@ -1005,8 +1005,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month\{display:grid;width:1120px;min-width:1120px;max-width:1120px;grid-template-columns:repeat\(7,160px\);gap:0;padding:0;border:0\}/,
-  'coach schedule month content grid should keep the exact 1120px weekday layout'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours\{display:grid;width:100%;min-width:0;max-width:none;grid-template-columns:repeat\(7,minmax\(0,1fr\)\);will-change:transform\}/,
+  'coach schedule month header should use seven fluid weekday columns'
 );
 
 assert.match(
@@ -1023,14 +1023,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-overview\{display:grid;grid-template-columns:1120px;min-width:1120px\}/,
-  'coach schedule month overview should not render a blank left column'
+  /#page-coachschedule \.coach-ops-month-overview\{display:block;width:100%;min-width:0;max-width:none\}/,
+  'coach schedule month overview should fill the available calendar width'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-overview-grid\{display:grid;width:1120px;min-width:1120px;max-width:1120px;grid-template-columns:repeat\(7,160px\)\}/,
-  'coach schedule month overview should render seven 160px date columns'
+  /#page-coachschedule \.coach-ops-month-overview-grid\{display:grid;width:100%;min-width:0;max-width:none;grid-template-columns:repeat\(7,minmax\(0,1fr\)\)\}/,
+  'coach schedule month overview should render seven fluid date columns'
 );
 
 assert.match(
@@ -1053,8 +1053,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours span,#page-coachschedule \.coach-ops-daycell\{width:160px;min-width:160px;max-width:160px;box-sizing:border-box\}/,
-  'coach schedule month header/content cells should share exact 160px columns'
+  /#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell\{width:auto;min-width:0;max-width:none\}/,
+  'coach schedule month date cells should stretch with the fluid columns'
 );
 
 assert.match(
