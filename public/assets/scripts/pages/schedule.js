@@ -124,14 +124,21 @@ function renderSchedule(){
   renderScheduleMobileCards(slice);
 }
 function scheduleStudentTextByIds(ids){
-  return parseArr(ids).map(id=>{
-    const student=students.find(s=>s.id===id);
-    if(!student)return id;
-    return student.phone?`${student.name}（${student.phone}）`:student.name;
-  }).join('、');
+  return parseArr(ids).map(id=>{const student=students.find(s=>s.id===id);return student?(student.phone?`${student.name}（${student.phone}）`:student.name):id;}).join('、');
+}
+function scheduleStudentRosterRows(){
+  const map=new Map();
+  [...(teachingStudentViews?.historicalStudents||[]),...(teachingStudentViews?.activeStudents||[])].forEach(row=>{const id=String(row.studentId||row.id||'').trim();if(!id||map.has(id))return;const student=students.find(item=>String(item.id||'')===id)||{};map.set(id,{...student,...row,id,name:row.name||row.displayName||student.name||'',phone:row.phone||student.phone||'',campus:row.campus||student.campus||'',primaryCoach:row.primaryCoach||row.owner||student.primaryCoach||''});});
+  return [...map.values()];
+}
+function scheduleStudentById(id){const sid=String(id||'').trim();return sid?(scheduleStudentRosterRows().find(s=>String(s.id||'')===sid)||students.find(s=>String(s.id||'')===sid)||null):null;}
+function scheduleStudentSearchRows(selectedIds=[]){
+  const map=new Map();scheduleStudentRosterRows().forEach(s=>{if(s?.id)map.set(String(s.id),s);});
+  parseArr(selectedIds).forEach(id=>{const sid=String(id||'').trim();if(!sid||map.has(sid))return;const student=students.find(s=>String(s.id||'')===sid);if(student)map.set(sid,student);});
+  return [...map.values()];
 }
 function scheduleSelectedStudentHomeCampusMeta(ids){
-  const selected=parseArr(ids).map(id=>students.find(s=>s.id===id)).filter(Boolean);
+  const selected=parseArr(ids).map(id=>scheduleStudentById(id)).filter(Boolean);
   const campusIds=[...new Set(selected.map(s=>typeof customerLifecycleCampus==='function'?customerLifecycleCampus(s,s.campus):s.campus).filter(Boolean))];
   if(!selected.length)return {text:'归属校区：未选择学员',campus:''};
   if(!campusIds.length)return {text:'归属校区：未设置',campus:''};
@@ -139,7 +146,7 @@ function scheduleSelectedStudentHomeCampusMeta(ids){
   return {text:`归属校区：多个（${campusIds.map(id=>cn(id)||id).join('、')}）`,campus:''};
 }
 function scheduleSelectedStudentCoachMeta(ids){
-  const selected=parseArr(ids).map(id=>students.find(s=>s.id===id)).filter(Boolean);
+  const selected=parseArr(ids).map(id=>scheduleStudentById(id)).filter(Boolean);
   const coaches=[...new Set(selected.map(s=>coachName(typeof customerLifecycleOwner==='function'?customerLifecycleOwner(s,s.primaryCoach):s.primaryCoach)).filter(Boolean))];
   if(!selected.length||coaches.length!==1)return {coach:''};
   return {coach:coaches[0]};
@@ -150,12 +157,8 @@ function scheduleStudentLastLessonBrief(student){
   const days=Math.max(0,Math.floor((Date.now()-new Date(row.startTime))/(86400000)));
   return days===0?'今天':`${days}天前`;
 }
-function scheduleStudentDisplayName(student){
-  return String(student?.name||student?.studentName||student?.displayName||student?.nickName||student?.nickname||'').trim();
-}
-function scheduleStudentPhone(student){
-  return String(student?.phone||student?.mobile||student?.studentPhone||'').trim();
-}
+function scheduleStudentDisplayName(student){return String(student?.name||student?.studentName||student?.displayName||student?.nickName||student?.nickname||'').trim();}
+function scheduleStudentPhone(student){return String(student?.phone||student?.mobile||student?.studentPhone||'').trim();}
 function scheduleStudentSearchTokens(student){
   const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;
   return [scheduleStudentDisplayName(student),scheduleStudentPhone(student),cn(lifecycleCampus),lifecycleCampus].filter(Boolean);
@@ -169,10 +172,7 @@ function scheduleStudentInlineMeta(student){
 function campusOptionLabel(campusRecord){
   return campusRecord?.name||cn(campusRecord?.code||campusRecord?.id)||campusRecord?.code||campusRecord?.id||'—';
 }
-function handleScheduleCampusChange(){
-  refreshSchEntitlementOptions();
-  syncScheduleVenueField();
-}
+function handleScheduleCampusChange(){refreshSchEntitlementOptions();syncScheduleVenueField();}
 function scheduleLessonUnitsFromFields(){
   const start=scheduleComposeDateTime('sch_date','sch_startTime');
   const end=scheduleComposeDateTime('sch_date','sch_endTime');
@@ -212,13 +212,13 @@ function syncScheduleProfileFromStudents(ids,applyDefault=true){
 }
 function renderScheduleStudentTags(selectedIds=[]){
   const picked=new Set(parseArr(selectedIds));
-  const rows=students.filter(s=>picked.has(s.id));
+  const rows=scheduleStudentSearchRows(selectedIds).filter(s=>picked.has(s.id));
   if(!rows.length)return '';
   return rows.map(s=>`<span class="schedule-student-tag">${esc(scheduleStudentDisplayName(s)||s.id)} <span>${esc(scheduleStudentInlineMeta(s))}</span><button type="button" onclick="removeScheduleStudent(${jsArg(s.id)})">×</button></span>`).join('');
 }
 function scheduleSelectedStudentSearchText(ids=[]){
   const picked=new Set(parseArr(ids));
-  return students.filter(s=>picked.has(s.id)).map(scheduleStudentDisplayName).filter(Boolean).join(',');
+  return scheduleStudentSearchRows(ids).filter(s=>picked.has(s.id)).map(scheduleStudentDisplayName).filter(Boolean).join(',');
 }
 function syncScheduleStudentSearchInput(ids=[]){
   const input=document.getElementById('sch_stuSearch');
@@ -234,8 +234,9 @@ function renderScheduleStudentSuggestions(selectedIds=[],keyword=''){
   const picked=new Set(parseArr(selectedIds));
   const q=String(keyword||'').trim().toLowerCase();
   if(!q)return '';
-  const pickedMatches=students.filter(s=>picked.has(s.id)&&scheduleStudentSearchTokens(s).some(v=>String(v||'').toLowerCase().includes(q)));
-  const rows=students.filter(s=>{
+  const searchRows=scheduleStudentSearchRows(selectedIds);
+  const pickedMatches=searchRows.filter(s=>picked.has(s.id)&&scheduleStudentSearchTokens(s).some(v=>String(v||'').toLowerCase().includes(q)));
+  const rows=searchRows.filter(s=>{
     if(picked.has(s.id))return false;
     return scheduleStudentSearchTokens(s).some(v=>String(v||'').toLowerCase().includes(q));
   }).sort((a,b)=>String(scheduleStudentDisplayName(a)||'').localeCompare(String(scheduleStudentDisplayName(b)||''),'zh-CN')).slice(0,8);

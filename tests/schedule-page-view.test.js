@@ -134,6 +134,10 @@ assert.match(styles, /\.modal\.modal-court \.schedule-time-field\{flex:1 1 auto/
 assert.match(styles, /\.modal\.modal-court \.schedule-repeat-row\{align-items:flex-end;gap:18px\}/, 'schedule repeat controls should have their own row spacing');
 assert.doesNotMatch(fnBody('openScheduleModal'), /上课地点|排课会校验时间冲突|取消勾选的人本次记为缺勤|按周生成多节课/, 'schedule modal should remove the extra notice, separate location section, and old repeat copy');
 assert.match(fnBody('openScheduleModal'), /姓名<\/label>[\s\S]*sch_stuSearch[\s\S]*sch_studentSuggest[\s\S]*sch_selectedStudentTags/, 'schedule modal should use search suggestions and selected student tags');
+assert.match(source, /schedule:\['campuses','students','courts','schedule','coaches','coachProposals','lifecycleMetricsPage'\]/, 'schedule page should load lifecycle student roster before rendering student search');
+assert.match(source, /function scheduleStudentRosterRows\([\s\S]*teachingStudentViews\?\.historicalStudents[\s\S]*teachingStudentViews\?\.activeStudents/, 'schedule student search should use the same lifecycle roster as the student list');
+assert.match(fnBody('renderScheduleStudentSuggestions'), /const searchRows=scheduleStudentSearchRows\(selectedIds\)[\s\S]*searchRows\.filter/, 'schedule student suggestions should search the lifecycle roster instead of the raw students table');
+assert.match(fnBody('scheduleStudentSearchRows'), /scheduleStudentRosterRows\(\)[\s\S]*students\.find/, 'schedule student search should keep a raw-student fallback only for already selected legacy schedule students');
 assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*\$\{campus\}｜\$\{last\}上课/, 'schedule student metadata should use compact campus and last lesson copy');
 assert.match(source, /function scheduleStudentDisplayName\(/, 'schedule student search should resolve real student display names');
 assert.match(fnBody('renderScheduleStudentSuggestions'), /scheduleStudentSearchTokens\(s\)/, 'schedule student suggestions should search real name and phone fields');

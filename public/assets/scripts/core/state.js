@@ -233,7 +233,7 @@ const PAGE_DATA_REQUIREMENTS={
   'trial-students':['campuses','students','coaches','lifecycleMetricsPage'],
   leads:['campuses','leads'],
   operations:['operationsPage'],
-  schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
+  schedule:['campuses','students','courts','schedule','coaches','coachProposals','lifecycleMetricsPage'],
   coachschedule:['workbenchPage'],
   coachops:['workbenchPage','operationsPage'],
   finance:[],
