@@ -193,4 +193,5 @@ module.exports={
   validateCourtBookingConflicts,
   scheduleParticipantSummary,
   collectScheduleRiskWarnings
+  ,normalizeVenue
 };

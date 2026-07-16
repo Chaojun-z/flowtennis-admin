@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const scheduleSaveValidationSource = fs.readFileSync(path.join(__dirname, '../server/schedule-save-validation.js'), 'utf8');
 const authSource = fs.readFileSync(path.join(__dirname, '../server/auth.js'), 'utf8');
 const authRoutesSource = fs.readFileSync(path.join(__dirname, '../server/auth-routes.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(__dirname, '../server/bootstrap.js'), 'utf8');
@@ -67,7 +68,7 @@ assert.match(apiSource, /async function applyEntitlementDelta\(entitlementId,sch
 assert.match(purchaseEntitlementRoutesSource, /if\(path==='\/entitlements'\)\{[\s\S]*const sid=query\.get\('studentId'\)\|\|'';[\s\S]*getIndexedActiveEntitlementsForStudents\(\[sid\]\)[\s\S]*getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\);/, 'entitlement list should keep cached scan and allow admin student drill-down to prefer active entitlement index');
 assert.match(purchaseEntitlementRoutesSource, /if\(path==='\/entitlements\/recommend'&&method==='POST'\)\{[\s\S]*getIndexedActiveEntitlementsForStudents\(parseArr\(body\.studentIds\)\)[\s\S]*getCachedScan\(T_COACHES\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_USERS\)\.catch\(\(\)=>\[\]\)/, 'entitlement recommend should prefer active entitlement index');
 assert.match(purchaseEntitlementRoutesSource, /if\(method==='GET'\)return sendJson\(res,await getCachedRow\(T_ENTITLEMENTS,id\)\);/, 'entitlement detail should use cached row');
-assert.match(apiSource, /async function validateScheduleSave\(nextRec,oldRec\)\{[\s\S]*timed\('scan schedule for conflict check',\(\)=>withRequiredStorageTimeout\(getCachedScan\(T_SCHEDULE\),3500,'排课校验超时，请稍后重试'\)\)[\s\S]*timed\('scan courts for schedule conflict check',\(\)=>withTimeout\(getCachedScan\(T_COURTS\)\.catch\(\(\)=>\[\]\),2500,\[\]\)\)/, 'schedule save validation should reuse cached schedule and court scans with save timeouts');
+assert.match(scheduleSaveValidationSource, /async function validateScheduleSave\(nextRec\)\{[\s\S]*timed\('load schedule conflict index',\(\)=>withRequiredStorageTimeout\(loadScheduleConflictIndexRows\(nextRec\),3500,'排课校验超时，请稍后重试'\)\)[\s\S]*timed\('scan courts for schedule conflict check',\(\)=>withTimeout\(getCachedScan\(T_COURTS\)\.catch\(\(\)=>\[\]\),2500,\[\]\)\)/, 'schedule save validation should use conflict index rows and keep court scan timeout fallback');
 assert.match(apiSource, /async function loadStudentReferenceData\(\)\{[\s\S]*getCachedScan\(T_PLANS\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_SCHEDULE\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_COURTS\)\.catch\(\(\)=>\[\]\)/, 'student identity update should reuse cached scans for heavy linked tables');
 assert.match(scheduleRoutesSource, /const \[entitlementRows,coaches,users\]=await Promise\.all\(\[[\s\S]*withRequiredStorageTimeout\(getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\),3500,'课包余额校验超时，请稍后重试'\)[\s\S]*getCachedScan\(T_COACHES\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_USERS\)\.catch\(\(\)=>\[\]\)[\s\S]*\]\);/, 'schedule save should reuse cached entitlement scan with a timeout and coach refs');
 assert.match(apiSource, /async function prewarmHotScanCache\(\)/, 'api should expose a hot table prewarm');

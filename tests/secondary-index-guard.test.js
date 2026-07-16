@@ -4,10 +4,12 @@ const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 const scheduleRoutesSource = fs.readFileSync(path.join(__dirname, '../server/schedule-routes.js'), 'utf8');
+const scheduleSaveValidationSource = fs.readFileSync(path.join(__dirname, '../server/schedule-save-validation.js'), 'utf8');
 const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const purchaseEntitlementRoutesSource = fs.readFileSync(path.join(__dirname, '../server/purchase-entitlement-routes.js'), 'utf8');
 
 assert.match(apiSource, /T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index'/, '必须声明教练排课索引表');
+assert.match(apiSource, /T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index'/, '必须声明排课冲突索引表');
 assert.match(apiSource, /T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index'/, '必须声明学员活跃课包索引表');
 assert.match(apiSource, /async function getCoachIndexedScheduleForUser\(user\)\{/, '必须提供教练排课索引读取 helper');
 assert.match(apiSource, /async function getCoachScheduleRowsForUser\(user,coachRefs=\[\]\)\{/, '必须提供教练排课索引加主表兜底读取 helper');
@@ -17,6 +19,10 @@ assert.match(corePageDataSource, /const scheduleRowsPromise=user\.role==='admin'
 assert.match(scheduleRoutesSource, /syncCoachScheduleIndexes\(null,r\)\.catch\(/, '新建排课索引同步失败不能回滚已保存排课');
 assert.match(scheduleRoutesSource, /syncCoachScheduleIndexes\(ex,r\)\.catch\(/, '编辑排课索引同步失败不能回滚已保存排课');
 assert.match(scheduleRoutesSource, /syncCoachScheduleIndexes\(ex,null\)\.catch\(/, '删除排课索引同步失败不能回滚已删除排课');
+assert.match(scheduleRoutesSource, /timed\('schedule create conflict index write',\(\)=>syncScheduleConflictIndexes\(null,r\)\)/, '新建排课必须关键同步冲突索引');
+assert.match(scheduleRoutesSource, /timed\('schedule update conflict index write',\(\)=>syncScheduleConflictIndexes\(ex,r\)\)/, '编辑排课必须关键同步冲突索引');
+assert.match(scheduleRoutesSource, /timed\('schedule delete conflict index write',\(\)=>syncScheduleConflictIndexes\(ex,null\)\)/, '删除排课必须关键同步冲突索引');
+assert.match(scheduleSaveValidationSource, /scheduleRowsFromConflictIndex\(indexRows\)/, '排课保存冲突校验必须从冲突索引还原候选排课');
 assert.match(purchaseEntitlementRoutesSource, /if\(path==='\/entitlements\/recommend'&&method==='POST'\)\{[\s\S]*getIndexedActiveEntitlementsForStudents\(parseArr\(body\.studentIds\)\)[\s\S]*getCachedScan\(T_COACHES\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_USERS\)\.catch\(\(\)=>\[\]\)/, '课包推荐必须优先走学员活跃课包索引');
 assert.match(scheduleRoutesSource, /const \[entitlementRows,coaches,users\]=await Promise\.all\(\[[\s\S]*getCachedScan\(T_ENTITLEMENTS\)[\s\S]*getCachedScan\(T_COACHES\)[\s\S]*getCachedScan\(T_USERS\)[\s\S]*\]\);[\s\S]*const coachRefs=buildCoachRefs\(\{coaches,users\}\);[\s\S]*resolveScheduleEntitlementDeltas\(\{\.\.\.r,coachRefs\},entitlementRows\)/, '排课保存扣课校验必须使用完整教练映射，避免教练改名后课包不匹配');
 assert.match(apiSource, /const needsFallback=missingStudentIds\.length>0\|\|!indexedRows\.length;[\s\S]*const fallbackRows=\(await getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\)\)\.filter\(row=>normalized\.includes\(String\(row\.studentId\|\|''\)\.trim\(\)\)&&isActiveEntitlementForIndex\(row\)\);/, '课包推荐在索引缺失或空洞时必须回退全量课包扫描');

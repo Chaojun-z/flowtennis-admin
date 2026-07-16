@@ -90,6 +90,10 @@ assert.match(source, /function scheduleCampusAllowsCustomVenue\(/, 'schedule pag
 assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /return !activeCampusVenueRows\(campusCode\)\.length/, 'schedule page should only allow custom venues when a campus has no configured venues');
 assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal should render venue through a dedicated host');
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
+assert.match(source, /function updateScheduleCreateHeaderSubtitle\(/, 'schedule create drawer should refresh the header subtitle from current form values');
+assert.match(fnBody('scheduleDetailCreateHeaderHtml'), /scheduleCreateSubtitle/, 'schedule create header should expose a dynamic subtitle target');
+assert.match(fnBody('handleScheduleCampusChange'), /updateScheduleCreateHeaderSubtitle\(\)/, 'changing campus should refresh the create header subtitle');
+assert.match(fnBody('renderScheduleVenueField'), /handleScheduleVenueChange|updateScheduleCreateHeaderSubtitle/, 'changing venue should refresh the create header subtitle');
 assert.match(fnBody('saveSchedule'), /const selectedVenue=locationType==='own'\?scheduleVenueByValue\(campusValue,venueValue\):null/, 'schedule save should resolve selected venue metadata');
 assert.match(fnBody('saveSchedule'), /venueId:selectedVenue\?\.id\|\|''[\s\S]*venueSpaceType:selectedVenue\?\.spaceType\|\|''/, 'schedule save should persist venue id and indoor/outdoor type for configured venues');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*sch_locationType[\s\S]*schedule-location-row[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit after coach and location type');

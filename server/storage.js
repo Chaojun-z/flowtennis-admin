@@ -239,6 +239,41 @@ function createStorageServices({
       f();
     }));
   }
+  function scanByIdPrefix(t,prefix,options={}){
+    const rawPrefix=String(prefix||'');
+    const columns=normalizeProjectionColumns(options?.columns);
+    return withStorageRetry(()=>new Promise((res,rej)=>{
+      const rows=[];
+      const columnsToGet=columns.length?columns:undefined;
+      function f(sk){
+        runStorageOperation('getRangePrefix',{table:t,prefix:rawPrefix},(opRes,opRej)=>{
+          const request={
+            tableName:t,
+            direction:TableStore.Direction.FORWARD,
+            inclusiveStartPrimaryKey:sk||[{id:rawPrefix}],
+            exclusiveEndPrimaryKey:[{id:`${rawPrefix}\uffff`}],
+            maxVersions:1,
+            limit:500
+          };
+          if(columnsToGet)request.columnsToGet=columnsToGet;
+          gc().getRange(request,(e,d)=>{
+            if(e)return opRej(e);
+            opRes(d);
+          });
+        }).then(d=>{
+          (d.rows||[]).forEach(r=>{
+            if(!r.primaryKey)return;
+            const obj={id:r.primaryKey[0].value};
+            (r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});
+            rows.push(obj);
+          });
+          const nextStartPrimaryKey=d.nextStartPrimaryKey ? d.nextStartPrimaryKey.map(pk => ({ [pk.name]: pk.value })) : null;
+          nextStartPrimaryKey?f(nextStartPrimaryKey):res(rows);
+        }).catch(rej);
+      }
+      f();
+    }));
+  }
   function del(t,id){if(hotScanTables.has(t))invalidateHotScanCache(t);if(hotGetTables.has(t))invalidateHotGetCache(t,id);onTableWrite(t);return withStorageRetry(()=>runStorageOperation('deleteRow',{table:t,id},(res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
   async function clearTables(storage,tables){
     const result={success:true,total:0,tables:[]};
@@ -280,6 +315,7 @@ function createStorageServices({
     putIfAbsent,
     get,
     scan,
+    scanByIdPrefix,
     del,
     clearTables,
     mkTable,

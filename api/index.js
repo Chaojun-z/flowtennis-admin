@@ -27,6 +27,7 @@ const { createCourtRoutes } = require('../server/courts-routes');
 const { createMembershipRoutes } = require('../server/membership-routes');
 const { createPurchaseEntitlementRoutes } = require('../server/purchase-entitlement-routes');
 const { createScheduleRoutes } = require('../server/schedule-routes');
+const { createScheduleSaveValidation } = require('../server/schedule-save-validation');
 const { createAdminUserRoutes } = require('../server/admin-users-routes');
 const { createAdminToolRoutes, TEST_DATA_RESET_TABLES, getTestDataResetTables } = require('../server/admin-tools-routes');
 const { createPackageBoardRoutes, normalizePackageBoardColumnOrder } = require('../server/package-board-routes');
@@ -96,7 +97,7 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'老吴',name:'刘润扬教练'}
 ];
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
 const CAMPUS_DISPLAY_NAMES={shunyi_mapo:'顺义马坡',shilipu:'朝阳十里堡',guowang:'国家网球中心',langang:'蓝色港湾',chaojun:'朝珺私教'};
 const CAMPUS_ALIASES={'顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo','shunyi_mapo':'shunyi_mapo','朝阳十里堡':'shilipu','十里堡':'shilipu','shilipu':'shilipu','国家网球中心':'guowang','国网':'guowang','guowang':'guowang','蓝色港湾':'langang','蓝港':'langang','langang':'langang','朝珺私教':'chaojun','chaojun':'chaojun'};
 CAMPUS_ALIASES[['ma','bao'].join('')]='shunyi_mapo';
@@ -107,7 +108,7 @@ const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,...MEMBERSHIP_TABLES];
 const HOT_SCAN_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -328,6 +329,7 @@ const {
   putIfAbsent,
   get,
   scan,
+  scanByIdPrefix,
   del,
   clearTables,
   mkTable,
@@ -454,6 +456,7 @@ const bootstrapRuntime=createBootstrapRuntime({
     T_PRODUCTS,
     T_PLANS,
     T_SCHEDULE,
+    T_SCHEDULE_CONFLICT_INDEX,
     T_COACHES,
     T_CLASSES,
     T_CLASS_NOS,
@@ -539,6 +542,11 @@ const {
   scheduleParticipantSummary,
   collectScheduleRiskWarnings
 }=scheduleRules;
+const {validateScheduleSave,syncScheduleConflictIndexes}=createScheduleSaveValidation({
+  scanByIdPrefix,put,del,mkTable,withRequiredStorageTimeout,withTimeout,timed,getCachedScan,
+  isTableMissingError,validateScheduleConflicts,validateCourtBookingConflicts,collectScheduleRiskWarnings,
+  normalizeCampusValue,T_SCHEDULE_CONFLICT_INDEX,T_COURTS
+});
 const SMALL_CLASS_TYPES=['single','bootcamp','dropin','family'];
 function isSmallGroupCourse(row={}){
   return String(row.courseType||row.type||'').trim()==='小班课';
@@ -1906,7 +1914,7 @@ const handleScheduleRoutes=createScheduleRoutes({
   resolveScheduleEntitlementDeltas,assertScheduleEntitlementCapacity,scheduleStoredValuePaymentAmount,
   getFastStudentsRead,buildScheduleStoredValueCourtUpdate,put,scheduleLessonDelta,applyEntitlementDelta,
   applySmallGroupFreeAbsences,applyLessonDelta,syncScheduleFieldFeeFinancialLedger,persistScheduleStoredValueCourts,
-  syncCoachScheduleIndexes,del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,
+  syncCoachScheduleIndexes,syncScheduleConflictIndexes,del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,
   scheduleSaveErrorStatus,get,withTimeout,scanFeedbacks,assertScheduleEditableAfterFeedback,scan,
   scheduleEntitlementDeltas,restoreSmallGroupFreeAbsenceLedgerRows,parseLessonValue,returnEntitlementFreeAbsence,
   diffScheduleEntitlementDeltas,effectiveScheduleStatus,assertCanDeleteSchedule,
@@ -3818,14 +3826,6 @@ async function applyStudentIdentityUpdate(oldStudent,nextStudent){
   ]);
   return updates;
 }
-async function validateScheduleSave(nextRec,oldRec){
-  const schedules=await timed('scan schedule for conflict check',()=>withRequiredStorageTimeout(getCachedScan(T_SCHEDULE),3500,'排课校验超时，请稍后重试'));
-  validateScheduleConflicts(nextRec,schedules,nextRec.id);
-  /* hot-cache guard: timed('scan courts for schedule conflict check',()=>getCachedScan(T_COURTS).catch(()=>[])) */
-  validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>withTimeout(getCachedScan(T_COURTS).catch(()=>[]),2500,[])));
-  return {warnings:collectScheduleRiskWarnings(nextRec,schedules,nextRec.id)};
-}
-
 function isShunyiMapoFinanceSeedRow(row){
   return String(row?.seedTag||'').startsWith('shunyi_mapo-finance-seed-');
 }

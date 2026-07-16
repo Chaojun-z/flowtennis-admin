@@ -172,7 +172,7 @@ function scheduleStudentInlineMeta(student){
 function campusOptionLabel(campusRecord){
   return campusRecord?.name||cn(campusRecord?.code||campusRecord?.id)||campusRecord?.code||campusRecord?.id||'—';
 }
-function handleScheduleCampusChange(){refreshSchEntitlementOptions();syncScheduleVenueField();}
+function handleScheduleCampusChange(){refreshSchEntitlementOptions();syncScheduleVenueField();updateScheduleCreateHeaderSubtitle();}function handleScheduleVenueChange(){updateScheduleCreateHeaderSubtitle();}
 function scheduleLessonUnitsFromFields(){
   const start=scheduleComposeDateTime('sch_date','sch_startTime');
   const end=scheduleComposeDateTime('sch_date','sch_endTime');
@@ -183,6 +183,7 @@ function scheduleLessonUnitsFromFields(){
 }
 function refreshScheduleTimeDerivedFields(){
   syncScheduleLessonCountFromTime();
+  updateScheduleCreateHeaderSubtitle();
 }
 function syncScheduleLessonCountFromTime(){
   const input=document.getElementById('sch_lc');
@@ -308,6 +309,7 @@ function toggleScheduleLocationType(){
     syncScheduleVenueField();
   }
   refreshSchEntitlementOptions();
+  updateScheduleCreateHeaderSubtitle();
 }
 function toggleScheduleRepeatWeeks(){
   const wrap=document.getElementById('sch_repeatWeeksWrap');
@@ -1813,7 +1815,7 @@ function scheduleDetailHeaderHtml(s,studentNames){
 function scheduleDetailCreateHeaderHtml(seed={}){
   const start=String(seed.startTime||'').trim();
   const timeText=start?`${fmtDt(start)}${seed.endTime?` - ${String(seed.endTime).slice(11,16)}`:''}`:'填写排课信息';
-  return renderDetailDrawerHero({title:'新建排课',avatar:'新',subtitle:[timeText,seed.venue||''].filter(Boolean).join(' · '),statusText:'待保存'});
+  return renderDetailDrawerHero({title:'新建排课',avatar:'新',subtitleHtml:`<span id="scheduleCreateSubtitle">${esc([timeText,seed.venue||''].filter(Boolean).join(' · '))}</span>`,statusText:'待保存'});
 }
 function scheduleDetailTabsHtml(active,{create=false}={}){
   const tabs=create?[['info','排课信息']]:[['info','排课信息'],['proposal','教练提案'],['feedback','课后反馈']];

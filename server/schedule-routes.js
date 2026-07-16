@@ -7,7 +7,7 @@ function createScheduleRoutes(deps={}){
     withRequiredStorageTimeout,resolveScheduleEntitlementDeltas,assertScheduleEntitlementCapacity,
     scheduleStoredValuePaymentAmount,getFastStudentsRead,buildScheduleStoredValueCourtUpdate,
     put,scheduleLessonDelta,applyEntitlementDelta,applySmallGroupFreeAbsences,applyLessonDelta,
-    syncScheduleFieldFeeFinancialLedger,persistScheduleStoredValueCourts,syncCoachScheduleIndexes,
+    syncScheduleFieldFeeFinancialLedger,persistScheduleStoredValueCourts,syncCoachScheduleIndexes,syncScheduleConflictIndexes=async()=>{},
     del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,scheduleSaveErrorStatus,
     get,withTimeout,scanFeedbacks,assertScheduleEditableAfterFeedback,scan,scheduleEntitlementDeltas,
     restoreSmallGroupFreeAbsenceLedgerRows,parseLessonValue,returnEntitlementFreeAbsence,
@@ -79,6 +79,7 @@ function createScheduleRoutes(deps={}){
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
             const financialLedger=await timed('schedule create field fee finance write',()=>syncScheduleFieldFeeFinancialLedger(r,user,now));
             const storedValueCourts=await timed('schedule create stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
+            await timed('schedule create conflict index write',()=>syncScheduleConflictIndexes(null,r));
           let notification={skipped:true,reason:'official_account_reminder_only'};
             await syncCoachScheduleIndexes(null,r).catch(err=>{
               notification={...(notification||{}),sent:false,indexError:err.message};
@@ -86,6 +87,7 @@ function createScheduleRoutes(deps={}){
             return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,financialLedger:financialLedger?[financialLedger]:[],courts:storedValueCourts,notification});
           }catch(err){
             await del(T_SCHEDULE,id).catch(()=>null);
+            await syncScheduleConflictIndexes(r,null).catch(()=>null);
             await rollbackScheduleStoredValueCourts(storedValueUpdate);
             await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
             for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
@@ -144,10 +146,12 @@ function createScheduleRoutes(deps={}){
                 appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});
               }
               const storedValueCourts=await timed('schedule cancel stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
+              await timed('schedule cancel conflict index write',()=>syncScheduleConflictIndexes(ex,r));
               await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule cancel index sync failed:',err));
               return sendJson(res,{schedule:r,entitlements,entitlementLedger,...(lessonUpdate||{}),courts:storedValueCourts,warnings:[]});
             }catch(err){
               await put(T_SCHEDULE,id,ex).catch(()=>null);
+              await syncScheduleConflictIndexes(r,ex).catch(()=>null);
               await rollbackScheduleStoredValueCourts(storedValueUpdate);
               await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
               for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
@@ -225,10 +229,12 @@ function createScheduleRoutes(deps={}){
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
             const financialLedger=await timed('schedule update field fee finance write',()=>syncScheduleFieldFeeFinancialLedger(r,user,new Date().toISOString()));
             const storedValueCourts=await timed('schedule update stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
+            await timed('schedule update conflict index write',()=>syncScheduleConflictIndexes(ex,r));
             await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule update index sync failed:',err));
             return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,financialLedger:financialLedger?[financialLedger]:[],courts:storedValueCourts,warnings:risk.warnings||[]});
           }catch(err){
             await put(T_SCHEDULE,id,ex).catch(()=>null);
+            await syncScheduleConflictIndexes(r,ex).catch(()=>null);
             await rollbackScheduleStoredValueCourts(storedValueUpdate);
             await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
             await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
@@ -264,10 +270,12 @@ function createScheduleRoutes(deps={}){
           }
           const lessonUpdate=oldDelta?await applyLessonDelta(oldDelta.classId,-oldDelta.delta):null;
           const storedValueCourts=await timed('schedule delete stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
+          await timed('schedule delete conflict index write',()=>syncScheduleConflictIndexes(ex,null));
           await syncCoachScheduleIndexes(ex,null).catch(err=>console.error('schedule delete index sync failed:',err));
           return sendJson(res,{success:true,...(lessonUpdate||{}),courts:storedValueCourts});
         }catch(err){
           if(ex)await put(T_SCHEDULE,id,ex).catch(()=>null);
+          await syncScheduleConflictIndexes(null,ex).catch(()=>null);
           await rollbackScheduleStoredValueCourts(storedValueUpdate);
           for(const row of deletedLedger||[])await put(T_ENTITLEMENT_LEDGER,row.id,row).catch(()=>null);
           if(oldDelta)await applyLessonDelta(oldDelta.classId,oldDelta.delta).catch(()=>null);

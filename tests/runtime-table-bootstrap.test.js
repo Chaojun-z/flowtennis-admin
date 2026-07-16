@@ -18,6 +18,7 @@ assert.deepStrictEqual(
     'ft_match_settings',
     'ft_user_wechat_index',
     'ft_coach_schedule_index',
+    'ft_schedule_conflict_index',
     'ft_student_active_entitlement_index',
     'ft_official_account_query_sessions',
     'ft_coach_proposals',

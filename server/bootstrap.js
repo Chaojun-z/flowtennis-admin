@@ -244,7 +244,7 @@ function createBootstrapRuntime(options={}){
       }
       if(enableTableBootstrap){
         let stepStartedAt=Date.now();
-        for(const t of[tables.T_USERS,tables.T_COURTS,tables.T_STUDENTS,tables.T_PRODUCTS,tables.T_PLANS,tables.T_SCHEDULE,tables.T_COACHES,tables.T_CLASSES,tables.T_CLASS_NOS,tables.T_CAMPUSES,tables.T_FEEDBACKS,tables.T_COACH_PROPOSALS,tables.T_PACKAGES,tables.T_PURCHASES,tables.T_ENTITLEMENTS,tables.T_ENTITLEMENT_LEDGER,tables.T_PRICE_PLANS])await mkTable(t);
+        for(const t of[tables.T_USERS,tables.T_COURTS,tables.T_STUDENTS,tables.T_PRODUCTS,tables.T_PLANS,tables.T_SCHEDULE,tables.T_SCHEDULE_CONFLICT_INDEX,tables.T_COACHES,tables.T_CLASSES,tables.T_CLASS_NOS,tables.T_CAMPUSES,tables.T_FEEDBACKS,tables.T_COACH_PROPOSALS,tables.T_PACKAGES,tables.T_PURCHASES,tables.T_ENTITLEMENTS,tables.T_ENTITLEMENT_LEDGER,tables.T_PRICE_PLANS].filter(Boolean))await mkTable(t);
         console.log(`[api-init] ensure bootstrap tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
         stepStartedAt=Date.now();
         await bootstrapDefaultUsers();
