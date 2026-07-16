@@ -7,10 +7,9 @@ function scheduleStatusTagClass(status){
   return status==='已排课'?'tms-tag-tier-blue':status==='已结束'?'tms-tag-tier-slate schedule-status-ended':status==='已取消'?'tms-tag-red':'tms-tag-tier-slate';
 }
 function scheduleVenueOptionsForCampus(campusCode){
-  return activeCampusVenueRows(campusCode).map(v=>({value:v.id,label:v.name}));
-}
-function scheduleCampusAllowsCustomVenue(campusCode){
-  return !activeCampusVenueRows(campusCode).length;
+  const rows=activeCampusVenueRows(campusCode);
+  if(!rows.length)return VENUES.map(v=>({value:v,label:v}));
+  return rows.map(v=>({value:v.id,label:v.name}));
 }
 function scheduleVenueByValue(campusCode,value){
   return campusVenueByValue(campusCode,value);
@@ -18,10 +17,9 @@ function scheduleVenueByValue(campusCode,value){
 function scheduleVenueSelectValue(campusCode,value=''){
   const rows=activeCampusVenueRows(campusCode);
   const hit=rows.find(v=>String(v.id)===String(value||'')||String(v.name)===String(value||''));
-  return hit?.id||value||rows[0]?.id||'';
+  return hit?.id||value||rows[0]?.id||VENUES[0]||'';
 }
 function renderScheduleVenueField(campusCode,venueValue=''){
-  if(scheduleCampusAllowsCustomVenue(campusCode))return `<input class="finput tms-form-control" id="sch_venue" value="${esc(venueValue||'')}" placeholder="请直接填写场地" oninput="updateScheduleCreateHeaderSubtitle()" onchange="updateScheduleCreateHeaderSubtitle()">`;
   const venueOptions=scheduleVenueOptionsForCampus(campusCode);
   const nextValue=scheduleVenueSelectValue(campusCode,venueValue);
   return renderStandardDropdownHtml('sch_venue','场地',venueOptions,nextValue,true,'handleScheduleVenueChange');

@@ -86,8 +86,8 @@ assert.doesNotMatch(fnBody('refreshSchEntitlementOptions'), /ids\.length>1\)\{se
 assert.match(fnBody('openScheduleModal'), /上课教练[\s\S]*sch_coach[\s\S]*地点类型[\s\S]*sch_locationType[\s\S]*schedule-location-row[\s\S]*sch_ownLocationRow[\s\S]*sch_campus[\s\S]*sch_venue/, 'own campus location fields should sit after coach and location type');
 assert.match(source, /function scheduleVenueOptionsForCampus\(/, 'schedule page should expose venue options by campus');
 assert.match(fnBody('scheduleVenueOptionsForCampus'), /activeCampusVenueRows\(campusCode\)/, 'schedule page should read venue options from campus config');
-assert.match(source, /function scheduleCampusAllowsCustomVenue\(/, 'schedule page should expose custom venue rule by campus');
-assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /return !activeCampusVenueRows\(campusCode\)\.length/, 'schedule page should only allow custom venues when a campus has no configured venues');
+assert.match(fnBody('scheduleVenueOptionsForCampus'), /if\(!rows\.length\)return VENUES\.map\(v=>\(\{value:v,label:v\}\)\)/, 'schedule page should fall back to standard venue dropdown options when campus has no configured venues');
+assert.doesNotMatch(fnBody('renderScheduleVenueField'), /<input class="finput tms-form-control" id="sch_venue"/, 'schedule venue field should not switch to a free-text input for unconfigured campuses');
 assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal should render venue through a dedicated host');
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(source, /function updateScheduleCreateHeaderSubtitle\(/, 'schedule create drawer should refresh the header subtitle from current form values');
