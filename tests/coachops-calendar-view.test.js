@@ -61,8 +61,13 @@ assert.match(
 );
 assert.match(
   pagesCss,
-  /coach-ops-week-block \.coach-ops-duration-badge\{[\s\S]*flex:0 0 auto/,
-  'duration badge should not be squeezed by long names'
+  /coach-ops-week-block \.coach-ops-duration-badge\{[^}]*margin-left:auto[^}]*font-weight:400[^}]*text-align:right/,
+  'duration text should be normal-weight and right aligned'
+);
+assert.doesNotMatch(
+  pagesCss,
+  /coach-ops-week-block \.coach-ops-duration-badge\{[^}]*background:rgba/,
+  'duration text should not use a background pill'
 );
 
 console.log('coachops calendar view tests passed');

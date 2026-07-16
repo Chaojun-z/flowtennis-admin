@@ -9,7 +9,7 @@ assert.match(html, /assets\/styles\/base\.css/, 'index.html should load base.css
 assert.match(html, /assets\/styles\/components\.css/, 'index.html should load components.css');
 assert.match(html, /assets\/styles\/pages\.css/, 'index.html should load pages.css');
 assert.match(html, /assets\/styles\/pages\.css\?v=/, 'index.html should version pages.css to bust stale modal styles');
-assert.match(html, /assets\/styles\/pages\.css\?v=20260716-schedule-edit-calendar-v1/, 'index.html should bust stale cached pages.css after schedule edit and calendar fixes');
+assert.match(html, /assets\/styles\/pages\.css\?v=20260716-duration-text-v1/, 'index.html should bust stale cached pages.css after schedule duration text style fixes');
 assert.match(html, /assets\/scripts\/core\/constants\.js/, 'index.html should load constants.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js/, 'index.html should load utils.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js\?v=20260608-student-drawer-v2/, 'index.html should bust stale cached utils.js after coach operations split changes');

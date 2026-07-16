@@ -2389,7 +2389,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-week-block.type-master .coach-ops-card-dot{background:#EF4444}
 #page-coachschedule .coach-ops-week-block.type-partner .coach-ops-card-dot{background:#8B5CF6}
 #page-coachschedule .coach-ops-week-block .coach-ops-student-name{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#page-coachschedule .coach-ops-week-block .coach-ops-duration-badge{flex:0 0 auto;display:inline-flex;align-items:center;height:14px;padding:0 4px;border-radius:999px;background:rgba(255,255,255,.72);color:currentColor;font-size:9px;font-weight:700;line-height:14px}
+#page-coachschedule .coach-ops-week-block .coach-ops-duration-badge{flex:0 0 auto;margin-left:auto;padding:0;background:transparent;color:currentColor;font-size:10px;font-weight:400;line-height:1.2;text-align:right}
 #page-coachschedule .coach-ops-week-block .coach-ops-location{padding-left:9px;margin-top:2px;font-size:10px;font-weight:400;line-height:1.2;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #page-coachschedule .coach-ops-week-now-line{position:absolute;left:72px;right:0;bottom:auto;width:auto;height:0;border-top:1px solid rgba(242,72,34,.75);z-index:30;pointer-events:none}
 #page-coachschedule .coach-ops-week-now-head{position:absolute;left:0;right:auto;height:0;z-index:40;pointer-events:none}
