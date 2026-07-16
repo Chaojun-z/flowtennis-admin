@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="/assets/styles/components/search.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/buttons.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/filters.css?v=20260605-ui-components-v1">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260716-coach-sticky-structure-v7">
+<link rel="stylesheet" href="/assets/styles/pages.css?v=20260716-coach-rounded-sticky-v13">
 <link rel="stylesheet" href="/assets/styles/components/tables.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/status-tags.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/modals.css?v=20260605-ui-components-v1">
@@ -51,25 +51,28 @@
     <div class="page-section" id="page-coachschedule">
       <div class="coach-ops-grid-card is-loading mode-day" style="--coach-ops-day-coach-count:8;--coach-ops-day-grid-width:1280px">
         <div class="coach-ops-sticky-head">
-          <div class="coach-ops-shell">
-            <div class="coach-ops-toolbar">
-              <div class="coach-ops-toolbar-main">
-                <div id="coachOpsRangeHost"></div>
-                <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M303.872 541.952c-7.68 0-15.36-2.944-21.12-8.704-11.648-11.648-11.648-30.592 0-42.24L699.008 74.624c11.648-11.648 30.592-11.648 42.24 0 11.648 11.648 11.648 30.592 0 42.24L324.992 533.12c-5.888 5.888-13.44 8.832-21.12 8.832z"></path><path d="M720.128 958.208c-7.68 0-15.36-2.944-21.12-8.704L282.752 533.12c-11.648-11.648-11.648-30.592 0-42.24 11.648-11.648 30.592-11.648 42.24 0l416.256 416.256c11.648 11.648 11.648 30.592 0 42.24-5.76 5.888-13.44 8.832-21.12 8.832z"></path></svg></button>
-                <div class="coach-date-wrap">
-                  <input id="coachOpsDate" type="hidden" value="">
-                  <button class="coach-date-btn" id="coachOpsDateBtn" onclick="toggleCoachOpsPicker(event)" type="button"></button>
-                  <div class="coach-date-pop" id="coachOpsPicker"></div>
+          <div class="coach-ops-sticky-surface">
+            <div class="coach-ops-sticky-bg"></div>
+            <div class="coach-ops-shell">
+              <div class="coach-ops-toolbar">
+                <div class="coach-ops-toolbar-main">
+                  <div id="coachOpsRangeHost"></div>
+                  <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M303.872 541.952c-7.68 0-15.36-2.944-21.12-8.704-11.648-11.648-11.648-30.592 0-42.24L699.008 74.624c11.648-11.648 30.592-11.648 42.24 0 11.648 11.648 11.648 30.592 0 42.24L324.992 533.12c-5.888 5.888-13.44 8.832-21.12 8.832z"></path><path d="M720.128 958.208c-7.68 0-15.36-2.944-21.12-8.704L282.752 533.12c-11.648-11.648-11.648-30.592 0-42.24 11.648-11.648 30.592-11.648 42.24 0l416.256 416.256c11.648 11.648 11.648 30.592 0 42.24-5.76 5.888-13.44 8.832-21.12 8.832z"></path></svg></button>
+                  <div class="coach-date-wrap">
+                    <input id="coachOpsDate" type="hidden" value="">
+                    <button class="coach-date-btn" id="coachOpsDateBtn" onclick="toggleCoachOpsPicker(event)" type="button"></button>
+                    <div class="coach-date-pop" id="coachOpsPicker"></div>
+                  </div>
+                  <button class="coach-ops-nav coach-ops-arrow is-next" onclick="shiftCoachOpsDate(1)" title="下一段"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M303.872 541.952c-7.68 0-15.36-2.944-21.12-8.704-11.648-11.648-11.648-30.592 0-42.24L699.008 74.624c11.648-11.648 30.592-11.648 42.24 0 11.648 11.648 11.648 30.592 0 42.24L324.992 533.12c-5.888 5.888-13.44 8.832-21.12 8.832z"></path><path d="M720.128 958.208c-7.68 0-15.36-2.944-21.12-8.704L282.752 533.12c-11.648-11.648-11.648-30.592 0-42.24 11.648-11.648 30.592-11.648 42.24 0l416.256 416.256c11.648 11.648 11.648 30.592 0 42.24-5.76 5.888-13.44 8.832-21.12 8.832z"></path></svg></button>
+                  <button class="coach-ops-nav" onclick="setCoachOpsToday()">今天</button>
                 </div>
-                <button class="coach-ops-nav coach-ops-arrow is-next" onclick="shiftCoachOpsDate(1)" title="下一段"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M303.872 541.952c-7.68 0-15.36-2.944-21.12-8.704-11.648-11.648-11.648-30.592 0-42.24L699.008 74.624c11.648-11.648 30.592-11.648 42.24 0 11.648 11.648 11.648 30.592 0 42.24L324.992 533.12c-5.888 5.888-13.44 8.832-21.12 8.832z"></path><path d="M720.128 958.208c-7.68 0-15.36-2.944-21.12-8.704L282.752 533.12c-11.648-11.648-11.648-30.592 0-42.24 11.648-11.648 30.592-11.648 42.24 0l416.256 416.256c11.648 11.648 11.648 30.592 0 42.24-5.76 5.888-13.44 8.832-21.12 8.832z"></path></svg></button>
-                <button class="coach-ops-nav" onclick="setCoachOpsToday()">今天</button>
-              </div>
-              <div class="coach-ops-toolbar-right">
-                <div class="coach-ops-legend" id="coachOpsLegend"></div>
+                <div class="coach-ops-toolbar-right">
+                  <div class="coach-ops-legend" id="coachOpsLegend"></div>
+                </div>
               </div>
             </div>
+            <div class="coach-ops-head"><div class="coach-ops-corner"></div><div class="coach-ops-hours" id="coachOpsHours"></div></div>
           </div>
-          <div class="coach-ops-head"><div class="coach-ops-corner"></div><div class="coach-ops-hours" id="coachOpsHours"></div></div>
         </div>
         <div class="coach-ops-scroll">
           <div id="coachOpsTimeline" class="is-skeleton">
@@ -193,7 +196,7 @@
 <script src="/assets/scripts/pages/packages.js?v=20260610-package-board-v7"></script>
 <script src="/assets/scripts/pages/purchases.js?v=20260609-campus-scope-v1"></script>
 <script src="/assets/scripts/pages/entitlements.js?v=20260508-finance-ledger-v4"></script>
-<script src="/assets/scripts/pages/coachops.js?v=20260716-coach-sticky-structure-v7"></script>
+<script src="/assets/scripts/pages/coachops.js?v=20260716-coach-rounded-sticky-v13"></script>
 <script src="/assets/scripts/pages/operations.js?v=20260701-channel-quality-matrix-v1"></script>
 <script src="/assets/scripts/pages/prices.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/courts-helpers.js?v=20260626-date-filter-split-v1"></script>

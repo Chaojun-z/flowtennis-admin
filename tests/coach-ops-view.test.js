@@ -124,14 +124,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:#fff;border-radius:16px 16px 0 0;border-bottom:0\}/,
+  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:transparent;border:0;border-radius:16px 16px 0 0\}/,
   'coach schedule desktop calendar should grow with its content instead of using a fixed-height frame'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-scroll\{overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff\}/,
-  'coach schedule desktop calendar should own horizontal clipping without fixed vertical scrolling'
+  /#page-coachschedule \.coach-ops-scroll\{position:relative;z-index:0;overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff\}/,
+  'coach schedule desktop calendar should own horizontal clipping below the sticky header without fixed vertical scrolling'
 );
 
 assert.match(
@@ -142,8 +142,8 @@ assert.match(
 
 assert.match(
   styles,
-  /body\.is-coachschedule-page \.content\{overflow-x:hidden;padding-bottom:0\}/,
-  'coach schedule page should hide page-level horizontal overflow and let the white canvas reach the bottom'
+  /body\.is-coachschedule-page \.content\{overflow-x:hidden;padding-top:0;padding-bottom:0\}/,
+  'coach schedule page should attach the sticky calendar header below the topbar and let the white canvas reach the bottom'
 );
 
 assert.match(
@@ -208,14 +208,44 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function scrollCoachOpsWeekToNow\(\)[\s\S]*todayKey<dateKey\(range\.start\)\|\|todayKey>=dateKey\(range\.end\)[\s\S]*coachOpsScrollTopForElement\(scroll,todaySection,0\)/,
-  'coach schedule week view should auto-scroll the page to the top of today'
+  /function scrollCoachOpsStickyHeaderHeight\(\)|function coachOpsStickyHeaderHeight\(\)/,
+  'coach schedule should measure the real sticky header height before auto-scrolling'
+);
+
+assert.match(
+  coachOpsSource,
+  /function positionCoachOpsPicker\(\)[\s\S]*pop\.parentElement!==document\.body[\s\S]*document\.body\.appendChild\(pop\)[\s\S]*getBoundingClientRect\(\)[\s\S]*pop\.style\.left[\s\S]*pop\.style\.top/,
+  'coach schedule date picker should be portaled to body and positioned from the trigger button'
+);
+
+assert.match(
+  coachOpsSource,
+  /function resetCoachOpsPageScrollTop\(\)[\s\S]*const scroll=coachOpsPageScrollContainer\(\);[\s\S]*scroll\.scrollTop=0/,
+  'coach schedule should be able to reset inherited page scroll before showing month view'
+);
+
+assert.match(
+  coachOpsSource,
+  /function scrollCoachOpsWeekToNow\(\)[\s\S]*todayKey<dateKey\(range\.start\)\|\|todayKey>=dateKey\(range\.end\)[\s\S]*coachOpsScrollTopForElement\(scroll,todaySection,-coachOpsStickyHeaderHeight\(\)\)/,
+  'coach schedule week view should auto-scroll today below the sticky header'
 );
 
 assert.match(
   coachOpsSource,
   /coachOpsAutoScrollWeekView=coachOpsMode==='week'/,
   'switching into week view should request the current-time auto-scroll'
+);
+
+assert.match(
+  coachOpsSource,
+  /coachOpsAutoScrollMonthView=coachOpsMode==='month'/,
+  'switching into month view should request a clean top-aligned page position'
+);
+
+assert.match(
+  coachOpsSource,
+  /if\(mode==='month'&&coachOpsAutoScrollMonthView\)\{[\s\S]*requestAnimationFrame\(resetCoachOpsPageScrollTop\);[\s\S]*coachOpsAutoScrollMonthView=false;/,
+  'coach schedule month view should not inherit week or day vertical scroll'
 );
 
 assert.match(
@@ -1095,14 +1125,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:#fff;border-radius:16px 16px 0 0;border-bottom:0\}/,
+  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:transparent;border:0;border-radius:16px 16px 0 0\}/,
   'coach schedule grid should be a bottomless white canvas instead of a fixed-height frame'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-date-pop\{z-index:220\}/,
-  'coach schedule date picker should stay above the sticky header'
+  /\.coach-date-pop\{display:none;position:fixed;top:auto;left:auto;width:292px;[^}]*z-index:320/,
+  'coach schedule date picker should render as a fixed floating layer outside the rounded sticky clipping'
 );
 
 assert.match(
@@ -1173,8 +1203,8 @@ assert.match(
 
 assert.match(
   html,
-  /<div class="coach-ops-sticky-head">[\s\S]*<div class="coach-ops-head"><div class="coach-ops-corner"><\/div><div class="coach-ops-hours" id="coachOpsHours"><\/div><\/div>\s*<\/div>\s*<div class="coach-ops-scroll">/,
-  'coach schedule toolbar and header should share one real sticky header container above the body scroller'
+  /<div class="coach-ops-sticky-head">\s*<div class="coach-ops-sticky-surface">\s*<div class="coach-ops-sticky-bg"><\/div>[\s\S]*<div class="coach-ops-head"><div class="coach-ops-corner"><\/div><div class="coach-ops-hours" id="coachOpsHours"><\/div><\/div>\s*<\/div>\s*<\/div>\s*<div class="coach-ops-scroll">/,
+  'coach schedule toolbar and header should share one sticky header with an inner rounded surface'
 );
 
 assert.match(
@@ -1197,19 +1227,31 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-sticky-head\{position:sticky;top:0;z-index:130;background:#FFFCF9;border-radius:16px 16px 0 0;overflow:visible\}/,
-  'coach schedule toolbar and header should be fixed as one structural sticky layer'
+  /#page-coachschedule \.coach-ops-sticky-head\{position:sticky;top:0;z-index:260;background:var\(--shell-app-bg\);overflow:visible;isolation:isolate\}/,
+  'coach schedule sticky header should paint the page background outside rounded corners'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:relative;z-index:2;overflow:visible\}/,
-  'coach schedule toolbar band should live inside the sticky header instead of being sticky on its own'
+  /#page-coachschedule \.coach-ops-sticky-surface\{position:relative;z-index:1;background:#FFFCF9;border-radius:16px 16px 0 0;overflow:hidden;isolation:isolate\}/,
+  'coach schedule sticky header should clip toolbar and table header inside one rounded surface'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:#fff;border-radius:16px 16px 0 0;border-bottom:0\}/,
+  /#page-coachschedule \.coach-ops-sticky-bg\{position:absolute;inset:0;z-index:0;background:linear-gradient\(#FFFCF9 0 var\(--coach-ops-toolbar-h\),#fff var\(--coach-ops-toolbar-h\) 100%\);border-radius:16px 16px 0 0;pointer-events:none\}/,
+  'coach schedule sticky header should include one complete opaque background layer'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-shell\{background:transparent;position:relative;z-index:2;overflow:visible\}/,
+  'coach schedule toolbar band should not paint square corners over the rounded sticky background'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:transparent;border:0;border-radius:16px 16px 0 0\}/,
   'coach schedule grid should grow with the page instead of scrolling inside a fixed card'
 );
 
@@ -1221,8 +1263,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-scroll\{overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff\}/,
-  'coach schedule calendar should keep horizontal scrolling clipped inside the white canvas'
+  /#page-coachschedule \.coach-ops-scroll\{position:relative;z-index:0;overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff\}/,
+  'coach schedule body should stay below the sticky header layer while preserving horizontal scrolling'
 );
 
 assert.match(

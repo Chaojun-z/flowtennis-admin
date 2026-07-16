@@ -532,7 +532,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-audit-note{margin-bottom:12px;padding:8px 12px;border-radius:8px;background:rgba(254,243,199,.16);border:0.5px solid rgba(254,243,199,.22);color:#FEF3C7;font-size:12px;line-height:1.4}
 .course-showcase,.course-package-showcase{display:flex;flex-direction:column;gap:16px}
 body.is-packages-page .content{overflow:hidden}
-body.is-coachschedule-page .content{overflow-x:hidden;padding-bottom:0}
+body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bottom:0}
 #page-packages.active{height:100%;min-height:0;overflow:hidden}
 #page-packages .course-package-showcase{height:100%;min-height:0}
 .course-showcase-banner,.course-package-showcase-banner{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.92);font-size:13px;line-height:1.5}
@@ -1834,7 +1834,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-bottom:0}
 .coach-ops-toolbar .tms-dropdown-display{height:34px;min-width:110px;border-radius:6px;background:#fff;color:#2F241E;font-size:13px;font-weight:400;box-shadow:0 2px 8px rgba(60,20,0,0.04);border:1px solid #E7DBCE}
 .coach-ops-toolbar .tms-dropdown-display:hover{background:#F8F3EE;border-color:#D8C8B8}
 .coach-ops-toolbar .tms-dropdown-menu{top:calc(100% + 6px)}
-.coach-date-pop{display:none;position:absolute;top:44px;left:0;width:292px;background:rgba(255,251,245,.98);border:0.5px solid rgba(180,83,9,.18);border-radius:12px;box-shadow:0 18px 54px rgba(60,20,0,.28);padding:12px;z-index:30;color:var(--th)}
+.coach-date-pop{display:none;position:fixed;top:auto;left:auto;width:292px;background:rgba(255,251,245,.98);border:0.5px solid rgba(180,83,9,.18);border-radius:12px;box-shadow:0 18px 54px rgba(60,20,0,.28);padding:12px;z-index:320;color:var(--th)}
 .coach-date-pop.open{display:block}.coach-picker-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.coach-picker-title{font-size:15px;font-weight:800}.coach-picker-move{width:28px;height:28px;border:none;border-radius:7px;background:rgba(180,83,9,.08);color:var(--amber-base);cursor:pointer;font-size:16px}.coach-picker-weekdays,.coach-picker-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.coach-picker-weekdays span{font-size:11px;color:var(--ts);text-align:center;font-weight:700}.coach-picker-day,.coach-picker-month{border:none;border-radius:8px;background:rgba(180,83,9,.06);color:var(--th);height:34px;font-size:13px;font-family:inherit;cursor:pointer}.coach-picker-day:hover,.coach-picker-month:hover{background:rgba(217,119,6,.16)}.coach-picker-day.muted{color:rgba(28,25,23,.35)}.coach-picker-day.today{box-shadow:inset 0 0 0 1px rgba(180,83,9,.45);color:var(--amber-base);font-weight:700}.coach-picker-day.active,.coach-picker-month.active{background:var(--amber-base);color:#fff;font-weight:800}.coach-picker-day.week-active{box-shadow:inset 0 0 0 2px var(--amber-base);font-weight:800}.coach-picker-months{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.coach-picker-month{height:38px}
 #page-coachschedule #coachOpsViewTitle{color:#2F241E;margin:2px 0 10px}
 #page-coachops .tms-table-card{min-height:calc(100vh - 180px);display:flex;flex-direction:column}
@@ -2268,13 +2268,15 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-bottom:0}
 #page-coachschedule .coach-ops-drag-handle svg{width:10px;height:20px}
 #page-coachschedule .coach-ops-block,#page-coachschedule .coach-ops-block *,#page-coachschedule .coach-ops-course-card,#page-coachschedule .coach-ops-course-card *,#page-coachschedule .coach-ops-more-course,#page-coachschedule .coach-ops-more-course *{font-size:10px}
 #page-coachschedule.active{display:flex;flex-direction:column;width:100%;max-width:100%;min-height:calc(100vh - var(--topH) - 22px);overflow:visible}
-#page-coachschedule .coach-ops-grid-card{height:auto;min-height:calc(100vh - var(--topH) - 22px);overflow:visible;background:#fff;border-radius:16px 16px 0 0;border-bottom:0}
+#page-coachschedule .coach-ops-grid-card{height:auto;min-height:calc(100vh - var(--topH) - 22px);overflow:visible;background:transparent;border:0;border-radius:16px 16px 0 0}
 #page-coachschedule .coach-ops-grid-card.is-compact{height:auto;min-height:calc(100vh - var(--topH) - 22px);overflow:visible}
 #page-coachschedule .coach-ops-grid-card.is-compact .coach-ops-scroll{flex:0 0 auto}
 #page-coachschedule .coach-ops-grid-card{width:100%;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;position:relative;isolation:isolate}
-#page-coachschedule .coach-ops-sticky-head{position:sticky;top:0;z-index:130;background:#FFFCF9;border-radius:16px 16px 0 0;overflow:visible}
-#page-coachschedule .coach-ops-shell{background:#FFFCF9;position:relative;z-index:2;overflow:visible}
-#page-coachschedule .coach-ops-scroll{overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff}
+#page-coachschedule .coach-ops-sticky-head{position:sticky;top:0;z-index:260;background:var(--shell-app-bg);overflow:visible;isolation:isolate}
+#page-coachschedule .coach-ops-sticky-surface{position:relative;z-index:1;background:#FFFCF9;border-radius:16px 16px 0 0;overflow:hidden;isolation:isolate}
+#page-coachschedule .coach-ops-sticky-bg{position:absolute;inset:0;z-index:0;background:linear-gradient(#FFFCF9 0 var(--coach-ops-toolbar-h),#fff var(--coach-ops-toolbar-h) 100%);border-radius:16px 16px 0 0;pointer-events:none}
+#page-coachschedule .coach-ops-shell{background:transparent;position:relative;z-index:2;overflow:visible}
+#page-coachschedule .coach-ops-scroll{position:relative;z-index:0;overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff}
 #page-coachschedule .coach-ops-scroll{width:100%;box-sizing:border-box;overscroll-behavior-x:contain;scrollbar-width:none;-ms-overflow-style:none}
 #page-coachschedule .coach-ops-scroll::-webkit-scrollbar{display:none}
 #page-coachschedule .coach-ops-head{position:relative;z-index:1;width:100%;max-width:100%;height:var(--coach-ops-head-h);display:grid;grid-template-columns:var(--coach-ops-axis-w) minmax(0,1fr);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC}

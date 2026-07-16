@@ -8,6 +8,7 @@ const COACH_OPS_MONTH_VISIBLE_COACHES=5;
 let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 let coachOpsAutoScrollDayView=false;
 let coachOpsAutoScrollWeekView=false;
+let coachOpsAutoScrollMonthView=false;
 let coachOpsPendingCreateSlot=null;
 function isCoachSchedulePage(){
   return currentPage==='coachschedule';
@@ -119,14 +120,28 @@ function closeCoachOpsPicker(){
   document.getElementById('coachOpsWorkloadPicker')?.classList.remove('open');
 }
 function ensureCoachOpsReportDateControls(){}
+function coachOpsPickerAnchor(){
+  return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadDateBtn':'coachOpsDateBtn')||document.getElementById('coachOpsDateBtn')||document.getElementById('coachOpsWorkloadDateBtn');
+}
+function positionCoachOpsPicker(){
+  const pop=coachOpsPickerEl(),anchor=coachOpsPickerAnchor();
+  if(!pop||!anchor)return;
+  if(pop.parentElement!==document.body)document.body.appendChild(pop);
+  const rect=anchor.getBoundingClientRect();
+  const margin=12,gap=8;
+  const width=pop.offsetWidth||292,height=pop.offsetHeight||320;
+  pop.style.left=`${Math.max(margin,Math.min(rect.left,window.innerWidth-width-margin))}px`;
+  pop.style.top=`${Math.max(margin,Math.min(rect.bottom+gap,window.innerHeight-height-margin))}px`;
+}
 function toggleCoachOpsPicker(event){
   if(event){event.preventDefault();event.stopPropagation();}
   const pop=coachOpsPickerEl();if(!pop)return;
   coachOpsPickerMonth=monthStart(coachOpsInputDate());
   renderCoachOpsPicker();
   pop.classList.toggle('open');
+  if(pop.classList.contains('open'))positionCoachOpsPicker();
 }
-function moveCoachOpsPickerMonth(step,event){if(event){event.preventDefault();event.stopPropagation();}coachOpsPickerMonth=addMonths(coachOpsPickerMonth||coachOpsInputDate(),step);renderCoachOpsPicker();}
+function moveCoachOpsPickerMonth(step,event){if(event){event.preventDefault();event.stopPropagation();}coachOpsPickerMonth=addMonths(coachOpsPickerMonth||coachOpsInputDate(),step);renderCoachOpsPicker();positionCoachOpsPicker();}
 function pickCoachOpsDate(value){
   const el=coachOpsDateInput();if(!el)return;
   el.value=value;
@@ -224,6 +239,14 @@ function coachOpsScrollTopForElement(scroll,el,offset=0){
   if(scrollRect&&elRect)return scroll.scrollTop+elRect.top-scrollRect.top+offset;
   return (el.offsetTop||0)+offset;
 }
+function coachOpsStickyHeaderHeight(){
+  const head=document.querySelector('#page-coachschedule .coach-ops-sticky-head');
+  return head?head.getBoundingClientRect().height:0;
+}
+function resetCoachOpsPageScrollTop(){
+  const scroll=coachOpsPageScrollContainer();
+  if(scroll)scroll.scrollTop=0;
+}
 function setCoachOpsMode(mode){
   const d=coachOpsDateInput();
   mode=['day','week','month'].includes(mode)?mode:'day';
@@ -232,10 +255,11 @@ function setCoachOpsMode(mode){
   if(d)d.value=coachOpsInputValue(base,coachOpsMode);
   coachOpsAutoScrollDayView=coachOpsMode==='day';
   coachOpsAutoScrollWeekView=coachOpsMode==='week';
+  coachOpsAutoScrollMonthView=coachOpsMode==='month';
   closeCoachOpsPicker();
   renderCoachOps();
 }
-function setCoachOpsToday(){const el=coachOpsDateInput();if(el){el.value=coachOpsInputValue(new Date(),coachOpsMode);delete el.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=coachOpsMode==='day';coachOpsAutoScrollWeekView=coachOpsMode==='week';renderCoachOps();}
+function setCoachOpsToday(){const el=coachOpsDateInput();if(el){el.value=coachOpsInputValue(new Date(),coachOpsMode);delete el.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=coachOpsMode==='day';coachOpsAutoScrollWeekView=coachOpsMode==='week';coachOpsAutoScrollMonthView=coachOpsMode==='month';renderCoachOps();}
 function shiftCoachOpsDate(step){
   const el=coachOpsDateInput();if(!el)return;
   const mode=coachOpsMode;
@@ -245,6 +269,7 @@ function shiftCoachOpsDate(step){
   else el.value=dateKey(addDays(base,step));
   delete el.dataset.coachOpsAutoDate;
   coachOpsAutoScrollWeekView=false;
+  coachOpsAutoScrollMonthView=mode==='month';
   renderCoachOps();
 }
 function openCoachOpsDay(ds){coachOpsMode='day';const d=coachOpsDateInput();if(d){d.value=ds;delete d.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=ds===today();renderCoachOps();}
@@ -546,7 +571,7 @@ function scrollCoachOpsWeekToNow(){
   const scroll=coachOpsPageScrollContainer();
   const todaySection=document.querySelector('#page-coachschedule .coach-ops-week-day.is-today');
   if(!scroll||!todaySection)return;
-  scroll.scrollTop=Math.max(0,coachOpsScrollTopForElement(scroll,todaySection,0));
+  scroll.scrollTop=Math.max(0,coachOpsScrollTopForElement(scroll,todaySection,-coachOpsStickyHeaderHeight()));
 }
 function syncCoachOpsUnifiedOrder(order){
   const sortMap=new Map((order||[]).map((name,index)=>[coachName(name),(index+1)*10]));
@@ -850,6 +875,10 @@ function renderCoachOps(){
   if(mode==='week'&&coachOpsAutoScrollWeekView){
     requestAnimationFrame(scrollCoachOpsWeekToNow);
     coachOpsAutoScrollWeekView=false;
+  }
+  if(mode==='month'&&coachOpsAutoScrollMonthView){
+    requestAnimationFrame(resetCoachOpsPageScrollTop);
+    coachOpsAutoScrollMonthView=false;
   }
   const workloadBody=document.getElementById('coachOpsTbody');
   if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(r.totalLessonUnits)}<span>节</span>${coachOpsComparisonText(r)}</div></td><td>${operationsCoachTrialConversionText(r.name)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r))}">${esc(coachCourseTypeDistributionText(r))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${esc(r.campusDistributionText)}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${esc(r.timeBandDistributionText)}</div></td></tr>`).join('');
