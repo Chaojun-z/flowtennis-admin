@@ -2259,7 +2259,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-bottom:0}
 #page-coachschedule .coach-ops-shell{position:relative;z-index:80;overflow:visible}
 #page-coachschedule .coach-date-wrap{position:relative;z-index:120}
 #page-coachschedule .coach-date-pop{z-index:220}
-#page-coachschedule{--coach-ops-toolbar-h:65px;--coach-ops-head-h:38px;--coach-ops-sticky-guard-h:calc(var(--coach-ops-toolbar-h) + var(--coach-ops-head-h));--coach-ops-axis-w:72px}
+#page-coachschedule{--coach-ops-toolbar-h:65px;--coach-ops-head-h:38px;--coach-ops-axis-w:72px}
 #page-coachschedule .coach-ops-head{font-size:13px}
 #page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours span{font-size:13px}
 #page-coachschedule .coach-ops-toolbar-right{width:290px;height:28px;flex:0 0 290px}
@@ -2272,15 +2272,14 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-bottom:0}
 #page-coachschedule .coach-ops-grid-card.is-compact{height:auto;min-height:calc(100vh - var(--topH) - 22px);overflow:visible}
 #page-coachschedule .coach-ops-grid-card.is-compact .coach-ops-scroll{flex:0 0 auto}
 #page-coachschedule .coach-ops-grid-card{width:100%;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;position:relative;isolation:isolate}
-#page-coachschedule .coach-ops-shell{background:#FFFCF9;position:sticky;top:0;z-index:130;overflow:visible}
+#page-coachschedule .coach-ops-sticky-head{position:sticky;top:0;z-index:130;background:#FFFCF9;border-radius:16px 16px 0 0;overflow:visible}
+#page-coachschedule .coach-ops-shell{background:#FFFCF9;position:relative;z-index:2;overflow:visible}
 #page-coachschedule .coach-ops-scroll{overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff}
 #page-coachschedule .coach-ops-scroll{width:100%;box-sizing:border-box;overscroll-behavior-x:contain;scrollbar-width:none;-ms-overflow-style:none}
 #page-coachschedule .coach-ops-scroll::-webkit-scrollbar{display:none}
-#page-coachschedule .coach-ops-head{position:sticky;top:var(--coach-ops-toolbar-h);z-index:120;width:100%;max-width:100%;height:var(--coach-ops-head-h);display:grid;grid-template-columns:var(--coach-ops-axis-w) minmax(0,1fr);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC}
-#page-coachschedule .coach-ops-head::before{content:"";position:absolute;inset:0;background:inherit;z-index:0;pointer-events:none}
-#page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours{position:relative;z-index:2}
+#page-coachschedule .coach-ops-head{position:relative;z-index:1;width:100%;max-width:100%;height:var(--coach-ops-head-h);display:grid;grid-template-columns:var(--coach-ops-axis-w) minmax(0,1fr);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC}
+#page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours{position:relative;z-index:1}
 #page-coachschedule .coach-ops-corner{z-index:115}
-#page-coachschedule .coach-ops-grid-card::before{content:"";position:sticky;top:0;z-index:110;display:block;height:var(--coach-ops-sticky-guard-h);margin-bottom:calc(var(--coach-ops-sticky-guard-h) * -1);background:linear-gradient(#FFFCF9 0 var(--coach-ops-toolbar-h),#FCF7F3 var(--coach-ops-toolbar-h) 100%);border-radius:16px 16px 0 0;pointer-events:none}
 #page-coachschedule .coach-ops-shell{border-radius:16px 16px 0 0}
 #page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours,#page-coachschedule .coach-ops-hours span,#page-coachschedule .coach-ops-name{background:#FCF7F3}
 #page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours span{font-weight:500}

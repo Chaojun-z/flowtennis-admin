@@ -1173,8 +1173,8 @@ assert.match(
 
 assert.match(
   html,
-  /<div class="coach-ops-head"><div class="coach-ops-corner"><\/div><div class="coach-ops-hours" id="coachOpsHours"><\/div><\/div>\s*<div class="coach-ops-scroll">/,
-  'coach schedule header should be detached above the horizontal body scroller'
+  /<div class="coach-ops-sticky-head">[\s\S]*<div class="coach-ops-head"><div class="coach-ops-corner"><\/div><div class="coach-ops-hours" id="coachOpsHours"><\/div><\/div>\s*<\/div>\s*<div class="coach-ops-scroll">/,
+  'coach schedule toolbar and header should share one real sticky header container above the body scroller'
 );
 
 assert.match(
@@ -1197,8 +1197,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:sticky;top:0;z-index:130;overflow:visible\}/,
-  'coach schedule toolbar band should stay fixed and use #FFFCF9'
+  /#page-coachschedule \.coach-ops-sticky-head\{position:sticky;top:0;z-index:130;background:#FFFCF9;border-radius:16px 16px 0 0;overflow:visible\}/,
+  'coach schedule toolbar and header should be fixed as one structural sticky layer'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:relative;z-index:2;overflow:visible\}/,
+  'coach schedule toolbar band should live inside the sticky header instead of being sticky on its own'
 );
 
 assert.match(
@@ -1221,20 +1227,20 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-head\{position:sticky;top:var\(--coach-ops-toolbar-h\);z-index:120;width:100%;max-width:100%;height:var\(--coach-ops-head-h\);display:grid;grid-template-columns:var\(--coach-ops-axis-w\) minmax\(0,1fr\);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
-  'coach schedule table header should stay fixed in the page content scroll area'
+  /#page-coachschedule \.coach-ops-head\{position:relative;z-index:1;width:100%;max-width:100%;height:var\(--coach-ops-head-h\);display:grid;grid-template-columns:var\(--coach-ops-axis-w\) minmax\(0,1fr\);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
+  'coach schedule table header should be part of the shared sticky header container'
 );
 
-assert.match(
+assert.doesNotMatch(
   styles,
-  /#page-coachschedule \.coach-ops-head::before\{content:"";position:absolute;inset:0;background:inherit;z-index:0;pointer-events:none\}/,
-  'coach schedule table header should have an opaque mask above scrolling content'
+  /#page-coachschedule \.coach-ops-head::before/,
+  'coach schedule should not rely on a header pseudo-element mask'
 );
 
-assert.match(
+assert.doesNotMatch(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card::before\{content:"";position:sticky;top:0;z-index:110;display:block;height:var\(--coach-ops-sticky-guard-h\);margin-bottom:calc\(var\(--coach-ops-sticky-guard-h\) \* -1\);background:linear-gradient\(#FFFCF9 0 var\(--coach-ops-toolbar-h\),#FCF7F3 var\(--coach-ops-toolbar-h\) 100%\);border-radius:16px 16px 0 0;pointer-events:none\}/,
-  'coach schedule top guard should mask vertically scrolling content under the toolbar and table header'
+  /#page-coachschedule \.coach-ops-grid-card::before/,
+  'coach schedule should not rely on a grid-card pseudo-element mask'
 );
 
 assert.match(
