@@ -2280,6 +2280,8 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-bottom:0}
 #page-coachschedule .coach-ops-head::before{content:"";position:absolute;inset:0;background:inherit;z-index:0;pointer-events:none}
 #page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours{position:relative;z-index:2}
 #page-coachschedule .coach-ops-corner{z-index:115}
+#page-coachschedule .coach-ops-grid-card::before{content:"";position:sticky;top:0;z-index:119;display:block;height:var(--coach-ops-toolbar-h);margin-bottom:calc(var(--coach-ops-toolbar-h) * -1);background:#FFFCF9;border-radius:16px 16px 0 0;pointer-events:none}
+#page-coachschedule .coach-ops-shell{border-radius:16px 16px 0 0}
 #page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours,#page-coachschedule .coach-ops-hours span,#page-coachschedule .coach-ops-name{background:#FCF7F3}
 #page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours span{font-weight:500}
 #page-coachschedule .coach-ops-name{font-weight:500}

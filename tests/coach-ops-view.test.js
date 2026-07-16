@@ -1233,6 +1233,18 @@ assert.match(
 
 assert.match(
   styles,
+  /#page-coachschedule \.coach-ops-grid-card::before\{content:"";position:sticky;top:0;z-index:119;display:block;height:var\(--coach-ops-toolbar-h\);margin-bottom:calc\(var\(--coach-ops-toolbar-h\) \* -1\);background:#FFFCF9;border-radius:16px 16px 0 0;pointer-events:none\}/,
+  'coach schedule top guard should mask vertically scrolling content above the toolbar'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-shell\{border-radius:16px 16px 0 0\}/,
+  'coach schedule toolbar band should preserve the rounded top corners without clipping the infinite canvas'
+);
+
+assert.match(
+  styles,
   /#page-coachschedule \.coach-ops-week-day-label-fixed\{position:sticky;left:0;z-index:70;width:72px;height:30px;[^}]*background:#F9FAFB/,
   'coach schedule week date label should lock the left 72px area during horizontal scrolling'
 );
