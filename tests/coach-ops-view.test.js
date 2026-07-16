@@ -208,8 +208,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function scrollCoachOpsWeekToNow\(\)[\s\S]*todayKey<dateKey\(range\.start\)\|\|todayKey>=dateKey\(range\.end\)[\s\S]*coachOpsScrollTopForElement\(scroll,todaySection,30\+nowLineTop-180\)/,
-  'coach schedule week view should auto-scroll the page near today and the current time'
+  /function scrollCoachOpsWeekToNow\(\)[\s\S]*todayKey<dateKey\(range\.start\)\|\|todayKey>=dateKey\(range\.end\)[\s\S]*coachOpsScrollTopForElement\(scroll,todaySection,0\)/,
+  'coach schedule week view should auto-scroll the page to the top of today'
 );
 
 assert.match(
@@ -1197,7 +1197,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:sticky;top:0;z-index:120;overflow:visible\}/,
+  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:sticky;top:0;z-index:130;overflow:visible\}/,
   'coach schedule toolbar band should stay fixed and use #FFFCF9'
 );
 
@@ -1221,7 +1221,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-head\{position:sticky;top:var\(--coach-ops-toolbar-h\);z-index:110;width:100%;max-width:100%;height:38px;display:grid;grid-template-columns:var\(--coach-ops-axis-w\) minmax\(0,1fr\);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
+  /#page-coachschedule \.coach-ops-head\{position:sticky;top:var\(--coach-ops-toolbar-h\);z-index:120;width:100%;max-width:100%;height:var\(--coach-ops-head-h\);display:grid;grid-template-columns:var\(--coach-ops-axis-w\) minmax\(0,1fr\);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
   'coach schedule table header should stay fixed in the page content scroll area'
 );
 
@@ -1233,8 +1233,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card::before\{content:"";position:sticky;top:0;z-index:119;display:block;height:var\(--coach-ops-toolbar-h\);margin-bottom:calc\(var\(--coach-ops-toolbar-h\) \* -1\);background:#FFFCF9;border-radius:16px 16px 0 0;pointer-events:none\}/,
-  'coach schedule top guard should mask vertically scrolling content above the toolbar'
+  /#page-coachschedule \.coach-ops-grid-card::before\{content:"";position:sticky;top:0;z-index:110;display:block;height:var\(--coach-ops-sticky-guard-h\);margin-bottom:calc\(var\(--coach-ops-sticky-guard-h\) \* -1\);background:linear-gradient\(#FFFCF9 0 var\(--coach-ops-toolbar-h\),#FCF7F3 var\(--coach-ops-toolbar-h\) 100%\);border-radius:16px 16px 0 0;pointer-events:none\}/,
+  'coach schedule top guard should mask vertically scrolling content under the toolbar and table header'
 );
 
 assert.match(

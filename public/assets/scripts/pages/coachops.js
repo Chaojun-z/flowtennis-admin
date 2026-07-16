@@ -546,10 +546,7 @@ function scrollCoachOpsWeekToNow(){
   const scroll=coachOpsPageScrollContainer();
   const todaySection=document.querySelector('#page-coachschedule .coach-ops-week-day.is-today');
   if(!scroll||!todaySection)return;
-  const now=new Date();
-  const nowMin=Math.max(0,Math.min((22-7)*60,(now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60));
-  const nowLineTop=nowMin/60*COACH_OPS_WEEK_HOUR_HEIGHT;
-  scroll.scrollTop=Math.max(0,coachOpsScrollTopForElement(scroll,todaySection,30+nowLineTop-180));
+  scroll.scrollTop=Math.max(0,coachOpsScrollTopForElement(scroll,todaySection,0));
 }
 function syncCoachOpsUnifiedOrder(order){
   const sortMap=new Map((order||[]).map((name,index)=>[coachName(name),(index+1)*10]));
