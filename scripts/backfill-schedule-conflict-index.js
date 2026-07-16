@@ -27,9 +27,32 @@ function buildBackfillPlan(schedules=[],existingIndex=[]){
   const existingIds=new Set((existingIndex||[]).map(row=>String(row.id||'')).filter(Boolean).filter(id=>id!==SCHEDULE_CONFLICT_INDEX_READY_ID));
   return {
     expectedRows,
+    missingRows:expectedRows.filter(row=>!existingIds.has(row.id)),
     staleIds:[...existingIds].filter(id=>!expectedById.has(id)),
     activeScheduleCount:(schedules||[]).filter(row=>row&&row.status!=='已取消').length
   };
+}
+async function retryTableStore(label,fn,maxAttempts=4){
+  let lastErr;
+  for(let attempt=1;attempt<=maxAttempts;attempt+=1){
+    try{return await fn();}
+    catch(err){
+      lastErr=err;
+      if(attempt===maxAttempts)break;
+      await new Promise(resolve=>setTimeout(resolve,attempt*500));
+    }
+  }
+  throw new Error(`${label} failed after ${maxAttempts} attempts: ${lastErr?.message||lastErr}`);
+}
+async function runWithConcurrency(items,limit,worker){
+  const queue=items.slice();
+  const workers=Array.from({length:Math.max(1,limit)},async()=>{
+    while(queue.length){
+      const item=queue.shift();
+      await worker(item);
+    }
+  });
+  await Promise.all(workers);
 }
 async function main(){
   loadEnv();
@@ -50,12 +73,13 @@ async function main(){
     scheduleRows:schedules.length,
     activeScheduleRows:plan.activeScheduleCount,
     expectedIndexRows:plan.expectedRows.length,
+    missingIndexRows:plan.missingRows.length,
     staleIndexRows:plan.staleIds.length
   },null,2));
   if(!write)return;
-  for(const row of plan.expectedRows)await putRow(client,TABLES.conflictIndex,row);
-  for(const id of plan.staleIds)await deleteRow(client,TABLES.conflictIndex,id);
-  await putRow(client,TABLES.conflictIndex,{id:SCHEDULE_CONFLICT_INDEX_READY_ID,ready:true,scheduleRows:schedules.length,indexRows:plan.expectedRows.length,updatedAt:new Date().toISOString()});
+  await runWithConcurrency(plan.missingRows,12,row=>retryTableStore(`put ${row.id}`,()=>putRow(client,TABLES.conflictIndex,row)));
+  await runWithConcurrency(plan.staleIds,8,id=>retryTableStore(`delete ${id}`,()=>deleteRow(client,TABLES.conflictIndex,id)));
+  await retryTableStore('mark ready',()=>putRow(client,TABLES.conflictIndex,{id:SCHEDULE_CONFLICT_INDEX_READY_ID,ready:true,scheduleRows:schedules.length,indexRows:plan.expectedRows.length,updatedAt:new Date().toISOString()}));
   console.log('schedule conflict index backfill done');
 }
 
