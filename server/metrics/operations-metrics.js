@@ -379,16 +379,18 @@ function buildLeadConversionSets(data = {}) {
 function normalizeLeadDealType(lead = {}, leadPoolByLeadId = new Map(), sets = {}) {
   const pooled = leadPoolForLead(lead, leadPoolByLeadId);
   const explicit = String(pooled.dealType || pooled.conversionType || lead.dealType || lead.conversionType || '').trim();
-  if (explicit) return explicit.replace(/会员/g, '订场会员').replace(/订场订场会员/g, '订场会员').split('+').map(value => String(value || '').trim()).filter(Boolean);
+  if (explicit) return explicit.replace(/会员/g, '订场会员').replace(/订场订场会员/g, '订场会员').replace(/订场陪打/g, '订场+陪打').split('+').map(value => String(value || '').trim()).filter(Boolean);
 
   const ids = leadIds(lead);
   const hasCourse = !!(lead.studentId || lead.formalStudentId || lead.courseStudentId || ids.some(id => sets.course?.has(id)));
   const hasBooking = !!(lead.courtId || lead.bookingCourtId || ids.some(id => sets.booking?.has(id)));
   const hasMembership = !!(lead.membershipAccountId || lead.memberId || ids.some(id => sets.membership?.has(id)));
+  const hasCompanion = !!(lead.isCompanionConverted || ids.some(id => sets.companion?.has(id)));
   return [
     hasCourse ? '课程' : '',
     hasBooking ? '订场' : '',
-    hasMembership ? '订场会员' : ''
+    hasMembership ? '订场会员' : '',
+    hasCompanion ? '陪打' : ''
   ].filter(Boolean);
 }
 
@@ -965,9 +967,14 @@ function purchaseStudentKey(row = {}) {
 
 function normalizeCoachCourseType(row = {}) {
   const text = `${row.courseType || ''} ${row.standardCourseType || ''} ${row.experienceType || ''} ${row.packageName || ''} ${row.productName || ''}`.trim();
+  if (/陪打/.test(text)) return '陪打';
   if (/体验/.test(text)) return '体验课';
   if (/小班|班课|训练营|大师/.test(text)) return '小班课';
   return '私教课';
+}
+
+function isCompanionSchedule(row = {}) {
+  return normalizeCoachCourseType(row) === '陪打';
 }
 
 function coachUtilizationBand(rateValue) {
@@ -1145,6 +1152,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       campus: row.campus,
       sortOrder: row.sortOrder,
       usedHours: 0,
+      teachingHours: 0,
       lessonCount: 0,
       availableHours,
       revenue: 0,
@@ -1158,7 +1166,8 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       courseMix: [
         { type: '体验课', hours: 0 },
         { type: '私教课', hours: 0 },
-        { type: '小班课', hours: 0 }
+        { type: '小班课', hours: 0 },
+        { type: '陪打', hours: 0 }
       ]
     }]));
   (schedule || []).filter(isActiveScheduleForOperations).forEach(row => {
@@ -1169,6 +1178,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       campus: campusLabel(row.campus || row.campusName, campusLabels),
       sortOrder: 9999,
       usedHours: 0,
+      teachingHours: 0,
       lessonCount: 0,
       availableHours,
       revenue: 0,
@@ -1182,12 +1192,15 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       courseMix: [
         { type: '体验课', hours: 0 },
         { type: '私教课', hours: 0 },
-        { type: '小班课', hours: 0 }
+        { type: '小班课', hours: 0 },
+        { type: '陪打', hours: 0 }
       ]
     });
     const current = grouped.get(coach);
     const hours = scheduleDurationHours(row);
+    const companion = isCompanionSchedule(row);
     current.usedHours = round(current.usedHours + hours, 1);
+    if (!companion) current.teachingHours = round(current.teachingHours + hours, 1);
     current.lessonCount += 1;
     const mixType = normalizeCoachCourseType(row);
     const mix = current.courseMix.find(item => item.type === mixType);
@@ -1207,6 +1220,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       campus: '未记录',
       sortOrder: 9999,
       usedHours: 0,
+      teachingHours: 0,
       lessonCount: 0,
       availableHours,
       revenue: 0,
@@ -1220,7 +1234,8 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       courseMix: [
         { type: '体验课', hours: 0 },
         { type: '私教课', hours: 0 },
-        { type: '小班课', hours: 0 }
+        { type: '小班课', hours: 0 },
+        { type: '陪打', hours: 0 }
       ]
     });
     grouped.get(coach).revenue = money(grouped.get(coach).revenue + purchaseAmount(row));
@@ -1468,7 +1483,8 @@ function buildCoachCourseMixRows(rows = []) {
     coach: row.coach,
     trialHours: row.courseMix.find(item => item.type === '体验课')?.hours || 0,
     privateHours: row.courseMix.find(item => item.type === '私教课')?.hours || 0,
-    smallGroupHours: row.courseMix.find(item => item.type === '小班课')?.hours || 0
+    smallGroupHours: row.courseMix.find(item => item.type === '小班课')?.hours || 0,
+    companionHours: row.courseMix.find(item => item.type === '陪打')?.hours || 0
   }));
 }
 

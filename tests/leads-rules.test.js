@@ -18,6 +18,8 @@ assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConver
 assert.strictEqual(rules.deriveLeadDealType({ courtId: 'court-1' }), '订场');
 assert.strictEqual(rules.deriveLeadDealType({ membershipAccountId: 'member-1' }), '订场会员');
 assert.strictEqual(rules.deriveLeadDealType({ dealType: '会员' }), '订场会员');
+assert.strictEqual(rules.deriveLeadDealType({ dealType: '陪打成交' }), '陪打');
+assert.strictEqual(rules.deriveLeadDealType({ rawStatus: '订场陪打' }), '订场+陪打');
 assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1' }), '课程+订场');
 assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, membershipAccountId: 'member-1' }), '课程+订场会员');
 assert.strictEqual(rules.deriveLeadDealType({ courtId: 'court-1', membershipAccountId: 'member-1' }), '订场+订场会员');
@@ -86,6 +88,13 @@ assert.strictEqual(convertedLead.systemStatus, '已成交');
 assert.strictEqual(convertedLead.leadStage, '已成交');
 assert.strictEqual(convertedLead.dealType, '课程+订场会员');
 assert.strictEqual(convertedLead.conversionType, '课程+订场会员');
+const companionFollowup = rules.normalizeLeadFollowupRecord({
+  leadId: 'lead-1',
+  followupAt: '2026-05-11',
+  statusAfter: '已成交',
+  dealType: '订场陪打'
+}, { id: 'fu-companion', now: '2026-05-11 00:00:00' });
+assert.strictEqual(companionFollowup.dealType, '订场+陪打');
 assert.throws(() => rules.normalizeLeadFollowupRecord({
   leadId: 'lead-1',
   statusAfter: '已成交'

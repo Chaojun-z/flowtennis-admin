@@ -73,6 +73,28 @@ const notConvertedLead = notConvertedPlatform.leadPoolRows.find(row => row.id ==
 assert.strictEqual(notConvertedLead?.leadStage, '跟进中', '未转化 dealType must not force the unified lead stage to 已成交');
 assert.strictEqual(notConvertedLead?.dealType, '', '未转化 dealType must not be displayed as a成交类型');
 
+const companionConvertedPlatform = buildPlatformMetrics({
+  leads: [
+    { id: 'lead-companion', displayName: '陪打线索', leadStage: '已成交', systemStatus: '已成交', dealType: '陪打', leadDate: '2026-06-10' },
+    { id: 'lead-booking-companion', displayName: '订场陪打线索', leadStage: '已成交', systemStatus: '已成交', dealType: '订场+陪打', courtId: 'court-companion', leadDate: '2026-06-11' }
+  ],
+  students: [],
+  purchases: [],
+  entitlements: [],
+  schedule: [
+    { id: 'schedule-companion', sourceLeadId: 'lead-companion', courseType: '陪打', standardCourseType: '陪打', scheduleSource: '线索陪打', coach: '王教练', startTime: '2026-06-12 10:00:00', endTime: '2026-06-12 11:00:00', status: '已排课' }
+  ],
+  courts: [{ id: 'court-companion', sourceLeadId: 'lead-booking-companion', createdAt: '2026-06-11' }],
+  membershipAccounts: [],
+  membershipOrders: []
+});
+const companionLead = companionConvertedPlatform.rawLeadPoolRows.find(row => row.id === 'lead-companion');
+const bookingCompanionLead = companionConvertedPlatform.rawLeadPoolRows.find(row => row.id === 'lead-booking-companion');
+assert.strictEqual(companionLead?.leadStage, '已成交', 'companion lead deal should enter the converted lead stage');
+assert.strictEqual(companionLead?.dealType, '陪打', 'companion lead deal type should stay visible');
+assert.strictEqual(bookingCompanionLead?.dealType, '订场+陪打', 'booking plus companion should keep both deal axes');
+assert.strictEqual(companionConvertedPlatform.conversionMetrics.convertedLeads, 2, 'companion deals should count in raw lead conversion metrics');
+
 const lostAfterTrialPlatform = buildPlatformMetrics({
   leads: [
     { id: 'lead-lost-after-trial', displayName: '体验后流失', leadStage: '已流失', systemStatus: '已流失', trialAtRaw: '2026-06-10', leadDate: '2026-06-01' }

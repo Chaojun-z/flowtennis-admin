@@ -738,7 +738,8 @@ function renderOperationsCoach(data) {
       ${operationsCoachChartHeader('课程结构占比', operationsCoachTitleLegend([
         { label: '体验课', color: '#D97706' },
         { label: '私教课', color: '#0F766E' },
-        { label: '小班课', color: '#E7E5E4' }
+        { label: '小班课', color: '#E7E5E4' },
+        { label: '陪打', color: '#7C3AED' }
       ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachCourseMixChart"></div>
     </section>
@@ -760,7 +761,10 @@ function operationsCoachDetailChangeText(comparison = {}) {
 }
 
 function operationsCoachUsedHoursCell(row = {}) {
-  return `<div class="operations-coach-detail-hours"><span>${fmt(Number(row.usedHours) || 0)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
+  const usedHours=Number(row.usedHours)||0;
+  const teachingHours=Number(row.teachingHours);
+  const teachingText=Number.isFinite(teachingHours)?`<small>教学 ${fmt(teachingHours)}</small>`:'';
+  return `<div class="operations-coach-detail-hours"><span>${fmt(usedHours)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}${teachingText}</div>`;
 }
 
 function operationsCoachTrialText(row = {}) {
@@ -812,7 +816,7 @@ function renderOperationsCoachDetailTable(rows = []) {
   return `<section class="operations-section operations-coach-detail-table">
     ${operationsCoachChartHeader('教练课时详细统计')}
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table">
-      <thead><tr><th>教练</th><th>课时数</th><th>体验课</th><th>体验课转化率</th><th>课程类型分布</th><th>学员反馈</th><th>校区分布</th></tr></thead>
+      <thead><tr><th>教练</th><th>工作量/教学课时</th><th>体验课</th><th>体验课转化率</th><th>课程类型分布</th><th>学员反馈</th><th>校区分布</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div></div>
   </section>`;

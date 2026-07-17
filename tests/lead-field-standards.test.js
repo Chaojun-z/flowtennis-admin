@@ -22,9 +22,11 @@ assert.deepStrictEqual(taxonomy.LEAD_DEAL_TYPE_OPTIONS.map(item => item.value), 
   '课程',
   '订场',
   '订场会员',
+  '陪打',
   '课程+订场',
   '课程+订场会员',
   '订场+订场会员',
+  '订场+陪打',
   '课程+订场+订场会员'
 ]);
 assert.deepStrictEqual(taxonomy.LEAD_CUSTOMER_TYPE_OPTIONS.map(item => item.value), ['成人', '青少年']);
@@ -39,6 +41,7 @@ assert.strictEqual(rules.deriveLeadSystemStatus({ rawStatus: '体验课完成' }
 assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1' }), '');
 assert.strictEqual(rules.deriveLeadDealType({ membershipAccountId: 'member-1' }), '订场会员');
 assert.strictEqual(rules.deriveLeadDealType({ dealType: '会员' }), '订场会员');
+assert.strictEqual(rules.deriveLeadDealType({ dealType: '陪打' }), '陪打');
 assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+订场会员');
 
 const normalizedLead = rules.normalizeLeadRecord({

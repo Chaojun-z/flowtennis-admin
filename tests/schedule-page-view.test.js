@@ -19,10 +19,16 @@ assert.match(fnBody('openScheduleModal'), /sch_repeatEnabled/, 'schedule modal s
 assert.match(fnBody('openScheduleModal'), /循环排课/, 'schedule modal should describe weekly repeat scheduling');
 assert.match(fnBody('openScheduleModal'), /是否迟到/, 'schedule modal should support marking coach-late free lessons');
 assert.match(fnBody('openScheduleModal'), /需承担场地费用/, 'schedule modal should capture coach late field fee');
+assert.match(fnBody('openScheduleModal'), /id="sch_sourceLeadId" value="\$\{esc\(rv\(s,'sourceLeadId',seed\.sourceLeadId\|\|''\)\)\}"/, 'schedule modal should keep source lead id from companion lead conversion seeds');
+assert.match(fnBody('openScheduleModal'), /id="sch_sourceLeadName" value="\$\{esc\(rv\(s,'sourceLeadName',seed\.sourceLeadName\|\|seed\.studentName\|\|''\)\)\}"/, 'schedule modal should keep source lead name when no student profile exists');
 assert.match(fnBody('scheduleSaveConfirmText'), /迟到免费/, 'schedule save confirm copy should show coach-late free status');
 assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /班次：/, 'schedule save confirm copy should not show obsolete class linkage copy');
 assert.match(fnBody('saveSchedule'), /buildRepeatScheduleSeeds\(/, 'saving schedules should fan out repeat seeds when enabled');
 assert.match(fnBody('saveSchedule'), /coachLateFree/, 'saving schedules should persist coach late fields');
+assert.match(fnBody('saveSchedule'), /sourceLeadId:document\.getElementById\('sch_sourceLeadId'\)\?\.value\|\|''/, 'schedule save should persist the source lead id');
+assert.match(fnBody('saveSchedule'), /isLeadCompanionSchedule=scheduleSourceValue==='线索陪打'/, 'lead companion schedules should have an explicit save branch');
+assert.match(fnBody('saveSchedule'), /if\(!studentIds\.length&&!isLeadCompanionSchedule\)/, 'normal schedules should still require a student while lead companion schedules can use lead identity');
+assert.match(fnBody('saveSchedule'), /studentName:isLeadCompanionSchedule\?sourceLeadName:scheduleStudentTextByIds\(studentIds\)\.replace/, 'lead companion schedules should persist the lead name as the schedule participant');
 assert.match(fnBody('saveSchedule'), /await appConfirm\(/, 'saving schedules should use app confirm instead of browser confirm');
 assert.doesNotMatch(fnBody('saveSchedule'), /window\.confirm\(/, 'saving schedules should not use browser confirm');
 assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-card/, 'schedule save confirm should render a structured confirmation card');

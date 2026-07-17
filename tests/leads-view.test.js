@@ -177,6 +177,10 @@ assert.match(fnBody('leadFollowupDrawerFormHtml'), /成交类型[\s\S]*lead_deal
 assert.match(fnBody('leadFollowupPayloadFromForm'), /const dealType=leadNormalizeDealType\(document\.getElementById\('lead_dealType'\)\?\.value\|\|''\)/, 'follow-up save should normalize the existing dealType field');
 assert.match(fnBody('leadFollowupPayloadFromForm'), /statusAfter,[\s\S]*dealType,[\s\S]*conversionType:dealType/, 'follow-up save payload should send dealType and compatible conversionType');
 assert.match(fnBody('leadFollowupPayloadFromForm'), /statusAfter==='已成交'&&!dealType[\s\S]*成交类型/, 'follow-up save should block converted status without a deal type');
+assert.match(fnBody('leadNormalizeDealType'), /'陪打'[\s\S]*'订场\+陪打'/, 'lead deal type normalization should support companion and booking plus companion deals');
+assert.match(fnBody('leadConversionSummaryHtml'), /leadCompanionScheduleActionHtml\(lead\)/, 'lead conversion summary should expose the companion schedule action');
+assert.match(leadsSource, /function leadCompanionScheduleSeed\(lead\)[\s\S]*courseType:'陪打'[\s\S]*standardCourseType:'陪打'[\s\S]*scheduleSource:'线索陪打'[\s\S]*sourceLeadId:lead\?\.id/, 'lead companion schedule seed should mark schedules as lead companion demand');
+assert.match(leadsSource, /function openLeadCompanionSchedule\(leadId\)[\s\S]*openScheduleModal\('',leadCompanionScheduleSeed\(lead\)\)/, 'lead companion action should open the normal schedule drawer with a companion seed');
 assert.doesNotMatch(leadsSource, /type="datetime-local"/, 'follow-up date should not use native datetime-local');
 assert.match(leadsSource, /courtDateButtonHtml\('lead_followupAt'[\s\S]*leadFollowupDateInputValue/, 'follow-up date should use the shared date picker');
 assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page should expose the import preview modal');

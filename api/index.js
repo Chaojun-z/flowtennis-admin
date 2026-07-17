@@ -210,6 +210,8 @@ const SCHEDULE_LIST_PROJECTION_FIELDS=[
   'notifyStatus',
   'confirmStatus',
   'scheduleSource',
+  'sourceLeadId',
+  'sourceLeadName',
   'packageName',
   'entitlementId',
   'entitlementIds',
@@ -5664,22 +5666,22 @@ function deriveLeadSystemStatus(input={}){
   if(rawStatus==='体验课预约'||rawStatus==='已约体验')return '已约体验';
   if(['体验课完成','已体验待转化','已体验待成交'].includes(rawStatus))return '已体验待成交';
   if(['新线索','跟进中'].includes(rawStatus))return rawStatus;
-  if(/成交|已报名|已转课程|已转订场|已订场|已定场|定场|订场|会员|储值/.test(rawStatus))return '已成交';
+  if(/成交|已报名|已转课程|已转订场|已订场|已定场|定场|订场|会员|储值|陪打/.test(rawStatus))return '已成交';
   const linked=cleanLeadText(input.courtId)||cleanLeadText(input.membershipAccountId)||input.isCourseConverted===true||input.isCourtConverted===true||input.isMembershipConverted===true;
   return linked?'已成交':'跟进中';
 }
-const LEAD_DEAL_TYPE_VALUES=['课程','订场','订场会员','课程+订场','课程+订场会员','订场+订场会员','课程+订场+订场会员'];
+const LEAD_DEAL_TYPE_VALUES=['课程','订场','订场会员','陪打','课程+订场','课程+订场会员','订场+订场会员','订场+陪打','课程+订场+订场会员'];
 function normalizeLeadDealType(value){
   const raw=cleanLeadText(value);
   if(!raw||raw==='未转化')return '';
-  const normalized=raw.replace(/已转/g,'').replace(/转化/g,'').replace(/成交/g,'').replace(/\s/g,'').replace(/会员/g,'订场会员').replace(/订场订场会员/g,'订场会员');
+  const normalized=raw.replace(/已转/g,'').replace(/转化/g,'').replace(/成交/g,'').replace(/\s/g,'').replace(/会员/g,'订场会员').replace(/订场订场会员/g,'订场会员').replace(/订场陪打/g,'订场+陪打');
   return LEAD_DEAL_TYPE_VALUES.includes(raw)?raw:LEAD_DEAL_TYPE_VALUES.includes(normalized)?normalized:'';
 }
 function deriveLeadDealType(input={}){
   const stored=normalizeLeadDealType(input.dealType||input.conversionType);
   if(stored)return stored;
   const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.systemStatus||input.leadStage);
-  const parts=[['课程',input.isCourseConverted===true||/已报名|已转课程|课程/.test(rawStatus)],['订场',cleanLeadText(input.courtId)||input.isCourtConverted===true||/已定场|已订场|订场|定场/.test(rawStatus)],['订场会员',cleanLeadText(input.membershipAccountId)||input.isMembershipConverted===true||/已转会员|会员|储值/.test(rawStatus)]].filter(([,ok])=>!!ok).map(([label])=>label);
+  const parts=[['课程',input.isCourseConverted===true||/已报名|已转课程|课程/.test(rawStatus)],['订场',cleanLeadText(input.courtId)||input.isCourtConverted===true||/已定场|已订场|订场|定场/.test(rawStatus)],['订场会员',cleanLeadText(input.membershipAccountId)||input.isMembershipConverted===true||/已转会员|会员|储值/.test(rawStatus)],['陪打',input.isCompanionConverted===true||/陪打/.test(rawStatus)]].filter(([,ok])=>!!ok).map(([label])=>label);
   return parts.length?parts.join('+'):(input.convertedFlag===true?'课程':'');
 }
 function deriveLeadConversionType(input={}){return deriveLeadDealType(input);}

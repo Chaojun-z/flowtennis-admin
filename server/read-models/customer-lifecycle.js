@@ -110,6 +110,12 @@ function scheduleIsTrial(row = {}) {
   return normalized.level1 === '体验课' || /体验/.test(textValue);
 }
 
+function scheduleIsCompanion(row = {}) {
+  const normalized = businessTaxonomy.normalizeCourseType(row);
+  const textValue = [row.courseType, row.standardCourseType, row.scheduleSource, row.packageName, row.productName].filter(Boolean).join(' ');
+  return normalized.level1 === '陪打' || /陪打/.test(textValue);
+}
+
 function leadHasCourseStudentEntry(lead = {}) {
   const dealText = text(firstValue(lead.dealType, lead.conversionType, lead.conversion, lead.statusAfter));
   const statusText = text(firstValue(lead.leadStage, lead.rawStatus, lead.systemStatus, lead.status));
@@ -277,6 +283,7 @@ function makeEmptyRow(key) {
     hasScheduleRecord: false,
     hasCourseStudentEntry: false,
     hasFreeCourseFollowup: false,
+    hasCompanionConversion: false,
     leadDate: '',
     createdAt: '',
     hasCourseConversion: false,
@@ -459,6 +466,23 @@ function buildCustomerLifecycleRows({
     row.hasTrialToCourseConversion = row.hasTrialToCourseConversion || hasTrialToCourseConversion;
   });
 
+  (schedule || []).forEach(item => {
+    const sourceId = resolveLeadSourceId(sourceLeadId(item));
+    if (!sourceId || !activeStatus(item) || !scheduleIsCompanion(item)) return;
+    const row = rowFor(sourceId, `lead:${sourceId}`);
+    mergeIntoRow(row, {
+      sourceLeadId: sourceId,
+      displayName: firstValue(item.sourceLeadName, item.studentName),
+      campus: firstValue(item.campus, item.campusName),
+      formalCoach: firstValue(item.coach, item.coachName),
+      conversionAt: firstValue(item.startTime, item.createdAt),
+      firstTouchAt: firstDate(item.startTime, item.createdAt),
+      createdAt: firstValue(item.createdAt, item.startTime)
+    });
+    row.hasScheduleRecord = true;
+    row.hasCompanionConversion = true;
+  });
+
   const courtsById = new Map();
   (courts || []).forEach(court => {
     const cid = text(court.id || court.courtId);
@@ -578,6 +602,7 @@ function buildCustomerLifecycleRows({
     row.hasTrialExperience = !!row.hasTrialExperience;
     row.hasScheduleRecord = !!row.hasScheduleRecord;
     row.hasCourseStudentEntry = !!row.hasCourseStudentEntry;
+    row.hasCompanionConversion = !!row.hasCompanionConversion;
     row.hasBookingConversion = row.hasBookingConversion || row.courtStage === 'booking' || row.courtStage === 'member';
     row.hasMembershipConversion = row.hasMembershipConversion || row.courtStage === 'member';
     return row;
@@ -588,14 +613,16 @@ function buildLeadConversionSetsFromLifecycle(rows = []) {
   const course = new Set();
   const booking = new Set();
   const membership = new Set();
+  const companion = new Set();
   (rows || []).forEach(row => {
     const id = text(row.sourceLeadId || row.leadId);
     if (!id) return;
     if (row.hasCourseConversion) course.add(id);
     if (row.hasBookingConversion) booking.add(id);
     if (row.hasMembershipConversion) membership.add(id);
+    if (row.hasCompanionConversion) companion.add(id);
   });
-  return { course, booking, membership };
+  return { course, booking, membership, companion };
 }
 
 module.exports = {

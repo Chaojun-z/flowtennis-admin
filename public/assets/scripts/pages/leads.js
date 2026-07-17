@@ -170,9 +170,9 @@ function leadStandardField(lead,key){
 function leadNormalizeDealType(value){
   const raw=String(value||'').trim();
   if(!raw||raw==='未转化'||raw==='未成交')return '';
-  const standard=['课程','订场','订场会员','课程+订场','课程+订场会员','订场+订场会员','课程+订场+订场会员'];
+  const standard=['课程','订场','订场会员','陪打','课程+订场','课程+订场会员','订场+订场会员','订场+陪打','课程+订场+订场会员'];
   if(standard.includes(raw))return raw;
-  const normalized=raw.replace(/已转/g,'').replace(/转化/g,'').replace(/成交/g,'').replace(/\s/g,'').replace(/会员/g,'订场会员').replace(/订场订场会员/g,'订场会员');
+  const normalized=raw.replace(/已转/g,'').replace(/转化/g,'').replace(/成交/g,'').replace(/\s/g,'').replace(/会员/g,'订场会员').replace(/订场订场会员/g,'订场会员').replace(/订场陪打/g,'订场+陪打');
   return standard.includes(normalized)?normalized:'';
 }
 function leadStandardDealTypeText(lead){
@@ -1043,6 +1043,7 @@ function leadConversionSummaryHtml(lead){
   return [
     leadDetailFieldHtml('线索阶段',leadStageText(lead)),
     leadDetailFieldHtml('成交类型',leadDealTypeText(lead)||'-'),
+    leadCompanionScheduleActionHtml(lead),
     leadLinkedAccountFieldHtml(lead,'student'),
     leadPurchasePackageActionHtml(lead),
     leadLinkedAccountFieldHtml(lead,'court'),
@@ -1050,6 +1051,34 @@ function leadConversionSummaryHtml(lead){
     leadDetailFieldHtml('成交时间',leadFormalSignupDateText(lead)),
     leadDetailBlockHtml('流失原因',esc(lead?.lostReason||'-'),{hideEmpty:false})
   ].join('');
+}
+function leadHasCompanionDeal(lead){
+  return /陪打/.test(leadDealTypeText(lead));
+}
+function leadCompanionScheduleActionHtml(lead){
+  if(!leadHasCompanionDeal(lead))return '';
+  return `<div class="schedule-detail-field"><div class="schedule-detail-label">陪打排课</div><div class="schedule-detail-value lead-linked-account-value"><span>${esc(leadDisplayName(lead))}</span><span class="lead-inline-actions">${leadInlineActionHtml('创建陪打排课',`openLeadCompanionSchedule('${lead.id}')`)}</span></div></div>`;
+}
+function leadCompanionScheduleSeed(lead){
+  return {
+    courseType:'陪打',
+    standardCourseType:'陪打',
+    scheduleSource:'线索陪打',
+    sourceLeadId:lead?.id||'',
+    sourceLeadName:leadDisplayName(lead),
+    studentName:leadDisplayName(lead),
+    studentIds:[],
+    expectedStudentIds:[],
+    settlementType:'gift',
+    lessonCount:1,
+    campus:lead?.campus||lead?.campusName||''
+  };
+}
+function openLeadCompanionSchedule(leadId){
+  const lead=leadById(leadId);
+  if(!lead)return;
+  if(typeof openScheduleModal!=='function'){toast('排课模块尚未加载','warn');return;}
+  openScheduleModal('',leadCompanionScheduleSeed(lead));
 }
 function leadInlineActionHtml(text,onclick,tone=''){
   return `<span class="lead-inline-link-action ${tone}" onclick="${onclick}">${esc(text)}</span>`;
