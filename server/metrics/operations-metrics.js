@@ -469,6 +469,10 @@ function normalizedCampusDisplayName(value) {
 
 function buildCampusLabelMap(campuses = []) {
   const map = new Map();
+  [
+    ['shunyi_mapo', '顺义马坡'],
+    [['ma', 'bao'].join(''), '顺义马坡']
+  ].forEach(([key, label]) => map.set(key, label));
   (campuses || []).forEach(row => {
     const label = normalizeText(row.name || row.displayName || row.code || row.id, '');
     [row.id, row.code, row.name, row.displayName].forEach(value => {
@@ -1135,11 +1139,66 @@ function lifecycleHasTrialDeal(row = {}) {
     || String(row.courseDealPath || '').trim() === 'trial_to_course';
 }
 
+function coachRowHasSelectedBusiness(row = {}) {
+  return (Number(row.usedHours) || 0) > 0 || (Number(row.revenue) || 0) > 0;
+}
+
+function trialScheduleStudentKeys(row = {}) {
+  return scheduleStudentKeys(row).filter(Boolean);
+}
+
+function buildCoachTrialCohorts(schedule = []) {
+  const cohorts = new Map();
+  (schedule || [])
+    .filter(isActiveScheduleForOperations)
+    .filter(row => normalizeCoachCourseType(row) === '体验课')
+    .forEach(row => {
+      const coach = scheduleCoachName(row);
+      if (!isBusinessCoachName(coach)) return;
+      if (!cohorts.has(coach)) cohorts.set(coach, new Map());
+      const coachCohort = cohorts.get(coach);
+      const trialDay = dateKey(row.startTime || row.date || row.createdAt);
+      trialScheduleStudentKeys(row).forEach(studentKey => {
+        const current = coachCohort.get(studentKey);
+        if (!current || (trialDay && trialDay < current.trialDay)) {
+          coachCohort.set(studentKey, { studentKey, trialDay });
+        }
+      });
+    });
+  return cohorts;
+}
+
+function purchaseMatchesTrialConversion(purchase = {}, trial = {}, coach = '', dateRange = {}) {
+  if (!isValidCoursePurchase(purchase)) return false;
+  if (purchaseCoachName(purchase) !== coach) return false;
+  if (purchaseStudentKey(purchase) !== trial.studentKey) return false;
+  const day = purchaseDate(purchase);
+  if (trial.trialDay && day && day < trial.trialDay) return false;
+  return dateWithinRange(day, dateRange);
+}
+
+function buildCoachTrialTrendMetrics({ schedule = [], allPurchases = [], dateRange = {}, day = '' } = {}) {
+  const cohorts = buildCoachTrialCohorts(schedule || []);
+  const trialRows = [...cohorts.entries()].flatMap(([coach, rowsByStudent]) => (
+    [...rowsByStudent.values()].map(trial => ({ coach, trial }))
+  ));
+  const converted = trialRows.filter(({ coach, trial }) => (allPurchases || []).some(purchase => (
+    eventInTrendWindow(purchaseDate(purchase), day, dateRange)
+      && purchaseMatchesTrialConversion(purchase, trial, coach, dateRange)
+  ))).length;
+  return {
+    numerator: converted,
+    denominator: trialRows.length,
+    rate: rate(converted, trialRows.length)
+  };
+}
+
 function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases = [], allPurchases = [], periodPurchases = purchases, customerLifecycleRows = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
   const activeCoaches = (coaches || []).filter(row => String(row.status || 'active') !== 'inactive');
   const campusLabels = buildCampusLabelMap(campuses || []);
   const period = coachPeriodInfo({ schedule, purchases: periodPurchases, dateRange, now });
   const availableHours = period.days ? coachAvailableHours({ days: period.days, now }) : selectedCoachAvailableHours(dateRange, now);
+  const trialCohorts = buildCoachTrialCohorts(schedule || []);
   const grouped = new Map(activeCoaches
     .map(row => ({
       coach: canonicalCoachName(row.name || row.coachName || ''),
@@ -1242,10 +1301,9 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
   });
   grouped.forEach(row => {
     const coach = row.coach;
-    const coachLifecycleRows = (customerLifecycleRows || []).filter(item => lifecycleCoachName(item) === coach);
-    const trialRows = coachLifecycleRows.filter(lifecycleHasTrialPath);
-    row.trialBase = trialRows.length;
-    row.trialConverted = trialRows.filter(lifecycleHasTrialDeal).length;
+    const selectedTrialRows = [...(trialCohorts.get(coach) || new Map()).values()];
+    row.trialBase = selectedTrialRows.length;
+    row.trialConverted = selectedTrialRows.filter(trial => (allPurchases || []).some(purchase => purchaseMatchesTrialConversion(purchase, trial, coach, dateRange))).length;
     const validAllPurchases = (allPurchases || []).filter(isValidCoursePurchase);
     let priorOldStudents = new Set(validAllPurchases
       .filter(purchase => purchaseCoachName(purchase) === coach && isPurchaseBeforeRange(purchase, dateRange))
@@ -1272,7 +1330,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
     row.oldCustomerBase = priorOldStudents.size;
     row.renewalCount = renewedStudents.size;
   });
-  return [...grouped.values()].map(row => {
+  return [...grouped.values()].filter(coachRowHasSelectedBusiness).map(row => {
     const campusDistribution = [...(row.campusHours || new Map()).entries()]
       .map(([campusName, hours]) => ({ campusName, hours }))
       .filter(item => item.campusName && item.hours > 0)
@@ -1447,15 +1505,16 @@ function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [],
     const trialConverted = rows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
     const oldCustomerBase = rows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
     const renewalCount = rows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
+    const trial = buildCoachTrialTrendMetrics({ schedule, allPurchases, dateRange, day });
     const renewal = buildCoachRenewalTrendMetrics({ purchases, allPurchases, dateRange, day });
     return {
       date: day,
       activeCoaches: rows.filter(row => (Number(row.usedHours) || 0) > 0 || (Number(row.revenue) || 0) > 0).length,
       utilizationRate: availableHours ? round(usedHours * 100 / availableHours, 1) : 0,
       revenue,
-      trialConversionRate: trialBase ? rate(trialConverted, trialBase) : null,
-      trialConversionRateNumerator: trialConverted,
-      trialConversionRateDenominator: trialBase,
+      trialConversionRate: trial.denominator ? trial.rate : (trialBase ? rate(trialConverted, trialBase) : null),
+      trialConversionRateNumerator: trial.denominator ? trial.numerator : trialConverted,
+      trialConversionRateDenominator: trial.denominator || trialBase,
       renewalRate: renewal.denominator ? renewal.rate : (oldCustomerBase ? rate(renewalCount, oldCustomerBase) : null),
       renewalRateNumerator: renewal.denominator ? renewal.numerator : renewalCount,
       renewalRateDenominator: renewal.denominator || oldCustomerBase
@@ -2681,7 +2740,8 @@ function studentCoachName(row = {}) {
 function financeRowAttribution(row = {}, context = {}) {
   const purchase = context.purchaseById.get(sourceDocumentId(row, '购买记录')) || {};
   const schedule = context.scheduleById.get(sourceDocumentId(row, '排课')) || {};
-  const directCoach = financeCoachName(row);
+  const financeDirectCoach = financeCoachName(row);
+  const directCoach = context.knownCoaches.has(financeDirectCoach) ? financeDirectCoach : '';
   const purchaseCoach = purchaseCoachName(purchase);
   const scheduleCoach = scheduleCoachName(schedule);
   const sourceStudentId = String(

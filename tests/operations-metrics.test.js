@@ -1673,4 +1673,56 @@ assert.strictEqual(fixedCoachCohortTrendMetrics.coach.trends.find(row => row.dat
 assert.strictEqual(fixedCoachCohortTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.trialConversionRate, 33.3, 'coach trial conversion trend should not use same-day trial denominator');
 assert.strictEqual(fixedCoachCohortTrendMetrics.coach.trends.find(row => row.date === '2026-06-30')?.trialConversionRate, 33.3, 'coach trial conversion trend should exclude conversions after the selected range');
 
+const mapoLegacyCampusCode = ['ma', 'bao'].join('');
+const coachPeriodFactMetrics = buildOperationsMetrics({
+  campuses: [{ id: mapoLegacyCampusCode, code: mapoLegacyCampusCode, name: '顺义马坡' }],
+  coaches: [
+    { id: 'coach-a', name: 'A教练', status: 'active', campus: mapoLegacyCampusCode },
+    { id: 'coach-b', name: 'B教练', status: 'active', campus: mapoLegacyCampusCode },
+    { id: 'coach-idle', name: '空闲教练', status: 'active', campus: mapoLegacyCampusCode }
+  ],
+  students: [
+    { id: 'june-trial-student', primaryCoach: 'A教练' },
+    { id: 'old-lifecycle-student', primaryCoach: 'B教练' }
+  ],
+  customerLifecycleRows: [
+    { studentId: 'june-trial-student', formalCoach: 'A教练', trialAttendedAt: '2026-06-02', hasTrialExperience: true, hasTrialToCourseConversion: true, courseDealPath: 'trial_to_course', courseFirstPurchaseAt: '2026-06-03' },
+    { studentId: 'old-lifecycle-student', formalCoach: 'B教练', trialAttendedAt: '2026-05-02', hasTrialExperience: true, hasTrialToCourseConversion: true, courseDealPath: 'trial_to_course', courseFirstPurchaseAt: '2026-05-03' }
+  ],
+  schedule: [
+    { id: 'june-trial', coach: 'A教练', studentId: 'june-trial-student', startTime: '2026-06-02 09:00:00', endTime: '2026-06-02 10:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '体验课' },
+    { id: 'july-private', coach: 'A教练', studentId: 'june-trial-student', startTime: '2026-07-02 09:00:00', endTime: '2026-07-02 10:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '私教课' },
+    { id: 'july-b-private', coach: 'B教练', studentId: 'old-lifecycle-student', startTime: '2026-07-03 09:00:00', endTime: '2026-07-03 10:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '私教课' }
+  ],
+  feedbacks: [{ id: 'fb-july-private', scheduleId: 'july-private' }],
+  purchases: [
+    { id: 'june-trial-deal', studentId: 'june-trial-student', ownerCoach: 'A教练', actualAmount: 1000, purchaseDate: '2026-06-03', status: 'active', courseType: '私教课' },
+    { id: 'old-lifecycle-deal', studentId: 'old-lifecycle-student', ownerCoach: 'B教练', actualAmount: 1000, purchaseDate: '2026-05-03', status: 'active', courseType: '私教课' }
+  ],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [
+    { id: 'june-trial-deal-finance', studentId: 'june-trial-student', ownerCoach: 'A教练', businessType: '课程', action: '收款', cashDelta: 1000, businessDate: '2026-06-03' },
+    { id: 'old-lifecycle-deal-finance', studentId: 'old-lifecycle-student', ownerCoach: 'B教练', businessType: '课程', action: '收款', cashDelta: 1000, businessDate: '2026-05-03' }
+  ],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-07-04 12:00:00'),
+  dateRange: { startDate: '2026-07-01', endDate: '2026-07-31' }
+});
+const periodCoachA = coachPeriodFactMetrics.coach.rows.find(row => row.coach === 'A教练');
+const periodCoachB = coachPeriodFactMetrics.coach.rows.find(row => row.coach === 'B教练');
+assert.strictEqual(coachPeriodFactMetrics.coach.rows.some(row => row.coach === '空闲教练'), false, 'coach dashboard should not include active roster coaches with no selected-period lessons or revenue');
+assert.strictEqual(coachPeriodFactMetrics.coach.cards.activeCoaches.value, 2, 'coach active card should count selected-period coaches with real lessons or receipts only');
+assert.strictEqual(periodCoachA.trialBase, 0, 'selected-period coach trial base must come from selected-period trial schedules, not all-time lifecycle trial rows');
+assert.strictEqual(periodCoachA.trialConverted, 0, 'selected-period coach trial conversion must not reuse old all-time lifecycle conversions');
+assert.strictEqual(periodCoachB.trialBase, 0, 'coaches without selected-period trial schedules must have zero trial base even when lifecycle has old trials');
+assert.strictEqual(coachPeriodFactMetrics.coach.cards.trialConversionRate.value, 0, 'coach top trial conversion should be zero when selected period has no trial lessons');
+assert.strictEqual(periodCoachA.feedbackCompleted, 1, 'selected-period feedback should count feedback records linked by scheduleId');
+assert.strictEqual(periodCoachA.feedbackRequired, 1, 'selected-period feedback denominator should use selected-period schedules');
+assert.doesNotMatch(periodCoachA.campusDistributionText, /shunyi_mapo/, 'coach campus distribution must not leak backend campus codes');
+assert.match(periodCoachA.campusDistributionText, /顺义马坡 1/, 'coach campus distribution should render the standard campus name');
+
 console.log('operations metrics tests passed');

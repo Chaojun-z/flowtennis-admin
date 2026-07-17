@@ -13,6 +13,8 @@ const chartsPath = path.join(repoRoot, 'public/assets/scripts/standard/charts.js
 const operationsPath = path.join(repoRoot, 'public/assets/scripts/pages/operations.js');
 const operationsMetricsPath = path.join(repoRoot, 'server/metrics/operations-metrics.js');
 const operationsSourcePath = path.join(repoRoot, 'server/read-models/operations-source.js');
+const apiIndexPath = path.join(repoRoot, 'api/index.js');
+const residualPagesPath = path.join(repoRoot, 'server/page-data/residual-pages.js');
 const stylesPath = path.join(repoRoot, 'public/assets/styles/pages.css');
 
 assert.ok(fs.existsSync(chartsPath), 'global chart wrapper should live in public/assets/scripts/standard/charts.js');
@@ -25,6 +27,8 @@ const chartsSource = fs.readFileSync(chartsPath, 'utf8');
 const operationsSource = fs.readFileSync(operationsPath, 'utf8');
 const operationsMetricsSource = fs.readFileSync(operationsMetricsPath, 'utf8');
 const operationsSourceReadModel = fs.readFileSync(operationsSourcePath, 'utf8');
+const apiIndexSource = fs.readFileSync(apiIndexPath, 'utf8');
+const residualPagesSource = fs.readFileSync(residualPagesPath, 'utf8');
 const stylesSource = fs.readFileSync(stylesPath, 'utf8');
 const operationsRuntime = {
   console,
@@ -147,6 +151,8 @@ assert.match(indexSource, /id="page-operations"/, 'index.html should contain the
 assert.match(indexSource, /cdn\.jsdelivr\.net\/npm\/echarts/, 'index.html should load Apache ECharts from a CDN');
 assert.match(indexSource, /\/assets\/scripts\/standard\/charts\.js/, 'index.html should load the global chart wrapper');
 assert.match(indexSource, /\/assets\/scripts\/pages\/operations\.js/, 'index.html should load the operations page script');
+assert.match(apiIndexSource, /handleResidualPageDataRoutes=createResidualPageDataRoutes\([\s\S]*tables:\{[\s\S]*T_FEEDBACKS[\s\S]*\}/, 'operations page-data route should pass T_FEEDBACKS into the shared read model');
+assert.match(residualPagesSource, /handleOperationsPageData\([\s\S]*tables:\{[\s\S]*T_FEEDBACKS[\s\S]*\}/, 'operations residual page handler should include feedback table when building coach metrics');
 assert.match(componentsSource, /setOperationsTab\('overview'\);goPage\('operations',this\)[\s\S]*经营总览/, 'sidebar should expose operations overview as a left menu item');
 assert.match(componentsSource, /setOperationsTab\('court'\);goPage\('operations',this\)[\s\S]*场地运转/, 'sidebar should expose court operations as a left menu item');
 assert.match(componentsSource, /setOperationsTab\('conversion'\);goPage\('operations',this\)[\s\S]*转化与留存/, 'sidebar should expose conversion and retention as a left menu item');
