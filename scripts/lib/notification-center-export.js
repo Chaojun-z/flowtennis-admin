@@ -2,6 +2,34 @@ function pad(value) {
   return String(value).padStart(2, '0');
 }
 
+const CAMPUS_DISPLAY_NAME_MAP = {
+  shunyi_mapo: '顺义马坡',
+  mabao: '顺义马坡',
+  '顺义马坡': '顺义马坡',
+  '马坡': '顺义马坡',
+  '马宝': '顺义马坡',
+  shilipu: '朝阳十里堡',
+  '朝阳十里堡': '朝阳十里堡',
+  '十里堡': '朝阳十里堡',
+  guowang: '国家网球中心',
+  '国家网球中心': '国家网球中心',
+  '国网': '国家网球中心',
+  '朝阳国网': '国家网球中心',
+  langang: '蓝色港湾',
+  '蓝色港湾': '蓝色港湾',
+  '朝阳蓝色港湾': '蓝色港湾',
+  '蓝港': '蓝色港湾',
+  chaojun: '朝珺私教',
+  '朝珺私教': '朝珺私教',
+  '朝珺': '朝珺私教'
+};
+
+function campusDisplayName(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') return '';
+  return CAMPUS_DISPLAY_NAME_MAP[raw] || raw;
+}
+
 function toChinaParts(input) {
   const date = input instanceof Date ? input : new Date(input);
   const fmt = new Intl.DateTimeFormat('en-CA', {
@@ -102,7 +130,7 @@ function normalizeLesson(row, campusMap, now) {
     coachId: String(row.coachId || '').trim(),
     coachName: String(row.coach || row.coachName || '').trim(),
     campusCode,
-    campusName: isExternal ? (externalVenueName || '校区外') : (campusMap.get(campusCode) || campusCode),
+    campusName: isExternal ? (externalVenueName || '校区外') : (campusMap.get(campusCode) || campusDisplayName(campusCode)),
     venue: isExternal ? externalCourtName : String(row.venue || '').trim(),
     className: String(row.className || '').trim(),
     courseType: String(row.courseType || '').trim(),
@@ -152,10 +180,12 @@ function buildNotificationCenterSnapshot({
 } = {}) {
   const today = targetDate || toChinaDateKey(now);
   const tomorrow = addDays(today, 1);
-  const campusMap = new Map((campuses || []).map((row) => [
-    String(row?.code || row?.id || '').trim(),
-    String(row?.name || row?.code || row?.id || '').trim()
-  ]));
+  const campusMap = new Map();
+  (campuses || []).forEach((row) => {
+    const name = campusDisplayName(row?.name || row?.code || row?.id);
+    [row?.code, row?.id, row?.name].map((value) => String(value || '').trim()).filter(Boolean)
+      .forEach((key) => campusMap.set(key, name));
+  });
   const activeCoachNames = new Set((coaches || [])
     .filter((row) => String(row?.status || 'active').trim() !== 'inactive')
     .map((row) => String(row?.name || row?.id || '').trim())

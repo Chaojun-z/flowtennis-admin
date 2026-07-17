@@ -5,7 +5,7 @@ const { buildNotificationCenterSnapshot } = require(path.join(__dirname, '..', '
 
 const snapshot = buildNotificationCenterSnapshot({
   targetDate: '2026-05-25',
-  now: new Date('2026-05-25 01:22:00'),
+  now: new Date('2026-05-25T01:22:00Z'),
   scheduleRows: [
     { id: 's1', startTime: '2026-05-25 12:00', endTime: '2026-05-25 14:00', coach: 'Siren', campus: 'shunyi_mapo', courseType: '私教课', studentName: '马晨', status: '已排课' },
     { id: 's2', startTime: '2026-05-25 16:30', endTime: '2026-05-25 17:30', coach: 'Siren', campus: 'shunyi_mapo', courseType: '私教课', studentName: '丫丫', status: '已排课' },
@@ -22,7 +22,7 @@ assert.deepStrictEqual(snapshot.todayLessonDetails[0].studentNames, ['马晨'], 
 
 const completedSnapshot = buildNotificationCenterSnapshot({
   targetDate: '2026-05-25',
-  now: new Date('2026-05-25 13:22:00'),
+  now: new Date('2026-05-25T13:22:00Z'),
   scheduleRows: [
     { id: 'done-1', startTime: '2026-05-25 19:00', endTime: '2026-05-25 20:00', coach: 'Siren', campus: 'shunyi_mapo', courseType: '私教课', studentName: '马晨', status: '已排课' },
     { id: 'cancel-1', startTime: '2026-05-25 19:00', endTime: '2026-05-25 20:00', coach: '朝珺', campus: 'shunyi_mapo', courseType: '私教课', studentName: '丫丫', status: '已取消' }
@@ -36,7 +36,7 @@ assert.deepStrictEqual(completedSnapshot.todayLessonDetails.map((row) => row.sta
 
 const fallbackEndSnapshot = buildNotificationCenterSnapshot({
   targetDate: '2026-06-16',
-  now: new Date('2026-06-16 13:00:00'),
+  now: new Date('2026-06-16T13:00:00Z'),
   scheduleRows: [
     { id: 'fallback-end', startTime: '2026-06-16 07:00', coach: '朝珺', campus: 'shunyi_mapo', courseType: '私教课', studentName: '马晨', status: '已排课', lessonCount: 1 }
   ],
@@ -47,7 +47,7 @@ assert.strictEqual(fallbackEndSnapshot.todayStats.completedLessons, 1, '缺少 e
 
 const externalSnapshot = buildNotificationCenterSnapshot({
   targetDate: '2026-06-16',
-  now: new Date('2026-06-16 13:00:00'),
+  now: new Date('2026-06-16T13:00:00Z'),
   scheduleRows: [
     { id: 'external-1', startTime: '2026-06-17 07:00', endTime: '2026-06-17 09:00', coach: '朝珺', campus: 'external', locationType: 'external', externalVenueName: '国家网球中心', externalCourtName: 'C1', venue: '国家网球中心 · C1', courseType: '私教课', studentName: '有知有行团课', status: '已排课' }
   ],
@@ -56,5 +56,16 @@ const externalSnapshot = buildNotificationCenterSnapshot({
 
 assert.strictEqual(externalSnapshot.tomorrowLessonDetails[0].campusName, '国家网球中心', '外部场馆日报不应把 external 当校区展示');
 assert.strictEqual(externalSnapshot.tomorrowLessonDetails[0].venue, 'C1', '外部场馆日报应把外部场地号单独展示');
+
+const missingCampusTableSnapshot = buildNotificationCenterSnapshot({
+  targetDate: '2026-07-17',
+  now: new Date('2026-07-17 21:58:00'),
+  scheduleRows: [
+    { id: 'mapo-1', startTime: '2026-07-18 09:00', endTime: '2026-07-18 10:00', coach: '朝珺', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', studentName: '吕瑜 黄晴', status: '已排课' }
+  ],
+  campuses: []
+});
+
+assert.strictEqual(missingCampusTableSnapshot.tomorrowLessonDetails[0].campusName, '顺义马坡', '日报快照缺少校区表映射时也不能展示后端校区 code');
 
 console.log('notification center export tests passed');
