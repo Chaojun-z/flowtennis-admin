@@ -191,8 +191,13 @@ async function membershipSummaryFromRows(rows = {}) {
   );
   assert.strictEqual(
     manualOperations.conversion.standardLifecycleMetrics.funnels.leadStudentRoster[1].value,
+    1,
+    '已成交且成交类型包含课程的关联学员，必须被看板算入历史学员'
+  );
+  assert.strictEqual(
+    manualOperations.conversion.standardLifecycleMetrics.funnels.leadStudentRoster[2].value,
     0,
-    '反例：只有手工课程成交、没有有效上课事实，不能被看板算成历史学员'
+    '只有手工课程成交、没有课包余额/排课/上课事实，不能被看板算成在期学员'
   );
 
   const purchasedNotScheduledSample = {

@@ -1049,8 +1049,16 @@ function teachingStudentHasCompletedLesson(data = {}, row = {}, now = new Date()
   return teachingStudentScheduleRows(data, studentId, schedule => teachingScheduleLessonFact(schedule, now)).length > 0;
 }
 
+function teachingStudentHasCourseRosterEntry(row = {}) {
+  return !!row.hasCourseStudentEntry
+    || !!row.hasCourseConversion
+    || text(row.studentStage) === 'formal';
+}
+
 function teachingStudentInHistoricalRoster(data = {}, row = {}, now = new Date()) {
-  return teachingStudentHasCompletedLesson(data, row, now) || teachingStudentHasFormalPackage(row);
+  return teachingStudentHasCompletedLesson(data, row, now)
+    || teachingStudentHasFormalPackage(row)
+    || teachingStudentHasCourseRosterEntry(row);
 }
 
 function teachingStudentInActiveRoster(data = {}, row = {}, now = new Date()) {
@@ -1151,10 +1159,16 @@ function teachingStudentDirectLessonsAfterLastPackage(data = {}, row = {}, now =
 function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()) {
   const packageStatus = teachingStudentPackageStatusLabel(row);
   const activityStatus = teachingStudentActivityStatusLabel(data, row, now);
+  const studentId = text(row.studentId);
+  const formalRows = teachingStudentFormalLessonFactRows(data, studentId, now);
+  const scheduledFormalRows = teachingStudentScheduleRows(data, studentId, item => teachingScheduleFormal(item));
   const recentDirect30 = teachingStudentDirectFormalLessonRows(data, text(row.studentId), now, row).filter(item => {
     const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
     return days !== null && days <= 30;
   }).length;
+  if (teachingStudentHasCourseRosterEntry(row) && !teachingStudentHasFormalPackage(row) && !formalRows.length) {
+    return scheduledFormalRows.length ? '已排课未上课' : '已成交待首课';
+  }
   if (packageStatus === '课包有余额' && activityStatus === '近30天活跃') return '课包活跃中';
   if (packageStatus === '课包有余额' && activityStatus !== '近30天活跃') return '有余额未活跃';
   if (teachingStudentDirectLessonsAfterLastPackage(data, row, now).length > 0) return '已转单次付费';

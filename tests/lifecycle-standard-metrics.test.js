@@ -100,8 +100,8 @@ assert.strictEqual(formalViewRow.completedLessons, 9, '正式学员累计上课�
 assert.strictEqual(formalViewRow.packagePurchaseDate, '2026-06-08', '正式学员课包购买时间必须由后端统一读模型按首次正式课包给出');
 assert.deepStrictEqual(
   standard.views.historicalStudents.map(row => row.studentId).sort(),
-  ['student-direct-course', 'student-formal-schedule-only', 'student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-91days', 'student-single-pay-active', 'student-single-pay-sleeping'],
-  '历史学员必须按有效排课事实或正式课包购买事实返回，包含已买课包未排课、已排课、无档案排课、体验课、正式课包课和单次付费正式课'
+  ['student-direct-course', 'student-formal-schedule-only', 'student-manual-course-converted', 'student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-91days', 'student-single-pay-active', 'student-single-pay-sleeping'],
+  '历史学员必须包含已成交课程关联学员、已买课包未排课、已排课、无档案排课、体验课、正式课包课和单次付费正式课'
 );
 assert.deepStrictEqual(
   standard.views.activeStudents.map(row => row.studentId).sort(),
@@ -110,7 +110,7 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   standard.teachingSummary.historicalStudentCount,
-  8,
+  9,
   '历史学员顶部总数必须来自历史学员新视图'
 );
 assert.strictEqual(

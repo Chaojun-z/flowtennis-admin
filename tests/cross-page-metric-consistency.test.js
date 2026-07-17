@@ -199,11 +199,15 @@ assert.deepStrictEqual(
   ['stu-attended-only'],
   '上过体验未买正式课只统计有体验课排课事实但未买正式课包的人'
 );
+assert.ok(
+  teachingPlatform.teachingStudentViews.historicalStudents.some(row => row.studentId === 'stu-manual-course'),
+  '已成交且成交类型包含课程的关联学员，未买课包未排课也必须进入历史学员'
+);
 [
   ['courseStudentCount', 7],
   ['trialStudentCount', 2],
   ['formalStudentCount', 3],
-  ['historicalStudentCount', 5],
+  ['historicalStudentCount', 6],
   ['activeStudentCount', 1],
   ['courseDealCustomers', 3],
   ['trialAttendedStudentCount', 2],

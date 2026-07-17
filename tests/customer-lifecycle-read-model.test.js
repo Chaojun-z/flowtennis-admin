@@ -261,6 +261,56 @@ const linkedStudentViews = buildTeachingStudentViews(linkedStudentDisplayRows, {
 });
 assert.strictEqual(linkedStudentViews.activeStudents[0].name, '莲儿（连女士）', 'active student list should display the backend unified real student name');
 
+const convertedCourseWithoutPackageRows = buildCustomerLifecycleRows({
+  leads: [{
+    id: 'lead-luo',
+    displayName: '罗量',
+    studentId: 'student-luo',
+    campus: 'chaojun',
+    leadStage: '已成交',
+    systemStatus: '已成交',
+    dealType: '课程',
+    conversionType: '课程',
+    isCourseConverted: true,
+    createdAt: '2026-04-25 13:46:09'
+  }],
+  students: [{
+    id: 'student-luo',
+    name: '罗量',
+    sourceLeadId: 'lead-luo',
+    campus: 'chaojun',
+    createdAt: '2026-04-25 13:46:09'
+  }]
+});
+const convertedCourseWithoutPackageViews = buildTeachingStudentViews(convertedCourseWithoutPackageRows, {
+  students: [{ id: 'student-luo', name: '罗量', sourceLeadId: 'lead-luo', campus: 'chaojun' }],
+  now: new Date(Date.UTC(2026, 6, 17, 7, 30, 0))
+});
+assert.ok(
+  convertedCourseWithoutPackageViews.historicalStudents.some(row => row.studentId === 'student-luo'),
+  '已成交且成交类型包含课程的关联学员，即使未买课包未排课，也必须进入历史学员'
+);
+assert.ok(
+  !convertedCourseWithoutPackageViews.activeStudents.some(row => row.studentId === 'student-luo'),
+  '未买课包且未排课/未上课的课程成交学员不能自动进入在期学员'
+);
+assert.strictEqual(
+  convertedCourseWithoutPackageViews.historicalStudents.find(row => row.studentId === 'student-luo').studentStatusLabel,
+  '已成交待首课',
+  '已成交课程但没有课程事实的人必须显示待首课状态'
+);
+
+const convertedCourseScheduledViews = buildTeachingStudentViews(convertedCourseWithoutPackageRows, {
+  students: [{ id: 'student-luo', name: '罗量', sourceLeadId: 'lead-luo', campus: 'chaojun' }],
+  schedule: [{ id: 'schedule-luo', studentId: 'student-luo', courseType: '私教课', status: '已排课', startTime: '2026-07-20 10:00' }],
+  now: new Date(Date.UTC(2026, 6, 17, 7, 30, 0))
+});
+assert.strictEqual(
+  convertedCourseScheduledViews.historicalStudents.find(row => row.studentId === 'student-luo').studentStatusLabel,
+  '已排课未上课',
+  '已成交课程且已有未来正式课排课的人必须显示已排课未上课'
+);
+
 const depletedRecentScheduledRows = buildCustomerLifecycleRows({
   students: [{ id: 'student-dede', name: '德德', campus: 'campus-main' }],
   purchases: [{
