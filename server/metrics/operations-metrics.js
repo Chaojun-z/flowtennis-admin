@@ -1220,6 +1220,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       feedbackCompleted: 0,
       feedbackRequired: 0,
       campusHours: new Map(),
+      teachingStudentKeys: new Set(),
       oldCustomerBase: 0,
       renewalCount: 0,
       courseMix: [
@@ -1246,6 +1247,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       feedbackCompleted: 0,
       feedbackRequired: 0,
       campusHours: new Map(),
+      teachingStudentKeys: new Set(),
       oldCustomerBase: 0,
       renewalCount: 0,
       courseMix: [
@@ -1259,7 +1261,10 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
     const hours = scheduleDurationHours(row);
     const companion = isCompanionSchedule(row);
     current.usedHours = round(current.usedHours + hours, 1);
-    if (!companion) current.teachingHours = round(current.teachingHours + hours, 1);
+    if (!companion) {
+      current.teachingHours = round(current.teachingHours + hours, 1);
+      scheduleStudentKeys(row).forEach(key => current.teachingStudentKeys.add(key));
+    }
     current.lessonCount += 1;
     const mixType = normalizeCoachCourseType(row);
     const mix = current.courseMix.find(item => item.type === mixType);
@@ -1288,6 +1293,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       feedbackCompleted: 0,
       feedbackRequired: 0,
       campusHours: new Map(),
+      teachingStudentKeys: new Set(),
       oldCustomerBase: 0,
       renewalCount: 0,
       courseMix: [
@@ -1338,6 +1344,8 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
     return {
       ...row,
       campusHours: undefined,
+      teachingStudentKeys: undefined,
+      teachingStudentCount: row.teachingStudentKeys?.size || 0,
       campusDistribution,
       campusDistributionText: campusDistribution.length ? campusDistribution.map(item => `${item.campusName} ${metricText(item.hours)}`).join(' | ') : '-',
       feedbackCompletionRate: rate(row.feedbackCompleted, row.feedbackRequired),

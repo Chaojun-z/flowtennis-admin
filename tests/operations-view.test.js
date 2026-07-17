@@ -520,9 +520,10 @@ assert.doesNotMatch(coachDashboardSource, /help:/, 'coach KPI cards should not d
 assert.match(coachDashboardSource, /operationsCoachChartHeader\('产值 × 工时利用率矩阵'[\s\S]*operationsCoachChartHeader\('转化 × 续费能力矩阵'/, 'coach chart headers should use compact title-only headers');
 assert.doesNotMatch(coachDashboardSource, /横轴越右越饱和|只在有体验\/续费基数时展示|柱子是归属实收|看团队整体是闲置|体验课、私教课、小班课按课时拆分/, 'coach chart cards should not render subtitles under titles');
 assert.match(coachDashboardSource, /renderOperationsCoachDetailTable\(rows\)/, 'coach page should render the coach workload detail table at the bottom');
-assert.match(coachDashboardSource, /教练课时详细统计[\s\S]*工作量\/教学课时[\s\S]*体验课[\s\S]*体验课转化率[\s\S]*课程类型分布[\s\S]*学员反馈[\s\S]*校区分布/, 'coach detail table should use the approved columns');
+assert.match(coachDashboardSource, /教练课时详细统计[\s\S]*教学课时\/人数[\s\S]*体验课\/体验课转化（人）[\s\S]*体验转化率[\s\S]*课程结构（课时）[\s\S]*课程反馈（课次）[\s\S]*校区结构（课时）/, 'coach detail table should use unit-explicit coach metric columns');
 assert.doesNotMatch(coachDashboardSource, /已反馈|未反馈|时间段/, 'coach detail table should merge feedback columns and remove time-band distribution');
-assert.match(operationsSource, /function operationsCoachUsedHoursCell[\s\S]*教学 \$\{fmt\(teachingHours\)\}[\s\S]*operationsCoachDetailChangeText\(row\.usedHoursComparison\)/, 'coach detail table should show work-hour change and teaching hours beside the main value');
+assert.match(operationsSource, /function operationsCoachUsedHoursCell[\s\S]*teachingStudentCount[\s\S]*\$\{fmt\(teachingHours\)\}课时 \/ \$\{fmt\(teachingStudentCount\)\}人[\s\S]*operationsCoachDetailChangeText\(row\.usedHoursComparison\)/, 'coach detail table should show teaching hours and unique student count in the main workload cell');
+assert.match(operationsSource, /function operationsCoachDetailChangeText[\s\S]*较上期[\s\S]*课时/, 'coach detail lesson-hour change should explicitly say it compares teaching hours');
 assert.doesNotMatch(operationsSource, /const icon = change > 0 \? '↑' : '↓'/, 'coach detail lesson-hour change should not use raw text arrows');
 assert.match(operationsSource, /function operationsCoachDetailTrendIcon[\s\S]*operations-coach-detail-icon/, 'coach detail lesson-hour change should render a standard inline icon');
 assert.match(operationsSource, /function operationsCoachFeedbackText[\s\S]*feedbackCompleted[\s\S]*feedbackRequired[\s\S]*\/\$\{fmt\(required\)\}/, 'coach detail table should render feedback as completed over required');

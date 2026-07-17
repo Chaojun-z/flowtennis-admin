@@ -753,24 +753,24 @@ function operationsCoachDetailTrendIcon(direction) {
 }
 
 function operationsCoachDetailChangeText(comparison = {}) {
-  if (!comparison || comparison.mode !== 'previous_period') return '<span class="operations-coach-detail-change muted">-</span>';
+  if (!comparison || comparison.mode !== 'previous_period') return '<span class="operations-coach-detail-change muted">较上期 -</span>';
   const change = Number(comparison.changeValue) || 0;
-  if (!change) return '<span class="operations-coach-detail-change muted">0</span>';
+  if (!change) return '<span class="operations-coach-detail-change muted">较上期 0课时</span>';
   const direction = change > 0 ? 'up' : 'down';
-  return `<span class="operations-coach-detail-change ${direction}">${operationsCoachDetailTrendIcon(direction)}<span>${fmt(Math.abs(change))}</span></span>`;
+  const sign = change > 0 ? '+' : '-';
+  return `<span class="operations-coach-detail-change ${direction}">${operationsCoachDetailTrendIcon(direction)}<span>较上期 ${sign}${fmt(Math.abs(change))}课时</span></span>`;
 }
 
 function operationsCoachUsedHoursCell(row = {}) {
-  const usedHours=Number(row.usedHours)||0;
-  const teachingHours=Number(row.teachingHours);
-  const teachingText=Number.isFinite(teachingHours)?`<small>教学 ${fmt(teachingHours)}</small>`:'';
-  return `<div class="operations-coach-detail-hours"><span>${fmt(usedHours)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}${teachingText}</div>`;
+  const teachingHours=Number(row.teachingHours)||0;
+  const teachingStudentCount=Number(row.teachingStudentCount)||0;
+  return `<div class="operations-coach-detail-hours"><span>${fmt(teachingHours)}课时 / ${fmt(teachingStudentCount)}人</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
 }
 
 function operationsCoachTrialText(row = {}) {
   const converted = Number(row.trialConverted) || 0;
   const total = Number(row.trialBase) || 0;
-  return total ? `${fmt(converted)} / ${fmt(total)}` : '-';
+  return total ? `${fmt(total)}/${fmt(converted)}` : '-';
 }
 
 function operationsCoachTrialRateCell(row = {}) {
@@ -816,7 +816,7 @@ function renderOperationsCoachDetailTable(rows = []) {
   return `<section class="operations-section operations-coach-detail-table">
     ${operationsCoachChartHeader('教练课时详细统计')}
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table">
-      <thead><tr><th>教练</th><th>工作量/教学课时</th><th>体验课</th><th>体验课转化率</th><th>课程类型分布</th><th>学员反馈</th><th>校区分布</th></tr></thead>
+      <thead><tr><th>教练</th><th>教学课时/人数</th><th>体验课/体验课转化（人）</th><th>体验转化率</th><th>课程结构（课时）</th><th>课程反馈（课次）</th><th>校区结构（课时）</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div></div>
   </section>`;

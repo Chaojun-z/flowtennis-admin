@@ -929,6 +929,7 @@ assert.strictEqual(coachDashboardMetrics.coach.rows.some(row => row.coach === 'C
 assert.strictEqual(coachA.availableHours, 27.4, 'coach available hours should use the real selected period up to today');
 assert.strictEqual(coachA.usedHours, 5.5, 'coach utilization should include scheduled and completed non-cancelled lessons plus companion work in the selected period');
 assert.strictEqual(coachA.teachingHours, 4.5, 'coach teaching hours should exclude companion work');
+assert.strictEqual(coachA.teachingStudentCount, 2, 'coach detail rows should expose selected-period unique teaching students');
 assert.strictEqual(coachA.feedbackCompleted, 1, 'coach detail rows should count completed feedback by schedule record');
 assert.strictEqual(coachA.feedbackRequired, 3, 'coach detail rows should count one required feedback per valid schedule record');
 assert.deepStrictEqual(
