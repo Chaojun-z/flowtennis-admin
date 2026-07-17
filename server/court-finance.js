@@ -49,16 +49,56 @@ function createCourtFinanceRules(deps={}){
     }
   }
 
+function scheduleStoredValueChargeSpecs(schedule){
+  if(!isBillableSchedule(schedule))return [];
+  const charges=[];
+  const lessonAmount=roundMoney(schedule?.paidAmount||schedule?.paymentAmount||0);
+  if(isDirectPaidSchedule(schedule)&&isStoredValuePayMethod(schedule?.payMethod||schedule?.paymentChannel)&&lessonAmount>0){
+    charges.push({
+      key:'lesson',
+      amount:lessonAmount,
+      courtIdField:'storedValueCourtId',
+      amountField:'storedValueAmount',
+      category:`排课${schedule?.courseType==='体验课'?(schedule.experienceType||'体验课'):(schedule?.courseType||'课程')}`,
+      sourceCategory:'排课储值卡扣款',
+      sourceProject:`${schedule?.courseType==='体验课'?(schedule.experienceType||'体验课'):(schedule?.courseType||'课程')} ${String(schedule?.startTime||'').replace('T',' ').slice(0,16)}`,
+      defaultNote:'排课产生的储值卡扣款',
+      consumeNote:'排课产生的储值卡扣款',
+      returnNote:'取消排课退回储值卡',
+      returnOriginalNote:'编辑排课退回原储值卡扣款',
+      consumeDiffNote:'编辑排课补扣储值卡',
+      returnDiffNote:'编辑排课退回储值卡差额'
+    });
+  }
+  const fieldFeeAmount=roundMoney(schedule?.fieldFeeAmount||0);
+  if(schedule?.requiresFieldFee&&isStoredValuePayMethod(schedule?.fieldFeePayMethod)&&fieldFeeAmount>0){
+    charges.push({
+      key:'fieldFee',
+      amount:fieldFeeAmount,
+      courtIdField:'storedValueFieldFeeCourtId',
+      amountField:'storedValueFieldFeeAmount',
+      category:'课程订场',
+      sourceCategory:'排课场地费储值卡扣款',
+      sourceProject:`排课场地费 ${String(schedule?.startTime||'').replace('T',' ').slice(0,16)}`,
+      defaultNote:'排课场地费储值卡扣款',
+      consumeNote:'场地费储值卡扣款',
+      returnNote:'取消排课退回场地费储值卡扣款',
+      returnOriginalNote:'编辑排课退回原场地费储值卡扣款',
+      consumeDiffNote:'编辑排课补扣场地费',
+      returnDiffNote:'编辑排课退回场地费差额'
+    });
+  }
+  return charges;
+}
 function scheduleStoredValuePaymentAmount(schedule){
-  if(!isBillableSchedule(schedule)||!isDirectPaidSchedule(schedule)||!isStoredValuePayMethod(schedule?.payMethod||schedule?.paymentChannel))return 0;
-  return roundMoney(schedule?.paidAmount||schedule?.paymentAmount||0);
+  return scheduleStoredValueChargeSpecs(schedule).reduce((sum,item)=>roundMoney(sum+item.amount),0);
 }
 function activeCourtForStoredValue(court){
   const status=String(court?.status||'active');
   return court&&status!=='inactive'&&status!=='deleted'&&!court.deletedAt&&!court.mergedIntoCourtId;
 }
-function resolveScheduleStoredValueCourt(schedule,courts=[],students=[]){
-  const storedCourtId=String(schedule?.storedValueCourtId||'').trim();
+function resolveScheduleStoredValueCourt(schedule,courts=[],students=[],charge={}){
+  const storedCourtId=String(schedule?.[charge.courtIdField||'storedValueCourtId']||'').trim();
   if(storedCourtId){
     const court=(courts||[]).find(item=>String(item?.id||'')===storedCourtId&&activeCourtForStoredValue(item));
     if(court)return court;
@@ -78,10 +118,13 @@ function resolveScheduleStoredValueCourt(schedule,courts=[],students=[]){
   if(!rows.length)throw new Error('未找到该学员的会员储值卡');
   return rows.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')))[0];
 }
-function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount=0,now=new Date().toISOString(),operator='',operationTrace=null,note='',idSuffix='consume'}={}){
+function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount=0,now=new Date().toISOString(),operator='',operationTrace=null,note='',idSuffix='consume',charge=null}={}){
   const courseLabel=schedule?.courseType==='体验课'?(schedule.experienceType||'体验课'):(schedule?.courseType||'课程');
   const historyId=`schedule-stored-${schedule.id}-${idSuffix}`;
   const occurredDate=String(schedule?.startTime||now).slice(0,10);
+  const category=charge?.category||`排课${courseLabel}`;
+  const sourceCategory=charge?.sourceCategory||'排课储值卡扣款';
+  const sourceProject=charge?.sourceProject||`${courseLabel} ${String(schedule?.startTime||'').replace('T',' ').slice(0,16)}`;
   const row=withOperationTrace({
     id:historyId,
     date:occurredDate,
@@ -91,19 +134,19 @@ function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount
     type,
     transactionType:type==='冲正'?'冲正':'消耗',
     businessTypeLevel1:'课程',
-    businessTypeLevel2:courseLabel,
-    category:`排课${courseLabel}`,
-    sourceCategory:'排课储值卡扣款',
+    businessTypeLevel2:charge?.key==='fieldFee'?'课程订场':courseLabel,
+    category,
+    sourceCategory,
     sourceType:'schedule',
     sourceDocument:`排课 ${schedule.id}`,
-    sourceProject:`${courseLabel} ${String(schedule?.startTime||'').replace('T',' ').slice(0,16)}`,
+    sourceProject,
     scheduleId:schedule.id,
     studentId:parseArr(schedule?.studentIds)[0]||'',
     studentName:schedule?.studentName||'',
     payMethod:'储值卡',
     normalizedPaymentMethod:businessTaxonomy.normalizePaymentMethod('储值卡'),
     amount:roundMoney(amount),
-    note:note||'排课产生的储值卡扣款',
+    note:note||charge?.defaultNote||'排课产生的储值卡扣款',
     startTime:schedule?.startTime||'',
     endTime:schedule?.endTime||'',
     venue:schedule?.venue||'',
@@ -115,22 +158,20 @@ function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount
   return row;
 }
 function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule=null,courts=[],students=[],now=new Date().toISOString(),operator='',operationTrace=null}={}){
-  const previousAmount=scheduleStoredValuePaymentAmount(previousSchedule);
-  const nextAmount=scheduleStoredValuePaymentAmount(nextSchedule);
   const next={...(nextSchedule||{})};
-  if(!previousAmount&&!nextAmount){
+  const previousCharges=scheduleStoredValueChargeSpecs(previousSchedule);
+  const nextCharges=scheduleStoredValueChargeSpecs(nextSchedule);
+  const keys=[...new Set([...previousCharges.map(item=>item.key),...nextCharges.map(item=>item.key)])];
+  if(next.storedValueCourtId===undefined)next.storedValueCourtId='';
+  if(next.storedValueAmount===undefined)next.storedValueAmount=0;
+  if(next.storedValueFieldFeeCourtId===undefined)next.storedValueFieldFeeCourtId='';
+  if(next.storedValueFieldFeeAmount===undefined)next.storedValueFieldFeeAmount=0;
+  if(!keys.length){
     next.storedValueCourtId='';
     next.storedValueAmount=0;
+    next.storedValueFieldFeeCourtId='';
+    next.storedValueFieldFeeAmount=0;
     return {schedule:next,court:null,courts:[],originalCourts:[],historyRows:[]};
-  }
-  const previousCourt=previousAmount?resolveScheduleStoredValueCourt(previousSchedule,courts,students):null;
-  const nextCourt=nextAmount?resolveScheduleStoredValueCourt(next,courts,students):null;
-  if(nextAmount){
-    next.storedValueCourtId=nextCourt.id;
-    next.storedValueAmount=nextAmount;
-  }else{
-    next.storedValueCourtId='';
-    next.storedValueAmount=0;
   }
   const updates=new Map();
   const originals=new Map();
@@ -143,56 +184,76 @@ function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule
     updates.set(court.id,current);
     historyRows.push(row);
   };
-  if(previousAmount&&(!nextAmount||previousCourt.id!==nextCourt.id)){
-    addRow(previousCourt,buildScheduleStoredValueHistoryRow(previousSchedule,{
-      court:previousCourt,
-      type:'冲正',
-      amount:previousAmount,
-      now,
-      operator,
-      operationTrace,
-      note:nextAmount?'编辑排课退回原储值卡扣款':'取消排课退回储值卡',
-      idSuffix:`return-${operationTrace?.operationId||now}`
-    }));
-  }
-  if(nextAmount&&(!previousAmount||previousCourt.id!==nextCourt.id)){
-    addRow(nextCourt,buildScheduleStoredValueHistoryRow(next,{
-      court:nextCourt,
-      type:'消费',
-      amount:nextAmount,
-      now,
-      operator,
-      operationTrace,
-      note:'排课产生的储值卡扣款',
-      idSuffix:`consume-${operationTrace?.operationId||now}`
-    }));
-  }
-  if(previousAmount&&nextAmount&&previousCourt.id===nextCourt.id){
-    const diff=roundMoney(nextAmount-previousAmount);
-    if(diff>0){
-      addRow(nextCourt,buildScheduleStoredValueHistoryRow(next,{
-        court:nextCourt,
-        type:'消费',
-        amount:diff,
-        now,
-        operator,
-        operationTrace,
-        note:'编辑排课补扣储值卡',
-        idSuffix:`consume-diff-${operationTrace?.operationId||now}`
-      }));
-    }else if(diff<0){
+  keys.forEach(key=>{
+    const previousCharge=previousCharges.find(item=>item.key===key)||null;
+    const nextCharge=nextCharges.find(item=>item.key===key)||null;
+    const previousAmount=roundMoney(previousCharge?.amount||0);
+    const nextAmount=roundMoney(nextCharge?.amount||0);
+    const charge=nextCharge||previousCharge;
+    const previousCourt=previousAmount?resolveScheduleStoredValueCourt(previousSchedule,courts,students,previousCharge):null;
+    const nextCourt=nextAmount?resolveScheduleStoredValueCourt(next,courts,students,nextCharge):null;
+    if(nextCharge&&nextCourt){
+      next[nextCharge.courtIdField]=nextCourt.id;
+      next[nextCharge.amountField]=nextAmount;
+    }else if(charge){
+      next[charge.courtIdField]='';
+      next[charge.amountField]=0;
+    }
+    if(previousAmount&&(!nextAmount||previousCourt.id!==nextCourt.id)){
       addRow(previousCourt,buildScheduleStoredValueHistoryRow(previousSchedule,{
         court:previousCourt,
         type:'冲正',
-        amount:Math.abs(diff),
+        amount:previousAmount,
         now,
         operator,
         operationTrace,
-        note:'编辑排课退回储值卡差额',
-        idSuffix:`return-diff-${operationTrace?.operationId||now}`
+        note:nextAmount?previousCharge.returnOriginalNote:previousCharge.returnNote,
+        idSuffix:`${key}-return-${operationTrace?.operationId||now}`,
+        charge:previousCharge
       }));
     }
-  }
+    if(nextAmount&&(!previousAmount||previousCourt.id!==nextCourt.id)){
+      addRow(nextCourt,buildScheduleStoredValueHistoryRow(next,{
+        court:nextCourt,
+        type:'消费',
+        amount:nextAmount,
+        now,
+        operator,
+        operationTrace,
+        note:nextCharge.consumeNote,
+        idSuffix:`${key}-consume-${operationTrace?.operationId||now}`,
+        charge:nextCharge
+      }));
+    }
+    if(previousAmount&&nextAmount&&previousCourt.id===nextCourt.id){
+      const diff=roundMoney(nextAmount-previousAmount);
+      if(diff>0){
+        addRow(nextCourt,buildScheduleStoredValueHistoryRow(next,{
+          court:nextCourt,
+          type:'消费',
+          amount:diff,
+          now,
+          operator,
+          operationTrace,
+          note:nextCharge.consumeDiffNote,
+          idSuffix:`${key}-consume-diff-${operationTrace?.operationId||now}`,
+          charge:nextCharge
+        }));
+      }else if(diff<0){
+        addRow(previousCourt,buildScheduleStoredValueHistoryRow(previousSchedule,{
+          court:previousCourt,
+          type:'冲正',
+          amount:Math.abs(diff),
+          now,
+          operator,
+          operationTrace,
+          note:previousCharge.returnDiffNote,
+          idSuffix:`${key}-return-diff-${operationTrace?.operationId||now}`,
+          charge:previousCharge
+        }));
+      }
+    }
+  });
   const updatedCourts=[...updates.values()].map(court=>{
     computeCourtFinance(court);
     return {...court,updatedAt:now};

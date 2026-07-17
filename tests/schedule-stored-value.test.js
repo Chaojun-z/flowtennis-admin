@@ -121,4 +121,83 @@ assert.strictEqual(storedValueRows[0].deferredRevenueDelta, -224);
 assert.strictEqual(storedValueRows[0].paymentChannel, '储值卡');
 assert.strictEqual(storedValueRows[0].businessType, '课程');
 
+const fieldFeeSchedule = {
+  ...schedule,
+  id: 'sch-field-fee',
+  settlementType: 'direct',
+  payMethod: '微信',
+  paidAmount: 300,
+  requiresFieldFee: true,
+  fieldFeeAmount: 126,
+  fieldFeePayMethod: '储值卡',
+  fieldFeeNote: '陪打场地费'
+};
+
+const fieldFeeCreated = rules.buildScheduleStoredValueCourtUpdate({
+  previousSchedule: null,
+  nextSchedule: fieldFeeSchedule,
+  courts: [baseCourt],
+  students: [student],
+  now,
+  operator: '管理员',
+  operationTrace: { ...trace, operationId: 'op-field-create', batchId: 'batch-op-field-create' }
+});
+assert.strictEqual(fieldFeeCreated.schedule.storedValueAmount, 0, 'wechat lesson fee should not consume stored value');
+assert.strictEqual(fieldFeeCreated.schedule.storedValueFieldFeeCourtId, 'court-1');
+assert.strictEqual(fieldFeeCreated.schedule.storedValueFieldFeeAmount, 126);
+assert.strictEqual(fieldFeeCreated.historyRows.length, 1);
+assert.strictEqual(fieldFeeCreated.historyRows[0].type, '消费');
+assert.strictEqual(fieldFeeCreated.historyRows[0].category, '课程订场');
+assert.strictEqual(fieldFeeCreated.historyRows[0].amount, 126);
+assert.match(fieldFeeCreated.historyRows[0].note, /场地费.*储值卡扣款/);
+assert.strictEqual(rules.computeCourtFinance(fieldFeeCreated.court).balance, 1154);
+
+const fieldFeeEditedUp = rules.buildScheduleStoredValueCourtUpdate({
+  previousSchedule: fieldFeeCreated.schedule,
+  nextSchedule: { ...fieldFeeCreated.schedule, fieldFeeAmount: 160 },
+  courts: [fieldFeeCreated.court],
+  students: [student],
+  now: '2026-06-11 11:30:00',
+  operator: '管理员',
+  operationTrace: { ...trace, operationId: 'op-field-edit-up', batchId: 'batch-op-field-edit-up' }
+});
+assert.strictEqual(fieldFeeEditedUp.historyRows.length, 1);
+assert.strictEqual(fieldFeeEditedUp.historyRows[0].type, '消费');
+assert.strictEqual(fieldFeeEditedUp.historyRows[0].amount, 34);
+assert.match(fieldFeeEditedUp.historyRows[0].note, /编辑排课补扣场地费/);
+assert.strictEqual(rules.computeCourtFinance(fieldFeeEditedUp.court).balance, 1120);
+
+const fieldFeeEditedDown = rules.buildScheduleStoredValueCourtUpdate({
+  previousSchedule: fieldFeeEditedUp.schedule,
+  nextSchedule: { ...fieldFeeEditedUp.schedule, fieldFeeAmount: 120 },
+  courts: [fieldFeeEditedUp.court],
+  students: [student],
+  now: '2026-06-11 11:45:00',
+  operator: '管理员',
+  operationTrace: { ...trace, operationId: 'op-field-edit-down', batchId: 'batch-op-field-edit-down' }
+});
+assert.strictEqual(fieldFeeEditedDown.historyRows.length, 1);
+assert.strictEqual(fieldFeeEditedDown.historyRows[0].type, '冲正');
+assert.strictEqual(fieldFeeEditedDown.historyRows[0].amount, 40);
+assert.match(fieldFeeEditedDown.historyRows[0].note, /编辑排课退回场地费差额/);
+assert.strictEqual(rules.computeCourtFinance(fieldFeeEditedDown.court).balance, 1160);
+
+const fieldFeeFinanceRows = rules.buildFinanceUnifiedRows({
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
+  students: [student],
+  courts: [fieldFeeCreated.court],
+  schedule: [fieldFeeCreated.schedule]
+}).filter(row => row.sourceDocument === '排课 sch-field-fee');
+const fieldFeeLessonIncome = fieldFeeFinanceRows.find(row => row.businessType === '课程');
+const fieldFeeStoredConsumption = fieldFeeFinanceRows.find(row => row.debitTarget === '会员储值余额');
+assert.ok(fieldFeeLessonIncome, 'wechat lesson fee should still create a direct course income row');
+assert.strictEqual(fieldFeeLessonIncome.cashDelta, 300);
+assert.strictEqual(fieldFeeLessonIncome.recognizedRevenueDelta, 300);
+assert.ok(fieldFeeStoredConsumption, 'stored-value field fee should create a member balance consumption row');
+assert.strictEqual(fieldFeeStoredConsumption.cashDelta, 0);
+assert.strictEqual(fieldFeeStoredConsumption.recognizedRevenueDelta, 126);
+assert.strictEqual(fieldFeeStoredConsumption.deferredRevenueDelta, -126);
+assert.strictEqual(fieldFeeStoredConsumption.paymentChannel, '储值卡');
+assert.strictEqual(fieldFeeStoredConsumption.businessType, '会员订场');
+
 console.log('schedule stored value tests passed');

@@ -1056,12 +1056,12 @@ function assertScheduleFieldFeeInput(schedule){
   if(!schedule?.requiresFieldFee)return;
   const amount=roundMoney(schedule.fieldFeeAmount||0);
   if(amount<=0)return;
-  if(!String(schedule.fieldFeePayMethod||'').trim())throw new Error('请选择场地费支付方式');
-  if(['储值扣款','课包划扣','大众点评券码','抖音券码','其他'].includes(String(schedule.fieldFeePayMethod||'').trim()))throw new Error('场地费支付方式不可用');
+  const method=String(schedule.fieldFeePayMethod||'').trim();
+  if(!method)throw new Error('请选择场地费支付方式');if(['课包划扣','大众点评券码','抖音券码','其他'].includes(method))throw new Error('场地费支付方式不可用');
 }
 function buildScheduleFieldFeeFinancialLedger(schedule,user={},now=new Date().toISOString()){
   const amount=roundMoney(schedule?.fieldFeeAmount||0);
-  if(!schedule?.requiresFieldFee||amount<=0)return null;
+  if(!schedule?.requiresFieldFee||amount<=0||isStoredValuePayMethod(schedule.fieldFeePayMethod))return null;
   return {
     id:`schedule-field-fee-${schedule.id}`,
     ledgerType:'schedule_field_fee',

@@ -299,7 +299,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       debitTarget:'直接收款'
     };
   });
-  const scheduleFieldFeeRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&roundMoney(item.fieldFeeAmount)>0).map(item=>{
+  const scheduleFieldFeeRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&!isStoredValuePayMethod(item.fieldFeePayMethod)&&roundMoney(item.fieldFeeAmount)>0).map(item=>{
     const amount=roundMoney(item.fieldFeeAmount);
     const businessDate=financeBusinessDateTime(item.startTime,item.fieldFeePaidAt,item.fieldFeePaymentTime,item.paidAt,item.paymentTime,item.createdAt);
     const operator=operatorText(item.fieldFeeOperator,item.operator,item.createdBy,item.updatedBy);

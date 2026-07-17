@@ -199,7 +199,7 @@ function standardCourseTypeFilterValue(row={}){
 }
 function experienceTypeOptions(){return EXPERIENCE_TYPES.map(t=>({value:t,label:t}));}
 function payMethodOptions(){return PAY_METHODS.map(t=>({value:t,label:t}));}
-function courseSurchargePayMethodOptions(){return payMethodOptions().filter(option=>!['储值扣款','课包划扣','大众点评券码','抖音券码','其他'].includes(option.value));}
+function courseSurchargePayMethodOptions(){return payMethodOptions().filter(option=>!['课包划扣','大众点评券码','抖音券码','其他'].includes(option.value));}
 function normalizeExperienceType(value='',fallback='私教体验课'){
   const raw=String(value||'').trim();
   if(EXPERIENCE_TYPES.includes(raw))return raw;
