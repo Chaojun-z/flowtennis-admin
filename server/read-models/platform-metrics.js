@@ -760,7 +760,8 @@ function lifecycleInScope(row = {}, scope = 'all') {
 
 function lifecycleLeadStage(row = {}, lead = {}) {
   const studentStage = text(row.studentStage);
-  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal';
+  const hasCourseRosterConversion = !!row.hasCourseStudentEntry && !row.hasFreeCourseFollowup;
+  const hasCourse = !!row.hasCourseConversion || hasCourseRosterConversion || studentStage === 'formal';
   const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage));
   const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member';
   const hasCompanion = !!row.hasCompanionConversion;
@@ -786,7 +787,8 @@ function lifecycleLeadStage(row = {}, lead = {}) {
 function lifecycleDealType(row = {}, lead = {}) {
   const ignoreLegacyOutcome = shouldIgnoreLegacyLeadOutcome(row, lead);
   const manualStage = manualLeadOutcomeStage(lead);
-  const hasConvertedFact = !!row.hasCourseConversion || !!row.hasBookingConversion || !!row.hasMembershipConversion || !!row.hasCompanionConversion || text(row.studentStage) === 'formal' || ['booking', 'member'].includes(text(row.courtStage));
+  const hasCourseRosterConversion = !!row.hasCourseStudentEntry && !row.hasFreeCourseFollowup;
+  const hasConvertedFact = !!row.hasCourseConversion || hasCourseRosterConversion || !!row.hasBookingConversion || !!row.hasMembershipConversion || !!row.hasCompanionConversion || text(row.studentStage) === 'formal' || ['booking', 'member'].includes(text(row.courtStage));
   const allowStoredDeal = !ignoreLegacyOutcome && (hasConvertedFact || manualStage === '已成交');
   const stored = allowStoredDeal ? normalizeLifecycleDealType(lead.dealType || lead.conversionType || row.dealType) : '';
   if (stored) return stored;
@@ -799,7 +801,7 @@ function lifecycleDealType(row = {}, lead = {}) {
     lead.statusAfter
   ].filter(Boolean).join(' ')) : '';
   const studentStage = text(row.studentStage);
-  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal' || (allowStoredDeal && !!text(lead.studentId || lead.formalStudentId || lead.courseStudentId)) || /课程|课包|报名|私教|小班/.test(legacyText);
+  const hasCourse = !!row.hasCourseConversion || hasCourseRosterConversion || studentStage === 'formal' || (allowStoredDeal && !!text(lead.studentId || lead.formalStudentId || lead.courseStudentId)) || /课程|课包|报名|私教|小班/.test(legacyText);
   const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage)) || (allowStoredDeal && !!text(lead.courtId || lead.bookingCourtId)) || /订场|定场|场地/.test(legacyText);
   const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member' || (allowStoredDeal && !!text(lead.membershipAccountId || lead.memberId)) || /会员|储值/.test(legacyText);
   const hasCompanion = !!row.hasCompanionConversion || /陪打/.test(legacyText);

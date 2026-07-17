@@ -1078,8 +1078,8 @@ function leadCompanionScheduleSeed(lead){
     sourceLeadId:lead?.id||'',
     sourceLeadName:leadDisplayName(lead),
     studentName:leadDisplayName(lead),
-    studentIds:[],
-    expectedStudentIds:[],
+    studentIds:lead?.studentId?[lead.studentId]:[],
+    expectedStudentIds:lead?.studentId?[lead.studentId]:[],
     settlementType:'gift',
     lessonCount:1,
     campus:lead?.campus||lead?.campusName||''
@@ -1155,7 +1155,28 @@ function leadPurchasePackageActionHtml(lead){
   if(leadHasFormalPackage(lead)){
     return `<div class="schedule-detail-field"><div class="schedule-detail-label">课包信息</div><div class="schedule-detail-value lead-linked-account-value"><span>已购课包：${esc(leadFormalPackageText(lead))}</span></div></div>`;
   }
-  return `<div class="schedule-detail-field"><div class="schedule-detail-label">课包状态</div><div class="schedule-detail-value lead-linked-account-value"><span>已关联学员但未买课包</span><span class="lead-inline-actions">${leadInlineActionHtml('去购买课包',`openLeadPurchasePackage('${lead.id}')`)}</span></div></div>`;
+  return `<div class="schedule-detail-field"><div class="schedule-detail-label">课包状态</div><div class="schedule-detail-value lead-linked-account-value"><span>已关联学员但未买课包</span><span class="lead-inline-actions">${leadInlineActionHtml('去购买课包',`openLeadPurchasePackage('${lead.id}')`)}${leadInlineActionHtml('直接排课',`openLeadStudentSchedule('${lead.id}')`)}</span></div></div>`;
+}
+function leadStudentScheduleSeed(lead){
+  return {
+    courseType:'私教课',
+    standardCourseType:'私教课',
+    scheduleSource:'线索课程',
+    sourceLeadId:lead?.id||'',
+    sourceLeadName:leadDisplayName(lead),
+    studentName:leadDisplayName(lead),
+    studentIds:lead?.studentId?[lead.studentId]:[],
+    expectedStudentIds:lead?.studentId?[lead.studentId]:[],
+    settlementType:'single',
+    lessonCount:1,
+    campus:lead?.campus||lead?.campusName||''
+  };
+}
+function openLeadStudentSchedule(leadId){
+  const lead=leadById(leadId);
+  if(!lead?.studentId){toast('请先关联学员','warn');return;}
+  if(typeof openScheduleModal!=='function'){toast('排课模块尚未加载','warn');return;}
+  openScheduleModal('',leadStudentScheduleSeed(lead));
 }
 async function openLeadPurchasePackage(leadId){
   const lead=leads.find(item=>String(item?.id||'')===String(leadId));

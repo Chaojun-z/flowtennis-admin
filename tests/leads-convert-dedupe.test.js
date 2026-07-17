@@ -148,9 +148,9 @@ async function main() {
   const shellStudentLead = listRes.body.find((row) => row.displayName === '学生壳');
   assert.ok(shellStudentLead, '有学生壳但没有购课/排课事实的倒推线索仍应出现在列表，方便后续人工处理');
   assert.strictEqual(shellStudentLead.leadDate, '', '学生壳没有业务事实时不能用合成线索 createdAt 显示为 6 月 26');
-  assert.strictEqual(shellStudentLead.leadStage, '跟进中', '学生壳没有业务事实时不能显示已成交');
-  assert.strictEqual(shellStudentLead.dealType, '', '学生壳没有业务事实时不能显示已成交课程');
-  assert.strictEqual(shellStudentLead.studentId, '', '线索主表没有 studentId 时，生命周期同名或历史 sourceLeadId 不能伪装成已关联学员');
+  assert.strictEqual(shellStudentLead.leadStage, '已成交', '已成交课程线索即使还没购课/排课，也应保留成交阶段');
+  assert.strictEqual(shellStudentLead.dealType, '课程', '已成交课程线索应保留课程成交类型');
+  assert.strictEqual(shellStudentLead.studentId, 'student-shell', '已成交课程线索应补齐学员身份，后续才能排课');
   assert.ok(!String(materializedStudentLead.id).startsWith('student:'), '线索池列表不能把 student: 临时 ID 暴露给编辑保存');
   assert.ok(
     writes.some((item) => item.table === 'ft_leads' && item.id === 'lead-from-student-student-2' && item.row.studentId === 'student-2' && item.row.leadDate === '2026-04-15' && item.row.profileNote === ''),

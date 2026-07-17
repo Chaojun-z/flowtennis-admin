@@ -645,7 +645,7 @@ const {
 }=membershipRules;
 const routeSendJson=(...args)=>{sendJson(...args);return true;};
 const handleLeadsRoutes=createLeadsRoutes({
-  init,sendJson:routeSendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,
+  init,sendJson:routeSendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
   cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
   LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
   normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,

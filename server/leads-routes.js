@@ -4,7 +4,7 @@ const { buildLeadPoolRows } = require('./read-models/platform-metrics.js');
 
 function createLeadsRoutes(deps={}){
   const {
-    init,sendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,
+    init,sendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
     cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
     LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
     normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
@@ -31,6 +31,145 @@ function createLeadsRoutes(deps={}){
     const next=lifecycleSourcePatch(row,lead,now);
     if(!next)return row;
     await put(table,next.id,next);
+    return next;
+  }
+
+  function leadDealParts(lead={}){
+    const deal=cleanLeadText(lead.dealType||lead.conversionType);
+    return new Set(deal.split('+').map(cleanLeadText).filter(Boolean));
+  }
+
+  function leadHasConvertedDeal(lead={}){
+    const stage=cleanLeadText(lead.leadStage||lead.systemStatus||lead.rawStatus||lead.status);
+    if(/未成交|未转化/.test(stage))return false;
+    return stage==='已成交'&&leadDealParts(lead).size>0;
+  }
+
+  function fallbackId(prefix,lead={},linkedId=''){
+    const source=cleanLeadText(lead.id||linkedId||Date.now());
+    return `${prefix}-${source.replace(/[^a-zA-Z0-9_-]/g,'-')}`;
+  }
+
+  async function ensureDealStudent(lead={},now,preferredStudentId=''){
+    if(!T_STUDENTS)return {student:null,created:false};
+    if(cleanLeadText(lead.studentId)){
+      let student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
+      if(student)student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
+      return {student,created:false};
+    }
+    let student=preferredStudentId?await get(T_STUDENTS,preferredStudentId).catch(()=>null):null;
+    if(!student){
+      const studentMatch=matchLeadToStudent?matchLeadToStudent(lead,await scan(T_STUDENTS).catch(()=>[])):{matchType:'none',record:null};
+      student=studentMatch.record||null;
+    }
+    let created=false;
+    if(!student){
+      student=buildLeadStudentRecord(lead,{now});
+      await put(T_STUDENTS,student.id,student);
+      created=true;
+    }
+    student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
+    return {student,created};
+  }
+
+  async function ensureDealCourt(lead={},now,{studentId='',preferredCourtId=''}={}){
+    if(!T_COURTS)return {court:null,created:false};
+    if(cleanLeadText(lead.courtId)){
+      let court=await get(T_COURTS,lead.courtId).catch(()=>null);
+      if(court)court=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
+      return {court,created:false};
+    }
+    let court=preferredCourtId?await get(T_COURTS,preferredCourtId).catch(()=>null):null;
+    if(!court){
+      const courtRows=(await scan(T_COURTS).catch(()=>[])).filter(row=>String(row.status||'active')!=='inactive');
+      const courtMatch=matchLeadToCourt?matchLeadToCourt(lead,courtRows):{matchType:'none',record:null};
+      court=courtMatch.record||null;
+    }
+    let created=false;
+    if(!court){
+      court=buildLeadCourtRecord(lead,{studentId,now});
+      await put(T_COURTS,court.id,court);
+      created=true;
+    }
+    court=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
+    return {court,created};
+  }
+
+  function buildLeadMembershipAccountRecord(lead={},court={},now){
+    const id=(typeof uuidv4==='function'?uuidv4():fallbackId('membership-from-lead',lead,court.id));
+    return {
+      id,
+      courtId:cleanLeadText(court.id||court.courtId),
+      courtName:cleanLeadText(court.name||court.courtName||lead.displayName||lead.wechatName),
+      phone:cleanLeadText(court.phone||lead.phone),
+      status:'active',
+      sourceLeadId:cleanLeadText(lead.id),
+      memberLabel:'线索成交待开卡',
+      createdAt:now,
+      updatedAt:now
+    };
+  }
+
+  async function ensureDealMembershipAccount(lead={},court={},now){
+    if(!T_MEMBERSHIP_ACCOUNTS||!cleanLeadText(court?.id))return {membershipAccount:null,created:false};
+    const rows=await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]);
+    let membershipAccount=(rows||[]).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
+    if(membershipAccount){
+      membershipAccount=await ensureLifecycleSourceLink(T_MEMBERSHIP_ACCOUNTS,membershipAccount,lead,now);
+      return {membershipAccount,created:false};
+    }
+    membershipAccount=buildLeadMembershipAccountRecord(lead,court,now);
+    await put(T_MEMBERSHIP_ACCOUNTS,membershipAccount.id,membershipAccount);
+    return {membershipAccount,created:true};
+  }
+
+  async function materializeLeadConversionIdentities(lead={},options={}){
+    if(!lead?.id||!leadHasConvertedDeal(lead))return {lead,student:null,court:null,membershipAccount:null,created:{student:false,court:false,membershipAccount:false},changed:false};
+    const parts=leadDealParts(lead);
+    const needsStudent=parts.has('课程')||parts.has('陪打');
+    const needsCourt=parts.has('订场')||parts.has('订场会员');
+    const needsMembership=parts.has('订场会员');
+    if(!needsStudent&&!needsCourt&&!needsMembership)return {lead,student:null,court:null,membershipAccount:null,created:{student:false,court:false,membershipAccount:false},changed:false};
+    const now=options.now||new Date().toISOString();
+    let nextLead={...lead};
+    let student=null,court=null,membershipAccount=null;
+    const created={student:false,court:false,membershipAccount:false};
+    if(needsStudent){
+      const result=await ensureDealStudent(nextLead,now,options.studentId||'');
+      student=result.student;
+      created.student=result.created;
+      if(student?.id)nextLead={...nextLead,studentId:student.id};
+    }
+    if(needsCourt){
+      const result=await ensureDealCourt(nextLead,now,{studentId:nextLead.studentId||'',preferredCourtId:options.courtId||''});
+      court=result.court;
+      created.court=result.created;
+      if(court?.id)nextLead={...nextLead,courtId:court.id};
+    }
+    if(needsMembership&&court?.id){
+      const result=await ensureDealMembershipAccount(nextLead,court,now);
+      membershipAccount=result.membershipAccount;
+      created.membershipAccount=result.created;
+      if(membershipAccount?.id)nextLead={...nextLead,membershipAccountId:membershipAccount.id};
+    }
+    const normalized=normalizeLeadRecord({
+      ...nextLead,
+      isCourseConverted:nextLead.isCourseConverted===true||needsStudent,
+      isCourtConverted:nextLead.isCourtConverted===true||needsCourt,
+      isMembershipConverted:nextLead.isMembershipConverted===true||!!nextLead.membershipAccountId,
+      createdAt:lead.createdAt
+    },{id:lead.id,now});
+    const changed=['studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted'].some(key=>String(normalized[key]??'')!==String(lead[key]??''));
+    if(changed)await put(T_LEADS,lead.id,normalized);
+    return {lead:normalized,student,court,membershipAccount,created,changed};
+  }
+
+  async function materializeLeadConversionRows(leads=[]){
+    const next=[];
+    for(const lead of leads||[]){
+      const result=await materializeLeadConversionIdentities(lead);
+      next.push(result.lead);
+    }
     return next;
   }
 
@@ -138,7 +277,7 @@ function createLeadsRoutes(deps={}){
       T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([]),
       T_MEMBERSHIP_ORDERS?getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
     ]);
-    let mergedLeads=mergeDuplicateLeadRows(applyCurrentLeadSnapshots(leads,followups));
+    let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(leads,followups)));
     let customerLifecycleRows=buildCustomerLifecycleRows({
       leads:mergedLeads,
       students,
@@ -219,13 +358,15 @@ function createLeadsRoutes(deps={}){
         const sameName=mergeDuplicateLeadRows(existingLeads).find(row=>leadCanonicalNameKey(row)===leadCanonicalNameKey(lead));
         if(sameName){
           const next=mergeLeadRows([sameName,{...lead,id:sameName.id,createdAt:sameName.createdAt,leadDate:sameName.leadDate,updatedAt:now}]);
-          await put(T_LEADS,next.id,next);
-          return sendJson(res,{lead:next,followup:null,merged:true});
+          const materialized=await materializeLeadConversionIdentities(next,{now});
+          if(!materialized.changed)await put(T_LEADS,next.id,next);
+          return sendJson(res,{lead:materialized.lead,followup:null,merged:true});
         }
-        await put(T_LEADS,lead.id,lead);
+        const materialized=await materializeLeadConversionIdentities(lead,{now});
+        if(!materialized.changed)await put(T_LEADS,lead.id,lead);
         const followup=body.createInitialFollowup===false?null:buildLeadInitialFollowup(lead);
         if(followup)await put(T_LEAD_FOLLOWUPS,followup.id,followup);
-        return sendJson(res,{lead,followup});
+        return sendJson(res,{lead:materialized.lead,followup});
       }
     }
     const leadIdM=path.match(/^\/leads\/([^/]+)$/);
@@ -237,10 +378,12 @@ function createLeadsRoutes(deps={}){
         await init();
         const old=await get(T_LEADS,leadId).catch(()=>null);
         if(!old)return sendJson(res,{error:'线索不存在'},404);
-        const normalized=normalizeLeadRecord({...old,...body,id:leadId,createdAt:old.createdAt},{now:new Date().toISOString()});
+        const now=new Date().toISOString();
+        const normalized=normalizeLeadRecord({...old,...body,id:leadId,createdAt:old.createdAt},{now});
         const next=await applyPersistedLeadSnapshot(normalized);
-        await put(T_LEADS,leadId,next);
-        return sendJson(res,next);
+        const materialized=await materializeLeadConversionIdentities(next,{now});
+        if(!materialized.changed)await put(T_LEADS,leadId,next);
+        return sendJson(res,materialized.lead);
       }
     }
     const leadFollowupIdM=path.match(/^\/lead-followups\/([^/]+)$/);
@@ -255,12 +398,14 @@ function createLeadsRoutes(deps={}){
         const leadId=cleanLeadText(oldFollowup.leadId);
         const lead=await get(T_LEADS,leadId).catch(()=>null);
         if(!lead)return sendJson(res,{error:'线索不存在'},404);
-        const followup=normalizeLeadFollowupRecord({...oldFollowup,...body,id:followupId,leadId,createdAt:oldFollowup.createdAt},{now:new Date().toISOString()});
+        const now=new Date().toISOString();
+        const followup=normalizeLeadFollowupRecord({...oldFollowup,...body,id:followupId,leadId,createdAt:oldFollowup.createdAt},{now});
         await put(T_LEAD_FOLLOWUPS,followupId,followup);
         const rows=(await scan(T_LEAD_FOLLOWUPS).catch(()=>[])).filter(row=>String(row.leadId||'')===String(leadId)).map(row=>String(row.id||'')===String(followupId)?followup:row);
         const nextLead=applyLeadFollowupsSnapshot(lead,rows);
-        await put(T_LEADS,leadId,nextLead);
-        return sendJson(res,{followup,lead:nextLead});
+        const materialized=await materializeLeadConversionIdentities(nextLead,{now});
+        if(!materialized.changed)await put(T_LEADS,leadId,nextLead);
+        return sendJson(res,{followup,lead:materialized.lead});
       }
     }
     const leadFollowupsM=path.match(/^\/leads\/([^/]+)\/followups$/);
@@ -278,11 +423,13 @@ function createLeadsRoutes(deps={}){
         return sendJson(res,rows);
       }
       if(method==='POST'){
-        const followup=normalizeLeadFollowupRecord({...body,leadId,followupBy:body.followupBy||user.name||''},{now:new Date().toISOString()});
+        const now=new Date().toISOString();
+        const followup=normalizeLeadFollowupRecord({...body,leadId,followupBy:body.followupBy||user.name||''},{now});
         await put(T_LEAD_FOLLOWUPS,followup.id,followup);
         const nextLead=applyLeadFollowupSnapshot(lead,followup);
-        await put(T_LEADS,leadId,nextLead);
-        return sendJson(res,{followup,lead:nextLead});
+        const materialized=await materializeLeadConversionIdentities(nextLead,{now});
+        if(!materialized.changed)await put(T_LEADS,leadId,nextLead);
+        return sendJson(res,{followup,lead:materialized.lead});
       }
     }
     if(path==='/leads/import-preview'&&method==='POST'){
@@ -316,10 +463,12 @@ function createLeadsRoutes(deps={}){
       const createdLeads=[];
       const createdFollowups=[];
       for(const row of rowsToCreate){
-        const lead=normalizeLeadRecord(row,{id:row.id,now:new Date().toISOString()});
-        await put(T_LEADS,lead.id,lead);
-        createdLeads.push(lead);
-        const followup=buildLeadInitialFollowup(lead);
+        const now=new Date().toISOString();
+        const lead=normalizeLeadRecord(row,{id:row.id,now});
+        const materialized=await materializeLeadConversionIdentities(lead,{now});
+        if(!materialized.changed)await put(T_LEADS,lead.id,lead);
+        createdLeads.push(materialized.lead);
+        const followup=buildLeadInitialFollowup(materialized.lead);
         await put(T_LEAD_FOLLOWUPS,followup.id,followup);
         createdFollowups.push(followup);
       }
@@ -343,9 +492,11 @@ function createLeadsRoutes(deps={}){
       const lead=await get(T_LEADS,leadId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
       if(lead.studentId){
+        const now=new Date().toISOString();
         let student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
-        if(student)student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,new Date().toISOString());
-        return sendJson(res,{lead,student,created:false});
+        if(student)student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
+        const materialized=await materializeLeadConversionIdentities(lead,{now,studentId:lead.studentId});
+        return sendJson(res,{lead:materialized.lead,student,created:false});
       }
       let student=body.studentId?await get(T_STUDENTS,body.studentId).catch(()=>null):null;
       if(!student){
@@ -359,8 +510,9 @@ function createLeadsRoutes(deps={}){
       const now=new Date().toISOString();
       student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
       const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,membershipAccountId:lead.membershipAccountId||'',updatedAt:now,createdAt:lead.createdAt},{id:lead.id,now});
-      await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,student,created:!body.studentId});
+      const materialized=await materializeLeadConversionIdentities(nextLead,{now,studentId:student.id});
+      if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:materialized.lead,student,created:!body.studentId});
     }
     const leadConvertCourtM=path.match(/^\/leads\/([^/]+)\/convert-court$/);
     if(leadConvertCourtM&&method==='POST'){
@@ -371,9 +523,11 @@ function createLeadsRoutes(deps={}){
       const lead=await get(T_LEADS,leadId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
       if(lead.courtId){
+        const now=new Date().toISOString();
         let court=await get(T_COURTS,lead.courtId).catch(()=>null);
-        if(court)court=await ensureLifecycleSourceLink(T_COURTS,court,lead,new Date().toISOString());
-        return sendJson(res,{lead,court,created:false});
+        if(court)court=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
+        const materialized=await materializeLeadConversionIdentities(lead,{now,courtId:lead.courtId});
+        return sendJson(res,{lead:materialized.lead,court,created:false});
       }
       let court=body.courtId?await get(T_COURTS,body.courtId).catch(()=>null):null;
       if(!court){
@@ -388,8 +542,9 @@ function createLeadsRoutes(deps={}){
       court=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
       const membershipAccount=(await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
       const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,updatedAt:now,createdAt:lead.createdAt},{id:lead.id,now});
-      await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,court,created:!body.courtId});
+      const materialized=await materializeLeadConversionIdentities(nextLead,{now,courtId:court.id});
+      if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:materialized.lead,court,created:!body.courtId});
     }
     const leadLinkStudentM=path.match(/^\/leads\/([^/]+)\/link-student$/);
     if(leadLinkStudentM&&method==='POST'){
@@ -403,8 +558,9 @@ function createLeadsRoutes(deps={}){
       const now=new Date().toISOString();
       const linkedStudent=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
       const nextLead=normalizeLeadRecord({...lead,studentId:linkedStudent.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now});
-      await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,student:linkedStudent});
+      const materialized=await materializeLeadConversionIdentities(nextLead,{now,studentId:linkedStudent.id});
+      if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:materialized.lead,student:linkedStudent});
     }
     const leadLinkCourtM=path.match(/^\/leads\/([^/]+)\/link-court$/);
     if(leadLinkCourtM&&method==='POST'){
@@ -419,8 +575,9 @@ function createLeadsRoutes(deps={}){
       const linkedCourt=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
       const membershipAccount=(await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
       const nextLead=normalizeLeadRecord({...lead,courtId:linkedCourt.id,membershipAccountId:membershipAccount?.id||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now});
-      await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,court:linkedCourt,membershipAccount});
+      const materialized=await materializeLeadConversionIdentities(nextLead,{now,courtId:linkedCourt.id});
+      if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:materialized.lead,court:linkedCourt,membershipAccount:materialized.membershipAccount||membershipAccount});
     }
     const leadUnlinkStudentM=path.match(/^\/leads\/([^/]+)\/unlink-student$/);
     if(leadUnlinkStudentM&&method==='POST'){

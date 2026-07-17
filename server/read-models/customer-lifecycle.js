@@ -120,7 +120,7 @@ function leadHasCourseStudentEntry(lead = {}) {
   const dealText = text(firstValue(lead.dealType, lead.conversionType, lead.conversion, lead.statusAfter));
   const statusText = text(firstValue(lead.leadStage, lead.rawStatus, lead.systemStatus, lead.status));
   if (lead.isCourseConverted === true || lead.hasCourseConversion === true) return true;
-  if (/课程|课包|私教|小班/.test(dealText)) return true;
+  if (/课程|课包|私教|小班|陪打/.test(dealText)) return true;
   if (statusText === '已成交' && text(lead.studentId || lead.formalStudentId || lead.courseStudentId)) return true;
   return false;
 }
@@ -376,6 +376,7 @@ function buildCustomerLifecycleRows({
       ),
       createdAt: firstValue(lead.createdAt, lead.leadDate)
     });
+    if (/陪打/.test(firstValue(lead.dealType, lead.conversionType))) row.hasCompanionConversion = true;
   });
 
   const studentsById = new Map();
