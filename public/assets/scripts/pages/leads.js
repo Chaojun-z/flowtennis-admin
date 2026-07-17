@@ -1046,7 +1046,9 @@ function leadConversionSummaryHtml(lead){
     leadCompanionScheduleActionHtml(lead),
     leadLinkedAccountFieldHtml(lead,'student'),
     leadPurchasePackageActionHtml(lead),
+    leadCourtConversionActionHtml(lead),
     leadLinkedAccountFieldHtml(lead,'court'),
+    leadMembershipConversionActionHtml(lead),
     leadDetailFieldHtml('成交教练',leadFormalCoachText(lead)),
     leadDetailFieldHtml('成交时间',leadFormalSignupDateText(lead)),
     leadDetailBlockHtml('流失原因',esc(lead?.lostReason||'-'),{hideEmpty:false})
@@ -1058,6 +1060,15 @@ function leadHasCompanionDeal(lead){
 function leadCompanionScheduleActionHtml(lead){
   if(!leadHasCompanionDeal(lead))return '';
   return `<div class="schedule-detail-field"><div class="schedule-detail-label">陪打排课</div><div class="schedule-detail-value lead-linked-account-value"><span>${esc(leadDisplayName(lead))}</span><span class="lead-inline-actions">${leadInlineActionHtml('创建陪打排课',`openLeadCompanionSchedule('${lead.id}')`)}</span></div></div>`;
+}
+function leadCourtConversionActionHtml(lead){
+  if(!/订场/.test(leadDealTypeText(lead))||lead?.courtId)return '';
+  return `<div class="schedule-detail-field"><div class="schedule-detail-label">订场用户档案</div><div class="schedule-detail-value lead-linked-account-value"><span>已成交订场但未创建订场用户档案</span><span class="lead-inline-actions">${leadInlineActionHtml('创建订场用户档案',`convertLeadToCourt('${lead.id}')`)}</span></div></div>`;
+}
+function leadMembershipConversionActionHtml(lead){
+  if(!/订场会员/.test(leadDealTypeText(lead))||lead?.membershipAccountId)return '';
+  const text=lead?.courtId?'已成交订场会员但未开通会员账户':'需先创建或关联订场用户，再开通会员账户';
+  return `<div class="schedule-detail-field"><div class="schedule-detail-label">会员账户</div><div class="schedule-detail-value lead-linked-account-value"><span>${esc(text)}</span><span class="lead-inline-actions">${leadInlineActionHtml('去会员管理开卡/储值',`openLeadMembershipNextStep('${lead.id}')`)}</span></div></div>`;
 }
 function leadCompanionScheduleSeed(lead){
   return {
@@ -1501,6 +1512,15 @@ async function convertLeadToCourt(leadId){
   }catch(e){
     toast('转化失败：'+e.message,'error');
   }
+}
+function openLeadMembershipNextStep(leadId){
+  const lead=leadById(leadId);
+  if(!lead)return;
+  if(!lead.courtId){toast('请先创建或关联订场用户档案','warn');return;}
+  if(typeof goPage==='function')goPage('memberships');
+  setTimeout(()=>{
+    if(typeof openCourtMembershipPanel==='function')openCourtMembershipPanel(lead.courtId,{tab:'overview'});
+  },0);
 }
 function openLeadLinkStudentModal(leadId){
   if(document.getElementById('overlay')?.dataset.leadDetailId){
