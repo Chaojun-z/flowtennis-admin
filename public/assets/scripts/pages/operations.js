@@ -764,21 +764,14 @@ function operationsCoachDetailChangeText(comparison = {}) {
 function operationsCoachUsedHoursCell(row = {}) {
   const teachingHours=Number(row.teachingHours)||0;
   const teachingStudentCount=Number(row.teachingStudentCount)||0;
-  return `<div class="operations-coach-detail-hours"><span>${fmt(teachingHours)}课时 / ${fmt(teachingStudentCount)}人</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
+  return `<div class="operations-coach-detail-hours"><span>${fmt(teachingHours)}/${fmt(teachingStudentCount)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
 }
 
-function operationsCoachTrialText(row = {}) {
+function operationsCoachTrialConversionText(row = {}) {
   const converted = Number(row.trialConverted) || 0;
   const total = Number(row.trialBase) || 0;
-  return total ? `${fmt(total)}/${fmt(converted)}` : '-';
-}
-
-function operationsCoachTrialRateCell(row = {}) {
-  const total = Number(row.trialBase) || 0;
-  const value = Number(row.trialConversionRate) || 0;
-  const className = !total || value <= 0 ? 'no-data' : 'has-data';
-  const text = total ? `${fmt(value)}%` : '-%';
-  return `<span class="operations-coach-trial-rate ${className}">${esc(text)}</span>`;
+  const rate = Number(row.trialConversionRate) || (total ? (converted / total) * 100 : 0);
+  return total ? `${fmt(converted)}/${fmt(total)} ${fmt(rate)}%` : '-';
 }
 
 function operationsCoachCourseMixText(row = {}) {
@@ -807,16 +800,15 @@ function renderOperationsCoachDetailTable(rows = []) {
   const body = rows.length ? rows.map(row => `<tr>
     <td><div class="operations-coach-name-cell">${esc(row.coach || '-')}</div></td>
     <td>${operationsCoachUsedHoursCell(row)}</td>
-    <td><span class="operations-coach-muted">${esc(operationsCoachTrialText(row))}</span></td>
-    <td>${operationsCoachTrialRateCell(row)}</td>
+    <td><span class="operations-coach-muted">${esc(operationsCoachTrialConversionText(row))}</span></td>
     <td>${operationsCoachDetailTooltipText(operationsCoachCourseMixText(row))}</td>
     <td><span class="operations-coach-feedback">${esc(operationsCoachFeedbackText(row))}</span></td>
     <td>${operationsCoachDetailTooltipText(operationsCoachCampusDistributionText(row))}</td>
-  </tr>`).join('') : '<tr><td colspan="7"><div class="tms-empty-state"><div class="tms-empty-title">暂无教练课时数据</div></div></td></tr>';
+  </tr>`).join('') : '<tr><td colspan="6"><div class="tms-empty-state"><div class="tms-empty-title">暂无教练课时数据</div></div></td></tr>';
   return `<section class="operations-section operations-coach-detail-table">
     ${operationsCoachChartHeader('教练课时详细统计')}
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table">
-      <thead><tr><th>教练</th><th>教学课时/人数</th><th>体验课/体验课转化（人）</th><th>体验转化率</th><th>课程结构（课时）</th><th>课程反馈（课次）</th><th>校区结构（课时）</th></tr></thead>
+      <thead><tr><th>教练</th><th>教学课时/人数</th><th>体验课转化</th><th>课程结构（课时）</th><th>课程反馈（课次）</th><th>校区结构（课时）</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div></div>
   </section>`;
