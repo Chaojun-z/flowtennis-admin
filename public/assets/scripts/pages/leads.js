@@ -118,14 +118,7 @@ function mergeLeadRows(rows=[]){
   return merged;
 }
 function mergeDuplicateLeadRows(rows=[]){
-  const groups=new Map();
-  (rows||[]).forEach(row=>{
-    const key=leadCanonicalNameKey(row);
-    const group=groups.get(key)||[];
-    group.push(row);
-    groups.set(key,group);
-  });
-  return Array.from(groups.values()).map(mergeLeadRows).filter(Boolean);
+  return (rows||[]).filter(row=>String(row?.status||'').trim()!=='merged');
 }
 function leadWechatText(lead){
   return String(lead?.wechatName||lead?.displayName||'-').trim()||'-';

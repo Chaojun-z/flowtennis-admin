@@ -41,6 +41,7 @@ function createHarness(seedRows) {
     normalizeLeadFollowupRecord: rules.normalizeLeadFollowupRecord,
     applyLeadFollowupSnapshot: rules.applyLeadFollowupSnapshot,
     applyLeadFollowupsSnapshot: rules.applyLeadFollowupsSnapshot,
+    buildLeadInitialFollowup: rules.buildLeadInitialFollowup,
     buildLeadMergePlan: rules.buildLeadMergePlan,
     T_LEADS: 'ft_leads',
     T_LEAD_FOLLOWUPS: 'ft_lead_followups',
@@ -70,6 +71,40 @@ async function request(handle, path, method, body = {}) {
 
 async function main() {
   assert.ok(rules.buildLeadMergePlan, 'api._test should expose lead merge plan builder');
+
+  const sameNameCreateHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-existing',
+      displayName: '景涵（ -Jinghan-）',
+      wechatName: '景涵（ -Jinghan-）',
+      phone: '13800000001',
+      leadDate: '2026-07-16',
+      createdAt: '2026-07-16',
+      updatedAt: '2026-07-16'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: []
+  });
+  const createSameNameRes = await request(sameNameCreateHarness.handle, '/leads', 'POST', {
+    id: 'lead-new-same-name',
+    displayName: '景涵（ -Jinghan-）',
+    wechatName: '景涵（ -Jinghan-）',
+    phone: '13900000002',
+    leadDate: '2026-07-16',
+    createInitialFollowup: false
+  });
+  assert.strictEqual(createSameNameRes.statusCode, 200);
+  assert.strictEqual(createSameNameRes.body.merged, undefined, 'same-name lead create should not auto merge');
+  assert.strictEqual(sameNameCreateHarness.rows.ft_leads.length, 2, 'same-name lead create should keep a separate row');
+  const sameNameListRes = await request(sameNameCreateHarness.handle, '/leads', 'GET');
+  assert.strictEqual(sameNameListRes.statusCode, 200);
+  assert.strictEqual(sameNameListRes.body.filter(row => row.displayName === '景涵（ -Jinghan-）').length, 2, 'same-name leads should both appear in the list');
 
   const seedRows = {
     ft_leads: [{

@@ -105,7 +105,7 @@ assert.strictEqual(
   rules.buildLeadDedupKey({ wechatName: 'Leah', phone: '13800138000', leadDate: '2026-04-07', source: '大众点评 ', consultType: ' 成人私教' })
 );
 
-const sameNameMerged = rules.mergeDuplicateLeadRows([
+const sameNameRows = rules.mergeDuplicateLeadRows([
   rules.normalizeLeadRecord({
     displayName: 'MMJUAN',
     wechatName: 'MMJUAN',
@@ -125,10 +125,13 @@ const sameNameMerged = rules.mergeDuplicateLeadRows([
     rawStatus: '已约体验'
   }, { id: 'new-lead', now: '2026-06-05 00:00:00' })
 ]);
-assert.strictEqual(sameNameMerged.length, 1, 'same wechat name leads should merge');
-assert.strictEqual(sameNameMerged[0].id, 'old-lead', 'merge should keep the older lead id');
-assert.strictEqual(sameNameMerged[0].leadDate, '2026-06-03', 'merge should keep the original lead date');
-assert.strictEqual(sameNameMerged[0].profileNote, '已经预约6月4日，18-19', 'merge should keep the newer useful profile');
-assert.strictEqual(sameNameMerged[0].systemStatus, '已约体验', 'merge should keep the stronger status');
+assert.strictEqual(sameNameRows.length, 2, 'same wechat name leads should remain separate until manual merge');
+assert.deepStrictEqual(sameNameRows.map(row => row.id).sort(), ['new-lead', 'old-lead']);
+
+const visibleAfterManualMerge = rules.mergeDuplicateLeadRows([
+  ...sameNameRows,
+  { ...sameNameRows[1], id: 'merged-lead', status: 'merged', mergedIntoLeadId: 'old-lead' }
+]);
+assert.ok(!visibleAfterManualMerge.find(row => row.id === 'merged-lead'), 'manually merged duplicate leads should be hidden');
 
 console.log('leads rules tests passed');

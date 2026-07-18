@@ -78,7 +78,7 @@ assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page sho
 assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
 assert.match(leadsSource, /function leadFormalCoachText\(lead\)/, 'converted course leads should derive deal coach from lifecycle or package purchase owner coach');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
-assert.match(leadsSource, /function leadCanonicalNameKey\(/, 'leads page should merge leads with the same visible name');
+assert.match(leadsSource, /status\|\|''\)\.trim\(\)!=='merged'/, 'leads page should hide only manually merged duplicate leads');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
 assert.match(leadsSource, /线索数[\s\S]*历史学员[\s\S]*在期学员[\s\S]*上过体验课[\s\S]*体验后买正式课/, 'lead stats should expose schedule-fact student metrics from the unified backend model');
 assert.match(leadsSource, /历史学员 \/ 线索数[\s\S]*在期学员 \/ 历史学员[\s\S]*上过体验课 \/ 线索数[\s\S]*体验后买正式课 \/ 上过体验课/, 'lead stats should explain the unified historical, active, and trial-attended formulas');

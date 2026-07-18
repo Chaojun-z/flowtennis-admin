@@ -328,7 +328,7 @@ function createLeadsRoutes(deps={}){
         membershipOrders
       });
     }
-    return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope});
+    return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:false});
   }
 
   async function readVisibleLeadRows({expandLifecycleSearch=false}={}){
@@ -380,14 +380,6 @@ function createLeadsRoutes(deps={}){
       if(method==='POST'){
         const now=new Date().toISOString();
         const lead=normalizeLeadRecord({...body,createdAt:now,updatedAt:now},{now});
-        const existingLeads=await scan(T_LEADS).catch(()=>[]);
-        const sameName=mergeDuplicateLeadRows(existingLeads).find(row=>leadCanonicalNameKey(row)===leadCanonicalNameKey(lead));
-        if(sameName){
-          const next=mergeLeadRows([sameName,{...lead,id:sameName.id,createdAt:sameName.createdAt,leadDate:sameName.leadDate,updatedAt:now}]);
-          const materialized=await materializeLeadConversionIdentities(next,{now});
-          if(!materialized.changed)await put(T_LEADS,next.id,next);
-          return sendJson(res,{lead:materialized.lead,followup:null,merged:true});
-        }
         const materialized=await materializeLeadConversionIdentities(lead,{now});
         if(!materialized.changed)await put(T_LEADS,lead.id,lead);
         const followup=body.createInitialFollowup===false?null:buildLeadInitialFollowup(lead);

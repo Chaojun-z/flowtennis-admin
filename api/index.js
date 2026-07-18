@@ -5937,14 +5937,7 @@ function mergeLeadRows(rows=[]){
   return applyLeadOutcomeFields(merged);
 }
 function mergeDuplicateLeadRows(rows=[]){
-  const groups=new Map();
-  (rows||[]).forEach(row=>{
-    const key=leadCanonicalNameKey(row);
-    const group=groups.get(key)||[];
-    group.push(row);
-    groups.set(key,group);
-  });
-  return [...groups.values()].map(mergeLeadRows).filter(Boolean);
+  return (rows||[]).filter(row=>cleanLeadText(row?.status)!=='merged');
 }
 function leadNameCandidates(lead){
   return [lead.displayName,lead.wechatName].map(cleanLeadText).filter(Boolean);

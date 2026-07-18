@@ -813,7 +813,7 @@ function lifecycleDealType(row = {}, lead = {}) {
   ].filter(Boolean).join('+');
 }
 
-function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleScope = 'all' } = {}) {
+function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleScope = 'all', mergeDuplicates = true } = {}) {
   const leadRows = new Map((leads || []).map(row => [rowId(row), row]).filter(([id]) => id));
   const rows = new Map();
 
@@ -895,7 +895,8 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
     });
   });
 
-  return mergeDuplicateLeadPoolRows([...rows.values()]);
+  const result = [...rows.values()];
+  return mergeDuplicates ? mergeDuplicateLeadPoolRows(result) : result;
 }
 
 function buildStageRows(leadPoolRows = []) {
