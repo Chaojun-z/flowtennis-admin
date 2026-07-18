@@ -56,22 +56,42 @@ context.standardLifecycleMetrics = {
     trialAttendedToFormalPurchase: { value: 1, rateText: '25%' },
     trialPathStudents: { value: 99, rateText: '99%' },
     trialPathDeals: { value: 88, rateText: '88%' }
+  },
+  views: {
+    historicalStudents: [
+      { sourceLeadId: 'lead-1' },
+      { studentId: 'stu-1' },
+      { courtId: 'court-1' }
+    ],
+    activeStudents: [
+      { studentId: 'stu-1' },
+      { courtId: 'court-1' }
+    ],
+    trialAttendedStudents: [
+      { sourceLeadId: 'lead-1' },
+      { studentId: 'stu-1' },
+      { sourceLeadId: 'lead-3' },
+      { sourceLeadId: 'lead-4' }
+    ],
+    trialAttendedToFormalPurchase: [
+      { sourceLeadId: 'lead-4' }
+    ]
   }
 };
 assert.deepStrictEqual(
   JSON.parse(JSON.stringify(context.leadStatsData([
-    { rawStatus: '体验课完成' },
-    { trialAtRaw: '2026-05-20 10:00-11:00', studentId: 'stu-1' },
-    { trialAtRaw: '2026-06-01 10:00-11:00' },
-    { trialAtRaw: '2026-05-10 10:00-11:00', convertedFlag: true },
-    { courtId: 'court-1' }
+    { id: 'lead-1', rawStatus: '体验课完成' },
+    { id: 'lead-2', trialAtRaw: '2026-05-20 10:00-11:00', studentId: 'stu-1' },
+    { id: 'lead-3', trialAtRaw: '2026-06-01 10:00-11:00' },
+    { id: 'lead-4', trialAtRaw: '2026-05-10 10:00-11:00', convertedFlag: true },
+    { id: 'lead-5', courtId: 'court-1' }
   ]))),
   {
     total: 5,
     historicalStudents: 3,
     historicalStudentRate: '60%',
     activeStudents: 2,
-    activeStudentRate: '67%',
+    activeStudentRate: '66.7%',
     trialAttended: 4,
     trialAttendedRate: '80%',
     trialAttendedToFormalPurchase: 1,

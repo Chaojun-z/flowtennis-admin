@@ -65,23 +65,24 @@ function createLeadMergeRuleHelpers(deps = {}) {
     }).filter(Boolean);
   }
 
-  function buildPrimaryUpdate({ primaryLead, mergeLeads = [], followups = [], finalLeadStage = '', now = '', operator = '' }) {
+  function buildPrimaryUpdate({ primaryLead, mergeLeads = [], followups = [], now = '', operator = '' }) {
     const merged = mergeLeadRows([primaryLead, ...mergeLeads]) || primaryLead;
     const snapshot = typeof applyLeadFollowupsSnapshot === 'function' ? applyLeadFollowupsSnapshot(merged, followups) : merged;
-    const stage = text(finalLeadStage);
+    const primaryStage = text(primaryLead.leadStage || primaryLead.systemStatus || primaryLead.rawStatus);
+    const primaryRawStatus = text(primaryLead.rawStatus || primaryStage);
     const next = normalizeLeadRecord({
       ...snapshot,
       id: primaryLead.id,
       createdAt: primaryLead.createdAt,
-      rawStatus: stage || snapshot.rawStatus || snapshot.leadStage,
-      leadStage: stage || snapshot.leadStage,
-      systemStatus: stage || snapshot.systemStatus,
+      rawStatus: primaryRawStatus || snapshot.rawStatus || snapshot.leadStage,
+      leadStage: primaryStage || snapshot.leadStage,
+      systemStatus: primaryStage || snapshot.systemStatus,
       updatedAt: now
     }, { id: primaryLead.id, now });
-    if (stage) {
-      next.rawStatus = stage;
-      next.leadStage = deriveLeadSystemStatus(next);
-      next.systemStatus = next.leadStage;
+    if (primaryStage) {
+      next.rawStatus = primaryRawStatus || primaryStage;
+      next.leadStage = primaryStage;
+      next.systemStatus = primaryStage;
     }
     next.mergedLeadIds = leadMergeUniqueValues([...(primaryLead.mergedLeadIds || []), primaryLead.id, ...mergeLeads.map(row => row.id)]);
     next.lastLeadMergeAt = now;

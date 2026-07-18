@@ -178,7 +178,7 @@ async function main() {
   });
   assert.strictEqual(mergeRes.statusCode, 200);
   assert.strictEqual(mergeRes.body.primaryLead.id, 'lead-main');
-  assert.strictEqual(mergeRes.body.primaryLead.leadStage, '已体验待成交');
+  assert.strictEqual(mergeRes.body.primaryLead.leadStage, '跟进中', 'manual merge should keep the primary lead stage and ignore duplicate/legacy final stage input');
   assert.strictEqual(mergeHarness.rows.ft_lead_followups.find(row => row.id === 'fu-dup').leadId, 'lead-main');
   assert.strictEqual(mergeHarness.rows.ft_lead_followups.find(row => row.id === 'fu-dup').originalLeadId, 'lead-dup');
   assert.strictEqual(mergeHarness.rows.ft_students[0].sourceLeadId, 'lead-main');
