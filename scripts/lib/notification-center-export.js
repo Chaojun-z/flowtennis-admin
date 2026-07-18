@@ -4,10 +4,8 @@ function pad(value) {
 
 const CAMPUS_DISPLAY_NAME_MAP = {
   shunyi_mapo: '顺义马坡',
-  mabao: '顺义马坡',
   '顺义马坡': '顺义马坡',
   '马坡': '顺义马坡',
-  '马宝': '顺义马坡',
   shilipu: '朝阳十里堡',
   '朝阳十里堡': '朝阳十里堡',
   '十里堡': '朝阳十里堡',

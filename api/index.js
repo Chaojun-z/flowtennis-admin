@@ -32,7 +32,7 @@ const { createAdminUserRoutes } = require('../server/admin-users-routes');
 const { createAdminToolRoutes, TEST_DATA_RESET_TABLES, getTestDataResetTables } = require('../server/admin-tools-routes');
 const { createPackageBoardRoutes, normalizePackageBoardColumnOrder } = require('../server/package-board-routes');
 const { createMatchRoutes } = require('../server/match-routes');
-const { createLeadsRoutes } = require('../server/leads-routes');
+const { createLeadsRoutes } = require('../server/leads-routes'), { createLeadMergeRuleHelpers } = require('../server/lead-merge-rules');
 const { createCampusRoutes } = require('../server/campuses-routes');
 const { createCoachRoutes, createCoachRuleHelpers } = require('../server/coaches-routes');
 const { createProductRoutes, createProductRouteHelpers } = require('../server/products-routes');
@@ -150,14 +150,11 @@ const OPERATIONS_SOURCE_TABLES=new Set([T_LEADS,T_LEAD_FOLLOWUPS,T_SCHEDULE,T_CO
 const LEAD_LIST_PROJECTION_FIELDS=[
   'displayName','name','wechatName','phone','level','leadDate','source','campus','customerType','demandProduct','consultType','intentLevel','profileNote','owner',
   'systemStatus','rawStatus','trialAtRaw','enrollAtRaw','convertedFlag','nextFollowupAt','lastFollowupAt','latestConcern','latestConclusion','nextAction','followupPriority','formalCoach',
-  'studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted','leadStage','dealType','conversionType','updatedAt','createdAt','lostReason'
+  'studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted','leadStage','dealType','conversionType','updatedAt','createdAt','lostReason','status','mergedIntoLeadId','mergedIntoLeadName','mergedAt','mergedBy'
 ];
 const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=[
-  'leadId',
-  'followupAt',
-  'createdAt',
-  'followupBy',
-  'followupType',
+  'leadId','originalLeadId','leadMergedAt','followupAt','createdAt',
+  'followupBy','followupType',
   'communicationNote',
   'concern',
   'conclusion',
@@ -644,13 +641,14 @@ const {
   normalizeMembershipOrderViewRecord
 }=membershipRules;
 const routeSendJson=(...args)=>{sendJson(...args);return true;};
+const {buildLeadMergePlan}=createLeadMergeRuleHelpers({cleanLeadText,mergeLeadRows,applyLeadFollowupsSnapshot,normalizeLeadRecord,deriveLeadSystemStatus});
 const handleLeadsRoutes=createLeadsRoutes({
   init,sendJson:routeSendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
   cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
   LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
   normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
   normalizeLeadFollowupRecord,applyLeadFollowupsSnapshot,applyLeadFollowupSnapshot,normalizeLeadImportRows,
-  buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,
+  buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,buildLeadMergePlan,
   buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,
   T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS
 });
@@ -7146,6 +7144,7 @@ module.exports._test={
   normalizeLeadImportRows,
   buildLeadInitialFollowup,
   buildLeadDedupKey,
+  buildLeadMergePlan,
   normalizeLeadIdentityName,
   dedupeLeadRows,
   leadCanonicalNameKey,

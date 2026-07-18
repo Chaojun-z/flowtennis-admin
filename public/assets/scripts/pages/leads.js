@@ -1394,6 +1394,64 @@ async function saveLeadFollowup(leadId,followupId=''){
     }
   });
 }
+function leadMergeOptionHtml(selectedId=''){
+  return leadRows().map(lead=>{
+    const text=[leadDisplayName(lead),lead?.phone,leadDateDisplayText(lead)].filter(Boolean).join(' / ');
+    return `<option value="${esc(lead.id)}"${String(lead.id)===String(selectedId)?' selected':''}>${esc(text)}</option>`;
+  }).join('');
+}
+function leadMergePayload(){
+  const primaryLeadId=document.getElementById('leadMergePrimary')?.value||'';
+  const mergeLeadId=document.getElementById('leadMergeDuplicate')?.value||'';
+  return {
+    primaryLeadId,
+    mergeLeadIds:mergeLeadId?[mergeLeadId]:[],
+    finalLeadStage:document.getElementById('leadMergeFinalStage')?.value||''
+  };
+}
+function leadMergePreviewHtml(preview){
+  if(!preview)return '<div class="tms-text-secondary">请选择主线索和要合并的线索后点击预览。</div>';
+  const conflicts=(preview.conflicts||[]).map(item=>`<div>${esc(item.label)}：${esc((item.values||[]).join(' / '))}</div>`).join('')||'<div>无明显字段冲突</div>';
+  return `<div class="lead-import-summary-grid"><div><b>跟进迁移</b><span>${preview.counts?.followupsToMove||0} 条</span></div><div><b>学员引用</b><span>${preview.counts?.studentSourceLinks||0} 条</span></div><div><b>订场引用</b><span>${preview.counts?.courtSourceLinks||0} 条</span></div><div><b>会员引用</b><span>${preview.counts?.membershipSourceLinks||0} 条</span></div></div><div class="tms-section-header">字段冲突</div><div class="finput tms-form-control" style="height:auto;min-height:56px">${conflicts}</div>`;
+}
+function openLeadMergeModal(){
+  const rows=leadRows();
+  if(rows.length<2){toast('至少需要两条线索才能合并','warn');return;}
+  const stageOptions=leadStageOptions().map(opt=>`<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join('');
+  const body=`<div class="tms-section-header" style="margin-top:0;">合并设置</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">主线索</label><select class="finput tms-form-control" id="leadMergePrimary">${leadMergeOptionHtml(rows[0]?.id)}</select></div><div class="tms-form-item"><label class="tms-form-label">重复线索</label><select class="finput tms-form-control" id="leadMergeDuplicate">${leadMergeOptionHtml(rows[1]?.id)}</select></div><div class="tms-form-item"><label class="tms-form-label">合并后阶段</label><select class="finput tms-form-control" id="leadMergeFinalStage">${stageOptions}</select></div></div><div class="tms-section-header">合并预览</div><div id="leadMergePreviewResult">${leadMergePreviewHtml(null)}</div>`;
+  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-default" id="leadMergePreviewBtn" onclick="previewLeadMerge()">预览</button><button class="tms-btn tms-btn-primary" id="leadMergeConfirmBtn" onclick="runLeadMerge()" disabled>确认合并</button>`;
+  openStandardModal({title:'合并线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
+}
+async function previewLeadMerge(){
+  const payload=leadMergePayload();
+  if(!payload.primaryLeadId||!payload.mergeLeadIds.length||payload.primaryLeadId===payload.mergeLeadIds[0]){toast('请选择两条不同线索','warn');return;}
+  try{
+    const preview=await apiCall('POST','/leads/merge-preview',payload);
+    const host=document.getElementById('leadMergePreviewResult');
+    if(host)host.innerHTML=leadMergePreviewHtml(preview);
+    const btn=document.getElementById('leadMergeConfirmBtn');
+    if(btn)btn.disabled=false;
+    toast('预览已生成 ✓','success');
+  }catch(e){
+    const btn=document.getElementById('leadMergeConfirmBtn');
+    if(btn)btn.disabled=true;
+    toast('预览失败：'+e.message,'error');
+  }
+}
+async function runLeadMerge(){
+  const payload=leadMergePayload();
+  if(!await appConfirm('确认合并线索？重复线索会隐藏，跟进记录会迁移到主线索。',{title:'确认合并线索',confirmText:'确认合并'}))return;
+  await runStandardMutation('leadMergeConfirmBtn',async()=>{
+    await apiCall('POST','/leads/merge',payload);
+  },{
+    successText:'线索已合并 ✓',
+    closeOnSuccess:true,
+    refresh:async()=>{
+      await refreshLeadRuntime({withStudents:true,withCourts:true});
+      renderLeads();
+    }
+  });
+}
 function renderLeadImportPreviewBody(){
   const summary=leadImportState.summary||null;
   const rows=Array.isArray(leadImportState.previewRows)?leadImportState.previewRows:[];

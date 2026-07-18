@@ -9,7 +9,7 @@ function createLeadsRoutes(deps={}){
     LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
     normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
     normalizeLeadFollowupRecord,applyLeadFollowupsSnapshot,applyLeadFollowupSnapshot,normalizeLeadImportRows,
-    buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,
+    buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,buildLeadMergePlan,
     buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,
     T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,
     T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS
@@ -19,6 +19,32 @@ function createLeadsRoutes(deps={}){
     if(!q)return true;
     const keyword=String(q).toLowerCase().trim();
     return values.some(v=>String(v||'').toLowerCase().includes(keyword));
+  }
+
+  function visibleLeadSourceRows(rows=[]){
+    return (rows||[]).filter(row=>cleanLeadText(row?.status)!=='merged');
+  }
+
+  async function readLeadMergeData(){
+    const [leads,followups,students,courts,membershipAccounts]=await Promise.all([
+      scan(T_LEADS).catch(()=>[]),
+      T_LEAD_FOLLOWUPS?scan(T_LEAD_FOLLOWUPS).catch(()=>[]):Promise.resolve([]),
+      T_STUDENTS?scan(T_STUDENTS).catch(()=>[]):Promise.resolve([]),
+      T_COURTS?scan(T_COURTS).catch(()=>[]):Promise.resolve([]),
+      T_MEMBERSHIP_ACCOUNTS?scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([])
+    ]);
+    return {leads,followups,students,courts,membershipAccounts};
+  }
+
+  function leadMergeSummary(plan){
+    return {
+      primaryLeadId:plan.primaryLeadId,
+      mergeLeadIds:plan.mergeLeadIds,
+      primaryLead:plan.primaryUpdate,
+      duplicateLeads:plan.duplicateLeadUpdates,
+      conflicts:plan.conflicts,
+      counts:plan.counts
+    };
   }
 
   function lifecycleSourcePatch(row,lead,now){
@@ -277,7 +303,7 @@ function createLeadsRoutes(deps={}){
       T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([]),
       T_MEMBERSHIP_ORDERS?getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
     ]);
-    let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(leads,followups)));
+    let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(visibleLeadSourceRows(leads),followups)));
     let customerLifecycleRows=buildCustomerLifecycleRows({
       leads:mergedLeads,
       students,
@@ -367,6 +393,46 @@ function createLeadsRoutes(deps={}){
         const followup=body.createInitialFollowup===false?null:buildLeadInitialFollowup(lead);
         if(followup)await put(T_LEAD_FOLLOWUPS,followup.id,followup);
         return sendJson(res,{lead:materialized.lead,followup});
+      }
+    }
+    if(path==='/leads/merge-preview'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      try{
+        const plan=buildLeadMergePlan({
+          primaryLeadId:body.primaryLeadId,
+          mergeLeadIds:body.mergeLeadIds,
+          data:await readLeadMergeData(),
+          finalLeadStage:body.finalLeadStage,
+          operator:user.name||''
+        });
+        return sendJson(res,leadMergeSummary(plan));
+      }catch(error){
+        return sendJson(res,{error:error.message||'线索合并预览失败'},error.statusCode||400);
+      }
+    }
+    if(path==='/leads/merge'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      try{
+        const plan=buildLeadMergePlan({
+          primaryLeadId:body.primaryLeadId,
+          mergeLeadIds:body.mergeLeadIds,
+          data:await readLeadMergeData(),
+          finalLeadStage:body.finalLeadStage,
+          operator:user.name||''
+        });
+        await put(T_LEADS,plan.primaryUpdate.id,plan.primaryUpdate);
+        for(const row of plan.movedFollowups)await put(T_LEAD_FOLLOWUPS,row.id,row);
+        for(const row of plan.duplicateLeadUpdates)await put(T_LEADS,row.id,row);
+        for(const row of plan.studentSourceUpdates)await put(T_STUDENTS,row.id,row);
+        for(const row of plan.courtSourceUpdates)await put(T_COURTS,row.id,row);
+        for(const row of plan.membershipSourceUpdates)await put(T_MEMBERSHIP_ACCOUNTS,row.id,row);
+        return sendJson(res,leadMergeSummary(plan));
+      }catch(error){
+        return sendJson(res,{error:error.message||'线索合并失败'},error.statusCode||400);
       }
     }
     const leadIdM=path.match(/^\/leads\/([^/]+)$/);

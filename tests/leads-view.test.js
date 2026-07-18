@@ -40,6 +40,7 @@ assert.match(standardSource, /leadOwnerFilterHost/, 'leads page should provide o
 assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove the follow-up todo filter host');
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
 assert.match(standardSource, /class="tms-import-action" onclick="openLeadImportPreviewModal\(\)">导入<\/span>/, 'leads toolbar should expose the shared text import entry');
+assert.match(standardSource, /onclick="openLeadMergeModal\(\)">合并线索/, 'leads toolbar should expose the lead merge entry');
 assert.match(html, /assets\/styles\/components\/modals\.css/, 'index should load shared modal styles');
 assert.match(standardSource, /新增线索/, 'leads toolbar should expose the create lead entry');
 assert.match(standardSource, /onclick="openLeadCreateDrawer\(\)">新增线索/, 'new lead entry should open the right drawer instead of the old modal');
@@ -184,6 +185,10 @@ assert.match(leadsSource, /function openLeadCompanionSchedule\(leadId\)[\s\S]*op
 assert.doesNotMatch(leadsSource, /type="datetime-local"/, 'follow-up date should not use native datetime-local');
 assert.match(leadsSource, /courtDateButtonHtml\('lead_followupAt'[\s\S]*leadFollowupDateInputValue/, 'follow-up date should use the shared date picker');
 assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page should expose the import preview modal');
+assert.match(leadsSource, /function openLeadMergeModal\(/, 'leads page should expose the lead merge modal');
+assert.match(leadsSource, /apiCall\('POST','\/leads\/merge-preview'/, 'lead merge modal should call the preview API before writing');
+assert.match(leadsSource, /apiCall\('POST','\/leads\/merge'/, 'lead merge confirm should call the merge API');
+assert.match(leadsSource, /finalLeadStage:document\.getElementById\('leadMergeFinalStage'\)\?\.value\|\|''/, 'lead merge should send the manually selected final lead stage');
 assert.match(leadsSource, /识别到的字段[\s\S]*缺失字段提醒[\s\S]*总行数[\s\S]*状态归类统计[\s\S]*自动匹配统计[\s\S]*疑似匹配列表[\s\S]*未匹配列表/, 'import preview modal should expose the required sections');
 assert.match(fnBody('leadBasicInfoFormHtml'), /姓名[\s\S]*电话[\s\S]*水平[\s\S]*线索时间[\s\S]*来源[\s\S]*所属校区[\s\S]*类型[\s\S]*需求产品[\s\S]*意向等级[\s\S]*跟进优先级[\s\S]*跟进人[\s\S]*基本信息/, 'lead create and edit drawer form should follow the detail drawer field order');
 assert.doesNotMatch(fnBody('openLeadCreateDrawer'), /lead-form-row-4|openStandardModal/, 'lead create drawer should not keep the old four-column modal body');
