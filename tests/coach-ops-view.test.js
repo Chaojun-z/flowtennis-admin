@@ -819,6 +819,18 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /function coachOpsMonthPreviewDateTitle\(date\)[\s\S]*return `\$\{String\(d\.getMonth\(\)\+1\)\.padStart\(2,'0'\)\}\/\$\{String\(d\.getDate\(\)\)\.padStart\(2,'0'\)\} \$\{weekday\}`;/,
+  'month coach hover preview title should include MM/DD and weekday'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsMonthCoachPreviewHtml\(item,date\)[\s\S]*\$\{esc\(coachOpsMonthPreviewDateTitle\(date\)\)\} · \$\{esc\(titleName\)\}/,
+  'month coach hover preview title should render date weekday and coach name'
+);
+
+assert.match(
+  coachOpsSource,
   /function openCoachOpsMorePopover\(el,coach,date,event\)[\s\S]*\(!coachKey\|\|coachName\(s\.coach\)===coachKey\)/,
   'month more popover should support all coaches for the selected date'
 );
@@ -1047,8 +1059,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-more-popover\{width:300px;/,
-  'coach schedule month more popover should be wide enough for location information'
+  /#page-coachschedule \.coach-ops-more-popover\{width:max-content;min-width:220px;max-width:520px;/,
+  'coach schedule month more popover should adapt to content width'
 );
 
 assert.match(
@@ -1113,8 +1125,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-preview\{display:none;position:absolute;left:8px;top:20px;z-index:70;width:300px;/,
-  'coach schedule month coach preview should be wide enough for full course details'
+  /#page-coachschedule \.coach-ops-month-preview\{display:none;position:absolute;left:8px;top:20px;z-index:70;width:max-content;min-width:220px;max-width:520px;/,
+  'coach schedule month coach preview should adapt to content width'
 );
 
 assert.match(

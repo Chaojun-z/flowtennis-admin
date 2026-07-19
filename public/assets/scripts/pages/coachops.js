@@ -350,6 +350,13 @@ function coachOpsMonthPopoverCourseHtml(s,clickable){
   const timeText=`${String(s.startTime||'').slice(11,16)}${s.endTime?`-${String(s.endTime).slice(11,16)}`:''}`;
   return `<${tag}${typeAttr} class="coach-ops-more-course ${typeClass}"${onClick}><span class="coach-ops-course-time">${timeText}</span><span class="coach-ops-course-name">${esc(coachOpsScheduleStudentTitle(s))}</span><span class="coach-ops-course-location">${esc(scheduleLocationText(s))}</span></${tag}>`;
 }
+function coachOpsMonthPreviewDateTitle(date){
+  const day=String(date||'').slice(0,10);
+  const d=new Date(`${day}T00:00:00`);
+  if(Number.isNaN(d.getTime()))return String(date||'').slice(5).replace('-','/');
+  const weekday=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]||'';
+  return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${weekday}`;
+}
 function openCoachOpsMorePopover(el,coach,date,event){
   if(event)event.stopPropagation();
   document.querySelectorAll('.coach-ops-more-popover,.coach-ops-more-overlay').forEach(node=>node.remove());
@@ -398,7 +405,7 @@ function coachOpsMonthCoachPreviewHtml(item,date){
   const rows=item.rows.slice(0,6);
   const hidden=item.rows.length-rows.length;
   const titleName=/教练$/.test(String(item.name||''))?String(item.name||''):`${String(item.name||'')}教练`;
-  return `<div class="coach-ops-month-preview"><b>${esc(String(date||'').slice(5).replace('-','/'))} · ${esc(titleName)}</b>${rows.map(s=>coachOpsMonthPopoverCourseHtml(s,false)).join('')}${hidden>0?`<em>还有 ${hidden} 节</em>`:''}</div>`;
+  return `<div class="coach-ops-month-preview"><b>${esc(coachOpsMonthPreviewDateTitle(date))} · ${esc(titleName)}</b>${rows.map(s=>coachOpsMonthPopoverCourseHtml(s,false)).join('')}${hidden>0?`<em>还有 ${hidden} 节</em>`:''}</div>`;
 }
 function renderCoachOpsMonthOverview(renderRows,range,todayKey){
   const gridStart=weekStart(range.start),gridEnd=addDays(weekStart(range.end),7);
