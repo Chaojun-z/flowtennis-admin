@@ -90,6 +90,16 @@ assert.match(
   /coach-ops-day-coach-col\{[^}]*border-right:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\)/,
   'day view coach columns should use shared 0.5px vertical lines'
 );
+assert.doesNotMatch(
+  pagesCss,
+  /coach-ops-day-coach-col\.is-today\{[^}]*background:/,
+  'day view today columns should not add a separate background that makes grid lines look lighter'
+);
+assert.doesNotMatch(
+  pagesCss,
+  /mode-day \.coach-ops-day-coach-col\.is-today:hover\{[^}]*background:/,
+  'day view today hover should not keep a separate background that changes grid contrast'
+);
 assert.match(
   pagesCss,
   /coach-ops-week-coach-col\{[^}]*border-right:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\)/,
