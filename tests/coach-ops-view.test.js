@@ -172,14 +172,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-time-axis\{position:sticky;left:0;z-index:65;[^}]*box-shadow:1px 0 0 #EDE9E8\}/,
-  'coach schedule day time axis should stay locked during horizontal scrolling'
+  /#page-coachschedule \.coach-ops-day-time-axis\{position:sticky;left:0;z-index:65;[^}]*border-right:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\);box-shadow:none\}/,
+  'coach schedule day time axis should stay locked with the shared 0.5px line'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-week-time-axis\{position:sticky;left:0;z-index:65;[^}]*box-shadow:1px 0 0 #EDE9E8\}/,
-  'coach schedule week time axis should stay locked during horizontal scrolling'
+  /#page-coachschedule \.coach-ops-week-time-axis\{position:sticky;left:0;z-index:65;[^}]*border-right:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\);box-shadow:none\}/,
+  'coach schedule week time axis should stay locked with the shared 0.5px line'
 );
 
 assert.match(
@@ -1299,8 +1299,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-week-day-label-track\{width:var\(--coach-ops-week-grid-width\);height:30px;box-sizing:border-box;background:#F9FAFB;border-bottom:1px solid #EDE9E8\}/,
-  'coach schedule week date label track should scroll with the coach columns'
+  /#page-coachschedule \.coach-ops-week-day-label-track\{width:var\(--coach-ops-week-grid-width\);height:30px;box-sizing:border-box;background:#F9FAFB;border-bottom:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\)\}/,
+  'coach schedule week date label track should scroll with the coach columns using the shared 0.5px line'
 );
 
 assert.match(

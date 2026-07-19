@@ -742,12 +742,7 @@ function renderCoachOps(){
         const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(name)})"`;
         return `<span class="${mode==='day'?'coach-ops-day-coach-head':'coach-ops-week-coach-head'}" ${dragAttrs}><b>${esc(name||'未命名教练')}</b></span>`;
       }).join('')
-      :['周一','周二','周三','周四','周五','周六','周日'].map((d,i)=>{
-          const currentMonthHasToday=todayKey>=dateKey(range.start)&&todayKey<dateKey(range.end);
-          const todayDate=new Date(`${todayKey}T00:00:00`);
-          const todayWeekIndex=(todayDate.getDay()+6)%7;
-          return `<span class="${currentMonthHasToday&&i===todayWeekIndex?'is-today':''}">${d}</span>`;
-        }).join('');
+      :['周一','周二','周三','周四','周五','周六','周日'].map(d=>`<span>${d}</span>`).join('');
   }
   const title=document.getElementById('coachOpsViewTitle');
   if(title)title.textContent=mode==='day'?`${range.label} 教练排课（7:00-22:00）`:mode==='week'?`${dateKey(range.start)} 至 ${dateKey(addDays(range.end,-1))} 教练周视图`:`${range.label} 教练月视图`;
