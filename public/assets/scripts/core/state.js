@@ -764,6 +764,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      teachingStudentViews=data.teachingStudentViews||teachingStudentViews;
       coachOpsUnifiedView=data.coachOpsUnifiedView||{rows:[]};
       staleCachedDatasets.delete('campuses');
       staleCachedDatasets.delete('coaches');

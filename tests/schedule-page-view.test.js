@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);
@@ -145,6 +146,8 @@ assert.match(styles, /\.modal\.modal-court \.schedule-repeat-row\{align-items:fl
 assert.doesNotMatch(fnBody('openScheduleModal'), /上课地点|排课会校验时间冲突|取消勾选的人本次记为缺勤|按周生成多节课/, 'schedule modal should remove the extra notice, separate location section, and old repeat copy');
 assert.match(fnBody('openScheduleModal'), /姓名<\/label>[\s\S]*sch_stuSearch[\s\S]*sch_studentSuggest[\s\S]*sch_selectedStudentTags/, 'schedule modal should use search suggestions and selected student tags');
 assert.match(source, /schedule:\['campuses','students','courts','schedule','coaches','coachProposals','lifecycleMetricsPage'\]/, 'schedule page should load lifecycle student roster before rendering student search');
+assert.match(source, /if\(name==='workbenchPage'\)\{[\s\S]*teachingStudentViews=data\.teachingStudentViews\|\|teachingStudentViews/, 'coach schedule calendar should hydrate the same student roster used by schedule search');
+assert.match(corePagesSource, /if\(path==='\/page-data\/workbench'[\s\S]*const teachingStudentViews=buildTeachingStudentViews\(customerLifecycleRows,scoped\);[\s\S]*teachingStudentViews,/, 'workbench page data should return the schedule search student roster');
 assert.match(source, /function scheduleStudentRosterRows\([\s\S]*teachingStudentViews\?\.historicalStudents[\s\S]*teachingStudentViews\?\.activeStudents/, 'schedule student search should use the same lifecycle roster as the student list');
 assert.match(fnBody('renderScheduleStudentSuggestions'), /const searchRows=scheduleStudentSearchRows\(selectedIds\)[\s\S]*searchRows\.filter/, 'schedule student suggestions should search the lifecycle roster instead of the raw students table');
 assert.match(fnBody('scheduleStudentSearchRows'), /scheduleStudentRosterRows\(\)[\s\S]*students\.find/, 'schedule student search should keep a raw-student fallback only for already selected legacy schedule students');

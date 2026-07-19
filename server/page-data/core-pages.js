@@ -207,6 +207,7 @@ function createCorePageDataRoutes(deps={}){
           schedule:scoped.schedule
         });
         const standardLifecycleMetrics=buildStandardLifecycleMetrics({...scoped,customerLifecycleRows});
+        const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,scoped);
         const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,standardLifecycleMetrics,now});
         return sendJson(res,{
           campuses:scoped.campuses||[],
@@ -220,6 +221,7 @@ function createCorePageDataRoutes(deps={}){
           entitlements:scoped.entitlements||[],
           entitlementLedger:scoped.entitlementLedger||[],
           customerLifecycleRows,
+          teachingStudentViews,
           standardLifecycleMetrics,
           coachOpsUnifiedView:buildCoachOpsUnifiedView({
             coaches:scoped.coaches||[],
