@@ -15,6 +15,7 @@ function makeRes() {
 function createHarness(seedRows) {
   const rows = clone(seedRows);
   const writes = [];
+  const deletes = [];
   const handle = createLeadsRoutes({
     init: async () => {},
     sendJson: (res, payload, status = 200) => {
@@ -31,6 +32,10 @@ function createHarness(seedRows) {
       const index = list.findIndex(item => String(item.id) === String(id));
       if (index >= 0) list[index] = clone(row);
       else list.push(clone(row));
+    },
+    del: async (table, id) => {
+      deletes.push({ table, id });
+      rows[table] = (rows[table] || []).filter(row => String(row.id) !== String(id));
     },
     ensureLeadTables: async () => {},
     isProductionRuntime: () => false,
@@ -53,7 +58,7 @@ function createHarness(seedRows) {
     T_SCHEDULE: 'ft_schedule',
     T_MEMBERSHIP_ORDERS: 'ft_membership_orders'
   });
-  return { rows, writes, handle };
+  return { rows, writes, deletes, handle };
 }
 
 async function request(handle, path, method, body = {}) {
@@ -209,6 +214,46 @@ async function main() {
   });
   assert.strictEqual(conflictRes.statusCode, 409);
   assert.match(conflictRes.body.error, /不同学员/);
+
+  const deleteHarness = createHarness({
+    ft_leads: [{ id: 'lead-delete', displayName: '可删除线索', phone: '13800000003', leadStage: '跟进中' }],
+    ft_lead_followups: [
+      { id: 'fu-delete-1', leadId: 'lead-delete', communicationNote: '首次沟通' },
+      { id: 'fu-keep', leadId: 'other-lead', communicationNote: '其他线索' }
+    ],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: []
+  });
+  const deleteRes = await request(deleteHarness.handle, '/leads/lead-delete', 'DELETE');
+  assert.strictEqual(deleteRes.statusCode, 200);
+  assert.strictEqual(deleteRes.body.deleted, true);
+  assert.ok(!deleteHarness.rows.ft_leads.find(row => row.id === 'lead-delete'), 'unlinked unconverted lead should be physically deleted');
+  assert.ok(!deleteHarness.rows.ft_lead_followups.find(row => row.id === 'fu-delete-1'), 'lead followups should be deleted with a physical lead delete');
+  assert.ok(deleteHarness.rows.ft_lead_followups.find(row => row.id === 'fu-keep'), 'other lead followups should stay');
+
+  const voidHarness = createHarness({
+    ft_leads: [{ id: 'lead-void', displayName: '有关联线索', phone: '13800000004', studentId: 'student-void', leadStage: '已成交', dealType: '课程' }],
+    ft_lead_followups: [{ id: 'fu-void', leadId: 'lead-void', communicationNote: '成交沟通' }],
+    ft_students: [{ id: 'student-void', name: '有关联线索', sourceLeadId: 'lead-void' }],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: []
+  });
+  const voidRes = await request(voidHarness.handle, '/leads/lead-void', 'DELETE', { reason: '重复录入' });
+  assert.strictEqual(voidRes.statusCode, 200);
+  assert.strictEqual(voidRes.body.archived, true);
+  assert.strictEqual(voidHarness.rows.ft_leads.find(row => row.id === 'lead-void').status, 'voided');
+  assert.ok(voidHarness.rows.ft_lead_followups.find(row => row.id === 'fu-void'), 'voided lead should keep followups for history');
+  const voidListRes = await request(voidHarness.handle, '/leads', 'GET');
+  assert.ok(!voidListRes.body.find(row => row.id === 'lead-void'), 'voided lead should be hidden from default list');
 
   console.log('leads merge routes tests passed');
 }

@@ -119,7 +119,7 @@ function mergeLeadRows(rows=[]){
   return merged;
 }
 function mergeDuplicateLeadRows(rows=[]){
-  return (rows||[]).filter(row=>String(row?.status||'').trim()!=='merged');
+  return (rows||[]).filter(row=>!['merged','voided','deleted'].includes(String(row?.status||'').trim()));
 }
 function leadWechatText(lead){
   return String(lead?.wechatName||lead?.displayName||'-').trim()||'-';
@@ -957,13 +957,18 @@ async function saveLeadBasicFromDrawer(leadId){
     }
   });
 }
+function openLeadDeleteConfirm(leadId){
+  const lead=leadById(leadId);
+  if(!lead){toast('线索不存在，请刷新后重试','warn');return;}
+  confirmDel(lead.id,leadDisplayName(lead),'lead');
+}
 function leadDetailBasicTabHtml(lead){
   const editing=leadDetailEditingSection==='basic';
   if(editing){
     const actions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="cancelLeadDrawerEdit('${lead.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="leadDrawerSaveBtn" onclick="saveLeadBasicFromDrawer('${lead.id}')">保存</button></div>`;
     return renderDetailDrawerContent(renderDetailDrawerFormCard('基础信息',leadBasicInfoFormHtml(lead),actions));
   }
-  const actions=`<button type="button" class="schedule-detail-action" onclick="openLeadMergeModal('${lead.id}')">合并重复线索</button><button type="button" class="schedule-detail-action" onclick="startLeadBasicDrawerEdit('${lead.id}')">编辑</button>`;
+  const actions=`<button type="button" class="schedule-detail-action" onclick="openLeadMergeModal('${lead.id}')">合并重复线索</button><button type="button" class="schedule-detail-action" onclick="startLeadBasicDrawerEdit('${lead.id}')">编辑</button><button type="button" class="schedule-detail-action muted" onclick="openLeadDeleteConfirm('${lead.id}')">删除线索</button>`;
   return renderDetailDrawerContent(leadDrawerCardHtml('基础信息',leadBasicInfoReadonlyHtml(lead),'lead-basic-card',actions));
 }
 function leadFollowupTimelineItemHtml(lead,item){
@@ -1397,6 +1402,11 @@ function leadMergePayload(){
 function leadMergeCandidateLabel(lead){
   return [leadDisplayName(lead),lead?.phone,leadSourceText(lead),leadStageDisplayText(lead),leadDateDisplayText(lead)].filter(value=>String(value||'').trim()&&String(value).trim()!=='-').join(' / ');
 }
+function leadMergeCandidateHtml(lead){
+  const name=leadDisplayName(lead);
+  const meta=[leadSourceText(lead),leadStageDisplayText(lead),leadDateDisplayText(lead)].filter(value=>String(value||'').trim()&&String(value).trim()!=='-').join(' / ')||'-';
+  return `<span class="lead-merge-candidate-main">${esc(name)}</span><span class="lead-merge-candidate-meta">${esc(meta)}</span>`;
+}
 function leadMergeCandidateRows(){
   const primary=leadById(leadMergeState.primaryLeadId)||{};
   const query=String(leadMergeState.search||'').trim().toLowerCase();
@@ -1411,7 +1421,7 @@ function leadMergeCandidateRows(){
 function leadMergeCandidatePickerHtml(){
   const rows=leadMergeCandidateRows();
   if(!rows.length)return '<div class="tms-empty-state" style="min-height:96px"><div class="tms-empty-title">没有匹配的线索</div><div class="tms-empty-desc">换姓名或手机号再试</div></div>';
-  return `<div class="tms-checkbox-matrix lead-link-picker">${rows.map(row=>`<label class="tms-checkbox-wrap ${String(row.id||'')===String(leadMergeState.selectedDuplicateId||'')?'active':''}" onclick="selectLeadMergeDuplicate('${row.id}')"><input type="radio" class="tms-checkbox" name="leadMergePick" ${String(row.id||'')===String(leadMergeState.selectedDuplicateId||'')?'checked':''}><span>${esc(leadMergeCandidateLabel(row))}</span></label>`).join('')}</div>`;
+  return `<div class="tms-checkbox-matrix lead-link-picker lead-merge-candidate-list">${rows.map(row=>`<label class="tms-checkbox-wrap lead-merge-candidate-option ${String(row.id||'')===String(leadMergeState.selectedDuplicateId||'')?'active':''}" onclick="selectLeadMergeDuplicate('${row.id}')"><input type="radio" class="tms-checkbox" name="leadMergePick" ${String(row.id||'')===String(leadMergeState.selectedDuplicateId||'')?'checked':''}><span class="lead-merge-candidate-text">${leadMergeCandidateHtml(row)}</span></label>`).join('')}</div>`;
 }
 function renderLeadMergeCandidatePicker(keepSelected=false){
   leadMergeState.search=document.getElementById('leadMergeCandidateSearch')?.value||leadMergeState.search||'';
@@ -1437,12 +1447,43 @@ function leadMergeFriendlyError(error){
   if(/已合并/.test(raw))return '这条线索已经被合并过，请刷新线索池后重试。';
   return raw||'线索合并失败，请稍后重试。';
 }
+function leadMergeBlockedText(error){
+  const raw=String(error?.message||error||'');
+  if(/不同学员/.test(raw)){
+    return {
+      reason:'这两条线索已经分别关联到不同学员，系统不能判断是不是同一个人。',
+      next:'如果确认是同一个人，请先合并学员；如果不是同一个人，请不要合并这两条线索。'
+    };
+  }
+  if(/不同订场用户/.test(raw)){
+    return {
+      reason:'这两条线索已经分别关联到不同订场用户，系统不能判断是不是同一个人。',
+      next:'如果确认是同一个订场用户，请先处理订场用户档案；如果不是同一个人，请不要合并这两条线索。'
+    };
+  }
+  return {reason:leadMergeFriendlyError(error),next:'请检查选择的两条线索后再试。'};
+}
+function leadMergePreviewRowHtml(label,value){
+  return `<div class="lead-merge-preview-row"><span>${esc(label)}：</span><span>${esc(value)}</span></div>`;
+}
 function leadMergePreviewHtml(preview){
   if(!preview)return '<div class="tms-text-secondary">请选择要合并进来的重复线索后点击预览。</div>';
+  if(preview.blocked){
+    const blocked=leadMergeBlockedText(preview.error||preview.message||'');
+    return `<div class="lead-merge-blocked">${leadMergePreviewRowHtml('原因',blocked.reason)}${leadMergePreviewRowHtml('下一步',blocked.next)}</div>`;
+  }
   const primary=leadById(preview.primaryLeadId)||preview.primaryLead||{};
   const duplicate=leadById((preview.mergeLeadIds||[])[0])||(preview.duplicateLeads||[])[0]||{};
-  const conflicts=(preview.conflicts||[]).map(item=>`<div>${esc(item.label)}：${esc((item.values||[]).join(' / '))}</div>`).join('')||'<div>无明显字段冲突</div>';
-  return `<div class="lead-import-summary-grid"><div><b>保留线索</b><span>${esc(leadDisplayName(primary))}</span></div><div><b>隐藏线索</b><span>${esc(leadDisplayName(duplicate))}</span></div><div><b>跟进迁移</b><span>${preview.counts?.followupsToMove||0} 条</span></div><div><b>学员引用</b><span>${preview.counts?.studentSourceLinks||0} 条</span></div><div><b>订场引用</b><span>${preview.counts?.courtSourceLinks||0} 条</span></div><div><b>会员引用</b><span>${preview.counts?.membershipSourceLinks||0} 条</span></div></div><div class="tms-section-header">字段冲突提醒</div><div class="finput tms-form-control" style="height:auto;min-height:56px">${conflicts}</div>`;
+  const rows=[
+    ['保留线索',leadDisplayName(primary)],
+    ['隐藏线索',leadDisplayName(duplicate)],
+    ['跟进迁移',`${preview.counts?.followupsToMove||0} 条`],
+    ['学员引用',`${preview.counts?.studentSourceLinks||0} 条`],
+    ['订场引用',`${preview.counts?.courtSourceLinks||0} 条`],
+    ['会员引用',`${preview.counts?.membershipSourceLinks||0} 条`]
+  ].map(([label,value])=>leadMergePreviewRowHtml(label,value)).join('');
+  const conflicts=(preview.conflicts||[]).map(item=>leadMergePreviewRowHtml(item.label,(item.values||[]).join(' / '))).join('')||leadMergePreviewRowHtml('字段冲突','无明显字段冲突');
+  return `<div class="lead-merge-preview-list">${rows}</div><div class="tms-section-header">字段冲突提醒</div><div class="lead-merge-preview-list">${conflicts}</div>`;
 }
 function openLeadMergeModal(primaryLeadId=''){
   const rows=leadRows();
@@ -1450,7 +1491,7 @@ function openLeadMergeModal(primaryLeadId=''){
   if(rows.length<2){toast('至少需要两条线索才能合并','warn');return;}
   if(!primary){toast('请先打开要保留的线索详情','warn');return;}
   leadMergeState={primaryLeadId:String(primaryLeadId),selectedDuplicateId:'',search:'',preview:null};
-  const body=`<div class="tms-section-header" style="margin-top:0;">合并设置</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">保留线索</label><div class="finput tms-form-control" style="height:auto;min-height:44px">${esc(leadMergeCandidateLabel(primary))}</div></div><div class="tms-form-item"><label class="tms-form-label">重复线索</label><input class="finput tms-form-control" id="leadMergeCandidateSearch" placeholder="搜索姓名 / 手机号" oninput="renderLeadMergeCandidatePicker()"><div id="leadMergeCandidateWrap" style="margin-top:8px">${leadMergeCandidatePickerHtml()}</div></div></div><div class="tms-section-header">合并预览</div><div id="leadMergePreviewResult">${leadMergePreviewHtml(null)}</div>`;
+  const body=`<div class="lead-merge-modal-body" style="font-size:13px"><div class="tms-section-header" style="margin-top:0;">合并设置</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">保留线索</label><div class="finput tms-form-control lead-merge-primary" style="height:auto;min-height:44px;font-size:13px">${leadMergeCandidateHtml(primary)}</div></div><div class="tms-form-item"><label class="tms-form-label">重复线索</label><input class="finput tms-form-control lead-merge-search" id="leadMergeCandidateSearch" placeholder="搜索姓名 / 手机号" style="font-size:12px" oninput="renderLeadMergeCandidatePicker()"><div id="leadMergeCandidateWrap" style="margin-top:8px">${leadMergeCandidatePickerHtml()}</div></div></div><div class="tms-section-header">合并预览</div><div id="leadMergePreviewResult">${leadMergePreviewHtml(null)}</div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-default" id="leadMergePreviewBtn" onclick="previewLeadMerge()">预览</button><button class="tms-btn tms-btn-primary" id="leadMergeConfirmBtn" onclick="runLeadMerge()" disabled>确认合并</button>`;
   openStandardModal({title:'合并线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
@@ -1468,7 +1509,10 @@ async function previewLeadMerge(){
   }catch(e){
     const btn=document.getElementById('leadMergeConfirmBtn');
     if(btn)btn.disabled=true;
-    toast('预览失败：'+leadMergeFriendlyError(e),'error');
+    leadMergeState.preview=null;
+    const host=document.getElementById('leadMergePreviewResult');
+    if(host)host.innerHTML=leadMergePreviewHtml({blocked:true,error:e});
+    toast('当前不能合并，请查看预览说明。','error');
   }
 }
 async function runLeadMerge(){

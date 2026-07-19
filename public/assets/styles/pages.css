@@ -917,6 +917,19 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 .modal.modal-court.modal-lead-drawer .lead-inline-actions{display:inline-flex;align-items:center;gap:8px}
 .modal.modal-court.modal-lead-drawer .lead-inline-link-action{color:#805435;cursor:pointer;font-size:13px;font-weight:400;line-height:22px}
 .modal.modal-court.modal-lead-drawer .lead-inline-link-action.danger{color:#C06031}
+.modal.modal-court .lead-merge-modal-body{font-size:13px;color:#332A24;line-height:1.6}
+.modal.modal-court .lead-merge-modal-body .tms-form-control{font-size:12px;font-weight:400}
+.modal.modal-court .lead-merge-primary{display:block!important;height:auto;min-height:44px;padding:8px 12px}
+.modal.modal-court .lead-merge-search{font-size:12px}
+.modal.modal-court .lead-merge-candidate-list{display:flex;flex-direction:column;flex-wrap:nowrap;gap:8px;padding:10px;max-height:180px}
+.modal.modal-court .lead-merge-candidate-option{width:100%;align-items:flex-start;gap:8px;font-size:12px;font-weight:400}
+.modal.modal-court .lead-merge-candidate-text{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:12px;font-weight:400}
+.modal.modal-court .lead-merge-candidate-main{font-size:13px;color:#332A24;font-weight:400;line-height:1.4}
+.modal.modal-court .lead-merge-candidate-meta{font-size:12px;color:#8C7B6E;font-weight:400;line-height:1.4}
+.modal.modal-court .lead-merge-preview-list,.modal.modal-court .lead-merge-blocked{background:#FDF7F2;border:1px solid #EAE0D6;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.7}
+.modal.modal-court .lead-merge-preview-row{display:grid;grid-template-columns:88px minmax(0,1fr);gap:6px;align-items:start;color:#332A24;font-weight:400}
+.modal.modal-court .lead-merge-preview-row span{font-size:13px;font-weight:400;word-break:break-word}
+.modal.modal-court .lead-merge-blocked{background:#FFF7F5;border-color:#FED7CE}
 .modal.modal-court.modal-membership-drawer .mbody{background:#F5F2F0}
 .modal.modal-court.modal-membership-drawer .membership-danger-action{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .modal.modal-court.modal-membership-drawer .membership-danger-action .tms-field-help{margin:0;color:#8C7B6E}

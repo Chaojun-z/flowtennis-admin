@@ -4,7 +4,7 @@ const { buildLeadPoolRows } = require('./read-models/platform-metrics.js');
 
 function createLeadsRoutes(deps={}){
   const {
-    init,sendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
+    init,sendJson,getCachedScan,get,scan,put,del,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
     cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
     LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
     normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
@@ -22,7 +22,14 @@ function createLeadsRoutes(deps={}){
   }
 
   function visibleLeadSourceRows(rows=[]){
-    return (rows||[]).filter(row=>cleanLeadText(row?.status)!=='merged');
+    return (rows||[]).filter(row=>!['merged','voided','deleted'].includes(cleanLeadText(row?.status)));
+  }
+
+  function hiddenLeadSourceIds(rows=[]){
+    return new Set((rows||[])
+      .filter(row=>['merged','voided','deleted'].includes(cleanLeadText(row?.status)))
+      .map(row=>cleanLeadText(row?.id))
+      .filter(Boolean));
   }
 
   async function readLeadMergeData(){
@@ -69,6 +76,31 @@ function createLeadsRoutes(deps={}){
     const stage=cleanLeadText(lead.leadStage||lead.systemStatus||lead.rawStatus||lead.status);
     if(/未成交|未转化/.test(stage))return false;
     return stage==='已成交'&&leadDealParts(lead).size>0;
+  }
+
+  function leadHasConvertedOutcome(lead={}){
+    const stage=cleanLeadText(lead.leadStage||lead.systemStatus||lead.rawStatus||lead.status);
+    return leadHasConvertedDeal(lead)||stage==='已成交'||lead.convertedFlag===true||lead.isCourseConverted===true||lead.isCourtConverted===true||lead.isMembershipConverted===true||!!cleanLeadText(lead.dealType||lead.conversionType);
+  }
+
+  function sourceLeadId(row={}){
+    return cleanLeadText(row.sourceLeadId||row.leadId||row.fromLeadId);
+  }
+
+  function leadHasBusinessLinks(lead={},data={}){
+    const leadId=cleanLeadText(lead.id);
+    if(cleanLeadText(lead.studentId)||cleanLeadText(lead.courtId)||cleanLeadText(lead.membershipAccountId))return true;
+    return [data.students,data.courts,data.membershipAccounts].some(rows=>(rows||[]).some(row=>sourceLeadId(row)===leadId));
+  }
+
+  async function readLeadDeleteData(){
+    const [followups,students,courts,membershipAccounts]=await Promise.all([
+      T_LEAD_FOLLOWUPS?scan(T_LEAD_FOLLOWUPS).catch(()=>[]):Promise.resolve([]),
+      T_STUDENTS?scan(T_STUDENTS).catch(()=>[]):Promise.resolve([]),
+      T_COURTS?scan(T_COURTS).catch(()=>[]):Promise.resolve([]),
+      T_MEMBERSHIP_ACCOUNTS?scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([])
+    ]);
+    return {followups,students,courts,membershipAccounts};
   }
 
   function fallbackId(prefix,lead={},linkedId=''){
@@ -303,6 +335,7 @@ function createLeadsRoutes(deps={}){
       T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([]),
       T_MEMBERSHIP_ORDERS?getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
     ]);
+    const hiddenLeadIds=hiddenLeadSourceIds(leads);
     let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(visibleLeadSourceRows(leads),followups)));
     let customerLifecycleRows=buildCustomerLifecycleRows({
       leads:mergedLeads,
@@ -328,7 +361,8 @@ function createLeadsRoutes(deps={}){
         membershipOrders
       });
     }
-    return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:false});
+    return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:false})
+      .filter(row=>!hiddenLeadIds.has(cleanLeadText(row.id))&&!hiddenLeadIds.has(cleanLeadText(row.sourceLeadId)));
   }
 
   async function readVisibleLeadRows({expandLifecycleSearch=false}={}){
@@ -442,6 +476,26 @@ function createLeadsRoutes(deps={}){
         const materialized=await materializeLeadConversionIdentities(next,{now});
         if(!materialized.changed)await put(T_LEADS,leadId,next);
         return sendJson(res,materialized.lead);
+      }
+      if(method==='DELETE'){
+        await init();
+        const lead=await get(T_LEADS,leadId).catch(()=>null);
+        if(!lead)return sendJson(res,{error:'线索不存在'},404);
+        const now=new Date().toISOString();
+        const data=await readLeadDeleteData();
+        const linked=leadHasBusinessLinks(lead,data);
+        const converted=leadHasConvertedOutcome(lead);
+        const followups=(data.followups||[]).filter(row=>cleanLeadText(row.leadId)===cleanLeadText(leadId));
+        if(!linked&&!converted){
+          await Promise.all([
+            del(T_LEADS,leadId),
+            ...followups.map(row=>del(T_LEAD_FOLLOWUPS,row.id))
+          ]);
+          return sendJson(res,{success:true,deleted:true,archived:false,followupIds:followups.map(row=>row.id)});
+        }
+        const next={...lead,status:'voided',voidedAt:lead.voidedAt||now,voidedBy:user.name||'',voidReason:cleanLeadText(body?.reason)||'线索删除时自动作废，历史业务数据保留',updatedAt:now};
+        await put(T_LEADS,leadId,next);
+        return sendJson(res,{success:true,deleted:false,archived:true,lead:next});
       }
     }
     const leadFollowupIdM=path.match(/^\/lead-followups\/([^/]+)$/);

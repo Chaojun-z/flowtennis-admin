@@ -150,7 +150,7 @@ const OPERATIONS_SOURCE_TABLES=new Set([T_LEADS,T_LEAD_FOLLOWUPS,T_SCHEDULE,T_CO
 const LEAD_LIST_PROJECTION_FIELDS=[
   'displayName','name','wechatName','phone','level','leadDate','source','campus','customerType','demandProduct','consultType','intentLevel','profileNote','owner',
   'systemStatus','rawStatus','trialAtRaw','enrollAtRaw','convertedFlag','nextFollowupAt','lastFollowupAt','latestConcern','latestConclusion','nextAction','followupPriority','formalCoach',
-  'studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted','leadStage','dealType','conversionType','updatedAt','createdAt','lostReason','status','mergedIntoLeadId','mergedIntoLeadName','mergedAt','mergedBy'
+  'studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted','leadStage','dealType','conversionType','updatedAt','createdAt','lostReason','status','mergedIntoLeadId','mergedIntoLeadName','mergedAt','mergedBy','voidedAt','voidedBy','voidReason'
 ];
 const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=[
   'leadId','originalLeadId','leadMergedAt','followupAt','createdAt',
@@ -643,7 +643,7 @@ const {
 const routeSendJson=(...args)=>{sendJson(...args);return true;};
 const {buildLeadMergePlan}=createLeadMergeRuleHelpers({cleanLeadText,mergeLeadRows,applyLeadFollowupsSnapshot,normalizeLeadRecord,deriveLeadSystemStatus});
 const handleLeadsRoutes=createLeadsRoutes({
-  init,sendJson:routeSendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
+  init,sendJson:routeSendJson,getCachedScan,get,scan,put,del,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
   cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
   LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
   normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
@@ -5937,7 +5937,7 @@ function mergeLeadRows(rows=[]){
   return applyLeadOutcomeFields(merged);
 }
 function mergeDuplicateLeadRows(rows=[]){
-  return (rows||[]).filter(row=>cleanLeadText(row?.status)!=='merged');
+  return (rows||[]).filter(row=>!['merged','voided','deleted'].includes(cleanLeadText(row?.status)));
 }
 function leadNameCandidates(lead){
   return [lead.displayName,lead.wechatName].map(cleanLeadText).filter(Boolean);

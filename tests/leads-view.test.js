@@ -78,7 +78,7 @@ assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page sho
 assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
 assert.match(leadsSource, /function leadFormalCoachText\(lead\)/, 'converted course leads should derive deal coach from lifecycle or package purchase owner coach');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
-assert.match(leadsSource, /status\|\|''\)\.trim\(\)!=='merged'/, 'leads page should hide only manually merged duplicate leads');
+assert.match(leadsSource, /\['merged','voided','deleted'\]\.includes\(String\(row\?\.status\|\|''\)\.trim\(\)\)/, 'leads page should hide manually merged and voided leads');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
 assert.match(leadsSource, /线索数[\s\S]*历史学员[\s\S]*在期学员[\s\S]*上过体验课[\s\S]*体验后买正式课/, 'lead stats should expose schedule-fact student metrics from the unified backend model');
 assert.match(leadsSource, /历史学员 \/ 线索数[\s\S]*在期学员 \/ 历史学员[\s\S]*上过体验课 \/ 线索数[\s\S]*体验后买正式课 \/ 上过体验课/, 'lead stats should explain the unified historical, active, and trial-attended formulas');
@@ -161,6 +161,8 @@ assert.doesNotMatch(fnBody('leadDateDisplayText'), /\$\{date\} \$\{String\(time\
 assert.match(fnBody('leadBasicInfoReadonlyHtml'), /leadDetailFieldHtml\('线索时间',leadDateDisplayText\(lead\)\)/, 'lead detail basic tab should format lead time instead of showing raw ISO values');
 assert.doesNotMatch(fnBody('leadBasicInfoReadonlyHtml'), /leadDetailFieldHtml\('线索时间',lead\?\.leadDate\|\|'-'\)/, 'lead detail basic tab should not render raw leadDate');
 assert.match(fnBody('leadDetailBasicTabHtml'), /openLeadMergeModal\('\$\{lead\.id\}'\)[\s\S]*合并重复线索/, 'lead merge entry should live in the current lead detail drawer');
+assert.match(fnBody('leadDetailBasicTabHtml'), /openLeadDeleteConfirm\('\$\{lead\.id\}'\)[\s\S]*删除线索/, 'lead delete entry should live in the lead detail drawer');
+assert.match(fnBody('openLeadDeleteConfirm'), /confirmDel\(lead\.id,leadDisplayName\(lead\),'lead'\)/, 'lead delete confirmation should resolve the lead name before opening the shared confirm dialog');
 assert.match(leadsSource, /function leadDateInputValue\(lead\)/, 'lead forms should expose a standard lead date input helper');
 assert.match(fnBody('leadBasicInfoFormHtml'), /courtDateButtonHtml\('lead_leadDate',leadDateInputValue\(lead\),'线索时间'\)/, 'lead drawer edit form should pass a normalized date value to the date picker');
 assert.match(fnBody('openLeadCreateDrawer'), /leadBasicInfoFormHtml\(lead\)/, 'lead create drawer should reuse the same basic-info drawer form');
@@ -193,6 +195,15 @@ assert.doesNotMatch(leadsSource, /leadMergeFinalStage|finalLeadStage:document\.g
 assert.match(fnBody('openLeadMergeModal'), /leadMergeCandidateSearch[\s\S]*搜索姓名 \/ 手机号/, 'lead merge modal should search duplicate leads instead of using a giant default dropdown');
 assert.match(fnBody('leadMergePayload'), /primaryLeadId:leadMergeState\.primaryLeadId[\s\S]*mergeLeadIds:leadMergeState\.selectedDuplicateId\?\[leadMergeState\.selectedDuplicateId\]:\[\]/, 'lead merge payload should keep the drawer lead as primary and only submit the searched duplicate lead');
 assert.match(leadsSource, /function leadMergeFriendlyError\(/, 'lead merge should translate backend errors into user-friendly copy');
+assert.match(css, /lead-merge-modal-body\{font-size:13px/, 'lead merge modal body should use 13px body text');
+assert.match(css, /lead-merge-search\{font-size:12px/, 'lead merge modal search input should use 12px input text');
+assert.match(css, /lead-merge-candidate-meta\{font-size:12px/, 'lead merge candidate details should use 12px text');
+assert.match(fnBody('leadMergePreviewRowHtml'), /lead-merge-preview-row[\s\S]*esc\(label\)}：/, 'lead merge preview rows should render field labels and values with colons');
+assert.match(fnBody('leadMergePreviewHtml'), /'保留线索'[\s\S]*'隐藏线索'[\s\S]*'跟进迁移'[\s\S]*'学员引用'/, 'lead merge preview should include the key business fields');
+assert.doesNotMatch(fnBody('leadMergePreviewHtml'), /<b>|<strong>|font-weight/, 'lead merge preview body should not use bold text');
+assert.match(leadsSource, /当前不能合并，请查看预览说明。/, 'blocked lead merge preview should show a short user-friendly toast');
+assert.match(leadsSource, /这两条线索已经分别关联到不同学员/, 'blocked lead merge preview should explain the reason in user-facing language');
+assert.match(fnBody('leadMergePreviewHtml'), /leadMergePreviewRowHtml\('原因',blocked\.reason\)[\s\S]*leadMergePreviewRowHtml\('下一步',blocked\.next\)/, 'blocked lead merge preview should render reason and next step in the preview area');
 assert.match(leadsSource, /识别到的字段[\s\S]*缺失字段提醒[\s\S]*总行数[\s\S]*状态归类统计[\s\S]*自动匹配统计[\s\S]*疑似匹配列表[\s\S]*未匹配列表/, 'import preview modal should expose the required sections');
 assert.match(fnBody('leadBasicInfoFormHtml'), /姓名[\s\S]*电话[\s\S]*水平[\s\S]*线索时间[\s\S]*来源[\s\S]*所属校区[\s\S]*类型[\s\S]*需求产品[\s\S]*意向等级[\s\S]*跟进优先级[\s\S]*跟进人[\s\S]*基本信息/, 'lead create and edit drawer form should follow the detail drawer field order');
 assert.doesNotMatch(fnBody('openLeadCreateDrawer'), /lead-form-row-4|openStandardModal/, 'lead create drawer should not keep the old four-column modal body');
