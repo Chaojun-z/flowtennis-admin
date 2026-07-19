@@ -2359,9 +2359,9 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-create-preview{position:absolute;left:6px;right:6px;border:1px solid rgba(76,125,224,.52);border-radius:6px;background:rgba(76,125,224,.12);box-shadow:inset 0 0 0 1px rgba(76,125,224,.12);pointer-events:none;z-index:18}
 #page-coachschedule .coach-ops-day-board .coach-ops-empty{position:absolute;left:8px;right:8px;top:8px;bottom:auto;width:auto;margin:0;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:10px;font-style:italic;line-height:1.2}
 #page-coachschedule .coach-ops-day-board .coach-ops-now-line{position:absolute;left:72px;right:0;bottom:auto;width:auto;height:0;border-top:1px solid rgba(242,72,34,.75);border-left:0;z-index:30;pointer-events:none}
-#page-coachschedule .coach-ops-day-board .coach-ops-now-head{position:absolute;left:0;right:auto;height:0;z-index:40;pointer-events:none}
-#page-coachschedule .coach-ops-day-board .coach-ops-now-head i{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0 6px;border-radius:999px;background:rgba(242,72,34,.95);color:#fff;font-size:10px;font-style:normal;line-height:16px;white-space:nowrap;box-shadow:0 2px 6px rgba(242,72,34,.14)}
-#page-coachschedule .coach-ops-day-board .coach-ops-now-head b{position:absolute;left:68px;top:-4px;width:8px;height:8px;border-radius:50%;background:#F24822;box-shadow:0 0 0 2px rgba(255,255,255,.95)}
+#page-coachschedule .coach-ops-day-board .coach-ops-now-head{position:absolute;left:0;right:auto;height:0;z-index:90;pointer-events:none}
+#page-coachschedule .coach-ops-day-board .coach-ops-now-head i{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0;background:transparent;color:#F24822;font-size:10px;font-weight:400;font-style:normal;line-height:16px;white-space:nowrap;box-shadow:none}
+#page-coachschedule .coach-ops-day-board .coach-ops-now-head b{position:absolute;left:72px;top:-4px;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#F24822;box-shadow:0 0 0 2px rgba(255,255,255,.95)}
 #page-coachschedule .coach-ops-day-board .coach-ops-mobile-skeleton-card{position:absolute;left:14px;top:24px;width:88px;height:12px;border-radius:999px;background:linear-gradient(90deg,#F3F4F6 25%,#E5E7EB 37%,#F3F4F6 63%);background-size:400% 100%;animation:coachOpsSkeleton 1.2s ease-in-out infinite}
 #page-coachschedule .coach-ops-grid-card.mode-week .coach-ops-head{grid-template-columns:var(--coach-ops-axis-w) minmax(0,1fr);min-width:0;gap:0;background:#fff}
 #page-coachschedule .coach-ops-grid-card.mode-week .coach-ops-corner{width:72px;min-width:72px;max-width:72px;height:38px;min-height:38px;box-sizing:border-box;display:flex!important;align-items:center!important;justify-content:center!important;padding:0 6px!important;line-height:1;background:#fff;font-size:10px;font-weight:400}
@@ -2372,7 +2372,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-head{grid-template-columns:minmax(0,1fr);min-width:0;gap:0;background:#fff}
 #page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-hours{display:grid;width:100%;min-width:0;max-width:none;grid-template-columns:repeat(7,minmax(0,1fr));will-change:transform}
 #page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-hours span{width:auto;min-width:0;max-width:none}
-#page-coachschedule .coach-ops-month-overview{display:block;width:100%;min-width:0;max-width:none}
+#page-coachschedule .coach-ops-month-overview{display:block;width:100%;min-width:0;max-width:none;padding:0 24px;box-sizing:border-box}
 #page-coachschedule .coach-ops-month-overview-grid{display:grid;width:100%;min-width:0;max-width:none;grid-template-columns:repeat(7,minmax(0,1fr))}
 #page-coachschedule .coach-ops-month-overview .coach-ops-daycell{width:auto;min-width:0;max-width:none}
 #page-coachschedule .coach-ops-week-experiment{width:calc(72px + var(--coach-ops-week-grid-width));min-width:calc(72px + var(--coach-ops-week-grid-width));background:#fff}
@@ -2405,9 +2405,9 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-week-block .coach-ops-duration-badge{flex:0 0 auto;margin-left:auto;padding:0;background:transparent;color:currentColor;font-size:10px;font-weight:400;line-height:1.2;text-align:right}
 #page-coachschedule .coach-ops-week-block .coach-ops-location{padding-left:9px;margin-top:2px;font-size:10px;font-weight:400;line-height:1.2;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #page-coachschedule .coach-ops-week-now-line{position:absolute;left:72px;right:0;bottom:auto;width:auto;height:0;border-top:1px solid rgba(242,72,34,.75);z-index:30;pointer-events:none}
-#page-coachschedule .coach-ops-week-now-head{position:absolute;left:0;right:auto;height:0;z-index:40;pointer-events:none}
-#page-coachschedule .coach-ops-week-now-head i{position:absolute;top:-8px;left:8px;height:16px;padding:0 6px;border-radius:999px;background:rgba(242,72,34,.95);color:#fff;font-size:10px;font-style:normal;line-height:16px;white-space:nowrap;box-shadow:0 2px 6px rgba(242,72,34,.14)}
-#page-coachschedule .coach-ops-week-now-head b{position:absolute;left:68px;top:-4px;width:8px;height:8px;border-radius:50%;background:#F24822;box-shadow:0 0 0 2px rgba(255,255,255,.95)}
+#page-coachschedule .coach-ops-week-now-head{position:absolute;left:0;right:auto;height:0;z-index:90;pointer-events:none}
+#page-coachschedule .coach-ops-week-now-head i{position:absolute;top:-8px;left:8px;height:16px;padding:0;background:transparent;color:#F24822;font-size:10px;font-weight:400;font-style:normal;line-height:16px;white-space:nowrap;box-shadow:none}
+#page-coachschedule .coach-ops-week-now-head b{position:absolute;left:72px;top:-4px;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#F24822;box-shadow:0 0 0 2px rgba(255,255,255,.95)}
 #page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-hours span.is-today{background:#FCF7F3!important;color:#6B7280;font-weight:500}
 #page-coachschedule .coach-ops-month-overview .coach-ops-daycell{overflow:visible}
 #page-coachschedule .coach-ops-month-overview .coach-ops-daycell.month-cell{border-right:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line);border-bottom:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line)}
@@ -2418,6 +2418,55 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-month-coach-list{overflow:visible}
 #page-coachschedule .coach-ops-month-coach-list .coach-ops-month-coach-row{overflow:visible}
 #page-coachschedule .coach-ops-month-preview{z-index:320}
+#page-coachschedule{--coach-ops-theme:#B45309;--coach-ops-theme-soft:#FFF4E6;--coach-ops-clean-line:#E5E7EB}
+#page-coachschedule .coach-ops-sticky-surface,#page-coachschedule .coach-ops-sticky-bg,#page-coachschedule .coach-ops-shell,#page-coachschedule .coach-ops-scroll,#page-coachschedule .coach-ops-head,#page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-head,#page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-hours,#page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-hours span{background:#fff}
+#page-coachschedule .coach-ops-sticky-bg{background:#fff}
+#page-coachschedule .coach-ops-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:40px;flex-wrap:nowrap}
+#page-coachschedule .coach-ops-toolbar-main{display:flex;align-items:center;gap:8px;height:40px;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+#page-coachschedule .coach-ops-toolbar-right{display:flex;align-items:center;justify-content:flex-end;width:auto;height:40px;flex:0 0 auto;gap:12px}
+#page-coachschedule .coach-ops-legend{display:flex;width:auto;height:28px;box-sizing:border-box;padding:0;align-items:center;justify-content:flex-end;gap:8px;border:0;background:transparent;box-shadow:none;color:#2F241E;font-size:9px;font-weight:400;line-height:1;white-space:nowrap}
+#page-coachschedule .coach-ops-legend-item{height:28px;display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:400;line-height:1}
+#page-coachschedule .coach-ops-legend-dot{width:7px;height:7px;display:block;align-self:center;margin:0;transform:none}
+#page-coachschedule .coach-ops-mode-segment{display:flex;align-items:center;justify-content:center;width:240px;height:34px;box-sizing:border-box;padding:3px;border:1px solid #DDE1E7;border-radius:8px;background:#fff;box-shadow:none}
+#page-coachschedule .coach-ops-mode-btn{display:flex;align-items:center;justify-content:center;flex:1 1 0;align-self:center;height:26px;min-width:0;padding:0;border:0;border-radius:6px;background:transparent;color:#2F241E;font-size:12px;font-weight:400;line-height:1;box-shadow:none}
+#page-coachschedule .coach-ops-mode-btn:hover{background:#F7F8FA;color:#2F241E}
+#page-coachschedule .coach-ops-mode-btn.active{height:26px;background:rgba(180,83,9,.12);color:var(--coach-ops-theme);font-weight:400;box-shadow:none}
+#page-coachschedule .coach-ops-nav,#page-coachschedule .coach-date-btn{height:34px;border:1px solid #DDE1E7;border-radius:7px;background:#fff;box-shadow:none;color:#2F241E;font-size:14px;font-weight:500}
+#page-coachschedule .coach-ops-nav:not(.coach-ops-arrow){padding:0 16px}
+#page-coachschedule .coach-ops-arrow{position:relative;width:28px;min-width:28px;border-color:transparent;padding:0}
+#page-coachschedule .coach-ops-arrow svg{width:13px;height:13px;fill:#6B7280}
+#page-coachschedule .coach-date-btn{min-width:0;width:auto;padding:0 6px;border-color:transparent;justify-content:flex-start;align-items:center;font-size:15px;font-weight:500;line-height:1}
+#page-coachschedule .coach-date-btn::after{content:"";display:inline-block;width:16px;height:16px;margin-left:4px;flex:0 0 16px;background:center/16px 16px no-repeat url("data:image/svg+xml,%3Csvg viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M292.16 385.856a21.344 21.344 0 0 0-0.448 29.696l204.736 217.984a21.344 21.344 0 0 0 31.136 0l204.736-217.984a21.344 21.344 0 1 0-31.136-29.216L512 587.744l-189.184-201.408a21.344 21.344 0 0 0-30.176-0.96z' fill='%23666666'/%3E%3C/svg%3E")}
+#page-coachschedule .coach-date-btn.is-today{color:var(--coach-ops-theme)}
+#page-coachschedule .coach-date-btn.is-muted{color:#9CA3AF}
+#page-coachschedule .coach-ops-nav:hover,#page-coachschedule .coach-date-btn:hover{background:#F7F8FA;border-color:#DDE1E7}
+#page-coachschedule .coach-ops-arrow:hover{background:#F7F8FA;border-color:transparent;box-shadow:none;transform:none}
+#page-coachschedule .coach-ops-arrow:hover::after{content:attr(data-tip);position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);height:22px;box-sizing:border-box;padding:0 8px;border-radius:6px;background:rgba(255,251,247,.98);color:#5F3F2A;font-size:10px;font-weight:400;line-height:22px;white-space:nowrap;box-shadow:0 8px 18px rgba(64,36,18,.14);z-index:420;pointer-events:none}
+#page-coachschedule .coach-ops-shell{height:56px;padding:12px 18px 8px;border:0;box-sizing:border-box}
+#page-coachschedule .coach-ops-head{height:34px;border-bottom:1px solid var(--coach-ops-clean-line);box-shadow:none}
+#page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-hours{height:34px;padding:0 24px;box-sizing:border-box}
+#page-coachschedule .coach-ops-grid-card.mode-day .coach-ops-hours .coach-ops-day-coach-head,#page-coachschedule .coach-ops-grid-card.mode-week .coach-ops-hours .coach-ops-week-coach-head{justify-content:flex-start!important;text-align:left}
+#page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-hours span{height:34px;border:0!important;color:#2F241E;font-size:10px;font-weight:400;line-height:1;text-align:left;padding-left:12px;display:flex;align-items:center;justify-content:flex-start}
+#page-coachschedule .coach-ops-grid-card.mode-month .coach-ops-hours span.is-today{background:#fff!important;color:var(--coach-ops-theme);font-weight:400}
+#page-coachschedule .coach-ops-month-overview-grid{display:grid;width:100%;min-width:0;max-width:none;grid-template-columns:repeat(7,minmax(0,1fr))}
+#page-coachschedule .coach-ops-month-overview-grid.weeks-5,#page-coachschedule .coach-ops-month-overview-grid.weeks-6{grid-auto-rows:minmax(160px,auto)}
+#page-coachschedule .coach-ops-month-overview .coach-ops-daycell,#page-coachschedule .coach-ops-month-overview .coach-ops-daycell.month-cell{width:auto;min-width:0;max-width:none;height:auto;min-height:0;border:0;border-bottom:1px solid var(--coach-ops-clean-line);background:#fff;box-shadow:none;overflow:visible;padding:0}
+#page-coachschedule .coach-ops-month-overview .coach-ops-daycell:hover,#page-coachschedule .coach-ops-month-overview .coach-ops-daycell.has-course:hover{background:#fff}
+#page-coachschedule .coach-ops-month-overview .coach-ops-daycell.is-muted{background:#fff;color:#9CA3AF}
+#page-coachschedule .coach-ops-month-overview .coach-ops-daycell.is-today,#page-coachschedule .coach-ops-month-overview .coach-ops-daycell.is-today.has-course,#page-coachschedule .coach-ops-month-overview .coach-ops-daycell.is-today:hover{background:var(--coach-ops-theme-soft)}
+#page-coachschedule .coach-ops-month-overview .coach-ops-daycell-head{height:28px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 8px 0;margin:0}
+#page-coachschedule .coach-ops-month-overview .coach-ops-daycell-head strong{display:inline-flex;align-items:center;justify-content:center;min-width:0;height:20px;color:#2F241E;font-size:13px;font-weight:500;line-height:20px;white-space:nowrap}
+#page-coachschedule .coach-ops-month-overview .coach-ops-daycell.is-muted .coach-ops-daycell-head strong{color:#9CA3AF}
+#page-coachschedule .coach-ops-month-overview .coach-ops-daycell.is-today .coach-ops-daycell-head strong{min-width:20px;padding:0 5px;border-radius:999px;background:var(--coach-ops-theme);color:#fff;font-size:13px;font-weight:500}
+#page-coachschedule .coach-ops-daycell-count{display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0;border:0;border-radius:4px;background:transparent!important;color:#6B7280;font-family:inherit;font-size:11px;font-weight:500;line-height:20px;white-space:nowrap;cursor:pointer}
+#page-coachschedule .coach-ops-daycell-count:hover{color:var(--coach-ops-theme);background:rgba(180,83,9,.08)!important}
+#page-coachschedule .coach-ops-month-coach-list{box-sizing:border-box;padding:8px 8px 8px;overflow:visible}
+#page-coachschedule .coach-ops-month-coach-row{min-height:17px;padding:1px 4px;border-radius:4px;gap:6px;color:#2F241E}
+#page-coachschedule .coach-ops-month-coach-row:hover{background:#F7F8FA}
+#page-coachschedule .coach-ops-month-coach-name,#page-coachschedule .coach-ops-month-coach-count{font-size:10px;font-weight:400}
+#page-coachschedule .coach-ops-month-coach-count{color:#6B7280}
+#page-coachschedule .coach-ops-more-btn{margin-top:1px;padding:1px 4px;color:#9CA3AF!important;font-size:10px;font-weight:400!important}
+#page-coachschedule .coach-ops-more-btn:hover{color:var(--coach-ops-theme)!important;background:rgba(180,83,9,.08)!important}
 .my-schedule-primary{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.95fr);gap:14px;margin-bottom:16px}
 .my-schedule-panel{background:#FCFAF7;border:1px solid #E9DED2;border-radius:18px;box-shadow:0 10px 30px rgba(60,20,0,.05);padding:16px 18px}
 .my-schedule-panel h3{font-size:18px;color:#2F241E;margin-bottom:4px}

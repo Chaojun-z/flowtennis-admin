@@ -262,8 +262,14 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function coachOpsDayTimeLabelTop\(index,totalHours\)[\s\S]*Math\.min\(index\*COACH_OPS_DAY_HOUR_HEIGHT,totalHours\*COACH_OPS_DAY_HOUR_HEIGHT-16\)/,
-  'coach schedule day time labels should clamp first and last labels inside the grid'
+  /const COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30;/,
+  'coach schedule day and week timelines should reserve a 30-minute blank row before 07:00 and after 22:00'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsDayTimeLabelTop\(index,totalHours\)[\s\S]*COACH_OPS_TIME_BUFFER_MIN\/60\*COACH_OPS_DAY_HOUR_HEIGHT\+index\*COACH_OPS_DAY_HOUR_HEIGHT\/2/,
+  'coach schedule day time labels should start after the blank top buffer'
 );
 
 assert.match(
@@ -460,8 +466,8 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /coach-ops-daycell-head[\s\S]*coach-ops-daycell-count/,
-  'coach ops week and month cells should keep date left and lesson count right on one row'
+  /<button type="button" class="coach-ops-daycell-count" onclick="openCoachOpsMorePopover\(this,'','\$\{ds\}',event\)">\$\{lessonCount\}节<\/button>/,
+  'coach ops month lesson count should open the full daily schedule list'
 );
 
 assert.match(
@@ -676,7 +682,13 @@ assert.match(
 assert.match(
   styles,
   /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours \.coach-ops-day-coach-head\{[^}]*display:flex!important[^}]*justify-content:center[^}]*font-size:10px[^}]*font-weight:400/,
-  'coach schedule day coach headers should visibly center coach names'
+  'coach schedule day coach headers should use 10px normal weight'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours \.coach-ops-day-coach-head,#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours \.coach-ops-week-coach-head\{justify-content:flex-start!important;text-align:left\}/,
+  'coach schedule day and week coach headers should be left aligned'
 );
 
 assert.match(
@@ -717,7 +729,7 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const COACH_OPS_WEEK_HOUR_HEIGHT=40;/,
+  /const bufferH=COACH_OPS_TIME_BUFFER_MIN\/60\*COACH_OPS_WEEK_HOUR_HEIGHT,dayHeight=opsTotalMin\/60\*COACH_OPS_WEEK_HOUR_HEIGHT\+bufferH\*2;/,
   'coach schedule week view should use a compact vertical time scale'
 );
 
@@ -831,6 +843,24 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /function coachOpsMonthDateText\(d,range,prev\)[\s\S]*monthChanged=!prev\|\|prev\.getMonth\(\)!==d\.getMonth\(\)\|\|prev\.getFullYear\(\)!==d\.getFullYear\(\)[\s\S]*return d\.getDate\(\)===1\|\|\(!sameMonth&&monthChanged\)\?`\$\{d\.getMonth\(\)\+1\}月\$\{d\.getDate\(\)\}日`:String\(d\.getDate\(\)\);/,
+  'month date labels should show month text only for the first visible day of each month'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsScheduleDateLabel\(\)[\s\S]*dateKey\(d\)===todayKey\?'今天':coachOpsWeekdayText\(d\)/,
+  'coach schedule day title should show 今天 only for today and weekday for other dates'
+);
+
+assert.match(
+  coachOpsSource,
+  /\['day','日'\],[\s\S]*\['week','周'\],[\s\S]*\['month','月'\]/,
+  'coach schedule view switch should use short 日 周 月 labels'
+);
+
+assert.match(
+  coachOpsSource,
   /function openCoachOpsMorePopover\(el,coach,date,event\)[\s\S]*\(!coachKey\|\|coachName\(s\.coach\)===coachKey\)/,
   'month more popover should support all coaches for the selected date'
 );
@@ -867,14 +897,20 @@ assert.match(
 
 assert.match(
   styles,
+  /#page-coachschedule \.coach-ops-week-now-head i\{position:absolute;top:-8px;left:8px;height:16px;padding:0;background:transparent;color:#F24822;font-size:10px;font-weight:400/,
+  'coach schedule week current-time label should render as red text on the time axis'
+);
+
+assert.match(
+  styles,
   /#page-coachschedule \.coach-ops-week-block \.coach-ops-student\{display:flex;align-items:center;gap:6px;padding-left:0/,
   'coach schedule week card student row should replace the old time row'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours span\{width:auto;min-width:0;max-width:none\}/,
-  'coach schedule month weekday labels should stretch with fluid columns'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours span\{height:34px;border:0!important;color:#2F241E;font-size:10px;font-weight:400;line-height:1;text-align:left;padding-left:12px;display:flex;align-items:center;justify-content:flex-start\}/,
+  'coach schedule month weekday labels should be 10px normal weight and left aligned'
 );
 
 assert.match(
@@ -999,14 +1035,20 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-toolbar-right\{width:320px;height:28px;flex:0 0 320px;align-items:center;justify-content:center;gap:0\}/,
-  'coach schedule course legend container should keep the requested 320px by 28px size'
+  /#page-coachschedule \.coach-ops-toolbar-right\{display:flex;align-items:center;justify-content:flex-end;width:auto;height:40px;flex:0 0 auto;gap:12px\}/,
+  'coach schedule view switch should sit on the right side of the toolbar'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-legend\{width:320px;height:28px;box-sizing:border-box;padding:0 16px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:10px;line-height:1\}/,
-  'coach schedule course legend should vertically align dots and labels'
+  /#page-coachschedule \.coach-ops-legend\{display:flex;width:auto;height:28px;box-sizing:border-box;padding:0;align-items:center;justify-content:flex-end;gap:8px;border:0;background:transparent;box-shadow:none;color:#2F241E;font-size:9px;font-weight:400;line-height:1;white-space:nowrap\}/,
+  'coach schedule toolbar should show a lightweight 9px legend before the view switch'
+);
+
+assert.match(
+  html,
+  /<div class="coach-ops-legend" id="coachOpsLegend"><\/div>\s*<div id="coachOpsRangeHost"><\/div>/,
+  'coach schedule legend should render to the left of the day week month switch'
 );
 
 assert.match(
@@ -1071,8 +1113,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-shell\{border-bottom:1px solid #E3DDDC\}/,
-  'coach schedule filter and grid divider should use 1px #E3DDDC'
+  /#page-coachschedule \.coach-ops-shell\{height:56px;padding:12px 18px 8px;border:0;box-sizing:border-box\}/,
+  'coach schedule toolbar should use a compact clean calendar header'
 );
 
 assert.match(
@@ -1095,25 +1137,37 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-overview\{display:block;width:100%;min-width:0;max-width:none\}/,
-  'coach schedule month overview should fill the available calendar width'
+  /#page-coachschedule \.coach-ops-month-overview\{display:block;width:100%;min-width:0;max-width:none;padding:0 24px;box-sizing:border-box\}/,
+  'coach schedule month overview should fill the available calendar width with side breathing room'
 );
 
 assert.match(
   styles,
   /#page-coachschedule \.coach-ops-month-overview-grid\{display:grid;width:100%;min-width:0;max-width:none;grid-template-columns:repeat\(7,minmax\(0,1fr\)\)\}/,
-  'coach schedule month overview should render seven fluid date columns'
+  'coach schedule month overview should render seven fluid columns that fit one screen'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell\.month-cell\{min-height:154px\}/,
-  'coach schedule month date cells should be tall enough for five coach summaries'
+  /#page-coachschedule \.coach-ops-month-overview-grid\.weeks-5,#page-coachschedule \.coach-ops-month-overview-grid\.weeks-6\{grid-auto-rows:minmax\(160px,auto\)\}/,
+  'coach schedule month overview should grow naturally so full cell content remains scrollable'
+);
+
+assert.match(
+  coachOpsSource,
+  /coach-ops-month-overview-grid weeks-\$\{Math\.ceil\(days\.length\/7\)\}/,
+  'coach schedule month overview should mark the actual number of calendar weeks'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-coach-row:hover\{background:#F3F4F6\}/,
+  /#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell,#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell\.month-cell\{width:auto;min-width:0;max-width:none;height:auto;min-height:0;border:0;border-bottom:1px solid var\(--coach-ops-clean-line\);background:#fff;box-shadow:none;overflow:visible;padding:0\}/,
+  'coach schedule month date cells should remove vertical lines and keep only horizontal dividers'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-month-coach-row:hover\{background:#F7F8FA\}/,
   'coach schedule month hover should apply only to coach summary rows'
 );
 
@@ -1131,8 +1185,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell\{width:auto;min-width:0;max-width:none\}/,
-  'coach schedule month date cells should stretch with the fluid columns'
+  /#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell\.is-today \.coach-ops-daycell-head strong\{min-width:20px;padding:0 5px;border-radius:999px;background:var\(--coach-ops-theme\);color:#fff;font-size:13px;font-weight:500\}/,
+  'coach schedule month today should render the date as a theme-color circle'
 );
 
 assert.match(
@@ -1281,14 +1335,74 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-sticky-surface\{position:relative;z-index:1;background:#FFFCF9;border-radius:16px 16px 0 0;overflow:hidden;isolation:isolate\}/,
-  'coach schedule sticky header should clip toolbar and table header inside one rounded surface'
+  /#page-coachschedule \.coach-ops-sticky-surface,#page-coachschedule \.coach-ops-sticky-bg,#page-coachschedule \.coach-ops-shell,#page-coachschedule \.coach-ops-scroll,#page-coachschedule \.coach-ops-head,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-head,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours span\{background:#fff\}/,
+  'coach schedule month header should use a clean white calendar background'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-sticky-bg\{position:absolute;inset:0;z-index:0;background:linear-gradient\(#FFFCF9 0 var\(--coach-ops-toolbar-h\),#fff var\(--coach-ops-toolbar-h\) 100%\);border-radius:16px 16px 0 0;pointer-events:none\}/,
-  'coach schedule sticky header should include one complete opaque background layer'
+  /#page-coachschedule \.coach-date-btn\.is-today\{color:var\(--coach-ops-theme\)\}/,
+  'coach schedule day title should use the theme color only for today'
+);
+
+assert.match(
+  html,
+  /setCoachOpsToday\(\)">今天<\/button>\s*<button class="coach-ops-nav coach-ops-arrow" id="coachOpsPrevBtn"[\s\S]*<button class="coach-ops-nav coach-ops-arrow is-next" id="coachOpsNextBtn"[\s\S]*<div class="coach-date-wrap">/,
+  'coach schedule toolbar should place today, previous and next controls before the date title'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsShiftTitle\(step\)\{const m=coachOpsMode;return m==='month'\?\(step<0\?'上个月':'下个月'\):m==='week'\?\(step<0\?'上周':'下周'\):\(step<0\?'前一天':'后一天'\);\}/,
+  'coach schedule arrow hover titles should follow the current day week month mode'
+);
+
+assert.match(
+  coachOpsSource,
+  /const prev=document\.getElementById\('coachOpsPrevBtn'\),next=document\.getElementById\('coachOpsNextBtn'\),prevTip=coachOpsShiftTitle\(-1\),nextTip=coachOpsShiftTitle\(1\);/,
+  'coach schedule should derive previous and next hover tooltip text from the active view mode'
+);
+
+assert.match(
+  coachOpsSource,
+  /if\(prev\)\{prev\.dataset\.tip=prevTip;prev\.setAttribute\('aria-label',prevTip\);\}\s*if\(next\)\{next\.dataset\.tip=nextTip;next\.setAttribute\('aria-label',nextTip\);\}/,
+  'coach schedule should refresh custom arrow tooltips and accessible labels when the date label updates'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-mode-segment\{display:flex;align-items:center;justify-content:center;width:240px;height:34px;box-sizing:border-box;padding:3px;border:1px solid #DDE1E7;border-radius:8px;background:#fff;box-shadow:none\}/,
+  'coach schedule day week month switch container should center the active block vertically'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-mode-btn\{display:flex;align-items:center;justify-content:center;flex:1 1 0;align-self:center;height:26px;min-width:0;padding:0;border:0;border-radius:6px;background:transparent;color:#2F241E;font-size:12px;font-weight:400;line-height:1;box-shadow:none\}/,
+  'coach schedule day week month switch should be vertically centered with lighter smaller text'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-mode-btn\.active\{height:26px;background:rgba\(180,83,9,\.12\);color:var\(--coach-ops-theme\);font-weight:400;box-shadow:none\}/,
+  'coach schedule selected day week month switch fill should be 26px high'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-arrow:hover\{background:#F7F8FA;border-color:transparent;box-shadow:none;transform:none\}/,
+  'coach schedule arrow hover should use a plain fill without adding a border'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-arrow:hover::after\{content:attr\(data-tip\);/,
+  'coach schedule arrow hover should show the custom tooltip text'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-date-btn::after\{content:"";display:inline-block;width:16px;height:16px;margin-left:4px;flex:0 0 16px;background:center\/16px 16px no-repeat url\("data:image\/svg\+xml,/,
+  'coach schedule date dropdown icon should use the provided centered svg icon'
 );
 
 assert.match(
@@ -1413,8 +1527,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-head i\{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0 6px;border-radius:999px;background:rgba\(242,72,34,\.95\)/,
-  'coach schedule current-time label should sit beside the horizontal red line'
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-head i\{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0;background:transparent;color:#F24822;font-size:10px;font-weight:400/,
+  'coach schedule current-time label should render as red text on the time axis'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-head b\{position:absolute;left:72px;top:-4px;transform:translateX\(-50%\);width:8px;height:8px;border-radius:50%;background:#F24822/,
+  'coach schedule current-time red dot should be centered on the axis boundary and fully visible'
 );
 
 assert.doesNotMatch(
