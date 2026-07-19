@@ -795,8 +795,26 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function coachOpsMonthCoachPreviewHtml\(item,date\)[\s\S]*scheduleLocationText\(s\)/,
-  'month coach hover preview should include location information'
+  /function coachOpsMonthPopoverCourseHtml\(s,clickable\)[\s\S]*class="coach-ops-course-location">\$\{esc\(scheduleLocationText\(s\)\)\}/,
+  'month popover course rows should include location information'
+);
+
+assert.match(
+  coachOpsSource,
+  /function openCoachOpsMorePopover\(el,coach,date,event\)[\s\S]*rows\.map\(s=>coachOpsMonthPopoverCourseHtml\(s,true\)\)/,
+  'month more popover should reuse the shared course row with location and type color'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsMonthCoachPreviewHtml\(item,date\)[\s\S]*rows\.map\(s=>coachOpsMonthPopoverCourseHtml\(s,false\)\)/,
+  'month coach hover preview should reuse the shared course row style'
+);
+
+assert.match(
+  coachOpsSource,
+  /const titleName=\/教练\$\/\.test\(String\(item\.name\|\|''\)\)\?String\(item\.name\|\|''\):`\$\{String\(item\.name\|\|''\)\}教练`;/,
+  'month coach hover preview title should clearly show the coach name'
 );
 
 assert.match(
@@ -1029,6 +1047,18 @@ assert.match(
 
 assert.match(
   styles,
+  /#page-coachschedule \.coach-ops-more-popover\{width:300px;/,
+  'coach schedule month more popover should be wide enough for location information'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-course-location\{flex:0 0 auto;min-width:auto;white-space:nowrap;overflow:visible;text-overflow:clip;color:#6B7280\}/,
+  'coach schedule month popover location should remain fully visible'
+);
+
+assert.match(
+  styles,
   /#page-coachschedule \.coach-ops-shell\{border-bottom:1px solid #E3DDDC\}/,
   'coach schedule filter and grid divider should use 1px #E3DDDC'
 );
@@ -1079,6 +1109,12 @@ assert.match(
   styles,
   /#page-coachschedule \.coach-ops-month-coach-row:hover \.coach-ops-month-preview\{display:block\}/,
   'coach schedule month coach row hover should show the daily preview'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-month-preview\{display:none;position:absolute;left:8px;top:20px;z-index:70;width:300px;/,
+  'coach schedule month coach preview should be wide enough for full course details'
 );
 
 assert.match(

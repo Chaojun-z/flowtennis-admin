@@ -2100,7 +2100,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-daycell-empty{display:none}
 #page-coachschedule .coach-ops-more-btn{font-size:10px;font-weight:400!important;color:#9CA3AF!important}
 #page-coachschedule .coach-ops-more-btn:hover{color:#3B82F6!important;background:#EFF6FF!important}
-#page-coachschedule .coach-ops-more-popover{width:180px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;box-shadow:0 10px 15px -3px rgba(0,0,0,.10);padding:12px}
+#page-coachschedule .coach-ops-more-popover{width:300px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;box-shadow:0 10px 15px -3px rgba(0,0,0,.10);padding:12px}
 #page-coachschedule .coach-ops-more-head strong{font-size:12px;font-weight:400;color:#1F2937}
 #page-coachschedule .coach-ops-more-list{gap:0}
 #page-coachschedule .coach-ops-more-course{display:flex;align-items:flex-start;gap:6px;width:100%;border:0;background:transparent;border-radius:4px;padding:2px 4px;text-align:left;font-family:inherit;cursor:pointer;white-space:nowrap;overflow:hidden}
@@ -2111,6 +2111,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-more-course.type-master::before{background:#EF4444}
 #page-coachschedule .coach-ops-more-course.type-partner::before{background:#8B5CF6}
 #page-coachschedule .coach-ops-more-course span{font-size:9px;font-weight:400;color:#374151;white-space:nowrap}
+#page-coachschedule .coach-ops-course-location{flex:0 0 auto;color:#6B7280}
 #page-coachschedule .coach-ops-shell{height:65px;padding:12px 24px;box-sizing:border-box}
 #page-coachschedule .coach-ops-toolbar{height:41px}
 #page-coachschedule .coach-ops-toolbar-main{height:41px;align-items:center}
@@ -2177,8 +2178,10 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-daycell-list{gap:0;line-height:1.1}
 #page-coachschedule .coach-ops-course-time{flex:0 0 auto;white-space:nowrap}
 #page-coachschedule .coach-ops-course-name{min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-coachschedule .coach-ops-course-location{flex:0 0 auto;min-width:auto;white-space:nowrap;overflow:visible;text-overflow:clip;color:#6B7280}
 #page-coachschedule .coach-ops-more-course{white-space:nowrap;flex-wrap:nowrap;overflow:hidden}
 #page-coachschedule .coach-ops-more-course span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+#page-coachschedule .coach-ops-more-course .coach-ops-course-location{min-width:auto;overflow:visible;text-overflow:clip}
 #page-coachschedule .coach-ops-head,#page-coachschedule .coach-ops-row{gap:0}
 #page-coachschedule .coach-ops-corner{border-bottom:1px solid #E3DDDC}
 #page-coachschedule .coach-ops-head::after{left:0}
@@ -2244,11 +2247,13 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-month-coach-row:hover{background:#F3F4F6}
 #page-coachschedule .coach-ops-month-coach-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:400}
 #page-coachschedule .coach-ops-month-coach-count{flex:0 0 auto;color:#6B7280;font-size:10px;font-weight:400;white-space:nowrap}
-#page-coachschedule .coach-ops-month-preview{display:none;position:absolute;left:8px;top:20px;z-index:70;width:188px;box-sizing:border-box;border:1px solid #E5E7EB;border-radius:8px;background:#fff;box-shadow:0 10px 20px rgba(17,24,39,.14);padding:9px 10px;color:#374151}
+#page-coachschedule .coach-ops-month-preview{display:none;position:absolute;left:8px;top:20px;z-index:70;width:300px;box-sizing:border-box;border:1px solid #E5E7EB;border-radius:8px;background:#fff;box-shadow:0 10px 20px rgba(17,24,39,.14);padding:9px 10px;color:#374151}
 #page-coachschedule .coach-ops-month-coach-row:hover .coach-ops-month-preview{display:block}
 #page-coachschedule .coach-ops-month-preview b,#page-coachschedule .coach-ops-month-preview span,#page-coachschedule .coach-ops-month-preview em{display:block;font-size:10px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #page-coachschedule .coach-ops-month-preview b{margin-bottom:4px;color:#111827;font-weight:600}
 #page-coachschedule .coach-ops-month-preview em{margin-top:3px;color:#6B7280;font-style:normal}
+#page-coachschedule .coach-ops-month-preview .coach-ops-more-course{cursor:default}
+#page-coachschedule .coach-ops-month-preview .coach-ops-more-course:hover{background:transparent}
 @keyframes coachOpsSkeleton{0%{background-position:100% 0}100%{background-position:0 0}}
 #page-coachschedule .coach-ops-grid-card{height:calc(100vh + 88px);overflow:visible}
 #page-coachschedule .coach-ops-grid-card.is-compact{height:auto}

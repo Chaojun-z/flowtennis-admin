@@ -342,6 +342,14 @@ function openCoachOpsDaySchedules(coach,date){
     :'<div class="empty"><p>当天暂无排课</p></div>';
   openStandardModal({title:'当天排课',bodyHtml:body,actionsHtml:'<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button>',extraClass:'modal-tight'});
 }
+function coachOpsMonthPopoverCourseHtml(s,clickable){
+  const tag=clickable?'button':'div';
+  const typeClass=coachOpsCourseTypeTagClass(scheduleCourseType(s));
+  const typeAttr=clickable?' type="button"':'';
+  const onClick=clickable?` onclick="event.stopPropagation();openScheduleDetail('${s.id}')" `:'';
+  const timeText=`${String(s.startTime||'').slice(11,16)}${s.endTime?`-${String(s.endTime).slice(11,16)}`:''}`;
+  return `<${tag}${typeAttr} class="coach-ops-more-course ${typeClass}"${onClick}><span class="coach-ops-course-time">${timeText}</span><span class="coach-ops-course-name">${esc(coachOpsScheduleStudentTitle(s))}</span><span class="coach-ops-course-location">${esc(scheduleLocationText(s))}</span></${tag}>`;
+}
 function openCoachOpsMorePopover(el,coach,date,event){
   if(event)event.stopPropagation();
   document.querySelectorAll('.coach-ops-more-popover,.coach-ops-more-overlay').forEach(node=>node.remove());
@@ -355,7 +363,7 @@ function openCoachOpsMorePopover(el,coach,date,event){
   const pop=document.createElement('div');
   pop.className='coach-ops-more-popover';
   const displayDate=String(date||'').replace(/^(\d{4})-(\d{2})-(\d{2})$/,(_,y,m,d)=>`${Number(m)}月${Number(d)}日`);
-  pop.innerHTML=`<div class="coach-ops-more-head"><strong>${esc(displayDate)} 排课</strong><button type="button" onclick="event.stopPropagation();document.querySelectorAll('.coach-ops-more-popover,.coach-ops-more-overlay').forEach(node=>node.remove())">×</button></div><div class="coach-ops-more-list">${rows.map(s=>`<button type="button" class="coach-ops-more-course ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><span class="coach-ops-course-time">${String(s.startTime||'').slice(11,16)}${s.endTime?`-${String(s.endTime).slice(11,16)}`:''}</span><span class="coach-ops-course-name">${esc(coachOpsScheduleStudentTitle(s))}</span></button>`).join('')}</div>`;
+  pop.innerHTML=`<div class="coach-ops-more-head"><strong>${esc(displayDate)} 排课</strong><button type="button" onclick="event.stopPropagation();document.querySelectorAll('.coach-ops-more-popover,.coach-ops-more-overlay').forEach(node=>node.remove())">×</button></div><div class="coach-ops-more-list">${rows.map(s=>coachOpsMonthPopoverCourseHtml(s,true)).join('')}</div>`;
   const cell=el.closest('.coach-ops-daycell')||el.parentElement;
   if(cell){
     cell.appendChild(overlay);
@@ -389,7 +397,8 @@ function coachOpsMonthCoachSummaries(dayRows){
 function coachOpsMonthCoachPreviewHtml(item,date){
   const rows=item.rows.slice(0,6);
   const hidden=item.rows.length-rows.length;
-  return `<span class="coach-ops-month-preview"><b>${esc(String(date||'').slice(5).replace('-','/'))} · ${esc(item.name)}</b>${rows.map(s=>`<span>${String(s.startTime||'').slice(11,16)}${s.endTime?`-${String(s.endTime).slice(11,16)}`:''} ${esc(coachOpsScheduleStudentTitle(s))} ${esc(scheduleLocationText(s))}</span>`).join('')}${hidden>0?`<em>还有 ${hidden} 节</em>`:''}</span>`;
+  const titleName=/教练$/.test(String(item.name||''))?String(item.name||''):`${String(item.name||'')}教练`;
+  return `<div class="coach-ops-month-preview"><b>${esc(String(date||'').slice(5).replace('-','/'))} · ${esc(titleName)}</b>${rows.map(s=>coachOpsMonthPopoverCourseHtml(s,false)).join('')}${hidden>0?`<em>还有 ${hidden} 节</em>`:''}</div>`;
 }
 function renderCoachOpsMonthOverview(renderRows,range,todayKey){
   const gridStart=weekStart(range.start),gridEnd=addDays(weekStart(range.end),7);
