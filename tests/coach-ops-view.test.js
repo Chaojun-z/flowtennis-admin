@@ -705,6 +705,12 @@ assert.match(
 
 assert.match(
   styles,
+  /#page-coachschedule \.coach-ops-day-time-axis span\{[^}]*transform:translateY\(-8px\)/,
+  'coach schedule day time axis labels should be centered on their timeline ticks'
+);
+
+assert.match(
+  styles,
   /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-corner\{[^}]*font-size:10px[^}]*font-weight:400/,
   'coach schedule day header corner should use 10px normal weight'
 );
@@ -893,6 +899,12 @@ assert.match(
   styles,
   /#page-coachschedule \.coach-ops-week-now-line\{position:absolute;left:72px;right:0;bottom:auto;width:auto;height:0;border-top:1px solid rgba\(242,72,34,\.75\);z-index:30;pointer-events:none\}/,
   'coach schedule week current-time line should start after the time axis'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-week-time-axis span\{[^}]*transform:translateY\(-8px\)/,
+  'coach schedule week time axis labels should be centered on their timeline ticks'
 );
 
 assert.match(
