@@ -1,7 +1,8 @@
-:root{--amber-deep:#78350F;--amber-mid:#92400E;--amber-base:#B45309;--amber-warm:#D97706;--amber-light:#F59E0B;--cream-soft:#FDF2D0;--cream-pale:#FEF9E7;--bg-grad:linear-gradient(135deg, #A7653D 0%, #8D4B22 100%);--card-f:rgba(255,255,255,0.92);--bf:blur(25px);--borf:1px solid rgba(255,255,255,0.40);--shf:0 12px 48px rgba(0,0,0,0.1);--shm:0 8px 32px rgba(0,0,0,0.08);--shb:0 4px 24px rgba(0,0,0,0.06);--th:#1c1917;--tb:#3f3f46;--ts:#71717a;--td:rgba(0,0,0,0.32);--sw:190px;--topH:60px;--shell-brand-color:#FBF7F4;--shell-brand-subline-color:#CAB6A8;--shell-sidebar-bg:#805435;--shell-sidebar-divider:#875C3C;--shell-app-bg:#875C3C;--shell-topbar-divider:#805435;--shell-page-title-color:#FBF7F4;--shell-live-clock-color:#E0D3C9;--shell-live-dot-color:#78DB89;--shell-sidebar-icon-color:#C5B0A2;--shell-sidebar-active-icon-color:#EFE7E2;}
+:root{--amber-deep:#78350F;--amber-mid:#92400E;--amber-base:#B45309;--amber-warm:#D97706;--amber-light:#F59E0B;--cream-soft:#FDF2D0;--cream-pale:#FEF9E7;--bg-grad:linear-gradient(135deg, #A7653D 0%, #8D4B22 100%);--card-f:rgba(255,255,255,0.92);--bf:blur(25px);--borf:1px solid rgba(255,255,255,0.40);--shf:0 12px 48px rgba(0,0,0,0.1);--shm:0 8px 32px rgba(0,0,0,0.08);--shb:0 4px 24px rgba(0,0,0,0.06);--th:#1c1917;--tb:#3f3f46;--ts:#71717a;--td:rgba(0,0,0,0.32);--sw:190px;--topH:60px;--ft-font-sans:"Inter","SF Pro Text","PingFang SC","PingFang TC",-apple-system,BlinkMacSystemFont,"Helvetica Neue","Microsoft YaHei",sans-serif;--ft-number-font:"Inter","SF Pro Text","SF Pro Display","PingFang SC","PingFang TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--shell-brand-color:#FBF7F4;--shell-brand-subline-color:#CAB6A8;--shell-sidebar-bg:#805435;--shell-sidebar-divider:#875C3C;--shell-app-bg:#875C3C;--shell-topbar-divider:#805435;--shell-page-title-color:#FBF7F4;--shell-live-clock-color:#E0D3C9;--shell-live-dot-color:#78DB89;--shell-sidebar-icon-color:#C5B0A2;--shell-sidebar-active-icon-color:#EFE7E2;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
-body{font-family:"PingFang SC","PingFang TC",-apple-system,BlinkMacSystemFont,"Helvetica Neue","Microsoft YaHei",sans-serif;background:var(--bg-grad);min-height:100vh;display:flex;overflow:hidden;color:var(--cream-pale)}
+body{font-family:var(--ft-font-sans);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;background:var(--bg-grad);min-height:100vh;display:flex;overflow:hidden;color:var(--cream-pale)}
+button,input,select,textarea{font-variant-numeric:inherit;font-feature-settings:inherit}
 body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.03) 3px,rgba(0,0,0,0.03) 6px);opacity:.18;pointer-events:none;z-index:0}
 .page-loading{position:fixed;inset:0;background:rgba(120,53,15,0.85);backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);display:none;align-items:center;justify-content:center;z-index:180}
 .page-loading.show{display:flex}
@@ -67,16 +68,16 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #courtStatsRow.court-dashboard-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;overflow:visible}
 #courtStatsRow.court-dashboard-stats .court-dashboard-card{min-width:0}
 #page-courts .court-split-value{gap:6px}
-#page-courts .court-split-value>span:not(.court-stat-slash){font-size:21px;margin-left:0;color:#3B3026;font-weight:700}
+#page-courts .court-split-value>span:not(.court-stat-slash){font-size:21px;margin-left:0;color:#3B3026;font-weight:500}
 #page-courts .court-stat-slash{color:#A19080;font-size:10px;font-weight:400}
-#page-courts .court-stat-percent{font-size:10px;color:#A19080;margin-left:4px;font-weight:700}
+#page-courts .court-stat-percent{font-size:10px;color:#A19080;margin-left:4px;font-weight:500}
 .scard{background:var(--card-f);backdrop-filter:var(--bf);border:var(--borf);box-shadow:var(--shf);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:13px;transition:transform .14s}.scard:hover{transform:translateY(-2px)}
 .sc-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
 .si-a{background:linear-gradient(135deg,rgba(180,83,9,0.15),rgba(217,119,6,0.1))}.si-b{background:linear-gradient(135deg,rgba(245,200,66,0.18),rgba(224,168,32,0.1))}.si-c{background:linear-gradient(135deg,rgba(120,53,15,0.12),rgba(146,64,14,0.08))}.si-d{background:linear-gradient(135deg,rgba(217,119,6,0.15),rgba(180,83,9,0.1))}.si-e{background:linear-gradient(135deg,rgba(220,38,38,0.12),rgba(185,28,28,0.08))}
-.sc-label{font-size:11px;color:var(--ts);margin-bottom:4px;font-weight:500}.sc-val{font-size:21px;font-weight:700;color:var(--th);line-height:1}.sc-val .u{font-size:12px;font-weight:400;color:var(--ts);margin-left:2px}.sc-sub{font-size:11px;color:var(--td);margin-top:2px}
+.sc-label{font-size:11px;color:var(--ts);margin-bottom:4px;font-weight:500}.sc-val{font-family:var(--ft-number-font);font-size:21px;font-weight:500;color:var(--th);line-height:1}.sc-val .u{font-size:12px;font-weight:400;color:var(--ts);margin-left:2px}.sc-sub{font-size:11px;color:var(--td);margin-top:2px}
 .mod-tabs{display:flex;gap:3px;background:rgba(0,0,0,0.10);border-radius:13px;padding:4px;width:fit-content;margin-bottom:20px;border:0.5px solid rgba(255,255,255,0.1)}
 .mtab{padding:8px 20px;border-radius:10px;border:none;background:transparent;color:rgba(254,243,199,0.55);font-size:13.5px;cursor:pointer;transition:all .16s;font-family:inherit;display:flex;align-items:center;gap:6px}.mtab:hover{color:var(--cream-pale)}.mtab.active{background:var(--card-f);color:var(--th);font-weight:600;box-shadow:var(--shm)}
-.mtab-cnt{background:var(--amber-base);color:#fff;border-radius:9px;font-size:10.5px;padding:1px 6px;font-weight:700}
+.mtab-cnt{background:var(--amber-base);color:#fff;border-radius:9px;font-size:10.5px;padding:1px 6px;font-weight:600}
 .toolbar{display:flex;align-items:center;gap:9px;margin-bottom:13px;flex-wrap:wrap}
 .search-box{display:flex;align-items:center;gap:8px;background:var(--card-f);border-radius:10px;padding:0 13px;box-shadow:var(--shm);flex:1;min-width:180px;max-width:280px;border:0.5px solid rgba(180,83,9,0.15)}
 .search-box input{border:none;outline:none;background:transparent;font-size:13px;color:var(--th);padding:9px 0;width:100%;font-family:inherit}.search-box input::placeholder{color:var(--td)}
@@ -89,10 +90,10 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-courts thead th{position:sticky;top:0;z-index:5;background:rgba(253,248,241,.96);backdrop-filter:blur(12px)}
 #page-memberships .membership-stat-card{min-width:0}
 #page-memberships .membership-split-value{gap:0;font-size:21px}
-#page-memberships .membership-split-value span:not(.tms-stat-divider){font-size:21px;margin-left:0;color:#3B3026;font-weight:700}
+#page-memberships .membership-split-value span:not(.tms-stat-divider){font-size:21px;margin-left:0;color:#3B3026;font-weight:500}
 #page-students .student-stat-card{min-width:0}
 #page-students .student-stat-pair{gap:0;font-size:21px}
-#page-students .student-stat-pair span:not(.student-stat-divider){font-size:21px;margin-left:0;color:#3B3026;font-weight:700}
+#page-students .student-stat-pair span:not(.student-stat-divider){font-size:21px;margin-left:0;color:#3B3026;font-weight:500}
 #page-students .student-stat-divider{color:#A19080!important;font-size:10px!important;font-weight:400!important;margin:0 8px!important}
 .lead-date-scope-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .lead-date-scope-main{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -118,12 +119,12 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-finance .finance-ledger-stats .tms-stat-label{white-space:normal;line-height:1.4}
 #page-finance .finance-ledger-stats .tms-stat-value{font-size:21px;min-width:0;overflow:visible}
 #page-finance .finance-ledger-stats .tms-stat-value.finance-split-value{gap:5px;font-size:16px}
-#page-finance .finance-ledger-stats .finance-main-number{font-size:1em;color:#3B3026;font-weight:700;flex:0 0 auto}
+#page-finance .finance-ledger-stats .finance-main-number{font-size:1em;color:#3B3026;font-weight:500;flex:0 0 auto}
 #page-finance .finance-ledger-stats .finance-split-sep{font-size:.62em;color:#A19080;flex:0 0 auto}
-#page-finance .finance-ledger-stats .finance-sub-number{font-size:1em;color:#3B3026;font-weight:700;flex:0 0 auto}
+#page-finance .finance-ledger-stats .finance-sub-number{font-size:1em;color:#3B3026;font-weight:500;flex:0 0 auto}
 #page-finance .finance-ledger-stats .finance-card-percent{font-size:.55em;margin-left:2px}
 #page-finance .finance-card-percent{display:inline;margin-top:0;text-align:left}
-#page-finance .finance-amount{font-weight:700;font-variant-numeric:tabular-nums}
+#page-finance .finance-amount{font-family:var(--ft-number-font);font-weight:400;font-variant-numeric:tabular-nums lining-nums}
 #page-finance .finance-amount-income{color:#3F946D}
 #page-finance .finance-amount-consume{color:#1F2937}
 #page-finance .finance-amount-refund{color:#D6455D}
@@ -1600,7 +1601,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-operations .operations-kpi-row .tms-skeleton-spark,#page-operations .operations-coach-kpi-strip .tms-skeleton-spark{height:66px;min-height:66px;margin:8px -18px -11px -20px;padding:0 18px;gap:24px}
 #page-operations .operations-kpi-row .tms-skeleton-spark::before,#page-operations .operations-coach-kpi-strip .tms-skeleton-spark::before{top:34px;left:18px;right:18px;background:linear-gradient(90deg,transparent,#DED2C8 18%,#DED2C8 82%,transparent)}
 @keyframes operationsSkeleton{0%{background-position:120% 0}100%{background-position:-120% 0}}
-#page-operations{--ops-number-font:SFMono-Regular,ui-monospace,"Cascadia Mono","Roboto Mono","Helvetica Neue",Arial,sans-serif;--ops-card-bg:#FFFDFC;--ops-card-border:rgba(91,63,42,.12);--ops-card-shadow:0 1px 2px rgba(37,24,15,.018),0 8px 20px rgba(37,24,15,.03);--ops-card-shadow-hover:0 1px 3px rgba(37,24,15,.028),0 10px 24px rgba(37,24,15,.04);--ops-title:#89776A;--ops-text:#111827;--ops-muted:#8FA0B6;--ops-green:#1F8A68;--ops-red:#E05252;--ops-blue:#2F72B8;--ops-gold:#D89135}
+#page-operations{--ops-number-font:var(--ft-number-font);--ops-card-bg:#FFFDFC;--ops-card-border:rgba(91,63,42,.12);--ops-card-shadow:0 1px 2px rgba(37,24,15,.018),0 8px 20px rgba(37,24,15,.03);--ops-card-shadow-hover:0 1px 3px rgba(37,24,15,.028),0 10px 24px rgba(37,24,15,.04);--ops-title:#89776A;--ops-text:#111827;--ops-muted:#8FA0B6;--ops-green:#1F8A68;--ops-red:#E05252;--ops-blue:#2F72B8;--ops-gold:#D89135}
 #page-operations .operations-section,#page-operations .operations-chart-card,#page-operations .operations-command-center,#page-operations .operations-coach-command{background:var(--ops-card-bg);border:1px solid var(--ops-card-border);border-radius:8px;box-shadow:var(--ops-card-shadow)}
 #page-operations .operations-section:hover,#page-operations .operations-chart-card:hover{box-shadow:var(--ops-card-shadow)}
 #page-operations .operations-module-head h3,#page-operations .operations-card-title{color:var(--ops-title);font-size:15px;font-weight:700;letter-spacing:0}
@@ -1623,6 +1624,9 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-operations .operations-kpi-line{stroke-width:1.8;filter:none;shape-rendering:geometricPrecision;vector-effect:non-scaling-stroke}
 #page-operations .operations-kpi-area{opacity:1}
 #page-operations .operations-kpi-hover-point:hover::before{width:6px;height:6px;border:1.5px solid var(--trend-color,#2E8B6D);box-shadow:0 0 0 3px color-mix(in srgb,var(--trend-color,#2E8B6D) 14%,transparent)}
+#page-operations .operations-kpi-card strong,#page-operations .operations-court-kpi-main strong,#page-operations .operations-coach-kpi strong,#page-operations .operations-overview-inline-kpis strong,#page-operations .operations-overview-metric strong,#page-operations .operations-court-ranking-rate,#page-operations .operations-court-ranking-facts strong,#page-operations .operations-court-heat-kpis strong,#page-operations .operations-funnel-value b,#page-operations .operations-funnel-conversion strong,#page-operations .operations-funnel-aux strong,#page-operations .operations-retention-metric strong,#page-operations .operations-channel-ranking-row strong,#page-operations .operations-attribute-head strong,#page-operations .operations-attribute-metric-head strong,#page-operations .operations-risk-head strong,#page-operations .operations-risk-row strong,#page-operations .operations-persona-row strong{font-family:var(--ft-number-font);font-weight:500;font-variant-numeric:tabular-nums lining-nums}
+#page-operations .operations-kpi-card em,#page-operations .operations-court-kpi-main em,#page-operations .operations-coach-kpi em,#page-operations .operations-court-kpi-change,#page-operations .operations-coach-kpi-change,#page-operations .operations-funnel-value em,#page-operations .operations-funnel-drop,#page-operations .operations-retention-metric em{font-family:var(--ft-number-font);font-weight:400;font-variant-numeric:tabular-nums lining-nums}
+#page-coachschedule .coach-date-btn,#page-coachschedule .coach-ops-nav,#page-coachschedule .coach-ops-daycell-head strong,#page-coachschedule .coach-ops-daycell-count,#page-coachschedule .coach-ops-month-coach-count,#page-coachschedule .coach-ops-course-time,#page-coachschedule .coach-ops-time,#page-coachschedule .coach-ops-week-time-axis span,#page-coachschedule .coach-ops-day-time-label,#page-coachschedule .coach-ops-week-time-label{font-family:var(--ft-number-font);font-variant-numeric:tabular-nums lining-nums}
 @media(max-width:900px){
   #page-operations .operations-chart-grid,#page-operations .operations-overview-grid,#page-operations .operations-overview-risk-board,#page-operations .operations-overview-inline-kpis,#page-operations .operations-court-top-grid,#page-operations .operations-conversion-monitor-grid,#page-operations .operations-conversion-funnel-grid,#page-operations .operations-retention-grid,#page-operations .operations-channel-diagnostics-grid,#page-operations .operations-persona-grid,#page-operations .operations-kpi-row,#page-operations .operations-coach-kpi-strip,#page-operations .operations-coach-hero-grid,#page-operations .operations-coach-secondary-grid,#page-operations .operations-channel-quality-layout,#page-operations .operations-attribute-layout,#page-operations .operations-skeleton-grid,#page-operations .operations-court-skeleton-grid{grid-template-columns:1fr}
   #page-operations .operations-overview-bar-row{grid-template-columns:1fr}

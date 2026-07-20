@@ -1,7 +1,7 @@
 .tms-table-card{background-color:#E7DFD6;border:1px solid #E8DFD5;border-radius:8px;box-shadow:none;display:flex;flex-direction:column;overflow:hidden;margin-bottom:20px}
 .tms-table-wrapper{overflow:auto;max-height:calc(100vh - 170px);scrollbar-width:thin;scrollbar-color:#D9D0C7 transparent;position:relative;isolation:isolate;background:#FBF7F4}
 .tms-table-wrapper::-webkit-scrollbar{height:8px;width:8px;display:none}
-.tms-table{width:100%;min-width:1600px;border-collapse:separate;border-spacing:0;text-align:left;font-size:12px}
+.tms-table{width:100%;min-width:1600px;border-collapse:separate;border-spacing:0;text-align:left;font-size:12px;font-variant-numeric:tabular-nums lining-nums}
 .tms-table thead{position:sticky;top:0;z-index:130;background:#F1E9E2}
 .tms-table th,.tms-table td{height:42px;white-space:nowrap;padding:0 16px;border-bottom:0.5px solid #E7DFD6;vertical-align:middle;line-height:1.2;box-sizing:border-box}
 .tms-table th{height:42px;background-color:#F1E9E2;color:#887565;font-size:12px;font-weight:400;position:sticky;top:0;z-index:50;box-shadow:none;letter-spacing:0;text-transform:none}
@@ -33,7 +33,7 @@
 .student-package-mini{min-width:80px}
 .tms-mini-bar-bg{position:absolute;left:0;top:0;right:0;bottom:0;background-color:#F0EAE2;border-radius:3px;z-index:1}
 .tms-mini-bar-fill{position:absolute;left:0;top:0;bottom:0;background-color:#DFBAA0;border-radius:3px 0 0 3px;z-index:2;opacity:1}
-.tms-mini-bar-text{position:relative;z-index:3;font-weight:400;color:#805435;padding:0 4px;font-size:10px;line-height:16px;text-align:left}
+.tms-mini-bar-text{position:relative;z-index:3;font-family:var(--ft-number-font);font-weight:400;color:#805435;padding:0 4px;font-size:10px;line-height:16px;text-align:left;font-variant-numeric:tabular-nums lining-nums}
 .tms-sort-header{border:0;background:transparent;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:0;white-space:nowrap}
 .tms-sort-icon{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:14px;height:14px;margin-left:0;vertical-align:middle;transform:none;color:inherit}
 .tms-sort-icon .tms-sort-up,.tms-sort-icon .tms-sort-down{display:block;width:14px;height:7px;border:0;background:transparent}
