@@ -753,25 +753,25 @@ function operationsCoachDetailTrendIcon(direction) {
 }
 
 function operationsCoachDetailChangeText(comparison = {}) {
-  if (!comparison || comparison.mode !== 'previous_period') return '<span class="operations-coach-detail-change muted">较上期 -</span>';
+  if (!comparison || comparison.mode !== 'previous_period') return '<span class="operations-coach-detail-change muted">-</span>';
   const change = Number(comparison.changeValue) || 0;
-  if (!change) return '<span class="operations-coach-detail-change muted">较上期 0课时</span>';
+  if (!change) return '<span class="operations-coach-detail-change muted">0 课时</span>';
   const direction = change > 0 ? 'up' : 'down';
   const sign = change > 0 ? '+' : '-';
-  return `<span class="operations-coach-detail-change ${direction}">${operationsCoachDetailTrendIcon(direction)}<span>较上期 ${sign}${fmt(Math.abs(change))}课时</span></span>`;
+  return `<span class="operations-coach-detail-change ${direction}">${operationsCoachDetailTrendIcon(direction)}<span>${sign}${fmt(Math.abs(change))} 课时</span></span>`;
 }
 
 function operationsCoachUsedHoursCell(row = {}) {
   const teachingHours=Number(row.teachingHours)||0;
   const teachingStudentCount=Number(row.teachingStudentCount)||0;
-  return `<div class="operations-coach-detail-hours"><span>${fmt(teachingHours)}/${fmt(teachingStudentCount)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
+  return `<div class="operations-coach-detail-hours"><span>${fmt(teachingHours)} / ${fmt(teachingStudentCount)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
 }
 
 function operationsCoachTrialConversionText(row = {}) {
   const converted = Number(row.trialConverted) || 0;
   const total = Number(row.trialBase) || 0;
   const rate = Number(row.trialConversionRate) || (total ? (converted / total) * 100 : 0);
-  return total ? `${fmt(converted)}/${fmt(total)} ${fmt(rate)}%` : '-';
+  return total ? `${fmt(converted)} / ${fmt(total)} ${fmt(rate)}%` : '-';
 }
 
 function operationsCoachCourseMixText(row = {}) {
@@ -793,7 +793,7 @@ function operationsCoachDetailTooltipText(value) {
 function operationsCoachFeedbackText(row = {}) {
   const completed = Number(row.feedbackCompleted) || 0;
   const required = Number(row.feedbackRequired) || 0;
-  return required ? `${fmt(completed)}/${fmt(required)}` : '0/0';
+  return required ? `${fmt(completed)} / ${fmt(required)}` : '0 / 0';
 }
 
 function renderOperationsCoachDetailTable(rows = []) {
