@@ -521,6 +521,8 @@ assert.match(coachDashboardSource, /operationsCoachChartHeader\('产值 × 工�
 assert.doesNotMatch(coachDashboardSource, /横轴越右越饱和|只在有体验\/续费基数时展示|柱子是归属实收|看团队整体是闲置|体验课、私教课、小班课按课时拆分/, 'coach chart cards should not render subtitles under titles');
 assert.match(coachDashboardSource, /renderOperationsCoachDetailTable\(rows\)/, 'coach page should render the coach workload detail table at the bottom');
 assert.match(coachDashboardSource, /教练课时详细统计[\s\S]*教学课时\/人数[\s\S]*体验课转化[\s\S]*课程结构（课时）[\s\S]*课程反馈（课次）[\s\S]*校区结构（课时）/, 'coach detail table should use the compact coach metric columns');
+assert.match(coachDashboardSource, /<colgroup>[\s\S]*width:12%[\s\S]*width:14%[\s\S]*width:10%[\s\S]*width:22%[\s\S]*width:10%[\s\S]*width:32%[\s\S]*<\/colgroup>/, 'coach detail table should use proportional non-pixel columns that give long text more room');
+assert.doesNotMatch(stylesSource, /operations-coach-detail-table[\s\S]*th:nth-child\(\d+\)\{width:/, 'coach detail table should distribute columns evenly instead of hardcoding individual column widths');
 assert.doesNotMatch(coachDashboardSource, /<th>体验转化率<\/th>/, 'coach detail table should not render trial conversion rate as a separate column');
 assert.doesNotMatch(coachDashboardSource, /已反馈|未反馈|时间段/, 'coach detail table should merge feedback columns and remove time-band distribution');
 assert.match(operationsSource, /function operationsCoachUsedHoursCell[\s\S]*teachingStudentCount[\s\S]*\$\{fmt\(teachingHours\)\}\/\$\{fmt\(teachingStudentCount\)\}[\s\S]*operationsCoachDetailChangeText\(row\.usedHoursComparison\)/, 'coach detail table should show teaching hours and unique student count without units in the main workload cell');
@@ -580,9 +582,9 @@ assert.match(trendChangeSource, /comparison[\s\S]*changeValue/, 'KPI cards shoul
 assert.doesNotMatch(trendChangeSource, /first[\s\S]*last[\s\S]*change/, 'KPI comparison values should not be calculated from the first and last sparkline points');
 assert.match(stylesSource, /operations-coach-kpi-strip\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/, 'coach dashboard KPI strip should be a dense five-column monitor row');
 assert.match(stylesSource, /operations-coach-detail-table \.tms-table\{[^}]*min-width:980px/, 'coach detail table should use a compact Gemini-style table width');
-assert.match(stylesSource, /operations-coach-detail-table \.tms-table th\{[^}]*color:#887565[^}]*font-size:12px[^}]*font-weight:400/, 'coach detail table headers should use 12px normal text');
-assert.match(stylesSource, /operations-coach-detail-table \.tms-table td\{[^}]*color:#887565[^}]*font-size:12px[^}]*font-weight:400/, 'coach detail table body cells should use 12px normal text by default');
-assert.match(stylesSource, /operations-coach-detail-table \.tms-table th:nth-child\(2\)\{width:145px\}/, 'coach detail teaching hours/student column should be wider');
+assert.match(stylesSource, /operations-coach-detail-table \.tms-table th\{[^}]*height:42px[^}]*color:#887565[^}]*font-size:12px[^}]*font-weight:400/, 'coach detail table headers should use 42px height and 12px normal text');
+assert.match(stylesSource, /operations-coach-detail-table \.tms-table td\{[^}]*height:42px[^}]*color:#887565[^}]*font-size:12px[^}]*font-weight:400/, 'coach detail table body cells should use 42px height and 12px normal text by default');
+assert.doesNotMatch(stylesSource, /operations-coach-detail-table \.tms-table th:nth-child\(\d+\)\{width:/, 'coach detail columns should share the table width without individual fixed widths');
 assert.match(stylesSource, /operations-coach-name-cell\{[^}]*font-weight:700[^}]*color:#887565/, 'coach detail coach name can be bold while keeping the same text color');
 assert.match(stylesSource, /operations-coach-detail-hours>span:first-child\{[^}]*font-size:12px[^}]*font-weight:400[^}]*color:#887565/, 'coach detail lesson-hour value should use the normal table style');
 assert.match(stylesSource, /operations-coach-detail-change\{[^}]*display:inline-flex[^}]*align-items:center[^}]*font-weight:400/, 'coach detail lesson-hour change should be vertically centered and normal weight');
@@ -629,7 +631,7 @@ assert.match(stylesSource, /operations-coach-title-legend\{[^}]*justify-content:
 assert.match(stylesSource, /operations-coach-title-legend\{[^}]*color:#A19080[^}]*font-size:11px[^}]*font-weight:400/, 'coach chart legends should use the requested axis-like label style');
 assert.match(operationsSource, /operationsCoachChartHeader\('教练产值贡献排行'[\s\S]*color: '#A67B5B'[\s\S]*color: '#0F766E', line: true/, 'coach contribution legend should match the Gemini bar-line colors');
 assert.match(operationsSource, /operationsCoachChartHeader\('课程结构占比'[\s\S]*color: '#D97706'[\s\S]*color: '#0F766E'[\s\S]*color: '#E7E5E4'/, 'coach course mix legend should match the Gemini stacked-bar colors');
-assert.match(stylesSource, /#page-operations\{[^}]*--ops-number-font:[^}]*SFMono-Regular[^}]*ui-monospace/, 'operations should define a local numeric font stack before broader platform rollout');
+assert.match(stylesSource, /#page-operations\{[^}]*--ops-number-font:var\(--ft-number-font\)/, 'operations should use the shared platform numeric font stack');
 assert.match(stylesSource, /operations-coach-kpi strong\{[^}]*font-family:var\(--ops-number-font\)/, 'coach KPI values should use the local numeric font stack');
 assert.match(stylesSource, /operations-coach-kpi-change\{[^}]*font-family:var\(--ops-number-font\)/, 'coach KPI comparison values should use the local numeric font stack');
 assert.doesNotMatch(stylesSource, /operations-utilization-gemini|operations-utilization-track|operations-utilization-row/, 'coach utilization distribution styles should be removed with the card');

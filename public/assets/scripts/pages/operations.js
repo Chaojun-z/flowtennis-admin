@@ -808,6 +808,7 @@ function renderOperationsCoachDetailTable(rows = []) {
   return `<section class="operations-section operations-coach-detail-table">
     ${operationsCoachChartHeader('教练课时详细统计')}
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table">
+      <colgroup><col style="width:12%"><col style="width:14%"><col style="width:10%"><col style="width:22%"><col style="width:10%"><col style="width:32%"></colgroup>
       <thead><tr><th>教练</th><th>教学课时/人数</th><th>体验课转化</th><th>课程结构（课时）</th><th>课程反馈（课次）</th><th>校区结构（课时）</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div></div>
