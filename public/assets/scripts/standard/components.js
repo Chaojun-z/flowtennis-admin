@@ -142,11 +142,11 @@ function renderStandardDropdownHtml(id,label,options,value,isForm=false,onchange
   const list=(options||[]).map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt);
   const active=list.find(opt=>String(opt.value)===String(value))||list.find(opt=>opt.active)||null;
   const displayLabel=active?(String(active.value)===''&&active.emptyDisplay?active.emptyDisplay:renderStandardOptionLabel(active)):label;
-  const displayTitle=active?(active.title||renderStandardOptionLabel(active)):displayLabel;
+  const displayTooltip=active?(active.tooltip||renderStandardOptionLabel(active)):displayLabel;
   const hasValue=String(active?.value||value||'')!=='';
   const isPageSize=String(id).includes('PageSize');
   const checkIcon='<span class="tms-dropdown-check" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.2L5.7 10.2L11.5 3.8"/></svg></span>';
-  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${isPageSize?'tms-page-size-dropdown ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${onchange}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display" title="${esc(displayTitle)}">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>{const optionLabel=renderStandardOptionLabel(opt);const isActive=active&&String(opt.value)===String(active.value);return `<div class="tms-dropdown-item ${isActive?'active':''} ${opt.disabled?'disabled':''}" data-value="${esc(opt.value??'')}" title="${esc(opt.title||optionLabel)}" aria-disabled="${opt.disabled?'true':'false'}" onclick="${opt.disabled?'event.stopPropagation()':`selectStandardDropdownItem('${id}',${jsArg(opt.value)},${jsArg(optionLabel)},event)`}">${isPageSize?checkIcon:''}<span>${esc(optionLabel)}</span></div>`;}).join('')}</div></div>`;
+  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${isPageSize?'tms-page-size-dropdown ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${onchange}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display" data-tooltip="${esc(displayTooltip)}">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>{const optionLabel=renderStandardOptionLabel(opt);const isActive=active&&String(opt.value)===String(active.value);return `<div class="tms-dropdown-item ${isActive?'active':''} ${opt.disabled?'disabled':''}" data-value="${esc(opt.value??'')}" data-tooltip="${esc(opt.tooltip||optionLabel)}" aria-disabled="${opt.disabled?'true':'false'}" onclick="${opt.disabled?'event.stopPropagation()':`selectStandardDropdownItem('${id}',${jsArg(opt.value)},${jsArg(optionLabel)},event)`}">${isPageSize?checkIcon:''}<span>${esc(optionLabel)}</span></div>`;}).join('')}</div></div>`;
 }
 function renderStandardSearchableDropdownHtml(config={}){
   const id=String(config.id||'');
@@ -335,7 +335,7 @@ function selectStandardDropdownItem(id,value,label,event){
   if(input)input.value=value;
   if(dropdown){
     const display=dropdown.querySelector('.tms-dropdown-display');
-    if(display){display.textContent=label;display.setAttribute('title',label);}
+    if(display){display.textContent=label;display.dataset.tooltip=event?.currentTarget?.dataset?.tooltip||label;}
     dropdown.classList.toggle('has-value',String(value||'')!=='');
     dropdown.querySelectorAll('.tms-dropdown-item').forEach(el=>el.classList.remove('active'));
     const current=[...dropdown.querySelectorAll('.tms-dropdown-item')].find(el=>String(el.dataset.value||'')===String(value||'')||el.textContent===label);
