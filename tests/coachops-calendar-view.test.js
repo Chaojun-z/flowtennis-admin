@@ -87,6 +87,11 @@ assert.match(
 );
 assert.match(
   pagesCss,
+  /coach-ops-week-coach-grid\{[^}]*background-position-y:20px/,
+  'week view hour rows should start after the 30-minute top buffer so labels align with grid lines'
+);
+assert.match(
+  pagesCss,
   /coach-ops-day-coach-col\{[^}]*border-right:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\)/,
   'day view coach columns should use shared 0.5px vertical lines'
 );
