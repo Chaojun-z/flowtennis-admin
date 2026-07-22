@@ -61,7 +61,12 @@ async function main() {
       history: [
         { type: '充值', amount: 500, bonusAmount: 0 },
         { type: '消费', amount: 300, payMethod: '储值扣款', category: '订场', date: '2026-05-10', startTime: '10:00', endTime: '12:00', venue: '1号场' },
-        { type: '消费', amount: 200, payMethod: '微信', category: '其他', businessDate: '2026.05.12', startTime: '14:00', endTime: '15:30', venue: '2号场' }
+        { type: '消费', amount: 60, payMethod: '储值扣款', category: '发球机', date: '2026-05-11', note: '发球机 1 小时' },
+        { type: '消费', amount: 150, payMethod: '储值扣款', category: '排课陪打', date: '2026-05-12', note: '陪打订场' },
+        { type: '消费', amount: 200, payMethod: '微信', category: '其他', businessDate: '2026.05.12', startTime: '14:00', endTime: '15:30', venue: '2号场' },
+        { type: '消费', amount: 180, payMethod: '储值扣款', category: '排课私教课', date: '2026-05-13', startTime: '16:00', endTime: '17:00', venue: '3号场' },
+        { type: '消费', amount: 80, payMethod: '储值扣款', category: '畅打待匹配', date: '2026-05-14', note: '拼场活动' },
+        { type: '消费', amount: 50, payMethod: '储值扣款', category: '穿线费用', date: '2026-05-15', note: '穿线' }
       ],
       updatedAt: '2026-05-13 10:00:00',
       createdAt: '2026-05-01 10:00:00'
@@ -116,11 +121,11 @@ async function main() {
   assert.strictEqual(view.items[0].membershipStatus, '正常');
   assert.strictEqual(view.items[0].membershipDiscountText, '9 折');
   assert.strictEqual(view.items[0].linkedStudentSummary, '学员甲');
-  assert.strictEqual(view.items[0].memberBookingCount, 1, '读模型应按流水支付方式统计会员订场次数');
-  assert.strictEqual(view.items[0].bookingCount, 2, '读模型应统计储值订场和散客订场');
-  assert.strictEqual(view.items[0].bookingHours, 3.5, '读模型应统计订场总时长');
-  assert.strictEqual(view.items[0].bookingAmount, 500, '读模型应汇总订场消费金额');
-  assert.strictEqual(view.items[0].memberBookingAmount, 300, '读模型应按储值扣款流水统计会员订场金额');
+  assert.strictEqual(view.items[0].memberBookingCount, 3, '读模型应把订场、发球机、陪打里的会员支付都算进会员订场次数');
+  assert.strictEqual(view.items[0].bookingCount, 4, '读模型应统计订场、发球机、陪打和散客订场，但排除私教课、畅打、穿线');
+  assert.strictEqual(view.items[0].bookingHours, 3.5, '读模型应只累计有效订场记录的场地时长');
+  assert.strictEqual(view.items[0].bookingAmount, 710, '读模型应只汇总有效订场记录金额');
+  assert.strictEqual(view.items[0].memberBookingAmount, 510, '读模型应按会员支付方式汇总订场、发球机、陪打金额');
   assert.strictEqual(view.items[0].membershipRechargeCount, 2, '读模型应输出会员有效储值次数');
   assert.strictEqual(view.items[0].hasMembershipRepeatRecharge, true, '读模型应输出会员复充标记');
   assert.strictEqual(view.items[0].hasMembershipBookingRetention, true, '读模型应输出会员储值后继续订场消费标记');
@@ -129,9 +134,9 @@ async function main() {
   assert.strictEqual(view.items[0].lastBookingDate, '2026-05-12', '读模型应输出最近订场日期');
   assert.strictEqual(view.items[0].balance, 100, '新读模型应优先读取 cachedBalance');
   assert.strictEqual(view.summary.totalMemberCount, 1, '读模型汇总应统计有效会员人数');
-  assert.strictEqual(view.summary.totalBookingHours, 3.5, '读模型汇总应统计订场总时长');
-  assert.strictEqual(view.summary.totalMemberBookingCount, 1, '读模型汇总应按储值扣款流水统计会员订场次数');
-  assert.strictEqual(view.summary.totalMemberBookingAmount, 300, '读模型汇总应按储值扣款流水统计会员订场金额');
+  assert.strictEqual(view.summary.totalBookingHours, 3.5, '读模型汇总应统计有效订场总时长');
+  assert.strictEqual(view.summary.totalMemberBookingCount, 3, '读模型汇总应按新口径统计会员订场次数');
+  assert.strictEqual(view.summary.totalMemberBookingAmount, 510, '读模型汇总应按新口径统计会员订场金额');
   assert.strictEqual(view.summary.totalMembershipRechargeCount, 2, '读模型汇总应统计有效储值次数');
   assert.strictEqual(view.summary.totalMembershipRepeatRechargeCount, 1, '读模型汇总应统计复充会员人数');
   assert.strictEqual(view.summary.totalMembershipRetainedCount, 1, '读模型汇总应统计储值后仍有订场消费的会员人数');

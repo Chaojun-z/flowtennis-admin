@@ -115,9 +115,14 @@ function computeLegacyFinance(court) {
 }
 
 function isCourtBookingHistoryRow(row) {
-  const category = String(row?.category || '');
+  const category = String(row?.category || '').trim();
   if (category.includes('内部占用')) return false;
+  if (category.includes('畅打')) return false;
+  if (category.includes('穿线')) return false;
+  if (category.includes('私教课')) return false;
   if (category.includes('订场')) return true;
+  if (category.includes('发球机')) return true;
+  if (category.includes('陪打')) return true;
   if (['储值扣款', '现场收款', '代用户订场'].includes(String(row?.revenueBucket || ''))) return true;
   if (row?.startTime && row?.endTime && row?.venue) return true;
   const payMethod = String(row?.payMethod || '').trim();
@@ -149,7 +154,7 @@ function computeBookingSummary(court) {
     if (!isCourtBookingHistoryRow(row)) return;
     const amount = money(row?.amount);
     if (row.type === '消费') {
-      const isMemberBooking = isStoredValuePayMethod(row?.payMethod) && String(row?.category || '').includes('订场');
+      const isMemberBooking = isStoredValuePayMethod(row?.payMethod);
       summary.bookingCount += 1;
       summary.bookingAmount += amount;
       summary.bookingHours += bookingDurationHours(row);
@@ -176,7 +181,7 @@ function computeBookingSummary(court) {
 }
 
 function computeMemberBookingCount(court) {
-  return normalizeCourtHistory(court?.history).filter((row) => row?.type === '消费' && isStoredValuePayMethod(row?.payMethod) && String(row?.category || '').includes('订场')).length;
+  return normalizeCourtHistory(court?.history).filter((row) => row?.type === '消费' && isCourtBookingHistoryRow(row) && isStoredValuePayMethod(row?.payMethod)).length;
 }
 
 function membershipStatusText(status) {
@@ -212,7 +217,23 @@ function membershipTierLabel(account, membershipOrders = [], membershipPlans = [
     .filter((row) => row?.membershipAccountId === account.id)
     .sort((a, b) => String(b?.purchaseDate || '').localeCompare(String(a?.purchaseDate || '')))[0] || null;
   const plan = membershipPlans.find((row) => row?.id === (latestOrder?.membershipPlanId || account?.membershipPlanId)) || {};
-  return account?.tierCode || latestOrder?.tierCode || plan?.tierCode || '-';
+  const thirdPartyTier = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (['1', '白银卡', '白银会员'].includes(raw)) return '白银卡';
+    if (['2', '黄金卡', '黄金会员'].includes(raw)) return '黄金卡';
+    return raw;
+  };
+  return account?.tierCode
+    || latestOrder?.tierCode
+    || plan?.tierCode
+    || account?.memberTag
+    || latestOrder?.memberTag
+    || plan?.memberTag
+    || thirdPartyTier(account?.thirdPartyLevelName)
+    || thirdPartyTier(latestOrder?.thirdPartyLevelName)
+    || thirdPartyTier(plan?.thirdPartyLevelName)
+    || '-';
 }
 
 function validMembershipOrdersForAccount(account, membershipOrders = []) {
@@ -225,6 +246,12 @@ function validMembershipOrdersForAccount(account, membershipOrders = []) {
     if (accountId && String(row?.membershipAccountId || '').trim() === accountId) return true;
     return courtId && String(row?.courtId || '').trim() === courtId;
   });
+}
+
+function isEffectiveMembershipRechargeOrder(order = {}) {
+  const paidAmount = money(order?.rechargeAmount ?? order?.finalAmount ?? order?.amount);
+  const bonusAmount = money(order?.bonusAmount);
+  return paidAmount > 0 || bonusAmount > 0;
 }
 
 function linkedStudentSummary(court, students = []) {
@@ -264,7 +291,7 @@ function isInactiveMembershipStatus(value) {
 
 function validMembershipOrders(account, membershipOrders = []) {
   return validMembershipOrdersForAccount(account, membershipOrders)
-    .filter((row) => money(row?.rechargeAmount ?? row?.finalAmount ?? row?.amount) > 0)
+    .filter((row) => isEffectiveMembershipRechargeOrder(row))
     .sort((a, b) => String(b?.purchaseDate || b?.createdAt || '').localeCompare(String(a?.purchaseDate || a?.createdAt || '')));
 }
 
@@ -662,7 +689,7 @@ function buildCourtAccountListViewFromData(source = {}, options = {}) {
     .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
     .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));
   const summary = buildSummary(items);
-  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders });
+  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: items });
   return {
     summary,
     filters: buildFilters({ items, campuses }),

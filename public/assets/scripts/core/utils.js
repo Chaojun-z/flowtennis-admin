@@ -26,9 +26,14 @@ function lessonUnitsText(value){
 function fmtDt(s){if(!s)return '—';return s.replace('T',' ').slice(0,16)}
 function dateMs(v){const d=dtObj(v);return d?d.getTime():NaN}
 function isCourtBookingHistoryRow(row){
-  const category=String(row?.category||'');
+  const category=String(row?.category||'').trim();
   if(category.includes('内部占用'))return false;
+  if(category.includes('畅打'))return false;
+  if(category.includes('穿线'))return false;
+  if(category.includes('私教课'))return false;
   if(category.includes('订场'))return true;
+  if(category.includes('发球机'))return true;
+  if(category.includes('陪打'))return true;
   if(['储值扣款','现场收款','代用户订场'].includes(String(row?.revenueBucket||'')))return true;
   if(row?.startTime&&row?.endTime&&row?.venue)return true;
   const payMethod=String(row?.payMethod||'').trim();
@@ -72,7 +77,7 @@ function courtBookingSummary(court){
     if(!isCourtBookingHistoryRow(h))return;
     const amount=parseFloat(h.amount)||0;
     if(h.type==='消费'){
-      const isMemberBooking=isStoredValuePayMethod(h.payMethod)&&String(h.category||'').includes('订场');
+      const isMemberBooking=isStoredValuePayMethod(h.payMethod);
       summary.count+=1;
       summary.amount+=amount;
       summary.hours+=courtBookingDurationHours(h);

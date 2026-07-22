@@ -14,7 +14,7 @@ async function main() {
         { id: 'h1', type: '消费', category: '订场', payMethod: '储值卡', amount: 120, date: '2026-06-01', startTime: '09:00', endTime: '10:00', venue: '1号场', note: '会员订场' },
         { id: 'h2', type: '消费', category: '订场', payMethod: '现场收款', amount: 80, date: '2026-06-02', startTime: '10:00', endTime: '11:00', venue: '2号场', note: '散客补差' }
       ],
-      cachedBalance: 980,
+      cachedBalance: 1376,
       cachedTotalDeposit: 1000,
       cachedTotalSpent: 120,
       cachedTotalReceived: 1080,
@@ -25,7 +25,7 @@ async function main() {
       id: 'acc-1',
       courtId: 'court-1',
       status: 'active',
-      tierCode: '黄金会员',
+      thirdPartyLevelName: '2',
       discountRate: 0.8,
       validUntil: '2027-06-01',
       hardExpireAt: '2028-06-01'
@@ -43,6 +43,19 @@ async function main() {
       benefitSnapshot: { ballMachine: { label: '发球机免费', unit: '次', count: 3 } },
       benefitValidUntil: '2027-06-01',
       notes: '首充'
+    }, {
+      id: 'order-2',
+      membershipAccountId: 'acc-1',
+      courtId: 'court-1',
+      status: 'paid',
+      purchaseDate: '2026-06-10',
+      membershipPlanName: '黄金会员',
+      rechargeAmount: 0,
+      bonusAmount: 396,
+      discountRate: 0.8,
+      benefitSnapshot: {},
+      benefitValidUntil: '2027-06-10',
+      notes: '赠送续充'
     }]],
     ['membershipPlans', []],
     ['membershipBenefitLedger', [
@@ -72,20 +85,21 @@ async function main() {
   assert.strictEqual(view.meta.source, 'unified-court-membership-read-model');
   assert.deepStrictEqual(view.summary.membershipFinanceSummary, {
     memberCount: 1,
-    rechargeCount: 1,
+    rechargeCount: 2,
     paidAmount: 1000,
-    bonusAmount: 100,
-    consumableAmount: 1100,
+    bonusAmount: 496,
+    consumableAmount: 1496,
     consumedAmount: 120,
-    pendingAmount: 980
+    pendingAmount: 1376
   });
   const item = view.items[0];
   assert.strictEqual(item.owner, '线索跟进人', '跟进人必须读取线索池 owner');
   assert.strictEqual(item.accountType, '会员账户');
   assert.strictEqual(item.firstOpenDate, '2026-06-01');
-  assert.strictEqual(item.membershipTierLabel, '黄金会员');
-  assert.strictEqual(item.rechargeRows.length, 1);
-  assert.strictEqual(item.rechargeRows[0].paidAmount, 1000);
+  assert.strictEqual(item.membershipTierLabel, '黄金卡');
+  assert.strictEqual(item.rechargeRows.length, 2);
+  assert.ok(item.rechargeRows.some((row) => row.paidAmount === 1000), '充值记录应保留正常实收订单');
+  assert.ok(item.rechargeRows.some((row) => row.paidAmount === 0 && row.bonusAmount === 396), '充值记录应保留零实收但有效赠送续充');
   assert.strictEqual(item.benefitRows.length, 1);
   assert.strictEqual(item.benefitRows[0].remaining, 2);
   assert.strictEqual(item.ledgerRows.length, 1);

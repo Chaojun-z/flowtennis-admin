@@ -51,11 +51,12 @@ assert.match(html, /function renderCourtPagerControls\(/, 'court page should use
 assert.match(fnBody('renderCourtPagerControls'), /renderStandardPaginationButtonsHtml\(courtPage,pages,'setCourtPage'\)/, 'court pager should render page buttons through the global standard pager');
 assert.doesNotMatch(fnBody('renderCourtPagerControls'), /jumpCourtPage|跳至/, 'court pager should not keep jump-to-page controls');
 assert.match(fnBody('renderCourtAccountListView'), /renderStandardTooltipText\(cleanNotes,'tms-text-remark tms-text-remark-1 court-note-cell'\)/, 'court read-model notes should clamp to one line like lead notes');
-assert.match(fnBody('renderCourts'), /renderStandardTooltipText\(cleanNotes,'tms-text-remark tms-text-remark-1 court-note-cell'\)/, 'court legacy notes should clamp to one line like lead notes');
+assert.match(fnBody('renderCourts'), /renderCourtAccountListView\(\)/, 'court page should delegate list rendering to the unified read-model view');
+assert.match(fnBody('renderCourtAccountListView'), /renderStandardTooltipText\(cleanNotes,'tms-text-remark tms-text-remark-1 court-note-cell'\)/, 'court list notes should clamp to one line like lead notes');
 assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose a dedicated finance modal');
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
 assert.doesNotMatch(html, /<th[^>]*>充值\/消费记录<\/th>/, 'court table should not keep a separate finance history column');
-assert.doesNotMatch(fnBody('renderCourts'), /openCourtHist\('\$\{u\.id\}'\)/, 'court rows should not open finance history from a separate list column');
+assert.doesNotMatch(fnBody('renderCourtAccountListView'), /openCourtHist\('\$\{u\.id\}'\)/, 'court rows should not open finance history from a separate list column');
 assert.doesNotMatch(fnBody('courtProfileFormHtml'), /加入日期|末次跟进日期|下次跟进日期|熟悉程度|f_joinDate|f_recentFollowUpDate|f_nextFollowUpDate|f_familiarity/, 'court edit drawer should remove deprecated profile fields');
 assert.doesNotMatch(html, /function openCourtModal[\s\S]*充值\/消费记录[\s\S]*add-rec-row/, 'court edit modal should no longer contain the inline finance entry area');
 assert.match(html, /function renderCourtMiniBar\(/, 'court page should expose a dedicated mini bar renderer');
@@ -98,7 +99,7 @@ assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 110px[\s\S]*re
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');
 assert.match(html, /发现可能重复的订场用户：/, 'court save flow should warn about possible duplicates');
 assert.match(html, /手机号优先，若无手机号则按姓名\+校区/, 'court duplicate reminder should prioritize phone and then name plus campus');
-assert.match(fnBody('renderCourts'), /searchHit[\s\S]*courtFollowOwnerText\(c\)[\s\S]*c\.depositAttitude[\s\S]*c\.notes/, 'court search should cover standard follow-up fields');
+assert.match(fnBody('getCurrentCourtAccountRows'), /searchHit\(q,item\.displayName,item\.phone,item\.campusName,item\.owner,item\.depositAttitude,item\.notesSummary[\s\S]*item\.linkedStudentSummary,item\.membershipTierLabel,item\.membershipStatus\)/, 'court search should cover standard follow-up fields');
 assert.match(fnBody('courtFollowOwnerText'), /leadForCourtSummary\(court\?\.id\)\?\.owner[\s\S]*court\?\.owner/, 'court follow owner should fall back from lead owner to the old court owner field');
 assert.match(html, /search:\{id:'courtSearch',oninput:'onCourtFilterChange\(\)'/, 'court search should reset to the first page before rendering');
 assert.match(html, /courtPageSize=\d+/, 'court page should keep its own page size state');
@@ -112,8 +113,8 @@ assert.match(fnBody('courtBookingSummary'), /h\.type==='消费'/, 'court booking
 assert.match(fnBody('courtBookingSummary'), /isCourtBookingHistoryRow\(h\)/, 'court booking summary should reuse booking row detection');
 assert.match(fnBody('isCourtBookingHistoryRow'), /category\.includes\('订场'\)[\s\S]*!isStoredValuePayMethod\(payMethod\)/, 'booking row detection should include categorized bookings and legacy direct booking rows');
 assert.match(fnBody('courtSortMetric'), /if\(!raw\|\|raw==='-'\|\|raw==='—'\)return \{empty:true,value:0\};/, 'court date sorting should treat dash placeholders as empty values');
-assert.match(fnBody('renderCourts'), /const sortedList=\[\.\.\.list\];/, 'court page should sort the full filtered list before paging');
-assert.match(fnBody('renderCourts'), /else\{[\s\S]*updatedAt\|\|b\.createdAt[\s\S]*updatedAt\|\|a\.createdAt/, 'court rows should use a deterministic default sort when no explicit sort is selected');
+assert.match(fnBody('renderCourtAccountListView'), /const sortedList=\[\.\.\.list\];/, 'court page should sort the full filtered list before paging');
+assert.match(fnBody('renderCourtAccountListView'), /else\{[\s\S]*updatedAt\|\|b\.createdAt[\s\S]*updatedAt\|\|a\.createdAt/, 'court rows should use a deterministic default sort when no explicit sort is selected');
 assert.match(html, /function handleCourtMoreAction\(/, 'court page should expose more action handler');
 assert.match(html, /id="courtBatchToolbar"[^>]*style="display:none"/, 'court batch toolbar should stay hidden before entering batch mode');
 assert.match(html, /function setCourtBatchMode\(/, 'court page should expose explicit batch mode toggling');
@@ -124,7 +125,7 @@ assert.match(html, /return raw&&raw!=='—'\?raw:'-';/, 'court list empty cells 
 assert.match(html, /renderStandardDropdownHtml\('nrPayMethod'[\s\S]*'储值卡',true,'onCourtFinanceSceneChange'\)/, 'court booking payment should default to stored-value card');
 assert.doesNotMatch(fnBody('saveCourt'), /confirm\(/, 'court save should not use browser confirm');
 assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court finance save should not use browser confirm');
-assert.doesNotMatch(fnBody('renderCourts'), /低余额/, 'court stats should not show low balance text');
+assert.doesNotMatch(fnBody('renderCourtAccountListView'), /低余额/, 'court stats should not show low balance text');
 assert.match(html, /function renderCourtStatsCards\(/, 'court stats should render through one shared card helper');
 assert.match(fnBody('renderCourtStatsCards'), /总订场用户[\s\S]*会员用户[\s\S]*客群次数对比[\s\S]*订场总实收[\s\S]*散客消费/, 'court stats should show the requested five dashboard cards');
 assert.match(html, /function renderStandardSearchHtml[\s\S]*placeholder='搜索姓名、手机号'[\s\S]*id:'courtSearch'/, 'court user search should use the unified placeholder');
@@ -135,8 +136,8 @@ assert.match(pagesCss, /#page-courts \.court-stat-slash\{[^}]*font-size:10px[^}]
 assert.match(pagesCss, /#page-courts \.court-stat-percent\{[^}]*font-size:10px[^}]*color:#A19080/, 'court stat percentages should use the shared small metric color');
 assert.match(html, /function courtMembershipTierLabel\(/, 'court membership display should use membership tier label');
 assert.match(html, /function courtMembershipTierTagClass\(/, 'court member tier should use tier-specific tag colors');
-assert.match(fnBody('renderCourts'), /m\.tierLabel&&m\.tierLabel!=='-'\?`<span class="tms-tag \$\{memberTagClass\}">/, 'current membership should render empty state without a tag');
-assert.doesNotMatch(fnBody('renderCourts'), /const memberTagClass=m\.accountType==='会员'\?'tms-tag-green':'';/, 'current membership tag color should not reuse account type tag color');
+assert.match(fnBody('renderCourtAccountListView'), /item\.membershipTierLabel&&item\.membershipTierLabel!=='-'\?`<span class="tms-tag \$\{memberTagClass\}">/, 'current membership should render empty state without a tag');
+assert.doesNotMatch(fnBody('renderCourtAccountListView'), /const memberTagClass=m\.accountType==='会员'\?'tms-tag-green':'';/, 'current membership tag color should not reuse account type tag color');
 assert.match(fnBody('renderAll'), /renderPageData\(currentPage\)/, 'initial load should render only the current page instead of every module');
 assert.match(html, /function renderCourtFinanceFields\(/, 'court finance modal should render fields by selected scene');
 assert.match(html, /function onCourtFinanceSceneChange\(/, 'court finance modal should update visible fields when scene changes');
@@ -156,9 +157,9 @@ assert.match(fnBody('courtFinanceRevenueSummaryLocal'), /pendingRevenue=t\.proxy
 assert.match(fnBody('courtFinanceRevenueSummaryLocal'), /matchBooking/, 'court finance summary should expose match booking revenue');
 assert.match(fnBody('openCourtFinanceModal'), /确认订场收入[\s\S]*本次实收\/现金流入[\s\S]*待确认\/代用户订场[\s\S]*内部占用次数/, 'court finance modal should show booking income confirmation buckets');
 assert.match(fnBody('runBatchDeleteCourts'), /隐藏/, 'batch delete result should explain hidden archived courts');
-assert.match(fnBody('renderCourts'), /class="tms-court-row-main"[\s\S]*class="tms-checkbox court-row-cb"/, 'court name cell should separate checkbox and name for easier text selection');
-assert.match(fnBody('renderCourts'), /\$\{esc\(courtDisplayName\(u\)\)\}/, 'court rows should render the display-name helper instead of raw names');
-assert.doesNotMatch(fnBody('renderCourts'), /<label class="tms-checkbox-wrap"[\s\S]*\$\{esc\(u\.name\)\}/, 'court name text should no longer be wrapped by a clickable label');
+assert.match(fnBody('renderCourtAccountListView'), /class="tms-court-row-main"[\s\S]*class="tms-checkbox court-row-cb"/, 'court name cell should separate checkbox and name for easier text selection');
+assert.match(fnBody('renderCourtAccountListView'), /\$\{esc\(item\.displayName\)\}/, 'court rows should render the unified display name instead of raw names');
+assert.doesNotMatch(fnBody('renderCourtAccountListView'), /<label class="tms-checkbox-wrap"[\s\S]*\$\{esc\(u\.name\)\}/, 'court name text should no longer be wrapped by a clickable label');
 assert.match(html, /function openCourtFinanceModal[\s\S]*renderStandardDropdownHtml\('nrStudentId','关联学员'/, 'court finance modal should use a shorter linked-student label');
 assert.match(html, /function openCourtFinanceModal[\s\S]*renderStandardDropdownHtml\('nrCompanionCoach','陪打教练'/, 'court finance modal should allow selecting a companion coach for bookings');
 assert.match(html, /function saveCourtFinanceRecord[\s\S]*scheduleSource:'订场陪打'/, 'court booking with companion coach should generate a linked coach schedule source');

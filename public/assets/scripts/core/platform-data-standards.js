@@ -52,6 +52,11 @@
     return Math.round(num(value) * 100) / 100;
   }
 
+  function isStoredValuePayMethod(value) {
+    const method = text(value);
+    return method === '储值扣款' || method === '储值卡' || method.includes('储值');
+  }
+
   function identityValues(row = {}) {
     return [
       row.customerKey,
@@ -170,11 +175,16 @@
 
   function currentMembershipSummary(rows = []) {
     const base = rowsArray(rows);
-    const paidAmount = money(base.reduce((sum, row) => sum + num(row.totalDeposit), 0));
-    const bonusAmount = money(base.reduce((sum, row) => sum + num(row.totalBonus || row.bonusAmount), 0));
-    const consumedAmount = money(base.reduce((sum, row) => sum + num(row.memberBookingAmount || row.consumedAmount), 0));
+    const rechargeRows = base.flatMap(row => rowsArray(row.rechargeRows));
+    const paidAmount = money(rechargeRows.length
+      ? rechargeRows.reduce((sum, row) => sum + num(row.paidAmount ?? row.rechargeAmount ?? row.finalAmount ?? row.amount), 0)
+      : base.reduce((sum, row) => sum + num(row.totalDeposit), 0));
+    const bonusAmount = money(rechargeRows.length
+      ? rechargeRows.reduce((sum, row) => sum + num(row.bonusAmount), 0)
+      : base.reduce((sum, row) => sum + num(row.totalBonus || row.bonusAmount), 0));
     const pendingAmount = money(base.reduce((sum, row) => sum + num(row.balance), 0));
-    const consumableAmount = paidAmount + bonusAmount > 0 ? money(paidAmount + bonusAmount) : money(consumedAmount + pendingAmount);
+    const consumableAmount = paidAmount + bonusAmount > 0 ? money(paidAmount + bonusAmount) : pendingAmount;
+    const consumedAmount = money(Math.max(0, consumableAmount - pendingAmount));
     return {
       memberCount: base.length,
       rechargeCount: base.reduce((sum, row) => sum + (rowsArray(row.rechargeRows).length || num(row.membershipRechargeCount)), 0),

@@ -28,14 +28,15 @@ const summary = _test.buildMembershipFinanceSummary({
     { id: 'order-zhang', membershipAccountId: 'account-zhang', courtId: 'court-zhang', status: 'active', rechargeAmount: 5000, finalAmount: 5000, bonusAmount: 498, purchaseDate: '2026-04-12' },
     { id: 'order-nini-1', membershipAccountId: 'account-nini', courtId: 'court-nini', status: 'active', rechargeAmount: 2000, finalAmount: 2000, bonusAmount: 196, purchaseDate: '2026-04-01' },
     { id: 'order-nini-2', membershipAccountId: 'account-nini', courtId: 'court-nini', status: 'active', rechargeAmount: 2000, finalAmount: 2000, bonusAmount: 196, purchaseDate: '2026-05-28' },
+    { id: 'order-nini-3', membershipAccountId: 'account-nini', courtId: 'court-nini', status: 'active', rechargeAmount: 0, finalAmount: 0, bonusAmount: 396, purchaseDate: '2026-06-02' },
     { id: 'voided-order', membershipAccountId: 'account-nini', courtId: 'court-nini', status: 'voided', rechargeAmount: 9999, finalAmount: 9999, bonusAmount: 9999, purchaseDate: '2026-06-01' }
   ]
 });
 
 assert.strictEqual(summary.memberCount, 2, 'summary should count active member accounts');
-assert.strictEqual(summary.rechargeCount, 3, 'summary should count valid membership orders only');
+assert.strictEqual(summary.rechargeCount, 4, 'summary should count valid membership orders including zero-paid gift renewals');
 assert.strictEqual(summary.paidAmount, 9000, 'summary should use membership order paid amount, not court totalDeposit or legacy fix rows');
-assert.strictEqual(summary.bonusAmount, 890, 'summary should use membership order bonus amount');
-assert.strictEqual(summary.consumableAmount, 9890, 'summary should combine paid and bonus amount');
+assert.strictEqual(summary.bonusAmount, 1286, 'summary should use membership order bonus amount including zero-paid gift renewals');
+assert.strictEqual(summary.consumableAmount, 10286, 'summary should combine paid and bonus amount');
 assert.strictEqual(summary.consumedAmount, 324, 'summary should use stored value consumption from member courts');
-assert.strictEqual(summary.pendingAmount, 9566, 'summary should subtract consumed amount from consumable amount');
+assert.strictEqual(summary.pendingAmount, 9962, 'summary should subtract consumed amount from consumable amount');
