@@ -1432,7 +1432,7 @@ function renderLeadMergeCandidatePicker(keepSelected=false){
   const preview=document.getElementById('leadMergePreviewResult');
   if(preview)preview.innerHTML=leadMergePreviewHtml(null);
   const btn=document.getElementById('leadMergeConfirmBtn');
-  if(btn)btn.disabled=true;
+  if(btn)btn.disabled=false;
 }
 function selectLeadMergeDuplicate(id){
   leadMergeState.selectedDuplicateId=String(id||'');
@@ -1467,7 +1467,7 @@ function leadMergePreviewRowHtml(label,value){
   return `<div class="lead-merge-preview-row"><span>${esc(label)}：</span><span>${esc(value)}</span></div>`;
 }
 function leadMergePreviewHtml(preview){
-  if(!preview)return '<div class="tms-text-secondary">请选择要合并进来的重复线索后点击预览。</div>';
+  if(!preview)return '<div class="tms-text-secondary">可先点击预览查看影响，也可以直接确认合并。</div>';
   if(preview.blocked){
     const blocked=leadMergeBlockedText(preview.error||preview.message||'');
     return `<div class="lead-merge-blocked">${leadMergePreviewRowHtml('原因',blocked.reason)}${leadMergePreviewRowHtml('下一步',blocked.next)}</div>`;
@@ -1492,7 +1492,7 @@ function openLeadMergeModal(primaryLeadId=''){
   if(!primary){toast('请先打开要保留的线索详情','warn');return;}
   leadMergeState={primaryLeadId:String(primaryLeadId),selectedDuplicateId:'',search:'',preview:null};
   const body=`<div class="lead-merge-modal-body" style="font-size:13px"><div class="tms-section-header" style="margin-top:0;">合并设置</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">保留线索</label><div class="finput tms-form-control lead-merge-primary" style="height:auto;min-height:44px;font-size:13px">${leadMergeCandidateHtml(primary)}</div></div><div class="tms-form-item"><label class="tms-form-label">重复线索</label><input class="finput tms-form-control lead-merge-search" id="leadMergeCandidateSearch" placeholder="搜索姓名 / 手机号" style="font-size:12px" oninput="renderLeadMergeCandidatePicker()"><div id="leadMergeCandidateWrap" style="margin-top:8px">${leadMergeCandidatePickerHtml()}</div></div></div><div class="tms-section-header">合并预览</div><div id="leadMergePreviewResult">${leadMergePreviewHtml(null)}</div></div>`;
-  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-default" id="leadMergePreviewBtn" onclick="previewLeadMerge()">预览</button><button class="tms-btn tms-btn-primary" id="leadMergeConfirmBtn" onclick="runLeadMerge()" disabled>确认合并</button>`;
+  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-default" id="leadMergePreviewBtn" onclick="previewLeadMerge()">预览</button><button class="tms-btn tms-btn-primary" id="leadMergeConfirmBtn" onclick="runLeadMerge()">确认合并</button>`;
   openStandardModal({title:'合并线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
 async function previewLeadMerge(){
@@ -1517,7 +1517,7 @@ async function previewLeadMerge(){
 }
 async function runLeadMerge(){
   const payload=leadMergePayload();
-  if(!leadMergeState.preview){toast('请先预览合并影响','warn');return;}
+  if(!payload.primaryLeadId||!payload.mergeLeadIds.length||payload.primaryLeadId===payload.mergeLeadIds[0]){toast('请选择两条不同线索','warn');return;}
   if(!await appConfirm('确认合并线索？重复线索会隐藏，跟进记录会迁移到主线索。',{title:'确认合并线索',confirmText:'确认合并'}))return;
   await runStandardMutation('leadMergeConfirmBtn',async()=>{
     try{

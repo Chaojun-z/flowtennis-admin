@@ -193,7 +193,9 @@ assert.match(leadsSource, /apiCall\('POST','\/leads\/merge-preview'/, 'lead merg
 assert.match(leadsSource, /apiCall\('POST','\/leads\/merge'/, 'lead merge confirm should call the merge API');
 assert.doesNotMatch(leadsSource, /leadMergeFinalStage|finalLeadStage:document\.getElementById/, 'lead merge should not let users choose or send a final lead stage');
 assert.match(fnBody('openLeadMergeModal'), /leadMergeCandidateSearch[\s\S]*搜索姓名 \/ 手机号/, 'lead merge modal should search duplicate leads instead of using a giant default dropdown');
+assert.match(fnBody('openLeadMergeModal'), /id="leadMergeConfirmBtn" onclick="runLeadMerge\(\)">确认合并/, 'lead merge confirm should be clickable without requiring preview first');
 assert.match(fnBody('leadMergePayload'), /primaryLeadId:leadMergeState\.primaryLeadId[\s\S]*mergeLeadIds:leadMergeState\.selectedDuplicateId\?\[leadMergeState\.selectedDuplicateId\]:\[\]/, 'lead merge payload should keep the drawer lead as primary and only submit the searched duplicate lead');
+assert.doesNotMatch(fnBody('runLeadMerge'), /leadMergeState\.preview|请先预览合并影响/, 'lead merge confirm should not require preview state before merging');
 assert.match(leadsSource, /function leadMergeFriendlyError\(/, 'lead merge should translate backend errors into user-friendly copy');
 assert.match(css, /lead-merge-modal-body\{font-size:13px/, 'lead merge modal body should use 13px body text');
 assert.match(css, /lead-merge-search\{font-size:12px/, 'lead merge modal search input should use 12px input text');
