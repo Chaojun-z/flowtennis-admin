@@ -407,11 +407,13 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
     const packageListRows = rows.sort((a, b) => text(b.purchaseDate).localeCompare(text(a.purchaseDate)));
     const activeRows = includeTrial ? packageListRows : packageListRows.filter(row => (Number(row.remainingLessons) || 0) > 0);
     const displayRows = includeTrial || activeRows.length ? activeRows : packageListRows.slice(0, 1);
+    const detailRows = includeTrial ? displayRows : packageListRows;
     const remaining = displayRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
     const total = displayRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
     const packageDates = displayRows.map(row => text(row.purchaseDate)).filter(Boolean).sort();
     details.set(studentId, {
       packageListRows: displayRows,
+      detailPackageOrderRows: detailRows,
       packageListText: displayRows.map(row => `${row.packageName} ${lessonQty(row.remainingLessons)}/${lessonQty(row.totalLessons)}`).join('\n') || '-',
       packageBalanceRemaining: remaining,
       packageBalanceTotal: total,
@@ -681,7 +683,7 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       cumulativeCoursePaidAmount,
       cumulativeCoursePaidText: moneyText(cumulativeCoursePaidAmount),
       ...packageFields,
-      detailPackageOrderRows: Array.isArray(packageFields.packageListRows) ? packageFields.packageListRows : [],
+      detailPackageOrderRows: Array.isArray(packageFields.detailPackageOrderRows) ? packageFields.detailPackageOrderRows : [],
       ...benefitFields,
       completedLessons: round(completedByStudent.get(studentId) || 0, 1)
     });

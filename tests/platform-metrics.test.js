@@ -153,6 +153,31 @@ assert.deepStrictEqual(
   'student benefit ledger rows should be owned by the backend unified student detail model'
 );
 
+const historicalPackagePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-history-package', name: '历史课包展示' }],
+  purchases: [
+    { id: 'purchase-history-used', studentId: 'student-history-package', packageName: '历史10课时', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-02-01' },
+    { id: 'purchase-current-active', studentId: 'student-history-package', packageName: '当前10课时', courseType: '私教课', packageLessons: 10, amountPaid: 4500, status: 'active', purchaseDate: '2026-04-18' }
+  ],
+  entitlements: [
+    { id: 'ent-history-used', studentId: 'student-history-package', purchaseId: 'purchase-history-used', packageName: '历史10课时', courseType: '私教课', totalLessons: 10, usedLessons: 10, remainingLessons: 0, status: 'depleted' },
+    { id: 'ent-current-active', studentId: 'student-history-package', purchaseId: 'purchase-current-active', packageName: '当前10课时', courseType: '私教课', totalLessons: 10, usedLessons: 5, remainingLessons: 5, status: 'active' }
+  ],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: []
+});
+const historicalPackageStudent = historicalPackagePlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-history-package');
+assert.ok(historicalPackageStudent, 'history package student should enter formal student view');
+assert.strictEqual(historicalPackageStudent.packageBalanceText, '5/10', 'student list balance should keep the active package balance');
+assert.deepStrictEqual(
+  historicalPackageStudent.detailPackageOrderRows.map(row => [row.packageName, row.remainingLessons, row.totalLessons, row.statusText]),
+  [['当前10课时', 5, 10, '正常'], ['历史10课时', 0, 10, '已用完']],
+  'student detail package orders should include depleted historical purchases and entitlements'
+);
+
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(operations.conversion.cards.totalLeads.value, source.leads.length, 'operations conversion must count raw course leads, not the full searchable customer pool');

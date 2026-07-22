@@ -1928,7 +1928,8 @@ const handleAdminUserRoutes=createAdminUserRoutes({
   PRODUCTION_PAGE_READ_LIMITS,ADMIN_USER_LIST_PROJECTION_FIELDS,T_USERS
 });
 const handleAdminToolRoutes=createAdminToolRoutes({
-  init,sendJson:routeSendJson,clearTables,scan,del
+  init,sendJson:routeSendJson,clearTables,scan,put,del,
+  tables:{T_PURCHASES,T_ENTITLEMENTS}
 });
 const handlePackageBoardRoutes=createPackageBoardRoutes({
   init,sendJson:routeSendJson,get,put,T_MATCH_SETTINGS
