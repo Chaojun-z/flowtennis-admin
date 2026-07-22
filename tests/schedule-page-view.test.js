@@ -70,7 +70,13 @@ assert.match(fnBody('renderSchedule'), /openScheduleDetail\('\$\{s\.id\}'\)">查
 assert.doesNotMatch(fnBody('renderSchedule'), /openScheduleModal\('\$\{s\.id\}'\)">编辑/, 'schedule rows should not show edit action');
 assert.doesNotMatch(fnBody('openScheduleModal'), /误建删除|scheduleModalCanDelete/, 'schedule edit drawer header should not show mistaken-create delete');
 assert.match(source, /function scheduleEntitlementUnavailableReason\(/, 'schedule package picker should translate unavailable package reasons into user-facing copy');
+assert.match(fnBody('renderScheduleEntitlementDropdown'), /disabled:!x\.selectable[\s\S]*title:scheduleEntitlementOptionTitle\(x\)/, 'schedule package picker should keep unavailable active packages visible with a full hover title');
 assert.match(fnBody('applySchEntitlementOptions'), /scheduleEntitlementUnavailableReason\(res\.options\|\|\[\]\)/, 'schedule package picker should show why packages are unavailable');
+assert.match(fnBody('applySchEntitlementOptions'), /const selectableOptions=\(res\.options\|\|\[\]\)\.filter\(x=>x\.selectable\)/, 'schedule package picker should pick from selectable packages while still rendering all active package options');
+assert.match(source, /aria-disabled="\$\{opt\.disabled\?'true':'false'\}"/, 'standard dropdown should support disabled options for unavailable packages');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-item \.tms-dropdown-display\{[^}]*font-size:12px/, 'schedule package picker display should use 12px text');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-item \.tms-dropdown-item\{[^}]*font-size:12px/, 'schedule package picker menu items should use 12px text');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-item \.tms-dropdown-display:hover/, 'schedule package picker should have hover feedback');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /hint\.textContent=selected\?[^;]+:'';/, 'schedule package picker should not hide unavailable package reasons behind empty hint text');
 assert.match(fnBody('openScheduleDetail'), /设置迟到/, 'schedule detail should show coach late settlement info');
 assert.match(source, /globalTopFilterPages\(\)\.includes\(pg\)[\s\S]*\?'flex':'none'/, 'schedule page should show the global campus filter tabs');

@@ -1033,6 +1033,22 @@ const primeTimeRecommendation = rules.recommendEntitlements([
 assert.strictEqual(primeTimeRecommendation.recommended.entitlementId, 'ent-non-prime');
 assert.strictEqual(primeTimeRecommendation.recommended.requiresFieldFee, true, 'prime-time use of non-prime package should be marked for field fee');
 
+const primeTimeGoldPreferredRecommendation = rules.recommendEntitlements([
+  { ...entitlement, id: 'ent-non-prime-earlier', packageName: '私教非黄金课包', validUntil: '2026-07-01', remainingLessons: 9 },
+  { ...entitlement, id: 'ent-gold-later', packageName: '成人1v1 黄金时间10课时', timeBand: '黄金时间', validUntil: '2026-08-01', remainingLessons: 2 }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: 'coach-1',
+  coach: '朝珺',
+  campus: 'shunyi_mapo',
+  startTime: '2026-05-04 18:00',
+  endTime: '2026-05-04 19:00',
+  lessonCount: 1,
+  status: '已排课'
+});
+assert.strictEqual(primeTimeGoldPreferredRecommendation.recommended.entitlementId, 'ent-gold-later', 'prime-time schedules should prefer gold packages over non-prime packages that require field fee');
+
 const staleWindowGoldRecommendation = rules.recommendEntitlements([
   {
     ...entitlement,

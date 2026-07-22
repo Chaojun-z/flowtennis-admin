@@ -1208,6 +1208,7 @@ function recommendEntitlements(entitlements,schedule){
     };
   }).sort((a,b)=>{
     if(a.selectable!==b.selectable)return a.selectable?-1:1;
+    if(a.requiresFieldFee!==b.requiresFieldFee)return a.requiresFieldFee?1:-1;
     const av=a.validUntil||'9999-12-31',bv=b.validUntil||'9999-12-31';
     if(av!==bv)return av.localeCompare(bv);
     if(a.remainingLessons!==b.remainingLessons)return a.remainingLessons-b.remainingLessons;
@@ -2737,7 +2738,6 @@ async function getIndexedActiveEntitlementsForStudents(studentIds=[]){
   });
   const indexedRows=(await Promise.all([...entitlementIds].map(id=>getCachedRow(T_ENTITLEMENTS,id).catch(()=>null)))).filter(row=>row&&normalized.includes(String(row.studentId||'').trim())&&isActiveEntitlementForIndex(row));
   const needsFallback=missingStudentIds.length>0||!indexedRows.length;
-  if(!needsFallback)return indexedRows;
   const fallbackRows=(await getCachedScan(T_ENTITLEMENTS).catch(()=>[])).filter(row=>normalized.includes(String(row.studentId||'').trim())&&isActiveEntitlementForIndex(row));
   const merged=new Map(indexedRows.map(row=>[row.id,row]));
   fallbackRows.forEach(row=>merged.set(row.id,row));

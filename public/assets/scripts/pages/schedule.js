@@ -343,12 +343,11 @@ function scheduleEntitlementTimeBandText(option,title=''){
   const text=packageTimeBandShortLabel(option?.timeBand||'全天');
   return text&&!String(title||'').includes(text)?text:'';
 }
-function scheduleEntitlementExpiryText(option){
-  const validUntil=String(option?.validUntil||'').trim();
-  return validUntil&&validUntil!=='-'?`到期${validUntil}`:'';
-}
+function scheduleEntitlementExpiryText(option){const validUntil=String(option?.validUntil||'').trim();return validUntil&&validUntil!=='-'?`到期${validUntil}`:'';}
+function scheduleEntitlementOptionTitle(option){const base=scheduleEntitlementLabel(option),reason=option?.selectable===false?scheduleEntitlementUnavailableReason([option]):'';return [base,reason?`不可选：${reason}`:''].filter(Boolean).join(' · ');}
 function renderScheduleEntitlementDropdown(options=[],value='',placeholder='自动匹配可用课包'){
-  const list=options.length?options.map(x=>({value:x.entitlementId,label:scheduleEntitlementLabel(x)})):[{value:'',label:placeholder}];
+  const optionList=options.map(x=>({value:x.entitlementId,label:x.selectable===false?`${scheduleEntitlementLabel(x)} · 不可选：${scheduleEntitlementUnavailableReason([x])}`:scheduleEntitlementLabel(x),disabled:!x.selectable,title:scheduleEntitlementOptionTitle(x)}));
+  const list=optionList.length?[{value:'',label:placeholder,disabled:true,title:placeholder},...optionList]:[{value:'',label:placeholder,title:placeholder}];
   return renderStandardDropdownHtml('sch_entitlement','扣减课包',list,value,true,'handleScheduleEntitlementChange');
 }
 function setScheduleEntitlementDropdown(options=[],value='',placeholder='自动匹配可用课包'){
@@ -726,12 +725,13 @@ function applySchEntitlementOptions(res,preferredId=''){
   const hint=document.getElementById('sch_ent_hint');
   if(!sel||!hint)return;
   refreshScheduleStudentEntitlementRows({},[]);
-  const options=(res.options||[]).filter(x=>x.selectable);
+  const options=res.options||[];
+  const selectableOptions=(res.options||[]).filter(x=>x.selectable);
   schEntitlementOptionCache.clear();
-  options.forEach(option=>{if(option.entitlementId)schEntitlementOptionCache.set(option.entitlementId,option);});
-  const maxRemain=options.reduce((best,item)=>(Number(item.remainingLessons)||0)>(Number(best?.remainingLessons)||0)?item:best,null);
-  const selected=options.find(x=>preferredId&&x.entitlementId===preferredId)||maxRemain;
-  setScheduleEntitlementDropdown(options,selected?.entitlementId||'',options.length?'自动匹配可用课包':'无可用课包');
+  selectableOptions.forEach(option=>{if(option.entitlementId)schEntitlementOptionCache.set(option.entitlementId,option);});
+  const maxRemain=selectableOptions.reduce((best,item)=>(Number(item.remainingLessons)||0)>(Number(best?.remainingLessons)||0)?item:best,null);
+  const selected=selectableOptions.find(x=>preferredId&&x.entitlementId===preferredId)||maxRemain;
+  setScheduleEntitlementDropdown(options,selected?.entitlementId||'',selectableOptions.length?'自动匹配可用课包':'无可用课包');
   setScheduleCoachFromEntitlement(selected);
   syncScheduleExperienceType();
   syncScheduleSmallClassType();
