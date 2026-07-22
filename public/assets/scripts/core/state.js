@@ -919,15 +919,24 @@ function applyLoadedData(data){
   CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=campusDisplayName(x.name||x.code||x.id);});
   lastDataSyncAt=Date.now();
 }
+function pageHasUsableLoadedData(pg){
+  if(pg==='courts'||pg==='memberships'||pg==='membership-orders'||pg==='membership-ledger'){
+    return !!courtAccountListViewData;
+  }
+  if(pg==='operations')return !!operationsPageData;
+  if(pg==='finance')return !!financeOverviewData;
+  return requiredDatasetsForPage(pg).every(name=>loadedDatasets.has(name));
+}
 async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   const requestVersion=++dataRequestVersion;
   const loading=document.getElementById('pageLoading');
   if(!quiet&&loading)loading.classList.add('show');
+  const hadUsableDataBeforeLoad=pageHasUsableLoadedData(pg);
   try{
     await ensurePageDatasets(pg,{force});
     if(pg==='courts'||pg==='memberships'||pg==='membership-orders'||pg==='membership-ledger'){
       const needsCompare=shouldLoadCourtReadModelCompare();
-      await loadCourtReadModelGuardData({force});
+      await loadCourtReadModelGuardData({force,allowStaleOnError:quiet||hadUsableDataBeforeLoad});
       if(force){
         loadCourtReadModelCompareData({force:true}).then(()=>{
           if(requestVersion!==dataRequestVersion)return;
@@ -955,6 +964,10 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   }catch(e){
     if(requestVersion!==dataRequestVersion)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+    if(quiet&&hadUsableDataBeforeLoad){
+      console.warn('background page refresh failed:',pg,e);
+      return;
+    }
     if(pg==='students')renderStudentTableError(String(e.message||e));
     if(isStudentListPage(pg)&&pg!=='students')renderStudentTableError(String(e.message||e));
     if(pg==='leads')renderLeadTableError(String(e.message||e));
@@ -1024,7 +1037,7 @@ function refreshOperationsPageDataInBackground(){
     console.warn('operations background refresh failed',e);
   });
 }
-async function loadCourtReadModelGuardData({force=false}={}){
+async function loadCourtReadModelGuardData({force=false,allowStaleOnError=false}={}){
   if(!shouldUseCourtReadModelByDefault()){
     courtAccountListViewData=null;
     courtAccountListViewCompareData=null;
@@ -1034,10 +1047,18 @@ async function loadCourtReadModelGuardData({force=false}={}){
   }
   const requestKey=datasetRequestKey('courtAccountListViewPage');
   if(courtAccountListViewData&&!force&&courtAccountListViewRequestKey===requestKey)return;
-  const view=await DATASET_LOADERS.courtAccountListViewPage({fresh:force});
-  courtAccountListViewData=view||null;
-  courtAccountListViewRequestKey=requestKey;
-  window.__courtAccountListViewData=courtAccountListViewData;
+  try{
+    const view=await DATASET_LOADERS.courtAccountListViewPage({fresh:force});
+    courtAccountListViewData=view||null;
+    courtAccountListViewRequestKey=requestKey;
+    window.__courtAccountListViewData=courtAccountListViewData;
+  }catch(err){
+    if(allowStaleOnError&&courtAccountListViewData){
+      console.warn('court account list view refresh failed, keep stale data', err);
+      return courtAccountListViewData;
+    }
+    throw err;
+  }
 }
 function courtAccountListViewDataIsCurrent(){
   return !!courtAccountListViewData&&courtAccountListViewRequestKey===datasetRequestKey('courtAccountListViewPage');
