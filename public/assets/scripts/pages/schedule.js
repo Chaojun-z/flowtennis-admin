@@ -1789,10 +1789,11 @@ function scheduleDetailInput(label,id,value,type='text'){
   }
   return renderDetailDrawerInput(label,id,value,type);
 }
-function renderScheduleDetailCard(title,content,{section='',scheduleId='',className='',actionLabel='编辑',feedbackId=''}={}){
+function renderScheduleDetailCard(title,content,{section='',scheduleId='',className='',actionLabel='编辑',feedbackId='',canCancelSchedule=false}={}){
   const editing=scheduleDetailEditingSection===section;
   if(section==='schedule-form'){
-    return renderDetailDrawerCard(title,content,{className,actionsHtml:`<button type="button" class="schedule-detail-action" onclick="openScheduleModal('${scheduleId}')">编辑</button>`});
+    const cancelAction=canCancelSchedule?`<button type="button" class="schedule-detail-action danger" onclick="openCancelScheduleModal('${scheduleId}')">取消</button>`:'';
+    return renderDetailDrawerCard(title,content,{className,actionsHtml:`${cancelAction}<button type="button" class="schedule-detail-action" onclick="openScheduleModal('${scheduleId}')">编辑</button>`});
   }
   const posterAction=section==='feedback'&&feedbackId&&!editing?`<button type="button" class="schedule-detail-action" onclick="openFeedbackPosterModal('${feedbackId}','${scheduleId}')">生成海报</button>`:'';
   const actions=section?`${editing?`<button type="button" class="schedule-detail-action muted" onclick="cancelScheduleDetailSectionEdit('${scheduleId}')">取消</button><button type="button" class="schedule-detail-action primary" onclick="saveScheduleDetailSectionEdit('${scheduleId}','${section}')">保存修改</button>`:`${posterAction}<button type="button" class="schedule-detail-action" onclick="editScheduleDetailSection('${scheduleId}','${section}')">${esc(actionLabel)}</button>`}`:'';
@@ -2012,6 +2013,7 @@ function scheduleDetailLateHtml(s){
 function openScheduleDetail(scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);if(!s)return;
   const isCoachDetail=isCoachPortalUser();
+  const canCancelSchedule=effectiveScheduleStatus(s)!=='已取消';
   const fb=scheduleFeedback(s);
   const proposal=scheduleCoachProposal(s);
   const ent=findEntitlementForSchedule(s);
@@ -2021,7 +2023,7 @@ function openScheduleDetail(scheduleId){
   const ownerCoachText=[...new Set(stuRecords.map(st=>myStudentOwnerCoachText(st)).filter(Boolean))].join('、')||'未设置';
   const studentNotes=stuRecords.map(st=>st.notes).filter(Boolean).join('；');
   const recentFeedback=stuRecords.flatMap(st=>feedbacks.filter(item=>item.studentId===st.id||parseArr(item.studentIds).includes(st.id))).filter(item=>item.id!==fb?.id).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))).slice(0,2);
-  const infoHtml=`${renderScheduleDetailCard('基础信息',scheduleDetailInfoHtml(s,ent,studentNames,primaryCoachText,ownerCoachText),{section:isCoachDetail?'':'schedule-form',scheduleId:s.id})}${renderScheduleDetailCard('设置迟到',scheduleDetailLateHtml(s))}${renderScheduleDetailCard('备注信息',scheduleDetailNotesHtml(s,studentNotes,recentFeedback,fb),{section:isCoachDetail?'':'notes',scheduleId:s.id})}`;
+  const infoHtml=`${renderScheduleDetailCard('基础信息',scheduleDetailInfoHtml(s,ent,studentNames,primaryCoachText,ownerCoachText),{section:isCoachDetail?'':'schedule-form',scheduleId:s.id,canCancelSchedule})}${renderScheduleDetailCard('设置迟到',scheduleDetailLateHtml(s))}${renderScheduleDetailCard('备注信息',scheduleDetailNotesHtml(s,studentNotes,recentFeedback,fb),{section:isCoachDetail?'':'notes',scheduleId:s.id})}`;
   const proposalCanEdit=isSmallGroupSchedule(s)&&(!!proposal||isCoachDetail);
   const proposalHtml=scheduleDetailProposalHtml(s,proposal,{section:proposalCanEdit?'proposal':'',scheduleId:s.id});
   const feedbackCanEdit=!!fb||isCoachDetail;

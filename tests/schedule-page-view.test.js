@@ -260,6 +260,8 @@ assert.match(source, /function saveScheduleDetailSectionEdit\(/, 'schedule detai
 assert.match(fnBody('saveScheduleDetailSectionEdit'), /runStandardMutation\(saveButton/, 'local section saves should give immediate saving feedback through the global mutation helper');
 assert.doesNotMatch(fnBody('saveScheduleDetailSectionEdit'), /catch\(e\)[\s\S]*saveButton[\s\S]*disabled=false/, 'local section save failures should not restore the save button by hand');
 assert.match(fnBody('renderScheduleDetailCard'), /schedule-detail-action muted[\s\S]*取消[\s\S]*schedule-detail-action primary[\s\S]*保存修改/, 'schedule detail local edit actions should show cancel and save modification');
+assert.match(fnBody('renderScheduleDetailCard'), /canCancelSchedule[\s\S]*openCancelScheduleModal\('\$\{scheduleId\}'\)[\s\S]*>取消<\/button>[\s\S]*openScheduleModal\('\$\{scheduleId\}'\)">编辑/, 'schedule detail basic info card should show cancel to the left of edit');
+assert.match(fnBody('openScheduleDetail'), /const canCancelSchedule=effectiveScheduleStatus\(s\)!=='已取消'[\s\S]*renderScheduleDetailCard\('基础信息'[\s\S]*canCancelSchedule/, 'schedule detail should hide the cancel entry for already-cancelled schedules');
 assert.match(styles, /\.overlay\.schedule-drawer-overlay[\s\S]*justify-content:flex-end/, 'schedule detail drawer overlay should align the panel to the right');
 assert.match(styles, /\.overlay\.schedule-drawer-overlay \.modal\.modal-court\.modal-schedule-drawer\{[\s\S]*translateX\(100%\)/, 'schedule detail drawer should close by sliding out to the right');
 assert.match(styles, /\.overlay\.schedule-drawer-overlay\.open \.modal\.modal-court\.modal-schedule-drawer\{[\s\S]*translateX\(0\)/, 'schedule detail drawer should open by sliding in from the right');
