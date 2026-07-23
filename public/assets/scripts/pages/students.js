@@ -923,6 +923,20 @@ function studentLessonRecordMetaIcon(kind){
 function studentLessonRecordMetaItem(kind,text){
   return `<span class="student-lesson-meta-item">${studentLessonRecordMetaIcon(kind)}<span>${esc(renderStandardEmptyText(text))}</span></span>`;
 }
+function studentLessonRecordDetailSectionText(rows=[],index=0){
+  const row=rows[index]||{};
+  const count=Math.abs(Number(row.lessonDelta)||0);
+  if(!count)return '';
+  const laterRows=rows.slice(index+1);
+  const usedBefore=laterRows.reduce((sum,item)=>sum+Math.abs(Number(item.lessonDelta)||0),0);
+  const startNo=Number.isInteger(usedBefore)?usedBefore+1:usedBefore;
+  const endNo=usedBefore+count;
+  const marker=typeof studentLessonSectionMarker==='function'?studentLessonSectionMarker:(value=>String(value));
+  const startText=marker(startNo);
+  const endText=marker(endNo);
+  const unit=row.unit||'节';
+  return `[第${startText}${startText===endText?'':`-${endText}`}${unit}]`;
+}
 function studentHasActiveSearchOrFilter(){
   return !!((document.getElementById('stuSearch')?.value||'').trim()
     ||document.getElementById('stuTypeFilter')?.value
@@ -1025,9 +1039,11 @@ function studentLessonRecordHtml(stu){
   if(!rows.length)return '<div class="student-detail-empty">暂无上课记录</div>';
   const limit=studentLessonRecordExpanded(stu)?rows.length:10;
   const expanded=studentLessonRecordExpanded(stu);
-  const items=rows.slice(0,limit).map(item=>{
+  const items=rows.slice(0,limit).map((item,index)=>{
     if(item.kind){
-      const title=[item.time,item.courseType,item.className||item.packageName].filter(Boolean).join(' · ');
+      const sectionText=studentLessonRecordDetailSectionText(rows,index);
+      const detailText=[item.courseType,item.className||item.packageName].filter(Boolean).join(' · ');
+      const title=[sectionText,detailText].filter(Boolean).join(' ');
       return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title||'上课记录')}</div><div class="student-lesson-meta">${studentLessonRecordMetaItem('time',item.time)}${studentLessonRecordMetaItem('site',[cn(item.campus)||'-',item.venue||''].filter(Boolean).join(' '))}${studentLessonRecordMetaItem('coach',item.coach||'-')}</div></div></div>`;
     }
     const line=item.type==='ledger'
