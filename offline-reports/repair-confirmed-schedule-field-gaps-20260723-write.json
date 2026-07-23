@@ -1,0 +1,1582 @@
+{
+  "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+  "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+  "generatedAt": "2026-07-23T11:49:46.279Z",
+  "write": true,
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "summary": {
+    "putSchedules": 16,
+    "putLedgers": 1,
+    "deleteSchedules": 1,
+    "deleteLedgers": 1,
+    "putEntitlements": 1,
+    "deferredScheduleIds": [
+      "cxe-thirdparty-202606-schedule-472cf8f55217",
+      "cxe-thirdparty-202606-schedule-2528ffc3d0e1"
+    ]
+  },
+  "blockers": [],
+  "putSchedules": [
+    {
+      "id": "repair-schedule-aisi-20260409-1900",
+      "before": {
+        "id": "repair-schedule-aisi-20260409-1900",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723-aisi-0409",
+        "coach": "晓哲教练",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T02:14:03.521Z",
+        "endTime": "2026-04-09 20:00",
+        "entitlementId": "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+        "entitlementIds": [
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade"
+        ],
+        "expectedStudentIds": [
+          "new-student-9f2faf5f3ee4"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认：成人私教正式课，划扣小班课课包",
+        "operationAt": "2026-07-23T02:14:03.521Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723-aisi-0409",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "小班课 · 12课时 · 全天",
+        "purchaseId": "d6bb7367-67ae-4fa5-b11c-7c4f26c1b9a5",
+        "repairReason": "补齐艾斯 4/9 真实排课",
+        "smallClassType": "",
+        "startTime": "2026-04-09 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "new-student-9f2faf5f3ee4"
+        ],
+        "studentName": "艾斯",
+        "updatedAt": "2026-07-23T02:14:03.521Z",
+        "venue": "马坡室内2号场"
+      },
+      "after": {
+        "id": "repair-schedule-aisi-20260409-1900",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "晓哲教练",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T02:14:03.521Z",
+        "endTime": "2026-04-09 20:00",
+        "entitlementId": "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+        "entitlementIds": [
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade"
+        ],
+        "expectedStudentIds": [
+          "new-student-9f2faf5f3ee4"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认：成人私教正式课，划扣小班课课包",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "小班课 · 12课时 · 全天",
+        "purchaseId": "d6bb7367-67ae-4fa5-b11c-7c4f26c1b9a5",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "",
+        "startTime": "2026-04-09 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "new-student-9f2faf5f3ee4"
+        ],
+        "studentName": "艾斯",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "马坡室内2号场",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-smallclass-20260507-1900",
+      "before": {
+        "id": "repair-smallclass-20260507-1900",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723",
+        "coach": "Rive 天昊教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-05-07 21:00",
+        "entitlementId": "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+        "entitlementIds": [
+          "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71",
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade"
+        ],
+        "expectedStudentIds": [
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+          "new-student-2d6eb2c4ebe3",
+          "82dde631-d23b-4617-934f-b4aaddf87521",
+          "new-student-9f2faf5f3ee4"
+        ],
+        "lessonCount": 1,
+        "notes": "陈鹭为体验，不扣正式小班课包",
+        "operationAt": "2026-07-23T02:09:31.343Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认补齐真实排课",
+        "smallClassType": "dropin",
+        "startTime": "2026-05-07 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+          "new-student-2d6eb2c4ebe3",
+          "82dde631-d23b-4617-934f-b4aaddf87521",
+          "new-student-9f2faf5f3ee4"
+        ],
+        "studentName": "陈鹭（体验）、rzwyyy、Golden.Z™、艾斯",
+        "updatedAt": "2026-07-23T02:09:31.343Z",
+        "venue": "3号场"
+      },
+      "after": {
+        "id": "repair-smallclass-20260507-1900",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "Rive 天昊教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-05-07 21:00",
+        "entitlementId": "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+        "entitlementIds": [
+          "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71",
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade"
+        ],
+        "expectedStudentIds": [
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+          "new-student-2d6eb2c4ebe3",
+          "82dde631-d23b-4617-934f-b4aaddf87521",
+          "new-student-9f2faf5f3ee4"
+        ],
+        "lessonCount": 1,
+        "notes": "陈鹭为体验，不扣正式小班课包",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "dropin",
+        "startTime": "2026-05-07 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+          "new-student-2d6eb2c4ebe3",
+          "82dde631-d23b-4617-934f-b4aaddf87521",
+          "new-student-9f2faf5f3ee4"
+        ],
+        "studentName": "陈鹭（体验）、rzwyyy、Golden.Z™、艾斯",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "3号场",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-smallclass-20260514-1900",
+      "before": {
+        "id": "repair-smallclass-20260514-1900",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723",
+        "coach": "岳克舟教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-05-14 21:00",
+        "entitlementId": "7205ef9f-60f9-4a2b-9529-3797ea9a4b87",
+        "entitlementIds": [
+          "7205ef9f-60f9-4a2b-9529-3797ea9a4b87",
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71"
+        ],
+        "expectedStudentIds": [
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "lessonCount": 1,
+        "notes": "one1、cc z 为体验，不处理正式课包",
+        "operationAt": "2026-07-23T02:09:31.343Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认补齐真实排课",
+        "smallClassType": "dropin",
+        "startTime": "2026-05-14 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "studentName": "陈鹭、Golden.Z™、one1（体验）、cc z（体验）",
+        "updatedAt": "2026-07-23T02:09:31.343Z",
+        "venue": "3号场"
+      },
+      "after": {
+        "id": "repair-smallclass-20260514-1900",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "岳克舟教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-05-14 21:00",
+        "entitlementId": "7205ef9f-60f9-4a2b-9529-3797ea9a4b87",
+        "entitlementIds": [
+          "7205ef9f-60f9-4a2b-9529-3797ea9a4b87",
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71"
+        ],
+        "expectedStudentIds": [
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "lessonCount": 1,
+        "notes": "one1、cc z 为体验，不处理正式课包",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "dropin",
+        "startTime": "2026-05-14 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "studentName": "陈鹭、Golden.Z™、one1（体验）、cc z（体验）",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "3号场",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-smallclass-20260521-1900",
+      "before": {
+        "id": "repair-smallclass-20260521-1900",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723",
+        "coach": "岳克舟教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-05-21 21:00",
+        "entitlementId": "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+        "entitlementIds": [
+          "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71"
+        ],
+        "expectedStudentIds": [
+          "new-student-2d6eb2c4ebe3",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认补齐小班排课",
+        "operationAt": "2026-07-23T02:09:31.343Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认补齐真实排课",
+        "smallClassType": "dropin",
+        "startTime": "2026-05-21 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "new-student-2d6eb2c4ebe3",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "studentName": "朱一龙（体验）、Chris、rzwyyy、Golden.Z™",
+        "updatedAt": "2026-07-23T02:09:31.343Z",
+        "venue": "3号场"
+      },
+      "after": {
+        "id": "repair-smallclass-20260521-1900",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "岳克舟教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-05-21 21:00",
+        "entitlementId": "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+        "entitlementIds": [
+          "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71"
+        ],
+        "expectedStudentIds": [
+          "new-student-2d6eb2c4ebe3",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认补齐小班排课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "dropin",
+        "startTime": "2026-05-21 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "new-student-2d6eb2c4ebe3",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "studentName": "朱一龙（体验）、Chris、rzwyyy、Golden.Z™",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "3号场",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-smallclass-20260604-1900",
+      "before": {
+        "id": "repair-smallclass-20260604-1900",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723",
+        "coach": "岳克舟教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-06-04 21:00",
+        "entitlementId": "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71",
+        "entitlementIds": [
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71",
+          "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+          "7205ef9f-60f9-4a2b-9529-3797ea9a4b87"
+        ],
+        "expectedStudentIds": [
+          "82dde631-d23b-4617-934f-b4aaddf87521",
+          "1bf3878b-8789-48c4-8cb2-2dc86ca93f7b",
+          "new-student-2d6eb2c4ebe3",
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5"
+        ],
+        "externalCourtName": "2号场",
+        "externalNotes": "第三方6月占场#267 20:30-21:00 2号场",
+        "externalVenueName": "顺义马坡",
+        "lessonCount": 1,
+        "notes": "Yutong 不在本次确认修复范围，未新增扣课",
+        "operationAt": "2026-07-23T02:09:31.343Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认补齐真实排课",
+        "smallClassType": "dropin",
+        "startTime": "2026-06-04 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "82dde631-d23b-4617-934f-b4aaddf87521",
+          "1bf3878b-8789-48c4-8cb2-2dc86ca93f7b",
+          "new-student-2d6eb2c4ebe3",
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5"
+        ],
+        "studentName": "Golden.Z™、Yutong、rzwyyy、陈鹭",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|267|2026-06-04|20:30-21:00|2号场|马坡运营|岳克舟 随到随学小班课",
+        "thirdPartyTime": "20:30-21:00",
+        "updatedAt": "2026-07-23T10:55:36.579Z",
+        "venue": "2号场",
+        "venueId": "venue-1782359259926-1"
+      },
+      "after": {
+        "id": "repair-smallclass-20260604-1900",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "岳克舟教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-06-04 21:00",
+        "entitlementId": "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71",
+        "entitlementIds": [
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71",
+          "1a7d5977-6d0b-4f7f-87d6-7ebbe08a9456",
+          "7205ef9f-60f9-4a2b-9529-3797ea9a4b87"
+        ],
+        "expectedStudentIds": [
+          "82dde631-d23b-4617-934f-b4aaddf87521",
+          "1bf3878b-8789-48c4-8cb2-2dc86ca93f7b",
+          "new-student-2d6eb2c4ebe3",
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5"
+        ],
+        "externalCourtName": "2号场",
+        "externalNotes": "第三方6月占场#267 20:30-21:00 2号场",
+        "externalVenueName": "顺义马坡",
+        "lessonCount": 1,
+        "notes": "Yutong 不在本次确认修复范围，未新增扣课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "dropin",
+        "startTime": "2026-06-04 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "82dde631-d23b-4617-934f-b4aaddf87521",
+          "1bf3878b-8789-48c4-8cb2-2dc86ca93f7b",
+          "new-student-2d6eb2c4ebe3",
+          "dd33361c-5c42-4f91-92ee-e6138df7d4b5"
+        ],
+        "studentName": "Golden.Z™、Yutong、rzwyyy、陈鹭",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|267|2026-06-04|20:30-21:00|2号场|马坡运营|岳克舟 随到随学小班课",
+        "thirdPartyTime": "20:30-21:00",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "2号场",
+        "venueId": "venue-1782359259926-1",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-smallclass-20260416-1900",
+      "before": {
+        "id": "repair-smallclass-20260416-1900",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723",
+        "coach": "",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-04-16 20:00",
+        "entitlementId": "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+        "entitlementIds": [
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71"
+        ],
+        "expectedStudentIds": [
+          "new-student-9f2faf5f3ee4",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认：樊先生临时取消，不扣课",
+        "operationAt": "2026-07-23T02:09:31.343Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认补齐真实排课",
+        "smallClassType": "dropin",
+        "startTime": "2026-04-16 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "new-student-9f2faf5f3ee4",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "studentName": "艾斯、Golden.Z™、樊先生（临时取消）",
+        "updatedAt": "2026-07-23T02:09:31.343Z",
+        "venue": "马坡室内2号场"
+      },
+      "after": {
+        "id": "repair-smallclass-20260416-1900",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "晓哲教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-04-16 20:00",
+        "entitlementId": "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+        "entitlementIds": [
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+          "cc4ed87f-e4d9-40f0-af37-21c6b4bc3d71"
+        ],
+        "expectedStudentIds": [
+          "new-student-9f2faf5f3ee4",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认：随到随学小班课；樊先生临时取消，不退款",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "dropin",
+        "startTime": "2026-04-16 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "new-student-9f2faf5f3ee4",
+          "82dde631-d23b-4617-934f-b4aaddf87521"
+        ],
+        "studentName": "艾斯、Golden.Z™、樊先生（临时取消）",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "4号场",
+        "coachId": "f3d2f47c-3658-49b8-8057-62978efb382e",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-53514df52744",
+      "before": {
+        "id": "cxe-thirdparty-202606-schedule-53514df52744",
+        "absentStudentIds": [],
+        "campus": "shunyi_mapo",
+        "coach": "",
+        "coachId": "0778a6ed-4f8a-4b6e-b2f3-5494a4f3f0ba",
+        "confirmStatus": "待确认",
+        "courseType": "私教课",
+        "courseTypeLevel2": "",
+        "createdAt": "2026-07-23T10:55:36.579Z",
+        "createdBy": "第三方导入",
+        "endTime": "2026-06-02 11:00",
+        "expectedStudentIds": [
+          "cxe-thirdparty-202606-student-27bfa7e71a56"
+        ],
+        "externalCourtName": "3号场",
+        "externalNotes": "第三方6月占场#235 10:30-11:00 3号场",
+        "externalVenueName": "顺义马坡",
+        "fieldFeeAmount": 0,
+        "fieldFeePayMethod": "",
+        "lessonCount": 0.5,
+        "locationType": "own",
+        "notes": "2026-06 第三方锁场导入：吴教练 袁冶 私教课",
+        "operationAt": "2026-07-23T10:55:36.579Z",
+        "operationBy": "第三方导入",
+        "operationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "operationType": "thirdparty-schedule-import",
+        "paidAmount": 0,
+        "payMethod": "",
+        "requiresFieldFee": false,
+        "scheduleSource": "第三方锁场导入",
+        "settlementType": "direct",
+        "standardCourseType": "私教课",
+        "startTime": "2026-06-02 10:30",
+        "status": "已排课",
+        "studentIds": [
+          "cxe-thirdparty-202606-student-27bfa7e71a56"
+        ],
+        "studentName": "吴",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|235|2026-06-02|10:30-11:00|3号场|马坡运营|吴教练 袁冶 私教课",
+        "thirdPartyTime": "10:30-11:00",
+        "updatedAt": "2026-07-23T10:55:36.579Z",
+        "venue": "3号场",
+        "venueId": "venue-1782359262159-2",
+        "venueSpaceType": "室内"
+      },
+      "after": {
+        "id": "cxe-thirdparty-202606-schedule-53514df52744",
+        "absentStudentIds": [],
+        "campus": "mabao",
+        "coach": "吴教练",
+        "coachId": "628e3b01-820e-4bbe-892c-3683876cc630",
+        "confirmStatus": "待确认",
+        "courseType": "私教课",
+        "courseTypeLevel2": "",
+        "createdAt": "2026-07-23T10:55:36.579Z",
+        "createdBy": "第三方导入",
+        "endTime": "2026-06-02 11:00",
+        "expectedStudentIds": [
+          "seed-student-033"
+        ],
+        "externalCourtName": "3号场",
+        "externalNotes": "第三方6月占场#235 10:30-11:00 3号场",
+        "externalVenueName": "顺义马坡",
+        "fieldFeeAmount": 0,
+        "fieldFeePayMethod": "",
+        "lessonCount": 0.5,
+        "locationType": "own",
+        "notes": "2026-06 第三方锁场导入：吴教练 袁冶 私教课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "paidAmount": 0,
+        "payMethod": "",
+        "requiresFieldFee": false,
+        "scheduleSource": "第三方锁场导入",
+        "settlementType": "direct",
+        "standardCourseType": "私教课",
+        "startTime": "2026-06-02 10:30",
+        "status": "已排课",
+        "studentIds": [
+          "seed-student-033"
+        ],
+        "studentName": "袁冶",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|235|2026-06-02|10:30-11:00|3号场|马坡运营|吴教练 袁冶 私教课",
+        "thirdPartyTime": "10:30-11:00",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "3号场",
+        "venueId": "venue-1782359262159-2",
+        "venueSpaceType": "室内",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段"
+      }
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-b68d48d67456",
+      "before": {
+        "id": "cxe-thirdparty-202606-schedule-b68d48d67456",
+        "absentStudentIds": [],
+        "campus": "shunyi_mapo",
+        "coach": "",
+        "coachId": "0778a6ed-4f8a-4b6e-b2f3-5494a4f3f0ba",
+        "confirmStatus": "待确认",
+        "courseType": "小班课",
+        "courseTypeLevel2": "训练营/小班课",
+        "createdAt": "2026-07-23T10:55:36.579Z",
+        "createdBy": "第三方导入",
+        "endTime": "2026-06-04 21:00",
+        "expectedStudentIds": [
+          "cxe-thirdparty-202606-student-9680a604ce03"
+        ],
+        "externalCourtName": "1号场",
+        "externalNotes": "第三方6月占场#261 19:00-21:00 1号场",
+        "externalVenueName": "顺义马坡",
+        "fieldFeeAmount": 0,
+        "fieldFeePayMethod": "",
+        "lessonCount": 2,
+        "locationType": "own",
+        "notes": "2026-06 第三方锁场导入：理想团课",
+        "operationAt": "2026-07-23T10:55:36.579Z",
+        "operationBy": "第三方导入",
+        "operationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "operationType": "thirdparty-schedule-import",
+        "paidAmount": 0,
+        "payMethod": "",
+        "requiresFieldFee": false,
+        "scheduleSource": "第三方锁场导入",
+        "settlementType": "direct",
+        "standardCourseType": "小班课",
+        "startTime": "2026-06-04 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "cxe-thirdparty-202606-student-9680a604ce03"
+        ],
+        "studentName": "理想",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|261|2026-06-04|19:00-21:00|1号场|马坡运营|理想团课",
+        "thirdPartyTime": "19:00-21:00",
+        "updatedAt": "2026-07-23T10:55:36.579Z",
+        "venue": "1号场",
+        "venueId": "venue-1782359254410-0",
+        "venueSpaceType": "室内"
+      },
+      "after": {
+        "id": "cxe-thirdparty-202606-schedule-b68d48d67456",
+        "absentStudentIds": [],
+        "campus": "mabao",
+        "coach": "朝珺教练",
+        "coachId": "ac664799-5944-48ce-b1cc-1e60bf0982de",
+        "confirmStatus": "待确认",
+        "courseType": "小班课",
+        "courseTypeLevel2": "训练营/小班课",
+        "createdAt": "2026-07-23T10:55:36.579Z",
+        "createdBy": "第三方导入",
+        "endTime": "2026-06-04 21:00",
+        "expectedStudentIds": [
+          "cxe-thirdparty-202606-student-9680a604ce03"
+        ],
+        "externalCourtName": "1号场",
+        "externalNotes": "第三方6月占场#261 19:00-21:00 1号场",
+        "externalVenueName": "顺义马坡",
+        "fieldFeeAmount": 0,
+        "fieldFeePayMethod": "",
+        "lessonCount": 2,
+        "locationType": "own",
+        "notes": "2026-06 第三方锁场导入：理想团课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "paidAmount": 0,
+        "payMethod": "",
+        "requiresFieldFee": false,
+        "scheduleSource": "第三方锁场导入",
+        "settlementType": "direct",
+        "standardCourseType": "小班课",
+        "startTime": "2026-06-04 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "cxe-thirdparty-202606-student-9680a604ce03"
+        ],
+        "studentName": "理想",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|261|2026-06-04|19:00-21:00|1号场|马坡运营|理想团课",
+        "thirdPartyTime": "19:00-21:00",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "1号场",
+        "venueId": "venue-1782359254410-0",
+        "venueSpaceType": "室内",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段"
+      }
+    },
+    {
+      "id": "repair-yangziyi-20260612-1100",
+      "before": {
+        "id": "repair-yangziyi-20260612-1100",
+        "batchId": "batch-repair-confirmed-lesson-ledger-batch2-20260723",
+        "coach": "",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-06-12 12:00",
+        "entitlementId": "private_lesson_csv_import_20260519_BATCH2_15_LIVE:entitlement:杨子一:initial:2026-03-18",
+        "entitlementIds": [
+          "private_lesson_csv_import_20260519_BATCH2_15_LIVE:entitlement:杨子一:initial:2026-03-18"
+        ],
+        "expectedStudentIds": [
+          "seed-student-031"
+        ],
+        "externalCourtName": "2号场",
+        "externalNotes": "第三方6月占场#388 11:00-12:00 2号场",
+        "externalVenueName": "顺义马坡",
+        "lessonCount": 1,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T03:20:49.068Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-batch2-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "成人1v1 非黄时间10课时（历史）",
+        "purchaseId": "private_lesson_csv_import_20260519_BATCH2_15_LIVE:purchase:杨子一:initial:2026-03-18",
+        "repairReason": "按用户确认补齐排课",
+        "smallClassType": "",
+        "startTime": "2026-06-12 11:00",
+        "status": "已排课",
+        "studentIds": [
+          "seed-student-031"
+        ],
+        "studentName": "杨子一",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|388|2026-06-12|11:00-12:00|2号场|甄朝珺|-",
+        "thirdPartyTime": "11:00-12:00",
+        "updatedAt": "2026-07-23T10:55:36.579Z",
+        "venue": "2号场",
+        "venueId": "venue-1782359259926-1"
+      },
+      "after": {
+        "id": "repair-yangziyi-20260612-1100",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "林铭教练",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-06-12 12:00",
+        "entitlementId": "private_lesson_csv_import_20260519_BATCH2_15_LIVE:entitlement:杨子一:initial:2026-03-18",
+        "entitlementIds": [
+          "private_lesson_csv_import_20260519_BATCH2_15_LIVE:entitlement:杨子一:initial:2026-03-18"
+        ],
+        "expectedStudentIds": [
+          "seed-student-031"
+        ],
+        "externalCourtName": "2号场",
+        "externalNotes": "第三方6月占场#388 11:00-12:00 2号场",
+        "externalVenueName": "顺义马坡",
+        "lessonCount": 1,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "成人1v1 非黄时间10课时（历史）",
+        "purchaseId": "private_lesson_csv_import_20260519_BATCH2_15_LIVE:purchase:杨子一:initial:2026-03-18",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "",
+        "startTime": "2026-06-12 11:00",
+        "status": "已排课",
+        "studentIds": [
+          "seed-student-031"
+        ],
+        "studentName": "杨子一",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|388|2026-06-12|11:00-12:00|2号场|甄朝珺|-",
+        "thirdPartyTime": "11:00-12:00",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "2号场",
+        "venueId": "venue-1782359259926-1",
+        "coachId": "0778a6ed-4f8a-4b6e-b2f3-5494a4f3f0ba",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-yangziyi-20260616-0900",
+      "before": {
+        "id": "repair-yangziyi-20260616-0900",
+        "batchId": "batch-repair-confirmed-lesson-ledger-batch2-20260723",
+        "coach": "",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-06-16 10:00",
+        "entitlementId": "private_lesson_csv_import_20260519_BATCH2_15_LIVE:entitlement:杨子一:initial:2026-03-18",
+        "entitlementIds": [
+          "private_lesson_csv_import_20260519_BATCH2_15_LIVE:entitlement:杨子一:initial:2026-03-18"
+        ],
+        "expectedStudentIds": [
+          "seed-student-031"
+        ],
+        "externalCourtName": "4号场",
+        "externalNotes": "第三方6月占场#453 09:00-10:00 4号场",
+        "externalVenueName": "顺义马坡",
+        "lessonCount": 1,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T03:20:49.068Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-batch2-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "成人1v1 非黄时间10课时（历史）",
+        "purchaseId": "private_lesson_csv_import_20260519_BATCH2_15_LIVE:purchase:杨子一:initial:2026-03-18",
+        "repairReason": "按用户确认补齐排课",
+        "smallClassType": "",
+        "startTime": "2026-06-16 09:00",
+        "status": "已排课",
+        "studentIds": [
+          "seed-student-031"
+        ],
+        "studentName": "杨子一",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|453|2026-06-16|09:00-10:00|4号场|岳克舟|林教练 杨子一",
+        "thirdPartyTime": "09:00-10:00",
+        "updatedAt": "2026-07-23T10:55:36.579Z",
+        "venue": "4号场",
+        "venueId": "venue-1782359265294-3"
+      },
+      "after": {
+        "id": "repair-yangziyi-20260616-0900",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "林铭教练",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-06-16 10:00",
+        "entitlementId": "private_lesson_csv_import_20260519_BATCH2_15_LIVE:entitlement:杨子一:initial:2026-03-18",
+        "entitlementIds": [
+          "private_lesson_csv_import_20260519_BATCH2_15_LIVE:entitlement:杨子一:initial:2026-03-18"
+        ],
+        "expectedStudentIds": [
+          "seed-student-031"
+        ],
+        "externalCourtName": "4号场",
+        "externalNotes": "第三方6月占场#453 09:00-10:00 4号场",
+        "externalVenueName": "顺义马坡",
+        "lessonCount": 1,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "成人1v1 非黄时间10课时（历史）",
+        "purchaseId": "private_lesson_csv_import_20260519_BATCH2_15_LIVE:purchase:杨子一:initial:2026-03-18",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "",
+        "startTime": "2026-06-16 09:00",
+        "status": "已排课",
+        "studentIds": [
+          "seed-student-031"
+        ],
+        "studentName": "杨子一",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|453|2026-06-16|09:00-10:00|4号场|岳克舟|林教练 杨子一",
+        "thirdPartyTime": "09:00-10:00",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "4号场",
+        "venueId": "venue-1782359265294-3",
+        "coachId": "0778a6ed-4f8a-4b6e-b2f3-5494a4f3f0ba",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-smallclass-20260709-1900",
+      "before": {
+        "id": "repair-smallclass-20260709-1900",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723",
+        "coach": "",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-07-09 20:00",
+        "entitlementId": "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+        "entitlementIds": [
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade"
+        ],
+        "expectedStudentIds": [
+          "new-student-9f2faf5f3ee4"
+        ],
+        "lessonCount": 1,
+        "notes": "随到随学，正式课",
+        "operationAt": "2026-07-23T02:09:31.343Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认补齐真实排课",
+        "smallClassType": "dropin",
+        "startTime": "2026-07-09 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "new-student-9f2faf5f3ee4"
+        ],
+        "studentName": "吃糖的麻花、艾斯",
+        "updatedAt": "2026-07-23T02:09:31.343Z",
+        "venue": "2号场"
+      },
+      "after": {
+        "id": "repair-smallclass-20260709-1900",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "岳克舟教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-07-09 20:00",
+        "entitlementId": "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+        "entitlementIds": [
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade"
+        ],
+        "expectedStudentIds": [
+          "new-student-9f2faf5f3ee4"
+        ],
+        "lessonCount": 1,
+        "notes": "随到随学，正式课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "dropin",
+        "startTime": "2026-07-09 19:00",
+        "status": "已排课",
+        "studentIds": [
+          "new-student-9f2faf5f3ee4"
+        ],
+        "studentName": "吃糖的麻花、艾斯",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "2号场",
+        "coachId": "ab068ad7-58db-4eb3-909a-692b04662ffc",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "cxe-thirdparty-schedule-107-286eb50c0fc4",
+      "before": {
+        "id": "cxe-thirdparty-schedule-107-286eb50c0fc4",
+        "absentStudentIds": [],
+        "batchId": "batch-changxiaoer-thirdparty-remaining41-20260701-0715-20260721025528",
+        "campus": "shunyi_mapo",
+        "coach": "",
+        "coachId": "",
+        "confirmStatus": "待确认",
+        "courseType": "排课占场",
+        "courseTypeLevel2": "",
+        "createdAt": "2026-07-21T03:01:17.000Z",
+        "createdBy": "第三方导入",
+        "endTime": "2026-07-12 20:30",
+        "entitlementId": "",
+        "entitlementIds": [],
+        "expectedStudentIds": [
+          "349a719a-d92e-405e-b38a-626ae3a58365"
+        ],
+        "fieldFeeAmount": 0,
+        "lessonCount": 1,
+        "locationType": "own",
+        "notes": "7.1-7.15第三方补导：yx；YX是线上学员；先补占场，不处理财务",
+        "notifyStatus": "未通知",
+        "operationAt": "2026-07-21T03:01:17.000Z",
+        "operationBy": "第三方导入",
+        "operationId": "changxiaoer-thirdparty-remaining41-20260701-0715-20260721025528",
+        "operationType": "thirdparty-remaining41-import",
+        "packageName": "",
+        "paidAmount": 0,
+        "payMethod": "",
+        "purchaseId": "",
+        "requiresFieldFee": false,
+        "scheduleSource": "第三方锁场导入",
+        "settlementType": "none",
+        "smallClassType": "",
+        "sourceExcelRow": 107,
+        "sourceSystem": "changxiaoer",
+        "standardCourseType": "排课占场",
+        "startTime": "2026-07-12 19:30",
+        "status": "已排课",
+        "studentIds": [
+          "349a719a-d92e-405e-b38a-626ae3a58365"
+        ],
+        "studentName": "YX",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-remaining41-20260701-0715-20260721025528",
+        "updatedAt": "2026-07-21T03:01:17.000Z",
+        "venue": "2号场",
+        "venueId": "venue-1782359259926-1",
+        "venueSpaceType": "室内"
+      },
+      "after": {
+        "id": "cxe-thirdparty-schedule-107-286eb50c0fc4",
+        "absentStudentIds": [],
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "campus": "mabao",
+        "coach": "朝珺教练",
+        "coachId": "ac664799-5944-48ce-b1cc-1e60bf0982de",
+        "confirmStatus": "待确认",
+        "courseType": "排课占场",
+        "courseTypeLevel2": "",
+        "createdAt": "2026-07-21T03:01:17.000Z",
+        "createdBy": "第三方导入",
+        "endTime": "2026-07-12 20:30",
+        "entitlementId": "",
+        "entitlementIds": [],
+        "expectedStudentIds": [
+          "349a719a-d92e-405e-b38a-626ae3a58365"
+        ],
+        "fieldFeeAmount": 0,
+        "lessonCount": 1,
+        "locationType": "own",
+        "notes": "7.1-7.15第三方补导：yx；YX是线上学员；先补占场，不处理财务",
+        "notifyStatus": "未通知",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "paidAmount": 0,
+        "payMethod": "",
+        "purchaseId": "",
+        "requiresFieldFee": false,
+        "scheduleSource": "第三方锁场导入",
+        "settlementType": "none",
+        "smallClassType": "",
+        "sourceExcelRow": 107,
+        "sourceSystem": "changxiaoer",
+        "standardCourseType": "排课占场",
+        "startTime": "2026-07-12 19:30",
+        "status": "已排课",
+        "studentIds": [
+          "349a719a-d92e-405e-b38a-626ae3a58365"
+        ],
+        "studentName": "YX",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-remaining41-20260701-0715-20260721025528",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "2号场",
+        "venueId": "venue-1782359259926-1",
+        "venueSpaceType": "室内",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段"
+      }
+    },
+    {
+      "id": "repair-smallclass-20260719-1000",
+      "before": {
+        "id": "repair-smallclass-20260719-1000",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723",
+        "coach": "",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-07-19 12:00",
+        "entitlementId": "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+        "entitlementIds": [
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade"
+        ],
+        "expectedStudentIds": [
+          "7c610f7c-8139-46ce-90b8-ec9e681741e3",
+          "new-student-9f2faf5f3ee4"
+        ],
+        "lessonCount": 1,
+        "notes": "训练营；仅处理艾斯的课包扣课",
+        "operationAt": "2026-07-23T02:09:31.343Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认补齐真实排课",
+        "smallClassType": "bootcamp",
+        "startTime": "2026-07-19 10:00",
+        "status": "已排课",
+        "studentIds": [
+          "7c610f7c-8139-46ce-90b8-ec9e681741e3",
+          "new-student-9f2faf5f3ee4"
+        ],
+        "studentName": "陈雪莹、🍉、王有理、艾斯",
+        "updatedAt": "2026-07-23T02:09:31.343Z",
+        "venue": "4号场"
+      },
+      "after": {
+        "id": "repair-smallclass-20260719-1000",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "刘润扬教练",
+        "courseType": "小班课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-07-19 12:00",
+        "entitlementId": "6ba53a5b-e33c-409b-be1e-170e07fdcade",
+        "entitlementIds": [
+          "6ba53a5b-e33c-409b-be1e-170e07fdcade"
+        ],
+        "expectedStudentIds": [
+          "7c610f7c-8139-46ce-90b8-ec9e681741e3",
+          "new-student-9f2faf5f3ee4"
+        ],
+        "lessonCount": 1,
+        "notes": "训练营；仅处理艾斯的课包扣课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "bootcamp",
+        "startTime": "2026-07-19 10:00",
+        "status": "已排课",
+        "studentIds": [
+          "7c610f7c-8139-46ce-90b8-ec9e681741e3",
+          "new-student-9f2faf5f3ee4"
+        ],
+        "studentName": "陈雪莹、🍉、王有理、艾斯",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "4号场",
+        "coachId": "c69e1bae-1d14-4be3-bb61-64755e4ccd55",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-zijie-20260723-0830",
+      "before": {
+        "id": "repair-zijie-20260723-0830",
+        "batchId": "batch-repair-confirmed-lesson-ledger-batch2-20260723",
+        "coach": "",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-07-23 09:30",
+        "entitlementId": "201f6a7d-9402-446a-9552-ebcdd5dc849d",
+        "entitlementIds": [
+          "201f6a7d-9402-446a-9552-ebcdd5dc849d"
+        ],
+        "expectedStudentIds": [
+          "manual-student-zijie-20260519"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T03:20:49.068Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-batch2-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "1v1私教课 · 10课时 · 非黄金",
+        "purchaseId": "fa75ae5c-aff8-4483-8aad-30928cecbf28",
+        "repairReason": "按用户确认补齐排课",
+        "smallClassType": "",
+        "startTime": "2026-07-23 08:30",
+        "status": "已排课",
+        "studentIds": [
+          "manual-student-zijie-20260519"
+        ],
+        "studentName": "子杰",
+        "updatedAt": "2026-07-23T03:20:49.068Z",
+        "venue": ""
+      },
+      "after": {
+        "id": "repair-zijie-20260723-0830",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "刘润扬教练",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-07-23 09:30",
+        "entitlementId": "201f6a7d-9402-446a-9552-ebcdd5dc849d",
+        "entitlementIds": [
+          "201f6a7d-9402-446a-9552-ebcdd5dc849d"
+        ],
+        "expectedStudentIds": [
+          "manual-student-zijie-20260519"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "1v1私教课 · 10课时 · 非黄金",
+        "purchaseId": "fa75ae5c-aff8-4483-8aad-30928cecbf28",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "",
+        "startTime": "2026-07-23 08:30",
+        "status": "已排课",
+        "studentIds": [
+          "manual-student-zijie-20260519"
+        ],
+        "studentName": "子杰",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "2号场",
+        "coachId": "c69e1bae-1d14-4be3-bb61-64755e4ccd55",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-zhanghaoran-20260723-1730",
+      "before": {
+        "id": "repair-zhanghaoran-20260723-1730",
+        "batchId": "batch-repair-confirmed-lesson-ledger-batch2-20260723",
+        "coach": "",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-07-23 19:30",
+        "entitlementId": "da956bf4-f81f-49c1-834a-0feee4f3304a",
+        "entitlementIds": [
+          "da956bf4-f81f-49c1-834a-0feee4f3304a"
+        ],
+        "expectedStudentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "lessonCount": 2,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T03:20:49.068Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-batch2-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "1v1私教课 · 10课时 · 非黄金",
+        "purchaseId": "10584d60-0587-4390-975d-b9d316908971",
+        "repairReason": "按用户确认补齐排课",
+        "smallClassType": "",
+        "startTime": "2026-07-23 17:30",
+        "status": "已排课",
+        "studentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "studentName": "张先生（张昊然）",
+        "updatedAt": "2026-07-23T03:20:49.068Z",
+        "venue": ""
+      },
+      "after": {
+        "id": "repair-zhanghaoran-20260723-1730",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "杨教练",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-07-22 19:30",
+        "entitlementId": "da956bf4-f81f-49c1-834a-0feee4f3304a",
+        "entitlementIds": [
+          "da956bf4-f81f-49c1-834a-0feee4f3304a"
+        ],
+        "expectedStudentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "lessonCount": 2,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "1v1私教课 · 10课时 · 非黄金",
+        "purchaseId": "10584d60-0587-4390-975d-b9d316908971",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "",
+        "startTime": "2026-07-22 17:30",
+        "status": "已排课",
+        "studentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "studentName": "张先生（张昊然）",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "3号场",
+        "coachId": "c1eda306-b188-43cb-8800-aa1fbb45b97f",
+        "campus": "mabao"
+      }
+    },
+    {
+      "id": "repair-schedule-ai-20260724-1500",
+      "before": {
+        "id": "repair-schedule-ai-20260724-1500",
+        "batchId": "batch-repair-confirmed-lesson-ledger-20260723",
+        "coach": "朝珺教练",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-07-24 16:00",
+        "entitlementId": "private_lesson_csv_import_20260519_PILOT_5:entitlement:艾女士",
+        "entitlementIds": [
+          "private_lesson_csv_import_20260519_PILOT_5:entitlement:艾女士"
+        ],
+        "expectedStudentIds": [
+          "7ef17ae2-7c47-4026-a28a-37464dfd1c69"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认补录第10节课",
+        "operationAt": "2026-07-23T02:09:31.343Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认补齐真实排课",
+        "smallClassType": "",
+        "startTime": "2026-07-24 15:00",
+        "status": "已排课",
+        "studentIds": [
+          "7ef17ae2-7c47-4026-a28a-37464dfd1c69"
+        ],
+        "studentName": "艾女士",
+        "updatedAt": "2026-07-23T02:09:31.343Z",
+        "venue": "2号场"
+      },
+      "after": {
+        "id": "repair-schedule-ai-20260724-1500",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "coach": "朝珺教练",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T02:09:31.343Z",
+        "endTime": "2026-07-24 16:00",
+        "entitlementId": "private_lesson_csv_import_20260519_PILOT_5:entitlement:艾女士",
+        "entitlementIds": [
+          "private_lesson_csv_import_20260519_PILOT_5:entitlement:艾女士"
+        ],
+        "expectedStudentIds": [
+          "7ef17ae2-7c47-4026-a28a-37464dfd1c69"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认补录第10节课",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认修正排课校区/教练/场地/日期字段",
+        "smallClassType": "",
+        "startTime": "2026-07-24 15:00",
+        "status": "已排课",
+        "studentIds": [
+          "7ef17ae2-7c47-4026-a28a-37464dfd1c69"
+        ],
+        "studentName": "艾女士",
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "venue": "2号场",
+        "campus": "mabao"
+      }
+    }
+  ],
+  "putLedgers": [
+    {
+      "id": "repair-ledger-zhanghaoran-20260723",
+      "before": {
+        "id": "repair-ledger-zhanghaoran-20260723",
+        "action": "consume",
+        "batchId": "batch-repair-confirmed-lesson-ledger-batch2-20260723",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "customerName": "张先生（张昊然）",
+        "entitlementId": "da956bf4-f81f-49c1-834a-0feee4f3304a",
+        "lessonDelta": -2,
+        "notes": "按用户确认补齐扣课流水",
+        "operationAt": "2026-07-23T03:20:49.068Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-batch2-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "1v1私教课 · 10课时 · 非黄金",
+        "purchaseId": "10584d60-0587-4390-975d-b9d316908971",
+        "relatedDate": "2026-07-23",
+        "repairReason": "按用户确认补齐扣课流水",
+        "scheduleId": "repair-zhanghaoran-20260723-1730",
+        "sourceDate": "2026-07-23",
+        "studentId": "f4d9aeed-2d5b-4790-8351-00e83dc89bee",
+        "studentName": "张先生（张昊然）",
+        "updatedAt": "2026-07-23T03:20:49.068Z"
+      },
+      "after": {
+        "id": "repair-ledger-zhanghaoran-20260723",
+        "action": "consume",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "customerName": "张先生（张昊然）",
+        "entitlementId": "da956bf4-f81f-49c1-834a-0feee4f3304a",
+        "lessonDelta": -2,
+        "notes": "按用户确认：真实上课日期为2026-07-22，扣第8和第9节",
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "packageName": "1v1私教课 · 10课时 · 非黄金",
+        "purchaseId": "10584d60-0587-4390-975d-b9d316908971",
+        "relatedDate": "2026-07-22",
+        "repairReason": "按用户确认修正扣课流水日期",
+        "scheduleId": "repair-zhanghaoran-20260723-1730",
+        "sourceDate": "2026-07-22",
+        "studentId": "f4d9aeed-2d5b-4790-8351-00e83dc89bee",
+        "studentName": "张先生（张昊然）",
+        "updatedAt": "2026-07-23T11:49:46.279Z"
+      }
+    }
+  ],
+  "deleteSchedules": [
+    {
+      "id": "repair-mmjuan-20260724-2000",
+      "before": {
+        "id": "repair-mmjuan-20260724-2000",
+        "batchId": "batch-repair-confirmed-lesson-ledger-batch2-20260723",
+        "coach": "",
+        "courseType": "私教课",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "endTime": "2026-07-24 21:00",
+        "entitlementId": "85620ad1-9d85-45ca-bbb9-eedd31a5bba8",
+        "entitlementIds": [
+          "85620ad1-9d85-45ca-bbb9-eedd31a5bba8"
+        ],
+        "expectedStudentIds": [
+          "e8cda620-cc71-464a-b8fc-7c13c90ba56b"
+        ],
+        "lessonCount": 1,
+        "notes": "按用户确认补齐排课",
+        "operationAt": "2026-07-23T03:20:49.068Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-batch2-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "1v1私教课 · 10课时 · 黄金",
+        "purchaseId": "990e5f35-b324-4e20-be00-ff8cc364be60",
+        "repairReason": "按用户确认补齐排课",
+        "smallClassType": "",
+        "startTime": "2026-07-24 20:00",
+        "status": "已排课",
+        "studentIds": [
+          "e8cda620-cc71-464a-b8fc-7c13c90ba56b"
+        ],
+        "studentName": "MMJUAN",
+        "updatedAt": "2026-07-23T03:20:49.068Z",
+        "venue": ""
+      }
+    }
+  ],
+  "deleteLedgers": [
+    {
+      "id": "repair-ledger-mmjuan-20260724",
+      "before": {
+        "id": "repair-ledger-mmjuan-20260724",
+        "action": "consume",
+        "batchId": "batch-repair-confirmed-lesson-ledger-batch2-20260723",
+        "createdAt": "2026-07-23T03:20:49.068Z",
+        "customerName": "MMJUAN",
+        "entitlementId": "85620ad1-9d85-45ca-bbb9-eedd31a5bba8",
+        "lessonDelta": -1,
+        "notes": "按用户确认补齐扣课流水",
+        "operationAt": "2026-07-23T03:20:49.068Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-batch2-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "packageName": "1v1私教课 · 10课时 · 黄金",
+        "purchaseId": "990e5f35-b324-4e20-be00-ff8cc364be60",
+        "relatedDate": "2026-07-24",
+        "repairReason": "按用户确认补齐扣课流水",
+        "scheduleId": "repair-mmjuan-20260724-2000",
+        "sourceDate": "2026-07-24",
+        "studentId": "e8cda620-cc71-464a-b8fc-7c13c90ba56b",
+        "studentName": "MMJUAN",
+        "updatedAt": "2026-07-23T03:20:49.068Z"
+      }
+    }
+  ],
+  "putEntitlements": [
+    {
+      "id": "85620ad1-9d85-45ca-bbb9-eedd31a5bba8",
+      "before": {
+        "id": "85620ad1-9d85-45ca-bbb9-eedd31a5bba8",
+        "allowedCoaches": [],
+        "batchId": "batch-repair-confirmed-lesson-ledger-batch2-20260723",
+        "campusIds": [
+          "mabao"
+        ],
+        "coachIds": [],
+        "coachNames": [],
+        "courseType": "私教课",
+        "createdAt": "2026-07-14T03:11:45.427Z",
+        "dailyTimeWindows": [
+          {
+            "label": "工作日",
+            "startTime": "16:00",
+            "endTime": "22:00",
+            "daysOfWeek": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "label": "周六日",
+            "startTime": "09:00",
+            "endTime": "22:00",
+            "daysOfWeek": [
+              6,
+              7
+            ]
+          }
+        ],
+        "maxStudents": 1,
+        "operationAt": "2026-07-23T03:20:49.068Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-lesson-ledger-batch2-20260723",
+        "operationType": "confirmed-lesson-data-repair",
+        "ownerCoach": "林铭教练",
+        "packageId": "fix-20260521-成人1v2-黄金时间10课时",
+        "packageName": "1v1私教课 · 10课时 · 黄金",
+        "productId": "",
+        "productName": "",
+        "purchaseId": "990e5f35-b324-4e20-be00-ff8cc364be60",
+        "remainingLessons": 8,
+        "repairReason": "按用户确认修正为已用 2 节",
+        "status": "active",
+        "studentId": "e8cda620-cc71-464a-b8fc-7c13c90ba56b",
+        "studentName": "MMJUAN",
+        "timeBand": "黄金时段",
+        "totalLessons": 10,
+        "updatedAt": "2026-07-23T03:20:49.068Z",
+        "usageEndDate": "",
+        "usageStartDate": "2026-03-25",
+        "usedLessons": 2,
+        "validFrom": "2026-07-08",
+        "validUntil": ""
+      },
+      "after": {
+        "id": "85620ad1-9d85-45ca-bbb9-eedd31a5bba8",
+        "allowedCoaches": [],
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723",
+        "campusIds": [
+          "mabao"
+        ],
+        "coachIds": [],
+        "coachNames": [],
+        "courseType": "私教课",
+        "createdAt": "2026-07-14T03:11:45.427Z",
+        "dailyTimeWindows": [
+          {
+            "label": "工作日",
+            "startTime": "16:00",
+            "endTime": "22:00",
+            "daysOfWeek": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "label": "周六日",
+            "startTime": "09:00",
+            "endTime": "22:00",
+            "daysOfWeek": [
+              6,
+              7
+            ]
+          }
+        ],
+        "maxStudents": 1,
+        "operationAt": "2026-07-23T11:49:46.279Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "ownerCoach": "林铭教练",
+        "packageId": "fix-20260521-成人1v2-黄金时间10课时",
+        "packageName": "1v1私教课 · 10课时 · 黄金",
+        "productId": "",
+        "productName": "",
+        "purchaseId": "990e5f35-b324-4e20-be00-ff8cc364be60",
+        "remainingLessons": 9,
+        "repairReason": "按用户确认删除2026-07-24误补课程后恢复1节课包余额",
+        "status": "active",
+        "studentId": "e8cda620-cc71-464a-b8fc-7c13c90ba56b",
+        "studentName": "MMJUAN",
+        "timeBand": "黄金时段",
+        "totalLessons": 10,
+        "updatedAt": "2026-07-23T11:49:46.279Z",
+        "usageEndDate": "",
+        "usageStartDate": "2026-03-25",
+        "usedLessons": 1,
+        "validFrom": "2026-07-08",
+        "validUntil": ""
+      }
+    }
+  ]
+}

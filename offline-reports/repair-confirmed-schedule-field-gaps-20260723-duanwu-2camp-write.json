@@ -1,0 +1,117 @@
+{
+  "operationId": "repair-confirmed-schedule-field-gaps-20260723-duanwu-2camp",
+  "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723-duanwu-2camp",
+  "write": true,
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "summary": {
+    "putSchedules": 1,
+    "untouched": "未改学员名单和扣课"
+  },
+  "putSchedules": [
+    {
+      "id": "cxe-thirdparty-202606-schedule-13e9164ef183",
+      "before": {
+        "id": "cxe-thirdparty-202606-schedule-13e9164ef183",
+        "absentStudentIds": [],
+        "campus": "shunyi_mapo",
+        "coach": "",
+        "coachId": "0778a6ed-4f8a-4b6e-b2f3-5494a4f3f0ba",
+        "confirmStatus": "待确认",
+        "courseType": "小班课",
+        "courseTypeLevel2": "训练营/小班课",
+        "createdAt": "2026-07-23T10:55:36.579Z",
+        "createdBy": "第三方导入",
+        "endTime": "2026-06-19 17:00",
+        "expectedStudentIds": [
+          "cxe-thirdparty-202606-student-f46e0ba81b23"
+        ],
+        "externalCourtName": "4号场",
+        "externalNotes": "第三方6月占场#505 15:00-17:00 4号场",
+        "externalVenueName": "顺义马坡",
+        "fieldFeeAmount": 0,
+        "fieldFeePayMethod": "",
+        "lessonCount": 2,
+        "locationType": "own",
+        "notes": "2026-06 第三方锁场导入：端午  2.0集训营",
+        "operationAt": "2026-07-23T10:55:36.579Z",
+        "operationBy": "第三方导入",
+        "operationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "operationType": "thirdparty-schedule-import",
+        "paidAmount": 0,
+        "payMethod": "",
+        "requiresFieldFee": false,
+        "scheduleSource": "第三方锁场导入",
+        "settlementType": "direct",
+        "standardCourseType": "小班课",
+        "startTime": "2026-06-19 15:00",
+        "status": "已排课",
+        "studentIds": [
+          "cxe-thirdparty-202606-student-f46e0ba81b23"
+        ],
+        "studentName": "端午",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|505|2026-06-19|15:00-17:00|4号场|马坡运营|端午  2.0集训营",
+        "thirdPartyTime": "15:00-17:00",
+        "updatedAt": "2026-07-23T10:55:36.579Z",
+        "venue": "4号场",
+        "venueId": "venue-1782359265294-3",
+        "venueSpaceType": "室内"
+      },
+      "after": {
+        "id": "cxe-thirdparty-202606-schedule-13e9164ef183",
+        "absentStudentIds": [],
+        "campus": "mabao",
+        "coach": "朝珺教练",
+        "coachId": "ac664799-5944-48ce-b1cc-1e60bf0982de",
+        "confirmStatus": "待确认",
+        "courseType": "小班课",
+        "courseTypeLevel2": "训练营/小班课",
+        "createdAt": "2026-07-23T10:55:36.579Z",
+        "createdBy": "第三方导入",
+        "endTime": "2026-06-19 17:00",
+        "expectedStudentIds": [
+          "cxe-thirdparty-202606-student-f46e0ba81b23"
+        ],
+        "externalCourtName": "4号场",
+        "externalNotes": "第三方6月占场#505 15:00-17:00 4号场",
+        "externalVenueName": "顺义马坡",
+        "fieldFeeAmount": 0,
+        "fieldFeePayMethod": "",
+        "lessonCount": 2,
+        "locationType": "own",
+        "notes": "2026-06 第三方锁场导入：端午  2.0集训营",
+        "operationAt": "2026-07-23T11:55:00.110Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-schedule-field-gaps-20260723-duanwu-2camp",
+        "operationType": "confirmed-schedule-field-gap-repair",
+        "paidAmount": 0,
+        "payMethod": "",
+        "requiresFieldFee": false,
+        "scheduleSource": "第三方锁场导入",
+        "settlementType": "direct",
+        "standardCourseType": "小班课",
+        "startTime": "2026-06-19 15:00",
+        "status": "已排课",
+        "studentIds": [
+          "cxe-thirdparty-202606-student-f46e0ba81b23"
+        ],
+        "studentName": "端午",
+        "thirdPartyImportOperationId": "changxiaoer-thirdparty-202606-final-20260723105403",
+        "thirdPartyRecordId": "2026-06|锁场报表|505|2026-06-19|15:00-17:00|4号场|马坡运营|端午  2.0集训营",
+        "thirdPartyTime": "15:00-17:00",
+        "updatedAt": "2026-07-23T11:55:00.110Z",
+        "venue": "4号场",
+        "venueId": "venue-1782359265294-3",
+        "venueSpaceType": "室内",
+        "batchId": "batch-repair-confirmed-schedule-field-gaps-20260723-duanwu-2camp",
+        "repairReason": "按用户确认补齐端午2.0集训营教练和校区"
+      }
+    }
+  ]
+}
