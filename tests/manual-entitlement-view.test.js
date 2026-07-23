@@ -39,13 +39,13 @@ assert.match(
 
 assert.match(
   fnBody('studentEntitlementSummaryHtml'),
-  /<div class="student-package-head"><div class="student-package-title">[\s\S]*studentManualEntitlementActionsHtml\(entitlement\)[\s\S]*<\/div><div class="student-package-meta">/,
+  /<div class="student-package-head"><div class="student-package-title">[\s\S]*<div class="student-package-actions"><span class="student-package-status">[\s\S]*\$\{actionHtml\}<\/div><\/div><div class="student-package-meta">/,
   'student package card manual actions should sit on the right side of the package title'
 );
 
 assert.match(
   fnBody('studentManualEntitlementActionsHtml'),
-  /student-package-action-link[\s\S]*手动消课[\s\S]*student-package-action-link[\s\S]*退回课时[\s\S]*student-package-actions/,
+  /student-package-action-link[\s\S]*手动消课[\s\S]*student-package-action-link[\s\S]*退回课时/,
   'student manual package actions should render as small text links'
 );
 
