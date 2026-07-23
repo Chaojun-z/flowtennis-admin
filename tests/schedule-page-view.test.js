@@ -72,12 +72,13 @@ assert.doesNotMatch(fnBody('openScheduleModal'), /误建删除|scheduleModalCanD
 assert.match(source, /function scheduleEntitlementUnavailableReason\(/, 'schedule package picker should translate unavailable package reasons into user-facing copy');
 assert.match(fnBody('scheduleEntitlementLabel'), /`\$\{option\.remainingLessons\}\/\$\{option\.totalLessons\}\$\{unit\}`/, 'schedule package picker should show lesson balance as 8/10课时 without the remaining prefix');
 assert.doesNotMatch(fnBody('scheduleEntitlementLabel'), /剩余\$\{option\.remainingLessons\}/, 'schedule package picker should not prefix lesson balance with 剩余');
-assert.match(fnBody('renderScheduleEntitlementDropdown'), /disabled:!x\.selectable[\s\S]*tooltip:scheduleEntitlementOptionTitle\(x\)/, 'schedule package picker should keep unavailable active packages visible with an app tooltip');
+assert.match(fnBody('renderScheduleEntitlementDropdown'), /disabled:!x\.selectable/, 'schedule package picker should keep unavailable active packages visible as disabled options');
+assert.doesNotMatch(fnBody('renderScheduleEntitlementDropdown'), /tooltip:/, 'schedule package picker should not attach dropdown hover tooltips');
 assert.match(fnBody('applySchEntitlementOptions'), /scheduleEntitlementUnavailableReason\(res\.options\|\|\[\]\)/, 'schedule package picker should show why packages are unavailable');
 assert.match(fnBody('applySchEntitlementOptions'), /const selectableOptions=\(res\.options\|\|\[\]\)\.filter\(x=>x\.selectable\)/, 'schedule package picker should pick from selectable packages while still rendering all active package options');
 assert.match(source, /aria-disabled="\$\{opt\.disabled\?'true':'false'\}"/, 'standard dropdown should support disabled options for unavailable packages');
-assert.match(source, /data-tooltip="\$\{esc\(displayTooltip\)\}"/, 'standard dropdown display should use the app tooltip instead of the browser title');
-assert.match(source, /data-tooltip="\$\{esc\(opt\.tooltip\|\|optionLabel\)\}"/, 'standard dropdown items should use the app tooltip instead of the browser title');
+assert.doesNotMatch(fnBody('renderStandardDropdownHtml'), /data-tooltip/, 'standard dropdowns should not show global hover tooltips on filters or form controls');
+assert.doesNotMatch(fnBody('selectStandardDropdownItem'), /dataset\.tooltip/, 'selecting a dropdown item should not restore global hover tooltips');
 assert.doesNotMatch(fnBody('renderScheduleEntitlementDropdown'), /label:placeholder/, 'schedule package picker should not render 自动匹配可用课包 as a selectable menu item');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-item \.tms-dropdown-display\{[^}]*font-size:11px/, 'schedule package picker display should use 11px text');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-item \.tms-dropdown-item\{[^}]*font-size:11px/, 'schedule package picker menu items should use 11px text');

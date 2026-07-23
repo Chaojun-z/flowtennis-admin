@@ -348,9 +348,8 @@ function scheduleEntitlementTimeBandText(option,title=''){
   return text&&!String(title||'').includes(text)?text:'';
 }
 function scheduleEntitlementExpiryText(option){const validUntil=String(option?.validUntil||'').trim();return validUntil&&validUntil!=='-'?`到期${validUntil}`:'';}
-function scheduleEntitlementOptionTitle(option){const base=scheduleEntitlementLabel(option),reason=option?.selectable===false?scheduleEntitlementUnavailableReason([option]):'';return [base,reason?`不可选：${reason}`:''].filter(Boolean).join(' · ');}
 function renderScheduleEntitlementDropdown(options=[],value='',placeholder=''){
-  const optionList=options.map(x=>({value:x.entitlementId,label:x.selectable===false?`${scheduleEntitlementLabel(x)} · 不可选：${scheduleEntitlementUnavailableReason([x])}`:scheduleEntitlementLabel(x),disabled:!x.selectable,tooltip:scheduleEntitlementOptionTitle(x)}));
+  const optionList=options.map(x=>({value:x.entitlementId,label:x.selectable===false?`${scheduleEntitlementLabel(x)} · 不可选：${scheduleEntitlementUnavailableReason([x])}`:scheduleEntitlementLabel(x),disabled:!x.selectable}));
   return renderStandardDropdownHtml('sch_entitlement',placeholder||'扣减课包',optionList,value,true,'handleScheduleEntitlementChange');
 }
 function setScheduleEntitlementDropdown(options=[],value='',placeholder=''){
