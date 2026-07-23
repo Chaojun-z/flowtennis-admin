@@ -39,6 +39,7 @@ const studentsSource = read('public/assets/scripts/pages/students.js');
 const courtsSource = read('public/assets/scripts/pages/courts.js');
 const matchesSource = read('public/assets/scripts/pages/matches.js');
 const standardShellSource = read('public/assets/scripts/standard/components.js');
+const pagesCss = read('public/assets/styles/pages.css');
 const packageJson = JSON.parse(read('package.json'));
 
 [
@@ -127,6 +128,11 @@ assert.match(
   functionBody(matchesSource, 'renderMatches'),
   /<td class="tms-sticky-r tms-action-cell" style="width:90px;padding-right:20px;text-align:right">/,
   '约球活动表格行操作列宽度必须是 90px'
+);
+assert.match(
+  pagesCss,
+  /#page-courts \.tms-table\{width:1630px;min-width:1630px;table-layout:fixed\}/,
+  '订场用户表格总宽度必须等于列宽合计，避免 1992px 强制撑大首尾列'
 );
 
 assert.ok(

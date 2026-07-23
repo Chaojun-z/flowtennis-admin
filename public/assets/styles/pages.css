@@ -218,7 +218,7 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-courts .tms-table td.tms-sticky-l{position:sticky;left:0;z-index:40;background-color:#FBF7F4}
 #page-courts .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FBF7F4}
 #page-courts .tms-table tbody tr:hover td.tms-sticky-l,#page-courts .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
-#page-courts .tms-table{min-width:1992px;table-layout:fixed}
+#page-courts .tms-table{width:1630px;min-width:1630px;table-layout:fixed}
 #page-courts .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-courts .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-courts .tms-text-primary,#page-courts .tms-cell-text,#page-courts .tms-text-remark{font-size:12px}
