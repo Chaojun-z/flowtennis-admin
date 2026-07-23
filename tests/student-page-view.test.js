@@ -347,6 +347,9 @@ assert.match(css, /\.modal\.modal-court \.tms-detail-grid[\s\S]*\.modal\.modal-c
 assert.match(css, /\.modal\.modal-court\.modal-student-drawer \.student-detail-shell\{[^}]*display:flex[^}]*flex-direction:column/, 'student detail header should sit inside the standard drawer');
 assert.match(css, /\.modal\.modal-court\.modal-student-drawer \.student-detail-tabs\{[^}]*display:flex/, 'student detail should render tabs in the drawer title area');
 assert.match(css, /\.student-package-icon\{[^}]*background:transparent/, 'student detail package icon should be a bare folder glyph');
+assert.match(css, /\.student-package-actions\{[^}]*font-size:13px/, 'student package first-line status and actions should use the same 13px size as the title');
+assert.match(css, /\.student-package-action-link\{[^}]*font-size:13px/, 'student package action links should use 13px in the first line');
+assert.match(css, /\.student-package-meta\{[^}]*font-size:12px/, 'student package second line should use 12px');
 assert.match(css, /\.student-reminder-section \.student-reminder-options\{[^}]*max-width:none/, 'student reminder options should use the compact drawer layout');
 assert.match(css, /\.student-reminder-section \.student-reminder-copy-btn span\{font-size:13px;font-weight:400/, 'student reminder copy button should use a smaller label');
 assert.match(css, /\.student-lesson-title\{[^}]*font-size:12px/, 'student lesson title should stay compact at 12px');
@@ -385,7 +388,7 @@ assert.match(source, /function studentEntitlementSummaryHtml\([\s\S]*detailPacka
 assert.doesNotMatch(source, /function studentEntitlementSummaryHtml\([\s\S]*e\.studentId===stu\?\.id[\s\S]*function studentEntitlementPurchaseDate/, 'student package detail should not rescan raw entitlements for its display rows');
 assert.doesNotMatch(source, /function studentEntitlementSummaryHtml\([\s\S]*purchaseStatusText\(purchases\.find\(p=>p\.id===e\.purchaseId\)\|\|\{\}\)!=='已作废'[\s\S]*function studentEntitlementPurchaseDate/, 'student package detail should not rescan linked raw purchases for its display rows');
 assert.match(source, /function studentEntitlementLedgerRows\(stu\)\{[\s\S]*entitlementStatusText\(e\)!=='已作废'[\s\S]*purchaseStatusText\(purchases\.find\(p=>p\.id===e\.purchaseId\)\|\|\{\}\)!=='已作废'/, 'student lesson records should ignore ledger rows from voided entitlements or purchases');
-assert.match(source, /const priceText=systemAmount&&systemAmount!==paidAmount\?`实付 ¥\$\{fmt\(paidAmount\)\}（应付 ¥\$\{fmt\(systemAmount\)\}）`:`实付 ¥\$\{fmt\(paidAmount\)\}`/, 'student package records should hide payable amount unless paid amount differs');
+assert.match(source, /const priceText=`实付 ¥\$\{fmt\(paidAmount\)\}`/, 'student package records should only show paid amount and hide payable amount');
 assert.match(source, /function studentEntitlementLedgerLineHtml\([\s\S]*studentEntitlementLedgerDeltaText\(row,ent,schedule\)[\s\S]*join\(' · '\)/, 'student package consume records should render one compact middle-dot line with signed lesson count');
 assert.match(source, /function studentEntitlementLedgerTimeText\([\s\S]*\$\{date\} \$\{start\}-\$\{end\}/, 'student package consume records should show a lesson time range when available');
 assert.match(source, /function findScheduleForEntitlementLedgerRow\([\s\S]*String\(s\.startTime\|\|''\)\.slice\(0,10\)!==date[\s\S]*function studentEntitlementLedgerLineHtml[\s\S]*studentEntitlementLedgerTimeText\(row,schedule\)/, 'student package consume records should use same-day schedule to fill missing start-end time');

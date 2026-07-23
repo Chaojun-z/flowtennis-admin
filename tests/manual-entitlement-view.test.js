@@ -39,6 +39,12 @@ assert.match(
 
 assert.match(
   fnBody('studentEntitlementSummaryHtml'),
+  /const matchedEntitlement=row\.entitlementId\?entitlements\.find[\s\S]*const entitlement=matchedEntitlement\|\|\(\(row\.entitlementId\)\?\{[\s\S]*id:row\.entitlementId[\s\S]*status:statusText==='已作废'\?'voided':\(depleted\?'depleted':'active'\)/,
+  'student package cards should render manual actions from backend detail rows even when the global entitlement list is missing the row'
+);
+
+assert.match(
+  fnBody('studentEntitlementSummaryHtml'),
   /<div class="student-package-head"><div class="student-package-title">[\s\S]*<div class="student-package-actions"><span class="student-package-status">[\s\S]*\$\{actionHtml\}<\/div><\/div><div class="student-package-meta">/,
   'student package card manual actions should sit on the right side of the package title'
 );
