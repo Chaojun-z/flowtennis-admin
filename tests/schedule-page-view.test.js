@@ -162,7 +162,9 @@ assert.match(corePagesSource, /if\(path==='\/page-data\/workbench'[\s\S]*const t
 assert.match(source, /function scheduleStudentRosterRows\([\s\S]*teachingStudentViews\?\.historicalStudents[\s\S]*teachingStudentViews\?\.activeStudents/, 'schedule student search should use the same lifecycle roster as the student list');
 assert.match(fnBody('renderScheduleStudentSuggestions'), /const searchRows=scheduleStudentSearchRows\(selectedIds\)[\s\S]*searchRows\.filter/, 'schedule student suggestions should search the lifecycle roster instead of the raw students table');
 assert.match(fnBody('scheduleStudentSearchRows'), /scheduleStudentRosterRows\(\)[\s\S]*students\.find/, 'schedule student search should keep a raw-student fallback only for already selected legacy schedule students');
-assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*\$\{campus\}｜\$\{last\}上课/, 'schedule student metadata should use compact campus and last lesson copy');
+assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*\$\{campus\}｜\$\{last\}\$\{last\.endsWith\('有课'\)\?'':'上课'\}/, 'schedule student metadata should use compact campus and last lesson copy');
+assert.match(fnBody('scheduleStudentLastLessonBrief'), /effectiveScheduleStatus\(s\)!=='已取消'/, 'schedule student latest lesson should ignore cancelled schedules');
+assert.match(fnBody('scheduleStudentLastLessonBrief'), /if\(diffDays>0\)return diffDays===1\?'明天有课':`\$\{diffDays\}天后有课`;/, 'schedule student latest lesson should label future schedules instead of showing today');
 assert.match(source, /function scheduleStudentDisplayName\(/, 'schedule student search should resolve real student display names');
 assert.match(fnBody('renderScheduleStudentSuggestions'), /scheduleStudentSearchTokens\(s\)/, 'schedule student suggestions should search real name and phone fields');
 assert.match(source, /function renderScheduleStudentTags\([\s\S]*scheduleStudentInlineMeta[\s\S]*removeScheduleStudent/, 'selected schedule students should render as removable tags with inline metadata');

@@ -152,10 +152,14 @@ function scheduleSelectedStudentCoachMeta(ids){
   return {coach:coaches[0]};
 }
 function scheduleStudentLastLessonBrief(student){
-  const row=schedules.filter(s=>scheduleHasStudent(s,student)&&s.startTime).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
+  const row=schedules.filter(s=>scheduleHasStudent(s,student)&&s.startTime&&effectiveScheduleStatus(s)!=='已取消').sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
   if(!row?.startTime)return '无记录';
-  const days=Math.max(0,Math.floor((Date.now()-new Date(row.startTime))/(86400000)));
-  return days===0?'今天':`${days}天前`;
+  const lessonDate=String(row.startTime).slice(0,10);
+  const baseDate=typeof today==='function'?today():new Date().toISOString().slice(0,10);
+  const diffDays=Math.round((new Date(`${lessonDate}T00:00:00`)-new Date(`${baseDate}T00:00:00`))/86400000);
+  if(diffDays<0)return `${Math.abs(diffDays)}天前`;
+  if(diffDays>0)return diffDays===1?'明天有课':`${diffDays}天后有课`;
+  return '今天';
 }
 function scheduleStudentDisplayName(student){return String(student?.name||student?.studentName||student?.displayName||student?.nickName||student?.nickname||'').trim();}
 function scheduleStudentPhone(student){return String(student?.phone||student?.mobile||student?.studentPhone||'').trim();}
@@ -167,7 +171,7 @@ function scheduleStudentInlineMeta(student){
   const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;
   const campus=cn(lifecycleCampus)||'未设校区';
   const last=scheduleStudentLastLessonBrief(student);
-  return `${campus}｜${last}上课`;
+  return `${campus}｜${last}${last.endsWith('有课')?'':'上课'}`;
 }
 function campusOptionLabel(campusRecord){
   return campusRecord?.name||cn(campusRecord?.code||campusRecord?.id)||campusRecord?.code||campusRecord?.id||'—';
