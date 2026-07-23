@@ -1,0 +1,102 @@
+{
+  "operationId": "repair-songtiti-20260615-companion-20260723",
+  "batchId": "batch-repair-songtiti-20260615-companion-20260723",
+  "write": false,
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "blockers": [],
+  "summary": {
+    "putSchedules": 1,
+    "putCourts": 1,
+    "deleteSchedules": 1,
+    "deleteConflictIndexRows": 0
+  },
+  "mainSchedule": {
+    "before": {
+      "id": "497274a9-8933-462a-a1f8-331b9ee25290",
+      "studentName": "宋缇缇",
+      "courseType": "私教课",
+      "standardCourseType": "私教课",
+      "courseTypeLevel2": "",
+      "startTime": "2026-06-15 12:00",
+      "endTime": "2026-06-15 13:00",
+      "coach": "岳克舟教练",
+      "coachId": "ab068ad7-58db-4eb3-909a-692b04662ffc",
+      "campus": "mabao",
+      "venue": "2号场",
+      "payMethod": "储值卡",
+      "paidAmount": 100,
+      "operationId": "c87b6e64-721f-4923-a56d-82dd658fa342"
+    },
+    "after": {
+      "id": "497274a9-8933-462a-a1f8-331b9ee25290",
+      "studentName": "宋缇缇",
+      "courseType": "陪打",
+      "standardCourseType": "陪打",
+      "courseTypeLevel2": "陪打",
+      "startTime": "2026-06-15 12:00",
+      "endTime": "2026-06-15 13:00",
+      "coach": "岳克舟教练",
+      "coachId": "ab068ad7-58db-4eb3-909a-692b04662ffc",
+      "campus": "mabao",
+      "venue": "2号场",
+      "payMethod": "储值卡",
+      "paidAmount": 100,
+      "operationId": "repair-songtiti-20260615-companion-20260723"
+    }
+  },
+  "courtHistory": {
+    "courtId": "22903bec-de3e-4c77-80df-cf79b4aced6b",
+    "before": [
+      {
+        "id": "schedule-stored-497274a9-8933-462a-a1f8-331b9ee25290-consume-c87b6e64-721f-4923-a56d-82dd658fa342",
+        "category": "排课私教课",
+        "businessTypeLevel1": "课程",
+        "businessTypeLevel2": "私教课",
+        "sourceCategory": "排课储值卡扣款",
+        "sourceProject": "私教课 2026-06-15 12:00",
+        "amount": 100,
+        "note": "排课产生的储值卡扣款",
+        "scheduleId": "497274a9-8933-462a-a1f8-331b9ee25290"
+      }
+    ],
+    "after": [
+      {
+        "id": "schedule-stored-497274a9-8933-462a-a1f8-331b9ee25290-consume-c87b6e64-721f-4923-a56d-82dd658fa342",
+        "category": "排课陪打",
+        "businessTypeLevel1": "课程",
+        "businessTypeLevel2": "陪打",
+        "sourceCategory": "排课储值卡扣款",
+        "sourceProject": "陪打 2026-06-15 12:00",
+        "amount": 100,
+        "note": "排课产生的储值卡扣款",
+        "scheduleId": "497274a9-8933-462a-a1f8-331b9ee25290",
+        "repairOperationId": "repair-songtiti-20260615-companion-20260723"
+      }
+    ]
+  },
+  "deleteSchedule": {
+    "before": {
+      "id": "cxe-thirdparty-202606-schedule-472cf8f55217",
+      "studentName": "",
+      "courseType": "陪打",
+      "standardCourseType": "陪打",
+      "courseTypeLevel2": "",
+      "startTime": "2026-06-15 13:00",
+      "endTime": "2026-06-15 13:30",
+      "coach": "",
+      "coachId": "0778a6ed-4f8a-4b6e-b2f3-5494a4f3f0ba",
+      "campus": "shunyi_mapo",
+      "venue": "3号场",
+      "payMethod": "",
+      "paidAmount": 0,
+      "operationId": "changxiaoer-thirdparty-202606-final-20260723105403"
+    }
+  },
+  "deleteConflictIndexRows": []
+}
