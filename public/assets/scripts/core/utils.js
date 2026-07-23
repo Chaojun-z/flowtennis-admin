@@ -963,6 +963,19 @@ function studentPrimaryCoachText(stu){
   return coach?coachName(coach.name):'-';
 }
 function studentPackageLessonMeta(stu){
+  const directRemaining=Number(stu?.packageBalanceRemaining);
+  const directTotal=Number(stu?.packageBalanceTotal);
+  if(Number.isFinite(directRemaining)&&Number.isFinite(directTotal)&&directTotal>0){
+    return {hasPackage:true,remaining:directRemaining,total:directTotal,text:`${lessonQty(directRemaining)}/${lessonQty(directTotal)}`,pct:Math.max(0,Math.min(100,Math.round((directRemaining/directTotal)*100)))};
+  }
+  const detailRows=(Array.isArray(stu?.detailPackageOrderRows)?stu.detailPackageOrderRows:[]).filter(row=>String(row?.statusText||'')!=='已作废'&&lessonValue(row?.totalLessons)>0);
+  if(detailRows.length){
+    const activeRows=detailRows.filter(row=>lessonValue(row?.remainingLessons)>0);
+    const displayRows=activeRows.length?activeRows:detailRows.slice(0,1);
+    const total=displayRows.reduce((sum,row)=>sum+lessonValue(row?.totalLessons),0);
+    const remaining=displayRows.reduce((sum,row)=>sum+lessonValue(row?.remainingLessons),0);
+    if(total>0)return {hasPackage:true,remaining,total,text:`${lessonQty(remaining)}/${lessonQty(total)}`,pct:Math.max(0,Math.min(100,Math.round((remaining/total)*100)))};
+  }
   const rows=studentActiveEntitlementRows(stu);
   if(!rows.length)return {hasPackage:false,remaining:0,total:0,text:'-'};
   const total=rows.reduce((sum,row)=>sum+(Number(row.totalLessons)||0),0);

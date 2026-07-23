@@ -272,6 +272,7 @@ assert.doesNotMatch(fnBody('studentCumulativeCoursePaidText'), /purchases|entitl
 assert.match(fnBody('studentLifecycleStatusText'), /studentStatusLabel/, 'student status label must come from backend unified teaching view');
 assert.doesNotMatch(fnBody('studentLifecycleStatusText'), /studentRecentDirectFormalLessonCount|studentHasDirectAfterPackageUsedUp|studentPackageStatusText|studentActivityStatusText/, 'frontend must not recalculate student status from local labels');
 assert.match(source, /function studentPackageLessonMeta\(/, 'student package lesson summary should expose remaining and total lessons');
+assert.match(fnBody('studentPackageLessonMeta'), /packageBalanceRemaining[\s\S]*packageBalanceTotal[\s\S]*detailPackageOrderRows[\s\S]*activeRows[\s\S]*remainingLessons[\s\S]*totalLessons/, 'student detail package metric should use backend balance fields and fall back to backend detail package rows');
 assert.match(source, /function studentActiveEntitlementRows\([\s\S]*includes\(entitlementStatusText\(e\)\)[\s\S]*lessonValue\(e\.totalLessons\)>0/, 'student lesson/package summary should keep normal packages even when balance is 0');
 assert.match(source, /function studentPackageLessonSummary\([\s\S]*`\$\{lessonQty\(e\.remainingLessons\)\}\/\$\{lessonQty\(e\.totalLessons\)\}`[\s\S]*\|\|meta\.text/, 'student lesson/package summary should show only balance numbers, not package names');
 assert.match(source, /function studentPackageListHtml\(/, 'student list should render each package on its own line');
