@@ -1,0 +1,404 @@
+{
+  "operationId": "repair-baozao-nonprime-20260724",
+  "batchId": "batch-repair-baozao-nonprime-20260724",
+  "write": true,
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "before": {
+    "schedule": {},
+    "ledger": {},
+    "entitlement": {
+      "id": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "allowedCoaches": [
+        "Siren 教练"
+      ],
+      "batchId": "batch-repair-baozao-shared-package-20260723",
+      "campusIds": [
+        "mabao"
+      ],
+      "coachIds": [
+        "1d95ab1b-a345-4090-9cc4-f7e1902bef03"
+      ],
+      "coachNames": [
+        "Siren 教练"
+      ],
+      "courseType": "私教课",
+      "createdAt": "2026-05-19T15:02:49.453Z",
+      "dailyTimeWindows": [
+        {
+          "label": "工作日",
+          "startTime": "09:00",
+          "endTime": "16:00",
+          "daysOfWeek": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "expirationRemovedAt": "2026-06-04T10:30:43.304Z",
+      "expirationRemovedReason": "取消课包到期日概念",
+      "importBatchId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE",
+      "importSource": "马坡私教CSV导入",
+      "maxStudents": 1,
+      "notes": "暂时固定每周一18:30-19:30、周中12-13点还想加一节 / 来源 私教课学员.csv#67",
+      "operationAt": "2026-06-04T10:30:43.304Z",
+      "operationBy": "Codex",
+      "operationId": "repair-baozao-shared-package-20260723",
+      "operationType": "cancel-package-entitlement-expiry",
+      "originalPackageId": "import-package-private-10",
+      "originalPackageName": "马坡私教10节课包",
+      "ownerCoach": "朝珺教练",
+      "packageId": "fix-20260521-成人1v1-朝珺非黄金10课时",
+      "packageName": "成人1v1 朝珺非黄金10课时",
+      "packageOwnershipFixedAt": "2026-05-22T09:40:01+08:00",
+      "packageTimeBand": "",
+      "productId": "seed-product-adult-1v1",
+      "productName": "私教课",
+      "purchaseId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-purchase-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "remainingLessons": 8,
+      "saleCampusId": "mabao",
+      "sourcePurchaseKey": "67|暴躁壹壹|initial|2026-05-19|10|3500",
+      "status": "active",
+      "studentId": "import-student-cba443b0-df05-84e9-bb59-a49876f7b363",
+      "studentName": "暴躁壹壹",
+      "timeBand": "非黄金时段",
+      "totalLessons": 10,
+      "updatedAt": "2026-07-23T04:26:39.180Z",
+      "usageEndDate": "",
+      "usageStartDate": "2026-03-25",
+      "usedLessons": 2,
+      "validFrom": "2026-05-19",
+      "validUntil": ""
+    }
+  },
+  "put": {
+    "schedule": {
+      "id": "repair-baozao-nonprime-schedule-20260724-1200",
+      "absentStudentIds": [],
+      "actualStudentCount": 1,
+      "batchId": "batch-repair-baozao-nonprime-20260724",
+      "campus": "shunyi_mapo",
+      "cancelReason": "",
+      "classId": "",
+      "coach": "朝珺教练",
+      "coachId": "ac664799-5944-48ce-b1cc-1e60bf0982de",
+      "coachLateFieldFeeAmount": 0,
+      "coachLateFree": false,
+      "coachLateHandledAt": "",
+      "coachLateHandledBy": "",
+      "confirmStatus": "待确认",
+      "courseType": "私教课",
+      "courseTypeLevel2": "",
+      "createdAt": "2026-07-23T04:45:55.458Z",
+      "createdBy": "管理员",
+      "endTime": "2026-07-24 13:00",
+      "entitlementId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "entitlementIds": [
+        "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7"
+      ],
+      "expectedStudentIds": [
+        "import-student-cba443b0-df05-84e9-bb59-a49876f7b363"
+      ],
+      "experienceType": "",
+      "externalCourtName": "",
+      "externalNotes": "",
+      "externalVenueName": "",
+      "feishuCoachDailyDigestSentAt": "2026-07-16T13:28:49.090Z",
+      "feishuCoachDailyDigestSentDate": "2026-07-17",
+      "fieldFeeAmount": 0,
+      "fieldFeeNote": "",
+      "fieldFeePayMethod": "",
+      "fieldFeeReason": "",
+      "isTrial": false,
+      "lateMinutes": 0,
+      "lateReason": "",
+      "lessonCount": 1,
+      "locationType": "own",
+      "notes": "非黄第3节",
+      "notifyStatus": "未通知",
+      "operationAt": "2026-07-16T04:44:29.801Z",
+      "operationBy": "管理员",
+      "operationId": "repair-baozao-nonprime-20260724",
+      "operationType": "lesson-consume",
+      "packageName": "1v1私教课 · 成人 · 10课时 · 非黄金",
+      "paidAmount": 0,
+      "payMethod": "",
+      "purchaseId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-purchase-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "requiresFieldFee": false,
+      "scheduleSource": "教练运营",
+      "settlementType": "package",
+      "smallClassType": "",
+      "standardCourseType": "私教课",
+      "startTime": "2026-07-24 12:00",
+      "status": "已排课",
+      "studentIds": [
+        "import-student-cba443b0-df05-84e9-bb59-a49876f7b363"
+      ],
+      "studentName": "暴躁壹壹",
+      "timeBand": "非黄金时段",
+      "updatedAt": "2026-07-23T04:45:55.458Z",
+      "venue": "2号场",
+      "venueId": "venue-1782359259926-1",
+      "venueSpaceType": "室内"
+    },
+    "ledger": {
+      "id": "repair-baozao-nonprime-ledger-20260724-1200",
+      "entitlementId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "purchaseId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-purchase-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "scheduleId": "repair-baozao-nonprime-schedule-20260724-1200",
+      "studentId": "import-student-cba443b0-df05-84e9-bb59-a49876f7b363",
+      "studentName": "暴躁壹壹",
+      "lessonDelta": -1,
+      "action": "consume",
+      "reason": "排课消课",
+      "relatedDate": "2026-07-24",
+      "sourceTimeBand": "12:00-13:00",
+      "venue": "2号场",
+      "coach": "朝珺教练",
+      "scheduleTime": "2026-07-24 12:00-13:00",
+      "notes": "非黄第3节",
+      "operator": "Codex修数",
+      "createdAt": "2026-07-23T04:45:55.458Z",
+      "operationId": "repair-baozao-nonprime-20260724",
+      "batchId": "batch-repair-baozao-nonprime-20260724"
+    },
+    "entitlement": {
+      "id": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "allowedCoaches": [
+        "Siren 教练"
+      ],
+      "batchId": "batch-repair-baozao-nonprime-20260724",
+      "campusIds": [
+        "mabao"
+      ],
+      "coachIds": [
+        "1d95ab1b-a345-4090-9cc4-f7e1902bef03"
+      ],
+      "coachNames": [
+        "Siren 教练"
+      ],
+      "courseType": "私教课",
+      "createdAt": "2026-05-19T15:02:49.453Z",
+      "dailyTimeWindows": [
+        {
+          "label": "工作日",
+          "startTime": "09:00",
+          "endTime": "16:00",
+          "daysOfWeek": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "expirationRemovedAt": "2026-06-04T10:30:43.304Z",
+      "expirationRemovedReason": "取消课包到期日概念",
+      "importBatchId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE",
+      "importSource": "马坡私教CSV导入",
+      "maxStudents": 1,
+      "notes": "暂时固定每周一18:30-19:30、周中12-13点还想加一节 / 来源 私教课学员.csv#67",
+      "operationAt": "2026-06-04T10:30:43.304Z",
+      "operationBy": "Codex",
+      "operationId": "repair-baozao-nonprime-20260724",
+      "operationType": "cancel-package-entitlement-expiry",
+      "originalPackageId": "import-package-private-10",
+      "originalPackageName": "马坡私教10节课包",
+      "ownerCoach": "朝珺教练",
+      "packageId": "fix-20260521-成人1v1-朝珺非黄金10课时",
+      "packageName": "成人1v1 朝珺非黄金10课时",
+      "packageOwnershipFixedAt": "2026-05-22T09:40:01+08:00",
+      "packageTimeBand": "",
+      "productId": "seed-product-adult-1v1",
+      "productName": "私教课",
+      "purchaseId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-purchase-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "remainingLessons": 7,
+      "saleCampusId": "mabao",
+      "sourcePurchaseKey": "67|暴躁壹壹|initial|2026-05-19|10|3500",
+      "status": "active",
+      "studentId": "import-student-cba443b0-df05-84e9-bb59-a49876f7b363",
+      "studentName": "暴躁壹壹",
+      "timeBand": "非黄金时段",
+      "totalLessons": 10,
+      "updatedAt": "2026-07-23T04:45:55.458Z",
+      "usageEndDate": "",
+      "usageStartDate": "2026-03-25",
+      "usedLessons": 3,
+      "validFrom": "2026-05-19",
+      "validUntil": ""
+    }
+  },
+  "after": {
+    "schedule": {
+      "id": "repair-baozao-nonprime-schedule-20260724-1200",
+      "absentStudentIds": [],
+      "actualStudentCount": 1,
+      "batchId": "batch-repair-baozao-nonprime-20260724",
+      "campus": "shunyi_mapo",
+      "cancelReason": "",
+      "classId": "",
+      "coach": "朝珺教练",
+      "coachId": "ac664799-5944-48ce-b1cc-1e60bf0982de",
+      "coachLateFieldFeeAmount": 0,
+      "coachLateFree": false,
+      "coachLateHandledAt": "",
+      "coachLateHandledBy": "",
+      "confirmStatus": "待确认",
+      "courseType": "私教课",
+      "courseTypeLevel2": "",
+      "createdAt": "2026-07-23T04:45:55.458Z",
+      "createdBy": "管理员",
+      "endTime": "2026-07-24 13:00",
+      "entitlementId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "entitlementIds": [
+        "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7"
+      ],
+      "expectedStudentIds": [
+        "import-student-cba443b0-df05-84e9-bb59-a49876f7b363"
+      ],
+      "experienceType": "",
+      "externalCourtName": "",
+      "externalNotes": "",
+      "externalVenueName": "",
+      "feishuCoachDailyDigestSentAt": "2026-07-16T13:28:49.090Z",
+      "feishuCoachDailyDigestSentDate": "2026-07-17",
+      "fieldFeeAmount": 0,
+      "fieldFeeNote": "",
+      "fieldFeePayMethod": "",
+      "fieldFeeReason": "",
+      "isTrial": false,
+      "lateMinutes": 0,
+      "lateReason": "",
+      "lessonCount": 1,
+      "locationType": "own",
+      "notes": "非黄第3节",
+      "notifyStatus": "未通知",
+      "operationAt": "2026-07-16T04:44:29.801Z",
+      "operationBy": "管理员",
+      "operationId": "repair-baozao-nonprime-20260724",
+      "operationType": "lesson-consume",
+      "packageName": "1v1私教课 · 成人 · 10课时 · 非黄金",
+      "paidAmount": 0,
+      "payMethod": "",
+      "purchaseId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-purchase-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "requiresFieldFee": false,
+      "scheduleSource": "教练运营",
+      "settlementType": "package",
+      "smallClassType": "",
+      "standardCourseType": "私教课",
+      "startTime": "2026-07-24 12:00",
+      "status": "已排课",
+      "studentIds": [
+        "import-student-cba443b0-df05-84e9-bb59-a49876f7b363"
+      ],
+      "studentName": "暴躁壹壹",
+      "timeBand": "非黄金时段",
+      "updatedAt": "2026-07-23T04:45:55.458Z",
+      "venue": "2号场",
+      "venueId": "venue-1782359259926-1",
+      "venueSpaceType": "室内"
+    },
+    "ledger": {
+      "id": "repair-baozao-nonprime-ledger-20260724-1200",
+      "action": "consume",
+      "batchId": "batch-repair-baozao-nonprime-20260724",
+      "coach": "朝珺教练",
+      "createdAt": "2026-07-23T04:45:55.458Z",
+      "entitlementId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "lessonDelta": -1,
+      "notes": "非黄第3节",
+      "operationId": "repair-baozao-nonprime-20260724",
+      "operator": "Codex修数",
+      "purchaseId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-purchase-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "reason": "排课消课",
+      "relatedDate": "2026-07-24",
+      "scheduleId": "repair-baozao-nonprime-schedule-20260724-1200",
+      "scheduleTime": "2026-07-24 12:00-13:00",
+      "sourceTimeBand": "12:00-13:00",
+      "studentId": "import-student-cba443b0-df05-84e9-bb59-a49876f7b363",
+      "studentName": "暴躁壹壹",
+      "venue": "2号场"
+    },
+    "entitlement": {
+      "id": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "allowedCoaches": [
+        "Siren 教练"
+      ],
+      "batchId": "batch-repair-baozao-nonprime-20260724",
+      "campusIds": [
+        "mabao"
+      ],
+      "coachIds": [
+        "1d95ab1b-a345-4090-9cc4-f7e1902bef03"
+      ],
+      "coachNames": [
+        "Siren 教练"
+      ],
+      "courseType": "私教课",
+      "createdAt": "2026-05-19T15:02:49.453Z",
+      "dailyTimeWindows": [
+        {
+          "label": "工作日",
+          "startTime": "09:00",
+          "endTime": "16:00",
+          "daysOfWeek": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "expirationRemovedAt": "2026-06-04T10:30:43.304Z",
+      "expirationRemovedReason": "取消课包到期日概念",
+      "importBatchId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE",
+      "importSource": "马坡私教CSV导入",
+      "maxStudents": 1,
+      "notes": "暂时固定每周一18:30-19:30、周中12-13点还想加一节 / 来源 私教课学员.csv#67",
+      "operationAt": "2026-06-04T10:30:43.304Z",
+      "operationBy": "Codex",
+      "operationId": "repair-baozao-nonprime-20260724",
+      "operationType": "cancel-package-entitlement-expiry",
+      "originalPackageId": "import-package-private-10",
+      "originalPackageName": "马坡私教10节课包",
+      "ownerCoach": "朝珺教练",
+      "packageId": "fix-20260521-成人1v1-朝珺非黄金10课时",
+      "packageName": "成人1v1 朝珺非黄金10课时",
+      "packageOwnershipFixedAt": "2026-05-22T09:40:01+08:00",
+      "packageTimeBand": "",
+      "productId": "seed-product-adult-1v1",
+      "productName": "私教课",
+      "purchaseId": "private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-purchase-e2a1df15-0df5-1110-eebc-067bab082dc7",
+      "remainingLessons": 7,
+      "saleCampusId": "mabao",
+      "sourcePurchaseKey": "67|暴躁壹壹|initial|2026-05-19|10|3500",
+      "status": "active",
+      "studentId": "import-student-cba443b0-df05-84e9-bb59-a49876f7b363",
+      "studentName": "暴躁壹壹",
+      "timeBand": "非黄金时段",
+      "totalLessons": 10,
+      "updatedAt": "2026-07-23T04:45:55.458Z",
+      "usageEndDate": "",
+      "usageStartDate": "2026-03-25",
+      "usedLessons": 3,
+      "validFrom": "2026-05-19",
+      "validUntil": ""
+    }
+  },
+  "verification": {
+    "scheduleExists": true,
+    "ledgerExists": true,
+    "usedLessons": 3,
+    "remainingLessons": 7
+  }
+}

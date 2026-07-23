@@ -2458,10 +2458,9 @@ assert.doesNotThrow(
   'schedule without feedback can be deleted'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertCanDeleteSchedule('sch-1', [], [{ id: 'led-1', scheduleId: 'sch-1', entitlementId: 'ent-1' }]),
-  /权益消耗记录/,
-  'schedule with entitlement ledger should not be deletable'
+  'schedule with entitlement ledger can be deleted after the route restores the package balance'
 );
 
 assert.doesNotThrow(
@@ -2469,10 +2468,9 @@ assert.doesNotThrow(
   'cancelled schedule with entitlement ledger can be deleted after refund'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertCanDeleteSchedule({ id: 'sch-1', status: '已排课' }, [], [{ id: 'led-1', scheduleId: 'sch-1', entitlementId: 'ent-1' }]),
-  /请先取消排课再删除/,
-  'active schedule with entitlement ledger should require cancellation before deletion'
+  'active schedule with entitlement ledger should be deletable through the route balance rollback'
 );
 
 assert.throws(

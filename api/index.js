@@ -6497,9 +6497,7 @@ function decorateWorkbenchFeedbacks(feedbacks=[]){
 }
 function assertCanDeleteSchedule(schedule,feedbacks,ledger=[]){
   const scheduleId=typeof schedule==='string'?schedule:schedule?.id;
-  const isCancelled=typeof schedule==='string'?false:effectiveScheduleStatus(schedule)==='已取消';
   if((feedbacks||[]).some(f=>f.scheduleId===scheduleId))throw new Error('该排课已有课后反馈，不能直接删除');
-  if(!isCancelled&&(ledger||[]).some(l=>l.scheduleId===scheduleId))throw new Error('该排课已有权益消耗记录，请先取消排课再删除');
 }
 function assertCanDeleteStudent(studentId,data){
   if(!studentId)return;

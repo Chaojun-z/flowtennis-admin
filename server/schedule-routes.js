@@ -250,35 +250,56 @@ function createScheduleRoutes(deps={}){
         const allLedger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
         const scheduleLedger=allLedger.filter(row=>row.scheduleId===id);
         assertCanDeleteSchedule(ex||id,await scanFeedbacks(),allLedger);
+        const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now:new Date().toISOString()});
+        const oldEntDeltas=scheduleEntitlementDeltas(ex);
+        const oldFreeAbsenceLedger=scheduleLedger.filter(row=>row.action==='free_absence');
+        const isCancelled=ex&&effectiveScheduleStatus(ex)==='已取消';
         let storedValueUpdate={schedule:{...(ex||{}),status:'已取消'},courts:[],originalCourts:[],historyRows:[]};
         if(scheduleStoredValuePaymentAmount(ex)>0){
           const [courtRows,studentRows]=await Promise.all([
             withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
             getFastStudentsRead().catch(()=>[])
           ]);
-          const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now:new Date().toISOString()});
           storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:{...ex,status:'已取消'},courts:courtRows,students:studentRows,now:operationTrace.operationAt,operator:user.name||'',operationTrace});
         }
-        await del(T_SCHEDULE,id);
+        const appliedEntitlements=[];
         const deletedLedger=[];
+        const generatedLedger=[];
+        const appliedClassDeltas=[];
+        let freeAbsenceRolledBack=false;
         try{
-          if(ex&&effectiveScheduleStatus(ex)==='已取消'){
-            for(const row of scheduleLedger){
-              await del(T_ENTITLEMENT_LEDGER,row.id);
-              deletedLedger.push(row);
+          if(ex&&!isCancelled){
+            for(const oldEntDelta of oldEntDeltas){
+              const updated=await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','删除排课退回权益',user,operationTrace);
+              if(updated?.ledger)generatedLedger.push(updated.ledger);
+              if(updated)appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'删除排课失败重新扣回权益'});
             }
+            await rollbackSmallGroupFreeAbsences(oldFreeAbsenceLedger);
+            freeAbsenceRolledBack=oldFreeAbsenceLedger.length>0;
           }
-          const lessonUpdate=oldDelta?await applyLessonDelta(oldDelta.classId,-oldDelta.delta):null;
+          for(const row of [...scheduleLedger,...generatedLedger]){
+            await del(T_ENTITLEMENT_LEDGER,row.id);
+            deletedLedger.push(row);
+          }
+          const lessonUpdate=oldDelta?await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex?.studentIds)):null;
+          if(oldDelta)appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex?.studentIds)});
           const storedValueCourts=await timed('schedule delete stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
+          await del(T_SCHEDULE,id);
           await timed('schedule delete conflict index write',()=>syncScheduleConflictIndexes(ex,null));
           await syncCoachScheduleIndexes(ex,null).catch(err=>console.error('schedule delete index sync failed:',err));
-          return sendJson(res,{success:true,...(lessonUpdate||{}),courts:storedValueCourts});
+          return sendJson(res,{success:true,...(lessonUpdate||{}),entitlementLedger:deletedLedger,courts:storedValueCourts});
         }catch(err){
           if(ex)await put(T_SCHEDULE,id,ex).catch(()=>null);
           await syncScheduleConflictIndexes(null,ex).catch(()=>null);
           await rollbackScheduleStoredValueCourts(storedValueUpdate);
-          for(const row of deletedLedger||[])await put(T_ENTITLEMENT_LEDGER,row.id,row).catch(()=>null);
-          if(oldDelta)await applyLessonDelta(oldDelta.classId,oldDelta.delta).catch(()=>null);
+          if(freeAbsenceRolledBack)await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
+          for(const row of deletedLedger.filter(row=>!generatedLedger.some(generated=>generated.id===row.id)))await put(T_ENTITLEMENT_LEDGER,row.id,row).catch(()=>null);
+          for(const row of generatedLedger)await del(T_ENTITLEMENT_LEDGER,row.id).catch(()=>null);
+          for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
+          for(const item of appliedEntitlements){
+            const rollback=await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
+            if(rollback?.ledger)await del(T_ENTITLEMENT_LEDGER,rollback.ledger.id).catch(()=>null);
+          }
           throw err;
         }
       }
