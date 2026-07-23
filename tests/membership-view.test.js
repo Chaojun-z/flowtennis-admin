@@ -373,7 +373,7 @@ assert.match(membershipShell, /filterHostIds:\['membershipTierFilter'\]/, 'membe
 assert.match(html, /function onMembershipToolbarFilterChange\(\)/, 'membership member type filter should rerender from page one');
 assert.match(membershipShell, /会员类型[\s\S]*会员余额[\s\S]*会员订场[\s\S]*累计订场/, 'membership management should use the requested column labels and booking columns');
 assert.match(membershipShell, /首次开卡时间[\s\S]*续费次数[\s\S]*会员余额/, 'membership management should show renewal count after first open date');
-assert.match(membershipShell, /label:'操作'[\s\S]*style:'width:96px;padding-right:12px;text-align:right'/, 'membership management action column should use the compact action width');
+assert.match(membershipShell, /label:'操作'[\s\S]*style:'width:90px;padding-right:12px;text-align:right'/, 'membership management action column should use the compact action width');
 assert.doesNotMatch(fnBody('renderMemberships'), /当前会员|当前余额|订场次数/, 'membership management should remove old column labels');
 assert.match(fnBody('renderMemberships'), /renderCourtMiniBar\(finance\.balance,finance\.totalDeposit/, 'membership balance should use the same mini bar as court users');
 assert.match(fnBody('renderMemberships'), /membershipReadModelBookingForCourt\(item\)[\s\S]*memberBookingCount[\s\S]*bookingCount/, 'membership management should show member bookings and total bookings from the unified read model');

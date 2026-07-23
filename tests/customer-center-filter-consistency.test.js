@@ -18,6 +18,21 @@ function functionBody(source, name) {
   return source.slice(start, end);
 }
 
+function standardConfigBlock(key) {
+  const marker = `key:'${key}'`;
+  const start = standardShellSource.indexOf(marker);
+  assert.notStrictEqual(start, -1, `${key} should have a standard list config`);
+  const rest = standardShellSource.slice(start);
+  const next = rest.search(/\n    \{key:|\n  \];/);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+function assertCustomerCenterTableEdgeWidths(label, key) {
+  const block = standardConfigBlock(key);
+  assert.match(block, /columns:\[\{[\s\S]*style:'[^']*width:130px/, `${label}第一列宽度必须是 130px`);
+  assert.match(block, /label:'操作'[\s\S]*style:'width:90px[^']*text-align:right'/, `${label}最后一列宽度必须是 90px`);
+}
+
 const standardsSource = read('public/assets/scripts/core/platform-data-standards.js');
 const leadsSource = read('public/assets/scripts/pages/leads.js');
 const studentsSource = read('public/assets/scripts/pages/students.js');
@@ -98,6 +113,20 @@ assert.match(
   functionBody(matchesSource, 'renderMatches'),
   /renderMatchStats\(FlowTennisPlatformDataStandards\.currentMatchSummary\(rows\)\)/,
   '约球活动顶部必须基于当前筛选后的约球列表汇总'
+);
+
+[
+  ['线索池', 'leads'],
+  ['历史学员', 'students'],
+  ['在期学员', 'students'],
+  ['订场用户', 'courts'],
+  ['会员管理', 'memberships'],
+  ['约球活动', 'matches']
+].forEach(([label, key]) => assertCustomerCenterTableEdgeWidths(label, key));
+assert.match(
+  functionBody(matchesSource, 'renderMatches'),
+  /<td class="tms-sticky-r tms-action-cell" style="width:90px;padding-right:20px;text-align:right">/,
+  '约球活动表格行操作列宽度必须是 90px'
 );
 
 assert.ok(

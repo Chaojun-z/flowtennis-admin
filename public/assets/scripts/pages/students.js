@@ -531,7 +531,7 @@ function studentTableColumns(){
     {label:'学员状态',style:'width:120px'},
     {label:'负责教练',style:'width:110px'},
     {label:'备注',style:'width:280px'},
-    {label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}
+    {label:'操作',className:'tms-sticky-r',style:'width:90px;padding-right:20px;text-align:right'}
   ];
 }
 function renderStudentTableHeaders(){
@@ -1003,7 +1003,7 @@ function renderStudents(options={}){
   document.getElementById('stuTbody').innerHTML=slice.length?slice.map(s=>{
     const coachText=studentPrimaryCoachText(s);
     const noteText=studentHumanText(studentNoteSummary(s));
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStudentLabelTag(studentActivityStatusText(s))}</td><td>${renderStudentLabelTag(studentPaymentModeText(s))}</td><td>${renderStudentLabelTag(studentPackageStatusText(s))}</td><td>${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentRecentLessonText(s),false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(studentCumulativeCoursePaidText(s),false)}</td><td>${renderStudentLabelTag(studentLifecycleStatusText(s))}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStudentLabelTag(studentActivityStatusText(s))}</td><td>${renderStudentLabelTag(studentPaymentModeText(s))}</td><td>${renderStudentLabelTag(studentPackageStatusText(s))}</td><td>${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentRecentLessonText(s),false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(studentCumulativeCoursePaidText(s),false)}</td><td>${renderStudentLabelTag(studentLifecycleStatusText(s))}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:90px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
   renderStudentMobileCards(slice);
 }
