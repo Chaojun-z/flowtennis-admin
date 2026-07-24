@@ -17,6 +17,7 @@ const {
   buildFinanceOverviewSummaryFromData
 } = require('../read-models/finance-summary.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
+const { normalizeCampusValue, displayCampusName, buildCampusNameMap } = require('../../public/assets/scripts/core/campus.js');
 
 function round(value, digits = 1) {
   const base = 10 ** digits;
@@ -464,19 +465,15 @@ function normalizedCampusDisplayName(value) {
   const text = normalizeText(value, '');
   if (!text) return '';
   if (/^_+external_+$/i.test(text) || /^external$/i.test(text) || text === '校区外') return '校区外';
-  return text;
+  return displayCampusName(text);
 }
 
 function buildCampusLabelMap(campuses = []) {
-  const map = new Map();
-  [
-    ['shunyi_mapo', '顺义马坡'],
-    [['ma', 'bao'].join(''), '顺义马坡']
-  ].forEach(([key, label]) => map.set(key, label));
+  const map = buildCampusNameMap(campuses || []);
   (campuses || []).forEach(row => {
     const label = normalizeText(row.name || row.displayName || row.code || row.id, '');
     [row.id, row.code, row.name, row.displayName].forEach(value => {
-      const key = normalizeText(value, '');
+      const key = normalizeCampusValue(value);
       if (key && label) map.set(key, label);
     });
   });

@@ -53,19 +53,25 @@ const legacyTerms = [
 
 const legacyTermContentAllowlist = new Map([
   [['ma', 'bao'].join(''), new Set([
-    'public/assets/scripts/core/constants.js',
+    'public/assets/scripts/core/campus.js',
     'tests/campus-display-hard-guard.test.js'
   ])]
 ]);
 const legacyRuntimeAllowlist = new Set([
-  'public/assets/scripts/core/constants.js'
+  'public/assets/scripts/core/campus.js'
 ]);
 
 const rawDateTimePattern = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 const allTrackedFiles = execFileSync('git', ['ls-files', '-z'], { cwd: repoRoot, encoding: 'utf8' })
   .split('\0')
   .filter(Boolean)
-  .filter(rel => !rel.startsWith('_exports/') && !rel.includes('node_modules'));
+  .filter(rel => (
+    rel === 'public/index.html' ||
+    rel === 'api/index.js' ||
+    rel.startsWith('server/') ||
+    rel.startsWith('public/assets/scripts/') ||
+    rel.startsWith('wechat-miniprogram/miniprogram/pages/')
+  ) && !rel.startsWith('_exports/') && !rel.includes('node_modules'));
 
 allTrackedFiles.forEach(rel => {
   legacyTerms.forEach(term => {

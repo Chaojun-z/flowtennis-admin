@@ -503,6 +503,29 @@ const movedStickyBookingCourt = normalizeCourtRecord({
 
 assert.strictEqual(movedStickyBookingCourt.history[1].campus, 'shunyi_mapo');
 
+const legacyCampusCourt = normalizeCourtRecord({
+  name: '历史校区旧值',
+  phone: '15001010368',
+  campus: 'mabao',
+  history: [
+    {
+      id: 'legacy-campus-booking',
+      date: '2026-04-11',
+      type: '消费',
+      payMethod: '微信',
+      category: '订场',
+      campus: 'mabao',
+      startTime: '09:00',
+      endTime: '10:00',
+      venue: '1号场',
+      amount: 300
+    }
+  ]
+});
+
+assert.strictEqual(legacyCampusCourt.campus, 'shunyi_mapo', '订场用户保存时不得继续写入历史校区代码 mabao');
+assert.strictEqual(legacyCampusCourt.history[0].campus, 'shunyi_mapo', '订场历史流水保存时不得继续写入历史校区代码 mabao');
+
 const legacy = normalizeCourtRecord({
   name: '旧客户',
   studentId: 'stu-old',

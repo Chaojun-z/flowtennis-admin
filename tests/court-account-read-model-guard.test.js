@@ -46,7 +46,7 @@ async function main() {
       id: 'court-1',
       name: '客户A',
       phone: '13800000000',
-      campus: 'shunyi_mapo',
+      campus: 'mabao',
       owner: '订场旧对接人',
       familiarity: '熟',
       depositAttitude: '高',
@@ -114,6 +114,8 @@ async function main() {
   assert.deepStrictEqual(Object.keys(view), ['summary', 'filters', 'items', 'membershipOrderAuditRows', 'membershipLedgerAuditRows', 'meta'], '读模型应返回 summary/filters/items/audit/meta');
   assert.strictEqual(view.items.length, 2, '读模型应返回可渲染列表项');
   assert.strictEqual(view.items[0].displayName, '客户A');
+  assert.strictEqual(view.items[0].campusCode, 'shunyi_mapo', '订场用户读模型必须把历史 mabao 归一为标准校区代码');
+  assert.strictEqual(view.items[0].campusName, '顺义马坡', '订场用户读模型不得向前端返回 mabao 展示名');
   assert.strictEqual(view.items[0].owner, '线索跟进人', '订场用户跟进人应读取线索池 owner 统一事实源');
   assert.strictEqual(view.items[1].owner, '', '没有关联线索跟进人时不应回退订场旧对接人');
   assert.strictEqual(view.items[0].accountType, '会员账户');

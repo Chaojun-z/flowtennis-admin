@@ -1,4 +1,3 @@
-// ===== 排课表 =====
 function onScheduleFilterChange(){schPage=standardListFirstPage();renderSchedule();}
 function syncScheduleFilterOptions(){
   const statusValue=document.getElementById('schStatusFilter')?.value||'',coachValue=document.getElementById('schCoachFilter')?.value||'',courseTypeValue=document.getElementById('schCourseTypeFilter')?.value||'',proposalValue=document.getElementById('schProposalFilter')?.value||'',feedbackValue=document.getElementById('schFeedbackFilter')?.value||'';

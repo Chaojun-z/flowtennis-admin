@@ -1,6 +1,7 @@
 const MATCH_COURT_FINANCE_ACCOUNT_ID = 'match-court-finance';
 const DEFAULT_SAMPLE_SIZE = 10;
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
+const { normalizeCampusValue, displayCampusName, buildCampusNameMap } = require('../../public/assets/scripts/core/campus.js');
 
 function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
@@ -10,12 +11,8 @@ function courtText(value) {
   return String(value || '').trim();
 }
 
-const COURT_ACCOUNT_CAMPUS_ALIASES = { shunyi_mapo: 'shunyi_mapo', '顺义马坡': 'shunyi_mapo', '马坡': 'shunyi_mapo' };
-COURT_ACCOUNT_CAMPUS_ALIASES[['ma', 'bao'].join('')] = 'shunyi_mapo';
-COURT_ACCOUNT_CAMPUS_ALIASES[['马', '宝'].join('')] = 'shunyi_mapo';
 function courtAccountCampusKey(value) {
-  const raw = courtText(value);
-  return COURT_ACCOUNT_CAMPUS_ALIASES[raw] || raw;
+  return normalizeCampusValue(courtText(value));
 }
 
 function parseArr(value) {
@@ -437,13 +434,14 @@ function buildLegacyItem(court, ctx) {
   const tierLabel = membershipTierLabel(account, ctx.membershipOrders, ctx.membershipPlans);
   const membershipRechargeCount = validMembershipOrders(account, ctx.membershipOrders).length;
   const membershipRenewalCount = Math.max(0, membershipRechargeCount - 1);
+  const campusCode = normalizeCampusValue(court?.campus);
   return {
     id: court.id,
     history: normalizeCourtHistory(court?.history),
     displayName: displayName(court, studentSummary),
     phone: String(court?.phone || '').trim(),
-    campusCode: String(court?.campus || '').trim(),
-    campusName: ctx.campusMap.get(String(court?.campus || '').trim()) || String(court?.campus || '').trim() || '-',
+    campusCode,
+    campusName: ctx.campusMap.get(campusCode) || displayCampusName(campusCode) || '-',
     owner: leadOwnerForCourt(court, ctx.leads),
     depositAttitude: String(court?.depositAttitude || '').trim(),
     recentFollowUpDate: String(court?.recentFollowUpDate || '').trim(),
@@ -679,7 +677,7 @@ function buildCourtAccountListViewFromData(source = {}, options = {}) {
   } = source;
   const sampleIds = resolveSampleIds({ sampleIds: options.sampleIds, sample: options.sample, fixedSampleAccounts: options.fixedSampleAccounts || [] });
   const useLegacy = options.useLegacy === true;
-  const campusMap = new Map((campuses || []).map((row) => [String(row?.code || row?.id || '').trim(), row?.name || row?.code || row?.id || '']));
+  const campusMap = buildCampusNameMap(campuses || []);
   const activeCourts = (courts || [])
     .filter((row) => String(row?.status || 'active') !== 'inactive')
     .filter((row) => String(row?.id || '') !== MATCH_COURT_FINANCE_ACCOUNT_ID)

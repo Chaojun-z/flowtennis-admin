@@ -1,5 +1,6 @@
 const FEATURE_PERMISSION_KEYS = ['match_ops', 'match_finance'];
 const ADMIN_DEFAULT_FEATURE_PERMISSIONS = ['match_ops', 'match_finance'];
+const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
 function parseList(value) {
   if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
@@ -8,18 +9,6 @@ function parseList(value) {
 
 function uniqueList(value) {
   return [...new Set(parseList(value))];
-}
-
-const CAMPUS_ALIASES = {
-  shunyi_mapo: 'shunyi_mapo',
-  '顺义马坡': 'shunyi_mapo',
-  '马坡': 'shunyi_mapo'
-};
-CAMPUS_ALIASES[['ma', 'bao'].join('')] = 'shunyi_mapo';
-CAMPUS_ALIASES[['马', '宝'].join('')] = 'shunyi_mapo';
-function normalizeCampusValue(value) {
-  const raw = String(value || '').trim();
-  return CAMPUS_ALIASES[raw] || raw;
 }
 
 function normalizeRole(role) {

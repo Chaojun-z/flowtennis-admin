@@ -1,13 +1,11 @@
+const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
+
 function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
-const CAMPUS_ALIASES = { shunyi_mapo: 'shunyi_mapo', '顺义马坡': 'shunyi_mapo', '马坡': 'shunyi_mapo' };
-CAMPUS_ALIASES[['ma', 'bao'].join('')] = 'shunyi_mapo';
-CAMPUS_ALIASES[['马', '宝'].join('')] = 'shunyi_mapo';
 function campusKey(value) {
-  const raw = String(value || '').trim();
-  return CAMPUS_ALIASES[raw] || raw;
+  return normalizeCampusValue(value);
 }
 
 function financeBusinessRows(rows = []) {

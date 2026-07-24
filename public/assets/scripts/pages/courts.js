@@ -2113,7 +2113,7 @@ function getCourtDedupKeys(item){
   return keys;
 }
 function normalizeCampusCode(value){
-  const raw=String(value||'').trim();
+  const raw=campusKey(value);
   if(!raw)return defaultCourtCampusCode();
   if(CAMPUS[raw])return raw;
   const match=Object.entries(CAMPUS).find(([,name])=>String(name).trim()===raw);

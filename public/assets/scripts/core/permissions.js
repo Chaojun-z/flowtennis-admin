@@ -6,12 +6,10 @@
     return String(value||'').split(/[,，\s]+/).map(item=>item.trim()).filter(Boolean);
   }
   function uniqueClientPermissionList(value){return [...new Set(parseClientPermissionList(value))];}
-  const CLIENT_CAMPUS_ALIASES={shunyi_mapo:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo'};
-  CLIENT_CAMPUS_ALIASES[['ma','bao'].join('')]='shunyi_mapo';
-  CLIENT_CAMPUS_ALIASES[['马','宝'].join('')]='shunyi_mapo';
   function normalizeClientCampusValue(value){
-    const raw=String(value||'').trim();
-    return CLIENT_CAMPUS_ALIASES[raw]||raw;
+    return typeof global.FlowTennisCampus?.normalizeCampusValue==='function'
+      ? global.FlowTennisCampus.normalizeCampusValue(value)
+      : String(value||'').trim();
   }
   function normalizeClientRole(role){return String(role||'').trim()==='editor'?'editor':'admin';}
   function normalizeClientDataScope(value,role,campusIds){

@@ -1,17 +1,14 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
 const { readLeadSourceRows } = require('../lead-source-read-model.js');
+const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
 
 const CUSTOMER_LIFECYCLE_LEAD_FIELDS=[
   'id','leadId','displayName','wechatName','name','phone','source','campus','campusName',
   'owner','coach','coachName','studentId','courtId','membershipAccountId'
 ];
 
-const CAMPUS_ALIASES={shunyi_mapo:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo'};
-CAMPUS_ALIASES[['ma','bao'].join('')]='shunyi_mapo';
-CAMPUS_ALIASES[['马','宝'].join('')]='shunyi_mapo';
 function campusKey(value){
-  const raw=String(value||'').trim();
-  return CAMPUS_ALIASES[raw]||raw;
+  return normalizeCampusValue(value);
 }
 
 async function handleFinancePageData({

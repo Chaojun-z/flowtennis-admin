@@ -1,4 +1,5 @@
 const DEFAULT_ID_FACTORY=()=>`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 const SMALL_CLASS_TYPES=['single','bootcamp','dropin','family'];
 const PACKAGE_MERGE_CORE_FIELDS=[
   'ownerCoach','courseType','price','lessons','validDays',
@@ -12,12 +13,8 @@ function fallbackNormalizeMoney(v){const n=Number(v);return Number.isFinite(n)?M
 function packageRefIds(values,parseArr=fallbackParseArr){
   return parseArr(values).map(x=>String(x||'').trim()).filter(Boolean);
 }
-const PACKAGE_CAMPUS_ALIASES={shunyi_mapo:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo'};
-PACKAGE_CAMPUS_ALIASES[['ma','bao'].join('')]='shunyi_mapo';
-PACKAGE_CAMPUS_ALIASES[['马','宝'].join('')]='shunyi_mapo';
 function normalizePackageCampusValue(value){
-  const raw=String(value||'').trim();
-  return PACKAGE_CAMPUS_ALIASES[raw]||raw;
+  return normalizeCampusValue(value);
 }
 function stableRuleValue(value,parseArr=fallbackParseArr){
   if(Array.isArray(value))return JSON.stringify(value.map(v=>stableRuleValue(v,parseArr)));

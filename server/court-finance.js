@@ -1,4 +1,5 @@
 const defaultBusinessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
+const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
 const DEFAULT_ID_FACTORY=()=>`${Date.now()}-${Math.random().toString(16).slice(2)}`;
 function fallbackParseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
@@ -23,8 +24,11 @@ function createCourtFinanceRules(deps={}){
 
   function normalizeCourtBookingHistoryRows(court,history){
     return (history||[]).map(row=>{
-      if(row?.type==='消费'&&row?.category==='订场'&&!row.campus){
-        return {...row,campus:court?.campus||''};
+      const isCourtBooking=row?.type==='消费'&&row?.category==='订场';
+      const hasCampusField=Object.prototype.hasOwnProperty.call(row||{},'campus');
+      const campus=normalizeCampusValue(row?.campus||(isCourtBooking?court?.campus:''));
+      if(isCourtBooking||hasCampusField){
+        return {...row,campus};
       }
       return row;
     });
@@ -494,9 +498,9 @@ function mergeCourtRecords({targetCourt,sourceCourt,membershipAccounts=[],member
     membershipAccountEvents:(membershipAccountEvents||[]).map(row=>String(row.courtId||'')===String(sourceCourt.id)?rewriteCourtLink(row):row)
   };
 }
-function normalizeCourtRecord(input,refs={}){
-  const inferredDeposit=extractDepositAmountFromText(input.depositAttitude);
-  const normalizedInput={...input};
+  function normalizeCourtRecord(input,refs={}){
+    const inferredDeposit=extractDepositAmountFromText(input.depositAttitude);
+    const normalizedInput={...input,campus:normalizeCampusValue(input.campus)};
   if(inferredDeposit>0&&!normalizeMoney(normalizedInput.totalDeposit))normalizedInput.totalDeposit=inferredDeposit;
   if(inferredDeposit>0&&!hasMoneyValue(input.balance)){
     const spent=normalizeMoney(normalizedInput.spentAmount);
