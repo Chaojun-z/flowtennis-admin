@@ -963,8 +963,13 @@ function studentPrimaryCoachText(stu){
   return coach?coachName(coach.name):'-';
 }
 function studentPackageLessonMeta(stu){
+  const detailRemaining=Number(stu?.detailPackageBalanceRemaining);
+  const detailTotal=Number(stu?.detailPackageBalanceTotal);
   const directRemaining=Number(stu?.packageBalanceRemaining);
   const directTotal=Number(stu?.packageBalanceTotal);
+  if(Number.isFinite(detailRemaining)&&Number.isFinite(detailTotal)&&detailTotal>0){
+    return {hasPackage:true,remaining:detailRemaining,total:detailTotal,text:`${lessonQty(detailRemaining)}/${lessonQty(detailTotal)}`,pct:Math.max(0,Math.min(100,Math.round((detailRemaining/detailTotal)*100)))};
+  }
   if(Number.isFinite(directRemaining)&&Number.isFinite(directTotal)&&directTotal>0){
     return {hasPackage:true,remaining:directRemaining,total:directTotal,text:`${lessonQty(directRemaining)}/${lessonQty(directTotal)}`,pct:Math.max(0,Math.min(100,Math.round((directRemaining/directTotal)*100)))};
   }

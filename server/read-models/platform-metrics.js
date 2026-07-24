@@ -407,10 +407,16 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
     const detailRows = includeTrial ? displayRows : packageListRows;
     const remaining = displayRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
     const total = displayRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
+    const detailRemaining = detailRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
+    const detailTotal = detailRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
     const packageDates = displayRows.map(row => text(row.purchaseDate)).filter(Boolean).sort();
     details.set(studentId, {
       packageListRows: displayRows,
       detailPackageOrderRows: detailRows,
+      detailPackageBalanceRemaining: detailRemaining,
+      detailPackageBalanceTotal: detailTotal,
+      detailPackageBalanceText: detailTotal > 0 ? `${lessonQty(detailRemaining)}/${lessonQty(detailTotal)}` : '-',
+      detailPackageBalancePercent: detailTotal > 0 ? Math.max(0, Math.min(100, Math.round(detailRemaining / detailTotal * 100))) : 0,
       packageListText: displayRows.map(row => `${row.packageName} ${lessonQty(row.remainingLessons)}/${lessonQty(row.totalLessons)}`).join('\n') || '-',
       packageBalanceRemaining: remaining,
       packageBalanceTotal: total,
@@ -670,6 +676,10 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       packageBalanceText: '-',
       packageBalancePercent: 0,
       packagePurchaseDate: '',
+      detailPackageBalanceRemaining: 0,
+      detailPackageBalanceTotal: 0,
+      detailPackageBalanceText: '-',
+      detailPackageBalancePercent: 0,
       detailPackageOrderRows: [],
       detailLessonRecordRows: lessonRows,
       detailRecentLessonDate: lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : '',

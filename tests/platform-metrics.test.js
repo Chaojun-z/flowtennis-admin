@@ -172,6 +172,7 @@ const historicalPackagePlatform = buildPlatformMetrics({
 const historicalPackageStudent = historicalPackagePlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-history-package');
 assert.ok(historicalPackageStudent, 'history package student should enter formal student view');
 assert.strictEqual(historicalPackageStudent.packageBalanceText, '5/10', 'student list balance should keep the active package balance');
+assert.strictEqual(historicalPackageStudent.detailPackageBalanceText, '5/20', 'student detail balance should summarize all historical non-voided package orders');
 assert.deepStrictEqual(
   historicalPackageStudent.detailPackageOrderRows.map(row => [row.packageName, row.remainingLessons, row.totalLessons, row.statusText]),
   [['当前10课时', 5, 10, '正常'], ['历史10课时', 0, 10, '已用完']],
