@@ -40,3 +40,30 @@ assert.strictEqual(summary.bonusAmount, 1286, 'summary should use membership ord
 assert.strictEqual(summary.consumableAmount, 10286, 'summary should combine paid and bonus amount');
 assert.strictEqual(summary.consumedAmount, 324, 'summary should use stored value consumption from member courts');
 assert.strictEqual(summary.pendingAmount, 9962, 'summary should subtract consumed amount from consumable amount');
+
+const cachedBalanceSummary = _test.buildMembershipFinanceSummary({
+  courts: [{
+    id: 'court-snapshot-a',
+    cachedBalance: 2200,
+    history: [
+      { id: 'old-consume-a', type: '消费', amount: 999, payMethod: '储值扣款', category: '订场' }
+    ]
+  }, {
+    id: 'court-snapshot-b',
+    cachedBalance: 1200,
+    history: [
+      { id: 'old-consume-b', type: '消费', amount: 888, payMethod: '储值扣款', category: '订场' }
+    ]
+  }],
+  membershipAccounts: [
+    { id: 'account-snapshot-a', courtId: 'court-snapshot-a', status: 'active' },
+    { id: 'account-snapshot-b', courtId: 'court-snapshot-b', status: 'active' }
+  ],
+  membershipOrders: [
+    { id: 'order-snapshot-a', membershipAccountId: 'account-snapshot-a', courtId: 'court-snapshot-a', status: 'active', finalAmount: 3000, bonusAmount: 300 },
+    { id: 'order-snapshot-b', membershipAccountId: 'account-snapshot-b', courtId: 'court-snapshot-b', status: 'active', finalAmount: 2000, bonusAmount: 100 }
+  ]
+});
+
+assert.strictEqual(cachedBalanceSummary.pendingAmount, 3400, 'membership page summary should trust court cachedBalance when present so it matches the court account read model');
+assert.strictEqual(cachedBalanceSummary.consumedAmount, 2000, 'membership page recognized amount should derive from consumable amount minus cached member balance');

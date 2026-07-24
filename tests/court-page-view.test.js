@@ -127,7 +127,7 @@ assert.doesNotMatch(fnBody('saveCourt'), /confirm\(/, 'court save should not use
 assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court finance save should not use browser confirm');
 assert.doesNotMatch(fnBody('renderCourtAccountListView'), /低余额/, 'court stats should not show low balance text');
 assert.match(html, /function renderCourtStatsCards\(/, 'court stats should render through one shared card helper');
-assert.match(fnBody('renderCourtStatsCards'), /总订场用户[\s\S]*会员用户[\s\S]*客群次数对比[\s\S]*订场总实收[\s\S]*散客消费/, 'court stats should show the requested five dashboard cards');
+assert.match(fnBody('renderCourtStatsCards'), /总订场用户[\s\S]*会员用户[\s\S]*客群次数对比[\s\S]*订场总金额[\s\S]*散客消费/, 'court stats should show the requested five dashboard cards');
 assert.match(html, /function renderStandardSearchHtml[\s\S]*placeholder='搜索姓名、手机号'[\s\S]*id:'courtSearch'/, 'court user search should use the unified placeholder');
 assert.match(html, /court-stat-percent/, 'court stats should render percentages with a smaller muted style');
 assert.match(pagesCss, /#courtStatsRow\.court-dashboard-stats\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'court stats should use the shared adaptive card grid');

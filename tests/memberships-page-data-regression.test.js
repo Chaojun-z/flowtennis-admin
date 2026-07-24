@@ -16,4 +16,22 @@ assert.doesNotMatch(
   'memberships page aggregate endpoint must not trigger reconcile during read'
 );
 
+assert.match(
+  corePageDataSource,
+  /buildCourtAccountListViewFromData/,
+  'memberships page aggregate endpoint should reuse the court account read model for membership finance summary'
+);
+
+assert.match(
+  corePageDataSource,
+  /if\(path==='\/page-data\/memberships'&&method==='GET'\)\{[\s\S]*getCachedScan\(T_COURTS\)/s,
+  'memberships page aggregate endpoint must load the full court accounts set before matching membership accounts'
+);
+
+assert.match(
+  corePageDataSource,
+  /buildMembershipFinanceSummary\(\{[\s\S]*courtAccountItems:membershipCourtAccountView\.items/s,
+  'memberships page finance summary should receive the same member rows as the court account page'
+);
+
 console.log('memberships page data regression tests passed');

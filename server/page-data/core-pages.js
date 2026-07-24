@@ -1,6 +1,7 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
 const { buildTeachingStudentViews, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
+const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
 const {
   buildCoachOpsUnifiedView,
   buildPurchaseUnifiedView,
@@ -122,7 +123,7 @@ function createCorePageDataRoutes(deps={}){
       const [campuses,students,courts,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,membershipPlans,coaches]=await Promise.all([
         listCampusesWithDefaults(),
         cappedScan(T_STUDENTS),
-        cappedScan(T_COURTS),
+        getCachedScan(T_COURTS),
         cappedScan(T_MEMBERSHIP_ACCOUNTS),
         cappedScan(T_MEMBERSHIP_ORDERS),
         cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER),
@@ -150,10 +151,21 @@ function createCorePageDataRoutes(deps={}){
         membershipAccounts:scoped.membershipAccounts,
         membershipOrders:scoped.membershipOrders
       });
+      const membershipCourtAccountView=buildCourtAccountListViewFromData({
+        campuses:scoped.campuses,
+        students:scoped.students,
+        courts:scoped.courts,
+        membershipAccounts:scoped.membershipAccounts,
+        membershipOrders:scoped.membershipOrders,
+        membershipPlans:scoped.membershipPlans,
+        membershipBenefitLedger:scoped.membershipBenefitLedger,
+        membershipAccountEvents:scoped.membershipAccountEvents
+      });
       const membershipFinanceSummary=buildMembershipFinanceSummary({
         courts:scoped.courts,
         membershipAccounts:scoped.membershipAccounts,
-        membershipOrders:scoped.membershipOrders
+        membershipOrders:scoped.membershipOrders,
+        courtAccountItems:membershipCourtAccountView.items
       });
       return sendJson(res,{
         campuses:scoped.campuses,

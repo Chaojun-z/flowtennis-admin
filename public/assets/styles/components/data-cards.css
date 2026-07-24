@@ -3,6 +3,6 @@
 .tms-stat-card{height:100px;min-width:0;background-color:#FBF7F4;border:1px solid #E8DFD5;border-radius:8px;padding:18px 16px 14px 22px;box-sizing:border-box;box-shadow:0 8px 20px rgba(0,0,0,.08);display:flex;flex-direction:column;justify-content:flex-start;position:relative}
 .tms-stat-label{font-size:12px;color:#887565;margin-bottom:10px;white-space:nowrap;font-weight:700;line-height:1.2}
 .tms-stat-value{font-family:var(--ft-number-font);font-size:21px;font-weight:500;color:#3B3026;display:flex;align-items:baseline;white-space:nowrap;line-height:1.1;min-width:0;font-variant-numeric:tabular-nums lining-nums}
-.tms-stat-percent,.court-stat-percent{font-family:var(--ft-number-font);font-size:10px;color:#A19080;margin-left:4px;font-weight:500;font-variant-numeric:tabular-nums lining-nums}
+.tms-stat-percent,.court-stat-percent{font-family:var(--ft-number-font);font-size:10px;color:#A19080;margin-left:4px;font-weight:700;font-variant-numeric:tabular-nums lining-nums}
 .tms-stat-sub{font-size:10px;color:#A19080;position:static;margin-top:8px;white-space:nowrap;font-weight:400;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .tms-stat-divider{color:#A19080!important;font-size:10px!important;font-weight:400!important;margin:0 8px!important}

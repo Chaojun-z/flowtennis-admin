@@ -34,6 +34,10 @@ function isStoredValuePayMethod(value) {
   return method === '储值扣款' || method === '储值卡' || method.includes('储值');
 }
 
+function hasCachedBalance(court = {}) {
+  return court?.cachedBalance !== '' && court?.cachedBalance != null && Number.isFinite(Number(court.cachedBalance));
+}
+
 function orderAmount(order) {
   return money(order?.finalAmount ?? order?.rechargeAmount ?? order?.amount ?? 0);
 }
@@ -76,6 +80,22 @@ function buildMembershipFinanceSummary({ courts = [], membershipAccounts = [], m
     };
   }
   const courtMap = new Map((courts || []).map(court => [String(court?.id || '').trim(), court]));
+  const activeCourtRows = [...activeCourtIds]
+    .map(courtId => courtMap.get(courtId))
+    .filter(court => court && String(court?.status || 'active') !== 'inactive' && !court?.mergedIntoCourtId && !court?.deletedAt);
+  const cachedBalanceRows = activeCourtRows.filter(hasCachedBalance);
+  if (cachedBalanceRows.length && cachedBalanceRows.length === activeCourtRows.length) {
+    const pendingAmount = money(cachedBalanceRows.reduce((sum, court) => sum + money(court?.cachedBalance), 0));
+    return {
+      memberCount: activeAccounts.length,
+      rechargeCount: validOrders.length,
+      paidAmount,
+      bonusAmount,
+      consumableAmount,
+      consumedAmount: money(Math.max(0, consumableAmount - pendingAmount)),
+      pendingAmount
+    };
+  }
   const consumedAmount = money([...activeCourtIds].reduce((sum, courtId) => {
     const court = courtMap.get(courtId);
     if (!court || String(court?.status || 'active') === 'inactive' || court?.mergedIntoCourtId || court?.deletedAt) return sum;

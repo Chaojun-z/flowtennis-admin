@@ -151,7 +151,7 @@
 
   function currentCourtAccountSummary(rows = []) {
     const base = rowsArray(rows);
-    const memberRows = base.filter(row => row.accountType === '会员账户' || text(row.membershipStatusCode || row.membershipStatus));
+    const memberRows = base.filter(row => row.accountType === '会员账户' || (text(row.membershipStatusCode) && !['voided', 'cleared', 'inactive'].includes(text(row.membershipStatusCode))));
     const totalBookingCount = base.reduce((sum, row) => sum + num(row.bookingCount), 0);
     const totalMemberBookingCount = base.reduce((sum, row) => sum + num(row.memberBookingCount), 0);
     const totalBookingAmount = money(base.reduce((sum, row) => sum + num(row.bookingAmount), 0));
@@ -159,7 +159,7 @@
     return {
       totalCount: base.length,
       totalMemberCount: memberRows.length,
-      totalBalance: money(base.reduce((sum, row) => sum + num(row.balance), 0)),
+      totalBalance: money(memberRows.reduce((sum, row) => sum + num(row.balance), 0)),
       totalDeposit: money(base.reduce((sum, row) => sum + num(row.totalDeposit), 0)),
       totalSpent: money(base.reduce((sum, row) => sum + num(row.totalSpent), 0)),
       totalReceived: money(base.reduce((sum, row) => sum + num(row.totalReceived), 0)),
@@ -168,7 +168,7 @@
       totalMemberBookingCount,
       totalMemberBookingAmount,
       totalGuestBookingCount: Math.max(0, totalBookingCount - totalMemberBookingCount),
-      totalGuestBookingAmount: Math.max(0, money(totalBookingAmount - totalMemberBookingAmount)),
+      totalGuestBookingAmount: money(base.reduce((sum, row) => sum + num(row.guestBookingAmount), 0)) || Math.max(0, money(totalBookingAmount - totalMemberBookingAmount)),
       totalBookingAmount
     };
   }
