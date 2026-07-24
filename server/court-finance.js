@@ -449,9 +449,7 @@ function summarizeCourtFinanceRevenue(input){
 function mergeCourtNotes(targetCourt,sourceCourt){
   const targetNotes=String(targetCourt?.notes||'').trim();
   const sourceNotes=String(sourceCourt?.notes||'').trim();
-  const sourceMark=`[合并自 ${sourceCourt?.name||'原用户'} · ${sourceCourt?.id||''}]`;
-  if(!sourceNotes)return [targetNotes,sourceMark].filter(Boolean).join('\n');
-  return [targetNotes,`${sourceMark} ${sourceNotes}`].filter(Boolean).join('\n');
+  return [...new Set([targetNotes,sourceNotes].filter(Boolean))].join('\n');
 }
 function courtHistorySortKey(row){
   const typeOrder={充值:'0',消费:'1',退款:'2',冲正:'3'};

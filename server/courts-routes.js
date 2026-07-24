@@ -9,6 +9,53 @@ function createCourtRoutes(deps={}){
     T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS
   }=deps;
 
+  function routeParseArr(value){
+    if(Array.isArray(value))return value;
+    if(typeof value==='string'&&value){
+      try{return JSON.parse(value);}catch{return[];}
+    }
+    return [];
+  }
+  function routeStudentIds(row){
+    return [...new Set([
+      ...routeParseArr(row?.studentIds),
+      String(row?.studentId||'').trim()
+    ].filter(Boolean))];
+  }
+  function normalizedHistoryText(history){
+    return JSON.stringify(normalizeCourtHistory(history));
+  }
+  function isProfileOnlyHistory(prev,body){
+    if(!prev)return false;
+    const nextHistory=normalizedHistoryText(body?.history);
+    if(normalizedHistoryText(prev?.history)===nextHistory)return true;
+    const prevHistory=normalizeCourtHistory(prev?.history);
+    return !prevHistory.length&&normalizedHistoryText(buildLegacyCourtOpeningHistory(prev))===nextHistory;
+  }
+  function buildCourtProfileUpdate(prev,body,id){
+    const studentIds=routeStudentIds(body);
+    return {
+      ...prev,
+      name:String(body?.name||'').trim(),
+      phone:String(body?.phone||'').trim(),
+      studentId:studentIds[0]||'',
+      studentIds,
+      campus:String(body?.campus||'').trim(),
+      depositAttitude:String(body?.depositAttitude||'').trim(),
+      notes:String(body?.notes||'').trim(),
+      status:String(body?.status||prev?.status||'active').trim()||'active',
+      history:prev?.history||[],
+      id,
+      balance:prev?.balance,
+      totalDeposit:prev?.totalDeposit,
+      spentAmount:prev?.spentAmount,
+      receivedAmount:prev?.receivedAmount,
+      storedValueSpent:prev?.storedValueSpent,
+      directPaidSpent:prev?.directPaidSpent,
+      updatedAt:new Date().toISOString()
+    };
+  }
+
   return async function handleCourtRoutes({path,method,body,user,res}){
     if(path==='/courts'){
       await init();
@@ -130,7 +177,7 @@ function createCourtRoutes(deps={}){
       }
       return sendJson(res,{dryRun,total:rows.length,candidates,migrated,skipped,preview});
     }
-    const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const prev=await getCachedRow(T_COURTS,id).catch(()=>null);const prevHistory=JSON.stringify(normalizeCourtHistory(prev?.history));const nextHistory=JSON.stringify(normalizeCourtHistory(body?.history));const operationTrace=buildOperationTrace({operationType:'court-booking',operator:user.name||body.operator||''});const stampedBody=stampCourtHistoryOperationTrace({previousCourt:prev,nextCourt:body,operationTrace});const schedules=prevHistory===nextHistory?[]:await getCachedScan(T_SCHEDULE).catch(()=>[]);const r={...normalizeCourtRecord(stampedBody,{schedules}),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const court=await getCachedRow(T_COURTS,id).catch(()=>null);if(!court)return sendJson(res,{error:'订场用户不存在'},404);const action=courtDeleteAction(court,await loadCourtDeleteReferenceData());if(action==='delete'){await del(T_COURTS,id);return sendJson(res,{success:true,archived:false});}const now=new Date().toISOString();await put(T_COURTS,id,{...court,status:'inactive',deletedAt:court.deletedAt||now,updatedAt:now});return sendJson(res,{success:true,archived:true});}}
+    const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const prev=await getCachedRow(T_COURTS,id).catch(()=>null);if(isProfileOnlyHistory(prev,body)){const r=buildCourtProfileUpdate(prev,body,id);await put(T_COURTS,id,r);return sendJson(res,r);}const prevHistory=JSON.stringify(normalizeCourtHistory(prev?.history));const nextHistory=JSON.stringify(normalizeCourtHistory(body?.history));const operationTrace=buildOperationTrace({operationType:'court-booking',operator:user.name||body.operator||''});const stampedBody=stampCourtHistoryOperationTrace({previousCourt:prev,nextCourt:body,operationTrace});const schedules=prevHistory===nextHistory?[]:await getCachedScan(T_SCHEDULE).catch(()=>[]);const r={...normalizeCourtRecord(stampedBody,{schedules}),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const court=await getCachedRow(T_COURTS,id).catch(()=>null);if(!court)return sendJson(res,{error:'订场用户不存在'},404);const action=courtDeleteAction(court,await loadCourtDeleteReferenceData());if(action==='delete'){await del(T_COURTS,id);return sendJson(res,{success:true,archived:false});}const now=new Date().toISOString();await put(T_COURTS,id,{...court,status:'inactive',deletedAt:court.deletedAt||now,updatedAt:now});return sendJson(res,{success:true,archived:true});}}
     return false;
   };
 }

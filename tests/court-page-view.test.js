@@ -80,6 +80,7 @@ assert.doesNotMatch(fnBody('courtProfileFormHtml'), /tms-panel-tip[\s\S]*tms-for
 assert.doesNotMatch(fnBody('courtProfileFormHtml'), /来源线索摘要|线索来源/, 'court profile edit form should not include readonly lead summary');
 assert.doesNotMatch(fnBody('courtProfileFormHtml'), /来源线索摘要[\s\S]*finput tms-form-control tms-readonly-text/, 'court lead source should not look like an input');
 assert.match(fnBody('courtProfileFormHtml'), /姓名 \*[\s\S]*手机号[\s\S]*关联学员[\s\S]*f_campus[\s\S]*f_owner[\s\S]*f_attitude[\s\S]*备注/, 'court profile edit form should keep the simplified field order as readonly profile');
+assert.match(fnBody('courtProfileFormHtml'), /id="f_notes"[\s\S]*courtCleanUserNotes\(rv\(r,'notes'\)\)/, 'court profile edit notes should show cleaned user-facing notes');
 assert.match(fnBody('courtProfileFormHtml'), /关联学员[\s\S]*linkedStudentPicker[\s\S]*校区/, 'court profile edit form should place linked students beside campus like readonly profile');
 assert.match(fnBody('courtProfileFormHtml'), /跟进人[\s\S]*f_owner[\s\S]*储值态度[\s\S]*f_attitude/, 'court profile edit form should use standard follower and deposit attitude fields');
 assert.match(fnBody('renderCourtRecentBookingCell'), /daysAgoText\(raw\)/, 'court recent booking cell should show date plus days-ago text');
@@ -134,6 +135,7 @@ assert.match(pagesCss, /#courtStatsRow\.court-dashboard-stats\{[^}]*display:grid
 assert.match(pagesCss, /#page-courts \.court-split-value>span:not\(\.court-stat-slash\)\{font-size:21px/, 'court stat main numbers should use the shared stat number size');
 assert.match(pagesCss, /#page-courts \.court-stat-slash\{[^}]*font-size:10px[^}]*font-weight:400/, 'court stat slash should match caption slash weight and size');
 assert.match(pagesCss, /#page-courts \.court-stat-percent\{[^}]*font-size:10px[^}]*color:#A19080/, 'court stat percentages should use the shared small metric color');
+assert.match(pagesCss, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-field\.full-width\{grid-column:1\/-1;width:492px;max-width:492px\}/, 'court drawer full-width readonly fields should span two columns');
 assert.match(html, /function courtMembershipTierLabel\(/, 'court membership display should use membership tier label');
 assert.match(html, /function courtMembershipTierTagClass\(/, 'court member tier should use tier-specific tag colors');
 assert.match(fnBody('renderCourtAccountListView'), /item\.membershipTierLabel&&item\.membershipTierLabel!=='-'\?`<span class="tms-tag \$\{memberTagClass\}">/, 'current membership should render empty state without a tag');

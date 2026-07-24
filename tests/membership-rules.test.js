@@ -864,7 +864,7 @@ assert.deepStrictEqual(
     targetHistoryCount: 2,
     targetMergedIntoCourtId: '',
     targetMergedAt: '',
-    targetNotes: '原备注\n[合并自 导入用户 · court-source] 导入备注',
+    targetNotes: '原备注\n导入备注',
     accountCourtId: 'court-target',
     accountCourtName: '正式用户',
     accountPhone: '13800138000',
@@ -874,6 +874,7 @@ assert.deepStrictEqual(
   },
   'court merge should merge source finance and linked membership records into the target court'
 );
+assert.doesNotMatch(mergedCourt.targetCourt.notes, /合并自|court-source/, 'court merge should not write system merge traces into user-facing notes');
 
 assert.throws(
   () => rules.mergeCourtRecords({
