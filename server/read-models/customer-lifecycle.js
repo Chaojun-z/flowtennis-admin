@@ -429,6 +429,8 @@ function buildCustomerLifecycleRows({
       studentId: sid,
       displayName: studentDisplayName,
       phone: text(student.phone),
+      status: text(student.status),
+      mergedIntoStudentId: text(student.mergedIntoStudentId),
       source: businessTaxonomy.normalizeLeadSource(student.source),
       campus,
       owner: ownerForCampus(campus, firstValue(student.owner, student.followupOwner)),

@@ -57,6 +57,7 @@ assert.match(source, /function setStudentTagCascaderActiveGroup\(/, 'student tag
 assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuTagFilterHost','stuCoachFilterHost'\]/, 'student toolbar should expose type, source, tag cascader, and coach filters in order');
 assert.match(fnBody('renderStudentToolbarFilters'), /match:\(s,value\)=>value==='__unassigned__'\?studentPrimaryCoachText\(s\)==='-':studentPrimaryCoachText\(s\)===value/, 'student coach filter should use the same visible responsible-coach口径 as the list');
 assert.match(source, /function getStudentDuplicateCandidates\(/, 'student save flow should detect possible duplicates before submit');
+assert.match(fnBody('getStudentDuplicateCandidates'), /status\|\|''\)\.trim\(\)==='merged'\|\|String\(s\?\.mergedIntoStudentId/, 'student duplicate warning should ignore merged student profiles');
 assert.match(source, /发现可能重复的学员：/, 'student save flow should warn operators about possible duplicates');
 assert.match(fnBody('saveStudent'), /await appConfirm\(/, 'student duplicate warning should use the app modal instead of browser confirm');
 assert.doesNotMatch(fnBody('saveStudent'), /confirm\(/, 'student duplicate warning should not use the browser confirm dialog');
@@ -124,6 +125,7 @@ assert.doesNotMatch(officialStudentColumns, /label:'电话'|课时\/课包/, 'of
 assert.match(source, /function studentIsHistoricalRosterRow\(/, 'historical student list should use a dedicated historical roster rule');
 assert.match(source, /function studentIsActiveRosterRow\(/, 'active student list should use a dedicated active roster rule');
 assert.match(fnBody('getStudentBaseList'), /studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student base list should switch between historical and active roster rules');
+assert.match(fnBody('getStudentBaseList'), /status\|\|''\)\.trim\(\)==='merged'\|\|String\(s\?\.mergedIntoStudentId/, 'student base list should hide merged student profiles');
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 15, 50, and 100 row page sizes');
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');

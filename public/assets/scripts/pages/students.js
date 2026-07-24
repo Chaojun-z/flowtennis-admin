@@ -54,7 +54,7 @@ function studentUnifiedViewRows(){
       primaryCoach:row.primaryCoach||student.primaryCoach||'',
       __unifiedTeachingView:true
     };
-  }).filter(row=>String(row.id||'').trim());
+  }).filter(row=>String(row.id||'').trim()&&String(row.status||'').trim()!=='merged'&&!String(row.mergedIntoStudentId||'').trim());
 }
 function studentUnifiedRecordForId(id){
   const sid=String(id||'');
@@ -577,6 +577,7 @@ function getStudentBaseList(){
   const viewRows=studentUnifiedViewRows();
   const base=viewRows.length?viewRows:students;
   return base.filter(s=>{
+    if(String(s?.status||'').trim()==='merged'||String(s?.mergedIntoStudentId||'').trim())return false;
     if(!studentMatchesCampusForList(s))return false;
     return studentListViewMode()==='trial'?studentIsHistoricalRosterRow(s):studentIsActiveRosterRow(s);
   });
@@ -695,6 +696,7 @@ function getStudentDuplicateCandidates(input,editingId=''){
   const phone=String(input?.phone||'').replace(/\s+/g,'').trim();
   return students.filter(s=>{
     if(editingId&&s.id===editingId)return false;
+    if(String(s?.status||'').trim()==='merged'||String(s?.mergedIntoStudentId||'').trim())return false;
     const samePhone=phone&&String(s.phone||'').replace(/\s+/g,'').trim()===phone;
     const sameName=name&&String(s.name||'').trim()===name;
     return samePhone||sameName;

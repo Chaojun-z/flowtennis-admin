@@ -1283,7 +1283,8 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
 }
 
 function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
-  const studentRows = buildTeachingStudentSourceRows(customerLifecycleRows, data);
+  const studentRows = buildTeachingStudentSourceRows(customerLifecycleRows, data)
+    .filter(row => text(row.status) !== 'merged' && !text(row.mergedIntoStudentId));
   const now = data.now || new Date();
   const courseListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: true });
   const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });

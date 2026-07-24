@@ -33,14 +33,18 @@ function createLeadsRoutes(deps={}){
   }
 
   async function readLeadMergeData(){
-    const [leads,followups,students,courts,membershipAccounts]=await Promise.all([
+    const [leads,followups,students,courts,membershipAccounts,purchases,entitlements,schedule,membershipOrders]=await Promise.all([
       scan(T_LEADS).catch(()=>[]),
       T_LEAD_FOLLOWUPS?scan(T_LEAD_FOLLOWUPS).catch(()=>[]):Promise.resolve([]),
       T_STUDENTS?scan(T_STUDENTS).catch(()=>[]):Promise.resolve([]),
       T_COURTS?scan(T_COURTS).catch(()=>[]):Promise.resolve([]),
-      T_MEMBERSHIP_ACCOUNTS?scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([])
+      T_MEMBERSHIP_ACCOUNTS?scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([]),
+      T_PURCHASES?scan(T_PURCHASES).catch(()=>[]):Promise.resolve([]),
+      T_ENTITLEMENTS?scan(T_ENTITLEMENTS).catch(()=>[]):Promise.resolve([]),
+      T_SCHEDULE?scan(T_SCHEDULE).catch(()=>[]):Promise.resolve([]),
+      T_MEMBERSHIP_ORDERS?scan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
     ]);
-    return {leads,followups,students,courts,membershipAccounts};
+    return {leads,followups,students,courts,membershipAccounts,purchases,entitlements,schedule,membershipOrders};
   }
 
   function leadMergeSummary(plan){
@@ -49,6 +53,7 @@ function createLeadsRoutes(deps={}){
       mergeLeadIds:plan.mergeLeadIds,
       primaryLead:plan.primaryUpdate,
       duplicateLeads:plan.duplicateLeadUpdates,
+      studentProfileMerge:plan.studentProfileMerge,
       conflicts:plan.conflicts,
       counts:plan.counts
     };
@@ -454,6 +459,8 @@ function createLeadsRoutes(deps={}){
         for(const row of plan.movedFollowups)await put(T_LEAD_FOLLOWUPS,row.id,row);
         for(const row of plan.duplicateLeadUpdates)await put(T_LEADS,row.id,row);
         for(const row of plan.studentSourceUpdates)await put(T_STUDENTS,row.id,row);
+        if(plan.studentProfileMerge?.targetStudentUpdate)await put(T_STUDENTS,plan.studentProfileMerge.targetStudentUpdate.id,plan.studentProfileMerge.targetStudentUpdate);
+        for(const row of plan.studentProfileMerge?.sourceStudentUpdates||[])await put(T_STUDENTS,row.id,row);
         for(const row of plan.courtSourceUpdates)await put(T_COURTS,row.id,row);
         for(const row of plan.membershipSourceUpdates)await put(T_MEMBERSHIP_ACCOUNTS,row.id,row);
         return sendJson(res,leadMergeSummary(plan));

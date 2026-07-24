@@ -197,7 +197,7 @@ async function main() {
   assert.ok(listRes.body.find(row => row.id === 'lead-main'), 'primary lead remains visible');
   assert.ok(!listRes.body.find(row => row.id === 'lead-dup'), 'merged duplicate lead should be hidden from default list');
 
-  const conflictHarness = createHarness({
+  const studentMergeHarness = createHarness({
     ...seedRows,
     ft_leads: [
       { id: 'lead-a', displayName: '客户A', phone: '13800000001', studentId: 'student-a' },
@@ -208,12 +208,40 @@ async function main() {
       { id: 'student-b', name: '客户B', phone: '13900000002', sourceLeadId: 'lead-b' }
     ]
   });
-  const conflictRes = await request(conflictHarness.handle, '/leads/merge-preview', 'POST', {
+  const studentMergePreviewRes = await request(studentMergeHarness.handle, '/leads/merge-preview', 'POST', {
+    primaryLeadId: 'lead-a',
+    mergeLeadIds: ['lead-b']
+  });
+  assert.strictEqual(studentMergePreviewRes.statusCode, 200);
+  assert.strictEqual(studentMergePreviewRes.body.counts.studentProfilesMerged, 1, 'empty duplicate student profile should be included in lead merge preview');
+  const studentMergeRes = await request(studentMergeHarness.handle, '/leads/merge', 'POST', {
+    primaryLeadId: 'lead-a',
+    mergeLeadIds: ['lead-b']
+  });
+  assert.strictEqual(studentMergeRes.statusCode, 200);
+  assert.strictEqual(studentMergeHarness.rows.ft_leads.find(row => row.id === 'lead-a').studentId, 'student-a', 'primary lead should keep target student');
+  const mergedStudent = studentMergeHarness.rows.ft_students.find(row => row.id === 'student-b');
+  assert.strictEqual(mergedStudent.status, 'merged');
+  assert.strictEqual(mergedStudent.mergedIntoStudentId, 'student-a');
+
+  const blockedStudentMergeHarness = createHarness({
+    ...seedRows,
+    ft_leads: [
+      { id: 'lead-a', displayName: '客户A', phone: '13800000001', studentId: 'student-a' },
+      { id: 'lead-b', displayName: '客户B', phone: '13900000002', studentId: 'student-b' }
+    ],
+    ft_students: [
+      { id: 'student-a', name: '客户A', phone: '13800000001', sourceLeadId: 'lead-a' },
+      { id: 'student-b', name: '客户B', phone: '13900000002', sourceLeadId: 'lead-b' }
+    ],
+    ft_purchases: [{ id: 'purchase-b', studentId: 'student-b', amountPaid: 1000 }]
+  });
+  const conflictRes = await request(blockedStudentMergeHarness.handle, '/leads/merge-preview', 'POST', {
     primaryLeadId: 'lead-a',
     mergeLeadIds: ['lead-b']
   });
   assert.strictEqual(conflictRes.statusCode, 409);
-  assert.match(conflictRes.body.error, /不同学员/);
+  assert.match(conflictRes.body.error, /副学员已有/);
 
   const deleteHarness = createHarness({
     ft_leads: [{ id: 'lead-delete', displayName: '可删除线索', phone: '13800000003', leadStage: '跟进中' }],

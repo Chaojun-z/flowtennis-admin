@@ -260,6 +260,14 @@ const linkedStudentViews = buildTeachingStudentViews(linkedStudentDisplayRows, {
   schedule: [{ id: 'schedule-lian', studentIds: ['student-lian'], studentName: '莲儿（连女士）', courseType: '私教课', status: '已结束', startTime: '2026-06-22 17:30' }]
 });
 assert.strictEqual(linkedStudentViews.activeStudents[0].name, '莲儿（连女士）', 'active student list should display the backend unified real student name');
+const mergedStudentViews = buildTeachingStudentViews([{
+  studentId: 'student-merged',
+  displayName: '已合并学员',
+  status: 'merged',
+  mergedIntoStudentId: 'student-lian',
+  studentStage: 'formal'
+}], {});
+assert.strictEqual(mergedStudentViews.formalStudents.some(row => row.studentId === 'student-merged'), false, 'merged student profiles should be hidden from teaching student views');
 
 const convertedCourseWithoutPackageRows = buildCustomerLifecycleRows({
   leads: [{
