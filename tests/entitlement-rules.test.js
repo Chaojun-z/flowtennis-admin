@@ -1017,6 +1017,25 @@ assert.deepStrictEqual(
   'system should recommend the soonest expiring matching package'
 );
 
+assert.deepStrictEqual(
+  rules.recommendEntitlements([
+    { ...entitlement, id: 'ent-old', packageName: '成人1v1 黄金时间10课时', timeBand: '黄金时段', remainingLessons: 9, validFrom: '2026-05-23', createdAt: '2026-05-23 10:00:00' },
+    { ...entitlement, id: 'ent-new', packageName: '成人1v1 黄金时间10课时', timeBand: '黄金时段', remainingLessons: 4, validFrom: '2026-06-29', createdAt: '2026-06-29 10:00:00' }
+  ], {
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coachId: 'coach-1',
+    coach: '朝珺',
+    campus: 'shunyi_mapo',
+    startTime: '2026-07-04 10:00',
+    endTime: '2026-07-04 11:00',
+    lessonCount: 1,
+    status: '已排课'
+  }).recommended.id,
+  'ent-old',
+  'same course packages without expiry should recommend the oldest usable package before the newer balance'
+);
+
 const primeTimeRecommendation = rules.recommendEntitlements([
   { ...entitlement, id: 'ent-non-prime', packageName: '私教非黄金课包', validUntil: '2026-07-01', remainingLessons: 3 }
 ], {

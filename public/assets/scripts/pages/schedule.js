@@ -730,8 +730,7 @@ function applySchEntitlementOptions(res,preferredId=''){
   const selectableOptions=(res.options||[]).filter(x=>x.selectable);
   schEntitlementOptionCache.clear();
   selectableOptions.forEach(option=>{if(option.entitlementId)schEntitlementOptionCache.set(option.entitlementId,option);});
-  const maxRemain=selectableOptions.reduce((best,item)=>(Number(item.remainingLessons)||0)>(Number(best?.remainingLessons)||0)?item:best,null);
-  const selected=selectableOptions.find(x=>preferredId&&x.entitlementId===preferredId)||maxRemain;
+  const selected=selectableOptions.find(x=>preferredId&&x.entitlementId===preferredId)||selectableOptions[0];
   setScheduleEntitlementDropdown(options,selected?.entitlementId||'',selectableOptions.length?'':'无可用课包');
   setScheduleCoachFromEntitlement(selected);
   syncScheduleExperienceType();

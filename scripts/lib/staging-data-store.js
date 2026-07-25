@@ -93,6 +93,22 @@ function putRow(client, tableName, row) {
   });
 }
 
+function getRow(client, tableName, id) {
+  return new Promise((resolve, reject) => {
+    client.getRow(
+      {
+        tableName,
+        primaryKey: [{ id: String(id) }],
+        maxVersions: 1
+      },
+      (err, data) => {
+        if (err) return reject(err);
+        resolve(decodeRow(data.row));
+      }
+    );
+  });
+}
+
 function deleteRow(client, tableName, id) {
   return new Promise((resolve, reject) => {
     client.deleteRow(
@@ -130,6 +146,7 @@ function createTableIfMissing(client, tableName) {
 module.exports = {
   createClientFromEnv,
   scanTable,
+  getRow,
   putRow,
   deleteRow,
   createTableIfMissing

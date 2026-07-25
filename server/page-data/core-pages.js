@@ -38,6 +38,16 @@ function createCorePageDataRoutes(deps={}){
     T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,
     T_MEMBERSHIP_PLANS,T_USERS,T_FEEDBACKS
   }=tables;
+  async function hydrateScheduleRowsByLedgerIds(scheduleRows=[],ledgerRows=[]){
+    if(!T_SCHEDULE)return scheduleRows||[];
+    const existingIds=new Set((scheduleRows||[]).map(row=>String(row.id||'')).filter(Boolean));
+    const missingIds=[...new Set((ledgerRows||[]).map(row=>String(row.scheduleId||'')).filter(id=>id&&!existingIds.has(id)))];
+    if(!missingIds.length)return scheduleRows||[];
+    const extraRows=(await Promise.all(missingIds.map(id=>getCachedRow(T_SCHEDULE,id).catch(()=>null))))
+      .filter(Boolean)
+      .map(row=>projectScheduleListRow(row));
+    return [...(scheduleRows||[]),...extraRows.filter(row=>row&&row.id&&!existingIds.has(String(row.id)))];
+  }
 
   return async function handleCorePageDataRoutes({path,method,user,res,query}){
     if(path==='/page-data/coaches'&&method==='GET'){
@@ -61,6 +71,7 @@ function createCorePageDataRoutes(deps={}){
         T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
       ]);
       const scoped=filterLoadAllForUser({purchases,packages,students,entitlements,entitlementLedger,leads,schedule,membershipBenefitLedger,feedbacks},user);
+      scoped.schedule=await hydrateScheduleRowsByLedgerIds(scoped.schedule,scoped.entitlementLedger);
       const customerLifecycleRows=buildCustomerLifecycleRows({
         leads:scoped.leads,
         students:scoped.students,
@@ -123,7 +134,7 @@ function createCorePageDataRoutes(deps={}){
       const [campuses,students,courts,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,membershipPlans,coaches]=await Promise.all([
         listCampusesWithDefaults(),
         cappedScan(T_STUDENTS),
-        getCachedScan(T_COURTS),
+        cappedScan(T_COURTS),
         cappedScan(T_MEMBERSHIP_ACCOUNTS),
         cappedScan(T_MEMBERSHIP_ORDERS),
         cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER),

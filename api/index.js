@@ -1206,6 +1206,9 @@ function recommendEntitlements(entitlements,schedule){
     if(a.requiresFieldFee!==b.requiresFieldFee)return a.requiresFieldFee?1:-1;
     const av=a.validUntil||'9999-12-31',bv=b.validUntil||'9999-12-31';
     if(av!==bv)return av.localeCompare(bv);
+    const af=String(a._source.validFrom||a._source.usageStartDate||a._source.purchaseDate||a._source.createdAt||'');
+    const bf=String(b._source.validFrom||b._source.usageStartDate||b._source.purchaseDate||b._source.createdAt||'');
+    if(af!==bf)return af.localeCompare(bf);
     if(a.remainingLessons!==b.remainingLessons)return a.remainingLessons-b.remainingLessons;
     return String(a._source.purchaseDate||a._source.createdAt||'').localeCompare(String(b._source.purchaseDate||b._source.createdAt||''));
   });
