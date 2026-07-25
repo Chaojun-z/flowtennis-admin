@@ -1440,7 +1440,6 @@ function selectLeadMergeDuplicate(id){
 }
 function leadMergeFriendlyError(error){
   const raw=String(error?.message||error||'').replace(/\s*\[[^\]]+\]\s*$/,'').trim();
-  if(/副学员已有/.test(raw))return '副学员已有课包、排课、购买或会员记录，不能直接合并。需要先走客户档案合并预览。';
   if(/不同学员/.test(raw))return '这两条线索已关联不同学员，请选择要保留的学员线索作为主线索后再合并。';
   if(/不同订场用户/.test(raw))return '这两条线索已关联不同订场用户，不能直接合并。请先确认订场用户后再操作。';
   if(/请选择主线索和要合并的线索|请选择两条不同线索/.test(raw))return '请选择要合并进来的重复线索。';
@@ -1452,8 +1451,8 @@ function leadMergeBlockedText(error){
   const raw=String(error?.message||error||'');
   if(/不同学员/.test(raw)){
     return {
-      reason:/副学员已有/.test(raw)?'副学员已有课包、排课、购买或会员记录，不能直接静默合并。':'这两条线索已经分别关联到不同学员。',
-      next:/副学员已有/.test(raw)?'需要先走客户档案合并预览，再处理学员和业务记录。':'如果副学员没有业务记录，确认合并会一并隐藏副学员档案；如果不是同一个人，请不要合并。'
+      reason:'这两条线索已经分别关联到不同学员。',
+      next:'请把要保留的学员线索作为主线索；确认合并会迁移副学员业务记录并隐藏副学员档案。'
     };
   }
   if(/不同订场用户/.test(raw)){
@@ -1481,6 +1480,7 @@ function leadMergePreviewHtml(preview){
     ['跟进迁移',`${preview.counts?.followupsToMove||0} 条`],
     ['学员引用',`${preview.counts?.studentSourceLinks||0} 条`],
     ['学员档案',preview.counts?.studentProfilesMerged?`合并 ${preview.counts.studentProfilesMerged} 个副档案`:'无需合并'],
+    ['业务迁移',preview.counts?.studentReferenceLinks?`${preview.counts.studentReferenceLinks} 条`:'无需迁移'],
     ['订场引用',`${preview.counts?.courtSourceLinks||0} 条`],
     ['会员引用',`${preview.counts?.membershipSourceLinks||0} 条`]
   ].map(([label,value])=>leadMergePreviewRowHtml(label,value)).join('');
@@ -1520,7 +1520,7 @@ async function previewLeadMerge(){
 async function runLeadMerge(){
   const payload=leadMergePayload();
   if(!payload.primaryLeadId||!payload.mergeLeadIds.length||payload.primaryLeadId===payload.mergeLeadIds[0]){toast('请选择两条不同线索','warn');return;}
-  if(!await appConfirm('确认合并？重复线索会隐藏；如副学员无业务记录，也会一并隐藏副学员档案。',{title:'确认合并线索',confirmText:'确认合并'}))return;
+  if(!await appConfirm('确认合并？重复线索会隐藏，副学员档案会并入保留学员，相关课包、排课、购买、会员等记录会迁移到保留学员。',{title:'确认合并线索',confirmText:'确认合并'}))return;
   await runStandardMutation('leadMergeConfirmBtn',async()=>{
     try{
       await apiCall('POST','/leads/merge',payload);

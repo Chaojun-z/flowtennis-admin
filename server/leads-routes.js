@@ -12,7 +12,8 @@ function createLeadsRoutes(deps={}){
     buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,buildLeadMergePlan,
     buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,
     T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,
-    T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS
+    T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS,T_ENTITLEMENT_LEDGER,
+    T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_FINANCIAL_LEDGER,T_PLANS,T_CLASSES,T_FEEDBACKS
   }=deps;
 
   function leadSearchHit(q,...values){
@@ -33,7 +34,10 @@ function createLeadsRoutes(deps={}){
   }
 
   async function readLeadMergeData(){
-    const [leads,followups,students,courts,membershipAccounts,purchases,entitlements,schedule,membershipOrders]=await Promise.all([
+    const [
+      leads,followups,students,courts,membershipAccounts,purchases,entitlements,schedule,membershipOrders,
+      entitlementLedger,membershipBenefitLedger,membershipAccountEvents,financialLedger,plans,classes,feedbacks
+    ]=await Promise.all([
       scan(T_LEADS).catch(()=>[]),
       T_LEAD_FOLLOWUPS?scan(T_LEAD_FOLLOWUPS).catch(()=>[]):Promise.resolve([]),
       T_STUDENTS?scan(T_STUDENTS).catch(()=>[]):Promise.resolve([]),
@@ -42,9 +46,19 @@ function createLeadsRoutes(deps={}){
       T_PURCHASES?scan(T_PURCHASES).catch(()=>[]):Promise.resolve([]),
       T_ENTITLEMENTS?scan(T_ENTITLEMENTS).catch(()=>[]):Promise.resolve([]),
       T_SCHEDULE?scan(T_SCHEDULE).catch(()=>[]):Promise.resolve([]),
-      T_MEMBERSHIP_ORDERS?scan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
+      T_MEMBERSHIP_ORDERS?scan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([]),
+      T_ENTITLEMENT_LEDGER?scan(T_ENTITLEMENT_LEDGER).catch(()=>[]):Promise.resolve([]),
+      T_MEMBERSHIP_BENEFIT_LEDGER?scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]):Promise.resolve([]),
+      T_MEMBERSHIP_ACCOUNT_EVENTS?scan(T_MEMBERSHIP_ACCOUNT_EVENTS).catch(()=>[]):Promise.resolve([]),
+      T_FINANCIAL_LEDGER?scan(T_FINANCIAL_LEDGER).catch(()=>[]):Promise.resolve([]),
+      T_PLANS?scan(T_PLANS).catch(()=>[]):Promise.resolve([]),
+      T_CLASSES?scan(T_CLASSES).catch(()=>[]):Promise.resolve([]),
+      T_FEEDBACKS?scan(T_FEEDBACKS).catch(()=>[]):Promise.resolve([])
     ]);
-    return {leads,followups,students,courts,membershipAccounts,purchases,entitlements,schedule,membershipOrders};
+    return {
+      leads,followups,students,courts,membershipAccounts,purchases,entitlements,schedule,membershipOrders,
+      entitlementLedger,membershipBenefitLedger,membershipAccountEvents,financialLedger,plans,classes,feedbacks
+    };
   }
 
   function leadMergeSummary(plan){
@@ -463,6 +477,19 @@ function createLeadsRoutes(deps={}){
         for(const row of plan.studentProfileMerge?.sourceStudentUpdates||[])await put(T_STUDENTS,row.id,row);
         for(const row of plan.courtSourceUpdates)await put(T_COURTS,row.id,row);
         for(const row of plan.membershipSourceUpdates)await put(T_MEMBERSHIP_ACCOUNTS,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.purchases||[])await put(T_PURCHASES,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.entitlements||[])await put(T_ENTITLEMENTS,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.entitlementLedger||[])await put(T_ENTITLEMENT_LEDGER,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.schedule||[])await put(T_SCHEDULE,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.membershipOrders||[])await put(T_MEMBERSHIP_ORDERS,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.membershipBenefitLedger||[])await put(T_MEMBERSHIP_BENEFIT_LEDGER,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.membershipAccountEvents||[])await put(T_MEMBERSHIP_ACCOUNT_EVENTS,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.membershipAccounts||[])await put(T_MEMBERSHIP_ACCOUNTS,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.courts||[])await put(T_COURTS,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.financialLedger||[])await put(T_FINANCIAL_LEDGER,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.plans||[])await put(T_PLANS,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.classes||[])await put(T_CLASSES,row.id,row);
+        for(const row of plan.studentProfileMerge?.referenceUpdates?.feedbacks||[])await put(T_FEEDBACKS,row.id,row);
         return sendJson(res,leadMergeSummary(plan));
       }catch(error){
         return sendJson(res,{error:error.message||'线索合并失败'},error.statusCode||400);

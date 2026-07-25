@@ -45,6 +45,13 @@ function createLeadMergeRuleHelpers(deps = {}) {
     return raw.split(',').map(text).filter(Boolean);
   }
 
+  function leadMergeReplaceStudentId(value, sourceStudentIds = [], targetStudentId = '') {
+    const sources = new Set((sourceStudentIds || []).map(text).filter(Boolean));
+    const target = text(targetStudentId);
+    const list = leadMergeParseArray(value).map(id => sources.has(id) ? target : id).filter(Boolean);
+    return [...new Set(list)];
+  }
+
   function assertLeadMergeLinkSafe({ leads = [], students = [], courts = [] } = {}) {
     const courtIds = leadMergeUniqueValues([
       ...leads.map(row => leadMergeLinkId(row, 'courtId')),
@@ -53,22 +60,53 @@ function createLeadMergeRuleHelpers(deps = {}) {
     if (courtIds.length > 1) throw leadMergeError('两条线索已关联不同订场用户，不能直接合并', 409);
   }
 
-  function leadMergeStudentBusinessRefs(data = {}, studentId = '') {
-    const id = text(studentId);
-    if (!id) return [];
-    const hasStudentId = row => text(row?.studentId) === id;
-    const hasStudentIdArray = row => leadMergeParseArray(row?.studentIds).includes(id);
-    const hasAnyScheduleStudentId = row => hasStudentId(row)
-      || hasStudentIdArray(row)
-      || leadMergeParseArray(row?.expectedStudentIds).includes(id)
-      || leadMergeParseArray(row?.absentStudentIds).includes(id);
-    const refs = [];
-    (data.purchases || []).filter(hasStudentId).forEach(row => refs.push({ table: 'purchases', id: text(row.id) }));
-    (data.entitlements || []).filter(hasStudentId).forEach(row => refs.push({ table: 'entitlements', id: text(row.id) }));
-    (data.schedule || []).filter(hasAnyScheduleStudentId).forEach(row => refs.push({ table: 'schedule', id: text(row.id) }));
-    (data.membershipOrders || []).filter(row => hasStudentId(row) || hasStudentIdArray(row)).forEach(row => refs.push({ table: 'membershipOrders', id: text(row.id) }));
-    (data.courts || []).filter(row => hasStudentId(row) || hasStudentIdArray(row)).forEach(row => refs.push({ table: 'courts', id: text(row.id) }));
-    return refs.filter(row => row.id);
+  function leadMergeRowHasSourceStudent(row = {}, sourceStudentIds = []) {
+    const sources = new Set((sourceStudentIds || []).map(text).filter(Boolean));
+    if (!sources.size) return false;
+    const values = [
+      text(row.studentId),
+      text(row.sourceStudentId),
+      ...leadMergeParseArray(row.studentIds),
+      ...leadMergeParseArray(row.expectedStudentIds),
+      ...leadMergeParseArray(row.absentStudentIds)
+    ];
+    return values.some(id => sources.has(id));
+  }
+
+  function leadMergeRewriteStudentRow(row = {}, sourceStudentIds = [], targetStudent = {}, now = '', primaryLeadId = '') {
+    const sources = new Set((sourceStudentIds || []).map(text).filter(Boolean));
+    const targetId = text(targetStudent.id || targetStudent.studentId);
+    if (!targetId || !leadMergeRowHasSourceStudent(row, sourceStudentIds)) return null;
+    const next = { ...row, updatedAt: now };
+    if (sources.has(text(next.studentId))) next.studentId = targetId;
+    if (sources.has(text(next.sourceStudentId))) next.sourceStudentId = targetId;
+    if (Object.prototype.hasOwnProperty.call(next, 'sourceLeadId') && text(primaryLeadId)) next.sourceLeadId = text(primaryLeadId);
+    ['studentIds', 'expectedStudentIds', 'absentStudentIds'].forEach(field => {
+      if (leadMergeParseArray(next[field]).length) next[field] = leadMergeReplaceStudentId(next[field], sourceStudentIds, targetId);
+    });
+    if (Object.prototype.hasOwnProperty.call(next, 'studentName') && text(next.studentId) === targetId && text(targetStudent.name)) next.studentName = text(targetStudent.name);
+    return next;
+  }
+
+  function buildStudentReferenceUpdates(data = {}, sourceStudentIds = [], targetStudent = {}, now = '', primaryLeadId = '') {
+    const rewriteRows = rows => (rows || [])
+      .map(row => leadMergeRewriteStudentRow(row, sourceStudentIds, targetStudent, now, primaryLeadId))
+      .filter(Boolean);
+    return {
+      purchases: rewriteRows(data.purchases),
+      entitlements: rewriteRows(data.entitlements),
+      entitlementLedger: rewriteRows(data.entitlementLedger),
+      schedule: rewriteRows(data.schedule),
+      membershipOrders: rewriteRows(data.membershipOrders),
+      membershipBenefitLedger: rewriteRows(data.membershipBenefitLedger),
+      membershipAccountEvents: rewriteRows(data.membershipAccountEvents),
+      membershipAccounts: rewriteRows(data.membershipAccounts),
+      courts: rewriteRows(data.courts),
+      financialLedger: rewriteRows(data.financialLedger),
+      plans: rewriteRows(data.plans),
+      classes: rewriteRows(data.classes),
+      feedbacks: rewriteRows(data.feedbacks)
+    };
   }
 
   function buildStudentProfileMergePlan({ primaryLead, mergeLeads = [], sourceStudents = [], data = {}, now = '', operator = '' } = {}) {
@@ -84,16 +122,11 @@ function createLeadMergeRuleHelpers(deps = {}) {
       || text(sourceStudents.find(row => leadMergeSourceLeadId(row) === primaryLeadId)?.id);
     if (!targetStudentId) throw leadMergeError('两条线索已关联不同学员，请选择有关联学员的线索作为保留线索', 409);
 
-    const sourceStudentIds = studentIds.filter(id => id !== targetStudentId);
-    const blockedRefs = sourceStudentIds.flatMap(id => leadMergeStudentBusinessRefs(data, id));
-    if (blockedRefs.length) {
-      throw leadMergeError('两条线索已关联不同学员，且副学员已有课包、排课、购买或会员记录，不能直接合并', 409);
-    }
-
     const students = data.students || [];
     const targetStudent = students.find(row => text(row.id) === targetStudentId)
       || sourceStudents.find(row => text(row.id) === targetStudentId)
       || null;
+    const sourceStudentIds = studentIds.filter(id => id !== targetStudentId);
     const sourceStudentUpdates = sourceStudentIds.map(id => {
       const row = students.find(item => text(item.id) === id) || sourceStudents.find(item => text(item.id) === id);
       if (!row) return null;
@@ -117,7 +150,9 @@ function createLeadMergeRuleHelpers(deps = {}) {
       });
     });
 
-    return { targetStudentId, targetStudentUpdate, sourceStudentUpdates };
+    const referenceUpdates = buildStudentReferenceUpdates(data, sourceStudentIds, targetStudentUpdate || targetStudent || { id: targetStudentId }, now, primaryLeadId);
+
+    return { targetStudentId, targetStudentUpdate, sourceStudentUpdates, referenceUpdates };
   }
 
   function buildLeadMergeFieldConflicts(leads = []) {
@@ -252,6 +287,9 @@ function createLeadMergeRuleHelpers(deps = {}) {
         duplicateLeads: duplicateLeadUpdates.length,
         studentSourceLinks: studentSourceUpdates.length,
         studentProfilesMerged: studentProfileMerge?.sourceStudentUpdates?.length || 0,
+        studentReferenceLinks: studentProfileMerge?.referenceUpdates
+          ? Object.values(studentProfileMerge.referenceUpdates).reduce((sum, rows) => sum + rows.length, 0)
+          : 0,
         courtSourceLinks: courtSourceUpdates.length,
         membershipSourceLinks: membershipSourceUpdates.length
       }

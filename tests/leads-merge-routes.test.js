@@ -56,7 +56,14 @@ function createHarness(seedRows) {
     T_PURCHASES: 'ft_purchases',
     T_ENTITLEMENTS: 'ft_entitlements',
     T_SCHEDULE: 'ft_schedule',
-    T_MEMBERSHIP_ORDERS: 'ft_membership_orders'
+    T_MEMBERSHIP_ORDERS: 'ft_membership_orders',
+    T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'ft_membership_benefit_ledger',
+    T_MEMBERSHIP_ACCOUNT_EVENTS: 'ft_membership_account_events',
+    T_FINANCIAL_LEDGER: 'ft_financial_ledger',
+    T_PLANS: 'ft_plans',
+    T_CLASSES: 'ft_classes',
+    T_FEEDBACKS: 'ft_feedbacks'
   });
   return { rows, writes, deletes, handle };
 }
@@ -224,7 +231,7 @@ async function main() {
   assert.strictEqual(mergedStudent.status, 'merged');
   assert.strictEqual(mergedStudent.mergedIntoStudentId, 'student-a');
 
-  const blockedStudentMergeHarness = createHarness({
+  const businessStudentMergeHarness = createHarness({
     ...seedRows,
     ft_leads: [
       { id: 'lead-a', displayName: '客户A', phone: '13800000001', studentId: 'student-a' },
@@ -234,14 +241,42 @@ async function main() {
       { id: 'student-a', name: '客户A', phone: '13800000001', sourceLeadId: 'lead-a' },
       { id: 'student-b', name: '客户B', phone: '13900000002', sourceLeadId: 'lead-b' }
     ],
-    ft_purchases: [{ id: 'purchase-b', studentId: 'student-b', amountPaid: 1000 }]
+    ft_purchases: [{ id: 'purchase-b', studentId: 'student-b', amountPaid: 1000 }],
+    ft_entitlements: [{ id: 'ent-b', studentId: 'student-b', purchaseId: 'purchase-b' }],
+    ft_entitlement_ledger: [{ id: 'ledger-b', studentId: 'student-b', entitlementId: 'ent-b' }],
+    ft_schedule: [{ id: 'schedule-b', studentIds: ['student-b'], expectedStudentIds: ['student-b'], absentStudentIds: ['student-b'] }],
+    ft_membership_orders: [{ id: 'order-b', studentIds: ['student-b'] }],
+    ft_membership_benefit_ledger: [{ id: 'benefit-b', studentId: 'student-b' }],
+    ft_membership_account_events: [{ id: 'event-b', studentIds: ['student-b'] }],
+    ft_financial_ledger: [{ id: 'finance-b', studentId: 'student-b', amount: 1000 }],
+    ft_plans: [{ id: 'plan-b', studentId: 'student-b' }],
+    ft_classes: [{ id: 'class-b', studentIds: ['student-b'] }],
+    ft_feedbacks: [{ id: 'feedback-b', studentId: 'student-b' }]
   });
-  const conflictRes = await request(blockedStudentMergeHarness.handle, '/leads/merge-preview', 'POST', {
+  const businessPreviewRes = await request(businessStudentMergeHarness.handle, '/leads/merge-preview', 'POST', {
     primaryLeadId: 'lead-a',
     mergeLeadIds: ['lead-b']
   });
-  assert.strictEqual(conflictRes.statusCode, 409);
-  assert.match(conflictRes.body.error, /副学员已有/);
+  assert.strictEqual(businessPreviewRes.statusCode, 200);
+  assert.strictEqual(businessPreviewRes.body.counts.studentReferenceLinks, 11, 'preview should count business records that will move to the target student');
+  const businessMergeRes = await request(businessStudentMergeHarness.handle, '/leads/merge', 'POST', {
+    primaryLeadId: 'lead-a',
+    mergeLeadIds: ['lead-b']
+  });
+  assert.strictEqual(businessMergeRes.statusCode, 200);
+  assert.strictEqual(businessStudentMergeHarness.rows.ft_purchases[0].studentId, 'student-a');
+  assert.strictEqual(businessStudentMergeHarness.rows.ft_entitlements[0].studentId, 'student-a');
+  assert.strictEqual(businessStudentMergeHarness.rows.ft_entitlement_ledger[0].studentId, 'student-a');
+  assert.deepStrictEqual(businessStudentMergeHarness.rows.ft_schedule[0].studentIds, ['student-a']);
+  assert.deepStrictEqual(businessStudentMergeHarness.rows.ft_schedule[0].expectedStudentIds, ['student-a']);
+  assert.deepStrictEqual(businessStudentMergeHarness.rows.ft_schedule[0].absentStudentIds, ['student-a']);
+  assert.deepStrictEqual(businessStudentMergeHarness.rows.ft_membership_orders[0].studentIds, ['student-a']);
+  assert.strictEqual(businessStudentMergeHarness.rows.ft_membership_benefit_ledger[0].studentId, 'student-a');
+  assert.deepStrictEqual(businessStudentMergeHarness.rows.ft_membership_account_events[0].studentIds, ['student-a']);
+  assert.strictEqual(businessStudentMergeHarness.rows.ft_financial_ledger[0].studentId, 'student-a');
+  assert.strictEqual(businessStudentMergeHarness.rows.ft_plans[0].studentId, 'student-a');
+  assert.deepStrictEqual(businessStudentMergeHarness.rows.ft_classes[0].studentIds, ['student-a']);
+  assert.strictEqual(businessStudentMergeHarness.rows.ft_feedbacks[0].studentId, 'student-a');
 
   const deleteHarness = createHarness({
     ft_leads: [{ id: 'lead-delete', displayName: '可删除线索', phone: '13800000003', leadStage: '跟进中' }],
