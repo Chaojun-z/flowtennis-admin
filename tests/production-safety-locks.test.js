@@ -13,6 +13,7 @@ const matchKeepaliveWorkflow = fs.readFileSync(path.join(root, '.github', 'workf
 const officialAccountRemindersWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'official-account-reminders.yml'), 'utf8');
 const officialAccountDailyDigestsWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'official-account-daily-digests.yml'), 'utf8');
 const feishuCoachDailyDigestsWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'feishu-coach-daily-digests.yml'), 'utf8');
+const feishuScheduleSyncWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'feishu-schedule-sync.yml'), 'utf8');
 
 assert.doesNotMatch(
   apiSource,
@@ -65,7 +66,8 @@ assert.match(matchKeepaliveWorkflow, /Authorization:\s*Bearer \$DIAG_TOKEN/, 'ma
 for (const [name, source] of [
   ['official account reminders', officialAccountRemindersWorkflow],
   ['official account daily digests', officialAccountDailyDigestsWorkflow],
-  ['feishu coach daily digests', feishuCoachDailyDigestsWorkflow]
+  ['feishu coach daily digests', feishuCoachDailyDigestsWorkflow],
+  ['feishu schedule sync', feishuScheduleSyncWorkflow]
 ]) {
   assert.match(
     source,

@@ -26,7 +26,7 @@ const { createMembershipRules } = require('../server/membership');
 const { createCourtRoutes } = require('../server/courts-routes');
 const { createMembershipRoutes } = require('../server/membership-routes');
 const { createPurchaseEntitlementRoutes } = require('../server/purchase-entitlement-routes');
-const { createScheduleRoutes } = require('../server/schedule-routes');
+const { createScheduleRoutes } = require('../server/schedule-routes'), { createFeishuScheduleSyncRoutes } = require('../server/feishu-schedule-sync-routes');
 const { createScheduleSaveValidation } = require('../server/schedule-save-validation');
 const { createAdminUserRoutes } = require('../server/admin-users-routes');
 const { createAdminToolRoutes, TEST_DATA_RESET_TABLES, getTestDataResetTables } = require('../server/admin-tools-routes');
@@ -98,12 +98,12 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'老吴',name:'刘润扬教练'}
 ];
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,...MEMBERSHIP_TABLES];
 const HOT_SCAN_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -128,7 +128,7 @@ const HOT_SCAN_TABLES=new Map([
   [T_LEADS,{ttlMs:60000}],
   [T_LEAD_FOLLOWUPS,{ttlMs:60000}],
   [T_LEAD_IMPORT_BATCHES,{ttlMs:60000}],
-  [T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,{ttlMs:60000}]
+  [T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,{ttlMs:60000}],[T_FEISHU_SCHEDULE_SYNC,{ttlMs:60000}],[T_FEISHU_SCHEDULE_TASKS,{ttlMs:60000}]
 ]);
 const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
   T_COURTS,
@@ -1920,6 +1920,14 @@ const handleScheduleRoutes=createScheduleRoutes({
   diffScheduleEntitlementDeltas,effectiveScheduleStatus,assertCanDeleteSchedule,
   T_SCHEDULE,T_COACHES,T_USERS,T_ENTITLEMENTS,T_COURTS,T_ENTITLEMENT_LEDGER
 });
+async function callInternalJsonRoute(handler,args={}){let statusCode=200,payload;const fakeRes={req:{headers:{}},status(code){statusCode=code;return this;},json(body){payload=body;return this;},send(body){payload=body;return this;},setHeader(){return this;}};const handled=await handler({...args,res:fakeRes});if(!handled&&payload===undefined)throw new Error('内部接口未处理请求');if(statusCode>=400)throw new Error(String(payload?.error||payload||`内部接口失败 ${statusCode}`));return payload;}
+const feishuSyncUser={role:'admin',name:'飞书同步'},scheduleRoutePath=id=>`/schedule/${encodeURIComponent(String(id||'').trim())}`;
+async function cancelFeishuScheduleById(scheduleId,reason){if(!String(scheduleId||'').trim())throw new Error('缺少排课 ID');return callInternalJsonRoute(handleScheduleRoutes,{path:scheduleRoutePath(scheduleId),method:'PUT',body:{status:'已取消',cancelReason:reason||'飞书排课表删除确认'},user:feishuSyncUser});}
+async function createFeishuScheduleRecord(body){return callInternalJsonRoute(handleScheduleRoutes,{path:'/schedule',method:'POST',body,user:feishuSyncUser});}
+async function updateFeishuScheduleRecord(scheduleId,body){if(!String(scheduleId||'').trim())throw new Error('缺少排课 ID');return callInternalJsonRoute(handleScheduleRoutes,{path:scheduleRoutePath(scheduleId),method:'PUT',body,user:feishuSyncUser});}
+async function convertFeishuLeadToStudent(leadId){if(!String(leadId||'').trim())throw new Error('缺少线索 ID');return callInternalJsonRoute(handleLeadsRoutes,{path:`/leads/${encodeURIComponent(String(leadId).trim())}/convert-student`,method:'POST',body:{},user:feishuSyncUser,query:new URLSearchParams()});}
+async function purchaseFeishuTrialPackage(body){return callInternalJsonRoute(handlePurchaseEntitlementRoutes,{path:'/purchases',method:'POST',body,user:feishuSyncUser,query:new URLSearchParams()});}
+const handleFeishuScheduleSyncRoutes=createFeishuScheduleSyncRoutes({init,sendJson:routeSendJson,sendPlainText,getCachedScan,put,uuidv4,cancelScheduleById:cancelFeishuScheduleById,createSchedule:createFeishuScheduleRecord,updateSchedule:updateFeishuScheduleRecord,convertLeadToStudent:convertFeishuLeadToStudent,purchasePackage:purchaseFeishuTrialPackage,recommendEntitlements,T_SCHEDULE,T_STUDENTS,T_COACHES,T_USERS,T_PACKAGES,T_ENTITLEMENTS,T_LEADS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
 const handleAdminUserRoutes=createAdminUserRoutes({
   init,sendJson:routeSendJson,bcrypt,assertPhone,buildStoredPermissionFields,put,get,
   unbindWechatUserWithIndex,buildOfficialAccountUnboundUser,isProductionRuntime,
@@ -6979,6 +6987,7 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendFeishuCoachDailyDigests());
     }
+    if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
     if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;
     if(await handleMatchRoutes({path,method,body,req,res,query}))return;
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);

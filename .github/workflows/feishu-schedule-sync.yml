@@ -1,0 +1,28 @@
+name: Feishu Schedule Sync
+
+on:
+  schedule:
+    - cron: '0 0-16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync-feishu-schedule:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Asia/Shanghai
+      CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
+      TARGET_URL: https://www.flowtennis.cn/api/cron/feishu-schedule-sync
+
+    steps:
+      - name: Trigger feishu schedule sync endpoint
+        shell: bash
+        run: |
+          curl_args=(-fsS -X GET "$TARGET_URL" -H "User-Agent: vercel-cron")
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
+          fi
+          curl "${curl_args[@]}"

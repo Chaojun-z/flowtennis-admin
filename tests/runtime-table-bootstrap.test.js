@@ -22,6 +22,8 @@ assert.deepStrictEqual(
     'ft_student_active_entitlement_index',
     'ft_official_account_query_sessions',
     'ft_coach_proposals',
+    'ft_feishu_schedule_sync',
+    'ft_feishu_schedule_tasks',
     'ft_membership_plans',
     'ft_membership_accounts',
     'ft_membership_orders',
