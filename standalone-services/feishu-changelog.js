@@ -7,6 +7,7 @@ const path = require('path');
 const FEISHU_CHANGELOG_WEBHOOK = String(process.env.FEISHU_CHANGELOG_WEBHOOK || '').trim();
 const GITHUB_TOKEN = String(process.env.GITHUB_TOKEN || '').trim();
 const GITHUB_REPOSITORY = String(process.env.GITHUB_REPOSITORY || '').trim();
+const CHANGELOG_DATA_UPDATE_ISSUE_NUMBER = String(process.env.CHANGELOG_DATA_UPDATE_ISSUE_NUMBER || '').trim();
 const REPO_ROOT = path.join(__dirname, '..');
 const PLATFORM_ORDER = ['adminWeb', 'coachWeb', 'coachPwa', 'coachMp', 'matchMp'];
 const PLATFORM_NAMES = {
@@ -364,6 +365,58 @@ function extractProductBroadcastItems(input, commit) {
     .filter(Boolean);
 }
 
+function parseDataUpdateEntries(input, options = {}) {
+  const target = String(options.date || '').trim();
+  const lines = String(input || '').replace(/\r/g, '').replace(/\\n/g, '\n').split('\n');
+  const result = [];
+  let currentDate = '';
+  let inCodeBlock = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (/^```/.test(line)) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+    if (!line) continue;
+
+    const headingDate = line.match(/^#{1,6}\s*(\d{4}-\d{2}-\d{2})\b/) || line.match(/^(\d{4}-\d{2}-\d{2})$/);
+    if (headingDate) {
+      currentDate = headingDate[1];
+      continue;
+    }
+
+    if (!/^[-*]\s+/.test(line)) continue;
+
+    let itemDate = currentDate;
+    let text = line.replace(/^[-*]\s+/, '').trim();
+    const inlineDate = text.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
+    if (inlineDate) {
+      itemDate = inlineDate[1];
+      text = inlineDate[2].trim();
+    }
+
+    if (target && itemDate && itemDate !== target) continue;
+    if (target && !itemDate) continue;
+
+    const parsed = parseBroadcastLine(text, { files: ['public/index.html'] });
+    if (!parsed) continue;
+
+    for (const platform of parsed.platforms.length ? parsed.platforms : ['adminWeb']) {
+      result.push({ platform, summary: parsed.summary });
+    }
+  }
+
+  const seen = new Set();
+  return result.filter((item) => {
+    const key = `${item.platform}|${item.summary}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function buildBusinessEntries(commits, options = {}) {
   const prDetailsByNumber = options.prDetailsByNumber || {};
   const deduped = new Map();
@@ -455,8 +508,46 @@ function groupEntriesByPlatformAndCategory(entries) {
   return grouped;
 }
 
+function groupDataUpdatesByPlatform(dataUpdates) {
+  const grouped = {
+    adminWeb: [],
+    coachWeb: [],
+    coachPwa: [],
+    coachMp: [],
+    matchMp: []
+  };
+
+  for (const item of dataUpdates || []) {
+    const platform = grouped[item.platform] ? item.platform : 'adminWeb';
+    grouped[platform].push(item.summary);
+  }
+
+  for (const key of Object.keys(grouped)) {
+    grouped[key] = Array.from(new Set(grouped[key].filter(Boolean)));
+  }
+
+  return grouped;
+}
+
+function buildDataUpdateBlock(dataUpdates) {
+  const grouped = groupDataUpdatesByPlatform(dataUpdates);
+  const platformBlocks = PLATFORM_ORDER
+    .map((platform) => {
+      const lines = grouped[platform] || [];
+      if (!lines.length) return '';
+      return `**${PLATFORM_NAMES[platform]}**\n${lines.map((line) => `• ${line}`).join('\n')}`;
+    })
+    .filter(Boolean);
+
+  if (!platformBlocks.length) return null;
+  return {
+    tag: 'markdown',
+    content: `**🛠 数据更新与修复**\n\n${platformBlocks.join('\n\n')}`
+  };
+}
+
 function buildChangelogCard(payload) {
-  const grouped = groupEntriesByPlatformAndCategory(payload.entries);
+  const grouped = groupEntriesByPlatformAndCategory(payload.entries || []);
   const blocks = [];
 
   blocks.push({
@@ -478,6 +569,9 @@ function buildChangelogCard(payload) {
       content: `**${PLATFORM_NAMES[platform]}**\n\n${categoryBlocks.join('\n\n')}`
     });
   }
+
+  const dataUpdateBlock = buildDataUpdateBlock(payload.dataUpdates || []);
+  if (dataUpdateBlock) blocks.push(dataUpdateBlock);
 
   return {
     msg_type: 'interactive',
@@ -565,6 +659,62 @@ function writeSentDates(statePath, dates) {
   );
 }
 
+function readDataUpdateSourceText() {
+  const parts = [];
+  const inlineText = String(process.env.CHANGELOG_DATA_UPDATES || '').trim();
+  if (inlineText) parts.push(inlineText);
+
+  const configuredPath = String(process.env.CHANGELOG_DATA_UPDATE_FILE || 'changelogs/data-updates.md').trim();
+  if (configuredPath) {
+    const filePath = path.resolve(__dirname, configuredPath);
+    try {
+      parts.push(fs.readFileSync(filePath, 'utf8'));
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
+async function fetchDataUpdateIssueText() {
+  if (!GITHUB_TOKEN || !GITHUB_REPOSITORY || !CHANGELOG_DATA_UPDATE_ISSUE_NUMBER) return '';
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    Authorization: `Bearer ${GITHUB_TOKEN}`,
+    'User-Agent': 'flowtennis-changelog-bot'
+  };
+  const issueUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${encodeURIComponent(CHANGELOG_DATA_UPDATE_ISSUE_NUMBER)}`;
+  const commentsUrl = `${issueUrl}/comments?per_page=100`;
+  const [issueResponse, commentsResponse] = await Promise.all([
+    fetch(issueUrl, { headers }),
+    fetch(commentsUrl, { headers })
+  ]);
+
+  const parts = [];
+  if (issueResponse.ok) {
+    const issue = await issueResponse.json();
+    if (issue?.body) parts.push(issue.body);
+  }
+  if (commentsResponse.ok) {
+    const comments = await commentsResponse.json();
+    if (Array.isArray(comments)) {
+      for (const comment of comments) {
+        if (comment?.body) parts.push(comment.body);
+      }
+    }
+  }
+  return parts.join('\n\n');
+}
+
+async function loadDataUpdateEntries(date) {
+  const [localText, issueText] = await Promise.all([
+    Promise.resolve(readDataUpdateSourceText()),
+    fetchDataUpdateIssueText()
+  ]);
+  return parseDataUpdateEntries(`${localText}\n\n${issueText}`, { date });
+}
+
 function resolveReportDates(options = {}) {
   if (String(process.env.CHANGELOG_TARGET_DATE || '').trim() && !options.now) {
     return [targetDate()];
@@ -638,29 +788,37 @@ async function run() {
 
   for (const date of dates) {
     const commits = loadGitCommits(date);
-    if (commits.length === 0) {
-      console.log(`[Info] ${date} 没有检测到提交。`);
-      continue;
-    }
-
-    const prDetailsByNumber = await fetchPullRequestDetails(commits);
+    const prDetailsByNumber = commits.length ? await fetchPullRequestDetails(commits) : {};
     const dayEntries = buildBusinessEntries(commits, { prDetailsByNumber });
-    if (dayEntries.length === 0) {
-      console.log(`[Info] ${date} 没有有效产品更新。`);
+    const dayDataUpdates = await loadDataUpdateEntries(date);
+    if (dayEntries.length === 0 && dayDataUpdates.length === 0) {
+      console.log(`[Info] ${date} 没有有效产品或数据更新。`);
       continue;
     }
 
     datesWithEntries.push(date);
     entries.push(...dayEntries);
+    for (const item of dayDataUpdates) {
+      entries.push({
+        key: `data-${date}-${item.platform}-${item.summary}`,
+        summary: item.summary,
+        platforms: [item.platform],
+        dataUpdate: true
+      });
+    }
   }
 
   if (entries.length === 0) {
     writeSentDates(statePath, [...sentDates, ...dates]);
-    console.log(`[Info] ${dates.join('、')} 没有有效产品更新，静默退出。`);
+    console.log(`[Info] ${dates.join('、')} 没有有效产品或数据更新，静默退出。`);
     return;
   }
 
-  const payload = buildChangelogCard({ date: datesWithEntries.join('、'), entries });
+  const productEntries = entries.filter((entry) => !entry.dataUpdate);
+  const dataUpdates = entries
+    .filter((entry) => entry.dataUpdate)
+    .flatMap((entry) => entry.platforms.map((platform) => ({ platform, summary: entry.summary })));
+  const payload = buildChangelogCard({ date: datesWithEntries.join('、'), entries: productEntries, dataUpdates });
   await sendCard(payload);
   writeSentDates(statePath, [...sentDates, ...dates]);
   console.log(`✅ ${datesWithEntries.join('、')} 产品升级日志发送成功，共 ${entries.length} 项。`);
@@ -682,8 +840,11 @@ module.exports = {
   extractProductBroadcastItems,
   groupEntriesByPlatform,
   groupEntriesByPlatformAndCategory,
+  groupDataUpdatesByPlatform,
   isNoiseCommit,
+  loadDataUpdateEntries,
   parseGitLog,
+  parseDataUpdateEntries,
   readSentDates,
   resolveReportDates,
   targetDate,

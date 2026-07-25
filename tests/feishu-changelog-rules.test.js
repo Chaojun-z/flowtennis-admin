@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 
 const changelog = require(path.join(__dirname, '..', 'standalone-services', 'feishu-changelog.js'));
@@ -110,5 +111,58 @@ assert.match(cardText, /课包与排课/, '卡片应按模块分类展示课包�
 assert.match(cardText, /教练手机端/, '卡片应展示教练手机端播报');
 assert.match(cardText, /约球小程序/, '卡片应展示约球小程序播报');
 assert.doesNotMatch(cardText, /本摘要读取|自动补发/, '卡片不应展示底部说明文案');
+
+const dataUpdateEntries = changelog.parseDataUpdateEntries([
+  '## 2026-05-24',
+  '- 管理后台：已导入 5 月第三方订场数据',
+  '- 管理后台：已修复部分会员余额异常',
+  '',
+  '## 2026-05-25',
+  '- 管理后台：已导入 6 月订场数据'
+].join('\n'), { date: '2026-05-24' });
+
+assert.deepStrictEqual(
+  dataUpdateEntries,
+  [
+    { platform: 'adminWeb', summary: '已导入 5 月第三方订场数据' },
+    { platform: 'adminWeb', summary: '已修复部分会员余额异常' }
+  ],
+  '数据更新记录应按日期提取当天的人话播报'
+);
+
+const cardWithDataUpdates = changelog.buildChangelogCard({
+  date: '2026-05-24',
+  entries: [],
+  dataUpdates: dataUpdateEntries
+});
+const dataUpdateCardText = JSON.stringify(cardWithDataUpdates);
+assert.match(dataUpdateCardText, /数据更新与修复/, '卡片应展示数据更新与修复板块');
+assert.match(dataUpdateCardText, /已导入 5 月第三方订场数据/, '卡片应展示当天数据导入记录');
+assert.doesNotMatch(dataUpdateCardText, /已导入 6 月订场数据/, '卡片不应展示其他日期的数据更新记录');
+assert.deepStrictEqual(
+  changelog.parseDataUpdateEntries([
+    '```',
+    '## 2026-05-24',
+    '- 管理后台：这是填写示例，不应该进入播报',
+    '```'
+  ].join('\n'), { date: '2026-05-24' }),
+  [],
+  '数据更新记录中的代码块示例不应进入播报'
+);
+
+const changelogWorkflow = fs.readFileSync(
+  path.join(__dirname, '..', '.github', 'workflows', 'feishu-changelog.yml'),
+  'utf8'
+);
+assert.match(
+  changelogWorkflow,
+  /issues:\s*read/,
+  '产品升级日志 workflow 应允许读取数据更新记录 issue'
+);
+assert.match(
+  changelogWorkflow,
+  /CHANGELOG_DATA_UPDATE_ISSUE_NUMBER:\s*\$\{\{\s*vars\.CHANGELOG_DATA_UPDATE_ISSUE_NUMBER\s*\}\}/,
+  '产品升级日志脚本应从 GitHub 变量读取数据更新记录入口'
+);
 
 console.log('feishu changelog rules tests passed');
