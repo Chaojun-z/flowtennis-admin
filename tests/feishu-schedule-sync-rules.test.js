@@ -92,6 +92,42 @@ const coachScheduleFallbackPlan = sync.buildDryRunPlan({
 assert.strictEqual(coachScheduleFallbackPlan.summary.create, 1, 'existing schedule coach names should be allowed as a conservative fallback');
 assert.strictEqual(coachScheduleFallbackPlan.actions[0].candidate.resolvedCoach.name, '岳克舟', 'schedule fallback should keep the existing system coach name');
 
+const primaryCoachPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'student-primary-coach-key',
+    coachName: 'Siren',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-1', name: 'W.Jing', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(primaryCoachPlan.summary.create, 1, 'student primaryCoach should resolve sheet coach aliases when no coach directory exists');
+assert.strictEqual(primaryCoachPlan.actions[0].candidate.resolvedCoach.name, 'Siren 教练', 'student primaryCoach should provide the canonical coach name');
+
+const fullCoachNamePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'full-coach-name-key',
+    coachName: '刘润扬教练',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(fullCoachNamePlan.summary.create, 1, 'full coach names ending with 教练 should be accepted when coach directory data is missing');
+assert.strictEqual(fullCoachNamePlan.actions[0].candidate.resolvedCoach.name, '刘润扬教练', 'full coach name fallback should keep the sheet coach name');
+
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
   syncRows: [{ id: 'sync-1', sourceKey: 'old-key', scheduleId: 'sch-old', status: 'active' }],
