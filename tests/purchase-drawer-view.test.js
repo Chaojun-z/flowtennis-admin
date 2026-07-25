@@ -38,7 +38,7 @@ assert.match(openPurchaseDrawer, /modal-schedule-drawer/, 'purchase drawer helpe
 assert.match(openPurchaseDrawer, /modal-purchase-drawer/, 'purchase drawer should expose a scoped class for purchase-only layout fixes');
 
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('学员信息'[\s\S]*renderDetailDrawerFormCard\('购买信息'[\s\S]*renderDetailDrawerFormCard\('备注'/, 'purchase create should group fields into drawer cards');
-assert.match(openPurchaseModal, /ensureDatasetsByName\(\['purchasesPage'\]\)/, 'purchase create should load package data before rendering the package picker');
+assert.match(openPurchaseModal, /ensurePurchaseDataset\('packageCenterPage',\(\)=>openPurchaseModal\(studentId\)\)/, 'purchase create should load lightweight package center data before rendering the package picker');
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('本次赠送',giftForm\)/, 'purchase create should render gift fields in its own drawer card');
 assert.match(openPurchaseModal, /pur_giftLessons[\s\S]*pur_courtBookingGiftCount[\s\S]*pur_ballMachineGiftCount/, 'purchase create should expose package lesson and student benefit gift fields');
 assert.match(source, /function refreshPurchaseGiftPreview\(/, 'purchase create should render a gift preview');
@@ -67,7 +67,7 @@ assert.match(source, /String\(l\.purchaseId\|\|''\)===String\(purchaseId\|\|''\)
 assert.match(corePageDataSource, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*entitlementLedger:scoped\.entitlementLedger/, 'purchase page aggregate endpoint should return lesson ledger rows');
 assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker should have scoped drawer styling');
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_packageId_dropdown[\s\S]*text-overflow:ellipsis/, 'purchase package dropdown should clip long package names instead of overflowing the input');
-assert.match(savePurchase, /ensureDatasetsByName\(\['purchasesPage','lifecycleMetricsPage'\],\{force:true\}\)/, 'purchase save should force-refresh package data and lifecycle student views after creating a purchase');
+assert.match(savePurchase, /ensureDatasetsByName\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage'\],\{force:true\}\)/, 'purchase save should force-refresh package list data and customer lifecycle views after creating a purchase');
 assert.match(savePurchase, /giftLessons:parseFloat\(document\.getElementById\('pur_giftLessons'\)\?\.value\)\|\|0/, 'purchase save should submit gifted lesson count');
 assert.match(savePurchase, /courtBookingGiftCount:parseInt\(document\.getElementById\('pur_courtBookingGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit booking benefit gifts');
 assert.match(savePurchase, /ballMachineGiftCount:parseInt\(document\.getElementById\('pur_ballMachineGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit ball-machine benefit gifts');

@@ -64,8 +64,10 @@ assert.match(apiSource, /T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDE
 
 assert.match(stateSource, /if\(name==='financePage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);/, 'finance aggregate loader should hydrate lifecycle rows');
 assert.match(stateSource, /if\(name==='workbenchPage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);/, 'workbench aggregate loader should hydrate lifecycle rows');
-assert.match(stateSource, /'package-students':\[[^\]]*'financePage'[^\]]*\]/, 'package student pages should load the finance read model for money metrics');
-assert.match(stateSource, /'trial-students':\[[^\]]*'financePage'[^\]]*\]/, 'trial student pages should load the finance read model for money metrics');
+assert.match(stateSource, /'package-students':\['campuses','students','coaches','customerCenterPage'\]/, 'package student pages should load the lightweight customer center read model before first render');
+assert.match(stateSource, /'trial-students':\['campuses','students','coaches','customerCenterPage'\]/, 'trial student pages should load the lightweight customer center read model before first render');
+assert.doesNotMatch(stateSource, /'package-students':\[[^\]]*'financePage'[^\]]*\]/, 'package student pages should not load finance read model on first-screen/background list load');
+assert.doesNotMatch(stateSource, /'trial-students':\[[^\]]*'financePage'[^\]]*\]/, 'trial student pages should not load finance read model on first-screen/background list load');
 
 assert.match(studentsSource, /customerLifecycleByStudentId/, 'student pages should read studentStage/source from the shared lifecycle accessor');
 assert.match(studentsSource, /studentDealPathText[\s\S]*customerLifecycleStudentDealPath\(stu\)/, 'student deal path should prefer the unified lifecycle accessor');

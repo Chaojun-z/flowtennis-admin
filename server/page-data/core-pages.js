@@ -56,6 +56,48 @@ function createCorePageDataRoutes(deps={}){
       const coaches=await cappedScan(T_COACHES);
       return sendJson(res,{coaches:filterLoadAllForUser({coaches},user).coaches});
     }
+    if(path==='/page-data/package-center-list'&&method==='GET'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const [purchases,packages,students,entitlements]=await Promise.all([
+        cappedScan(T_PURCHASES),
+        cappedScan(T_PACKAGES),
+        cappedScan(T_STUDENTS),
+        cappedScan(T_ENTITLEMENTS)
+      ]);
+      const scoped=filterLoadAllForUser({purchases,packages,students,entitlements},user);
+      const customerLifecycleRows=buildCustomerLifecycleRows({
+        students:scoped.students,
+        purchases:scoped.purchases,
+        entitlements:scoped.entitlements
+      });
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,customerLifecycleRows,purchaseUnifiedView:buildPurchaseUnifiedView({...scoped,customerLifecycleRows}),packageUnifiedView:buildPackageUnifiedView(scoped),entitlementUnifiedView:buildEntitlementUnifiedView(scoped)});
+    }
+    if(path==='/page-data/customer-center-list'&&method==='GET'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const [leads,students,purchases,entitlements]=await Promise.all([
+        T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
+        cappedScan(T_STUDENTS),
+        cappedScan(T_PURCHASES),
+        cappedScan(T_ENTITLEMENTS)
+      ]);
+      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements},user);
+      const customerLifecycleRows=buildCustomerLifecycleRows({
+        leads:scoped.leads,
+        students:scoped.students,
+        purchases:scoped.purchases,
+        entitlements:scoped.entitlements
+      });
+      const metricScope=pageDataScopeFromQuery(query);
+      return sendJson(res,{
+        customerLifecycleRows,
+        teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),
+        standardLifecycleMetrics:hasPageDataScope(metricScope)
+          ? buildScopedStandardLifecycleMetrics({...scoped,customerLifecycleRows},metricScope)
+          : buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})
+      });
+    }
     if(path==='/page-data/purchases'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();

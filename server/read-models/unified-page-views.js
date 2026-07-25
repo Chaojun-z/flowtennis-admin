@@ -274,9 +274,11 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
     const student = studentById.get(text(row.studentId)) || {};
     const lifecycle = lifecycleByStudentId.get(text(row.studentId)) || {};
     const purchaseEntitlements = entitlementsByPurchase.get(text(row.id)) || [];
+    const purchaseLedgerRows = ledgerByPurchase.get(text(row.id)) || [];
     const packageLessons = Number(row.packageLessons ?? row.totalLessons ?? pkg.lessons ?? pkg.totalLessons) || 0;
     const remainingLessons = purchaseEntitlements.reduce((sum, ent) => sum + (Number(ent.remainingLessons) || 0), 0);
     const usedLessons = purchaseEntitlements.reduce((sum, ent) => sum + (Number(ent.usedLessons) || 0), 0);
+    const ledgerCount = purchaseLedgerRows.length || Number(row.ledgerCount || row.entitlementLedgerCount || 0) || 0;
     return {
       ...row,
       studentName: text(row.studentName || student.name),
@@ -288,7 +290,9 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
       packageLessons,
       remainingLessons,
       usedLessons,
-      ledgerRows: ledgerByPurchase.get(text(row.id)) || [],
+      ledgerCount,
+      hasLedger: ledgerCount > 0 || usedLessons > 0,
+      ledgerRows: purchaseLedgerRows,
       meaningful: !!(text(row.purchaseDate || row.studentName || row.packageName || row.payMethod || row.ownerCoach) || Number(row.amountPaid) > 0 || packageLessons > 0)
     };
   });

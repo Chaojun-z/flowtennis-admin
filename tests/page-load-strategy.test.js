@@ -29,6 +29,8 @@ assert.doesNotMatch(fnBody('loadPageBackgroundDatasets'), /for\(const name of im
 assert.match(fnBody('loadPageBackgroundDatasets'), /Promise\.allSettled\(immediateNames\.map/, 'background page datasets should load the current batch in parallel');
 assert.match(fnBody('loadPageBackgroundDatasets'), /if\(isStudentListPage\(pg\)&&STUDENT_PAGE_DEFERRED_REQUIREMENTS\.length\)/, 'student list pages should allow a second deferred background batch');
 assert.doesNotMatch(corePageDataSource, /\/page-data\/plans/, 'api should not expose deprecated plans page endpoint');
+assert.match(corePageDataSource, /if\(path==='\/page-data\/package-center-list'&&method==='GET'\)/, 'api should expose a lightweight package center list endpoint');
+assert.match(corePageDataSource, /if\(path==='\/page-data\/customer-center-list'&&method==='GET'\)/, 'api should expose a lightweight customer center list endpoint');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/purchases'&&method==='GET'\)/, 'api should expose an aggregated purchases page endpoint');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/lifecycle-metrics'&&method==='GET'\)/, 'api should expose a lightweight lifecycle metrics endpoint');
 assert.match(corePageDataSource, /\/page-data\/lifecycle-metrics[\s\S]*customerLifecycleRows[\s\S]*teachingStudentViews[\s\S]*standardLifecycleMetrics/, 'lifecycle metrics endpoint should return lifecycle rows, teaching views, and standard metrics');

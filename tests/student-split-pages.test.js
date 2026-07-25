@@ -15,7 +15,7 @@ assert.match(source, /const base=viewRows\.length\?viewRows:students;[\s\S]*stud
 assert.match(source, /function studentIsHistoricalRosterRow\(/, 'historical student page should use the historical roster helper');
 assert.match(source, /function studentIsActiveRosterRow\(/, 'active student page should use the active roster helper');
 assert.match(source, /课包学员[\s\S]*单次付费学员[\s\S]*课包\+单次付费/, 'student payment mode should cover package, single-pay, and mixed students');
-assert.match(source, /'package-students':\['campuses','students','coaches','lifecycleMetricsPage'\][\s\S]*'trial-students':\['campuses','students','coaches','lifecycleMetricsPage'\]/, 'student split pages should load coaches and lifecycle metrics before first render without pulling the full purchases aggregate');
+assert.match(source, /'package-students':\['campuses','students','coaches','customerCenterPage'\][\s\S]*'trial-students':\['campuses','students','coaches','customerCenterPage'\]/, 'student split pages should load coaches and the lightweight customer center read model before first render without pulling the full purchases aggregate');
 assert.doesNotMatch(source, /当前列表课程成交/, 'normal student page must use course-chain funnel cards instead of the old local course-deal card');
 
 console.log('student split pages tests passed');

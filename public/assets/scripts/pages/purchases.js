@@ -253,7 +253,23 @@ function renderPurchases(){
 function purchaseEntitlement(purchaseId){
   return entitlements.find(e=>e.purchaseId===purchaseId)||null;
 }
+function purchaseDatasetReady(name){
+  return loadedDatasets.has(name)&&!(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has(name))&&(!(typeof datasetHasCurrentRequestKey==='function')||datasetHasCurrentRequestKey(name));
+}
+function ensurePurchaseDataset(name,afterLoad,errorText){
+  if(purchaseDatasetReady(name))return false;
+  ensureDatasetsByName([name]).then(afterLoad).catch(e=>{
+    console.error(name+' load failed',e);
+    toast(errorText||'课包数据加载失败，请刷新后重试','error');
+  });
+  return true;
+}
+function ensureFullPurchaseData(afterLoad){
+  return ensurePurchaseDataset('purchasesPage',afterLoad,'购买详情加载失败，请刷新后重试');
+}
 function purchaseHasLedger(purchaseId){
+  const unified=purchaseUnifiedRows().find(row=>String(row.id||'')===String(purchaseId||''));
+  if(unified?.hasLedger||Number(unified?.ledgerCount||0)>0)return true;
   const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
   return entitlementLedger.some(l=>entIds.has(l.entitlementId));
 }
@@ -501,14 +517,7 @@ function openPurchaseEntryModal(){
   openPurchaseModal();
 }
 function openPurchaseModal(studentId=''){
-  const needsPackageData=typeof ensureDatasetsByName==='function'&&typeof loadedDatasets==='object'&&(!loadedDatasets.has('purchasesPage')||(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has('purchasesPage'))||(typeof datasetHasCurrentRequestKey==='function'&&!datasetHasCurrentRequestKey('purchasesPage')));
-  if(needsPackageData){
-    ensureDatasetsByName(['purchasesPage']).then(()=>openPurchaseModal(studentId)).catch(e=>{
-      console.error('purchase package data load failed',e);
-      toast('课包数据加载失败，请刷新后重试','error');
-    });
-    return;
-  }
+  if(ensurePurchaseDataset('packageCenterPage',()=>openPurchaseModal(studentId)))return;
   const stu=studentId?students.find(x=>x.id===studentId):null;
   if(studentId&&!stu){toast('学员不存在','error');return;}
   editId=null;
@@ -551,6 +560,7 @@ function setPurchaseDetailTab(tab){
   if(id)openPurchaseDetailModal(id,['deal','balance','rules'].includes(tab)?tab:'deal');
 }
 function openPurchaseDetailModal(id,tab='deal'){
+  if(ensureFullPurchaseData(()=>openPurchaseDetailModal(id,tab)))return;
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
   const activeTab=['deal','balance','rules'].includes(tab)?tab:'deal';
   const ent=purchaseEntitlement(id);
@@ -606,6 +616,7 @@ function openPurchaseDetailModal(id,tab='deal'){
   );
 }
 function openManualEntitlementAdjustModal(entitlementId, action='manual_consume', options={}){
+  if(ensureFullPurchaseData(()=>openManualEntitlementAdjustModal(entitlementId,action,options)))return;
   const ent=entitlements.find(e=>e.id===entitlementId);
   if(!ent){toast('课包余额不存在','error');return;}
   const purchase=purchases.find(p=>p.id===ent.purchaseId)||{};
@@ -676,6 +687,7 @@ async function saveManualEntitlementAdjust(entitlementId, action){
   });
 }
 function openPurchaseEditModal(id){
+  if(ensureFullPurchaseData(()=>openPurchaseEditModal(id)))return;
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
   const locked=purchaseHasLedger(id);
   const studentOptions=students.map(s=>({value:s.id,label:`${s.name}${s.phone?` · ${s.phone}`:''}`}));
@@ -727,10 +739,17 @@ async function savePurchaseEdit(id){
   },{
     successText:'购买记录已更新',
     closeOnSuccess:true,
-    refresh:[renderStudents,renderPurchases,renderEntitlements]
+    refresh:async()=>{
+      loadedDatasets.delete('purchasesPage');
+      await ensureDatasetsByName(['packageCenterPage','customerCenterPage'],{force:true});
+      renderStudents();
+      renderPurchases();
+      renderEntitlements();
+    }
   });
 }
 function openPurchaseVoidModal(id){
+  if(ensureFullPurchaseData(()=>openPurchaseVoidModal(id)))return;
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
   const ent=purchaseEntitlement(id);
   const meta=purchaseDisplayPackageMeta(p);
@@ -776,7 +795,13 @@ async function voidPurchase(id){
     errorPrefix:'作废失败',
     successText:'购买记录已作废',
     closeOnSuccess:true,
-    refresh:[renderStudents,renderPurchases,renderEntitlements]
+    refresh:async()=>{
+      loadedDatasets.delete('purchasesPage');
+      await ensureDatasetsByName(['packageCenterPage','customerCenterPage'],{force:true});
+      renderStudents();
+      renderPurchases();
+      renderEntitlements();
+    }
   });
 }
 async function savePurchase(){
@@ -797,7 +822,8 @@ async function savePurchase(){
     successText:'购买成功',
     closeOnSuccess:true,
     refresh:async()=>{
-      await ensureDatasetsByName(['purchasesPage','lifecycleMetricsPage'],{force:true});
+      loadedDatasets.delete('purchasesPage');
+      await ensureDatasetsByName(['packageCenterPage','customerCenterPage','lifecycleMetricsPage'],{force:true});
       renderStudents();
       renderPurchases();
       renderEntitlements();

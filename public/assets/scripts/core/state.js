@@ -189,7 +189,7 @@ const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
-const DATASETS_WITH_REQUEST_KEYS=new Set(['operationsPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
+const DATASETS_WITH_REQUEST_KEYS=new Set(['operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
 let operationsPageRequestSeq=0;
 let operationsPageBackgroundRefreshSeq=0;
 let courtAccountListViewRequestKey='';
@@ -229,8 +229,8 @@ function shouldBypassDatasetCache(name){
 }
 const PAGE_DATA_REQUIREMENTS={
   students:['campuses','students','coaches'],
-  'package-students':['campuses','students','coaches','lifecycleMetricsPage'],
-  'trial-students':['campuses','students','coaches','lifecycleMetricsPage'],
+  'package-students':['campuses','students','coaches','customerCenterPage'],
+  'trial-students':['campuses','students','coaches','customerCenterPage'],
   leads:['campuses','leads'],
   operations:['operationsPage'],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals','lifecycleMetricsPage'],
@@ -238,9 +238,9 @@ const PAGE_DATA_REQUIREMENTS={
   coachops:['workbenchPage','operationsPage'],
   finance:[],
   products:['products'],
-  packages:['purchasesPage','products','packageBoardPreferences'],
-  purchases:['purchasesPage'],
-  entitlements:['purchasesPage'],
+  packages:['packageCenterPage','products','packageBoardPreferences'],
+  purchases:['packageCenterPage'],
+  entitlements:['packageCenterPage'],
   coaches:['campuses','coaches'],
   'admin-users':['campuses','coaches'],
   courts:[],
@@ -258,8 +258,8 @@ const PAGE_DATA_REQUIREMENTS={
 };
 const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
-  'package-students':['classes','schedule','courts','financePage'],
-  'trial-students':['classes','schedule','courts','financePage'],
+  'package-students':['classes','schedule','courts'],
+  'trial-students':['classes','schedule','courts'],
   leads:['leadFollowups','lifecycleMetricsPage'],
   packages:[],
   purchases:[],
@@ -273,7 +273,8 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   mystudents:['campuses','students','classes','schedule','feedbacks','entitlements'],
   myclasses:['students','classes']
 };
-const STUDENT_PAGE_DEFERRED_REQUIREMENTS=['entitlements','entitlementLedger','feedbacks','products','purchasesPage','membershipBenefitLedger'];
+const STUDENT_PAGE_DEFERRED_REQUIREMENTS=[];
+const STUDENT_DETAIL_REQUIREMENTS=['entitlements','entitlementLedger','feedbacks','products','purchasesPage','membershipBenefitLedger'];
 const PERFORMANCE_PAGE_DATA_GUARD={
   students:['classes','schedule','courts'],
   workbench:['workbenchPage']
@@ -330,6 +331,9 @@ function appendPageDataQuery(url,params={}){
 function lifecycleMetricsPageDataUrl(){
   return scopedPageDataUrl('/page-data/lifecycle-metrics');
 }
+function customerCenterPageDataUrl(){
+  return scopedPageDataUrl('/page-data/customer-center-list');
+}
 function financePageDataUrl(){
   return scopedPageDataUrl('/page-data/finance');
 }
@@ -384,6 +388,7 @@ function hydrateOperationsPageFromClientCache(){
 }
 function datasetRequestKey(name){
   if(name==='operationsPage')return operationsPageDatasetRequestKey();
+  if(name==='customerCenterPage')return 'customerCenterPage:'+customerCenterPageDataUrl();
   if(name==='lifecycleMetricsPage')return 'lifecycleMetricsPage:'+lifecycleMetricsPageDataUrl();
   if(name==='financePage')return 'financePage:'+financePageDataUrl();
   if(name==='courtAccountListViewPage')return 'courtAccountListViewPage:'+courtAccountListViewPageDataUrl();
@@ -427,7 +432,9 @@ const DATASET_LOADERS={
   campuses:()=>apiCall('GET','/campuses'),
   feedbacks:()=>apiCall('GET','/feedbacks')
   ,coachProposals:()=>apiCall('GET','/coach-proposals')
+  ,packageCenterPage:()=>apiCall('GET','/page-data/package-center-list')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
+  ,customerCenterPage:()=>apiCall('GET',customerCenterPageDataUrl())
   ,lifecycleMetricsPage:()=>apiCall('GET',lifecycleMetricsPageDataUrl())
   ,financePage:()=>apiCall('GET',financePageDataUrl())
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
@@ -572,6 +579,7 @@ function initialBackgroundDatasetsForPage(pg){
   if(isNonProductionRuntime()&&pg==='finance')return ['financePage'];
   const fallback={
     leadFollowups:['leadFollowups'],
+    packageCenterPage:['purchases'],
     purchasesPage:['purchases'],
     courtsPage:['courts'],
     workbenchPage:['schedule']
@@ -682,6 +690,23 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
   }));
   results.forEach(([name,data,requestKey])=>{
     if(DATASETS_WITH_REQUEST_KEYS.has(name)&&requestKey!==datasetRequestKey(name))return;
+    if(name==='packageCenterPage'){
+      setDatasetValue('purchases',data.purchases||[]);
+      setDatasetValue('packages',data.packages||[]);
+      setDatasetValue('students',data.students||[]);
+      setDatasetValue('entitlements',data.entitlements||[]);
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      purchaseUnifiedView=data.purchaseUnifiedView||{rows:[]};
+      packageUnifiedView=data.packageUnifiedView||{rows:[]};
+      entitlementUnifiedView=data.entitlementUnifiedView||{rows:[]};
+      staleCachedDatasets.delete('purchases');
+      staleCachedDatasets.delete('packages');
+      staleCachedDatasets.delete('students');
+      staleCachedDatasets.delete('entitlements');
+      staleCachedDatasets.delete('customerLifecycleRows');
+      markDatasetLoaded('packageCenterPage',requestKey);
+      return;
+    }
     if(name==='purchasesPage'){
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('packages',data.packages||[]);
@@ -703,6 +728,14 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('membershipBenefitLedger');
       staleCachedDatasets.delete('customerLifecycleRows');
       markDatasetLoaded('purchasesPage',requestKey);
+      return;
+    }
+    if(name==='customerCenterPage'){
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+      standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
+      staleCachedDatasets.delete('customerLifecycleRows');
+      markDatasetLoaded('customerCenterPage',requestKey);
       return;
     }
     if(name==='lifecycleMetricsPage'){
@@ -992,7 +1025,7 @@ function renderScopedSummaryPage(pg){
 }
 function refreshScopedTopSummaryForCurrentPage(){
   const pg=currentPage;
-  const names=pg==='leads'||isStudentListPage(pg)?['lifecycleMetricsPage']:(pg==='finance'?['financePage']:[]);
+  const names=pg==='leads'?['lifecycleMetricsPage']:(isStudentListPage(pg)?['customerCenterPage']:(pg==='finance'?['financePage']:[]));
   if(names.length){
     ensureDatasetsByName(names,{force:true}).then(()=>{
       if(currentPage!==pg)return;

@@ -1215,8 +1215,26 @@ function studentLeadJumpActionHtml(s){
     ?`<button type="button" class="schedule-detail-action" onclick="jumpToLeadDetail('${lead.id}')">查看线索</button>`
     :'';
 }
+function studentDetailDatasetsReady(){
+  const names=Array.isArray(STUDENT_DETAIL_REQUIREMENTS)?STUDENT_DETAIL_REQUIREMENTS:[];
+  return names.every(name=>loadedDatasets.has(name)&&!(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has(name))&&(!(typeof datasetHasCurrentRequestKey==='function')||datasetHasCurrentRequestKey(name)));
+}
+function ensureStudentDetailDatasets(id){
+  if(studentDetailDatasetsReady())return false;
+  const s=studentUnifiedRecordForId(id);if(!s)return false;
+  const loadingBody='<div class="schedule-detail-content"><div class="empty"><p>详情加载中...</p></div></div>';
+  openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:loadingBody,actionsHtml:'',studentId:s.id});
+  ensureDatasetsByName(STUDENT_DETAIL_REQUIREMENTS).then(()=>{
+    openStudentDetail(id);
+  }).catch(e=>{
+    console.error('student detail data load failed',e);
+    toast('学员详情加载失败，请刷新后重试','error');
+  });
+  return true;
+}
 function openStudentDetail(id){
   const s=studentUnifiedRecordForId(id);if(!s)return;
+  if(ensureStudentDetailDatasets(id))return;
   if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))editId=null;
   const body=studentDetailActiveTab==='basic'?studentDetailBasicTabHtml(s):studentDetailActiveTab==='orders'?studentDetailOrdersTabHtml(s):studentDetailBenefitsTabHtml(s);
   openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
