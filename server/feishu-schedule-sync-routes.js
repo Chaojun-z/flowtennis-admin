@@ -70,6 +70,7 @@ function normalizeCourseType(value){
   const audience=/青少|儿童|少儿/.test(text)?'青少年':(/成人/.test(text)?'成人':'');
   if(isTrial&&!audience)return {ok:false,reason:'体验课无法判断成人/青少年',raw:text};
   if(isTrial)return {ok:true,raw:text,courseType:'体验课',experienceType:audience,audience,isTrial:true};
+  if(/团课|小班/.test(text))return {ok:true,raw:text,courseType:'小班课',experienceType:'',audience,smallClassType:/训练营/.test(text)?'bootcamp':'single',isTrial:false};
   if(/私教|正式/.test(text))return {ok:true,raw:text,courseType:'私教课',experienceType:'',audience,isTrial:false};
   return {ok:false,reason:`无法识别课程类型：${text}`,raw:text};
 }
@@ -170,15 +171,17 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
     }
   }
   const grouped=[];
+  const previousByKey=new Map();
   for(const cell of cells){
-    const prev=grouped[grouped.length-1];
+    const key=lessonCellKey(cell);
+    const prev=previousByKey.get(key);
     if(prev&&prev.cellKey===lessonCellKey(cell)&&prev.date===cell.date&&prev.endClock===cell.time.start){
       prev.endClock=cell.time.end;
       prev.endRowIndex=cell.rowIndex;
       continue;
     }
-    grouped.push({
-      cellKey:lessonCellKey(cell),
+    const next={
+      cellKey:key,
       sheetId:cell.sheetId,
       sheetTitle:cell.sheetTitle,
       startRowIndex:cell.rowIndex,
@@ -192,7 +195,9 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
       venueText:cell.venueText,
       courtText:cell.courtText,
       studentText:cell.studentText
-    });
+    };
+    grouped.push(next);
+    previousByKey.set(key,next);
   }
   return grouped.map(row=>{
     const course=normalizeCourseType(row.courseText);
@@ -441,9 +446,10 @@ function buildScheduleBody(candidate,extra={}){
     studentName,
     courseType,
     experienceType,
-    courseTypeLevel2:isTrial?`${experienceType}体验课`:`${candidate.course.audience||''}私教课`,
-    standardCourseType:isTrial?`${experienceType}私教【体验】`:`${candidate.course.audience||''}私教【正式】`,
+    courseTypeLevel2:isTrial?`${experienceType}体验课`:(courseType==='小班课'?'单次':`${candidate.course.audience||''}私教课`),
+    standardCourseType:isTrial?`${experienceType}私教【体验】`:(courseType==='小班课'?`${candidate.course.audience||''}小班课/单次`:`${candidate.course.audience||''}私教【正式】`),
     isTrial,
+    smallClassType:courseType==='小班课'?(candidate.course.smallClassType||'single'):'',
     coach:candidate.resolvedCoach?.name||candidate.coachName,
     coachId:candidate.resolvedCoach?.id||'',
     locationType,
