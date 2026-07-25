@@ -288,13 +288,38 @@ function uniqueByName(rows=[],name=''){
   return matched.length===1?matched[0]:null;
 }
 
-function matchCoach(coaches=[],users=[],coachName=''){
+function pushCoachRef(refs,row={}){
+  const id=cleanText(row.id||row.coachId||row.username);
+  const name=cleanText(row.coachName||row.name||row.displayName||row.username||row.coach||id);
+  if(!name&&!id)return;
+  const aliasValues=[
+    row.alias,row.aliases,row.nickname,row.nickName,row.displayName,row.username,row.coachName,row.name,row.coach
+  ].flatMap(value=>Array.isArray(value)?value:[value]).map(cleanText).filter(Boolean);
+  refs.push({id,name,keys:[name,id,...aliasValues].map(normalizeNameKey).filter(Boolean)});
+}
+
+function uniqueCoachRef(refs=[],coachName=''){
   const key=normalizeNameKey(coachName);
-  const refs=[];
-  (coaches||[]).forEach(row=>refs.push({id:row.id,name:row.name||row.id}));
-  (users||[]).filter(row=>String(row.role||'')==='editor').forEach(row=>refs.push({id:row.coachId||row.id||row.username,name:row.coachName||row.name||row.username}));
-  const matched=refs.filter(row=>normalizeNameKey(row.name)===key||normalizeNameKey(row.id)===key);
+  const matchedByName=new Map();
+  for(const ref of refs){
+    if(!(ref.keys||[]).includes(key))continue;
+    const stableKey=`${ref.id||''}|${normalizeNameKey(ref.name)}`;
+    matchedByName.set(stableKey,{id:ref.id||'',name:ref.name||ref.id});
+  }
+  const matched=[...matchedByName.values()];
   return matched.length===1?matched[0]:null;
+}
+
+function matchCoach(coaches=[],users=[],coachName='',schedules=[]){
+  const refs=[];
+  (coaches||[]).forEach(row=>pushCoachRef(refs,row));
+  (users||[])
+    .filter(row=>row.coachName||row.coachId||String(row.role||'').includes('coach')||String(row.role||'')==='editor')
+    .forEach(row=>pushCoachRef(refs,row));
+  const direct=uniqueCoachRef(refs,coachName);
+  if(direct)return direct;
+  (schedules||[]).filter(activeSchedule).forEach(row=>pushCoachRef(refs,{id:row.coachId||'',name:row.coach||row.coachName||''}));
+  return uniqueCoachRef(refs,coachName);
 }
 
 function buildResolvedCandidate(raw,ctx={}){
@@ -303,7 +328,7 @@ function buildResolvedCandidate(raw,ctx={}){
   if(!raw.studentNames.length)errors.push('缺少学员');
   if(!raw.campus)errors.push('缺少场馆');
   if(!raw.venue)errors.push('缺少场地号');
-  const resolvedCoach=matchCoach(ctx.coaches,ctx.users,raw.coachName);
+  const resolvedCoach=matchCoach(ctx.coaches,ctx.users,raw.coachName,ctx.schedules);
   if(!resolvedCoach)errors.push(`无法唯一识别教练：${raw.coachName}`);
   const resolvedStudents=[];
   const unresolvedStudents=[];
@@ -347,7 +372,7 @@ function attachSchedulableStudents(candidate,ctx={}){
 }
 
 function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],coaches=[],users=[],entitlements=[],recommendEntitlements=null}={}){
-  const ctx={students,coaches,users,entitlements,recommendEntitlements};
+  const ctx={students,coaches,users,schedules,entitlements,recommendEntitlements};
   const syncByKey=new Map((syncRows||[]).filter(row=>row.status!=='ignored').map(row=>[String(row.sourceKey||''),row]));
   const activeSourceKeys=new Set();
   const actions=[];

@@ -56,6 +56,42 @@ const plan = sync.buildDryRunPlan({
 assert.strictEqual(plan.summary.bindExisting, 1, 'first baseline should bind exact existing future schedule instead of creating duplicate');
 assert.strictEqual(plan.summary.create, 0, 'exact existing future schedule should not be recreated');
 
+const coachAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'coach-alias-key',
+    coachName: 'Siren',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [],
+  users: [{ id: 'user-siren', role: 'coach', coachId: 'coach-siren', coachName: 'Siren 教练' }],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(coachAliasPlan.summary.create, 1, 'coach role user alias should match Siren to Siren 教练');
+assert.strictEqual(coachAliasPlan.actions[0].candidate.resolvedCoach.name, 'Siren 教练', 'resolved coach should use canonical coach name');
+
+const coachScheduleFallbackPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'coach-schedule-fallback-key',
+    coachName: '岳克舟教练',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{ id: 'sch-yue', coach: '岳克舟', startTime: '2026-07-19 12:00', endTime: '2026-07-19 13:00', status: '已排课' }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(coachScheduleFallbackPlan.summary.create, 1, 'existing schedule coach names should be allowed as a conservative fallback');
+assert.strictEqual(coachScheduleFallbackPlan.actions[0].candidate.resolvedCoach.name, '岳克舟', 'schedule fallback should keep the existing system coach name');
+
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
   syncRows: [{ id: 'sync-1', sourceKey: 'old-key', scheduleId: 'sch-old', status: 'active' }],
