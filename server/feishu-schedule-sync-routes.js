@@ -334,7 +334,7 @@ function inferCoachFromResolvedStudents(rawCoachName='',students=[]){
   const matched=uniqueCoachRef(refs,rawCoachName);
   if(matched)return matched;
   const raw=cleanText(rawCoachName);
-  return raw&&/教练$/.test(raw)?{id:'',name:raw}:null;
+  return raw?{id:'',name:raw}:null;
 }
 
 function buildResolvedCandidate(raw,ctx={}){

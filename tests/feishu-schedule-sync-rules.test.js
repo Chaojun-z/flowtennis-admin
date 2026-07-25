@@ -144,7 +144,7 @@ const fullCoachNamePlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
     sourceKey: 'full-coach-name-key',
-    coachName: '刘润扬教练',
+    coachName: '刘润扬',
     studentNames: ['W.Jing'],
     course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
   }],
@@ -155,8 +155,8 @@ const fullCoachNamePlan = sync.buildDryRunPlan({
   users: [],
   entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
 });
-assert.strictEqual(fullCoachNamePlan.summary.create, 1, 'full coach names ending with 教练 should be accepted when coach directory data is missing');
-assert.strictEqual(fullCoachNamePlan.actions[0].candidate.resolvedCoach.name, '刘润扬教练', 'full coach name fallback should keep the sheet coach name');
+assert.strictEqual(fullCoachNamePlan.summary.create, 1, 'sheet coach names should be accepted when coach directory data is missing');
+assert.strictEqual(fullCoachNamePlan.actions[0].candidate.resolvedCoach.name, '刘润扬', 'coach name fallback should keep the sheet coach name');
 
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
