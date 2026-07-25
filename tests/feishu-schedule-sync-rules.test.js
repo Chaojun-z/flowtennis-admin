@@ -122,6 +122,24 @@ const primaryCoachPlan = sync.buildDryRunPlan({
 assert.strictEqual(primaryCoachPlan.summary.create, 1, 'student primaryCoach should resolve sheet coach aliases when no coach directory exists');
 assert.strictEqual(primaryCoachPlan.actions[0].candidate.resolvedCoach.name, 'Siren 教练', 'student primaryCoach should provide the canonical coach name');
 
+const globalPrimaryCoachAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'global-primary-coach-key',
+    coachName: 'Siren',
+    studentNames: ['不存在的学员'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-known', name: '已知学员', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: []
+});
+assert.ok(!/无法唯一识别教练/.test(globalPrimaryCoachAliasPlan.actions[0].reason), 'global student primaryCoach aliases should prevent noisy coach errors');
+assert.match(globalPrimaryCoachAliasPlan.actions[0].reason, /无法唯一识别正式课学员/, 'unresolved student should remain a real blocking error');
+
 const fullCoachNamePlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],

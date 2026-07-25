@@ -315,12 +315,13 @@ function uniqueCoachRef(refs=[],coachName=''){
   return matched.length===1?matched[0]:null;
 }
 
-function matchCoach(coaches=[],users=[],coachName='',schedules=[]){
+function matchCoach(coaches=[],users=[],coachName='',schedules=[],students=[]){
   const refs=[];
   (coaches||[]).forEach(row=>pushCoachRef(refs,row));
   (users||[])
     .filter(row=>row.coachName||row.coachId||String(row.role||'').includes('coach')||String(row.role||'')==='editor')
     .forEach(row=>pushCoachRef(refs,row));
+  (students||[]).forEach(row=>pushCoachRef(refs,{name:row.primaryCoach||'',id:row.primaryCoachId||''}));
   const direct=uniqueCoachRef(refs,coachName);
   if(direct)return direct;
   (schedules||[]).filter(activeSchedule).forEach(row=>pushCoachRef(refs,{id:row.coachId||'',name:row.coach||row.coachName||''}));
@@ -349,7 +350,7 @@ function buildResolvedCandidate(raw,ctx={}){
     if(student)resolvedStudents.push(student);
     else unresolvedStudents.push(name);
   }
-  const resolvedCoach=matchCoach(ctx.coaches,ctx.users,raw.coachName,ctx.schedules)||inferCoachFromResolvedStudents(raw.coachName,resolvedStudents);
+  const resolvedCoach=matchCoach(ctx.coaches,ctx.users,raw.coachName,ctx.schedules,ctx.students)||inferCoachFromResolvedStudents(raw.coachName,resolvedStudents);
   if(!resolvedCoach)errors.push(`无法唯一识别教练：${raw.coachName}`);
   if(raw.course.isTrial){
     if(raw.durationMinutes!==60)errors.push('体验课时长不是 1 小时，需要运营确认');
