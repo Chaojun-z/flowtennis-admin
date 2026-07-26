@@ -266,6 +266,18 @@ function isFutureCourse(course,nowKey=chinaDateTimeKey()){
   return String(course?.startTime||'').slice(0,16)>=nowKey;
 }
 
+function validDateKey(value){
+  const text=cleanText(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(text)?text:'';
+}
+
+function courseInDateRange(course,startDate='',endDate=''){
+  const date=String(course?.startTime||course?.date||'').slice(0,10);
+  if(startDate&&date<startDate)return false;
+  if(endDate&&date>endDate)return false;
+  return !!date;
+}
+
 function activeSchedule(row){
   return row&&String(row.status||'已排课')!=='已取消';
 }
@@ -757,7 +769,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     return parseFeishuScheduleRows({values,merges:sheet.merges||[],sheetId,sheetTitle:sheet.title||sheetId});
   }
 
-  async function runSync({dryRun=true}={}){
+  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false}={}){
     await init();
     const [feishuCourses,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
       loadFeishuCourses(),
@@ -772,17 +784,21 @@ function createFeishuScheduleSyncRoutes(deps={}){
     ]);
     const now=new Date().toISOString();
     const nowKey=chinaDateTimeKey();
-    const futureCourses=feishuCourses.filter(course=>isFutureCourse(course,nowKey));
-    const futureScheduleIds=new Set((schedules||[]).filter(row=>isFutureCourse(row,nowKey)).map(row=>String(row.id||'')).filter(Boolean));
+    const rangeMode=includeHistorical||!!startDate||!!endDate;
+    const selectedCourses=rangeMode
+      ? feishuCourses.filter(course=>courseInDateRange(course,startDate,endDate))
+      : feishuCourses.filter(course=>isFutureCourse(course,nowKey));
+    const selectedScheduleIds=new Set((schedules||[]).filter(row=>rangeMode?courseInDateRange(row,startDate,endDate):isFutureCourse(row,nowKey)).map(row=>String(row.id||'')).filter(Boolean));
     const sheetId=cleanText(process.env.FEISHU_SCHEDULE_SHEET_ID||process.env.FEISHU_SCHEDULE_DEFAULT_SHEET_ID);
     const scopedSyncRows=(syncRows||[]).filter(row=>{
       const rowSheet=cleanText(row.sheetId||String(row.sourceKey||'').split('|')[0]);
       if(sheetId&&rowSheet&&rowSheet!==sheetId)return false;
-      return !row.scheduleId||futureScheduleIds.has(String(row.scheduleId||''));
+      return !row.scheduleId||selectedScheduleIds.has(String(row.scheduleId||''));
     });
-    const plan=buildDryRunPlan({feishuCourses:futureCourses,syncRows:scopedSyncRows,schedules,students,coaches,users,entitlements,recommendEntitlements});
-    const result={ok:true,dryRun,at:now,courseCount:futureCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:feishuCourses.length-futureCourses.length,plan};
+    const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,recommendEntitlements});
+    const result={ok:true,dryRun,mode:rangeMode?'date_range':'future',startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:rangeMode?0:feishuCourses.length-selectedCourses.length,plan};
     if(!dryRun){
+      if(rangeMode)throw new Error('历史区间暂不允许直接写入，请先 dry-run 并人工确认报告');
       result.applied=await applySyncPlan(plan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
     }
     await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationText(result)).catch(err=>{
@@ -796,7 +812,10 @@ function createFeishuScheduleSyncRoutes(deps={}){
       if(!cronAuthorized(req))return sendJson(res,{error:'无权限'},403);
       const writeEnabled=String(process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED||'').toLowerCase()==='true';
       const dryRun=query.get('dryRun')==='true'||!writeEnabled;
-      return sendJson(res,await runSync({dryRun}));
+      const startDate=validDateKey(query.get('startDate'));
+      const endDate=validDateKey(query.get('endDate'));
+      const includeHistorical=query.get('history')==='true'||!!startDate||!!endDate;
+      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical}));
     }
     if(path==='/feishu-schedule-sync/confirm-delete'&&method==='GET'){
       const taskId=cleanText(query.get('taskId'));
@@ -837,6 +856,8 @@ module.exports={
   parseTimeRange,
   chinaDateTimeKey,
   isFutureCourse,
+  validDateKey,
+  courseInDateRange,
   applyMergesToValues,
   parseFeishuScheduleRows,
   buildDryRunPlan,
