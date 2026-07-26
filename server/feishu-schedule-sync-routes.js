@@ -565,6 +565,11 @@ function summarizePlan(actions=[]){
   return {summary,actions};
 }
 
+function safeHistoryApplyPlan(plan={}){
+  const safeTypes=new Set(['bind_existing','create_schedule','create_trial_schedule']);
+  return summarizePlan((plan.actions||[]).filter(action=>safeTypes.has(action.type)));
+}
+
 async function fetchTenantAccessToken({appId,appSecret}){
   if(!appId||!appSecret)throw new Error('缺少飞书应用 App ID 或 App Secret');
   const res=await axios.post('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',{
@@ -769,7 +774,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     return parseFeishuScheduleRows({values,merges:sheet.merges||[],sheetId,sheetTitle:sheet.title||sheetId});
   }
 
-  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false}={}){
+  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode=''}={}){
     await init();
     const [feishuCourses,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
       loadFeishuCourses(),
@@ -798,8 +803,10 @@ function createFeishuScheduleSyncRoutes(deps={}){
     const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,recommendEntitlements});
     const result={ok:true,dryRun,mode:rangeMode?'date_range':'future',startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:rangeMode?0:feishuCourses.length-selectedCourses.length,plan};
     if(!dryRun){
-      if(rangeMode)throw new Error('历史区间暂不允许直接写入，请先 dry-run 并人工确认报告');
-      result.applied=await applySyncPlan(plan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
+      const applyPlan=rangeMode?safeHistoryApplyPlan(plan):plan;
+      if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
+      result.applied=await applySyncPlan(applyPlan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
+      if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
     }
     await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationText(result)).catch(err=>{
       result.notificationError=err.message;
@@ -815,7 +822,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const startDate=validDateKey(query.get('startDate'));
       const endDate=validDateKey(query.get('endDate'));
       const includeHistorical=query.get('history')==='true'||!!startDate||!!endDate;
-      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical}));
+      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply'))}));
     }
     if(path==='/feishu-schedule-sync/confirm-delete'&&method==='GET'){
       const taskId=cleanText(query.get('taskId'));
@@ -862,6 +869,7 @@ module.exports={
   parseFeishuScheduleRows,
   buildDryRunPlan,
   buildScheduleBody,
+  safeHistoryApplyPlan,
   isHighRiskScheduleChange,
   applySyncPlan,
   createFeishuScheduleSyncRoutes

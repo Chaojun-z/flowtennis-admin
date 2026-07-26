@@ -212,6 +212,27 @@ const deletePlan = sync.buildDryRunPlan({
 
 assert.strictEqual(deletePlan.summary.pendingDelete, 1, 'delete detection should only create a pending delete action for bound sync rows');
 
+const safeHistoryPlan = sync.safeHistoryApplyPlan({
+  actions: [
+    { type: 'bind_existing', sourceKey: 'bind' },
+    { type: 'create_schedule', sourceKey: 'create' },
+    { type: 'create_trial_schedule', sourceKey: 'trial' },
+    { type: 'notify_error', sourceKey: 'error' },
+    { type: 'pending_delete', sourceKey: 'delete' },
+    { type: 'update_schedule', sourceKey: 'update' }
+  ]
+});
+assert.deepStrictEqual(safeHistoryPlan.summary, {
+  total: 3,
+  noop: 0,
+  bindExisting: 1,
+  create: 1,
+  createTrial: 1,
+  update: 0,
+  pendingDelete: 0,
+  notifyError: 0
+}, 'history safe apply should only execute confirmed bind/create actions');
+
 const workflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'feishu-schedule-sync.yml'), 'utf8');
 assert.match(workflow, /cron:\s*'0 0,10 \* \* \*'/, 'workflow should run twice daily at Beijing 08:00 and 18:00');
 assert.match(workflow, /\/api\/cron\/feishu-schedule-sync/, 'workflow should call the feishu schedule sync cron endpoint');
