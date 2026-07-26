@@ -290,6 +290,55 @@ assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*se
   assert.strictEqual(writes[0].row.sheetId, 'GrbZdi', 'sync relation should record source sheet id for future deletion scope');
   assert.strictEqual(writes[0].row.startTime, '2026-07-20 13:30', 'sync relation should record source start time for baseline audits');
 
+  const newTrialCandidate = {
+    ...candidate,
+    sourceKey: 'new-trial-student-key',
+    course: { ok: true, courseType: '体验课', experienceType: '成人', isTrial: true, audience: '成人' },
+    studentNames: ['宜歆'],
+    resolvedStudents: [],
+    scheduleStudents: []
+  };
+  const createdLeadBodies = [];
+  const convertedLeadIds = [];
+  const purchasedBodies = [];
+  const appliedNewTrial = await sync.applySyncPlan({
+    actions: [{ type: 'create_trial_schedule', sourceKey: newTrialCandidate.sourceKey, candidate: newTrialCandidate }]
+  }, {
+    put: async () => {},
+    uuidv4: () => 'uuid-fixed',
+    createLead: async (body) => { createdLeadBodies.push(body); return { lead: { id: 'lead-new', ...body } }; },
+    convertLeadToStudent: async (leadId) => { convertedLeadIds.push(leadId); return { student: { id: 'stu-new', name: '宜歆' } }; },
+    purchasePackage: async (body) => { purchasedBodies.push(body); return { purchase: { id: 'pur-new' }, entitlement: { id: 'ent-new' } }; },
+    createSchedule: async (body) => ({ schedule: { id: 'sch-new-trial', ...body } }),
+    packages: [{ id: 'pkg-trial-adult', name: '1v1 · 全天 · 1 课时', courseType: '体验课', experienceType: '私教体验课', price: 239, status: 'active' }],
+    entitlements: [],
+    leads: [],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.strictEqual(createdLeadBodies[0].displayName, '宜歆', 'new trial student should create a formal lead first');
+  assert.strictEqual(createdLeadBodies[0].rawStatus, '已约体验', 'new trial lead should enter the normal lead lifecycle');
+  assert.deepStrictEqual(convertedLeadIds, ['lead-new'], 'created trial lead should be converted to a student through the existing conversion route');
+  assert.strictEqual(purchasedBodies[0].packageId, 'pkg-trial-adult', 'trial package lookup should accept active 239 adult trial packages without exact name matching');
+  assert.strictEqual(purchasedBodies[0].payMethod, '大众点评券码', 'trial package purchase should use Dianping coupon write-off payment method');
+  assert.strictEqual(appliedNewTrial[0].scheduleId, 'sch-new-trial', 'new trial student flow should still create the schedule');
+
+  const ambiguousTrial = await sync.applySyncPlan({
+    actions: [{ type: 'create_trial_schedule', sourceKey: 'multi-trial-key', candidate: { ...newTrialCandidate, studentNames: ['麦迪', '朋友'] } }]
+  }, {
+    createLead: async () => { throw new Error('should not create ambiguous multi-student lead'); },
+    convertLeadToStudent: async () => ({}),
+    purchasePackage: async () => ({}),
+    createSchedule: async () => ({}),
+    packages: [{ id: 'pkg-trial-adult', courseType: '体验课', price: 239, status: 'active' }],
+    entitlements: [],
+    leads: [],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.strictEqual(ambiguousTrial[0].type, 'error', 'multi-student trial text should remain manual confirmation instead of creating a wrong student');
+  assert.match(ambiguousTrial[0].error, /多人或模糊学员/, 'ambiguous trial error should explain why it was not auto-created');
+
   let updateCalled = false;
   const appliedUpdate = await sync.applySyncPlan({
     actions: [{

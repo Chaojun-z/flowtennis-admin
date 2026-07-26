@@ -643,28 +643,57 @@ function isHighRiskScheduleChange(existing={},body={}){
 }
 
 function findTrialPackage(packages=[],candidate={}){
-  const name=candidate.course.experienceType==='青少年'?'青少年1v1私教体验课':'成人1v1私教体验课';
   const price=candidate.course.experienceType==='青少年'?199:239;
   return (packages||[]).find(row=>{
-    if(row.status&&row.status!=='active')return false;
-    const rowName=cleanText(row.name||row.packageName||row.productName);
-    return rowName===name&&Number(row.price||row.packagePrice||0)===price;
+    const status=cleanText(row.status||'active');
+    if(['inactive','off','voided','deleted','下架','作废'].includes(status))return false;
+    const rowPrice=Number(row.price||row.packagePrice||row.salePrice||row.systemAmount||0);
+    if(rowPrice!==price)return false;
+    const text=[row.courseType,row.type,row.name,row.packageName,row.productName,row.experienceType,row.courseTypeLevel2,row.notes].map(cleanText).join(' ');
+    return /体验/.test(text);
   })||null;
 }
 
-function findUniqueLead(leads=[],name=''){
+function findLeadMatches(leads=[],name=''){
   const key=normalizeNameKey(name);
   const rows=(leads||[]).filter(row=>{
     if(row.studentId)return false;
-    return normalizeNameKey(row.name||row.leadName||row.customerName)===key;
+    const rowKey=normalizeNameKey(row.name||row.leadName||row.customerName||row.displayName||row.wechatName);
+    return rowKey&&key&&(rowKey===key||rowKey.includes(key)||key.includes(rowKey));
   });
-  return rows.length===1?rows[0]:null;
+  return rows;
 }
 
-async function resolveTrialStudent(candidate,{leads=[],convertLeadToStudent}={}){
+function buildTrialLeadBody(candidate={}){
+  const name=cleanText(candidate.studentNames?.[0]||candidate.studentText);
+  return {
+    displayName:name,
+    wechatName:name,
+    phone:'',
+    source:'大众点评',
+    campus:candidate.campus||'',
+    customerType:candidate.course?.audience||candidate.course?.experienceType||'',
+    demandProduct:'私教体验课',
+    consultType:'私教体验课',
+    rawStatus:'已约体验',
+    trialAtRaw:candidate.startTime||'',
+    profileNote:'',
+    createInitialFollowup:true
+  };
+}
+
+async function resolveTrialStudent(candidate,{leads=[],convertLeadToStudent,createLead}={}){
   if(candidate.resolvedStudents.length)return {student:candidate.resolvedStudents[0],lead:null};
-  const lead=findUniqueLead(leads,candidate.studentNames[0]);
-  if(!lead)throw new Error(`体验课找不到历史学员或唯一线索：${candidate.studentNames.join('、')}`);
+  const matches=findLeadMatches(leads,candidate.studentNames[0]);
+  if(matches.length>1)throw new Error(`体验课找到多个相似线索，需要运营确认：${candidate.studentNames.join('、')}`);
+  let lead=matches[0]||null;
+  if(!lead){
+    if(candidate.studentNames.length!==1)throw new Error(`体验课多人或模糊学员需要运营确认：${candidate.studentNames.join('、')}`);
+    if(typeof createLead!=='function')throw new Error(`体验课找不到历史学员或唯一线索：${candidate.studentNames.join('、')}`);
+    const created=await createLead(buildTrialLeadBody(candidate));
+    lead=created?.lead;
+    if(!lead?.id)throw new Error('体验课线索创建失败');
+  }
   const result=await convertLeadToStudent(lead.id);
   const student=result?.student;
   if(!student?.id)throw new Error('线索转学员失败');
@@ -752,6 +781,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     createSchedule=async()=>{throw new Error('缺少创建排课处理器');},
     updateSchedule=async()=>{throw new Error('缺少修改排课处理器');},
     convertLeadToStudent=async()=>{throw new Error('缺少线索转学员处理器');},
+    createLead=async()=>{throw new Error('缺少创建线索处理器');},
     purchasePackage=async()=>{throw new Error('缺少购买课包处理器');},
     recommendEntitlements=null,
     T_SCHEDULE,T_STUDENTS,T_COACHES,T_USERS,T_PACKAGES,T_ENTITLEMENTS,T_LEADS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS
@@ -810,7 +840,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     if(!dryRun){
       const applyPlan=rangeMode?safeHistoryApplyPlan(plan):plan;
       if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
-      result.applied=await applySyncPlan(applyPlan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
+      result.applied=await applySyncPlan(applyPlan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
     }
     await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationText(result)).catch(err=>{
