@@ -31,7 +31,7 @@ function normalizeStudentNameKey(value){
   return cleanText(value)
     .toLowerCase()
     .replace(/[.·\s]/g,'')
-    .replace(/[（(]\s*\d+\s*[）)]/g,'')
+    .replace(/[（(][^）)]*[）)]/g,'')
     .trim();
 }
 
@@ -111,6 +111,7 @@ function normalizeCourseType(value){
   if(isTrial&&!audience)return {ok:false,reason:'体验课无法判断成人/青少年',raw:text};
   if(isTrial)return {ok:true,raw:text,courseType:'体验课',experienceType:audience,audience,isTrial:true};
   if(/团课|小班/.test(text))return {ok:true,raw:text,courseType:'小班课',experienceType:'',audience,smallClassType:/训练营/.test(text)?'bootcamp':'single',isTrial:false};
+  if(/陪打/.test(text))return {ok:true,raw:text,courseType:'陪打',experienceType:'',audience,isTrial:false};
   if(/私教|正式/.test(text))return {ok:true,raw:text,courseType:'私教课',experienceType:'',audience,isTrial:false};
   return {ok:false,reason:`无法识别课程类型：${text}`,raw:text};
 }
@@ -223,6 +224,16 @@ function lessonCellKey(cell){
   ].map(normalizeNameKey).join('|');
 }
 
+function isLikelySectionCell(cell={}){
+  const courseKey=normalizeNameKey(cell.courseText);
+  if(courseKey==='蓝色港湾'){
+    const filled=[cell.courseText,cell.venueText,cell.courtText,cell.studentText].map(cleanText).filter(Boolean);
+    const allSameVenue=filled.length>0&&filled.every(value=>normalizeNameKey(value)==='蓝色港湾');
+    if(allSameVenue)return true;
+  }
+  return false;
+}
+
 function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}={}){
   const merged=applyMergesToValues(values,merges);
   const {headerRow,blocks}=buildCoachBlocks(merged);
@@ -240,6 +251,7 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
       const venueText=cleanText(row[block.venueCol]);
       const courtText=cleanText(row[block.courtCol]);
       if(!courseText&&!studentText)continue;
+      if(isLikelySectionCell({courseText,venueText,courtText,studentText}))continue;
       cells.push({sheetId,sheetTitle,rowIndex:r,colIndex:block.courseCol,date,time,block,courseText,studentText,venueText,courtText});
     }
   }
@@ -373,12 +385,24 @@ function parseMaybeArray(value){
 }
 
 function uniqueByName(rows=[],name=''){
+  const matched=studentMatchesByName(rows,name);
+  return matched.length===1?matched[0]:null;
+}
+
+function studentMatchesByName(rows=[],name=''){
   const key=normalizeStudentNameKey(name);
   const candidates=(rows||[]).map(row=>({row,keys:studentNameKeys(row.name||row.studentName||row.leadName)}));
   const exact=candidates.filter(item=>item.keys.includes(key)).map(item=>item.row);
-  if(exact.length===1)return exact[0];
+  if(exact.length)return exact;
   const fuzzy=candidates.filter(item=>item.keys.some(itemKey=>itemKey&&key&&(itemKey.includes(key)||key.includes(itemKey)))).map(item=>item.row);
-  return fuzzy.length===1?fuzzy[0]:null;
+  return fuzzy;
+}
+
+function uniqueBySelectableEntitlement(rows=[],candidate,ctx={}){
+  const matched=(rows||[]).filter(student=>hasSelectableEntitlement(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
+  if(matched.length===1)return matched[0];
+  const matchedIgnoringIndex=(rows||[]).filter(student=>hasSelectableEntitlementIgnoringLessonIndex(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
+  return matchedIgnoringIndex.length===1?matchedIgnoringIndex[0]:null;
 }
 
 function pushCoachRef(refs,row={}){
@@ -437,7 +461,10 @@ function buildResolvedCandidate(raw,ctx={}){
   for(const name of raw.studentNames){
     const lookupName=resolveFeishuStudentAlias(name);
     if(lookupName!==name)studentAliasMap[name]=lookupName;
-    const student=uniqueByName(ctx.students,lookupName)||uniqueByName(ctx.students,name);
+    const lookupMatches=studentMatchesByName(ctx.students,lookupName);
+    const rawMatches=lookupName===name?[]:studentMatchesByName(ctx.students,name);
+    const candidates=[...lookupMatches,...rawMatches].filter((row,index,all)=>row?.id&&all.findIndex(item=>String(item.id)===String(row.id))===index);
+    const student=(candidates.length===1?candidates[0]:uniqueBySelectableEntitlement(candidates,raw,ctx))||uniqueByName(ctx.students,lookupName)||uniqueByName(ctx.students,name);
     if(student)resolvedStudents.push(student);
     else unresolvedStudents.push(name);
   }
@@ -572,8 +599,8 @@ function buildScheduleBody(candidate,extra={}){
     skillLevelMax:candidate.course.skillLevelMax||'',
     specialTopic:candidate.course.specialTopic||'',
     courseDisplayName:candidate.course.courseDisplayName||candidate.course.raw||courseType,
-    courseTypeLevel2:isTrial?`${experienceType}体验课`:(courseType==='小班课'?'单次':(courseType==='专项课'?'':`${candidate.course.audience||''}私教课`)),
-    standardCourseType:isTrial?`${experienceType}私教【体验】`:(courseType==='小班课'?`${candidate.course.audience||''}小班课/单次`:(courseType==='专项课'?'专项课':`${candidate.course.audience||''}私教【正式】`)),
+    courseTypeLevel2:isTrial?`${experienceType}体验课`:(courseType==='小班课'?'单次':(courseType==='专项课'?'':(courseType==='陪打'?'陪打':`${candidate.course.audience||''}私教课`))),
+    standardCourseType:isTrial?`${experienceType}私教【体验】`:(courseType==='小班课'?`${candidate.course.audience||''}小班课/单次`:(courseType==='专项课'?'专项课':(courseType==='陪打'?'陪打':`${candidate.course.audience||''}私教【正式】`))),
     isTrial,
     smallClassType:courseType==='小班课'?(candidate.course.smallClassType||'single'):'',
     coach:candidate.resolvedCoach?.name||candidate.coachName,

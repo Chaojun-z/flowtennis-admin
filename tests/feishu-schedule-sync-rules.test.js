@@ -63,6 +63,22 @@ assert.strictEqual(specialCourses[0].course.skillLevelMin, '2.5', 'special cours
 assert.strictEqual(specialCourses[0].course.skillLevelMax, '3.0', 'special course should parse max skill level');
 assert.strictEqual(specialCourses[0].course.specialTopic, '发接发与实战练习', 'special course should parse free-form topic');
 
+const noiseValues = [
+  ['时间', null, null, '外部场地', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
+  [46223, '一', '12:00-12:30', '蓝色港湾', '蓝色港湾', '蓝色港湾', '蓝色港湾']
+];
+const noiseCourses = sync.parseFeishuScheduleRows({ values: noiseValues, sheetId: 'GrbZdi', sheetTitle: '7.20-7.26' });
+assert.strictEqual(noiseCourses.length, 0, 'blue harbor section cells should not be imported as 10-hour schedules');
+
+const companionValues = [
+  ['时间', null, null, 'Siren', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
+  [46223, '一', '20:00-21:00', '陪打', '马坡室内', '1号', 'W.Jing']
+];
+const companionCourses = sync.parseFeishuScheduleRows({ values: companionValues, sheetId: 'GrbZdi', sheetTitle: '7.20-7.26' });
+assert.strictEqual(companionCourses[0].course.courseType, '陪打', 'companion course should be recognized by feishu sync');
+
 const plan = sync.buildDryRunPlan({
   feishuCourses: courses.slice(0, 1),
   syncRows: [],
@@ -213,6 +229,64 @@ const confirmedAliasPlan = sync.buildDryRunPlan({
 assert.strictEqual(confirmedAliasPlan.summary.create, 1, 'confirmed student alias should resolve 锤锤 to 是锤锤呀');
 assert.strictEqual(confirmedAliasPlan.actions[0].candidate.resolvedStudents[0].name, '是锤锤呀', 'confirmed alias should keep canonical student record');
 assert.strictEqual(sync.buildScheduleBody(confirmedAliasPlan.actions[0].candidate).standardCourseType, '专项课', 'special schedule body should persist standard special course type');
+
+const annotatedAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'annotated-alias-key',
+    coachName: 'Siren',
+    studentNames: ['锤锤（非黄5.5）'],
+    lessonIndex: null,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-chuichui', name: '是锤锤呀', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-private', studentId: 'stu-chuichui', courseType: '私教课', totalLessons: 10, usedLessons: 5, remainingLessons: 5, status: 'active' }]
+});
+assert.strictEqual(annotatedAliasPlan.summary.create, 1, 'student aliases should ignore non-numeric bracket notes');
+assert.strictEqual(annotatedAliasPlan.actions[0].candidate.resolvedStudents[0].name, '是锤锤呀', 'annotated alias should keep canonical student record');
+
+const entitlementDisambiguationPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'entitlement-disambiguation-key',
+    coachName: 'Siren',
+    studentNames: ['william'],
+    lessonIndex: null,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-william-1', name: 'william', primaryCoach: 'Siren 教练' },
+    { id: 'stu-william-2', name: 'William（时节）', primaryCoach: 'Siren 教练' }
+  ],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-william-2', studentId: 'stu-william-2', courseType: '私教课', experienceType: '青少年', totalLessons: 10, usedLessons: 4, remainingLessons: 6, status: 'active' }]
+});
+assert.strictEqual(entitlementDisambiguationPlan.summary.create, 1, 'multiple similar students should resolve when only one has matching entitlement');
+assert.strictEqual(entitlementDisambiguationPlan.actions[0].candidate.resolvedStudents[0].name, 'William（时节）', 'entitlement match should keep the canonical student name');
+
+const companionPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...companionCourses[0],
+    sourceKey: 'companion-key',
+    coachName: 'Siren'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-1', name: 'W.Jing', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: []
+});
+assert.strictEqual(companionPlan.summary.notifyError, 1, 'companion courses without a selectable package should still require manual handling');
+assert.doesNotMatch(companionPlan.actions[0].reason, /无法识别课程类型/, 'companion course should not be reported as an unknown course type');
+assert.strictEqual(sync.buildScheduleBody({ ...companionCourses[0], resolvedCoach: { name: 'Siren 教练' }, scheduleStudents: [{ id: 'stu-1', name: 'W.Jing' }] }).standardCourseType, '陪打', 'companion schedule body should persist companion type');
 
 const lessonIndexMismatchPlan = sync.buildDryRunPlan({
   feishuCourses: [{
