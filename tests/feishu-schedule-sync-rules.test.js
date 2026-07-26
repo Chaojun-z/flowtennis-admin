@@ -50,6 +50,19 @@ assert.strictEqual(interleavedCourses[0].endTime, '2026-07-20 11:00', 'interleav
 assert.strictEqual(interleavedCourses[1].course.courseType, '小班课', '青少年团课 should map to the system small class course type');
 assert.strictEqual(interleavedCourses[1].lessonCount, 1, 'interleaved group lesson should also merge to one hour');
 
+const specialValues = [
+  ['时间', null, null, 'Siren', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
+  [46223, '一', '18:00-18:30', '【2.5～3.0】发接发与实战练习', '马坡室内', '1号', '锤锤（2）'],
+  [null, null, '18:30-19:00', '【2.5～3.0】发接发与实战练习', '马坡室内', '1号', '锤锤（2）']
+];
+const specialCourses = sync.parseFeishuScheduleRows({ values: specialValues, sheetId: 'GrbZdi', sheetTitle: '7.20-7.26' });
+assert.strictEqual(specialCourses.length, 1, 'merged special course should still be one course');
+assert.strictEqual(specialCourses[0].course.courseType, '专项课', 'bracketed special course should map to special course type');
+assert.strictEqual(specialCourses[0].course.skillLevelMin, '2.5', 'special course should parse min skill level');
+assert.strictEqual(specialCourses[0].course.skillLevelMax, '3.0', 'special course should parse max skill level');
+assert.strictEqual(specialCourses[0].course.specialTopic, '发接发与实战练习', 'special course should parse free-form topic');
+
 const plan = sync.buildDryRunPlan({
   feishuCourses: courses.slice(0, 1),
   syncRows: [],
@@ -181,6 +194,25 @@ const uniqueContainsStudentPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(uniqueContainsStudentPlan.summary.create, 1, 'unique contains match should resolve 李俊泽 to 李先生（李俊泽）');
 assert.strictEqual(uniqueContainsStudentPlan.actions[0].candidate.resolvedStudents[0].name, '李先生（李俊泽）', 'student contains match should keep the canonical system student name');
+
+const confirmedAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...specialCourses[0],
+    sourceKey: 'confirmed-alias-key',
+    coachName: 'Siren',
+    studentNames: ['锤锤'],
+    course: { ...specialCourses[0].course, ok: true, isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-chuichui', name: '是锤锤呀', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-special', studentId: 'stu-chuichui', courseType: '专项课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+});
+assert.strictEqual(confirmedAliasPlan.summary.create, 1, 'confirmed student alias should resolve 锤锤 to 是锤锤呀');
+assert.strictEqual(confirmedAliasPlan.actions[0].candidate.resolvedStudents[0].name, '是锤锤呀', 'confirmed alias should keep canonical student record');
+assert.strictEqual(sync.buildScheduleBody(confirmedAliasPlan.actions[0].candidate).standardCourseType, '专项课', 'special schedule body should persist standard special course type');
 
 const lessonIndexMismatchPlan = sync.buildDryRunPlan({
   feishuCourses: [{

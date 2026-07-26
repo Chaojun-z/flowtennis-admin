@@ -1,6 +1,7 @@
 const DEFAULT_ID_FACTORY=()=>`${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 const SMALL_CLASS_TYPES=['single','bootcamp','dropin','family'];
+const SPECIAL_COURSE_SKILL_LEVELS=['1.0','1.5','2.0','2.5','3.0','3.5','4.0'];
 const PACKAGE_MERGE_CORE_FIELDS=[
   'ownerCoach','courseType','price','lessons','validDays',
   'saleStartDate','saleEndDate','usageStartDate','usageEndDate',
@@ -15,6 +16,25 @@ function packageRefIds(values,parseArr=fallbackParseArr){
 }
 function normalizePackageCampusValue(value){
   return normalizeCampusValue(value);
+}
+function specialCourseSnapshot(source={}){
+  const courseType=String(source.courseType||source.type||'').trim();
+  if(courseType!=='专项课')return {};
+  return {
+    skillLevelMin:String(source.skillLevelMin||'').trim(),
+    skillLevelMax:String(source.skillLevelMax||source.skillLevelMin||'').trim(),
+    specialTopic:String(source.specialTopic||'').trim(),
+    courseDisplayName:String(source.courseDisplayName||source.productName||source.name||'').trim()
+  };
+}
+function validateSpecialCourseFields(row={}){
+  const courseType=String(row.courseType||row.type||'').trim();
+  if(courseType!=='专项课')return;
+  const min=String(row.skillLevelMin||'').trim();
+  const max=String(row.skillLevelMax||min||'').trim();
+  if((min&&!SPECIAL_COURSE_SKILL_LEVELS.includes(min))||(max&&!SPECIAL_COURSE_SKILL_LEVELS.includes(max)))throw new Error('专项课水平不在标准范围内');
+  if(min&&max&&SPECIAL_COURSE_SKILL_LEVELS.indexOf(max)<SPECIAL_COURSE_SKILL_LEVELS.indexOf(min))throw new Error('专项课最高水平不能低于最低水平');
+  if(min&&max&&SPECIAL_COURSE_SKILL_LEVELS.indexOf(max)-SPECIAL_COURSE_SKILL_LEVELS.indexOf(min)>1)throw new Error('专项课水平范围不能跨两个以上级别');
 }
 function stableRuleValue(value,parseArr=fallbackParseArr){
   if(Array.isArray(value))return JSON.stringify(value.map(v=>stableRuleValue(v,parseArr)));
@@ -54,6 +74,7 @@ function createPackageRules(deps={}){
       productId:pkg.productId||'',
       productName:pkg.productName||'',
       courseType:pkg.courseType||pkg.type||'',
+      ...specialCourseSnapshot(pkg),
       totalLessons,
       usedLessons:0,
       remainingLessons:totalLessons,
@@ -110,6 +131,7 @@ function createPackageRules(deps={}){
       productId:pkg.productId||'',
       productName:pkg.productName||'',
       courseType:pkg.courseType||pkg.type||'',
+      ...specialCourseSnapshot(pkg),
       packageLessons,
       packagePrice:normalizeMoney(pkg.price),
       priceSource:'package',
@@ -157,6 +179,7 @@ function createPackageRules(deps={}){
     if((parseInt(product?.maxStudents)||0)<=0)throw new Error('人数必须大于 0');
     if(normalizeMoney(product?.price)<0)throw new Error('价格不能小于 0');
     if((parseInt(product?.lessons)||0)<0)throw new Error('课时不能小于 0');
+    validateSpecialCourseFields(product);
   }
   function normalizeProductRecord(input,old=null,now=new Date().toISOString()){
     const base={...(old||{}),...(input||{})};
@@ -164,6 +187,10 @@ function createPackageRules(deps={}){
       ...base,
       name:String(base.name||'').trim(),
       type:String(base.type||'').trim(),
+      skillLevelMin:String(base.skillLevelMin||'').trim(),
+      skillLevelMax:String(base.skillLevelMax||base.skillLevelMin||'').trim(),
+      specialTopic:String(base.specialTopic||'').trim(),
+      courseDisplayName:String(base.courseDisplayName||base.name||'').trim(),
       maxStudents:parseInt(base.maxStudents)||0,
       price:normalizeMoney(base.price),
       lessons:parseInt(base.lessons)||0,
@@ -176,6 +203,7 @@ function createPackageRules(deps={}){
   function validatePackageInput(pkg,refs={}){
     if(!String(pkg?.name||'').trim())throw new Error('请填写课包名称');
     if(!String(pkg?.courseType||pkg?.type||'').trim())throw new Error('请填写课程类型');
+    validateSpecialCourseFields(pkg);
     if(pkg?.productId&&refs.products&&!(refs.products||[]).some(p=>p.id===pkg.productId))throw new Error('课程产品不存在');
     if((parseInt(pkg.lessons)||0)<=0)throw new Error('课时必须大于 0');
     if(normalizeMoney(pkg.price)<=0)throw new Error('价格必须大于 0');
@@ -218,6 +246,10 @@ function createPackageRules(deps={}){
       productId:String(base.productId||'').trim(),
       productName:String(base.productName||'').trim(),
       courseType:String(base.courseType||base.type||'').trim(),
+      skillLevelMin:String(base.skillLevelMin||'').trim(),
+      skillLevelMax:String(base.skillLevelMax||base.skillLevelMin||'').trim(),
+      specialTopic:String(base.specialTopic||'').trim(),
+      courseDisplayName:String(base.courseDisplayName||base.productName||base.name||'').trim(),
       lessons:parseInt(base.lessons)||0,
       price:normalizeMoney(base.price),
       validDays:0,
@@ -246,7 +278,8 @@ function createPackageRules(deps={}){
     const purchaseUpdates=(purchases||[]).filter(p=>String(p.packageId||'')===packageId&&p.status!=='voided').map(p=>{
       const baseLessons=parseLessonValue(nextPackage.lessons);
       const giftLessons=parseLessonValue(p.giftLessons);
-      const next={...p,courseType:nextPackage.courseType||nextPackage.type||'',packageLessons:baseLessons,totalLessons:baseLessons+giftLessons,packagePrice:normalizeMoney(nextPackage.price),systemAmount:normalizeMoney(nextPackage.price),packageTimeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',validDays:0,saleStartDate:nextPackage.saleStartDate||'',saleEndDate:nextPackage.saleEndDate||'',usageStartDate:nextPackage.usageStartDate||'',usageEndDate:'',updatedAt:now};
+      const next={...p,courseType:nextPackage.courseType||nextPackage.type||'',...specialCourseSnapshot(nextPackage),packageLessons:baseLessons,totalLessons:baseLessons+giftLessons,packagePrice:normalizeMoney(nextPackage.price),systemAmount:normalizeMoney(nextPackage.price),packageTimeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',validDays:0,saleStartDate:nextPackage.saleStartDate||'',saleEndDate:nextPackage.saleEndDate||'',usageStartDate:nextPackage.usageStartDate||'',usageEndDate:'',updatedAt:now};
+      if(next.courseType!=='专项课'){delete next.skillLevelMin;delete next.skillLevelMax;delete next.specialTopic;delete next.courseDisplayName;}
       if(!giftLessons)delete next.totalLessons;
       if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
       if(isSmallGroupCourse(next))Object.assign(next,smallGroupRuleSnapshot({...nextPackage,courseType:next.courseType}));
@@ -258,7 +291,8 @@ function createPackageRules(deps={}){
       const totalLessons=parseLessonValue(nextPackage.lessons)+parseLessonValue(purchase.giftLessons);
       const usedLessons=parseLessonValue(e.usedLessons,Math.max(0,parseLessonValue(e.totalLessons)-parseLessonValue(e.remainingLessons)));
       const remainingLessons=Math.max(0,totalLessons-usedLessons);
-      const next={...e,courseType:nextPackage.courseType||nextPackage.type||'',totalLessons,usedLessons,remainingLessons,timeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',...validity,status:remainingLessons<=0?'depleted':'active',updatedAt:now};
+      const next={...e,courseType:nextPackage.courseType||nextPackage.type||'',...specialCourseSnapshot(nextPackage),totalLessons,usedLessons,remainingLessons,timeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',...validity,status:remainingLessons<=0?'depleted':'active',updatedAt:now};
+      if(next.courseType!=='专项课'){delete next.skillLevelMin;delete next.skillLevelMax;delete next.specialTopic;delete next.courseDisplayName;}
       if(parseLessonValue(purchase.giftLessons)>0){
         next.basePackageLessons=parseLessonValue(nextPackage.lessons);
         next.giftLessons=parseLessonValue(purchase.giftLessons);

@@ -99,6 +99,7 @@ const PACKAGE_BOARD_COLUMNS=[
   {key:'青少年-小班课',title:'青少年 · 小班课'},
   {key:'成人-私教课',title:'成人 · 私教课'},
   {key:'成人-小班课',title:'成人 · 小班课'},
+  {key:'专项课',title:'专项课'},
   {key:'chaojun',title:'朝珺'}
 ];
 function packageValidBoardColumnKey(value){
@@ -113,6 +114,7 @@ function packageBoardColumnKey(p={}){
   if(packageIsChaojunOnlyOwned(p))return'chaojun';
   const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
   const baseType=normalizeCourseType(p.courseType||p.type);
+  if(baseType==='专项课')return '专项课';
   let courseGroup=baseType;
   if(baseType==='体验课'){
     const experienceType=packageExperienceTypeLabel(p)||'私教体验课';
@@ -712,7 +714,7 @@ function packageDrawerHeaderHtml(p,mode){
   return renderDetailDrawerHero({title,avatar:'课',subtitle,statusHtml:status});
 }
 function packageDrawerHiddenFields(p){
-  return `<input type="hidden" id="pkg_name" value="${esc(rv(p,'name'))}"><textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea>`;
+  return `<input type="hidden" id="pkg_name" value="${esc(rv(p,'name'))}"><input type="hidden" id="pkg_skillLevelMin" value="${esc(rv(p,'skillLevelMin'))}"><input type="hidden" id="pkg_skillLevelMax" value="${esc(rv(p,'skillLevelMax'))}"><input type="hidden" id="pkg_specialTopic" value="${esc(rv(p,'specialTopic'))}"><input type="hidden" id="pkg_courseDisplayName" value="${esc(rv(p,'courseDisplayName'))}"><textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea>`;
 }
 function openPackageDetail(id){
   const p=packages.find(x=>x.id===id);if(!p)return;
@@ -759,7 +761,7 @@ function openPackageDetail(id){
   });
 }
 function openPackageModal(id,presetProductId=''){
-  editId=id;const presetProduct=presetProductId?products.find(x=>x.id===presetProductId):null;const p=id?packages.find(x=>x.id===id):presetProduct?{courseType:presetProduct.type,experienceType:presetProduct.experienceType,audience:presetProduct.audience,maxStudents:presetProduct.maxStudents,price:presetProduct.price,lessons:presetProduct.lessons,productId:presetProduct.id,productName:presetProduct.name}:null;
+  editId=id;const presetProduct=presetProductId?products.find(x=>x.id===presetProductId):null;const p=id?packages.find(x=>x.id===id):presetProduct?{courseType:presetProduct.type,experienceType:presetProduct.experienceType,audience:presetProduct.audience,maxStudents:presetProduct.maxStudents,price:presetProduct.price,lessons:presetProduct.lessons,skillLevelMin:presetProduct.skillLevelMin,skillLevelMax:presetProduct.skillLevelMax,specialTopic:presetProduct.specialTopic,courseDisplayName:presetProduct.courseDisplayName||presetProduct.name,productId:presetProduct.id,productName:presetProduct.name}:null;
   const locked=!!(id&&packageHasPurchases(id));
   const courseTypeForm=normalizeCourseTypeForForm(p);
   const courseType=courseTypeForm.courseType;
@@ -817,6 +819,9 @@ function packageSaveErrorText(err){
     '可用结束时间不能早于可用开始时间':'可用时间结束日期不能早于开始日期',
     '可用时段请填写完整':'请把可用时段的开始和结束时间都填完整',
     '可用结束时间必须晚于开始时间':'可用时段结束时间要晚于开始时间',
+    '专项课水平不在标准范围内':'专项课水平只能选 1.0 到 4.0',
+    '专项课最高水平不能低于最低水平':'专项课最高水平不能低于最低水平',
+    '专项课水平范围不能跨两个以上级别':'专项课水平范围最多选相邻级别',
     '可用教练不存在':'可上课教练里有已删除的教练，请重新勾选',
     '主归属教练不存在':'归属教练已经不存在，请重新选择',
     '可用校区不存在':'可用校区里有已删除的校区，请重新勾选',
@@ -858,7 +863,7 @@ async function savePackage(){
     endTime:idx===0?timeEnd:timeEnd2,
     daysOfWeek:preset.daysOfWeek
   })).filter(row=>row.startTime&&row.endTime);
-  const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',smallClassType:courseType==='小班课'?smallClassType:'',courseTypeLevel2:courseTypeLevel2Label(courseType,experienceType,smallClassType),standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType),fixedStudentCount:0,minAttendStudents:courseType==='小班课'?2:0,freeAbsenceLimit:courseType==='小班课'&&smallClassType==='bootcamp'?1:0,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:0,saleStartDate,saleEndDate:'',usageStartDate,usageEndDate:'',timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
+  const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',smallClassType:courseType==='小班课'?smallClassType:'',skillLevelMin:courseType==='专项课'?(document.getElementById('pkg_skillLevelMin')?.value||''):'',skillLevelMax:courseType==='专项课'?(document.getElementById('pkg_skillLevelMax')?.value||''):'',specialTopic:courseType==='专项课'?(document.getElementById('pkg_specialTopic')?.value||''):'',courseDisplayName:courseType==='专项课'?(document.getElementById('pkg_courseDisplayName')?.value||''):'',courseTypeLevel2:courseTypeLevel2Label(courseType,experienceType,smallClassType),standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType),fixedStudentCount:0,minAttendStudents:courseType==='小班课'?2:0,freeAbsenceLimit:courseType==='小班课'&&smallClassType==='bootcamp'?1:0,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:0,saleStartDate,saleEndDate:'',usageStartDate,usageEndDate:'',timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   await runStandardMutation(document.querySelector('.btn-save'),async()=>{
     if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}
     else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}

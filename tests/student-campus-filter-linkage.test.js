@@ -64,7 +64,7 @@ const context = {
   standardLifecycleMetrics: { metrics: {} },
   FlowTennisBusinessTaxonomy: {
     EXPERIENCE_TYPES: ['私教体验课', '小班体验课'],
-    PRODUCT_TYPES: ['私教课', '体验课', '小班课', '大师课', '陪打']
+    PRODUCT_TYPES: ['私教课', '体验课', '小班课', '专项课', '大师课', '陪打']
   },
   students: [
     { id: 'stu-17', name: '一七&zzxxyy', campus: 'shunyi_mapo' },

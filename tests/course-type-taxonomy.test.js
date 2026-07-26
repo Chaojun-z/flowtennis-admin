@@ -15,6 +15,8 @@ assert.match(source, /const PRODUCT_TYPES=BUSINESS_TAXONOMY\.PRODUCT_TYPES/, 'co
 assert.match(source, /const STANDARD_COURSE_TYPE_OPTIONS=BUSINESS_TAXONOMY\.STANDARD_COURSE_TYPE_OPTIONS/, 'course type filters should come from the global business dictionary');
 assert.match(source, /const SMALL_CLASS_TYPE_OPTIONS=BUSINESS_TAXONOMY\.SMALL_CLASS_TYPE_OPTIONS/, 'small-class subtype options should come from the global business dictionary');
 assert.match(fnBody('openPackageModal'), /const smallClassOptions=SMALL_CLASS_TYPE_OPTIONS/, 'package modal should keep 训练营 as a global small-class subtype option');
+assert.match(fnBody('openProductModal'), /p_skillMin[\s\S]*p_skillMax[\s\S]*p_specialTopic/, 'special course products should expose skill level and topic fields');
+assert.match(fnBody('saveProduct'), /skillLevelMin[\s\S]*skillLevelMax[\s\S]*specialTopic[\s\S]*courseDisplayName/, 'special course products should persist skill level and topic fields');
 
 assert.match(fnBody('openScheduleModal'), /normalizeCourseTypeForForm\(s\|\|seed\)/, 'schedule modal should map legacy 训练营 rows to 小班课/训练营 for editing');
 assert.match(fnBody('openPackageModal'), /normalizeCourseTypeForForm\(p\)/, 'package modal should map legacy 训练营 rows to 小班课/训练营 for editing');

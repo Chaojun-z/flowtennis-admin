@@ -14,6 +14,7 @@
     '课程 / 小班课 / 训练营',
     '课程 / 小班课 / 随到随学',
     '课程 / 小班课 / 亲子课',
+    '课程 / 专项课',
     '课程 / 体验课 / 私教体验课',
     '课程 / 体验课 / 小班体验课',
     '课程 / 大师课',
@@ -26,7 +27,7 @@
     '场地 / 约球局'
   ].map(value => ({ value, label: value }));
   const SOURCES = ['转介绍', '线下到店', '大众点评', '朝珺小红书', '网球兄弟小红书', '播客', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知'];
-  const PRODUCT_TYPES = ['私教课', '体验课', '小班课', '大师课', '陪打'];
+  const PRODUCT_TYPES = ['私教课', '体验课', '小班课', '专项课', '大师课', '陪打'];
   const STANDARD_COURSE_TYPE_OPTIONS = [
     { value: '私教课', label: '私教课' },
     { value: '体验课 / 私教体验课', label: '体验课 / 私教体验课' },
@@ -35,6 +36,7 @@
     { value: '小班课 / 训练营', label: '小班课 / 训练营' },
     { value: '小班课 / 随到随学', label: '小班课 / 随到随学' },
     { value: '小班课 / 亲子课', label: '小班课 / 亲子课' },
+    { value: '专项课', label: '专项课' },
     { value: '大师课', label: '大师课' },
     { value: '陪打', label: '陪打' }
   ];
@@ -94,7 +96,7 @@
   const LEAD_STAGE_OPTIONS = ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失'].map(value => ({ value, label: value }));
   const LEAD_DEAL_TYPE_OPTIONS = ['课程', '订场', '订场会员', '陪打', '课程+订场', '课程+订场会员', '订场+订场会员', '订场+陪打', '课程+订场+订场会员'].map(value => ({ value, label: value }));
   const LEAD_CUSTOMER_TYPE_OPTIONS = ['成人', '青少年'].map(value => ({ value, label: value }));
-  const LEAD_DEMAND_PRODUCT_OPTIONS = ['私教课', '小班课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他'].map(value => ({ value, label: value }));
+  const LEAD_DEMAND_PRODUCT_OPTIONS = ['私教课', '小班课', '专项课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他'].map(value => ({ value, label: value }));
   const LEAD_CONSULT_OPTIONS = LEAD_DEMAND_PRODUCT_OPTIONS;
   const LEAD_INTENT_OPTIONS = ['沉默', '20%-40%', '40%-60%', '60%-80%', '80%-100%'].map(value => ({ value, label: value }));
   const LEAD_LEVEL_OPTIONS = ['未知', '0', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '自定义'].map(value => ({ value, label: value }));
@@ -166,6 +168,7 @@
     { level1: '小班课', level2: '训练营' },
     { level1: '小班课', level2: '随到随学' },
     { level1: '小班课', level2: '亲子课' },
+    { level1: '专项课', level2: '' },
     { level1: '体验课', level2: '私教体验课' },
     { level1: '体验课', level2: '小班体验课' },
     { level1: '大师课', level2: '' },
@@ -283,14 +286,17 @@
     const raw = text(value);
     if (!raw) return '其他';
     if (includesAny(raw, ['青少年', '少儿', '儿童', '孩子'])) {
-      if (includesAny(raw, ['小班', '班课', '训练营', '专项'])) return '小班课';
+      if (includesAny(raw, ['小班', '班课', '训练营'])) return '小班课';
+      if (includesAny(raw, ['专项'])) return '专项课';
       if (includesAny(raw, ['私教'])) return '私教课';
     }
     if (includesAny(raw, ['成人'])) {
-      if (includesAny(raw, ['小班', '班课', '训练营', '专项'])) return '小班课';
+      if (includesAny(raw, ['小班', '班课', '训练营'])) return '小班课';
+      if (includesAny(raw, ['专项'])) return '专项课';
       if (includesAny(raw, ['私教'])) return '私教课';
     }
-    if (includesAny(raw, ['训练营', '专项', '小班', '班课'])) return '小班课';
+    if (includesAny(raw, ['训练营', '小班', '班课'])) return '小班课';
+    if (includesAny(raw, ['专项'])) return '专项课';
     if (includesAny(raw, ['私教'])) return '私教课';
     if (includesAny(raw, ['订场', '定场', '场地'])) return '订场';
     if (includesAny(raw, ['储值', '会员'])) return '会员';
@@ -336,6 +342,7 @@
     const experienceType = text(row && row.experienceType);
     const packageName = text(row && (row.packageName || row.productName || row.name || row.incomeType));
     const haystack = `${courseType} ${level2} ${experienceType} ${packageName}`;
+    if (courseType === '专项课' || courseType === '专项训练' || includesAny(haystack, ['专项课', '专项训练', '王牌专项', '发接发与实战练习', '击球位置优化', '球质提升', '多球综合实战特训', '优势球识别'])) return { level1: '专项课', level2: '' };
     if (courseType === '亲子课' || level2 === '亲子课' || includesAny(haystack, ['亲子课', '亲子'])) return { level1: '小班课', level2: '亲子课' };
     if (courseType === '训练营' || level2 === '训练营' || includesAny(haystack, ['训练营'])) return { level1: '小班课', level2: '训练营' };
     if (level2 === '随到随学' || includesAny(haystack, ['随到随学'])) return { level1: '小班课', level2: '随到随学' };

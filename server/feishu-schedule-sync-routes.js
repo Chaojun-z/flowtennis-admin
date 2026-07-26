@@ -35,6 +35,19 @@ function normalizeStudentNameKey(value){
     .trim();
 }
 
+const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
+  [normalizeStudentNameKey('将来')]: '赵新阳',
+  [normalizeStudentNameKey('锤锤')]: '是锤锤呀',
+  [normalizeStudentNameKey('李俊泽')]: '李俊泽（L¡）',
+  [normalizeStudentNameKey('william弟弟')]: 'william',
+  [normalizeStudentNameKey('willliam弟弟')]: 'william'
+});
+
+function resolveFeishuStudentAlias(value){
+  const raw=cleanText(value);
+  return FEISHU_STUDENT_NAME_ALIASES[normalizeStudentNameKey(raw)]||raw;
+}
+
 function studentNameKeys(value){
   const text=cleanText(value);
   const keys=new Set();
@@ -91,6 +104,8 @@ function minutesBetween(start,end){
 function normalizeCourseType(value){
   const text=cleanText(value);
   if(!text)return {ok:false,reason:'缺少课程类型'};
+  const special=parseSpecialCourseText(text);
+  if(special)return {ok:true,raw:text,courseType:'专项课',experienceType:'',audience:'',isTrial:false,...special};
   const isTrial=/体验/.test(text);
   const audience=/青少|儿童|少儿/.test(text)?'青少年':(/成人/.test(text)?'成人':'');
   if(isTrial&&!audience)return {ok:false,reason:'体验课无法判断成人/青少年',raw:text};
@@ -98,6 +113,39 @@ function normalizeCourseType(value){
   if(/团课|小班/.test(text))return {ok:true,raw:text,courseType:'小班课',experienceType:'',audience,smallClassType:/训练营/.test(text)?'bootcamp':'single',isTrial:false};
   if(/私教|正式/.test(text))return {ok:true,raw:text,courseType:'私教课',experienceType:'',audience,isTrial:false};
   return {ok:false,reason:`无法识别课程类型：${text}`,raw:text};
+}
+
+function normalizeSkillLevelText(value){
+  const raw=cleanText(value).replace(/[～—–~]/g,'-');
+  const m=raw.match(/(\d(?:\.\d)?)(?:\s*-\s*(\d(?:\.\d)?))?/);
+  if(!m)return {min:'',max:''};
+  return {min:m[1],max:m[2]||m[1]};
+}
+
+function parseSpecialCourseText(value){
+  const text=cleanText(value);
+  const bracket=text.match(/^【([^】]+)】\s*(.+)$/);
+  if(bracket){
+    const level=normalizeSkillLevelText(bracket[1]);
+    const topic=cleanText(bracket[2]);
+    return {
+      skillLevelMin:level.min,
+      skillLevelMax:level.max,
+      specialTopic:topic,
+      courseDisplayName:`${level.min&&level.max?`【${level.min===level.max?level.min:`${level.min}-${level.max}`}】`:''}${topic}`
+    };
+  }
+  if(/专项|发接发|击球位置优化|球质提升|多球综合实战特训|优势球识别/.test(text)){
+    const level=normalizeSkillLevelText(text);
+    const topic=cleanText(text.replace(/【[^】]+】/g,'').replace(/^\d(?:\.\d)?(?:\s*[-～—–~]\s*\d(?:\.\d)?)?/, '').replace(/^王牌专项[:：\s-]*/, ''));
+    return {
+      skillLevelMin:level.min,
+      skillLevelMax:level.max,
+      specialTopic:topic||text,
+      courseDisplayName:text
+    };
+  }
+  return null;
 }
 
 function normalizeVenueName(value){
@@ -385,8 +433,11 @@ function buildResolvedCandidate(raw,ctx={}){
   if(!raw.venue)errors.push('缺少场地号');
   const resolvedStudents=[];
   const unresolvedStudents=[];
+  const studentAliasMap={};
   for(const name of raw.studentNames){
-    const student=uniqueByName(ctx.students,name);
+    const lookupName=resolveFeishuStudentAlias(name);
+    if(lookupName!==name)studentAliasMap[name]=lookupName;
+    const student=uniqueByName(ctx.students,lookupName)||uniqueByName(ctx.students,name);
     if(student)resolvedStudents.push(student);
     else unresolvedStudents.push(name);
   }
@@ -397,7 +448,7 @@ function buildResolvedCandidate(raw,ctx={}){
   }else if(!resolvedStudents.length){
     errors.push(`无法唯一识别正式课学员：${raw.studentNames.join('、')}`);
   }
-  return {...raw,resolvedCoach,resolvedStudents,unresolvedStudents,errors};
+  return {...raw,resolvedCoach,resolvedStudents,unresolvedStudents,studentAliasMap,errors};
 }
 
 function hasSelectableEntitlement(student,candidate,entitlements=[],recommendEntitlements){
@@ -517,8 +568,12 @@ function buildScheduleBody(candidate,extra={}){
     studentName,
     courseType,
     experienceType,
-    courseTypeLevel2:isTrial?`${experienceType}体验课`:(courseType==='小班课'?'单次':`${candidate.course.audience||''}私教课`),
-    standardCourseType:isTrial?`${experienceType}私教【体验】`:(courseType==='小班课'?`${candidate.course.audience||''}小班课/单次`:`${candidate.course.audience||''}私教【正式】`),
+    skillLevelMin:candidate.course.skillLevelMin||'',
+    skillLevelMax:candidate.course.skillLevelMax||'',
+    specialTopic:candidate.course.specialTopic||'',
+    courseDisplayName:candidate.course.courseDisplayName||candidate.course.raw||courseType,
+    courseTypeLevel2:isTrial?`${experienceType}体验课`:(courseType==='小班课'?'单次':(courseType==='专项课'?'':`${candidate.course.audience||''}私教课`)),
+    standardCourseType:isTrial?`${experienceType}私教【体验】`:(courseType==='小班课'?`${candidate.course.audience||''}小班课/单次`:(courseType==='专项课'?'专项课':`${candidate.course.audience||''}私教【正式】`)),
     isTrial,
     smallClassType:courseType==='小班课'?(candidate.course.smallClassType||'single'):'',
     coach:candidate.resolvedCoach?.name||candidate.coachName,

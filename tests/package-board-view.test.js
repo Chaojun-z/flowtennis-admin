@@ -36,6 +36,8 @@ assert.match(fnBody('goPage'), /document\.body\.classList\.toggle\('is-packages-
 assert.match(cssRule('#page-packages .course-package-showcase'), /height:100%/, 'package board shell should fill the fixed content area');
 assert.match(cssRule('.course-package-showcase-toolbar'), /flex:0 0 56px/, 'package filters and actions should keep a fixed reserved height');
 assert.match(fnBody('renderPackages'), /package-board-column[\s\S]*draggable="true"[\s\S]*package-board-header[\s\S]*package-board-stack/, 'package board should keep header and cards inside one draggable column');
+assert.match(source, /key:'专项课',title:'专项课'/, 'package board should include a dedicated special course column');
+assert.match(fnBody('packageBoardColumnKey'), /baseType==='专项课'[\s\S]*return '专项课'/, 'special course packages should go to the dedicated column');
 assert.doesNotMatch(fnBody('renderPackages'), /package-board-header-row|package-board-body-row/, 'package board should not split headers away from draggable columns');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /overflow-x:auto/, 'package board should be the horizontal drag container');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /overflow-y:hidden/, 'the whole package board should not scroll vertically');

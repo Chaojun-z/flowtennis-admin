@@ -157,7 +157,7 @@ function normalizeCourseType(type=''){
   if(raw==='班课')return '小班课';
   if(raw==='训练营')return '小班课';
   if(raw==='亲子课')return '小班课';
-  if(raw==='专项训练')return '小班课';
+  if(raw==='专项训练'||/专项课|王牌专项|发接发与实战练习|击球位置优化|球质提升|多球综合实战特训|优势球识别/.test(raw))return '专项课';
   if(raw==='订场陪打')return '陪打';
   if(raw==='\u6b63\u5f0f\u8bfe')return '私教课';
   return raw;

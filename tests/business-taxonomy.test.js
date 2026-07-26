@@ -17,7 +17,7 @@ assert.strictEqual(taxonomy.normalizeLeadSource('其他'), '未知');
 assert.deepStrictEqual(taxonomy.LEAD_STAGE_OPTIONS.map(item => item.value), ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失']);
 assert.deepStrictEqual(taxonomy.LEAD_DEAL_TYPE_OPTIONS.map(item => item.value), ['课程', '订场', '订场会员', '陪打', '课程+订场', '课程+订场会员', '订场+订场会员', '订场+陪打', '课程+订场+订场会员']);
 assert.deepStrictEqual(taxonomy.LEAD_CUSTOMER_TYPE_OPTIONS.map(item => item.value), ['成人', '青少年']);
-assert.deepStrictEqual(taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value), ['私教课', '小班课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他']);
+assert.deepStrictEqual(taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value), ['私教课', '小班课', '专项课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他']);
 assert.deepStrictEqual(taxonomy.LEAD_CONSULT_OPTIONS.map(item => item.value), taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value));
 assert.deepStrictEqual(taxonomy.LEAD_LEVEL_OPTIONS.map(item => item.value), ['未知', '0', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '自定义']);
 assert.deepStrictEqual(taxonomy.LEAD_PRIORITY_OPTIONS.map(item => item.value), ['P0', 'P1', 'P2', 'P3', 'P4']);
@@ -26,6 +26,7 @@ assert.strictEqual(taxonomy.normalizeLeadCustomerType('青少年小班课'), '�
 assert.strictEqual(taxonomy.normalizeLeadCustomerType('成人私教'), '成人');
 assert.strictEqual(taxonomy.normalizeLeadConsultType('成人私教'), '私教课');
 assert.strictEqual(taxonomy.normalizeLeadConsultType('成人小班课（专项/训练营）'), '小班课');
+assert.strictEqual(taxonomy.normalizeLeadConsultType('成人专项课'), '专项课');
 assert.strictEqual(taxonomy.normalizeLeadConsultType('青少年小班课（训练营）'), '小班课');
 assert.strictEqual(taxonomy.normalizeLeadConsultType('咨询储值卡（会员）'), '会员');
 assert.strictEqual(taxonomy.normalizeLeadConsultType('合作等'), '合作');
@@ -39,6 +40,7 @@ assert.deepStrictEqual(taxonomy.STANDARD_BUSINESS_TYPE_OPTIONS.map(item => item.
   '课程 / 小班课 / 训练营',
   '课程 / 小班课 / 随到随学',
   '课程 / 小班课 / 亲子课',
+  '课程 / 专项课',
   '课程 / 体验课 / 私教体验课',
   '课程 / 体验课 / 小班体验课',
   '课程 / 大师课',
@@ -81,11 +83,21 @@ assert.deepStrictEqual(taxonomy.normalizeCourseType({ courseType: '订场陪打'
   level1: '陪打',
   level2: ''
 });
+assert.deepStrictEqual(taxonomy.normalizeCourseType({ courseType: '专项训练' }), {
+  level1: '专项课',
+  level2: ''
+});
 assert.deepStrictEqual(taxonomy.normalizeBusinessType({ courseType: '陪打' }), {
   level1: '课程',
   level2: '陪打',
   level3: '',
   display: '课程 / 陪打'
+});
+assert.deepStrictEqual(taxonomy.normalizeBusinessType({ courseType: '专项课' }), {
+  level1: '课程',
+  level2: '专项课',
+  level3: '',
+  display: '课程 / 专项课'
 });
 
 assert.deepStrictEqual(taxonomy.normalizeBusinessType({ businessType: '会员储值' }), {

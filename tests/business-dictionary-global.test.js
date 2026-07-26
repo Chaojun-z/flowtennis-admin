@@ -88,6 +88,7 @@ assert.match(pricesSource, /optionList\('priceBusinessTypes'\)/, 'price business
 assert.match(pricesSource, /optionList\('priceStatuses'\)/, 'price statuses should come from global business taxonomy');
 assert.match(packagesSource, /PACKAGE_STATUS_OPTIONS/, 'package statuses should come from global business taxonomy');
 assert.match(packagesSource, /PACKAGE_TIME_BAND_OPTIONS/, 'package time bands should come from global business taxonomy');
+assert.match(packagesSource, /key:'专项课',title:'专项课'/, 'package board should expose the special course column');
 assert.match(leadsSource, /function leadFollowupTypeOptions\(\)[\s\S]*LEAD_FOLLOWUP_TYPE_OPTIONS/, 'lead follow-up type options should come from global business taxonomy');
 assert.match(leadsSource, /function leadStatusAfterOptions\(\)\{[\s\S]*return leadStageOptions\(\);[\s\S]*\}/, 'lead status-after options should reuse the global lead stage options');
 assert.match(entitlementsSource, /ENTITLEMENT_STATUS_OPTIONS/, 'entitlement statuses should come from global business taxonomy');

@@ -30,7 +30,7 @@ assert.deepStrictEqual(taxonomy.LEAD_DEAL_TYPE_OPTIONS.map(item => item.value), 
   '课程+订场+订场会员'
 ]);
 assert.deepStrictEqual(taxonomy.LEAD_CUSTOMER_TYPE_OPTIONS.map(item => item.value), ['成人', '青少年']);
-assert.deepStrictEqual(taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value), ['私教课', '小班课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他']);
+assert.deepStrictEqual(taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value), ['私教课', '小班课', '专项课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他']);
 assert.strictEqual(taxonomy.normalizeLeadCustomerType('少儿小班课'), '青少年');
 assert.strictEqual(taxonomy.normalizeLeadCustomerType('成人私教'), '成人');
 assert.strictEqual(taxonomy.normalizeLeadDemandProduct('咨询储值卡（会员）'), '会员');

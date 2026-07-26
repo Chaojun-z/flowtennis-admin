@@ -1,5 +1,5 @@
 const PACKAGE_BOARD_PREFERENCES_ROW_ID='package-board-preferences';
-const PACKAGE_BOARD_COLUMN_KEYS=['青少年-私教课','青少年-小班课','成人-私教课','成人-小班课','chaojun','other'];
+const PACKAGE_BOARD_COLUMN_KEYS=['青少年-私教课','青少年-小班课','成人-私教课','成人-小班课','专项课','chaojun','other'];
 
 function normalizePackageBoardColumnOrder(value){
   if(!Array.isArray(value))return [];

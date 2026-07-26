@@ -20,7 +20,7 @@ assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-reminders
 assert.match(officialDigestsWorkflow, /\/api\/cron\/official-account-daily-digests/, '服务号次日课表应由 GitHub Actions 触发');
 assert.match(feishuCoachDigestsWorkflow, /cron: '0 12 \* \* \*'/, '飞书教练私发次日排课应每天北京时间 20:00 触发');
 assert.match(feishuCoachDigestsWorkflow, /\/api\/cron\/feishu-coach-daily-digests/, '飞书教练私发次日排课应由 GitHub Actions 触发');
-assert.match(feishuScheduleSyncWorkflow, /cron:\s*'0 0-16 \* \* \*'/, '飞书排课表同步应在北京时间 08:00-24:00 每小时触发');
+assert.match(feishuScheduleSyncWorkflow, /cron:\s*'0 0,10 \* \* \*'/, '飞书排课表同步应在北京时间 08:00、18:00 各触发一次');
 assert.match(feishuScheduleSyncWorkflow, /\/api\/cron\/feishu-schedule-sync/, '飞书排课表同步应由 GitHub Actions 触发');
 const matchKeepaliveWorkflow = fs.readFileSync(matchKeepaliveWorkflowPath, 'utf8');
 assert.match(matchKeepaliveWorkflow, /cron: '0 2 \* \* \*'/, '约球 Supabase 保活应每天北京时间 10:00 触发');
