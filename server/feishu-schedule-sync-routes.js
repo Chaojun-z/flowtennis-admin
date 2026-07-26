@@ -27,6 +27,31 @@ function parseStudentCell(value){
   return {raw,names,lessonIndex};
 }
 
+function normalizeStudentNameKey(value){
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/[.·\s]/g,'')
+    .replace(/[（(]\s*\d+\s*[）)]/g,'')
+    .trim();
+}
+
+function studentNameKeys(value){
+  const text=cleanText(value);
+  const keys=new Set();
+  const add=(item)=>{
+    const key=normalizeStudentNameKey(item);
+    if(key)keys.add(key);
+  };
+  add(text);
+  add(text.replace(/[（(][^）)]*[）)]/g,''));
+  const bracketRe=/[（(]([^）)]*)[）)]/g;
+  let match;
+  while((match=bracketRe.exec(text))){
+    if(!/^\s*\d+\s*$/.test(match[1]))add(match[1]);
+  }
+  return [...keys];
+}
+
 function excelSerialToDate(value){
   const n=Number(value);
   if(!Number.isFinite(n))return '';
@@ -288,9 +313,12 @@ function parseMaybeArray(value){
 }
 
 function uniqueByName(rows=[],name=''){
-  const key=normalizeNameKey(name);
-  const matched=(rows||[]).filter(row=>normalizeNameKey(row.name||row.studentName||row.leadName)===key);
-  return matched.length===1?matched[0]:null;
+  const key=normalizeStudentNameKey(name);
+  const candidates=(rows||[]).map(row=>({row,keys:studentNameKeys(row.name||row.studentName||row.leadName)}));
+  const exact=candidates.filter(item=>item.keys.includes(key)).map(item=>item.row);
+  if(exact.length===1)return exact[0];
+  const fuzzy=candidates.filter(item=>item.keys.some(itemKey=>itemKey&&key&&(itemKey.includes(key)||key.includes(itemKey)))).map(item=>item.row);
+  return fuzzy.length===1?fuzzy[0]:null;
 }
 
 function pushCoachRef(refs,row={}){
@@ -366,14 +394,37 @@ function hasSelectableEntitlement(student,candidate,entitlements=[],recommendEnt
   const rows=(entitlements||[]).filter(row=>String(row.studentId||'')===String(student.id||''));
   if(typeof recommendEntitlements==='function'){
     const result=recommendEntitlements(rows,body);
-    return !!result?.recommended;
+    if(!result?.recommended)return false;
+    const selected=rows.find(row=>String(row.id||'')===String(result.recommended.entitlementId||result.recommended.id||''));
+    return !!selected&&entitlementLessonIndexMatches(selected,candidate);
   }
   return rows.some(row=>{
     if(row.status&&row.status!=='active')return false;
     if(row.courseType&&row.courseType!==candidate.course.courseType)return false;
     if(row.experienceType&&candidate.course.experienceType&&row.experienceType!==candidate.course.experienceType)return false;
+    if(!entitlementLessonIndexMatches(row,candidate))return false;
     return Number(row.remainingLessons||0)>=Number(candidate.lessonCount||1);
   });
+}
+
+function entitlementExpectedLessonIndex(row={}){
+  const used=Number(row.usedLessons);
+  if(Number.isFinite(used))return Math.floor(used)+1;
+  const total=Number(row.totalLessons);
+  const remaining=Number(row.remainingLessons);
+  if(Number.isFinite(total)&&Number.isFinite(remaining))return Math.floor(Math.max(0,total-remaining))+1;
+  return null;
+}
+
+function entitlementLessonIndexMatches(row={},candidate={}){
+  const index=Number(candidate.lessonIndex);
+  if(!Number.isFinite(index)||index<=0)return true;
+  const expected=entitlementExpectedLessonIndex(row);
+  return expected!==null&&expected===index;
+}
+
+function hasSelectableEntitlementIgnoringLessonIndex(student,candidate,entitlements=[],recommendEntitlements){
+  return hasSelectableEntitlement(student,{...candidate,lessonIndex:null},entitlements,recommendEntitlements);
 }
 
 function attachSchedulableStudents(candidate,ctx={}){
@@ -381,6 +432,10 @@ function attachSchedulableStudents(candidate,ctx={}){
   if(candidate.course.isTrial)return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
   const scheduleStudents=candidate.resolvedStudents.filter(student=>hasSelectableEntitlement(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
   if(!scheduleStudents.length){
+    const hasPackageWithMismatchedIndex=Number(candidate.lessonIndex)>0&&candidate.resolvedStudents.some(student=>hasSelectableEntitlementIgnoringLessonIndex(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
+    if(hasPackageWithMismatchedIndex){
+      return {...candidate,scheduleStudents:[],errors:[...candidate.errors,'飞书括号课时编号和系统课包进度不一致，需要运营确认']};
+    }
     return {...candidate,scheduleStudents:[],errors:[...candidate.errors,'没有可自动扣课的可用课包']};
   }
   return {...candidate,scheduleStudents};

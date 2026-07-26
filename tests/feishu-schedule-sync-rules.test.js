@@ -81,7 +81,7 @@ const coachAliasPlan = sync.buildDryRunPlan({
   students: [{ id: 'stu-1', name: 'W.Jing' }],
   coaches: [],
   users: [{ id: 'user-siren', role: 'coach', coachId: 'coach-siren', coachName: 'Siren 教练' }],
-  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }]
 });
 assert.strictEqual(coachAliasPlan.summary.create, 1, 'coach role user alias should match Siren to Siren 教练');
 assert.strictEqual(coachAliasPlan.actions[0].candidate.resolvedCoach.name, 'Siren 教练', 'resolved coach should use canonical coach name');
@@ -99,7 +99,7 @@ const coachScheduleFallbackPlan = sync.buildDryRunPlan({
   students: [{ id: 'stu-1', name: 'W.Jing' }],
   coaches: [],
   users: [],
-  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }]
 });
 assert.strictEqual(coachScheduleFallbackPlan.summary.create, 1, 'existing schedule coach names should be allowed as a conservative fallback');
 assert.strictEqual(coachScheduleFallbackPlan.actions[0].candidate.resolvedCoach.name, '岳克舟', 'schedule fallback should keep the existing system coach name');
@@ -117,7 +117,7 @@ const primaryCoachPlan = sync.buildDryRunPlan({
   students: [{ id: 'stu-1', name: 'W.Jing', primaryCoach: 'Siren 教练' }],
   coaches: [],
   users: [],
-  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }]
 });
 assert.strictEqual(primaryCoachPlan.summary.create, 1, 'student primaryCoach should resolve sheet coach aliases when no coach directory exists');
 assert.strictEqual(primaryCoachPlan.actions[0].candidate.resolvedCoach.name, 'Siren 教练', 'student primaryCoach should provide the canonical coach name');
@@ -153,10 +153,48 @@ const fullCoachNamePlan = sync.buildDryRunPlan({
   students: [{ id: 'stu-1', name: 'W.Jing' }],
   coaches: [],
   users: [],
-  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', remainingLessons: 10, status: 'active' }]
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }]
 });
 assert.strictEqual(fullCoachNamePlan.summary.create, 1, 'sheet coach names should be accepted when coach directory data is missing');
 assert.strictEqual(fullCoachNamePlan.actions[0].candidate.resolvedCoach.name, '刘润扬', 'coach name fallback should keep the sheet coach name');
+
+const uniqueContainsStudentPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'unique-contains-student-key',
+    coachName: 'Siren',
+    studentNames: ['李俊泽'],
+    lessonIndex: 9,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-ljz', name: '李先生（李俊泽）', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-ljz', studentId: 'stu-ljz', courseType: '私教课', totalLessons: 10, usedLessons: 8, remainingLessons: 2, status: 'active' }]
+});
+assert.strictEqual(uniqueContainsStudentPlan.summary.create, 1, 'unique contains match should resolve 李俊泽 to 李先生（李俊泽）');
+assert.strictEqual(uniqueContainsStudentPlan.actions[0].candidate.resolvedStudents[0].name, '李先生（李俊泽）', 'student contains match should keep the canonical system student name');
+
+const lessonIndexMismatchPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'lesson-index-mismatch-key',
+    coachName: 'Siren',
+    studentNames: ['李俊泽'],
+    lessonIndex: 9,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-ljz', name: '李先生（李俊泽）', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-ljz', studentId: 'stu-ljz', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+});
+assert.strictEqual(lessonIndexMismatchPlan.summary.notifyError, 1, 'lesson index mismatch should block automatic import');
+assert.match(lessonIndexMismatchPlan.actions[0].reason, /括号课时编号和系统课包进度不一致/, 'lesson index mismatch should ask operations to confirm');
 
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
