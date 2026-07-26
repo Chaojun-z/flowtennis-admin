@@ -1112,7 +1112,12 @@ function validateEntitlementForSchedule(entitlement,schedule){
   const studentIds=parseArr(schedule.studentIds);
   if(entitlement.studentId&&studentIds.length&&!studentIds.includes(entitlement.studentId))throw new Error('课包所属学员不匹配');
   if(entitlement.courseType&&schedule.courseType&&entitlement.courseType!==schedule.courseType)throw new Error('课程类型不匹配');
-  if(entitlement.courseType==='体验课'&&schedule.courseType==='体验课'&&entitlement.experienceType&&schedule.experienceType&&entitlement.experienceType!==schedule.experienceType)throw new Error('体验课类型不匹配');
+  const trialExperienceTypesCompatible=(a,b)=>{
+    const left=String(a||'').trim(),right=String(b||'').trim();
+    if(!left||!right||left===right)return true;
+    return [left,right].includes('私教体验课')&&[left,right].some(value=>['成人','青少年'].includes(value));
+  };
+  if(entitlement.courseType==='体验课'&&schedule.courseType==='体验课'&&!trialExperienceTypesCompatible(entitlement.experienceType,schedule.experienceType))throw new Error('体验课类型不匹配');
   const campusIds=parseArr(entitlement.campusIds);
   if(campusIds.length&&schedule.campus&&!campusIds.map(normalizeCampusValue).includes(normalizeCampusValue(schedule.campus)))throw new Error('课包可用校区不匹配');
   const usedDate=dateKey(schedule.startTime);

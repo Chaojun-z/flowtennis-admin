@@ -285,6 +285,7 @@ assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*se
   assert.strictEqual(purchased, false, 'trial sync should reuse existing available trial entitlement before buying another package');
   assert.strictEqual(createdBody.payMethod, '', 'trial schedule should consume a package, not direct-pay through schedule');
   assert.strictEqual(createdBody.settlementType, 'package', 'trial schedule should follow package settlement');
+  assert.strictEqual(createdBody.entitlementId, 'ent-trial', 'trial schedule should explicitly carry the matched entitlement id');
   assert.strictEqual(appliedTrial[0].scheduleId, 'sch-trial', 'trial schedule creation should persist sync relation after schedule creation');
   assert.strictEqual(writes[0].table, 'ft_feishu_schedule_sync', 'created schedule should write sync relation');
   assert.strictEqual(writes[0].row.sheetId, 'GrbZdi', 'sync relation should record source sheet id for future deletion scope');
@@ -308,8 +309,11 @@ assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*se
     uuidv4: () => 'uuid-fixed',
     createLead: async (body) => { createdLeadBodies.push(body); return { lead: { id: 'lead-new', ...body } }; },
     convertLeadToStudent: async (leadId) => { convertedLeadIds.push(leadId); return { student: { id: 'stu-new', name: '宜歆' } }; },
-    purchasePackage: async (body) => { purchasedBodies.push(body); return { purchase: { id: 'pur-new' }, entitlement: { id: 'ent-new' } }; },
-    createSchedule: async (body) => ({ schedule: { id: 'sch-new-trial', ...body } }),
+    purchasePackage: async (body) => { purchasedBodies.push(body); return { purchase: { id: 'pur-new', packageName: '体验课 · 1课时 · 全天' }, entitlement: { id: 'ent-new', packageName: '体验课 · 1课时 · 全天', purchaseId: 'pur-new' } }; },
+    createSchedule: async (body) => {
+      assert.strictEqual(body.entitlementId, 'ent-new', 'new trial schedule should explicitly consume the purchased entitlement');
+      return { schedule: { id: 'sch-new-trial', ...body } };
+    },
     packages: [{ id: 'pkg-trial-adult', name: '1v1 · 全天 · 1 课时', courseType: '体验课', experienceType: '私教体验课', price: 239, status: 'active' }],
     entitlements: [],
     leads: [],

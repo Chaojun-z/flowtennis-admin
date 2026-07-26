@@ -505,6 +505,9 @@ function buildScheduleBody(candidate,extra={}){
   const isTrial=courseType==='体验课';
   const studentName=scheduleStudents.map(row=>row.name||row.id).join('、');
   const locationType=candidate.locationType==='external'?'external':'own';
+  const entitlement=extra.entitlement||{};
+  const purchase=extra.purchase||{};
+  const entitlementId=extra.entitlementId||entitlement.id||'';
   return {
     startTime:candidate.startTime,
     endTime:candidate.endTime,
@@ -531,9 +534,10 @@ function buildScheduleBody(candidate,extra={}){
     settlementType:'package',
     payMethod:'',
     paidAmount:0,
-    entitlementId:'',
-    packageName:'',
-    purchaseId:'',
+    entitlementId,
+    entitlementIds:entitlementId?[entitlementId]:[],
+    packageName:extra.packageName||entitlement.packageName||purchase.packageName||'',
+    purchaseId:extra.purchaseId||entitlement.purchaseId||purchase.id||'',
     timeBand:'',
     requiresFieldFee:false,
     fieldFeeReason:'',
@@ -741,8 +745,8 @@ async function applySyncPlan(plan,ctx={}){
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:schedule.id});
       }else if(action.type==='create_trial_schedule'){
         const trial=await resolveTrialStudent(action.candidate,ctx);
-        await ensureTrialEntitlement(action.candidate,{...ctx,student:trial.student});
-        const body=buildScheduleBody({...action.candidate,scheduleStudents:[trial.student]},{scheduleStudents:[trial.student],sourceLeadId:trial.lead?.id||'',sourceLeadName:trial.lead?.name||trial.lead?.leadName||''});
+        const trialPackage=await ensureTrialEntitlement(action.candidate,{...ctx,student:trial.student});
+        const body=buildScheduleBody({...action.candidate,scheduleStudents:[trial.student]},{scheduleStudents:[trial.student],entitlement:trialPackage.entitlement,purchase:trialPackage.purchase,sourceLeadId:trial.lead?.id||'',sourceLeadName:trial.lead?.name||trial.lead?.leadName||''});
         const result=await ctx.createSchedule(body);
         const schedule=result?.schedule;
         if(!schedule?.id)throw new Error('系统体验课排课创建失败');
