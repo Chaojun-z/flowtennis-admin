@@ -747,7 +747,7 @@ async function applySyncPlan(plan,ctx={}){
 
 function createFeishuScheduleSyncRoutes(deps={}){
   const {
-    init,sendJson,sendPlainText,getCachedScan,put,uuidv4,
+    init,sendJson,sendPlainText,getCachedScan,put,mkTable=async()=>{},uuidv4,
     cancelScheduleById=async()=>{throw new Error('缺少取消排课处理器');},
     createSchedule=async()=>{throw new Error('缺少创建排课处理器');},
     updateSchedule=async()=>{throw new Error('缺少修改排课处理器');},
@@ -756,6 +756,10 @@ function createFeishuScheduleSyncRoutes(deps={}){
     recommendEntitlements=null,
     T_SCHEDULE,T_STUDENTS,T_COACHES,T_USERS,T_PACKAGES,T_ENTITLEMENTS,T_LEADS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS
   }=deps;
+
+  async function ensureFeishuSyncTables(){
+    await Promise.all([T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS].filter(Boolean).map(table=>mkTable(table).catch(()=>null)));
+  }
 
   async function loadFeishuCourses(){
     const spreadsheetToken=cleanText(process.env.FEISHU_SCHEDULE_SPREADSHEET_TOKEN);
@@ -776,6 +780,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
 
   async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode=''}={}){
     await init();
+    await ensureFeishuSyncTables();
     const [feishuCourses,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
       loadFeishuCourses(),
       getCachedScan(T_FEISHU_SCHEDULE_SYNC).catch(()=>[]),
@@ -828,6 +833,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const taskId=cleanText(query.get('taskId'));
       const token=cleanText(query.get('token'));
       await init();
+      await ensureFeishuSyncTables();
       const tasks=await getCachedScan(T_FEISHU_SCHEDULE_TASKS).catch(()=>[]);
       const task=(tasks||[]).find(row=>String(row.id)===taskId&&String(row.confirmToken)===token);
       if(!task)return sendPlainText(res,'确认链接无效或已过期',404);
@@ -839,6 +845,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const taskId=cleanText(query.get('taskId'));
       const token=cleanText(query.get('token'));
       await init();
+      await ensureFeishuSyncTables();
       const tasks=await getCachedScan(T_FEISHU_SCHEDULE_TASKS,{fresh:true}).catch(()=>[]);
       const task=(tasks||[]).find(row=>String(row.id)===taskId&&String(row.confirmToken)===token);
       if(!task)return sendJson(res,{error:'确认链接无效或已过期'},404);

@@ -1,4 +1,6 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const api = require('../api/index.js');
 
 const rules = api._test;
@@ -31,6 +33,13 @@ assert.deepStrictEqual(
     'ft_membership_account_events'
   ],
   'runtime ensured tables should cover feedback, course package, secondary index, and membership tables'
+);
+
+const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
+assert.match(
+  apiSource,
+  /createFeishuScheduleSyncRoutes\(\{[^}]*mkTable/s,
+  'feishu schedule sync route should receive mkTable so it can create its runtime sync tables before writing'
 );
 
 console.log('runtime table bootstrap tests passed');
