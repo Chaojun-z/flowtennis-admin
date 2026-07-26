@@ -400,6 +400,9 @@ function datasetHasCurrentRequestKey(name){
 function lifecycleMetricsReady(){
   return datasetHasCurrentRequestKey('lifecycleMetricsPage');
 }
+function customerCenterPageReady(){
+  return datasetHasCurrentRequestKey('customerCenterPage');
+}
 function markDatasetLoaded(name,requestKey=datasetRequestKey(name)){
   loadedDatasets.add(name);
   if(DATASETS_WITH_REQUEST_KEYS.has(name))loadedDatasetRequestKeys.set(name,requestKey);

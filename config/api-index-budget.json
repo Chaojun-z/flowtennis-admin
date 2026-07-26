@@ -1,5 +1,5 @@
 {
-  "maxLines": 7435,
+  "maxLines": 7450,
   "extractedModules": [
     "server/auth.js",
     "server/auth-routes.js",
@@ -30,6 +30,7 @@
     "server/page-data/operations-page.js",
     "server/metrics/operations-metrics.js",
     "server/page-data/finance-page.js",
-    "server/page-data/finance-snapshot.js"
+    "server/page-data/finance-snapshot.js",
+    "server/read-models/student-teaching-summary-cache.js"
   ]
 }

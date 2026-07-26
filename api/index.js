@@ -13,6 +13,7 @@ const { buildMembershipFinanceSummary } = require('../server/read-models/members
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
 const { invalidateOperationsPageDataCache } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js'), { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
+const { createStudentTeachingSummaryCache } = require('../server/read-models/student-teaching-summary-cache.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
 const { createAuthServices } = require('../server/auth');
@@ -98,12 +99,12 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'老吴',name:'刘润扬教练'}
 ];
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,...MEMBERSHIP_TABLES];
 const HOT_SCAN_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -128,6 +129,7 @@ const HOT_SCAN_TABLES=new Map([
   [T_LEADS,{ttlMs:60000}],
   [T_LEAD_FOLLOWUPS,{ttlMs:60000}],
   [T_LEAD_IMPORT_BATCHES,{ttlMs:60000}],
+  [T_STUDENT_TEACHING_SUMMARY,{ttlMs:60000}],
   [T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,{ttlMs:60000}],[T_FEISHU_SCHEDULE_SYNC,{ttlMs:60000}],[T_FEISHU_SCHEDULE_TASKS,{ttlMs:60000}]
 ]);
 const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
@@ -285,6 +287,7 @@ const HOT_GET_TABLES=new Map([
   [T_USER_WECHAT_INDEX,{ttlMs:60000}],
   [T_COACH_SCHEDULE_INDEX,{ttlMs:60000}],
   [T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,{ttlMs:60000}],
+  [T_STUDENT_TEACHING_SUMMARY,{ttlMs:60000}],
   [T_CLASSES,{ttlMs:60000}],
   [T_ENTITLEMENTS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -309,6 +312,7 @@ const wechatAccessTokenCacheByApp = new Map();
 const wechatAccessTokenCache = wechatAccessTokenCacheByApp;
 const feishuTenantAccessTokenCacheByApp = new Map();
 let matchSqlPool;
+let queueStudentTeachingSummaryRefresh=()=>{};
 const {
   gc,
   isTransientStorageError,
@@ -341,8 +345,12 @@ const {
   hotGetTables:HOT_GET_TABLES,
   productionPageReadLimits:PRODUCTION_PAGE_READ_LIMITS,
   isProductionRuntime,
-  onTableWrite(t){if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;if(OPERATIONS_SOURCE_TABLES.has(t)){invalidateOperationsSourceCache();invalidateOperationsPageDataCache();}}
+  onTableWrite(t,meta){if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;if(OPERATIONS_SOURCE_TABLES.has(t)){invalidateOperationsSourceCache();invalidateOperationsPageDataCache();}queueStudentTeachingSummaryRefresh(t,meta);}
 });
+queueStudentTeachingSummaryRefresh=createStudentTeachingSummaryCache({
+  tables:{T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY},
+  getCachedScan,mkTable,put,del
+}).queueStudentTeachingSummaryRefresh;
 function getMatchSqlPool(){
   if(!MATCH_DATABASE_URL)throw new Error('缺少 MATCH_DATABASE_URL 或 DATABASE_URL，约球真实数据不能使用 mock 或 TableStore');
   if(!matchSqlPool)matchSqlPool=new Pool({connectionString:MATCH_DATABASE_URL,ssl:process.env.MATCH_DATABASE_SSL==='true'?{rejectUnauthorized:false}:undefined});
@@ -715,10 +723,11 @@ const handleCorePageDataRoutes=createCorePageDataRoutes({
   decorateWorkbenchScheduleRows,decorateWorkbenchClasses,buildWorkbenchStats,projectScheduleListRow,
   normalizeMembershipPlanViewRecord,normalizeMembershipOrderViewRecord,DEFAULT_CAMPUSES,
   PRODUCTION_PAGE_READ_LIMITS,COURTS_PAGE_STUDENT_PROJECTION_FIELDS,COURTS_PAGE_COURT_PROJECTION_FIELDS,
+  put,del,mkTable,
   tables:{T_COACHES,T_CAMPUSES,T_STUDENTS,T_CLASSES,T_PLANS,T_PRODUCTS,T_SCHEDULE,T_COURTS,
     T_ENTITLEMENTS,T_PURCHASES,T_PACKAGES,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ACCOUNTS,
     T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,
-    T_MEMBERSHIP_PLANS,T_USERS,T_FEEDBACKS,T_LEADS}
+    T_MEMBERSHIP_PLANS,T_USERS,T_FEEDBACKS,T_LEADS,T_STUDENT_TEACHING_SUMMARY}
 });
 const handleCampusRoutes=createCampusRoutes({
   init,sendJson:routeSendJson,listCampusesWithDefaults,filterLoadAllForUser,uuidv4,
@@ -1758,7 +1767,8 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     feedbacks:Array.isArray(data?.feedbacks)?data.feedbacks:[],
     coachProposals:Array.isArray(data?.coachProposals)?data.coachProposals:[],
     leads:Array.isArray(data?.leads)?data.leads:[],
-    leadFollowups:Array.isArray(data?.leadFollowups)?data.leadFollowups:[]
+    leadFollowups:Array.isArray(data?.leadFollowups)?data.leadFollowups:[],
+    studentTeachingSummaries:Array.isArray(data?.studentTeachingSummaries)?data.studentTeachingSummaries:[]
   };
   const profile=normalizePermissionProfile(user||{});
   if(profile.role==='admin')return filterCampusScopedData(normalized,user);

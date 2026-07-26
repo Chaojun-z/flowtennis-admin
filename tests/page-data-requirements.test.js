@@ -85,7 +85,11 @@ assert.match(corePagesSource, /path==='\/page-data\/package-center-list'&&method
 assert.doesNotMatch(corePagesSource, /path==='\/page-data\/package-center-list'&&method==='GET'[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*path==='\/page-data\/purchases'&&method==='GET'/, 'package center list endpoint must not scan lesson ledger rows');
 assert.doesNotMatch(corePagesSource, /path==='\/page-data\/package-center-list'&&method==='GET'[\s\S]*T_SCHEDULE[\s\S]*path==='\/page-data\/purchases'&&method==='GET'/, 'package center list endpoint must not scan schedule rows');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_PURCHASES\)[\s\S]*cappedScan\(T_ENTITLEMENTS\)/, 'customer center list endpoint should read the lightweight customer and course facts');
+assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'customer center list endpoint should read precomputed student teaching summary rows for schedule facts');
 assert.doesNotMatch(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*path==='\/page-data\/purchases'&&method==='GET'/, 'customer center list endpoint must not scan lesson ledger rows');
 assert.doesNotMatch(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*T_SCHEDULE[\s\S]*path==='\/page-data\/purchases'&&method==='GET'/, 'customer center list endpoint must not scan schedule rows');
+assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryRows/, 'customer center should expose an explicit admin-only rebuild path for the student teaching summary read model');
+assert.match(apiSource, /T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary'/, 'api should declare the student teaching summary read model table');
+assert.match(apiSource, /queueStudentTeachingSummaryRefresh\(t,meta\)/, 'source table writes should queue student teaching summary refreshes outside the first-screen read path');
 
 console.log('page data requirements tests passed');

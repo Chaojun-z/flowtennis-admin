@@ -1,5 +1,5 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
-const { buildTeachingStudentViews, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
+const { buildTeachingStudentViews, buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
 const {
@@ -30,13 +30,14 @@ function createCorePageDataRoutes(deps={}){
     decorateWorkbenchScheduleRows,decorateWorkbenchClasses,buildWorkbenchStats,projectScheduleListRow,
     normalizeMembershipPlanViewRecord,normalizeMembershipOrderViewRecord,DEFAULT_CAMPUSES,
     PRODUCTION_PAGE_READ_LIMITS,COURTS_PAGE_STUDENT_PROJECTION_FIELDS,COURTS_PAGE_COURT_PROJECTION_FIELDS,
+    put,del,mkTable,
     tables={}
   }=deps;
   const {
     T_COACHES,T_CAMPUSES,T_STUDENTS,T_CLASSES,T_PLANS,T_PRODUCTS,T_SCHEDULE,T_COURTS,T_LEADS,
     T_ENTITLEMENTS,T_PURCHASES,T_PACKAGES,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ACCOUNTS,
     T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,
-    T_MEMBERSHIP_PLANS,T_USERS,T_FEEDBACKS
+    T_MEMBERSHIP_PLANS,T_USERS,T_FEEDBACKS,T_STUDENT_TEACHING_SUMMARY
   }=tables;
   async function hydrateScheduleRowsByLedgerIds(scheduleRows=[],ledgerRows=[]){
     if(!T_SCHEDULE)return scheduleRows||[];
@@ -76,26 +77,28 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/customer-center-list'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const [leads,students,purchases,entitlements]=await Promise.all([
+      const [leads,students,purchases,entitlements,studentTeachingSummaries]=await Promise.all([
         T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
         cappedScan(T_STUDENTS),
         cappedScan(T_PURCHASES),
-        cappedScan(T_ENTITLEMENTS)
+        cappedScan(T_ENTITLEMENTS),
+        T_STUDENT_TEACHING_SUMMARY ? getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]) : Promise.resolve([])
       ]);
-      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements},user);
+      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,studentTeachingSummaries},user);
       const customerLifecycleRows=buildCustomerLifecycleRows({
         leads:scoped.leads,
         students:scoped.students,
         purchases:scoped.purchases,
         entitlements:scoped.entitlements
       });
+      const teachingData={...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries};
       const metricScope=pageDataScopeFromQuery(query);
       return sendJson(res,{
         customerLifecycleRows,
-        teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),
+        teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,teachingData),
         standardLifecycleMetrics:hasPageDataScope(metricScope)
-          ? buildScopedStandardLifecycleMetrics({...scoped,customerLifecycleRows},metricScope)
-          : buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})
+          ? buildScopedStandardLifecycleMetrics({...teachingData,customerLifecycleRows},metricScope)
+          : buildStandardLifecycleMetrics({...teachingData,customerLifecycleRows})
       });
     }
     if(path==='/page-data/purchases'&&method==='GET'){
@@ -154,6 +157,39 @@ function createCorePageDataRoutes(deps={}){
           ? buildScopedStandardLifecycleMetrics({...scoped,customerLifecycleRows},metricScope)
           : buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})
       });
+    }
+    if(path==='/page-data/customer-center-list/rebuild-summary'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      if(!T_STUDENT_TEACHING_SUMMARY||!put||!mkTable)return sendJson(res,{error:'摘要表未配置'},500);
+      await init();
+      const [leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
+        T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
+        cappedScan(T_STUDENTS),
+        cappedScan(T_PURCHASES),
+        cappedScan(T_ENTITLEMENTS),
+        cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
+        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
+        T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
+        T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
+      ]);
+      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
+      const customerLifecycleRows=buildCustomerLifecycleRows({
+        leads:scoped.leads,
+        students:scoped.students,
+        purchases:scoped.purchases,
+        entitlements:scoped.entitlements,
+        schedule:scoped.schedule,
+        feedbacks:scoped.feedbacks
+      });
+      const rows=buildStudentTeachingSummaryRows(customerLifecycleRows,scoped);
+      await mkTable(T_STUDENT_TEACHING_SUMMARY);
+      const existing=T_STUDENT_TEACHING_SUMMARY?await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}).catch(()=>[]):[];
+      const nextIds=new Set(rows.map(row=>String(row.id||'')).filter(Boolean));
+      for(const row of rows)await put(T_STUDENT_TEACHING_SUMMARY,row.id,row);
+      if(del){
+        for(const row of existing.filter(row=>row?.id&&!nextIds.has(String(row.id))))await del(T_STUDENT_TEACHING_SUMMARY,row.id).catch(()=>null);
+      }
+      return sendJson(res,{success:true,count:rows.length,updatedAt:new Date().toISOString()});
     }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

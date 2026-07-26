@@ -655,7 +655,70 @@ function buildTeachingStudentRecentFeedbackMap(data = {}) {
   return byStudent;
 }
 
+function booleanSnapshotValue(value) {
+  if (value === true || value === false) return value;
+  const raw = text(value).toLowerCase();
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return undefined;
+}
+
+function numberSnapshotValue(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function arraySnapshotValue(value) {
+  return parseArr(value);
+}
+
+function buildTeachingStudentSummaryFieldMap(data = {}) {
+  const details = new Map();
+  (data.teachingStudentSummaryRows || data.studentTeachingSummaries || [])
+    .forEach(row => {
+      const studentId = text(row.studentId || row.id);
+      if (!studentId) return;
+      details.set(studentId, {
+        hasTeachingSummarySnapshot: true,
+        packageListRows: arraySnapshotValue(row.packageListRows),
+        packageListText: text(row.packageListText || '-'),
+        packageBalanceRemaining: numberSnapshotValue(row.packageBalanceRemaining),
+        packageBalanceTotal: numberSnapshotValue(row.packageBalanceTotal),
+        packageBalanceText: text(row.packageBalanceText || '-'),
+        packageBalancePercent: numberSnapshotValue(row.packageBalancePercent),
+        packagePurchaseDate: text(row.packagePurchaseDate),
+        detailPackageBalanceRemaining: numberSnapshotValue(row.detailPackageBalanceRemaining),
+        detailPackageBalanceTotal: numberSnapshotValue(row.detailPackageBalanceTotal),
+        detailPackageBalanceText: text(row.detailPackageBalanceText || row.packageBalanceText || '-'),
+        detailPackageBalancePercent: numberSnapshotValue(row.detailPackageBalancePercent),
+        detailPackageOrderRows: arraySnapshotValue(row.detailPackageOrderRows),
+        detailLessonRecordRows: arraySnapshotValue(row.detailLessonRecordRows),
+        detailRecentLessonDate: text(row.detailRecentLessonDate || row.lastFormalLessonAt),
+        detailBenefitRows: arraySnapshotValue(row.detailBenefitRows),
+        detailBenefitGrantRows: arraySnapshotValue(row.detailBenefitGrantRows),
+        detailBenefitConsumeRows: arraySnapshotValue(row.detailBenefitConsumeRows),
+        detailRecentFeedbackRows: arraySnapshotValue(row.detailRecentFeedbackRows),
+        cumulativeCoursePaidAmount: numberSnapshotValue(row.cumulativeCoursePaidAmount),
+        cumulativeCoursePaidText: text(row.cumulativeCoursePaidText),
+        completedLessons: numberSnapshotValue(row.completedLessons),
+        lastFormalLessonAt: text(row.lastFormalLessonAt),
+        packageStatusLabel: text(row.packageStatusLabel),
+        paymentModeLabel: text(row.paymentModeLabel),
+        activityStatusLabel: text(row.activityStatusLabel),
+        lessonVolumeLabel: text(row.lessonVolumeLabel),
+        studentStatusLabel: text(row.studentStatusLabel),
+        isHistoricalStudentRoster: booleanSnapshotValue(row.isHistoricalStudentRoster),
+        isActiveStudentRoster: booleanSnapshotValue(row.isActiveStudentRoster),
+        hasTrialAttended: booleanSnapshotValue(row.hasTrialAttended),
+        hasFormalAttended: booleanSnapshotValue(row.hasFormalAttended),
+        summaryUpdatedAt: text(row.summaryUpdatedAt || row.updatedAt)
+      });
+    });
+  return details;
+}
+
 function buildTeachingStudentListFieldMap(data = {}, options = {}) {
+  const summaryFieldMap = buildTeachingStudentSummaryFieldMap(data);
   const packageFieldMap = buildTeachingStudentPackageFieldMap(data, options);
   const completedByStudent = buildTeachingStudentCompletedLessonMap(data);
   const coursePaidByStudent = buildTeachingStudentCoursePaidMap(data);
@@ -663,11 +726,17 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
   const benefitDetailMap = buildTeachingStudentBenefitDetailMap(data);
   const feedbackMap = buildTeachingStudentRecentFeedbackMap(data);
   const details = new Map();
-  [...new Set([...packageFieldMap.keys(), ...completedByStudent.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
+  [...new Set([...summaryFieldMap.keys(), ...packageFieldMap.keys(), ...completedByStudent.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
+    const summaryFields = summaryFieldMap.get(studentId) || {};
     const packageFields = packageFieldMap.get(studentId) || {};
-    const lessonRows = lessonDetailMap.get(studentId) || [];
+    const lessonRows = lessonDetailMap.has(studentId) ? (lessonDetailMap.get(studentId) || []) : (summaryFields.detailLessonRecordRows || []);
     const benefitFields = benefitDetailMap.get(studentId) || {};
-    const cumulativeCoursePaidAmount = money(coursePaidByStudent.get(studentId) || 0);
+    const cumulativeCoursePaidAmount = coursePaidByStudent.has(studentId)
+      ? money(coursePaidByStudent.get(studentId) || 0)
+      : money(summaryFields.cumulativeCoursePaidAmount || 0);
+    const completedLessons = completedByStudent.has(studentId)
+      ? round(completedByStudent.get(studentId) || 0, 1)
+      : round(summaryFields.completedLessons || 0, 1);
     details.set(studentId, {
       packageListRows: [],
       packageListText: '-',
@@ -689,10 +758,13 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       detailRecentFeedbackRows: feedbackMap.get(studentId) || [],
       cumulativeCoursePaidAmount,
       cumulativeCoursePaidText: moneyText(cumulativeCoursePaidAmount),
+      ...summaryFields,
       ...packageFields,
-      detailPackageOrderRows: Array.isArray(packageFields.detailPackageOrderRows) ? packageFields.detailPackageOrderRows : [],
+      detailPackageOrderRows: Array.isArray(packageFields.detailPackageOrderRows)
+        ? packageFields.detailPackageOrderRows
+        : (Array.isArray(summaryFields.detailPackageOrderRows) ? summaryFields.detailPackageOrderRows : []),
       ...benefitFields,
-      completedLessons: round(completedByStudent.get(studentId) || 0, 1)
+      completedLessons
     });
   });
   return details;
@@ -1036,11 +1108,11 @@ function teachingStudentFormalLedgerRows(data = {}, studentId = '') {
     });
 }
 
-function teachingStudentLatestFormalLessonDate(data = {}, studentId = '') {
+function teachingStudentLatestFormalLessonDate(data = {}, studentId = '', fallback = '') {
   const now = data.now || new Date();
   const scheduleDates = teachingStudentFormalLessonFactRows(data, studentId, now)
     .map(row => dateOnly(row.startTime || row.endTime || row.createdAt));
-  return scheduleDates.filter(Boolean).sort().pop() || '';
+  return scheduleDates.filter(Boolean).sort().pop() || text(fallback);
 }
 
 function teachingDaysSince(dateText = '', now = new Date()) {
@@ -1058,6 +1130,7 @@ function teachingDaysSince(dateText = '', now = new Date()) {
 function teachingStudentHasCompletedLesson(data = {}, row = {}, now = new Date()) {
   const studentId = text(row.studentId);
   if (!studentId) return false;
+  if (row.hasTeachingSummarySnapshot && (Number(row.completedLessons) || 0) > 0) return true;
   return teachingStudentScheduleRows(data, studentId, schedule => teachingScheduleLessonFact(schedule, now)).length > 0;
 }
 
@@ -1068,15 +1141,44 @@ function teachingStudentHasCourseRosterEntry(row = {}) {
 }
 
 function teachingStudentInHistoricalRoster(data = {}, row = {}, now = new Date()) {
-  return teachingStudentHasCompletedLesson(data, row, now)
+  if (teachingStudentHasCompletedLesson(data, row, now)
     || teachingStudentHasFormalPackage(row)
-    || teachingStudentHasCourseRosterEntry(row);
+    || teachingStudentHasCourseRosterEntry(row)) return true;
+  const snapshotValue = booleanSnapshotValue(row.isHistoricalStudentRoster);
+  return row.hasTeachingSummarySnapshot && snapshotValue === true;
 }
 
 function teachingStudentInActiveRoster(data = {}, row = {}, now = new Date()) {
   if ((Number(row.packageBalanceRemaining) || 0) > 0) return true;
-  const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
+  const snapshotValue = booleanSnapshotValue(row.isActiveStudentRoster);
+  if (row.hasTeachingSummarySnapshot && snapshotValue !== undefined) return snapshotValue;
+  const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId), teachingStudentSummaryDateFallback(data, row)), now);
   return days !== null && days <= 90;
+}
+
+function hasFreshTeachingLessonFacts(data = {}) {
+  return (Array.isArray(data.schedule) && data.schedule.length > 0)
+    || (Array.isArray(data.entitlementLedger) && data.entitlementLedger.length > 0);
+}
+
+function teachingStudentSummaryDateFallback(data = {}, row = {}) {
+  return hasFreshTeachingLessonFacts(data) ? '' : text(row.lastFormalLessonAt);
+}
+
+function teachingStudentHasTrialAttendedFact(data = {}, row = {}, now = new Date()) {
+  if (teachingStudentTrialLessonFactRows(data, text(row.studentId), now).length > 0) return true;
+  if (!hasFreshTeachingLessonFacts(data) && row.hasTeachingSummarySnapshot) {
+    return booleanSnapshotValue(row.hasTrialAttended) === true;
+  }
+  return false;
+}
+
+function teachingStudentHasFormalAttendedFact(data = {}, row = {}, now = new Date()) {
+  if (teachingStudentFormalLessonFactRows(data, text(row.studentId), now).length > 0) return true;
+  if (!hasFreshTeachingLessonFacts(data) && row.hasTeachingSummarySnapshot) {
+    return booleanSnapshotValue(row.hasFormalAttended) === true;
+  }
+  return false;
 }
 
 function teachingStudentHasFormalPackage(row = {}) {
@@ -1128,7 +1230,8 @@ function teachingStudentPackageStatusLabel(row = {}) {
 }
 
 function teachingStudentActivityStatusLabel(data = {}, row = {}, now = new Date()) {
-  const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
+  const latest = teachingStudentLatestFormalLessonDate(data, text(row.studentId), teachingStudentSummaryDateFallback(data, row));
+  const days = teachingDaysSince(latest, now);
   if (days === null) return '从未正式上课';
   if (days <= 30) return '近30天活跃';
   if (days <= 90) return '31-90天活跃';
@@ -1137,6 +1240,7 @@ function teachingStudentActivityStatusLabel(data = {}, row = {}, now = new Date(
 }
 
 function teachingStudentPaymentModeLabel(data = {}, row = {}, now = new Date()) {
+  if (!hasFreshTeachingLessonFacts(data) && text(row.paymentModeLabel)) return text(row.paymentModeLabel);
   const studentId = text(row.studentId);
   const formalLessonRows = teachingStudentFormalLessonFactRows(data, studentId, now);
   const hasPackage = teachingStudentHasFormalPackage(row) || formalLessonRows.some(teachingPaymentIsPackage);
@@ -1169,6 +1273,7 @@ function teachingStudentDirectLessonsAfterLastPackage(data = {}, row = {}, now =
 }
 
 function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()) {
+  if (!hasFreshTeachingLessonFacts(data) && text(row.studentStatusLabel)) return text(row.studentStatusLabel);
   const packageStatus = teachingStudentPackageStatusLabel(row);
   const activityStatus = teachingStudentActivityStatusLabel(data, row, now);
   const studentId = text(row.studentId);
@@ -1193,16 +1298,18 @@ function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()
 }
 
 function teachingStudentApplyStandardLabels(data = {}, row = {}, now = new Date()) {
-  const isHistoricalStudentRoster = teachingStudentInHistoricalRoster(data, row, now);
-  const isActiveStudentRoster = isHistoricalStudentRoster && teachingStudentInActiveRoster(data, row, now);
+  const lastFormalLessonAt = teachingStudentLatestFormalLessonDate(data, text(row.studentId), teachingStudentSummaryDateFallback(data, row));
+  const source = { ...row, lastFormalLessonAt };
+  const isHistoricalStudentRoster = teachingStudentInHistoricalRoster(data, source, now);
+  const isActiveStudentRoster = isHistoricalStudentRoster && teachingStudentInActiveRoster(data, source, now);
   return {
     ...row,
-    lastFormalLessonAt: teachingStudentLatestFormalLessonDate(data, text(row.studentId)),
-    packageStatusLabel: teachingStudentPackageStatusLabel(row),
-    paymentModeLabel: teachingStudentPaymentModeLabel(data, row, now),
-    activityStatusLabel: teachingStudentActivityStatusLabel(data, row, now),
-    lessonVolumeLabel: teachingStudentLessonVolumeLabel(row),
-    studentStatusLabel: teachingStudentStudentStatusLabel(data, row, now),
+    lastFormalLessonAt,
+    packageStatusLabel: teachingStudentPackageStatusLabel(source),
+    paymentModeLabel: teachingStudentPaymentModeLabel(data, source, now),
+    activityStatusLabel: teachingStudentActivityStatusLabel(data, source, now),
+    lessonVolumeLabel: teachingStudentLessonVolumeLabel(source),
+    studentStatusLabel: teachingStudentStudentStatusLabel(data, source, now),
     isHistoricalStudentRoster,
     isActiveStudentRoster
   };
@@ -1279,6 +1386,48 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
         });
       });
     });
+  (data.teachingStudentSummaryRows || data.studentTeachingSummaries || [])
+    .forEach(row => {
+      const studentId = text(row.studentId || row.id);
+      if (!studentId || byStudentId.has(studentId)) return;
+      byStudentId.set(studentId, {
+        customerKey: `teaching-summary:${studentId}`,
+        sourceLeadId: text(row.sourceLeadId),
+        leadId: '',
+        studentId,
+        displayName: text(row.displayName || row.name || studentId),
+        phone: text(row.phone),
+        source: text(row.source),
+        campus: text(row.campus),
+        owner: text(row.primaryCoach),
+        customerType: text(row.type),
+        demandProduct: '',
+        trialAtRaw: '',
+        trialBookedAt: '',
+        trialAttendedAt: '',
+        courseFirstPurchaseAt: text(row.packagePurchaseDate),
+        conversionAt: text(row.packagePurchaseDate),
+        formalCoach: text(row.primaryCoach),
+        profileNote: '',
+        studentStage: text(row.studentStage || 'student'),
+        courseDealPath: text(row.courseDealPath),
+        trialStatus: text(row.trialStatus),
+        coursePurchaseCount: 0,
+        hasCourseRepeatPurchase: false,
+        hasTrialToCourseConversion: false,
+        courtStage: 'none',
+        membershipStatus: '',
+        hasTrialExperience: booleanSnapshotValue(row.hasTrialAttended) === true,
+        hasScheduleRecord: true,
+        hasCourseStudentEntry: true,
+        hasFreeCourseFollowup: true,
+        leadDate: text(row.packagePurchaseDate || row.lastFormalLessonAt || row.summaryUpdatedAt),
+        createdAt: text(row.summaryUpdatedAt || row.updatedAt),
+        hasCourseConversion: text(row.studentStage) === 'formal',
+        hasBookingConversion: false,
+        hasMembershipConversion: false
+      });
+    });
   return [...byStudentId.values()];
 }
 
@@ -1290,8 +1439,8 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });
   const courseViewRow = row => teachingStudentViewRow(row, courseListFieldMap.get(text(row.studentId)) || {});
   const formalViewRow = row => teachingStudentViewRow(row, formalListFieldMap.get(text(row.studentId)) || {});
-  const hasTrialAttended = row => teachingStudentTrialLessonFactRows(data, text(row.studentId), now).length > 0;
-  const hasFormalAttended = row => teachingStudentFormalLessonFactRows(data, text(row.studentId), now).length > 0;
+  const hasTrialAttended = row => teachingStudentHasTrialAttendedFact(data, row, now);
+  const hasFormalAttended = row => teachingStudentHasFormalAttendedFact(data, row, now);
   const hasCourseStudentEntry = row => !!row.hasTrialExperience
     || text(row.studentStage) === 'formal'
     || !!row.hasCourseStudentEntry
@@ -1326,7 +1475,7 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const coursePurchaseCount = formalStudents.reduce((sum, row) => sum + (Number(row.coursePurchaseCount) || 0), 0);
   const courseRepeatCount = formalStudents.filter(row => row.hasCourseRepeatPurchase).length;
   const formalLessonWithinDays = (row, daysLimit) => {
-    const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
+    const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId), teachingStudentSummaryDateFallback(data, row)), now);
     return days !== null && days <= daysLimit;
   };
   const packageBalanceRows = activeStudents.filter(row => (Number(row.packageBalanceRemaining) || 0) > 0);
@@ -1376,6 +1525,67 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
       courseRepeatCount
     }
   };
+}
+
+function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOString()) {
+  const studentId = text(row.studentId || row.id);
+  if (!studentId) return null;
+  return {
+    id: studentId,
+    studentId,
+    name: text(row.name || row.displayName),
+    displayName: text(row.displayName || row.name),
+    phone: text(row.phone),
+    type: text(row.type),
+    source: text(row.source),
+    campus: text(row.campus),
+    primaryCoach: text(row.primaryCoach),
+    sourceLeadId: text(row.sourceLeadId),
+    studentStage: text(row.studentStage),
+    trialStatus: text(row.trialStatus),
+    courseDealPath: text(row.courseDealPath),
+    lastFormalLessonAt: text(row.lastFormalLessonAt),
+    completedLessons: round(row.completedLessons || 0, 1),
+    packageListRows: Array.isArray(row.packageListRows) ? row.packageListRows : [],
+    packageListText: text(row.packageListText || '-'),
+    packageBalanceRemaining: numberSnapshotValue(row.packageBalanceRemaining),
+    packageBalanceTotal: numberSnapshotValue(row.packageBalanceTotal),
+    packageBalanceText: text(row.packageBalanceText || '-'),
+    packageBalancePercent: numberSnapshotValue(row.packageBalancePercent),
+    packagePurchaseDate: text(row.packagePurchaseDate),
+    detailPackageBalanceRemaining: numberSnapshotValue(row.detailPackageBalanceRemaining),
+    detailPackageBalanceTotal: numberSnapshotValue(row.detailPackageBalanceTotal),
+    detailPackageBalanceText: text(row.detailPackageBalanceText || row.packageBalanceText || '-'),
+    detailPackageBalancePercent: numberSnapshotValue(row.detailPackageBalancePercent),
+    detailPackageOrderRows: Array.isArray(row.detailPackageOrderRows) ? row.detailPackageOrderRows : [],
+    detailRecentLessonDate: text(row.detailRecentLessonDate || row.lastFormalLessonAt),
+    cumulativeCoursePaidAmount: money(row.cumulativeCoursePaidAmount || 0),
+    cumulativeCoursePaidText: text(row.cumulativeCoursePaidText || moneyText(row.cumulativeCoursePaidAmount || 0)),
+    packageStatusLabel: text(row.packageStatusLabel),
+    paymentModeLabel: text(row.paymentModeLabel),
+    activityStatusLabel: text(row.activityStatusLabel),
+    lessonVolumeLabel: text(row.lessonVolumeLabel),
+    studentStatusLabel: text(row.studentStatusLabel),
+    isHistoricalStudentRoster: !!row.isHistoricalStudentRoster,
+    isActiveStudentRoster: !!row.isActiveStudentRoster,
+    hasTrialAttended: !!row.hasTrialAttended,
+    hasFormalAttended: !!row.hasFormalAttended,
+    summaryUpdatedAt: now,
+    updatedAt: now
+  };
+}
+
+function buildStudentTeachingSummaryRows(customerLifecycleRows = [], data = {}) {
+  const now = data.now || new Date();
+  const updatedAt = now instanceof Date ? now.toISOString() : text(now) || new Date().toISOString();
+  const views = buildTeachingStudentViews(customerLifecycleRows, { ...data, teachingStudentSummaryRows: [] });
+  return (views.historicalStudents || [])
+    .map(row => teachingStudentSummarySnapshotRow({
+      ...row,
+      hasTrialAttended: teachingStudentTrialLessonFactRows(data, text(row.studentId), now).length > 0,
+      hasFormalAttended: teachingStudentFormalLessonFactRows(data, text(row.studentId), now).length > 0
+    }, updatedAt))
+    .filter(Boolean);
 }
 
 function buildRawLeadConversionMetrics({ leads = [], customerLifecycleRows = [] } = {}) {
@@ -1634,6 +1844,7 @@ module.exports = {
   buildScopedLifecycleSource,
   buildLeadPoolRows,
   buildTeachingStudentViews,
+  buildStudentTeachingSummaryRows,
   buildRawLeadConversionMetrics,
   rawLeadPoolRowsForLeads,
   buildStageRows,

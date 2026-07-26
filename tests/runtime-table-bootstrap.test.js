@@ -22,6 +22,7 @@ assert.deepStrictEqual(
     'ft_coach_schedule_index',
     'ft_schedule_conflict_index',
     'ft_student_active_entitlement_index',
+    'ft_student_teaching_summary',
     'ft_official_account_query_sessions',
     'ft_coach_proposals',
     'ft_feishu_schedule_sync',

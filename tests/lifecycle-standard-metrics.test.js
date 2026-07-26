@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js');
-const { buildStandardLifecycleMetrics } = require('../server/read-models/platform-metrics.js');
+const { buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics } = require('../server/read-models/platform-metrics.js');
 const { buildOperationsMetrics } = require('../server/metrics/operations-metrics.js');
 
 const sample = {
@@ -158,6 +158,34 @@ assert.strictEqual(
   0,
   '在期学员课包即将耗尽必须来自后端统一读模型'
 );
+const teachingSummaryRows = buildStudentTeachingSummaryRows(customerLifecycleRows, { ...sample, now: new Date('2026-07-09 00:00:00') });
+const lightweightStandard = buildStandardLifecycleMetrics({
+  leads: sample.leads,
+  students: sample.students,
+  purchases: sample.purchases,
+  entitlements: sample.entitlements,
+  teachingStudentSummaryRows: teachingSummaryRows,
+  customerLifecycleRows,
+  now: new Date('2026-07-09 00:00:00')
+});
+[
+  'historicalStudentCount',
+  'activeStudentCount',
+  'historicalTrialAttendedCount',
+  'historicalFormalAttendedCount',
+  'historicalTrialWithoutFormalCount',
+  'historicalFormalLesson30Count',
+  'activeFormalLesson30Count',
+  'activeFormalLesson90Count',
+  'activePackageBalanceCount',
+  'activePackageLowCount'
+].forEach(key => {
+  assert.strictEqual(
+    lightweightStandard.teachingSummary[key],
+    standard.teachingSummary[key],
+    `轻量学员页摘要必须保持 ${key} 与完整教学口径一致`
+  );
+});
 assert.ok(
   standard.views.activeStudents.some(row => row.studentId === 'student-single-pay-active' && row.packageBalanceText === '-'),
   '单次付费活跃学员必须进入在期学员，但课包余额展示为空'

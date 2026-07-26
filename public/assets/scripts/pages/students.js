@@ -664,7 +664,7 @@ function studentLoadingStatsForMode(){
   };
 }
 function studentPageStats(base){
-  if(typeof lifecycleMetricsReady==='function'&&!lifecycleMetricsReady())return studentLoadingStatsForMode();
+  if(typeof customerCenterPageReady==='function'&&!customerCenterPageReady())return studentLoadingStatsForMode();
   return studentStandardSummaryForMode();
 }
 function studentPercentText(value,total){

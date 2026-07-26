@@ -69,7 +69,7 @@ assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*历史学员[\s\S]
 assert.doesNotMatch(source, /当前列表课程成交/, 'trial student top stats must not show the old local course-deal card');
 assert.match(source, /function studentStandardSummaryForMode\(/, 'student page should keep backend standard summary helper for top stats');
 assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student top stats must read the backend teaching summary');
-assert.match(fnBody('studentPageStats'), /lifecycleMetricsReady\(\)/, 'student top stats must wait for the current scoped lifecycle metrics before showing numbers');
+assert.match(fnBody('studentPageStats'), /customerCenterPageReady\(\)/, 'student top stats must wait for the current lightweight customer center read model before showing numbers');
 assert.doesNotMatch(fnBody('studentPageStats'), /FlowTennisPlatformDataStandards\.currentStudentSummary/, 'student top stats must not use frontend row summary');
 assert.doesNotMatch(fnBody('studentPageStats'), /studentFinanceStatsForBase\(base\)|purchases\.filter|entitlements\.filter|amountPaid|finalAmount|recognizedRevenueDelta/, 'student top cards must not recalculate core metrics from frontend raw rows');
 assert.match(fnBody('studentStandardSummaryForMode'), /historicalStudentCount[\s\S]*activeStudentCount/, 'student top stats should use historical and active student backend counts');

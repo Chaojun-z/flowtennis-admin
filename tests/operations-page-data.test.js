@@ -85,7 +85,7 @@ assert.match(operationsMetricsSource, /trendDiagnostics:\s*buildTrendDiagnostics
 assert.match(operationsPageSource, /mergeDuplicateLeadRows/, 'operations page-data should use the same deduped lead pool as the leads page');
 assert.match(operationsSourceModelSource, /function invalidateOperationsSourceCache\(\)[\s\S]*operationsRowsCache\.clear\(\)/, 'operations source model should expose raw row cache invalidation for realtime writes');
 assert.match(apiSource, /OPERATIONS_SOURCE_TABLES=new Set\(\[[\s\S]*T_LEADS[\s\S]*T_LEAD_FOLLOWUPS[\s\S]*T_SCHEDULE[\s\S]*T_COURTS[\s\S]*T_PURCHASES[\s\S]*\]\)/, 'api should list operation source tables that invalidate operations caches');
-assert.match(apiSource, /onTableWrite\(t\)\{[\s\S]*OPERATIONS_SOURCE_TABLES\.has\(t\)[\s\S]*invalidateOperationsSourceCache\(\)[\s\S]*invalidateOperationsPageDataCache\(\)/, 'storage writes to operation source tables should invalidate operations caches immediately');
+assert.match(apiSource, /onTableWrite\(t,meta\)\{[\s\S]*OPERATIONS_SOURCE_TABLES\.has\(t\)[\s\S]*invalidateOperationsSourceCache\(\)[\s\S]*invalidateOperationsPageDataCache\(\)/, 'storage writes to operation source tables should invalidate operations caches immediately');
 assert.match(residualSource, /require\('\.\/operations-page\.js'\)/, 'residual page-data routes should import operations-page.js');
 assert.match(residualSource, /path==='\/page-data\/operations'&&method==='GET'/, 'residual page-data routes should own /page-data/operations');
 assert.match(residualSource, /handleOperationsPageData/, 'residual page-data routes should delegate the operations route');
