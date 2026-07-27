@@ -110,7 +110,10 @@ function normalizeCourseType(value){
   const audience=/青少|儿童|少儿/.test(text)?'青少年':(/成人/.test(text)?'成人':'');
   if(isTrial&&!audience)return {ok:false,reason:'体验课无法判断成人/青少年',raw:text};
   if(isTrial)return {ok:true,raw:text,courseType:'体验课',experienceType:audience,audience,isTrial:true};
-  if(/团课|小班/.test(text))return {ok:true,raw:text,courseType:'小班课',experienceType:'',audience,smallClassType:/训练营/.test(text)?'bootcamp':'single',isTrial:false};
+  if(/团课|小班/.test(text)){
+    const smallClassType=/亲子/.test(text)?'family':(/训练营|团课/.test(text)?'bootcamp':'single');
+    return {ok:true,raw:text,courseType:'小班课',experienceType:'',audience,smallClassType,isTrial:false};
+  }
   if(/陪打/.test(text))return {ok:true,raw:text,courseType:'陪打',experienceType:'',audience,isTrial:false};
   if(/私教|正式/.test(text))return {ok:true,raw:text,courseType:'私教课',experienceType:'',audience,isTrial:false};
   return {ok:false,reason:`无法识别课程类型：${text}`,raw:text};
@@ -581,6 +584,8 @@ function buildScheduleBody(candidate,extra={}){
   const courseType=candidate.course.courseType;
   const experienceType=candidate.course.experienceType||'';
   const isTrial=courseType==='体验课';
+  const smallClassType=courseType==='小班课'?(candidate.course.smallClassType||'single'):'';
+  const smallClassLevel2=smallClassType==='bootcamp'?'训练营':(smallClassType==='family'?'亲子课':(smallClassType==='dropin'?'随到随学':'单次'));
   const studentName=scheduleStudents.map(row=>row.name||row.id).join('、');
   const locationType=candidate.locationType==='external'?'external':'own';
   const entitlement=extra.entitlement||{};
@@ -599,10 +604,10 @@ function buildScheduleBody(candidate,extra={}){
     skillLevelMax:candidate.course.skillLevelMax||'',
     specialTopic:candidate.course.specialTopic||'',
     courseDisplayName:candidate.course.courseDisplayName||candidate.course.raw||courseType,
-    courseTypeLevel2:isTrial?`${experienceType}体验课`:(courseType==='小班课'?'单次':(courseType==='专项课'?'':(courseType==='陪打'?'陪打':`${candidate.course.audience||''}私教课`))),
-    standardCourseType:isTrial?`${experienceType}私教【体验】`:(courseType==='小班课'?`${candidate.course.audience||''}小班课/单次`:(courseType==='专项课'?'专项课':(courseType==='陪打'?'陪打':`${candidate.course.audience||''}私教【正式】`))),
+    courseTypeLevel2:isTrial?`${experienceType}体验课`:(courseType==='小班课'?smallClassLevel2:(courseType==='专项课'?'':(courseType==='陪打'?'陪打':`${candidate.course.audience||''}私教课`))),
+    standardCourseType:isTrial?`${experienceType}私教【体验】`:(courseType==='小班课'?`${candidate.course.audience||''}小班课/${smallClassLevel2}`:(courseType==='专项课'?'专项课':(courseType==='陪打'?'陪打':`${candidate.course.audience||''}私教【正式】`))),
     isTrial,
-    smallClassType:courseType==='小班课'?(candidate.course.smallClassType||'single'):'',
+    smallClassType,
     coach:candidate.resolvedCoach?.name||candidate.coachName,
     coachId:candidate.resolvedCoach?.id||'',
     locationType,

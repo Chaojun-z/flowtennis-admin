@@ -48,6 +48,7 @@ const interleavedCourses = sync.parseFeishuScheduleRows({ values: interleavedVal
 assert.strictEqual(interleavedCourses.length, 2, 'same coach block course should merge across rows even when other coach blocks are interleaved');
 assert.strictEqual(interleavedCourses[0].endTime, '2026-07-20 11:00', 'interleaved private lesson should become one 60-minute course');
 assert.strictEqual(interleavedCourses[1].course.courseType, '小班课', '青少年团课 should map to the system small class course type');
+assert.strictEqual(interleavedCourses[1].course.smallClassType, 'bootcamp', '青少年团课 should use small class bootcamp entitlements');
 assert.strictEqual(interleavedCourses[1].lessonCount, 1, 'interleaved group lesson should also merge to one hour');
 
 const specialValues = [
@@ -119,6 +120,25 @@ const coachAliasPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(coachAliasPlan.summary.create, 1, 'coach role user alias should match Siren to Siren 教练');
 assert.strictEqual(coachAliasPlan.actions[0].candidate.resolvedCoach.name, 'Siren 教练', 'resolved coach should use canonical coach name');
+
+const bootcampPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...interleavedCourses[1],
+    sourceKey: 'bootcamp-key',
+    coachName: '杨教练',
+    studentNames: ['笑逐']
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-xiaozhu', name: '笑逐', primaryCoach: '杨教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-bootcamp', studentId: 'stu-xiaozhu', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(bootcampPlan.summary.create, 1, '青少年团课 should create when student has a bootcamp entitlement');
+const bootcampBody = sync.buildScheduleBody(bootcampPlan.actions[0].candidate);
+assert.strictEqual(bootcampBody.smallClassType, 'bootcamp', 'bootcamp schedule body should keep the small class subtype');
+assert.strictEqual(bootcampBody.courseTypeLevel2, '训练营', 'bootcamp schedule body should use training-camp level2 label');
 
 const coachScheduleFallbackPlan = sync.buildDryRunPlan({
   feishuCourses: [{
