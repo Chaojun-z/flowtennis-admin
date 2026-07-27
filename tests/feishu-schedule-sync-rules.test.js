@@ -103,6 +103,28 @@ const plan = sync.buildDryRunPlan({
 assert.strictEqual(plan.summary.bindExisting, 1, 'first baseline should bind exact existing future schedule instead of creating duplicate');
 assert.strictEqual(plan.summary.create, 0, 'exact existing future schedule should not be recreated');
 
+const systemVenuePlan = sync.buildDryRunPlan({
+  feishuCourses: courses.slice(0, 1),
+  syncRows: [],
+  schedules: [{
+    id: 'sch-system-venue',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coach: '晓哲',
+    campus: 'mabao',
+    venue: '4号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-1'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: []
+});
+assert.strictEqual(systemVenuePlan.summary.bindExisting, 1, 'existing system schedule should bind even when Feishu venue differs');
+assert.strictEqual(systemVenuePlan.actions[0].schedule.venue, '4号场', 'system venue should remain the source of truth for bound schedules');
+
 const coachAliasPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -315,6 +337,34 @@ const entitlementDisambiguationPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(entitlementDisambiguationPlan.summary.create, 1, 'multiple similar students should resolve when only one has matching entitlement');
 assert.strictEqual(entitlementDisambiguationPlan.actions[0].candidate.resolvedStudents[0].name, 'William（时节）', 'entitlement match should keep the canonical student name');
+
+const xiaotudouFriendAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'xiaotudou-friend-alias-key',
+    coachName: 'Siren',
+    startTime: '2026-07-24 15:00',
+    endTime: '2026-07-24 16:00',
+    startClock: '15:00',
+    endClock: '16:00',
+    durationMinutes: 60,
+    lessonCount: 1,
+    studentNames: ['小土豆的姐姐朋友'],
+    lessonIndex: 10,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-sister', name: '小土豆的姐姐', primaryCoach: 'Siren 教练' },
+    { id: 'stu-sister-friend', name: '小土豆的姐姐的朋友', primaryCoach: 'Siren 教练' }
+  ],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-sister-friend', studentId: 'stu-sister-friend', courseType: '私教课', totalLessons: 10, usedLessons: 9, remainingLessons: 1, status: 'active' }]
+});
+assert.strictEqual(xiaotudouFriendAliasPlan.summary.create, 1, 'confirmed friend alias should resolve to the friend student record');
+assert.strictEqual(xiaotudouFriendAliasPlan.actions[0].candidate.resolvedStudents[0].name, '小土豆的姐姐的朋友', 'friend alias should not resolve to 小土豆的姐姐');
 
 const companionPlan = sync.buildDryRunPlan({
   feishuCourses: [{

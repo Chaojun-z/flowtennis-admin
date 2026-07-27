@@ -39,6 +39,8 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
   [normalizeStudentNameKey('将来')]: '赵新阳',
   [normalizeStudentNameKey('锤锤')]: '是锤锤呀',
   [normalizeStudentNameKey('李俊泽')]: '李俊泽（L¡）',
+  [normalizeStudentNameKey('晨曦')]: '曦曦🐳',
+  [normalizeStudentNameKey('小土豆的姐姐朋友')]: '小土豆的姐姐的朋友',
   [normalizeStudentNameKey('william弟弟')]: 'william',
   [normalizeStudentNameKey('willliam弟弟')]: 'william'
 });
@@ -364,14 +366,20 @@ function scheduleCandidateFields(candidate){
   };
 }
 
-function exactScheduleMatch(candidate,schedules=[]){
+function normalizeCampusKey(value){
+  const text=cleanText(value);
+  if(['mabao','shunyi_mapo','顺义马坡','马坡'].includes(text))return 'shunyi_mapo';
+  return text;
+}
+
+function exactScheduleMatch(candidate,schedules=[],options={}){
   const fields=scheduleCandidateFields(candidate);
   const studentSet=new Set(fields.studentIds.map(String));
   return (schedules||[]).find(row=>{
     if(!activeSchedule(row)||!sameTime(fields,row))return false;
     if(String(row.coach||'')!==String(fields.coach||''))return false;
-    if(String(row.campus||'')!==String(fields.campus||''))return false;
-    if(String(row.venue||'')!==String(fields.venue||''))return false;
+    if(normalizeCampusKey(row.campus)!==normalizeCampusKey(fields.campus))return false;
+    if(!options.ignoreVenue&&String(row.venue||'')!==String(fields.venue||''))return false;
     if(String(row.courseType||'')!==String(fields.courseType||''))return false;
     if(String(row.experienceType||'')!==String(fields.experienceType||''))return false;
     const ids=parseMaybeArray(row.studentIds).map(String);
@@ -468,7 +476,8 @@ function buildResolvedCandidate(raw,ctx={}){
     const lookupMatches=studentMatchesByName(ctx.students,lookupName);
     const rawMatches=lookupName===name?[]:studentMatchesByName(ctx.students,name);
     const candidates=[...lookupMatches,...rawMatches].filter((row,index,all)=>row?.id&&all.findIndex(item=>String(item.id)===String(row.id))===index);
-    const student=(candidates.length===1?candidates[0]:uniqueBySelectableEntitlement(candidates,raw,ctx))||uniqueByName(ctx.students,lookupName)||uniqueByName(ctx.students,name);
+    const confirmedAliasStudent=lookupName!==name&&lookupMatches.length===1?lookupMatches[0]:null;
+    const student=confirmedAliasStudent||(candidates.length===1?candidates[0]:uniqueBySelectableEntitlement(candidates,raw,ctx))||uniqueByName(ctx.students,lookupName)||uniqueByName(ctx.students,name);
     if(student)resolvedStudents.push(student);
     else unresolvedStudents.push(name);
   }
@@ -562,6 +571,11 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     const exact=exactScheduleMatch(candidate,schedules);
     if(exact){
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:exact});
+      continue;
+    }
+    const systemVenueMatch=exactScheduleMatch(candidate,schedules,{ignoreVenue:true});
+    if(systemVenueMatch){
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueMatch,venueSource:'system'});
       continue;
     }
     candidate=attachSchedulableStudents(candidate,ctx);
