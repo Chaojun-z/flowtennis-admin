@@ -126,7 +126,34 @@ const bootcampPlan = sync.buildDryRunPlan({
     ...interleavedCourses[1],
     sourceKey: 'bootcamp-key',
     coachName: '杨教练',
-    studentNames: ['笑逐']
+    studentNames: ['笑逐', '同伴'],
+    studentText: '笑逐、同伴'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-xiaozhu', name: '笑逐', primaryCoach: '杨教练' },
+    { id: 'stu-peer', name: '同伴', primaryCoach: '杨教练' }
+  ],
+  coaches: [],
+  users: [],
+  entitlements: [
+    { id: 'ent-bootcamp', studentId: 'stu-xiaozhu', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' },
+    { id: 'ent-bootcamp-peer', studentId: 'stu-peer', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }
+  ]
+});
+assert.strictEqual(bootcampPlan.summary.create, 1, '青少年团课 should create when student has a bootcamp entitlement');
+const bootcampBody = sync.buildScheduleBody(bootcampPlan.actions[0].candidate);
+assert.strictEqual(bootcampBody.smallClassType, 'bootcamp', 'bootcamp schedule body should keep the small class subtype');
+assert.strictEqual(bootcampBody.courseTypeLevel2, '训练营', 'bootcamp schedule body should use training-camp level2 label');
+
+const singleBootcampPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...interleavedCourses[1],
+    sourceKey: 'single-bootcamp-key',
+    coachName: '杨教练',
+    studentNames: ['笑逐'],
+    studentText: '笑逐'
   }],
   syncRows: [],
   schedules: [],
@@ -135,10 +162,8 @@ const bootcampPlan = sync.buildDryRunPlan({
   users: [],
   entitlements: [{ id: 'ent-bootcamp', studentId: 'stu-xiaozhu', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }]
 });
-assert.strictEqual(bootcampPlan.summary.create, 1, '青少年团课 should create when student has a bootcamp entitlement');
-const bootcampBody = sync.buildScheduleBody(bootcampPlan.actions[0].candidate);
-assert.strictEqual(bootcampBody.smallClassType, 'bootcamp', 'bootcamp schedule body should keep the small class subtype');
-assert.strictEqual(bootcampBody.courseTypeLevel2, '训练营', 'bootcamp schedule body should use training-camp level2 label');
+assert.strictEqual(singleBootcampPlan.summary.notifyError, 1, 'single-student bootcamp should require operations confirmation');
+assert.match(singleBootcampPlan.actions[0].reason, /小班课至少 2 人/, 'single-student bootcamp should explain the attendance-count blocker');
 
 const coachScheduleFallbackPlan = sync.buildDryRunPlan({
   feishuCourses: [{

@@ -458,6 +458,7 @@ function buildResolvedCandidate(raw,ctx={}){
   if(!raw.studentNames.length)errors.push('缺少学员');
   if(!raw.campus)errors.push('缺少场馆');
   if(!raw.venue)errors.push('缺少场地号');
+  if(raw.course.courseType==='小班课'&&['bootcamp','family'].includes(raw.course.smallClassType)&&raw.studentNames.length<2)errors.push('小班课至少 2 人到场才能开课，需要运营确认');
   const resolvedStudents=[];
   const unresolvedStudents=[];
   const studentAliasMap={};
