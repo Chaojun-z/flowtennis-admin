@@ -30,6 +30,12 @@ assert.strictEqual(courses[0].lessonCount, 1.5, 'merged 90 minutes should be 1.5
 assert.deepStrictEqual(courses[0].studentNames, ['wjing'], 'student parser should remove bracket lesson index');
 assert.strictEqual(courses[0].lessonIndex, 11, 'student parser should keep bracket lesson index as metadata');
 assert.strictEqual(sync.normalizeNameKey('W.Jing'), sync.normalizeNameKey('wjing（11）'), 'student aliases should ignore case, dot, spaces and bracket text');
+assert.deepStrictEqual(sync.parseStudentCell('晨曦、朋友（2）').names, ['晨曦'], '晨曦、朋友 should only schedule the package owner');
+assert.strictEqual(sync.parseStudentCell('晨曦、朋友（2）').lessonIndex, 2, '晨曦、朋友 should keep the package lesson index');
+assert.deepStrictEqual(sync.parseStudentCell('德德（使用小林课包 2）').names, ['小林'], 'shared package note should schedule the package owner');
+assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').lessonIndex, 2, 'shared package note should keep the package lesson index');
+assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageNote, '德德使用小林课包 2', 'shared package note should be preserved for schedule notes');
+assert.deepStrictEqual(sync.parseStudentCell('王老板、王老板孩子').names, ['王老板'], 'Wang boss family course should use one canonical student record');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:00' }, '2026-07-20 12:01'), false, 'courses already started before baseline should be ignored');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:30' }, '2026-07-20 12:01'), true, 'future courses after baseline should be sync candidates');
 assert.strictEqual(sync.validDateKey('2026-07-01'), '2026-07-01', 'valid history date query should be accepted');
@@ -187,6 +193,24 @@ const singleBootcampPlan = sync.buildDryRunPlan({
 assert.strictEqual(singleBootcampPlan.summary.notifyError, 1, 'single-student bootcamp should require operations confirmation');
 assert.match(singleBootcampPlan.actions[0].reason, /小班课至少 2 人/, 'single-student bootcamp should explain the attendance-count blocker');
 
+const wangBossFamilyPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...interleavedCourses[1],
+    sourceKey: 'wang-boss-family-key',
+    coachName: '杨教练',
+    studentNames: ['王老板'],
+    studentText: '王老板',
+    course: { ok: true, courseType: '小班课', experienceType: '', audience: '青少年', smallClassType: 'family', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-wang', name: '王老板', primaryCoach: '杨教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-wang-family', studentId: 'stu-wang', courseType: '小班课', smallClassType: 'family', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(wangBossFamilyPlan.summary.create, 1, '王老板 family class should allow one canonical family student record');
+
 const coachScheduleFallbackPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -296,6 +320,51 @@ const confirmedAliasPlan = sync.buildDryRunPlan({
 assert.strictEqual(confirmedAliasPlan.summary.create, 1, 'confirmed student alias should resolve 锤锤 to 是锤锤呀');
 assert.strictEqual(confirmedAliasPlan.actions[0].candidate.resolvedStudents[0].name, '是锤锤呀', 'confirmed alias should keep canonical student record');
 assert.strictEqual(sync.buildScheduleBody(confirmedAliasPlan.actions[0].candidate).standardCourseType, '专项课', 'special schedule body should persist standard special course type');
+
+const chenxiFriendPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'chenxi-friend-key',
+    coachName: 'Siren',
+    studentText: '晨曦、朋友（2）',
+    studentNames: ['晨曦'],
+    lessonIndex: 2,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-xixi', name: '曦曦🐳', primaryCoach: 'Siren 教练' },
+    { id: 'stu-boyfriend', name: '暴躁壹壹男朋友', primaryCoach: 'Siren 教练' }
+  ],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-xixi', studentId: 'stu-xixi', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+});
+assert.strictEqual(chenxiFriendPlan.summary.create, 1, '晨曦、朋友 should create only for 曦曦 package owner');
+assert.deepStrictEqual(chenxiFriendPlan.actions[0].candidate.resolvedStudents.map(row=>row.name), ['曦曦🐳'], '晨曦、朋友 should not resolve the generic friend token');
+
+const sharedPackagePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'shared-package-key',
+    coachName: 'Siren',
+    studentText: '德德（使用小林课包 2）',
+    studentNames: ['小林'],
+    lessonIndex: 2,
+    sharedPackageNote: '德德使用小林课包 2',
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-xiaolin', name: '小林', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-xiaolin', studentId: 'stu-xiaolin', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+});
+assert.strictEqual(sharedPackagePlan.summary.create, 1, '德德 using 小林 package should create a schedule under 小林');
+assert.deepStrictEqual(sharedPackagePlan.actions[0].candidate.resolvedStudents.map(row=>row.name), ['小林'], 'shared package schedule should use the package owner as the system student');
+assert.match(sync.buildScheduleBody(sharedPackagePlan.actions[0].candidate).notes, /德德使用小林课包 2/, 'shared package schedule should keep the attendee note');
 
 const annotatedAliasPlan = sync.buildDryRunPlan({
   feishuCourses: [{

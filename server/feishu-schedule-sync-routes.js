@@ -21,9 +21,11 @@ function parseLessonIndex(value){
 
 function parseStudentCell(value){
   const raw=cleanText(value);
+  const shared=parseSharedPackageStudentCell(raw);
+  if(shared)return shared;
   const lessonIndex=parseLessonIndex(raw);
   const withoutIndex=raw.replace(/[（(]\s*\d+\s*[）)]/g,'').trim();
-  const names=withoutIndex.split(/[、,，/]+/).map(cleanText).filter(Boolean);
+  const names=normalizeFeishuStudentNames(withoutIndex.split(/[、,，/]+/).map(cleanText).filter(Boolean));
   return {raw,names,lessonIndex};
 }
 
@@ -44,6 +46,32 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
   [normalizeStudentNameKey('william弟弟')]: 'william',
   [normalizeStudentNameKey('willliam弟弟')]: 'william'
 });
+
+function parseSharedPackageStudentCell(raw){
+  const match=cleanText(raw).match(/^(.+?)[（(]\s*使用\s*(.+?)\s*课包\s*(\d+)?\s*[）)]$/);
+  if(!match)return null;
+  const attendee=cleanText(match[1]);
+  const packageOwner=cleanText(match[2]);
+  const lessonIndex=match[3]?parseInt(match[3],10):null;
+  return {
+    raw,
+    names:normalizeFeishuStudentNames([packageOwner]),
+    lessonIndex,
+    sharedPackageNote:`${attendee}使用${packageOwner}课包${lessonIndex?` ${lessonIndex}`:''}`.trim()
+  };
+}
+
+function normalizeFeishuStudentNames(names=[]){
+  const cleaned=(names||[]).map(cleanText).filter(Boolean);
+  const keys=cleaned.map(normalizeStudentNameKey);
+  if(keys.includes(normalizeStudentNameKey('晨曦'))&&keys.includes(normalizeStudentNameKey('朋友'))){
+    return cleaned.filter(name=>normalizeStudentNameKey(name)!==normalizeStudentNameKey('朋友'));
+  }
+  if(keys.includes(normalizeStudentNameKey('王老板'))){
+    return ['王老板'];
+  }
+  return cleaned;
+}
 
 function resolveFeishuStudentAlias(value){
   const raw=cleanText(value);
@@ -310,6 +338,7 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
       course,
       studentNames:students.names,
       lessonIndex:students.lessonIndex,
+      sharedPackageNote:students.sharedPackageNote||'',
       campus:venue.campus,
       locationType:venue.locationType,
       venue:venueName,
@@ -466,7 +495,8 @@ function buildResolvedCandidate(raw,ctx={}){
   if(!raw.studentNames.length)errors.push('缺少学员');
   if(!raw.campus)errors.push('缺少场馆');
   if(!raw.venue)errors.push('缺少场地号');
-  if(raw.course.courseType==='小班课'&&['bootcamp','family'].includes(raw.course.smallClassType)&&raw.studentNames.length<2)errors.push('小班课至少 2 人到场才能开课，需要运营确认');
+  const isWangBossFamily=raw.course.courseType==='小班课'&&raw.course.smallClassType==='family'&&raw.studentNames.some(name=>normalizeStudentNameKey(resolveFeishuStudentAlias(name))===normalizeStudentNameKey('王老板'));
+  if(raw.course.courseType==='小班课'&&['bootcamp','family'].includes(raw.course.smallClassType)&&raw.studentNames.length<2&&!isWangBossFamily)errors.push('小班课至少 2 人到场才能开课，需要运营确认');
   const resolvedStudents=[];
   const unresolvedStudents=[];
   const studentAliasMap={};
@@ -653,7 +683,7 @@ function buildScheduleBody(candidate,extra={}){
     sourceLeadId:extra.sourceLeadId||'',
     sourceLeadName:extra.sourceLeadName||'',
     actualStudentCount:Math.max(scheduleStudents.length,candidate.studentNames.length||1),
-    notes:`飞书排课表同步 ${candidate.sheetTitle||candidate.sheetId||''} ${candidate.sourceCell||''}`.trim()
+    notes:[candidate.sharedPackageNote,`飞书排课表同步 ${candidate.sheetTitle||candidate.sheetId||''} ${candidate.sourceCell||''}`.trim()].filter(Boolean).join('；')
   };
 }
 
