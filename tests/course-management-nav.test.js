@@ -112,7 +112,7 @@ assert.doesNotMatch(html, /function syncPackageProductMeta/, 'package modal shou
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_productId|课程产品|课程类型跟随课程产品/, 'package modal should no longer require course product selection');
 assert.match(openPackageModalBody, /renderDetailDrawerFormCard\('基础属性'[\s\S]*renderDetailDrawerFormCard\('规格与价格'[\s\S]*renderDetailDrawerFormCard\('时间规则'[\s\S]*renderDetailDrawerFormCard\('教练和场地'/, 'package modal should follow the standardized package card order');
 assert.match(openPackageModalBody, /学员类型[\s\S]*课程类型[\s\S]*上课人数[\s\S]*状态[\s\S]*pkg_lessons_label[\s\S]*价格[\s\S]*活动时间[\s\S]*可用时间[\s\S]*时段类型[\s\S]*可用时段[\s\S]*归属教练[\s\S]*可用校区[\s\S]*可上课教练[\s\S]*备注/, 'package modal should include the standardized package creation fields');
-assert.match(fnBody('openPackageModal'), /courseType==='小班课'\?'次数':'课时'/, 'small group package modal should label package amount as count');
+assert.match(fnBody('openPackageModal'), /courseType==='小班课'\|\|courseType==='专项课'[\s\S]*'次数':'课时'/, 'small group and special course package modal should label package amount as count');
 assert.match(fnBody('openPackageModal'), /10\$\{packageUnitLabel\}[\s\S]*20\$\{packageUnitLabel\}/, 'package shortcut chips should follow the current package unit label');
 assert.match(fnBody('standardPackageLabel'), /packageLessonUnitLabel\(p\)/, 'small group package labels should show count instead of lesson hours');
 assert.match(fnBody('packageListTitle'), /packageLessonUnitLabel\(p\)/, 'small group package cards should show count instead of lesson hours');

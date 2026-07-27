@@ -269,6 +269,7 @@ function packageStatusText(p={}){
 function packageLessonUnitLabel(p={}){
   const courseType=normalizeCourseType(p.courseType||p.packageCourseType||p.type||p.productType||'');
   if(courseType==='小班课')return '次';
+  if(courseType==='专项课')return '次';
   if(courseType==='体验课'&&packageExperienceTypeLabel(p)==='小班体验课')return '次';
   return '课时';
 }
