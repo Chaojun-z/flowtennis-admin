@@ -4,6 +4,7 @@ const path = require('path');
 const { html: indexHtml, appSource: source } = require('./helpers/read-index-bundle');
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const coachOpsSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'coachops.js'), 'utf8');
+const serviceWorkerSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'service-worker.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core', 'state.js'), 'utf8');
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 const html = source;
@@ -21,14 +22,20 @@ assert.doesNotMatch(
 
 assert.match(
   indexHtml,
-  /pages\.css\?v=20260727-coach-month-calendar-v2/,
+  /pages\.css\?v=20260727-coach-month-calendar-v3/,
   'coach schedule month calendar CSS version should force a fresh browser load'
 );
 
 assert.match(
   indexHtml,
-  /coachops\.js\?v=20260727-coach-month-calendar-v2/,
+  /coachops\.js\?v=20260727-coach-month-calendar-v3/,
   'coach schedule month calendar JS version should force a fresh browser load'
+);
+
+assert.match(
+  serviceWorkerSource,
+  /const SW_VERSION = 'flowtennis-shell-v10'/,
+  'coach schedule month calendar fix should ship with a fresh PWA shell version'
 );
 
 assert.match(
@@ -890,8 +897,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /else if\(mode==='month'\)\{\s*host\.innerHTML=renderCoachOpsMonthOverview\(renderRows,range,todayKey\);/,
-  'coach schedule month view should use the date overview renderer'
+  /if\(mode==='month'\)\{\s*host\.innerHTML='';[\s\S]*host\.innerHTML=renderCoachOpsMonthOverview\(renderRows,range,todayKey\);[\s\S]*host\.innerHTML=renderCoachOpsMonthOverview\(\[\],range,todayKey\);[\s\S]*\}else if\(!renderRows\.length\)/,
+  'coach schedule month view should replace stale week timelines with the date overview renderer'
 );
 
 assert.match(

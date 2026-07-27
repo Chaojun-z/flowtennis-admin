@@ -769,11 +769,18 @@ function renderCoachOps(){
   if(host){
     const renderRows=rows;
     host.classList.toggle('is-skeleton',false);
-    if(!renderRows.length){
+    host.dataset.viewMode=mode;
+    if(mode==='month'){
+      host.innerHTML='';
+      try{
+        host.innerHTML=renderCoachOpsMonthOverview(renderRows,range,todayKey);
+      }catch(err){
+        console.error('coach schedule month render failed:',err);
+        host.innerHTML=renderCoachOpsMonthOverview([],range,todayKey);
+      }
+    }else if(!renderRows.length){
       const emptyText=campus==='all'?'当前日期暂无教练排课':'当前筛选无教练排课';
       host.innerHTML=`<div class="coach-ops-empty-state"><strong>${emptyText}</strong><span>不是加载中，可切换校区或日期查看</span></div>`;
-    }else if(mode==='month'){
-      host.innerHTML=renderCoachOpsMonthOverview(renderRows,range,todayKey);
     }else if(isCoachOpsMobileSchedule()){
       host.innerHTML=renderCoachOpsMobileTimeline(renderRows,mode,range);
     }else if(mode==='day'){
