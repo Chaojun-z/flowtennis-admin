@@ -8,9 +8,11 @@ const scheduleSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'ass
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
-assert.match(indexHtml, /state\.js\?v=20260727-renderer-recovery-v1/, 'state script version should force a fresh browser load for renderer recovery');
-assert.match(indexHtml, /schedule\.js\?v=20260727-schedule-renderer-recovery-v1/, 'schedule script version should force a fresh browser load after syntax fixes');
-assert.match(source, /PAGE_RENDERER_RECOVERY=\{[\s\S]*schedule:\{fn:'renderSchedule',src:'\/assets\/scripts\/pages\/schedule\.js\?v=20260727-schedule-renderer-recovery-v1'\}/, 'schedule page should recover if the browser keeps an old broken schedule script');
+assert.match(indexHtml, /state\.js\?v=20260727-renderer-recovery-v2/, 'state script version should force a fresh browser load for renderer recovery');
+assert.match(indexHtml, /schedule\.js\?v=20260727-schedule-renderer-recovery-v2/, 'schedule script version should force a fresh browser load after syntax fixes');
+assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps an old broken schedule script');
+assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
+assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
 assert.match(source, /await recoverMissingPageRenderer\(pg\);[\s\S]*renderLoadedCurrentPage\(pg\)/, 'page data loader should reload a missing page renderer before rendering');
 
 function fnBody(name){

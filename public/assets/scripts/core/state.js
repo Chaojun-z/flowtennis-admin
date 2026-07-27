@@ -907,27 +907,43 @@ function normalizeCurrentPageForRole(){
     localStorage.setItem(PAGE_KEY,currentPage);
   }
 }
+const SCHEDULE_RENDERER_SRC='/assets/scripts/pages/schedule.js?v=20260727-schedule-renderer-recovery-v2';
+const COACH_OPS_RENDERER_SRC='/assets/scripts/pages/coachops.js?v=20260727-coach-month-calendar-v5';
 const PAGE_RENDERER_RECOVERY={
-  schedule:{fn:'renderSchedule',src:'/assets/scripts/pages/schedule.js?v=20260727-schedule-renderer-recovery-v1'},
-  coachschedule:{fn:'renderCoachOps',src:'/assets/scripts/pages/coachops.js?v=20260727-coach-month-calendar-v4'},
-  coachops:{fn:'renderCoachOps',src:'/assets/scripts/pages/coachops.js?v=20260727-coach-month-calendar-v4'}
+  schedule:{required:['renderSchedule'],scripts:[SCHEDULE_RENDERER_SRC]},
+  coachschedule:{required:['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'],scripts:[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC]},
+  coachops:{required:['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'],scripts:[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC]}
 };
 let pageRendererRecoveryPromises=new Map();
 function pageRendererReady(pg){
   const cfg=PAGE_RENDERER_RECOVERY[pg];
-  return !cfg||typeof window[cfg.fn]==='function';
+  return !cfg||(cfg.required||[]).every(fn=>typeof window[fn]==='function');
 }
-function recoverMissingPageRenderer(pg){
+function missingPageRendererFns(pg){
   const cfg=PAGE_RENDERER_RECOVERY[pg];
-  if(!cfg||pageRendererReady(pg))return Promise.resolve(true);
-  if(pageRendererRecoveryPromises.has(pg))return pageRendererRecoveryPromises.get(pg);
-  const promise=new Promise((resolve,reject)=>{
+  return cfg?(cfg.required||[]).filter(fn=>typeof window[fn]!=='function'):[];
+}
+function loadPageRendererScript(src){
+  return new Promise((resolve,reject)=>{
     const script=document.createElement('script');
-    script.src=`${cfg.src}&recover=${Date.now()}`;
-    script.onload=()=>pageRendererReady(pg)?resolve(true):reject(new Error(`${cfg.fn} is not defined`));
-    script.onerror=()=>reject(new Error(`${cfg.fn} load failed`));
+    script.src=`${src}&recover=${Date.now()}`;
+    script.onload=()=>resolve(true);
+    script.onerror=()=>reject(new Error(`${src} load failed`));
     (document.head||document.body).appendChild(script);
-  }).finally(()=>pageRendererRecoveryPromises.delete(pg));
+  });
+}
+async function recoverMissingPageRenderer(pg){
+  const cfg=PAGE_RENDERER_RECOVERY[pg];
+  if(!cfg||pageRendererReady(pg))return true;
+  if(pageRendererRecoveryPromises.has(pg))return pageRendererRecoveryPromises.get(pg);
+  const promise=(async()=>{
+    for(const src of cfg.scripts||[]){
+      if(pageRendererReady(pg))break;
+      await loadPageRendererScript(src);
+    }
+    if(pageRendererReady(pg))return true;
+    throw new Error(`${missingPageRendererFns(pg).join(', ')} is not defined`);
+  })().finally(()=>pageRendererRecoveryPromises.delete(pg));
   pageRendererRecoveryPromises.set(pg,promise);
   return promise;
 }
