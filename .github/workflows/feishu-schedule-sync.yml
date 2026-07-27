@@ -4,6 +4,23 @@ on:
   schedule:
     - cron: '0 0,10 * * *'
   workflow_dispatch:
+    inputs:
+      history:
+        description: '是否按历史区间运行'
+        required: false
+        default: 'false'
+      startDate:
+        description: '历史开始日期 YYYY-MM-DD'
+        required: false
+        default: ''
+      endDate:
+        description: '历史结束日期 YYYY-MM-DD'
+        required: false
+        default: ''
+      dryRun:
+        description: '是否只 dry-run'
+        required: false
+        default: 'true'
 
 permissions:
   contents: read
@@ -21,7 +38,19 @@ jobs:
       - name: Trigger feishu schedule sync endpoint
         shell: bash
         run: |
-          curl_args=(-fsS -X GET "$TARGET_URL" -H "User-Agent: vercel-cron")
+          target="$TARGET_URL"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            params=()
+            [ -n "${{ github.event.inputs.history }}" ] && params+=("history=${{ github.event.inputs.history }}")
+            [ -n "${{ github.event.inputs.startDate }}" ] && params+=("startDate=${{ github.event.inputs.startDate }}")
+            [ -n "${{ github.event.inputs.endDate }}" ] && params+=("endDate=${{ github.event.inputs.endDate }}")
+            [ -n "${{ github.event.inputs.dryRun }}" ] && params+=("dryRun=${{ github.event.inputs.dryRun }}")
+            if [ "${#params[@]}" -gt 0 ]; then
+              joined=$(IFS='&'; echo "${params[*]}")
+              target="${TARGET_URL}?${joined}"
+            fi
+          fi
+          curl_args=(-fsS -X GET "$target" -H "User-Agent: vercel-cron")
           if [ -n "${CRON_SECRET:-}" ]; then
             curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
           fi
