@@ -34,7 +34,7 @@ assert.match(
 
 assert.match(
   serviceWorkerSource,
-  /const SW_VERSION = 'flowtennis-shell-v10'/,
+  /const SW_VERSION = 'flowtennis-shell-v11'/,
   'coach schedule month calendar fix should ship with a fresh PWA shell version'
 );
 

@@ -3,7 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+const scheduleSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'schedule.js'), 'utf8');
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
+
+assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
+assert.match(indexHtml, /schedule\.js\?v=20260727-schedule-syntax-hotfix-v1/, 'schedule script version should force a fresh browser load after syntax fixes');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);
@@ -29,7 +34,7 @@ assert.match(fnBody('saveSchedule'), /coachLateFree/, 'saving schedules should p
 assert.match(fnBody('saveSchedule'), /sourceLeadId:document\.getElementById\('sch_sourceLeadId'\)\?\.value\|\|''/, 'schedule save should persist the source lead id');
 assert.match(fnBody('saveSchedule'), /isLeadCompanionSchedule=scheduleSourceValue==='线索陪打'/, 'lead companion schedules should have an explicit save branch');
 assert.match(fnBody('saveSchedule'), /if\(!studentIds\.length&&!isLeadCompanionSchedule\)/, 'normal schedules should still require a student while lead companion schedules can use lead identity');
-assert.match(fnBody('saveSchedule'), /studentName:isLeadCompanionSchedule\?sourceLeadName:scheduleStudentTextByIds\(studentIds\)\.replace/, 'lead companion schedules should persist the lead name as the schedule participant');
+assert.match(fnBody('saveSchedule'), /studentName:isLeadCompanionSchedule\?sourceLeadName:scheduleStudentTextByIds\(studentIds\)\.replace\(.+?,''\)/, 'lead companion schedules should persist the lead name as the schedule participant');
 assert.match(fnBody('saveSchedule'), /await appConfirm\(/, 'saving schedules should use app confirm instead of browser confirm');
 assert.doesNotMatch(fnBody('saveSchedule'), /window\.confirm\(/, 'saving schedules should not use browser confirm');
 assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-card/, 'schedule save confirm should render a structured confirmation card');
