@@ -54,4 +54,24 @@ jobs:
           if [ -n "${CRON_SECRET:-}" ]; then
             curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
           fi
-          curl "${curl_args[@]}"
+          mkdir -p feishu-sync-output
+          curl "${curl_args[@]}" -o feishu-sync-output/result.json
+          node - feishu-sync-output/result.json <<'NODE'
+          const fs = require('fs');
+          const file = process.argv[2];
+          const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const s = data.plan?.summary || {};
+          console.log(`mode=${data.mode || ''} dryRun=${data.dryRun} courseCount=${data.courseCount}`);
+          console.log(`bindExisting=${s.bindExisting || 0} create=${s.create || 0} createTrial=${s.createTrial || 0} update=${s.update || 0} pendingDelete=${s.pendingDelete || 0} notifyError=${s.notifyError || 0}`);
+          const errors = (data.plan?.actions || []).filter((item) => item.type === 'notify_error').slice(0, 20);
+          errors.forEach((item, index) => {
+            const c = item.candidate || {};
+            console.log(`error#${index + 1} ${c.date || ''} ${c.startClock || ''}-${c.endClock || ''} ${c.coachName || ''} ${c.courseText || ''} ${c.studentText || ''} :: ${item.reason || ''}`);
+          });
+          NODE
+
+      - name: Upload feishu sync result
+        uses: actions/upload-artifact@v4
+        with:
+          name: feishu-schedule-sync-result
+          path: feishu-sync-output/result.json
