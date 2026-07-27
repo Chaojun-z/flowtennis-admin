@@ -738,7 +738,7 @@ function renderCoachOps(){
   const hourHost=document.getElementById('coachOpsHours');
   const opsStartH=7,opsEndH=22,opsTotalMin=(opsEndH-opsStartH)*60;
   if(hourHost){
-    hourHost.classList.toggle('week',mode==='week'||mode==='month');
+    hourHost.classList.toggle('week',mode==='week');
     hourHost.classList.toggle('day-coaches',mode==='day');
     hourHost.style.setProperty('--coach-ops-day-coach-count',String(Math.max(1,rows.length)));
     hourHost.style.setProperty('--coach-ops-day-grid-width',`${Math.max(1,rows.length)*COACH_OPS_DAY_COACH_WIDTH}px`);

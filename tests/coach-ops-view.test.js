@@ -1,17 +1,34 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { appSource: source } = require('./helpers/read-index-bundle');
+const { html: indexHtml, appSource: source } = require('./helpers/read-index-bundle');
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const coachOpsSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'coachops.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core', 'state.js'), 'utf8');
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 const html = source;
+assert.match(
+  coachOpsSource,
+  /hourHost\.classList\.toggle\('week',mode==='week'\);/,
+  'coach schedule month view should not inherit the week header class'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /hourHost\.classList\.toggle\('week',mode==='week'\|\|mode==='month'\)/,
+  'coach schedule month view must stay isolated from week view styling'
+);
 
 assert.match(
-  source,
-  /mode==='week'\|\|mode==='month'/,
-  'coach schedule should keep shared week/month mode flags'
+  indexHtml,
+  /pages\.css\?v=20260727-coach-month-calendar-v2/,
+  'coach schedule month calendar CSS version should force a fresh browser load'
+);
+
+assert.match(
+  indexHtml,
+  /coachops\.js\?v=20260727-coach-month-calendar-v2/,
+  'coach schedule month calendar JS version should force a fresh browser load'
 );
 
 assert.match(
