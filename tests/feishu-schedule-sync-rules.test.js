@@ -211,6 +211,25 @@ const wangBossFamilyPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(wangBossFamilyPlan.summary.create, 1, '王老板 family class should allow one canonical family student record');
 
+const chenxiFriendFamilyPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...interleavedCourses[1],
+    sourceKey: 'chenxi-friend-family-key',
+    coachName: '岳克舟教练',
+    studentNames: ['晨曦'],
+    studentText: '晨曦、朋友（3）',
+    lessonIndex: 3,
+    course: { ok: true, courseType: '小班课', experienceType: '', audience: '青少年', smallClassType: 'family', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-xixi', name: '曦曦🐳', primaryCoach: '岳克舟教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-xixi-family', studentId: 'stu-xixi', courseType: '小班课', smallClassType: 'family', totalLessons: 10, usedLessons: 2, remainingLessons: 8, status: 'active' }]
+});
+assert.strictEqual(chenxiFriendFamilyPlan.summary.create, 1, '晨曦、朋友 family class should use 曦曦 as the confirmed package owner');
+
 const coachScheduleFallbackPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -470,6 +489,24 @@ const lessonIndexMismatchPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(lessonIndexMismatchPlan.summary.notifyError, 1, 'lesson index mismatch should block automatic import');
 assert.match(lessonIndexMismatchPlan.actions[0].reason, /括号课时编号和系统课包进度不一致/, 'lesson index mismatch should ask operations to confirm');
+
+const packageCycleLessonIndexPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'package-cycle-lesson-index-key',
+    coachName: '杨教练',
+    studentNames: ['丫丫'],
+    lessonIndex: 8,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-yaya', name: '丫丫', primaryCoach: '杨教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-yaya-20', studentId: 'stu-yaya', courseType: '私教课', totalLessons: 20, usedLessons: 17, remainingLessons: 3, status: 'active' }]
+});
+assert.strictEqual(packageCycleLessonIndexPlan.summary.create, 1, '20-lesson packages should allow Feishu numbering to restart every 10 lessons');
 
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],

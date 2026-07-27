@@ -495,8 +495,8 @@ function buildResolvedCandidate(raw,ctx={}){
   if(!raw.studentNames.length)errors.push('缺少学员');
   if(!raw.campus)errors.push('缺少场馆');
   if(!raw.venue)errors.push('缺少场地号');
-  const isWangBossFamily=raw.course.courseType==='小班课'&&raw.course.smallClassType==='family'&&raw.studentNames.some(name=>normalizeStudentNameKey(resolveFeishuStudentAlias(name))===normalizeStudentNameKey('王老板'));
-  if(raw.course.courseType==='小班课'&&['bootcamp','family'].includes(raw.course.smallClassType)&&raw.studentNames.length<2&&!isWangBossFamily)errors.push('小班课至少 2 人到场才能开课，需要运营确认');
+  const allowSingleSmallClass=confirmedSingleStudentSmallClass(raw);
+  if(raw.course.courseType==='小班课'&&['bootcamp','family'].includes(raw.course.smallClassType)&&raw.studentNames.length<2&&!allowSingleSmallClass)errors.push('小班课至少 2 人到场才能开课，需要运营确认');
   const resolvedStudents=[];
   const unresolvedStudents=[];
   const studentAliasMap={};
@@ -519,6 +519,15 @@ function buildResolvedCandidate(raw,ctx={}){
     errors.push(`无法唯一识别正式课学员：${raw.studentNames.join('、')}`);
   }
   return {...raw,resolvedCoach,resolvedStudents,unresolvedStudents,studentAliasMap,errors};
+}
+
+function confirmedSingleStudentSmallClass(raw={}){
+  if(raw.course?.courseType!=='小班课')return false;
+  const text=cleanText(raw.studentText||raw.studentNames?.join('、'));
+  const names=Array.isArray(raw.studentNames)?raw.studentNames:[];
+  const keys=[...names,...text.split(/[、,，/&]+/)].map(name=>normalizeStudentNameKey(resolveFeishuStudentAlias(name)));
+  if(keys.includes(normalizeStudentNameKey('王老板')))return true;
+  return keys.includes(normalizeStudentNameKey('曦曦🐳'))&&keys.includes(normalizeStudentNameKey('朋友'));
 }
 
 function hasSelectableEntitlement(student,candidate,entitlements=[],recommendEntitlements){
@@ -553,7 +562,13 @@ function entitlementLessonIndexMatches(row={},candidate={}){
   const index=Number(candidate.lessonIndex);
   if(!Number.isFinite(index)||index<=0)return true;
   const expected=entitlementExpectedLessonIndex(row);
-  return expected!==null&&expected===index;
+  if(expected===null)return false;
+  if(expected===index)return true;
+  const total=Number(row.totalLessons);
+  if(Number.isFinite(total)&&total>=20&&total%10===0&&expected>10){
+    return ((expected-1)%10)+1===index;
+  }
+  return false;
 }
 
 function hasSelectableEntitlementIgnoringLessonIndex(student,candidate,entitlements=[],recommendEntitlements){
