@@ -28,14 +28,20 @@ assert.match(
 
 assert.match(
   indexHtml,
-  /coachops\.js\?v=20260727-coach-month-calendar-v3/,
+  /coachops\.js\?v=20260727-coach-month-calendar-v4/,
   'coach schedule month calendar JS version should force a fresh browser load'
 );
 
 assert.match(
   serviceWorkerSource,
-  /const SW_VERSION = 'flowtennis-shell-v11'/,
+  /const SW_VERSION = 'flowtennis-shell-v12'/,
   'coach schedule month calendar fix should ship with a fresh PWA shell version'
+);
+
+assert.match(
+  stateSource,
+  /coachschedule:\{fn:'renderCoachOps',src:'\/assets\/scripts\/pages\/coachops\.js\?v=20260727-coach-month-calendar-v4'\}/,
+  'coach schedule calendar should recover if the browser keeps an old broken coachops script'
 );
 
 assert.match(

@@ -907,6 +907,30 @@ function normalizeCurrentPageForRole(){
     localStorage.setItem(PAGE_KEY,currentPage);
   }
 }
+const PAGE_RENDERER_RECOVERY={
+  schedule:{fn:'renderSchedule',src:'/assets/scripts/pages/schedule.js?v=20260727-schedule-renderer-recovery-v1'},
+  coachschedule:{fn:'renderCoachOps',src:'/assets/scripts/pages/coachops.js?v=20260727-coach-month-calendar-v4'},
+  coachops:{fn:'renderCoachOps',src:'/assets/scripts/pages/coachops.js?v=20260727-coach-month-calendar-v4'}
+};
+let pageRendererRecoveryPromises=new Map();
+function pageRendererReady(pg){
+  const cfg=PAGE_RENDERER_RECOVERY[pg];
+  return !cfg||typeof window[cfg.fn]==='function';
+}
+function recoverMissingPageRenderer(pg){
+  const cfg=PAGE_RENDERER_RECOVERY[pg];
+  if(!cfg||pageRendererReady(pg))return Promise.resolve(true);
+  if(pageRendererRecoveryPromises.has(pg))return pageRendererRecoveryPromises.get(pg);
+  const promise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src=`${cfg.src}&recover=${Date.now()}`;
+    script.onload=()=>pageRendererReady(pg)?resolve(true):reject(new Error(`${cfg.fn} is not defined`));
+    script.onerror=()=>reject(new Error(`${cfg.fn} load failed`));
+    (document.head||document.body).appendChild(script);
+  }).finally(()=>pageRendererRecoveryPromises.delete(pg));
+  pageRendererRecoveryPromises.set(pg,promise);
+  return promise;
+}
 function applyLoadedData(data){
   courts=Array.isArray(data?.courts)?data.courts:[];
   students=Array.isArray(data?.students)?data.students:[];
@@ -993,6 +1017,8 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
         });
       }
     }
+    if(requestVersion!==dataRequestVersion)return;
+    await recoverMissingPageRenderer(pg);
     if(requestVersion!==dataRequestVersion)return;
     renderLoadedCurrentPage(pg);
     openPendingScheduleDeepLink();
@@ -1215,6 +1241,16 @@ function renderAll(){
 }
 
 function renderPageData(pg){
+  if(!pageRendererReady(pg)){
+    renderPageLoading(pg);
+    recoverMissingPageRenderer(pg).then(()=>{
+      if(currentPage===pg)renderPageData(pg);
+    }).catch(e=>{
+      if(pg==='schedule')renderScheduleTableError(String(e.message||e));
+      else renderBlockLoading(`page-${pg}`,'页面脚本加载失败，请刷新后重试');
+    });
+    return;
+  }
   if(pageNeedsInlineLoading(pg)){
     if(pg==='operations'&&hydrateOperationsPageFromClientCache()){
       refreshOperationsPageDataInBackground();

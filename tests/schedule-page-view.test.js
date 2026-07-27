@@ -8,7 +8,10 @@ const scheduleSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'ass
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
-assert.match(indexHtml, /schedule\.js\?v=20260727-schedule-syntax-hotfix-v1/, 'schedule script version should force a fresh browser load after syntax fixes');
+assert.match(indexHtml, /state\.js\?v=20260727-renderer-recovery-v1/, 'state script version should force a fresh browser load for renderer recovery');
+assert.match(indexHtml, /schedule\.js\?v=20260727-schedule-renderer-recovery-v1/, 'schedule script version should force a fresh browser load after syntax fixes');
+assert.match(source, /PAGE_RENDERER_RECOVERY=\{[\s\S]*schedule:\{fn:'renderSchedule',src:'\/assets\/scripts\/pages\/schedule\.js\?v=20260727-schedule-renderer-recovery-v1'\}/, 'schedule page should recover if the browser keeps an old broken schedule script');
+assert.match(source, /await recoverMissingPageRenderer\(pg\);[\s\S]*renderLoadedCurrentPage\(pg\)/, 'page data loader should reload a missing page renderer before rendering');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);
