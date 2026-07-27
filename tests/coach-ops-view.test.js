@@ -1161,8 +1161,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-overview-grid\.weeks-5,#page-coachschedule \.coach-ops-month-overview-grid\.weeks-6\{grid-auto-rows:minmax\(160px,auto\)\}/,
-  'coach schedule month overview should grow naturally so full cell content remains scrollable'
+  /#page-coachschedule \.coach-ops-month-overview-grid\.weeks-5,#page-coachschedule \.coach-ops-month-overview-grid\.weeks-6\{grid-auto-rows:minmax\(150px,auto\);border-left:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\);border-top:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\)\}/,
+  'coach schedule month overview should render a calendar grid frame'
 );
 
 assert.match(
@@ -1173,8 +1173,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell,#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell\.month-cell\{width:auto;min-width:0;max-width:none;height:auto;min-height:0;border:0;border-bottom:1px solid var\(--coach-ops-clean-line\);background:#fff;box-shadow:none;overflow:visible;padding:0\}/,
-  'coach schedule month date cells should remove vertical lines and keep only horizontal dividers'
+  /#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell,#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell\.month-cell\{width:auto;min-width:0;max-width:none;height:auto;min-height:150px;border:0;border-right:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\);border-bottom:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\);background:#fff;box-shadow:none;overflow:visible;padding:0\}/,
+  'coach schedule month date cells should keep calendar-style vertical and horizontal grid lines'
 );
 
 assert.match(

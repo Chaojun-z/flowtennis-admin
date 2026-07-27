@@ -17,6 +17,8 @@ assert.match(source, /const SMALL_CLASS_TYPE_OPTIONS=BUSINESS_TAXONOMY\.SMALL_CL
 assert.match(fnBody('openPackageModal'), /const smallClassOptions=SMALL_CLASS_TYPE_OPTIONS/, 'package modal should keep 训练营 as a global small-class subtype option');
 assert.match(fnBody('openProductModal'), /p_skillMin[\s\S]*p_skillMax[\s\S]*p_specialTopic/, 'special course products should expose skill level and topic fields');
 assert.match(fnBody('saveProduct'), /skillLevelMin[\s\S]*skillLevelMax[\s\S]*specialTopic[\s\S]*courseDisplayName/, 'special course products should persist skill level and topic fields');
+assert.match(fnBody('openPackageModal'), /pkg_specialCourseItem[\s\S]*pkg_skillLevelMin[\s\S]*pkg_skillLevelMax[\s\S]*pkg_courseDisplayName[\s\S]*pkg_specialTopic/, 'special course packages should expose name, skill level and topic fields');
+assert.match(fnBody('savePackage'), /productId=courseType==='专项课'[\s\S]*skillLevelMin[\s\S]*skillLevelMax[\s\S]*specialTopic[\s\S]*courseDisplayName/, 'special course packages should persist source product, skill level and topic fields');
 
 assert.match(fnBody('openScheduleModal'), /normalizeCourseTypeForForm\(s\|\|seed\)/, 'schedule modal should map legacy 训练营 rows to 小班课/训练营 for editing');
 assert.match(fnBody('openPackageModal'), /normalizeCourseTypeForForm\(p\)/, 'package modal should map legacy 训练营 rows to 小班课/训练营 for editing');

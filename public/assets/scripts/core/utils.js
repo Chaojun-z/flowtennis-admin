@@ -276,9 +276,8 @@ function packageBalanceUnitLabel(p={}){
   return packageLessonUnitLabel(p)==='次'?'次':'节';
 }
 function standardPackageLabel(p={},includeStatus=false){
-  const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
-  const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
-  const unit=packageLessonUnitLabel(p);
+  const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0,courseType=normalizeCourseType(p.courseType||p.packageCourseType||p.type||p.productType||''),audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]),unit=packageLessonUnitLabel(p);
+  if(courseType==='专项课'){const min=String(p.skillLevelMin||'').trim(),max=String(p.skillLevelMax||min).trim(),level=min&&max&&min!==max?`${min}-${max}`:(min||max),topic=String(p.courseDisplayName||p.specialTopic||p.productName||p.packageName||p.name||'').replace(/^专项课[｜|·\s]*/,'').trim(),parts=['专项课',level,topic,lessons?`${lessons}${unit}`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean),status=includeStatus?packageStatusText(p):'';if(status)parts.push(status);return parts.join(' · ');}
   const parts=[packageCoreClassLabel(p),audience,lessons?`${lessons}${unit}`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean);
   const status=includeStatus?packageStatusText(p):'';
   if(status)parts.push(status);
