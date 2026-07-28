@@ -1,15 +1,9 @@
-// ===== 教练运营 =====
-var coachOpsDraggedName='';
-var COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter';
+var coachOpsDraggedName='',COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter',coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 var COACH_OPS_DAY_HOUR_HEIGHT=56;
 var COACH_OPS_DAY_COACH_WIDTH=128;
 var COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30;
 var COACH_OPS_MONTH_VISIBLE_COACHES=5;
-var coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
-var coachOpsAutoScrollDayView=false;
-var coachOpsAutoScrollWeekView=false;
-var coachOpsAutoScrollMonthView=false;
-var coachOpsPendingCreateSlot=null;
+var coachOpsAutoScrollDayView=false,coachOpsAutoScrollWeekView=false,coachOpsAutoScrollMonthView=false,coachOpsPendingCreateSlot=null;
 function isCoachSchedulePage(){return currentPage==='coachschedule';}
 function isCoachWorkloadPage(){return currentPage==='coachops';}
 function coachOpsDateInput(){

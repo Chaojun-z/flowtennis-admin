@@ -2039,8 +2039,4 @@ function openScheduleDetail(scheduleId){
   });
   requestAnimationFrame(()=>autoResizeFeedbackTextareas());
 }
-Object.assign(window,{
-  renderSchedule,
-  openScheduleDetail,
-  scheduleLocationText
-});
+Object.assign(window,{renderSchedule,openScheduleDetail,scheduleLocationText});
