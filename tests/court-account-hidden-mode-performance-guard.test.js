@@ -6,7 +6,7 @@ const stateSource = fs.readFileSync(path.join(__dirname, '../public/assets/scrip
 
 assert.match(
   stateSource,
-  /async function loadCourtReadModelGuardData\(\{force=false\}=\{\}\)\{[\s\S]*const view=await DATASET_LOADERS\.courtAccountListViewPage\(\{fresh:force\}\);/,
+  /async function loadCourtReadModelGuardData\(\{force=false,allowStaleOnError=false\}=\{\}\)\{[\s\S]*const view=await DATASET_LOADERS\.courtAccountListViewPage\(\{fresh:force\}\);/,
   '隐藏模式应保留单独的首屏主列表读模型加载函数'
 );
 assert.doesNotMatch(
@@ -21,7 +21,7 @@ assert.match(
 );
 assert.match(
   stateSource,
-  /await loadCourtReadModelGuardData\(\{force\}\);[\s\S]*loadCourtReadModelCompareData\(\{force:false\}\)\.then/,
+  /await loadCourtReadModelGuardData\(\{force,allowStaleOnError:quiet\|\|hadUsableDataBeforeLoad\}\);[\s\S]*loadCourtReadModelCompareData\(\{force:false\}\)\.then/,
   '订场用户页应先完成首屏主数据渲染，再后台补拉 compare'
 );
 assert.match(
