@@ -50,6 +50,7 @@ vm.runInContext(read('public/assets/scripts/core/utils.js'), context, { filename
   'packageListTimeBandLabel',
   'packageListClassLabel',
   'packageListTitle',
+  'packageCourseTypeTitle',
   'packageDisplayTitle'
 ].forEach(name => vm.runInContext(extractFunction(read('public/assets/scripts/pages/packages.js'), name), context, { filename: 'packages.js' }));
 vm.runInContext(extractFunction(read('public/assets/scripts/pages/purchases.js'), 'purchaseDisplayPackageMeta'), context, { filename: 'purchases.js' });
@@ -121,6 +122,40 @@ assert.strictEqual(
   }),
   '1v1 · 非黄 · 10 课时',
   'private lesson package card title should show class size, time band and lessons'
+);
+
+assert.strictEqual(
+  context.packageDisplayTitle({
+    courseType: '专项课',
+    skillLevelMin: '2.5',
+    skillLevelMax: 3,
+    courseDisplayName: '发接发与实战练习',
+    lessons: 1,
+    timeBand: '全天'
+  }),
+  '【2.5-3.0】发接发与实战练习',
+  'special course package title should show bracketed level range without course type'
+);
+assert.strictEqual(
+  context.packageDisplayTitle({
+    courseType: '专项课',
+    skillLevelMin: '2.5',
+    skillLevelMax: '2.5',
+    courseDisplayName: '发接发与实战练习',
+    lessons: 1,
+    timeBand: '全天'
+  }),
+  '【2.5】发接发与实战练习',
+  'special course package title should show one bracketed level when min and max are equal'
+);
+assert.strictEqual(
+  context.packageCourseTypeTitle({
+    courseType: '专项课',
+    skillLevelMin: '2.5',
+    skillLevelMax: 3
+  }),
+  '【2.5-3.0】',
+  'special course rule line should preserve one decimal levels without the course type prefix'
 );
 
 context.packages = [smallTrialPackage];

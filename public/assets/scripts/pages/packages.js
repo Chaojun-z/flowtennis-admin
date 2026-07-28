@@ -60,7 +60,7 @@ function packageListStatusValue(p){
   return'active';
 }
 function packageListTitle(p){
-  if(normalizeCourseType(p.courseType||p.type)==='专项课')return standardPackageLabel(p,false)||p.name||'专项课';
+  if(normalizeCourseType(p.courseType||p.type)==='专项课')return specialCourseDisplayTitle(p);
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
   const unit=packageLessonUnitLabel(p);
   return [packageListClassLabel(p),packageListTimeBandLabel(p.timeBand||p.packageTimeBand||'全天'),lessons?`${lessons} ${unit}`:''].filter(Boolean).join(' · ')||p.name||'课包';
@@ -179,10 +179,8 @@ function packageRuleIcon(kind){
 function packageCourseTypeTitle(p){
   const text=standardCourseTypeFilterValue(p)||normalizeCourseTypeForForm(p).standardCourseType||'';
   if(normalizeCourseType(p.courseType||p.type)==='专项课'){
-    const min=String(p.skillLevelMin||'').trim();
-    const max=String(p.skillLevelMax||min).trim();
-    const level=min&&max&&min!==max?`${min}-${max}`:(min||max);
-    return ['专项课',level].filter(Boolean).join(' · ');
+    const level=specialCourseLevelRangeText(p);
+    return level?`【${level}】`:'未设置';
   }
   return String(text).split('/').map(part=>part.trim()).filter(Boolean).pop()||'未设置';
 }
@@ -614,10 +612,8 @@ function packageSpecialLevelOptions(){
 }
 function packageSpecialProductOptions(){
   return products.filter(p=>normalizeCourseType(p.type||p.courseType)==='专项课').map(p=>{
-    const min=String(p.skillLevelMin||'').trim();
-    const max=String(p.skillLevelMax||min).trim();
-    const level=min&&max&&min!==max?`${min}-${max}`:(min||max);
-    const label=['专项课',level,p.courseDisplayName||p.specialTopic||p.name].filter(Boolean).join(' · ');
+    const level=specialCourseLevelRangeText(p);
+    const label=specialCourseDisplayTitle(p);
     return {value:p.id,label,searchText:[p.name,p.specialTopic,p.courseDisplayName,level].filter(Boolean).join(' ')};
   });
 }
@@ -767,9 +763,7 @@ function openPackageDetail(id){
   if(form.courseType==='小班课')basicRows.push(renderDetailDrawerField('小班类型',packageSmallClassTypeText(form.smallClassType)));
   if(form.courseType==='体验课')basicRows.push(renderDetailDrawerField('体验课类型',form.experienceType));
   if(form.courseType==='专项课'){
-    const min=String(p.skillLevelMin||'').trim();
-    const max=String(p.skillLevelMax||min).trim();
-    const level=min&&max&&min!==max?`${min}-${max}`:(min||max);
+    const level=specialCourseLevelRangeText(p);
     basicRows.push(renderDetailDrawerField('专项课名称',p.courseDisplayName||p.productName||p.specialTopic));
     basicRows.push(renderDetailDrawerField('水平要求',level));
     basicRows.push(renderDetailDrawerField('专项主题',p.specialTopic));

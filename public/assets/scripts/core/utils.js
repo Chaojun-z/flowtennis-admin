@@ -284,6 +284,30 @@ function standardPackageLabel(p={},includeStatus=false){
   if(status)parts.push(status);
   return parts.join(' · ');
 }
+function specialCourseLevelText(value){
+  const text=String(value??'').trim();
+  if(!text)return '';
+  const num=Number(text);
+  if(Number.isFinite(num)&&Math.abs(num*2-Math.round(num*2))<1e-9)return num.toFixed(1).replace(/\.5$/,'.5');
+  return text;
+}
+function specialCourseLevelRangeText(p={}){
+  const min=specialCourseLevelText(p.skillLevelMin);
+  const max=specialCourseLevelText((p.skillLevelMax??'')!==''?p.skillLevelMax:p.skillLevelMin);
+  if(min&&max&&min!==max)return `${min}-${max}`;
+  return min||max;
+}
+function specialCourseDisplayTitle(p={}){
+  const level=specialCourseLevelRangeText(p);
+  const topic=String(p.courseDisplayName||p.specialTopic||p.productName||p.packageName||p.name||'')
+    .replace(/^专项课[｜|·\s]*/,'')
+    .replace(/^【[^】]+】\s*/,'')
+    .replace(/^\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?[｜|·\s]*/,'')
+    .trim();
+  if(level&&topic)return `【${level}】${topic}`;
+  if(level)return `【${level}】`;
+  return topic||'未命名课程';
+}
 function scheduleCourseType(s){
   if(scheduleIsTrial(s))return '体验课';
   return normalizeCourseType(s?.courseType)||'—';
