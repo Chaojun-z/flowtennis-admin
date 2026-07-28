@@ -696,10 +696,10 @@ async function refreshScheduleLateFee(){
     amountInput.value=quote.finalAmount||quote.systemAmount||0;
   }catch(e){}
 }
-let schEntitlementRefreshTimer=0;
-let schEntitlementRefreshSeq=0;
-const schEntitlementCache=new Map();
-const schEntitlementOptionCache=new Map();
+var schEntitlementRefreshTimer=0;
+var schEntitlementRefreshSeq=0;
+var schEntitlementCache=new Map();
+var schEntitlementOptionCache=new Map();
 function scheduleEntitlementCacheKey(payload){
   return JSON.stringify(payload);
 }
@@ -1176,7 +1176,7 @@ function scheduleSaveErrorText(err){
   if(/^场地「.+」\d{2}:\d{2}-\d{2}:\d{2} 已被订场用户「.+」订场$/.test(raw))return '这个时间场地已经被占用，请换场地或改时间';
   return raw;
 }
-const FEEDBACK_POSTER_TEMPLATES={
+var FEEDBACK_POSTER_TEMPLATES={
   blueGreenDiagonal:{name:'蓝绿对角',type:'diagonalSplit',bg1:'#1F4287',bg2:'#278EA5',ink:'#FFFFFF',muted:'rgba(255,255,255,0.7)',accent:'#BCE84A',soft:'rgba(255,255,255,0.08)',cardTitle:'#BCE84A',highlight:'#BCE84A',nameColor:'#FFFFFF',subColor:'rgba(255,255,255,0.7)'},
   minimalDarkGreen:{name:'极简墨绿',type:'cleanSilhouette',bg1:'#F4F6F8',bg2:'#F4F6F8',ink:'#143D30',muted:'#76948A',accent:'#8DC63F',soft:'#FFFFFF',cardTitle:'#143D30',highlight:'#8DC63F',nameColor:'#143D30',subColor:'#76948A'},
   retroCourt:{name:'对角球场',type:'split',bg1:'#1E3D33',bg2:'#B35432',ink:'#1E3D33',muted:'#6D827A',accent:'#B35432',soft:'#F9F8F6',cardTitle:'#B35432',highlight:'#B35432',nameColor:'#F9F8F6',subColor:'rgba(249,248,246,0.7)'},
@@ -1184,7 +1184,7 @@ const FEEDBACK_POSTER_TEMPLATES={
   minimalRacket:{name:'极简白框',type:'minimal',bg1:'#2F74B4',bg2:'#2F74B4',ink:'#12355B',muted:'#82A9CE',accent:'#D4F02E',soft:'rgba(255,255,255,0.95)',cardTitle:'#2F74B4',highlight:'#2F74B4',nameColor:'#FFFFFF',subColor:'#82A9CE'},
   activeGreen:{name:'活力绿(缝线)',type:'sport',bg1:'#064E3B',bg2:'#022C22',ink:'#F8FAFC',muted:'#6EE7B7',accent:'#10B981',soft:'rgba(255,255,255,0.08)',cardTitle:'#10B981',highlight:'#10B981',nameColor:'#F8FAFC',subColor:'#6EE7B7'}
 };
-let feedbackPosterState=null;
+var feedbackPosterState=null;
 function feedbackPosterData(schedule,feedback){
   return {
     studentName:scheduleStudentSummary(schedule)||feedback?.studentName||'学员',
@@ -1772,8 +1772,8 @@ function feedbackSummaryHtml(fb){
   const parts=[fb.practicedToday||fb.template?.focus,fb.knowledgePoint,fb.nextTraining||fb.nextAdvice,fb.mainIssues,fb.conversionIntent?`转化意愿 ${fb.conversionIntent}`:'',fb.recommendedProductType?`推荐 ${fb.recommendedProductType}`:''].filter(Boolean);
   return parts.length?parts.map(esc).join('；'):'已填写';
 }
-let scheduleDetailActiveTab='info';
-let scheduleDetailEditingSection='';
+var scheduleDetailActiveTab='info';
+var scheduleDetailEditingSection='';
 function scheduleDetailEmpty(value){
   return detailDrawerEmpty(value);
 }

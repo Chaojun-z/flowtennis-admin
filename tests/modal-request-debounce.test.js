@@ -5,7 +5,7 @@ const path = require('path');
 const scheduleSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/schedule.js'), 'utf8');
 const courtsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/courts.js'), 'utf8');
 
-assert.match(scheduleSource, /const schEntitlementCache=new Map\(\)/, '排课课包推荐必须加短缓存');
+assert.match(scheduleSource, /var schEntitlementCache=new Map\(\)/, '排课课包推荐必须加短缓存，且排课脚本可被恢复机制重复加载');
 assert.match(scheduleSource, /clearTimeout\(schEntitlementRefreshTimer\)/, '排课课包推荐必须先清掉上一次定时请求');
 assert.match(scheduleSource, /schEntitlementRefreshTimer=setTimeout\(async \(\)=>\{[\s\S]*\/entitlements\/recommend/, '排课课包推荐必须做延迟合并请求');
 assert.match(scheduleSource, /if\(cached&&\(now-cached\.at\)<30000\)/, '排课课包推荐必须复用 30 秒内结果');

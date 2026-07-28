@@ -907,8 +907,8 @@ function normalizeCurrentPageForRole(){
     localStorage.setItem(PAGE_KEY,currentPage);
   }
 }
-const SCHEDULE_RENDERER_SRC='/assets/scripts/pages/schedule.js?v=20260727-schedule-renderer-recovery-v2';
-const COACH_OPS_RENDERER_SRC='/assets/scripts/pages/coachops.js?v=20260727-coach-month-calendar-v5';
+const SCHEDULE_RENDERER_SRC='/assets/scripts/pages/schedule.js?v=20260728-repeatable-schedule-renderer-v3';
+const COACH_OPS_RENDERER_SRC='/assets/scripts/pages/coachops.js?v=20260728-repeatable-coachops-renderer-v6';
 const PAGE_RENDERER_RECOVERY={
   schedule:{required:['renderSchedule'],scripts:[SCHEDULE_RENDERER_SRC]},
   coachschedule:{required:['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'],scripts:[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC]},

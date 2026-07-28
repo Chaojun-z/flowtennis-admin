@@ -8,8 +8,9 @@ const scheduleSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'ass
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
-assert.match(indexHtml, /state\.js\?v=20260727-renderer-recovery-v2/, 'state script version should force a fresh browser load for renderer recovery');
-assert.match(indexHtml, /schedule\.js\?v=20260727-schedule-renderer-recovery-v2/, 'schedule script version should force a fresh browser load after syntax fixes');
+assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
+assert.match(indexHtml, /state\.js\?v=20260728-repeatable-renderer-recovery-v3/, 'state script version should force a fresh browser load for renderer recovery');
+assert.match(indexHtml, /schedule\.js\?v=20260728-repeatable-schedule-renderer-v3/, 'schedule script version should force a fresh browser load after renderer recovery fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps an old broken schedule script');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
@@ -399,7 +400,7 @@ assert.match(fnBody('openScheduleModal'), /sch_payMethod[\s\S]*sch_paidAmount/, 
 assert.match(fnBody('saveSchedule'), /settlementType[\s\S]*paidAmount[\s\S]*payMethod/, 'schedule save should send settlement and payment fields to backend');
 assert.match(fnBody('refreshSchEntitlementOptions'), /currentScheduleSettlementType\(\)!=='package'/, 'non-package settlement should not try to match entitlements');
 assert.doesNotMatch(fnBody('saveSchedule'), /训练营固定 4 人/, 'small group bootcamp schedules should allow two or more attendees instead of requiring four');
-assert.match(source, /const FEEDBACK_POSTER_TEMPLATES\s*=/, 'feedback poster should define fixed template configs');
+assert.match(source, /var FEEDBACK_POSTER_TEMPLATES\s*=/, 'feedback poster should define fixed template configs and allow renderer recovery reloads');
 assert.match(source, /blueGreenDiagonal[\s\S]*minimalDarkGreen[\s\S]*retroCourt[\s\S]*blueprintBlue[\s\S]*minimalRacket[\s\S]*activeGreen/, 'feedback poster should expose the selected Gemini template styles');
 assert.doesNotMatch(source, /粉蓝笔刷|专业白\(拍网\)|深蓝撞色|波普斜切/, 'feedback poster should remove the rejected poster styles');
 assert.match(fnBody('drawFeedbackPoster'), /网球兄弟/, 'feedback poster should use the local brand name');

@@ -28,14 +28,20 @@ assert.match(
 
 assert.match(
   indexHtml,
-  /coachops\.js\?v=20260727-coach-month-calendar-v5/,
+  /coachops\.js\?v=20260728-repeatable-coachops-renderer-v6/,
   'coach schedule month calendar JS version should force a fresh browser load'
 );
 
 assert.match(
   serviceWorkerSource,
-  /const SW_VERSION = 'flowtennis-shell-v13'/,
+  /const SW_VERSION = 'flowtennis-shell-v14'/,
   'coach schedule month calendar fix should ship with a fresh PWA shell version'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /^(let|const) /m,
+  'coachops.js must stay repeatable because renderer recovery may load it more than once'
 );
 
 assert.match(
@@ -280,19 +286,19 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const COACH_OPS_DAY_HOUR_HEIGHT=56;/,
+  /var COACH_OPS_DAY_HOUR_HEIGHT=56;/,
   'coach schedule day view should use a denser 56px hour height'
 );
 
 assert.match(
   coachOpsSource,
-  /const COACH_OPS_DAY_COACH_WIDTH=128;/,
+  /var COACH_OPS_DAY_COACH_WIDTH=128;/,
   'coach schedule day view should use a narrower 128px coach column'
 );
 
 assert.match(
   coachOpsSource,
-  /const COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30;/,
+  /var COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30;/,
   'coach schedule day and week timelines should reserve a 30-minute blank row before 07:00 and after 22:00'
 );
 
@@ -813,7 +819,7 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const COACH_OPS_MONTH_VISIBLE_COACHES=5;/,
+  /var COACH_OPS_MONTH_VISIBLE_COACHES=5;/,
   'coach schedule month view should show five coach summaries before more'
 );
 
