@@ -775,7 +775,7 @@ function formatActionLine(action){
 function buildNotificationText(result){
   const s=result.plan.summary;
   const lines=[
-    `排课日报：飞书排课同步${result.dryRun?' dry-run':'执行'}完成`,
+    `网球兄弟小助手 排课日报：飞书排课同步${result.dryRun?' dry-run':'执行'}完成（当日上课情况 / 次日排课情况）`,
     `新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，删除待确认 ${s.pendingDelete}，异常 ${s.notifyError}`,
     `已忽略历史课 ${result.ignoredPastCount||0} 节`
   ];
@@ -1042,7 +1042,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const now=new Date().toISOString();
       const nextTask={...task,status:'confirmed',confirmedAt:now,updatedAt:now,resultScheduleId:task.scheduleId};
       await put(T_FEISHU_SCHEDULE_TASKS,task.id,nextTask);
-      await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,`排课日报：飞书排课删除已确认并取消系统排课：${task.scheduleId}`).catch(()=>null);
+      await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,`网球兄弟小助手 排课日报：飞书排课删除已确认并取消系统排课：${task.scheduleId}`).catch(()=>null);
       return sendJson(res,{success:true,task:nextTask,result});
     }
     return false;

@@ -768,7 +768,7 @@ assert.match(workflow, /notification sent=/, 'workflow log should expose whether
     axios.post = async (url, body) => {
       if (/tenant_access_token/.test(url)) return { data: { code: 0, tenant_access_token: 'tenant-token' } };
       if (/\/bot\/v2\/hook\//.test(url)) {
-        assert.match(body.content.text, /排课日报/, 'Feishu webhook notification should include the bot keyword');
+        assert.match(body.content.text, /网球兄弟小助手.*排课日报.*当日上课情况.*次日排课情况/s, 'Feishu webhook notification should include the known bot keywords');
         return { data: { code: 9499, msg: 'bad webhook' } };
       }
       throw new Error(`unexpected axios.post ${url}`);
