@@ -16,7 +16,7 @@
     "guard:deps-security": "node scripts/dependency-audit-guard.js"
   },
   "dependencies": {
-    "axios": "^1.16.1",
+    "axios": "^1.18.1",
     "bcryptjs": "^2.4.3",
     "dayjs": "^1.11.20",
     "dotenv": "^16.6.1",
