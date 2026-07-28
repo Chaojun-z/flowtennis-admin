@@ -17,12 +17,19 @@ function packageRefIds(values,parseArr=fallbackParseArr){
 function normalizePackageCampusValue(value){
   return normalizeCampusValue(value);
 }
+function normalizeSpecialCourseSkillLevel(value){
+  const raw=String(value??'').trim();
+  if(!raw)return '';
+  const n=Number(raw);
+  if(Number.isFinite(n))return n.toFixed(1);
+  return raw;
+}
 function specialCourseSnapshot(source={}){
   const courseType=String(source.courseType||source.type||'').trim();
   if(courseType!=='专项课')return {};
   return {
-    skillLevelMin:String(source.skillLevelMin||'').trim(),
-    skillLevelMax:String(source.skillLevelMax||source.skillLevelMin||'').trim(),
+    skillLevelMin:normalizeSpecialCourseSkillLevel(source.skillLevelMin),
+    skillLevelMax:normalizeSpecialCourseSkillLevel(source.skillLevelMax||source.skillLevelMin),
     specialTopic:String(source.specialTopic||'').trim(),
     courseDisplayName:String(source.courseDisplayName||source.productName||source.name||'').trim()
   };
@@ -30,8 +37,8 @@ function specialCourseSnapshot(source={}){
 function validateSpecialCourseFields(row={}){
   const courseType=String(row.courseType||row.type||'').trim();
   if(courseType!=='专项课')return;
-  const min=String(row.skillLevelMin||'').trim();
-  const max=String(row.skillLevelMax||min||'').trim();
+  const min=normalizeSpecialCourseSkillLevel(row.skillLevelMin);
+  const max=normalizeSpecialCourseSkillLevel(row.skillLevelMax||min);
   if((min&&!SPECIAL_COURSE_SKILL_LEVELS.includes(min))||(max&&!SPECIAL_COURSE_SKILL_LEVELS.includes(max)))throw new Error('专项课水平不在标准范围内');
   if(min&&max&&SPECIAL_COURSE_SKILL_LEVELS.indexOf(max)<SPECIAL_COURSE_SKILL_LEVELS.indexOf(min))throw new Error('专项课最高水平不能低于最低水平');
   if(min&&max&&SPECIAL_COURSE_SKILL_LEVELS.indexOf(max)-SPECIAL_COURSE_SKILL_LEVELS.indexOf(min)>1)throw new Error('专项课水平范围不能跨两个以上级别');
@@ -187,8 +194,8 @@ function createPackageRules(deps={}){
       ...base,
       name:String(base.name||'').trim(),
       type:String(base.type||'').trim(),
-      skillLevelMin:String(base.skillLevelMin||'').trim(),
-      skillLevelMax:String(base.skillLevelMax||base.skillLevelMin||'').trim(),
+      skillLevelMin:normalizeSpecialCourseSkillLevel(base.skillLevelMin),
+      skillLevelMax:normalizeSpecialCourseSkillLevel(base.skillLevelMax||base.skillLevelMin),
       specialTopic:String(base.specialTopic||'').trim(),
       courseDisplayName:String(base.courseDisplayName||base.name||'').trim(),
       maxStudents:parseInt(base.maxStudents)||0,
@@ -246,8 +253,8 @@ function createPackageRules(deps={}){
       productId:String(base.productId||'').trim(),
       productName:String(base.productName||'').trim(),
       courseType:String(base.courseType||base.type||'').trim(),
-      skillLevelMin:String(base.skillLevelMin||'').trim(),
-      skillLevelMax:String(base.skillLevelMax||base.skillLevelMin||'').trim(),
+      skillLevelMin:normalizeSpecialCourseSkillLevel(base.skillLevelMin),
+      skillLevelMax:normalizeSpecialCourseSkillLevel(base.skillLevelMax||base.skillLevelMin),
       specialTopic:String(base.specialTopic||'').trim(),
       courseDisplayName:String(base.courseDisplayName||base.productName||base.name||'').trim(),
       lessons:parseInt(base.lessons)||0,

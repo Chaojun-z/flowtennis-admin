@@ -76,6 +76,39 @@ const schedule = {
 assert.ok(rules.assertCanMergePackages, 'api._test should expose package merge validation');
 assert.ok(rules.buildPackageMergeUpdates, 'api._test should expose package merge update builder');
 
+const normalizedSpecialProduct = rules.normalizeProductRecord({
+  id: 'special-product',
+  name: '【2.0】击球位置优化',
+  type: '专项课',
+  skillLevelMin: 2,
+  skillLevelMax: 2,
+  specialTopic: '击球位置优化',
+  maxStudents: 4,
+  price: 260,
+  lessons: 1
+}, null, now);
+assert.strictEqual(normalizedSpecialProduct.skillLevelMin, '2.0', 'special course product should normalize numeric min level to standard label');
+assert.strictEqual(normalizedSpecialProduct.skillLevelMax, '2.0', 'special course product should normalize numeric max level to standard label');
+
+assert.doesNotThrow(
+  () => rules.assertCanEditProductWithReferences(
+    { id: 'special-product', type: '专项课', maxStudents: 4, lessons: 1, price: 0 },
+    { id: 'special-product', type: '专项课', maxStudents: 4, lessons: 1, price: 260 },
+    { packages: [{ productId: 'special-product', courseType: '专项课', price: 260 }], classes: [] }
+  ),
+  'referenced special course products should allow correcting zero default price to the linked package price'
+);
+
+assert.throws(
+  () => rules.assertCanEditProductWithReferences(
+    { id: 'special-product', type: '专项课', maxStudents: 4, lessons: 1, price: 0 },
+    { id: 'special-product', type: '专项课', maxStudents: 4, lessons: 2, price: 260 },
+    { packages: [{ productId: 'special-product', courseType: '专项课', price: 260 }], classes: [] }
+  ),
+  /不能修改核心字段/,
+  'referenced special course product correction should not allow changing lesson count'
+);
+
 assert.doesNotThrow(
   () => rules.assertCanMergePackages(masterPackage, sourcePackage),
   'matching packages should be mergeable'

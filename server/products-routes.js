@@ -1,11 +1,25 @@
 function createProductRouteHelpers(deps={}){
   const {changedCoreFields}=deps;
 
+  function normalizeMoneyValue(value){
+    const n=Number(value);
+    return Number.isFinite(n)?Math.round(n*100)/100:0;
+  }
+  function canCorrectReferencedSpecialProductPrice(oldProduct,nextProduct,refs={},changed=[]){
+    if(changed.length!==1||changed[0]!=='price')return false;
+    if(String(oldProduct.type||'')!=='专项课'||String(nextProduct.type||'')!=='专项课')return false;
+    if(normalizeMoneyValue(oldProduct.price)!==0||normalizeMoneyValue(nextProduct.price)<=0)return false;
+    if((refs.classes||[]).some(c=>c.productId===oldProduct.id))return false;
+    const linkedPackages=(refs.packages||[]).filter(p=>p.productId===oldProduct.id);
+    if(!linkedPackages.length)return false;
+    return linkedPackages.every(p=>String(p.courseType||p.type||'')==='专项课'&&normalizeMoneyValue(p.price)===normalizeMoneyValue(nextProduct.price));
+  }
   function assertCanEditProductWithReferences(oldProduct,nextProduct,refs={}){
     if(!oldProduct||!nextProduct)return;
     const used=(refs.classes||[]).some(c=>c.productId===oldProduct.id)||(refs.packages||[]).some(p=>p.productId===oldProduct.id);
     if(!used)return;
-    if(changedCoreFields(oldProduct,nextProduct,['type','maxStudents','lessons','price']).length)throw new Error('该课程产品已有班次或售卖课包使用，不能修改核心字段');
+    const changed=changedCoreFields(oldProduct,nextProduct,['type','maxStudents','lessons','price']);
+    if(changed.length&&!canCorrectReferencedSpecialProductPrice(oldProduct,nextProduct,refs,changed))throw new Error('该课程产品已有班次或售卖课包使用，不能修改核心字段');
   }
 
   function assertCanDeleteProduct(productId,classes,packages=[]){
