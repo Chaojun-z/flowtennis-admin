@@ -1036,7 +1036,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     return parseFeishuScheduleRows({values,merges:sheet.merges||[],sheetId,sheetTitle:sheet.title||sheetId});
   }
 
-  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode='',historyTrialMode='',notifyDryRun=false}={}){
+  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode='',historyTrialMode='',notifyDryRun=false,suppressNotification=false}={}){
     await init();
     await ensureFeishuSyncTables();
     const [feishuCourses,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
@@ -1072,7 +1072,9 @@ function createFeishuScheduleSyncRoutes(deps={}){
       result.applied=await applySyncPlan(applyPlan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
     }
-    if(dryRun&&!notifyDryRun){
+    if(suppressNotification){
+      result.notification={skipped:true,reason:'本次执行已按参数关闭群通知'};
+    }else if(dryRun&&!notifyDryRun){
       result.notification={skipped:true,reason:'dry-run 默认不发群'};
     }else{
       try{
@@ -1093,7 +1095,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const startDate=validDateKey(query.get('startDate'));
       const endDate=validDateKey(query.get('endDate'));
       const includeHistorical=query.get('history')==='true'||!!startDate||!!endDate;
-      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply')),historyTrialMode:cleanText(query.get('historyTrial')),notifyDryRun:query.get('notify')==='true'}));
+      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply')),historyTrialMode:cleanText(query.get('historyTrial')),notifyDryRun:query.get('notify')==='true',suppressNotification:query.get('notify')==='false'||query.get('silent')==='true'}));
     }
     if(path==='/feishu-schedule-sync/confirm-delete'&&method==='GET'){
       const taskId=cleanText(query.get('taskId'));

@@ -868,6 +868,29 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
     });
     assert.deepStrictEqual(jsonPayload.notification, { skipped: true, reason: 'dry-run 默认不发群' }, 'dry-run should not spam the group by default');
 
+    process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED = 'true';
+    process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/test';
+    let suppressedWebhookCalled = false;
+    axios.post = async (url) => {
+      if (/tenant_access_token/.test(url)) return { data: { code: 0, tenant_access_token: 'tenant-token' } };
+      if (/\/bot\/v2\/hook\//.test(url)) {
+        suppressedWebhookCalled = true;
+        return { data: { code: 0 } };
+      }
+      throw new Error(`unexpected axios.post ${url}`);
+    };
+    await route({
+      path: '/cron/feishu-schedule-sync',
+      method: 'GET',
+      req: { headers: { 'user-agent': 'vercel-cron' } },
+      res: {},
+      query: new URLSearchParams('notify=false')
+    });
+    assert.deepStrictEqual(jsonPayload.notification, { skipped: true, reason: '本次执行已按参数关闭群通知' }, 'manual write sync should allow suppressing group notification');
+    assert.strictEqual(suppressedWebhookCalled, false, 'notify=false should not call Feishu webhook');
+    process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED = 'false';
+    delete process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK;
+
     await route({
       path: '/cron/feishu-schedule-sync',
       method: 'GET',
