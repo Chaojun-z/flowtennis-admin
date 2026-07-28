@@ -63,6 +63,8 @@ jobs:
           const s = data.plan?.summary || {};
           console.log(`mode=${data.mode || ''} dryRun=${data.dryRun} courseCount=${data.courseCount}`);
           console.log(`bindExisting=${s.bindExisting || 0} create=${s.create || 0} createTrial=${s.createTrial || 0} update=${s.update || 0} pendingDelete=${s.pendingDelete || 0} notifyError=${s.notifyError || 0}`);
+          const n = data.notification || {};
+          console.log(`notification sent=${n.sent === true} skipped=${n.skipped === true} error=${n.error || data.notificationError || ''}`);
           const errors = (data.plan?.actions || []).filter((item) => item.type === 'notify_error').slice(0, 20);
           errors.forEach((item, index) => {
             const c = item.candidate || {};

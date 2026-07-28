@@ -751,8 +751,10 @@ async function fetchFeishuSheetMeta({spreadsheetToken,accessToken}){
 async function sendFeishuWebhook(webhook,text){
   const url=cleanText(webhook);
   if(!url)return {skipped:true};
-  await axios.post(url,{msg_type:'text',content:{text}}, {timeout:10000});
-  return {sent:true};
+  const res=await axios.post(url,{msg_type:'text',content:{text}}, {timeout:10000});
+  const code=Number(res.data?.code??0);
+  if(code!==0)throw new Error(`飞书群通知失败：${res.data?.msg||code}`);
+  return {sent:true,code};
 }
 
 function cronAuthorized(req){
@@ -995,9 +997,12 @@ function createFeishuScheduleSyncRoutes(deps={}){
       result.applied=await applySyncPlan(applyPlan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
     }
-    await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationText(result)).catch(err=>{
+    try{
+      result.notification=await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationText(result));
+    }catch(err){
+      result.notification={sent:false,error:err.message};
       result.notificationError=err.message;
-    });
+    }
     return result;
   }
 

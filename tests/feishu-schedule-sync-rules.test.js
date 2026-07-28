@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
 const sync = require('../server/feishu-schedule-sync-routes');
 
@@ -562,6 +563,7 @@ const workflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflow
 assert.match(workflow, /cron:\s*'0 0,10 \* \* \*'/, 'workflow should run twice daily at Beijing 08:00 and 18:00');
 assert.match(workflow, /\/api\/cron\/feishu-schedule-sync/, 'workflow should call the feishu schedule sync cron endpoint');
 assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, 'workflow should reuse FLOWTENNIS_ADMIN_TOKEN when CRON_SECRET is not configured');
+assert.match(workflow, /notification sent=/, 'workflow log should expose whether Feishu group notification was sent or skipped');
 
 (async () => {
   const candidate = {
@@ -705,6 +707,86 @@ assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*se
   assert.match(appliedDelete[0].confirmUrl, /\/api\/feishu-schedule-sync\/confirm-delete\?taskId=/, 'pending delete should include a mobile confirmation link');
   assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.row.status === 'pending'), 'delete sync should not cancel immediately, only create pending task');
   assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_sync' && item.row.status === 'pending_delete'), 'delete sync should mark relation as pending_delete');
+
+  const originalAxiosPost = axios.post;
+  const originalAxiosGet = axios.get;
+  const originalEnv = {
+    FEISHU_SCHEDULE_APP_ID: process.env.FEISHU_SCHEDULE_APP_ID,
+    FEISHU_SCHEDULE_APP_SECRET: process.env.FEISHU_SCHEDULE_APP_SECRET,
+    FEISHU_SCHEDULE_SPREADSHEET_TOKEN: process.env.FEISHU_SCHEDULE_SPREADSHEET_TOKEN,
+    FEISHU_SCHEDULE_SHEET_ID: process.env.FEISHU_SCHEDULE_SHEET_ID,
+    FEISHU_SCHEDULE_NOTIFY_WEBHOOK: process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,
+    FEISHU_SCHEDULE_SYNC_WRITE_ENABLED: process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED,
+    CRON_SECRET: process.env.CRON_SECRET
+  };
+  try {
+    process.env.FEISHU_SCHEDULE_APP_ID = 'app-id';
+    process.env.FEISHU_SCHEDULE_APP_SECRET = 'app-secret';
+    process.env.FEISHU_SCHEDULE_SPREADSHEET_TOKEN = 'spreadsheet-token';
+    process.env.FEISHU_SCHEDULE_SHEET_ID = 'GrbZdi';
+    process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED = 'false';
+    delete process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK;
+    delete process.env.CRON_SECRET;
+    axios.post = async (url) => {
+      assert.match(url, /tenant_access_token/, 'cron sync should only post to Feishu auth when webhook is not configured');
+      return { data: { code: 0, tenant_access_token: 'tenant-token' } };
+    };
+    axios.get = async (url) => {
+      if (/\/values\//.test(url)) return { data: { code: 0, data: { valueRange: { values } } } };
+      if (/\/sheets\/query/.test(url)) return { data: { code: 0, data: { sheets: [{ sheet_id: 'GrbZdi', title: '7.20-7.26', merges }] } } };
+      throw new Error(`unexpected axios.get ${url}`);
+    };
+    let jsonPayload = null;
+    const route = sync.createFeishuScheduleSyncRoutes({
+      init: async () => {},
+      mkTable: async () => {},
+      sendJson: (res, payload, status = 200) => { jsonPayload = payload; return { status, payload }; },
+      sendPlainText: () => {},
+      getCachedScan: async () => [],
+      put: async () => {},
+      uuidv4: () => 'uuid',
+      T_SCHEDULE: 'schedules',
+      T_STUDENTS: 'students',
+      T_COACHES: 'coaches',
+      T_USERS: 'users',
+      T_PACKAGES: 'packages',
+      T_ENTITLEMENTS: 'entitlements',
+      T_LEADS: 'leads',
+      T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+      T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+    });
+    await route({
+      path: '/cron/feishu-schedule-sync',
+      method: 'GET',
+      req: { headers: { 'user-agent': 'vercel-cron' } },
+      res: {},
+      query: new URLSearchParams('dryRun=true&history=true&startDate=2026-07-20&endDate=2026-07-20')
+    });
+    assert.deepStrictEqual(jsonPayload.notification, { skipped: true }, 'cron response should expose skipped notification when webhook is missing');
+
+    process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/test';
+    axios.post = async (url) => {
+      if (/tenant_access_token/.test(url)) return { data: { code: 0, tenant_access_token: 'tenant-token' } };
+      if (/\/bot\/v2\/hook\//.test(url)) return { data: { code: 9499, msg: 'bad webhook' } };
+      throw new Error(`unexpected axios.post ${url}`);
+    };
+    await route({
+      path: '/cron/feishu-schedule-sync',
+      method: 'GET',
+      req: { headers: { 'user-agent': 'vercel-cron' } },
+      res: {},
+      query: new URLSearchParams('dryRun=true&history=true&startDate=2026-07-20&endDate=2026-07-20')
+    });
+    assert.strictEqual(jsonPayload.notification.sent, false, 'cron response should mark Feishu webhook non-zero code as notification failure');
+    assert.match(jsonPayload.notification.error, /bad webhook/, 'notification failure should keep the Feishu error message');
+  } finally {
+    axios.post = originalAxiosPost;
+    axios.get = originalAxiosGet;
+    Object.entries(originalEnv).forEach(([key, value]) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    });
+  }
 
   console.log('feishu schedule sync rules tests passed');
 })().catch(err => {
