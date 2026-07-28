@@ -117,7 +117,7 @@ const systemVenuePlan = sync.buildDryRunPlan({
     startTime: '2026-07-20 12:00',
     endTime: '2026-07-20 13:30',
     coach: '晓哲',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     venue: '4号场',
     courseType: '私教课',
     experienceType: '',
