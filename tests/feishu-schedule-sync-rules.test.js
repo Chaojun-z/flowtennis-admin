@@ -765,9 +765,12 @@ assert.match(workflow, /notification sent=/, 'workflow log should expose whether
     assert.deepStrictEqual(jsonPayload.notification, { skipped: true }, 'cron response should expose skipped notification when webhook is missing');
 
     process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/test';
-    axios.post = async (url) => {
+    axios.post = async (url, body) => {
       if (/tenant_access_token/.test(url)) return { data: { code: 0, tenant_access_token: 'tenant-token' } };
-      if (/\/bot\/v2\/hook\//.test(url)) return { data: { code: 9499, msg: 'bad webhook' } };
+      if (/\/bot\/v2\/hook\//.test(url)) {
+        assert.match(body.content.text, /排课日报/, 'Feishu webhook notification should include the bot keyword');
+        return { data: { code: 9499, msg: 'bad webhook' } };
+      }
       throw new Error(`unexpected axios.post ${url}`);
     };
     await route({
