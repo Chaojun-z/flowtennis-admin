@@ -110,6 +110,79 @@ const plan = sync.buildDryRunPlan({
 assert.strictEqual(plan.summary.bindExisting, 1, 'first baseline should bind exact existing future schedule instead of creating duplicate');
 assert.strictEqual(plan.summary.create, 0, 'exact existing future schedule should not be recreated');
 
+const pastUnboundPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'past-unbound-key',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-1', name: 'W.Jing', primaryCoach: '晓哲' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
+  nowKey: '2026-07-21 00:00'
+});
+assert.strictEqual(pastUnboundPlan.summary.create, 0, 'document-scope sync should not auto-create unbound historical schedules');
+assert.strictEqual(pastUnboundPlan.summary.notifyError, 1, 'unbound historical schedules should be surfaced for operations confirmation');
+assert.match(pastUnboundPlan.actions[0].reason, /历史排课缺少系统绑定/, 'historical create blocker should be explicit');
+
+const futureUnboundPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'future-unbound-key',
+    startTime: '2026-07-21 12:00',
+    endTime: '2026-07-21 13:30',
+    date: '2026-07-21',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-1', name: 'W.Jing', primaryCoach: '晓哲' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
+  nowKey: '2026-07-21 11:00'
+});
+assert.strictEqual(futureUnboundPlan.summary.create, 1, 'future document rows should still auto-create when safely resolvable');
+
+const pastBoundModifiedPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'past-bound-key',
+    fingerprint: 'new-fingerprint',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [{ id: 'sync-past', sourceKey: 'past-bound-key', scheduleId: 'sch-past', lastFingerprint: 'old-fingerprint', status: 'active' }],
+  schedules: [{
+    id: 'sch-past',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coach: '晓哲',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-1'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
+  nowKey: '2026-07-21 00:00'
+});
+assert.strictEqual(pastBoundModifiedPlan.summary.update, 0, 'bound historical schedules should not be auto-updated after the class time');
+assert.strictEqual(pastBoundModifiedPlan.summary.notifyError, 1, 'bound historical schedule changes should be sent for operations confirmation');
+assert.match(pastBoundModifiedPlan.actions[0].reason, /历史排课修改需要运营确认/, 'historical update blocker should be explicit');
+
 const systemVenuePlan = sync.buildDryRunPlan({
   feishuCourses: courses.slice(0, 1),
   syncRows: [],
@@ -763,6 +836,16 @@ assert.match(workflow, /notification sent=/, 'workflow log should expose whether
       query: new URLSearchParams('dryRun=true&history=true&startDate=2026-07-20&endDate=2026-07-20')
     });
     assert.deepStrictEqual(jsonPayload.notification, { skipped: true }, 'cron response should expose skipped notification when webhook is missing');
+
+    await route({
+      path: '/cron/feishu-schedule-sync',
+      method: 'GET',
+      req: { headers: { 'user-agent': 'vercel-cron' } },
+      res: {},
+      query: new URLSearchParams('dryRun=true')
+    });
+    assert.strictEqual(jsonPayload.mode, 'sheet', 'regular cron sync should compare the whole Feishu document instead of future rows only');
+    assert.strictEqual(jsonPayload.courseCount, 2, 'regular cron sync should include historical document rows in the comparison scope');
 
     process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/test';
     axios.post = async (url, body) => {

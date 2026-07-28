@@ -589,13 +589,14 @@ function attachSchedulableStudents(candidate,ctx={}){
   return {...candidate,scheduleStudents};
 }
 
-function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],coaches=[],users=[],entitlements=[],recommendEntitlements=null}={}){
+function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],coaches=[],users=[],entitlements=[],recommendEntitlements=null,nowKey=''}={}){
   const ctx={students,coaches,users,schedules,entitlements,recommendEntitlements};
   const syncByKey=new Map((syncRows||[]).filter(row=>row.status!=='ignored').map(row=>[String(row.sourceKey||''),row]));
   const activeSourceKeys=new Set();
   const actions=[];
   for(const raw of feishuCourses){
     let candidate=buildResolvedCandidate(raw,ctx);
+    const historicalCourse=!!nowKey&&!isFutureCourse(candidate,nowKey);
     activeSourceKeys.add(candidate.sourceKey);
     const sync=syncByKey.get(candidate.sourceKey);
     if(candidate.errors.length){
@@ -607,6 +608,10 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       if(!existing){
         actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,reason:'同步记录绑定的系统排课不存在'});
       }else if(sync.lastFingerprint!==candidate.fingerprint){
+        if(historicalCourse){
+          actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing,reason:'历史排课修改需要运营确认'});
+          continue;
+        }
         actions.push({type:'update_schedule',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing});
       }else{
         actions.push({type:'noop',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing});
@@ -626,6 +631,10 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     candidate=attachSchedulableStudents(candidate,ctx);
     if(candidate.errors.length){
       actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,reason:candidate.errors.join('；')});
+      continue;
+    }
+    if(historicalCourse){
+      actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,reason:'历史排课缺少系统绑定，需要运营确认后补建'});
       continue;
     }
     actions.push({type:candidate.course.isTrial?'create_trial_schedule':'create_schedule',sourceKey:candidate.sourceKey,candidate});
@@ -777,7 +786,7 @@ function buildNotificationText(result){
   const lines=[
     `网球兄弟小助手 排课日报：飞书排课同步${result.dryRun?' dry-run':'执行'}完成（当日上课情况 / 次日排课情况）`,
     `新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，删除待确认 ${s.pendingDelete}，异常 ${s.notifyError}`,
-    `已忽略历史课 ${result.ignoredPastCount||0} 节`
+    `读取文档排课 ${result.courseCount||0} 节，总排课 ${result.totalCourseCount||0} 节`
   ];
   const important=result.plan.actions.filter(a=>a.type!=='noop').slice(0,12).map(formatActionLine);
   if(important.length)lines.push(...important);
@@ -981,16 +990,17 @@ function createFeishuScheduleSyncRoutes(deps={}){
     const rangeMode=includeHistorical||!!startDate||!!endDate;
     const selectedCourses=rangeMode
       ? feishuCourses.filter(course=>courseInDateRange(course,startDate,endDate))
-      : feishuCourses.filter(course=>isFutureCourse(course,nowKey));
-    const selectedScheduleIds=new Set((schedules||[]).filter(row=>rangeMode?courseInDateRange(row,startDate,endDate):isFutureCourse(row,nowKey)).map(row=>String(row.id||'')).filter(Boolean));
+      : feishuCourses;
+    const selectedScheduleIds=new Set((schedules||[]).filter(row=>rangeMode?courseInDateRange(row,startDate,endDate):true).map(row=>String(row.id||'')).filter(Boolean));
     const sheetId=cleanText(process.env.FEISHU_SCHEDULE_SHEET_ID||process.env.FEISHU_SCHEDULE_DEFAULT_SHEET_ID);
     const scopedSyncRows=(syncRows||[]).filter(row=>{
       const rowSheet=cleanText(row.sheetId||String(row.sourceKey||'').split('|')[0]);
       if(sheetId&&rowSheet&&rowSheet!==sheetId)return false;
+      if(!rangeMode)return true;
       return !row.scheduleId||selectedScheduleIds.has(String(row.scheduleId||''));
     });
-    const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,recommendEntitlements});
-    const result={ok:true,dryRun,mode:rangeMode?'date_range':'future',startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:rangeMode?0:feishuCourses.length-selectedCourses.length,plan};
+    const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,recommendEntitlements,nowKey});
+    const result={ok:true,dryRun,mode:rangeMode?'date_range':'sheet',startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:0,plan};
     if(!dryRun){
       const applyPlan=rangeMode?safeHistoryApplyPlan(plan,{includeTrial:historyTrialMode==='confirmed'}):plan;
       if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
