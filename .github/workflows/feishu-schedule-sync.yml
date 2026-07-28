@@ -21,6 +21,10 @@ on:
         description: '是否只 dry-run'
         required: false
         default: 'true'
+      notify:
+        description: 'dry-run 是否发群通知'
+        required: false
+        default: 'false'
 
 permissions:
   contents: read
@@ -45,6 +49,7 @@ jobs:
             [ -n "${{ github.event.inputs.startDate }}" ] && params+=("startDate=${{ github.event.inputs.startDate }}")
             [ -n "${{ github.event.inputs.endDate }}" ] && params+=("endDate=${{ github.event.inputs.endDate }}")
             [ -n "${{ github.event.inputs.dryRun }}" ] && params+=("dryRun=${{ github.event.inputs.dryRun }}")
+            [ -n "${{ github.event.inputs.notify }}" ] && params+=("notify=${{ github.event.inputs.notify }}")
             if [ "${#params[@]}" -gt 0 ]; then
               joined=$(IFS='&'; echo "${params[*]}")
               target="${TARGET_URL}?${joined}"

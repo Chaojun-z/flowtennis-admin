@@ -776,9 +776,32 @@ function cronAuthorized(req){
 
 function formatActionLine(action){
   const c=action.candidate||{};
-  if(action.type==='notify_error')return `失败：${action.reason}（${c.date||''} ${c.startClock||''} ${c.coachName||''} ${c.studentText||''} ${c.sourceCell||''}）`;
-  if(action.type==='pending_delete')return `待确认删除：${action.sync?.sourceKey||''}`;
+  if(action.type==='notify_error')return `${formatCourseBrief(c)}：${operatorActionText(action.reason)}`;
+  if(action.type==='pending_delete')return `待确认删除：系统排课 ${action.sync?.scheduleId||''}`;
   return `${action.type}：${c.date||''} ${c.startClock||''}-${c.endClock||''} ${c.coachName||''} ${c.studentText||''}`;
+}
+
+function formatCourseBrief(candidate={}){
+  const date=cleanText(candidate.date||String(candidate.startTime||'').slice(0,10));
+  const time=cleanText(candidate.startClock||String(candidate.startTime||'').slice(11,16));
+  const student=cleanText(candidate.studentText||candidate.studentNames?.join('、'));
+  const course=cleanText(candidate.courseText||candidate.course?.raw||candidate.course?.courseType);
+  const coach=cleanText(candidate.coachName||candidate.resolvedCoach?.name);
+  const venue=[candidate.venueText,candidate.courtText||candidate.venue].map(cleanText).filter(Boolean).join(' ');
+  return [date,time,student,course,coach,venue].filter(Boolean).join('｜');
+}
+
+function operatorActionText(reason=''){
+  const text=cleanText(reason);
+  if(/课时编号|系统课包进度/.test(text))return '请核对飞书第几节和系统课包已用节数，确认按哪个扣';
+  if(/无法唯一识别.*学员/.test(text))return '请确认对应系统学员；没有档案就走线索/学员建档流程';
+  if(/没有可自动扣课/.test(text))return '请确认要扣哪个课包；没有课包就先补购买/权益';
+  if(/体验课无法判断/.test(text))return '请标注每个人是体验课还是正式课，以及成人/青少年';
+  if(/历史排课缺少系统绑定/.test(text))return '请确认是否补建历史排课；确认后走专项修复';
+  if(/历史排课修改/.test(text))return '请确认是否修改历史排课；确认后走专项修复';
+  if(/缺少课程类型|缺少场馆|缺少场地号/.test(text))return '请补齐飞书表课程类型、场馆、场地';
+  if(/小班课至少/.test(text))return '请确认是否单人也开课，或补齐同场学员';
+  return text||'请运营确认';
 }
 
 function buildNotificationText(result){
@@ -788,8 +811,12 @@ function buildNotificationText(result){
     `新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，删除待确认 ${s.pendingDelete}，异常 ${s.notifyError}`,
     `读取文档排课 ${result.courseCount||0} 节，总排课 ${result.totalCourseCount||0} 节`
   ];
-  const important=result.plan.actions.filter(a=>a.type!=='noop').slice(0,12).map(formatActionLine);
-  if(important.length)lines.push(...important);
+  const important=result.plan.actions.filter(a=>a.type!=='noop');
+  if(important.length){
+    lines.push('需要运营处理：');
+    lines.push(...important.slice(0,10).map(formatActionLine));
+    if(important.length>10)lines.push(`其余 ${important.length-10} 条请看同步结果报告，不在群里刷屏。`);
+  }
   const deleteLinks=(result.applied||[]).filter(item=>item.type==='pending_delete'&&item.confirmUrl).slice(0,8).map(item=>`确认取消：${item.confirmUrl}`);
   if(deleteLinks.length)lines.push(...deleteLinks);
   return lines.join('\n');
@@ -971,7 +998,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     return parseFeishuScheduleRows({values,merges:sheet.merges||[],sheetId,sheetTitle:sheet.title||sheetId});
   }
 
-  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode='',historyTrialMode=''}={}){
+  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode='',historyTrialMode='',notifyDryRun=false}={}){
     await init();
     await ensureFeishuSyncTables();
     const [feishuCourses,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
@@ -1007,11 +1034,15 @@ function createFeishuScheduleSyncRoutes(deps={}){
       result.applied=await applySyncPlan(applyPlan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
     }
-    try{
-      result.notification=await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationText(result));
-    }catch(err){
-      result.notification={sent:false,error:err.message};
-      result.notificationError=err.message;
+    if(dryRun&&!notifyDryRun){
+      result.notification={skipped:true,reason:'dry-run 默认不发群'};
+    }else{
+      try{
+        result.notification=await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationText(result));
+      }catch(err){
+        result.notification={sent:false,error:err.message};
+        result.notificationError=err.message;
+      }
     }
     return result;
   }
@@ -1024,7 +1055,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const startDate=validDateKey(query.get('startDate'));
       const endDate=validDateKey(query.get('endDate'));
       const includeHistorical=query.get('history')==='true'||!!startDate||!!endDate;
-      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply')),historyTrialMode:cleanText(query.get('historyTrial'))}));
+      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply')),historyTrialMode:cleanText(query.get('historyTrial')),notifyDryRun:query.get('notify')==='true'}));
     }
     if(path==='/feishu-schedule-sync/confirm-delete'&&method==='GET'){
       const taskId=cleanText(query.get('taskId'));

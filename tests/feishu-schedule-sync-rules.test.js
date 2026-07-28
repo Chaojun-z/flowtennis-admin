@@ -637,6 +637,7 @@ assert.match(workflow, /cron:\s*'0 0,10 \* \* \*'/, 'workflow should run twice d
 assert.match(workflow, /\/api\/cron\/feishu-schedule-sync/, 'workflow should call the feishu schedule sync cron endpoint');
 assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, 'workflow should reuse FLOWTENNIS_ADMIN_TOKEN when CRON_SECRET is not configured');
 assert.match(workflow, /notification sent=/, 'workflow log should expose whether Feishu group notification was sent or skipped');
+assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'/, 'manual dry-run should expose an explicit notify switch');
 
 (async () => {
   const candidate = {
@@ -835,7 +836,7 @@ assert.match(workflow, /notification sent=/, 'workflow log should expose whether
       res: {},
       query: new URLSearchParams('dryRun=true&history=true&startDate=2026-07-20&endDate=2026-07-20')
     });
-    assert.deepStrictEqual(jsonPayload.notification, { skipped: true }, 'cron response should expose skipped notification when webhook is missing');
+    assert.deepStrictEqual(jsonPayload.notification, { skipped: true, reason: 'dry-run 默认不发群' }, 'dry-run should not spam the group by default');
 
     await route({
       path: '/cron/feishu-schedule-sync',
@@ -848,9 +849,11 @@ assert.match(workflow, /notification sent=/, 'workflow log should expose whether
     assert.strictEqual(jsonPayload.courseCount, 2, 'regular cron sync should include historical document rows in the comparison scope');
 
     process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/test';
+    let webhookText = '';
     axios.post = async (url, body) => {
       if (/tenant_access_token/.test(url)) return { data: { code: 0, tenant_access_token: 'tenant-token' } };
       if (/\/bot\/v2\/hook\//.test(url)) {
+        webhookText = body.content.text;
         assert.match(body.content.text, /网球兄弟小助手.*排课日报.*当日上课情况.*次日排课情况/s, 'Feishu webhook notification should include the known bot keywords');
         return { data: { code: 9499, msg: 'bad webhook' } };
       }
@@ -861,10 +864,12 @@ assert.match(workflow, /notification sent=/, 'workflow log should expose whether
       method: 'GET',
       req: { headers: { 'user-agent': 'vercel-cron' } },
       res: {},
-      query: new URLSearchParams('dryRun=true&history=true&startDate=2026-07-20&endDate=2026-07-20')
+      query: new URLSearchParams('dryRun=true&notify=true&history=true&startDate=2026-07-20&endDate=2026-07-20')
     });
     assert.strictEqual(jsonPayload.notification.sent, false, 'cron response should mark Feishu webhook non-zero code as notification failure');
     assert.match(jsonPayload.notification.error, /bad webhook/, 'notification failure should keep the Feishu error message');
+    assert.match(webhookText, /需要运营处理/, 'group notification should tell operations what to do');
+    assert.doesNotMatch(webhookText, /R\d+C\d+/, 'group notification should not expose spreadsheet cell coordinates');
   } finally {
     axios.post = originalAxiosPost;
     axios.get = originalAxiosGet;
