@@ -110,6 +110,35 @@ const plan = sync.buildDryRunPlan({
 assert.strictEqual(plan.summary.bindExisting, 1, 'first baseline should bind exact existing future schedule instead of creating duplicate');
 assert.strictEqual(plan.summary.create, 0, 'exact existing future schedule should not be recreated');
 
+const legacyCampusExistingPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'legacy-campus-existing-key',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{
+    id: 'sch-legacy-campus',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coach: '晓哲',
+    campus: 'mabao',
+    venue: '3号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-1'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: []
+});
+assert.strictEqual(legacyCampusExistingPlan.summary.bindExisting, 1, 'legacy mabao campus schedules should still bind to shunyi_mapo Feishu rows');
+
 const pastUnboundPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
