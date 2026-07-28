@@ -384,6 +384,24 @@ assert.throws(
   'price override requires a reason'
 );
 
+assert.doesNotThrow(
+  () => computeCourtFinance({
+    history: [{
+      id: 'legacy-priced-booking-no-reason',
+      date: '2026-04-20',
+      type: '消费',
+      category: '订场',
+      payMethod: '微信',
+      amount: 180,
+      priceMode: 'venue_rate',
+      pricePlanId: 'weekday-prime',
+      systemAmount: 198,
+      finalAmount: 180
+    }]
+  }),
+  'read-only legacy court history normalization should not block schedule saves'
+);
+
 assert.throws(
   () => normalizeCourtRecord({
     name: '订场 0 元改价未填原因',

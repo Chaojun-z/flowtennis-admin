@@ -273,14 +273,25 @@ function extractDepositAmountFromText(text){
   const m=raw.match(/已储值\s*([0-9]+(?:\.[0-9]+)?)/);
   return m?normalizeMoney(m[1]):0;
 }
-function normalizeFinancePriceSnapshot(row){
-  const hasSnapshot=row.priceMode||row.pricePlanId||row.systemAmount!==undefined||row.finalAmount!==undefined;
-  if(!hasSnapshot)return row;
+function financePriceSnapshotState(row){
   const systemAmount=normalizeMoney(row.systemAmount);
   const finalAmount=normalizeMoney(row.finalAmount!==undefined?row.finalAmount:row.amount);
   const priceOverridden=row.category==='订场'&&systemAmount>0&&systemAmount!==finalAmount;
   const overrideReason=String(row.overrideReason||'').trim();
-  if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
+  return {systemAmount,finalAmount,priceOverridden,overrideReason};
+}
+function assertFinancePriceOverrideReasons(history){
+  for(const row of history||[]){
+    const hasSnapshot=row?.priceMode||row?.pricePlanId||row?.systemAmount!==undefined||row?.finalAmount!==undefined;
+    if(!hasSnapshot)continue;
+    const {priceOverridden,overrideReason}=financePriceSnapshotState(row);
+    if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
+  }
+}
+function normalizeFinancePriceSnapshot(row){
+  const hasSnapshot=row.priceMode||row.pricePlanId||row.systemAmount!==undefined||row.finalAmount!==undefined;
+  if(!hasSnapshot)return row;
+  const {systemAmount,finalAmount,priceOverridden,overrideReason}=financePriceSnapshotState(row);
   return {
     ...row,
     priceMode:String(row.priceMode||'manual').trim(),
@@ -505,6 +516,7 @@ function mergeCourtRecords({targetCourt,sourceCourt,membershipAccounts=[],member
     const total=normalizeMoney(normalizedInput.totalDeposit);
     if(spent>0&&total>0)normalizedInput.balance=Math.max(0,total-spent);
   }
+  if(refs.requireOverrideReason!==false)assertFinancePriceOverrideReasons(input.history);
   const currentHistory=normalizeCourtHistory(input.history);
   const history=normalizeCourtBookingHistoryRows(normalizedInput,currentHistory.length?currentHistory:buildLegacyCourtOpeningHistory(normalizedInput)).sort((a,b)=>courtHistorySortKey(a).localeCompare(courtHistorySortKey(b)));
   if(Array.isArray(refs.schedules))assertCourtBookingHistoryAgainstSchedules({...normalizedInput,history},refs.schedules);
