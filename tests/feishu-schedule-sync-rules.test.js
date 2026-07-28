@@ -563,6 +563,7 @@ const lessonIndexMismatchPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(lessonIndexMismatchPlan.summary.notifyError, 1, 'lesson index mismatch should block automatic import');
 assert.match(lessonIndexMismatchPlan.actions[0].reason, /括号课时编号和系统课包进度不一致/, 'lesson index mismatch should ask operations to confirm');
+assert.match(lessonIndexMismatchPlan.actions[0].reason, /飞书第9节，系统下一节第2节/, 'lesson index mismatch should include the Feishu and system lesson numbers');
 
 const packageCycleLessonIndexPlan = sync.buildDryRunPlan({
   feishuCourses: [{

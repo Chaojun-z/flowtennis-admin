@@ -571,8 +571,42 @@ function entitlementLessonIndexMatches(row={},candidate={}){
   return false;
 }
 
+function entitlementCourseMatches(row={},candidate={}){
+  if(row.status&&row.status!=='active')return false;
+  if(row.courseType&&row.courseType!==candidate.course.courseType)return false;
+  if(row.experienceType&&candidate.course.experienceType&&row.experienceType!==candidate.course.experienceType)return false;
+  return Number(row.remainingLessons||0)>=Number(candidate.lessonCount||1);
+}
+
 function hasSelectableEntitlementIgnoringLessonIndex(student,candidate,entitlements=[],recommendEntitlements){
   return hasSelectableEntitlement(student,{...candidate,lessonIndex:null},entitlements,recommendEntitlements);
+}
+
+function lessonIndexMismatchDetails(candidate,ctx={}){
+  const index=Number(candidate.lessonIndex);
+  if(!Number.isFinite(index)||index<=0)return '';
+  const details=[];
+  for(const student of candidate.resolvedStudents||[]){
+    const rows=(ctx.entitlements||[]).filter(row=>String(row.studentId||'')===String(student.id||''));
+    let candidates=[];
+    if(typeof ctx.recommendEntitlements==='function'){
+      const result=ctx.recommendEntitlements(rows,buildScheduleBody({...candidate,lessonIndex:null,scheduleStudents:[student]}));
+      const selected=rows.find(row=>String(row.id||'')===String(result?.recommended?.entitlementId||result?.recommended?.id||''));
+      if(selected)candidates=[selected];
+    }else{
+      candidates=rows.filter(row=>entitlementCourseMatches(row,candidate));
+    }
+    candidates
+      .filter(row=>!entitlementLessonIndexMatches(row,candidate))
+      .slice(0,2)
+      .forEach(row=>{
+        const expected=entitlementExpectedLessonIndex(row);
+        if(expected===null)return;
+        const packageName=cleanText(row.packageName||row.name||row.productName||'可用课包');
+        details.push(`${student.name||student.id}：飞书第${index}节，系统下一节第${expected}节，课包「${packageName}」`);
+      });
+  }
+  return details.join('；');
 }
 
 function attachSchedulableStudents(candidate,ctx={}){
@@ -582,7 +616,8 @@ function attachSchedulableStudents(candidate,ctx={}){
   if(!scheduleStudents.length){
     const hasPackageWithMismatchedIndex=Number(candidate.lessonIndex)>0&&candidate.resolvedStudents.some(student=>hasSelectableEntitlementIgnoringLessonIndex(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
     if(hasPackageWithMismatchedIndex){
-      return {...candidate,scheduleStudents:[],errors:[...candidate.errors,'飞书括号课时编号和系统课包进度不一致，需要运营确认']};
+      const detail=lessonIndexMismatchDetails(candidate,ctx);
+      return {...candidate,scheduleStudents:[],errors:[...candidate.errors,`飞书括号课时编号和系统课包进度不一致，需要运营确认${detail?`：${detail}`:''}`]};
     }
     return {...candidate,scheduleStudents:[],errors:[...candidate.errors,'没有可自动扣课的可用课包']};
   }
@@ -793,7 +828,10 @@ function formatCourseBrief(candidate={}){
 
 function operatorActionText(reason=''){
   const text=cleanText(reason);
-  if(/课时编号|系统课包进度/.test(text))return '请核对飞书第几节和系统课包已用节数，确认按哪个扣';
+  if(/课时编号|系统课包进度/.test(text)){
+    const detail=text.includes('：')?text.split('：').slice(1).join('：'):'';
+    return `请确认按飞书还是按系统扣${detail?`；${detail}`:''}`;
+  }
   if(/无法唯一识别.*学员/.test(text))return '请确认对应系统学员；没有档案就走线索/学员建档流程';
   if(/没有可自动扣课/.test(text))return '请确认要扣哪个课包；没有课包就先补购买/权益';
   if(/体验课无法判断/.test(text))return '请标注每个人是体验课还是正式课，以及成人/青少年';
