@@ -212,7 +212,7 @@ function createCorePageDataRoutes(deps={}){
       const [campuses,students,courts,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,membershipPlans,coaches]=await Promise.all([
         listCampusesWithDefaults(),
         cappedScan(T_STUDENTS),
-        cappedScan(T_COURTS),
+        getCachedScan(T_COURTS),
         cappedScan(T_MEMBERSHIP_ACCOUNTS),
         cappedScan(T_MEMBERSHIP_ORDERS),
         cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER),
