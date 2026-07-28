@@ -716,8 +716,9 @@ function summarizePlan(actions=[]){
   return {summary,actions};
 }
 
-function safeHistoryApplyPlan(plan={}){
-  const safeTypes=new Set(['bind_existing','create_schedule','create_trial_schedule']);
+function safeHistoryApplyPlan(plan={},options={}){
+  const safeTypes=new Set(['bind_existing','create_schedule']);
+  if(options.includeTrial===true)safeTypes.add('create_trial_schedule');
   return summarizePlan((plan.actions||[]).filter(action=>safeTypes.has(action.type)));
 }
 
@@ -959,7 +960,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     return parseFeishuScheduleRows({values,merges:sheet.merges||[],sheetId,sheetTitle:sheet.title||sheetId});
   }
 
-  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode=''}={}){
+  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode='',historyTrialMode=''}={}){
     await init();
     await ensureFeishuSyncTables();
     const [feishuCourses,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
@@ -989,7 +990,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,recommendEntitlements});
     const result={ok:true,dryRun,mode:rangeMode?'date_range':'future',startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:rangeMode?0:feishuCourses.length-selectedCourses.length,plan};
     if(!dryRun){
-      const applyPlan=rangeMode?safeHistoryApplyPlan(plan):plan;
+      const applyPlan=rangeMode?safeHistoryApplyPlan(plan,{includeTrial:historyTrialMode==='confirmed'}):plan;
       if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
       result.applied=await applySyncPlan(applyPlan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
@@ -1008,7 +1009,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const startDate=validDateKey(query.get('startDate'));
       const endDate=validDateKey(query.get('endDate'));
       const includeHistorical=query.get('history')==='true'||!!startDate||!!endDate;
-      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply'))}));
+      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply')),historyTrialMode:cleanText(query.get('historyTrial'))}));
     }
     if(path==='/feishu-schedule-sync/confirm-delete'&&method==='GET'){
       const taskId=cleanText(query.get('taskId'));

@@ -530,6 +530,24 @@ const safeHistoryPlan = sync.safeHistoryApplyPlan({
   ]
 });
 assert.deepStrictEqual(safeHistoryPlan.summary, {
+  total: 2,
+  noop: 0,
+  bindExisting: 1,
+  create: 1,
+  createTrial: 0,
+  update: 0,
+  pendingDelete: 0,
+  notifyError: 0
+}, 'history safe apply should only execute confirmed bind/formal-create actions by default');
+
+const trialConfirmedHistoryPlan = sync.safeHistoryApplyPlan({
+  actions: [
+    { type: 'bind_existing', sourceKey: 'bind' },
+    { type: 'create_schedule', sourceKey: 'create' },
+    { type: 'create_trial_schedule', sourceKey: 'trial' }
+  ]
+}, { includeTrial: true });
+assert.deepStrictEqual(trialConfirmedHistoryPlan.summary, {
   total: 3,
   noop: 0,
   bindExisting: 1,
@@ -538,7 +556,7 @@ assert.deepStrictEqual(safeHistoryPlan.summary, {
   update: 0,
   pendingDelete: 0,
   notifyError: 0
-}, 'history safe apply should only execute confirmed bind/create actions');
+}, 'history safe apply should include trial creation only after explicit trial confirmation');
 
 const workflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'feishu-schedule-sync.yml'), 'utf8');
 assert.match(workflow, /cron:\s*'0 0,10 \* \* \*'/, 'workflow should run twice daily at Beijing 08:00 and 18:00');
