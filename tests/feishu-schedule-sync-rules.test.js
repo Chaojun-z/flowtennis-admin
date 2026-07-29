@@ -108,6 +108,15 @@ const companionValues = [
 const companionCourses = sync.parseFeishuScheduleRows({ values: companionValues, sheetId: 'GrbZdi', sheetTitle: '7.20-7.26' });
 assert.strictEqual(companionCourses[0].course.courseType, '陪打', 'companion course should be recognized by feishu sync');
 
+const chenxiCorrectionValues = [
+  ['时间', null, null, '岳克舟教练', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
+  [46227, '五', '12:00-13:00', '亲子小班正式课', '马坡室内', '4号', '晨曦、朋友（3）']
+];
+const chenxiCorrectionCourses = sync.parseFeishuScheduleRows({ values: chenxiCorrectionValues, sheetId: 'GrbZdi', sheetTitle: '7.20-7.26' });
+assert.strictEqual(chenxiCorrectionCourses[0].course.courseType, '私教课', 'confirmed Chenxi copy-paste mistake should sync as private lesson');
+assert.deepStrictEqual(chenxiCorrectionCourses[0].studentNames, ['晨曦'], 'confirmed Chenxi friend lesson should still use the package owner only');
+
 const plan = sync.buildDryRunPlan({
   feishuCourses: courses.slice(0, 1),
   syncRows: [],
@@ -295,6 +304,23 @@ const ignoredSourcePlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(ignoredSourcePlan.summary.notifyError, 0, 'ignored Feishu source rows should not keep notifying operations');
 assert.strictEqual(ignoredSourcePlan.summary.noop, 1, 'ignored Feishu source rows should count as noop');
+
+const confirmedIgnoredSourcePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...beginnerSpecialCourses[0],
+    sourceKey: 'GrbZdi|2026-07-25|16:00|17:30|杨|🐰🐰🐰🐰🐰、🌞艾薇、朋友|零基础训练营体验课|马坡室内|1号',
+    studentNames: ['🐰🐰🐰🐰🐰', '🌞艾薇', '朋友'],
+    studentText: '🐰🐰🐰🐰🐰、🌞艾薇、朋友',
+    courseText: '零基础训练营体验课'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [],
+  users: []
+});
+assert.strictEqual(confirmedIgnoredSourcePlan.summary.notifyError, 0, 'confirmed non-imported source row should not require a sync-table write to stay quiet');
+assert.strictEqual(confirmedIgnoredSourcePlan.summary.noop, 1, 'confirmed non-imported source row should be treated as noop');
 
 const legacyCampusExistingPlan = sync.buildDryRunPlan({
   feishuCourses: [{

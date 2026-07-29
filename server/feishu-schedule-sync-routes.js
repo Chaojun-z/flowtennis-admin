@@ -47,6 +47,10 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
   [normalizeStudentNameKey('willliam弟弟')]: 'william'
 });
 
+const FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS = new Set([
+  'GrbZdi|2026-07-25|16:00|17:30|杨|🐰🐰🐰🐰🐰、🌞艾薇、朋友|零基础训练营体验课|马坡室内|1号'
+]);
+
 function parseSharedPackageStudentCell(raw){
   const match=cleanText(raw).match(/^(.+?)[（(]\s*使用\s*(.+?)\s*课包\s*(\d+)?\s*[）)]$/);
   if(!match)return null;
@@ -59,6 +63,15 @@ function parseSharedPackageStudentCell(raw){
     lessonIndex,
     sharedPackageNote:`${attendee}使用${packageOwner}课包${lessonIndex?` ${lessonIndex}`:''}`.trim()
   };
+}
+
+function applyConfirmedCourseCorrection(row={},course={},students={}){
+  const studentKeys=(students.names||[]).map(normalizeStudentNameKey);
+  const rawStudentKey=normalizeStudentNameKey(students.raw||row.studentText||'');
+  if(/亲子小班/.test(cleanText(row.courseText))&&(studentKeys.includes(normalizeStudentNameKey('晨曦'))||rawStudentKey.includes(normalizeStudentNameKey('晨曦')))){
+    return {ok:true,raw:course.raw||row.courseText,courseType:'私教课',experienceType:'',audience:'成人',isTrial:false,confirmedCorrection:'晨曦朋友亲子小班按私教课处理'};
+  }
+  return course;
 }
 
 function normalizeFeishuStudentNames(names=[]){
@@ -368,8 +381,8 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
     previousByKey.set(key,next);
   }
   return grouped.map(row=>{
-    const course=normalizeCourseType(row.courseText);
     const students=parseStudentCell(row.studentText);
+    const course=applyConfirmedCourseCorrection(row,normalizeCourseType(row.courseText),students);
     const venue=normalizeVenueName(row.venueText);
     const venueName=normalizeCourtName(row.courtText);
     const durationMinutes=minutesBetween(row.startClock,row.endClock);
@@ -753,6 +766,11 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
   const activeSourceKeys=new Set();
   const actions=[];
   for(const raw of feishuCourses){
+    if(FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS.has(String(raw.sourceKey||''))){
+      activeSourceKeys.add(raw.sourceKey);
+      actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:{status:'ignored',sourceKey:raw.sourceKey}});
+      continue;
+    }
     const ignored=ignoredByKey.get(String(raw.sourceKey||''));
     if(ignored){
       activeSourceKeys.add(raw.sourceKey);
