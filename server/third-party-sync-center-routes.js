@@ -7,6 +7,9 @@ const T_THIRD_PARTY_SYNC_PRECHECKS = 'ft_third_party_sync_prechecks';
 const T_THIRD_PARTY_SYNC_CONFIRMATIONS = 'ft_third_party_sync_confirmations';
 const T_THIRD_PARTY_SYNC_IMPORT_RESULTS = 'ft_third_party_sync_import_results';
 const T_THIRD_PARTY_SYNC_IMPORT_BACKUPS = 'ft_third_party_sync_import_backups';
+const T_THIRD_PARTY_SYNC_CHANGES = 'ft_third_party_sync_changes';
+const T_THIRD_PARTY_SYNC_ALERTS = 'ft_third_party_sync_alerts';
+const T_THIRD_PARTY_SYNC_ROLLBACKS = 'ft_third_party_sync_rollbacks';
 const T_COURTS = 'ft_courts';
 const T_FINANCIAL_LEDGER = 'ft_financial_ledger';
 const T_SCHEDULE = 'ft_schedule';
@@ -17,7 +20,10 @@ const THIRD_PARTY_SYNC_TABLES = [
   T_THIRD_PARTY_SYNC_PRECHECKS,
   T_THIRD_PARTY_SYNC_CONFIRMATIONS,
   T_THIRD_PARTY_SYNC_IMPORT_RESULTS,
-  T_THIRD_PARTY_SYNC_IMPORT_BACKUPS
+  T_THIRD_PARTY_SYNC_IMPORT_BACKUPS,
+  T_THIRD_PARTY_SYNC_CHANGES,
+  T_THIRD_PARTY_SYNC_ALERTS,
+  T_THIRD_PARTY_SYNC_ROLLBACKS
 ];
 
 function cleanText(value) {
@@ -206,7 +212,7 @@ function latestConfirmationFor(precheck = {}, confirmations = []) {
 
 function isAlreadyImported(precheck = {}, importResults = []) {
   return (importResults || []).some(result =>
-    ['completed', 'partial_failed'].includes(String(result.status || '')) &&
+    ['completed', 'partial_completed', 'partial_failed'].includes(String(result.status || '')) &&
     (result.writtenIds || []).some(row => String(row.sourceRecordId || '') === String(precheck.sourceRecordId || ''))
   );
 }
@@ -332,6 +338,113 @@ async function buildImportBackup({ getCachedScan, put, uuidv4, batchId = '', ope
   return backup;
 }
 
+function latestRawBySource(rawRecords = []) {
+  const map = new Map();
+  for (const row of rawRecords || []) {
+    const key = `${row.sourceType || ''}|${row.thirdPartyId || row.sourceRecordId || row.orderNo || ''}`;
+    if (!key.endsWith('|') && String(row.fetchedAt || '').localeCompare(String(map.get(key)?.fetchedAt || '')) >= 0) map.set(key, row);
+  }
+  return map;
+}
+
+function changedFieldsFor(prev = {}, next = {}) {
+  const fields = [
+    ['status', cleanText(prev.status || prev.orderStatus), cleanText(next.status || next.orderStatus)],
+    ['amount', amountOf(prev), amountOf(next)],
+    ['remark', remarkOf(prev), remarkOf(next)],
+    ['date', bookingDateOf(prev), bookingDateOf(next)],
+    ['venue', venueOf(prev), venueOf(next)],
+    ['startTime', startTimeOf(prev), startTimeOf(next)],
+    ['endTime', endTimeOf(prev), endTimeOf(next)]
+  ];
+  return fields.filter(([, before, after]) => String(before) !== String(after)).map(([field, before, after]) => ({ field, before, after }));
+}
+
+function changeTypeFor(record = {}, fields = []) {
+  const status = cleanText(record.status || record.orderStatus);
+  if (/退款/.test(status)) return 'refunded';
+  if (/取消|作废/.test(status)) return 'cancelled';
+  if (fields.some(row => row.field === 'amount')) return 'amount_changed';
+  if (fields.some(row => ['date', 'venue', 'startTime', 'endTime'].includes(row.field))) return 'booking_changed';
+  if (fields.some(row => row.field === 'remark')) return 'remark_changed';
+  return 'updated';
+}
+
+function buildThirdPartyChangeRows({ sourceRecords = [], previousRawRecords = [], batchId = '', now = '' } = {}) {
+  const previousMap = latestRawBySource(previousRawRecords);
+  const rows = [];
+  for (const record of sourceRecords || []) {
+    const sourceType = normalizeSourceType(record.sourceType);
+    const sourceRecordId = recordSourceId(record);
+    const previous = previousMap.get(`${sourceType}|${sourceRecordId}`);
+    if (!previous) continue;
+    const currentHash = stableHash(record);
+    if (previous.rawHash === currentHash) continue;
+    const previousRaw = previous.rawJson || {};
+    const fields = changedFieldsFor(previousRaw, record);
+    rows.push({
+      id: `${batchId}-change-${stableHash({ sourceRecordId, currentHash }).slice(0, 16)}`,
+      batchId,
+      sourceSystem: 'changxiaoer',
+      sourceType,
+      sourceRecordId,
+      changeType: changeTypeFor(record, fields),
+      changedFields: fields,
+      previousRaw,
+      currentRaw: record,
+      previousBatchId: previous.batchId || '',
+      detectedAt: now,
+      status: 'pending_review'
+    });
+  }
+  return rows;
+}
+
+function buildThirdPartyFinanceSnapshot({ courts = [], financialLedger = [], schedule = [], membershipAccounts = [], now = '' } = {}) {
+  const activeLedger = (financialLedger || []).filter(row => !['voided', 'rolled_back'].includes(String(row.status || 'active')));
+  const centsToMoney = value => Math.round((Number(value || 0) || 0)) / 100;
+  return {
+    capturedAt: now,
+    courtCount: (courts || []).length,
+    courtHistoryCount: (courts || []).reduce((sum, row) => sum + (Array.isArray(row.history) ? row.history.length : 0), 0),
+    financialLedgerCount: activeLedger.length,
+    cashDelta: centsToMoney(activeLedger.reduce((sum, row) => sum + Number(row.cashDelta || 0), 0)),
+    recognizedRevenueDelta: centsToMoney(activeLedger.reduce((sum, row) => sum + Number(row.recognizedRevenueDelta || 0), 0)),
+    scheduleCount: (schedule || []).length,
+    membershipAccountCount: (membershipAccounts || []).length
+  };
+}
+
+function hasLaterCourtChange(current = {}, previous = {}, operationId = '') {
+  const previousHistory = Array.isArray(previous.history) ? previous.history : [];
+  const currentHistory = Array.isArray(current.history) ? current.history : [];
+  const previousIds = new Set(previousHistory.map(row => String(row.id || '')));
+  return currentHistory.some(row => String(row.operationId || '') !== operationId && !previousIds.has(String(row.id || '')));
+}
+
+function rollbackCourtImportRow(current = {}, previous = {}, operationId = '', nowValue = '') {
+  if (hasLaterCourtChange(current, previous, operationId)) {
+    const err = new Error('订场用户已有后续人工变更，不能自动回滚');
+    err.statusCode = 409;
+    throw err;
+  }
+  const currentHistory = Array.isArray(current.history) ? current.history : [];
+  return {
+    ...current,
+    history: currentHistory.filter(row => String(row.operationId || '') !== operationId),
+    updatedAt: nowValue
+  };
+}
+
+function rollbackScheduleImportRow(current = {}, operationId = '', nowValue = '') {
+  const imports = Array.isArray(current.thirdPartySyncImports) ? current.thirdPartySyncImports : [];
+  return {
+    ...current,
+    thirdPartySyncImports: imports.filter(row => String(row.operationId || '') !== operationId),
+    updatedAt: nowValue
+  };
+}
+
 function scheduleDateOf(row = {}) {
   return cleanText(row.date || row.scheduleDate || row.startDate || row.startTime).slice(0, 10);
 }
@@ -422,7 +535,7 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
     if (!schedule) throw new Error('绑定排课不存在');
     assertScheduleMatchesImportItem(schedule, item);
     const imports = Array.isArray(schedule.thirdPartySyncImports) ? schedule.thirdPartySyncImports : [];
-    const next = { ...schedule, thirdPartySyncImports: [...imports, { batchId: item.batchId, sourceRecordId: item.sourceRecordId, importedAt: now }], updatedAt: now, ...trace };
+    const next = { ...schedule, thirdPartySyncImports: [...imports, { batchId: item.batchId, sourceRecordId: item.sourceRecordId, operationId: trace.operationId || '', importedAt: now }], updatedAt: now, ...trace };
     await put(table, schedule.id, next);
     written.push({ table, id: schedule.id, sourceRecordId: item.sourceRecordId });
     return written;
@@ -559,6 +672,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     getCachedScan = async () => [],
     getCachedRow = async () => null,
     put = async () => {},
+    del = async () => {},
     mkTable = async () => {},
     uuidv4 = () => crypto.randomUUID(),
     normalizeCourtRecord = row => row,
@@ -584,21 +698,185 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       ...(fetched.records || []),
       ...(fetched.gaps || []).map(gap => ({ sourceType: `${gap}-gap`, thirdPartyId: `${gap}-gap`, riskReason: '会员流水批量接口缺口' }))
     ];
+    const previousRawRecords = await getCachedScan(T_THIRD_PARTY_SYNC_RAW_RECORDS).catch(() => []);
     const batchId = `cxe-sync-${String(rangeStart).slice(0, 10).replace(/-/g, '')}-${uuidv4()}`;
     const precheck = precheckThirdPartyRecords(sourceRecords, { batchId, now: pulledAt });
+    const changes = buildThirdPartyChangeRows({ sourceRecords, previousRawRecords, batchId, now: pulledAt });
     const financeImpact = precheck.items.reduce((acc, item) => ({
       cashDelta: acc.cashDelta + Number(item.financeImpact?.cashDelta || 0),
       recognizedRevenueDelta: acc.recognizedRevenueDelta + Number(item.financeImpact?.recognizedRevenueDelta || 0),
       deferredRevenueDelta: acc.deferredRevenueDelta + Number(item.financeImpact?.deferredRevenueDelta || 0)
     }), { cashDelta: 0, recognizedRevenueDelta: 0, deferredRevenueDelta: 0 });
-    const batch = { ...buildThirdPartySyncBatch({ id: batchId, rangeStart, rangeEnd, now: pulledAt, counts: precheck.counts, financeImpact }), createdBy: operator };
+    const batch = { ...buildThirdPartySyncBatch({ id: batchId, rangeStart, rangeEnd, now: pulledAt, counts: precheck.counts, financeImpact }), changeCount: changes.length, createdBy: operator };
     await put(T_THIRD_PARTY_SYNC_BATCHES, batch.id, batch);
     await Promise.all(sourceRecords.map((record, index) => {
       const row = rawRecordRow(record, { batchId, now: pulledAt, index });
       return put(T_THIRD_PARTY_SYNC_RAW_RECORDS, row.id, row);
     }));
     await Promise.all(precheck.items.map(row => put(T_THIRD_PARTY_SYNC_PRECHECKS, row.id, row)));
-    return { batch, precheck };
+    await Promise.all(changes.map(row => put(T_THIRD_PARTY_SYNC_CHANGES, row.id, row)));
+    return { batch, precheck, changes };
+  }
+
+  async function buildCurrentFinanceSnapshot(importedAt = now()) {
+    const [courts, financialLedger, schedule, membershipAccounts] = await Promise.all([
+      getCachedScan(tables.T_COURTS || T_COURTS).catch(() => []),
+      getCachedScan(tables.T_FINANCIAL_LEDGER || T_FINANCIAL_LEDGER).catch(() => []),
+      getCachedScan(tables.T_SCHEDULE || T_SCHEDULE).catch(() => []),
+      getCachedScan(tables.T_MEMBERSHIP_ACCOUNTS || T_MEMBERSHIP_ACCOUNTS).catch(() => [])
+    ]);
+    return buildThirdPartyFinanceSnapshot({ courts, financialLedger, schedule, membershipAccounts, now: importedAt });
+  }
+
+  async function createImportAlerts({ batchId = '', plan = {}, changes = [], result = null, operator = 'system', nowValue = now() } = {}) {
+    const alerts = [];
+    const pushAlert = reason => {
+      const text = cleanText(reason);
+      if (!text) return;
+      alerts.push({
+        id: `cxe-alert-${uuidv4()}`,
+        batchId,
+        operationId: result?.operationId || '',
+        reason: text,
+        status: 'open',
+        createdAt: nowValue,
+        createdBy: operator
+      });
+    };
+    for (const row of plan.blocked || []) pushAlert(row.reason || row.riskReason || '低置信数据待确认');
+    for (const row of plan.skipped || []) {
+      if (/取消|退款|作废/.test(String(row.reason || row.riskReason || row.plannedAction || ''))) pushAlert(row.reason || row.riskReason || row.plannedAction);
+    }
+    for (const row of changes || []) pushAlert(`第三方${row.changeType === 'cancelled' ? '取消' : row.changeType === 'refunded' ? '退款' : '变更'}：${row.sourceRecordId}`);
+    for (const row of result?.failed || []) pushAlert(row.reason || '导入失败');
+    await Promise.all(alerts.map(row => put(T_THIRD_PARTY_SYNC_ALERTS, row.id, row)));
+    return alerts;
+  }
+
+  async function runImportForBatch({ batchId = '', operator = 'admin', importedAt = now() } = {}) {
+    const [batches, prechecks, confirmations, importResults] = await Promise.all([
+      getCachedScan(T_THIRD_PARTY_SYNC_BATCHES).catch(() => []),
+      getCachedScan(T_THIRD_PARTY_SYNC_PRECHECKS).catch(() => []),
+      getCachedScan(T_THIRD_PARTY_SYNC_CONFIRMATIONS).catch(() => []),
+      getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => [])
+    ]);
+    const batch = batches.find(row => String(row.batchId || row.id || '') === batchId);
+    if (!batch) {
+      const err = new Error('同步批次不存在');
+      err.statusCode = 404;
+      throw err;
+    }
+    const plan = buildThirdPartyImportPlan({ batchId, prechecks, confirmations, importResults });
+    const operationId = `third-party-sync-import-${uuidv4()}`;
+    const trace = buildImportTrace({ batchId, operationId, operator, now: importedAt });
+    const financeBefore = await buildCurrentFinanceSnapshot(importedAt);
+    const backupTables = [T_COURTS, T_FINANCIAL_LEDGER, T_SCHEDULE, T_MEMBERSHIP_ACCOUNTS, T_THIRD_PARTY_SYNC_IMPORT_RESULTS];
+    const backup = await buildImportBackup({ getCachedScan, put, uuidv4, batchId, operationId, operator: trace.operationBy, tables: backupTables, now: importedAt });
+    const writtenIds = [];
+    const failed = [];
+    for (const item of plan.importable) {
+      try {
+        const rows = await writeImportItem(item, { getCachedScan, getCachedRow, put, uuidv4, normalizeCourtRecord, now: importedAt, trace, tables });
+        writtenIds.push(...(rows || []));
+      } catch (err) {
+        failed.push({ sourceRecordId: item.sourceRecordId, reason: err.message || '导入失败' });
+      }
+    }
+    const writtenTables = [...new Set(writtenIds.map(row => row.table))];
+    const verification = verifyThirdPartyImportResult({ plan, writtenIds, failed });
+    const hasBlocked = plan.blocked.length > 0;
+    const importStatus = failed.length
+      ? (writtenIds.length ? 'partial_failed' : 'failed')
+      : (hasBlocked ? (writtenIds.length ? 'partial_completed' : 'paused') : 'completed');
+    const financeAfter = await buildCurrentFinanceSnapshot(importedAt);
+    const result = {
+      id: `cxe-import-${uuidv4()}`,
+      batchId,
+      operationId,
+      status: importStatus,
+      importedAt,
+      importedBy: operator,
+      plannedCount: plan.importable.length,
+      writtenTables,
+      writtenIds,
+      skippedIds: [...plan.blocked, ...plan.skipped].map(row => ({ sourceRecordId: row.sourceRecordId, reason: row.reason || row.riskReason || '跳过' })),
+      failed,
+      backupFile: `table:${T_THIRD_PARTY_SYNC_IMPORT_BACKUPS}/${backup.backupId}`,
+      backup,
+      reportFile: `table:${T_THIRD_PARTY_SYNC_IMPORT_RESULTS}`,
+      verifiedAt: importedAt,
+      verification,
+      financeSnapshot: { before: financeBefore, after: financeAfter }
+    };
+    await put(T_THIRD_PARTY_SYNC_IMPORT_RESULTS, result.id, result);
+    await put(T_THIRD_PARTY_SYNC_BATCHES, batch.id || batch.batchId, { ...batch, status: result.status === 'completed' ? 'completed' : 'paused', importedAt, confirmedBy: result.importedBy });
+    return { success: ['completed', 'partial_completed'].includes(result.status), plan, result };
+  }
+
+  async function rollbackImportOperation({ operationId = '', operator = 'admin', rolledBackAt = now() } = {}) {
+    const [importResults, backupRows] = await Promise.all([
+      getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => []),
+      getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_BACKUPS).catch(() => [])
+    ]);
+    const result = importResults.find(row => String(row.operationId || '') === operationId);
+    if (!result) {
+      const err = new Error('导入批次不存在');
+      err.statusCode = 404;
+      throw err;
+    }
+    if (result.status === 'rolled_back') return { success: true, rollback: null, result };
+    const backupId = cleanText(result.backup?.backupId);
+    if (!backupId) {
+      const err = new Error('缺少导入前备份，不能回滚');
+      err.statusCode = 400;
+      throw err;
+    }
+    const restored = [];
+    for (const written of result.writtenIds || []) {
+      const table = cleanText(written.table);
+      const id = cleanText(written.id);
+      if (!table || !id) continue;
+      const rows = backupRows
+        .filter(row => String(row.backupId || '') === backupId && String(row.tableName || '') === table)
+        .flatMap(row => Array.isArray(row.rows) ? row.rows : []);
+      const previous = rows.find(row => String(row.id || '') === id);
+      const current = await getCachedRow(table, id).catch(() => null);
+      if (table === (tables.T_COURTS || T_COURTS) && current) {
+        const next = rollbackCourtImportRow(current, previous || {}, operationId, rolledBackAt);
+        if (next.history.length === 0 && !previous) {
+          await del(table, id);
+          restored.push({ table, id, action: 'delete_created_empty_court' });
+        } else {
+          await put(table, id, next);
+          restored.push({ table, id, action: 'remove_imported_history' });
+        }
+      } else if (table === (tables.T_SCHEDULE || T_SCHEDULE) && current) {
+        await put(table, id, rollbackScheduleImportRow(current, operationId, rolledBackAt));
+        restored.push({ table, id, action: 'remove_schedule_import_mark' });
+      } else if (previous) {
+        await put(table, id, previous);
+        restored.push({ table, id, action: 'restore_snapshot' });
+      } else {
+        await del(table, id);
+        restored.push({ table, id, action: 'delete_created' });
+      }
+    }
+    const rollback = {
+      id: `cxe-rollback-${uuidv4()}`,
+      batchId: result.batchId,
+      operationId,
+      rolledBackAt,
+      rolledBackBy: operator,
+      restored,
+      status: 'completed'
+    };
+    await put(T_THIRD_PARTY_SYNC_ROLLBACKS, rollback.id, rollback);
+    const nextResult = { ...result, status: 'rolled_back', rolledBackAt, rolledBackBy: operator };
+    await put(T_THIRD_PARTY_SYNC_IMPORT_RESULTS, result.id, nextResult);
+    const batches = await getCachedScan(T_THIRD_PARTY_SYNC_BATCHES).catch(() => []);
+    const batch = batches.find(row => String(row.batchId || row.id || '') === String(result.batchId || ''));
+    if (batch) await put(T_THIRD_PARTY_SYNC_BATCHES, batch.id || batch.batchId, { ...batch, status: 'rolled_back', rolledBackAt });
+    return { success: true, rollback, result: nextResult };
   }
 
   return async function handleThirdPartySyncCenterRoutes({ path, method, body = {}, user, req, res, query = new URLSearchParams() }) {
@@ -606,19 +884,25 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       if (!requireCronAccess(req, env)) return sendJson(res, { error: '无权限' }, 401);
       await init();
       const range = defaultDailyRange(new Date(), Number(query.get('lookbackDays') || 3));
-      return sendJson(res, await pullAndPrecheck(range));
+      const pulled = await pullAndPrecheck({ ...range, operator: 'daily-auto-sync' });
+      const autoImport = await runImportForBatch({ batchId: pulled.batch.batchId, operator: 'daily-auto-sync', importedAt: now() });
+      const alerts = await createImportAlerts({ batchId: pulled.batch.batchId, plan: autoImport.plan, changes: pulled.changes, result: autoImport.result, operator: 'daily-auto-sync', nowValue: now() });
+      return sendJson(res, { ...pulled, autoImport, alerts });
     }
     if (!path.startsWith('/third-party-sync')) return false;
     if (user?.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
     await init();
     await ensureTables();
     if (path === '/third-party-sync/overview' && method === 'GET') {
-      const [batches, rawRecords, prechecks, confirmations, importResults] = await Promise.all([
+      const [batches, rawRecords, prechecks, confirmations, importResults, changes, alerts, rollbacks] = await Promise.all([
         getCachedScan(T_THIRD_PARTY_SYNC_BATCHES).catch(() => []),
         getCachedScan(T_THIRD_PARTY_SYNC_RAW_RECORDS).catch(() => []),
         getCachedScan(T_THIRD_PARTY_SYNC_PRECHECKS).catch(() => []),
         getCachedScan(T_THIRD_PARTY_SYNC_CONFIRMATIONS).catch(() => []),
-        getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => [])
+        getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_CHANGES).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_ALERTS).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_ROLLBACKS).catch(() => [])
       ]);
       const summary = {
         batchCount: batches.length,
@@ -628,9 +912,12 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         exceptionCount: prechecks.filter(row => row.recommendedType === 'high_risk_exception').length,
         duplicateCount: prechecks.filter(row => row.recommendedType === 'duplicate_skip').length,
         importedCount: importResults.filter(row => ['completed', 'partial_completed'].includes(row.status)).length,
-        failedImportCount: importResults.filter(row => row.status === 'partial_failed' || row.status === 'failed').length
+        failedImportCount: importResults.filter(row => row.status === 'partial_failed' || row.status === 'failed').length,
+        changeCount: changes.length,
+        openAlertCount: alerts.filter(row => row.status !== 'closed').length,
+        rollbackCount: rollbacks.length
       };
-      return sendJson(res, { summary, batches, rawRecords, prechecks, confirmations, importResults });
+      return sendJson(res, { summary, batches, rawRecords, prechecks, confirmations, importResults, changes, alerts, rollbacks });
     }
     if (path === '/third-party-sync/pull' && method === 'POST') {
       const range = body.rangeStart && body.rangeEnd ? { rangeStart: body.rangeStart, rangeEnd: body.rangeEnd } : defaultDailyRange(new Date(), Number(body.lookbackDays || 3));
@@ -666,57 +953,23 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     if (path === '/third-party-sync/import' && method === 'POST') {
       const batchId = cleanText(body.batchId);
       if (!batchId) return sendJson(res, { error: '缺少批次 ID' }, 400);
-      const importedAt = now();
-      const [batches, prechecks, confirmations, importResults] = await Promise.all([
-        getCachedScan(T_THIRD_PARTY_SYNC_BATCHES).catch(() => []),
-        getCachedScan(T_THIRD_PARTY_SYNC_PRECHECKS).catch(() => []),
-        getCachedScan(T_THIRD_PARTY_SYNC_CONFIRMATIONS).catch(() => []),
-        getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => [])
-      ]);
-      const batch = batches.find(row => String(row.batchId || row.id || '') === batchId);
-      if (!batch) return sendJson(res, { error: '同步批次不存在' }, 404);
-      const plan = buildThirdPartyImportPlan({ batchId, prechecks, confirmations, importResults });
-      const operationId = `third-party-sync-import-${uuidv4()}`;
-      const trace = buildImportTrace({ batchId, operationId, operator: user.name || user.id || 'admin', now: importedAt });
-      const backupTables = [T_COURTS, T_FINANCIAL_LEDGER, T_SCHEDULE, T_MEMBERSHIP_ACCOUNTS, T_THIRD_PARTY_SYNC_IMPORT_RESULTS];
-      const backup = await buildImportBackup({ getCachedScan, put, uuidv4, batchId, operationId, operator: trace.operationBy, tables: backupTables, now: importedAt });
-      const writtenIds = [];
-      const failed = [];
-      for (const item of plan.importable) {
-        try {
-          const rows = await writeImportItem(item, { getCachedScan, getCachedRow, put, uuidv4, normalizeCourtRecord, now: importedAt, trace, tables });
-          writtenIds.push(...(rows || []));
-        } catch (err) {
-          failed.push({ sourceRecordId: item.sourceRecordId, reason: err.message || '导入失败' });
-        }
+      try {
+        const payload = await runImportForBatch({ batchId, operator: user.name || user.id || 'admin', importedAt: now() });
+        const changes = await getCachedScan(T_THIRD_PARTY_SYNC_CHANGES).catch(() => []);
+        await createImportAlerts({ batchId, plan: payload.plan, changes: changes.filter(row => row.batchId === batchId), result: payload.result, operator: user.name || user.id || 'admin', nowValue: now() });
+        return sendJson(res, payload);
+      } catch (err) {
+        return sendJson(res, { error: err.message || '导入失败' }, err.statusCode || 500);
       }
-      const writtenTables = [...new Set(writtenIds.map(row => row.table))];
-      const verification = verifyThirdPartyImportResult({ plan, writtenIds, failed });
-      const hasBlocked = plan.blocked.length > 0;
-      const importStatus = failed.length
-        ? (writtenIds.length ? 'partial_failed' : 'failed')
-        : (hasBlocked ? (writtenIds.length ? 'partial_completed' : 'paused') : 'completed');
-      const result = {
-        id: `cxe-import-${uuidv4()}`,
-        batchId,
-        operationId,
-        status: importStatus,
-        importedAt,
-        importedBy: user.name || user.id || 'admin',
-        plannedCount: plan.importable.length,
-        writtenTables,
-        writtenIds,
-        skippedIds: [...plan.blocked, ...plan.skipped].map(row => ({ sourceRecordId: row.sourceRecordId, reason: row.reason || row.riskReason || '跳过' })),
-        failed,
-        backupFile: `table:${T_THIRD_PARTY_SYNC_IMPORT_RESULTS}/${batchId}`,
-        backup,
-        reportFile: `table:${T_THIRD_PARTY_SYNC_IMPORT_RESULTS}`,
-        verifiedAt: importedAt,
-        verification
-      };
-      await put(T_THIRD_PARTY_SYNC_IMPORT_RESULTS, result.id, result);
-      await put(T_THIRD_PARTY_SYNC_BATCHES, batch.id || batch.batchId, { ...batch, status: result.status === 'completed' ? 'completed' : 'paused', importedAt, confirmedBy: result.importedBy });
-      return sendJson(res, { success: ['completed', 'partial_completed'].includes(result.status), plan, result });
+    }
+    if (path === '/third-party-sync/rollback' && method === 'POST') {
+      const operationId = cleanText(body.operationId);
+      if (!operationId) return sendJson(res, { error: '缺少操作 ID' }, 400);
+      try {
+        return sendJson(res, await rollbackImportOperation({ operationId, operator: user.name || user.id || 'admin', rolledBackAt: now() }));
+      } catch (err) {
+        return sendJson(res, { error: err.message || '回滚失败' }, err.statusCode || 500);
+      }
     }
     return false;
   };

@@ -57,6 +57,9 @@ assert.ok(precheck.items.some(item => item.customerName === '张三' && item.pho
     ft_third_party_sync_confirmations: [],
     ft_third_party_sync_import_results: [],
     ft_third_party_sync_import_backups: [],
+    ft_third_party_sync_changes: [],
+    ft_third_party_sync_alerts: [],
+    ft_third_party_sync_rollbacks: [],
     ft_courts: [],
     ft_financial_ledger: [],
     ft_schedule: [],
@@ -70,6 +73,10 @@ assert.ok(precheck.items.some(item => item.customerName === '张三' && item.pho
     put: async (table, id, row) => {
       writes.push({ table, id, row });
       scans[table] = [...(scans[table] || []).filter(item => String(item.id) !== String(id)), row];
+    },
+    del: async (table, id) => {
+      writes.push({ table, id, deleted: true });
+      scans[table] = (scans[table] || []).filter(item => String(item.id) !== String(id));
     },
     mkTable: async () => 'ok',
     uuidv4: () => 'uuid-1',
@@ -205,6 +212,104 @@ assert.ok(precheck.items.some(item => item.customerName === '张三' && item.pho
   });
   assert.strictEqual(scheduleImportRes.body.result.status, 'failed', 'mismatched schedule binding should fail');
   assert.ok(scheduleImportRes.body.result.failed.some(row => row.reason.includes('场地不一致')), 'schedule binding should validate venue');
+
+  const cronScans = {
+    ft_third_party_sync_batches: [],
+    ft_third_party_sync_raw_records: [{
+      id: 'old-raw-order-O9',
+      batchId: 'old-batch',
+      sourceSystem: 'changxiaoer',
+      sourceType: 'order',
+      thirdPartyId: 'O9',
+      rawJson: { sourceType: 'order', orderNo: 'O9', bookingDate: '2026-07-27', venue: '5号场', startTime: '15:00', endTime: '16:00', amount: 120, status: '已完成', remark: '旧备注' },
+      rawHash: 'old-hash',
+      fetchedAt: '2026-07-27T00:00:00+08:00'
+    }],
+    ft_third_party_sync_prechecks: [],
+    ft_third_party_sync_confirmations: [],
+    ft_third_party_sync_import_results: [],
+    ft_third_party_sync_import_backups: [],
+    ft_third_party_sync_changes: [],
+    ft_third_party_sync_alerts: [],
+    ft_third_party_sync_rollbacks: [],
+    ft_courts: [],
+    ft_financial_ledger: [],
+    ft_schedule: [],
+    ft_membership_accounts: []
+  };
+  const cronWrites = [];
+  const cronHandler = createThirdPartySyncCenterRoutes({
+    init: async () => {},
+    sendJson: (res, payload, code = 200) => res.status(code).json(payload),
+    getCachedScan: async table => cronScans[table] || [],
+    getCachedRow: async (table, id) => (cronScans[table] || []).find(row => String(row.id) === String(id)) || null,
+    put: async (table, id, row) => {
+      cronWrites.push({ table, id, row });
+      cronScans[table] = [...(cronScans[table] || []).filter(item => String(item.id) !== String(id)), row];
+    },
+    del: async (table, id) => {
+      cronWrites.push({ table, id, deleted: true });
+      cronScans[table] = (cronScans[table] || []).filter(item => String(item.id) !== String(id));
+    },
+    mkTable: async () => 'ok',
+    uuidv4: (() => {
+      let n = 0;
+      return () => `cron-uuid-${++n}`;
+    })(),
+    normalizeCourtRecord: row => row,
+    fetchThirdPartyData: async () => ({
+      records: [
+        { sourceType: 'order', orderNo: 'O8', bookingDate: '2026-07-27', venue: '4号场', startTime: '13:00', endTime: '14:00', amount: 90, payMethod: '微信支付', status: '已完成', customerName: '自动订单' },
+        { sourceType: 'order', orderNo: 'O9', bookingDate: '2026-07-27', venue: '5号场', startTime: '15:00', endTime: '16:00', amount: 120, payMethod: '微信支付', status: '已取消', remark: '取消订单' },
+        { sourceType: 'lock', thirdPartyId: 'L9', bookingDate: '2026-07-27', venue: '6号场', startTime: '17:00', endTime: '18:00', remark: '私教课' }
+      ],
+      gaps: []
+    }),
+    now: () => '2026-07-29T00:00:00+08:00',
+    env: { CRON_SECRET: 'secret' }
+  });
+  const cronRes = await call(cronHandler, {
+    path: '/cron/third-party-sync-center',
+    method: 'GET',
+    req: { headers: { authorization: 'Bearer secret' } },
+    query: new URLSearchParams('lookbackDays=3')
+  });
+  assert.strictEqual(cronRes.body.autoImport.result.status, 'partial_completed', 'cron should auto import stable rows and pause unsafe rows');
+  assert.ok(cronWrites.some(row => row.table === 'ft_courts' && row.row.history?.some(history => history.sourceRecordId === 'O8')), 'cron should write stable high-confidence order');
+  assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_changes' && row.row.sourceRecordId === 'O9' && row.row.changeType === 'cancelled'), 'cron should record third-party cancellation changes');
+  assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_alerts' && /取消|退款|阻断|低置信/.test(row.row.reason)), 'cron should create alerts for unsafe rows');
+  assert.ok(cronRes.body.autoImport.result.financeSnapshot?.before, 'cron import should record a pre-import finance snapshot');
+  assert.ok(cronRes.body.autoImport.result.financeSnapshot?.after, 'cron import should record a post-import finance snapshot');
+
+  const importedCourt = cronScans.ft_courts.find(row => row.history?.some(history => history.sourceRecordId === 'O8'));
+  cronScans.ft_courts = cronScans.ft_courts.map(row => row.id === importedCourt.id ? {
+    ...row,
+    name: '运营已修改用户',
+    history: [...row.history, { id: 'manual-after-import', date: '2026-07-29', type: '消费', category: '订场', payMethod: '现金', amount: 30, source: 'manual' }],
+    updatedAt: '2026-07-29T01:00:00+08:00'
+  } : row);
+  const unsafeRollbackRes = await call(cronHandler, {
+    path: '/third-party-sync/rollback',
+    method: 'POST',
+    body: { operationId: cronRes.body.autoImport.result.operationId }
+  });
+  assert.strictEqual(unsafeRollbackRes.statusCode, 409, 'rollback should reject when target row has later manual changes');
+  assert.ok(cronScans.ft_courts.some(row => row.id === importedCourt.id && row.history.some(history => history.id === 'manual-after-import')), 'rejected rollback must keep later manual history');
+  cronScans.ft_courts = cronScans.ft_courts.map(row => row.id === importedCourt.id ? {
+    ...row,
+    history: row.history.filter(history => history.id !== 'manual-after-import'),
+    updatedAt: cronRes.body.autoImport.result.importedAt
+  } : row);
+
+  const rollbackRes = await call(cronHandler, {
+    path: '/third-party-sync/rollback',
+    method: 'POST',
+    body: { operationId: cronRes.body.autoImport.result.operationId }
+  });
+  assert.strictEqual(rollbackRes.body.success, true, 'rollback should succeed by operation id');
+  assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_rollbacks'), 'rollback should write an audit row');
+  assert.ok(rollbackRes.body.rollback.restored.some(row => row.table === 'ft_courts' && row.action === 'delete_created_empty_court'), 'rollback should delete import-created empty court only after later changes are cleared');
+  assert.ok(cronScans.ft_third_party_sync_import_results.some(row => row.operationId === cronRes.body.autoImport.result.operationId && row.status === 'rolled_back'), 'rollback should mark import result rolled back');
 
   console.log('third-party sync center routes tests passed');
 })().catch(err => {

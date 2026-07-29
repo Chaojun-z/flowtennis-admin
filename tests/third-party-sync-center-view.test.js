@@ -17,6 +17,10 @@ assert.match(html, /confirmThirdPartySyncItem/, 'sync center should support oper
 assert.match(html, /runThirdPartySyncImportPlan/, 'sync center should expose import plan preview');
 assert.match(html, /runThirdPartySyncImport/, 'sync center should support one-click semi-auto import');
 assert.match(html, /写入结果[\s\S]*失败原因/, 'sync center should show import results and failure reasons');
+assert.match(html, /第三方变更回看[\s\S]*异常报警/, 'sync center should expose third-party change review and alerts');
+assert.match(html, /runThirdPartySyncRollback/, 'sync center should support batch rollback action');
+assert.match(html, /回滚影响/, 'sync center should show rollback impact details');
+assert.match(html, /稳定自动同步/, 'sync center should label the V3 auto sync capability');
 assert.match(html, /third-party-sync-center\.js/, 'index should load sync center page script');
 
 assert.ok(fs.existsSync(workflowPath), 'daily sync workflow should exist');

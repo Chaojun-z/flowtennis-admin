@@ -1,6 +1,6 @@
 // ===== 第三方同步中心 =====
 function thirdPartySyncData(){
-  return thirdPartySyncCenterData||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[]};
+  return thirdPartySyncCenterData||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[],changes:[],alerts:[],rollbacks:[]};
 }
 function thirdPartySyncLatestBatch(){
   const batches=[...(thirdPartySyncData().batches||[])];
@@ -48,6 +48,10 @@ function renderThirdPartySyncStats(){
     {label:'待确认数量',value:Number(summary.pendingCount||0),sub:'需要运营判断'},
     {label:'高危异常',value:Number(summary.exceptionCount||0),sub:'暂不导入'},
     {label:'重复跳过',value:Number(summary.duplicateCount||0),sub:'同场地时段去重'},
+    {label:'稳定自动同步',value:Number(summary.importedCount||0),sub:'每日自动导入批次'},
+    {label:'第三方变更',value:Number(summary.changeCount||0),sub:'退款/取消/备注等'},
+    {label:'异常报警',value:Number(summary.openAlertCount||0),sub:'待处理报警'},
+    {label:'已回滚批次',value:Number(summary.rollbackCount||0),sub:'回滚审计记录'},
     {label:'已导入批次',value:Number(summary.importedCount||0),sub:'有写入结果'},
     {label:'失败批次',value:Number(summary.failedImportCount||0),sub:'需复查原因'}
   ]);
@@ -126,8 +130,50 @@ function renderThirdPartySyncImportResults(){
       <td>${renderStandardCellText((row.writtenTables||[]).join(' / ')||'-')}</td>
       <td>${renderStandardCellText(`${(row.writtenIds||[]).length} 条写入 / ${skipped} 条跳过`)}</td>
       <td>${renderStandardCellText(failed||'-')}</td>
+      <td class="tms-sticky-r tms-action-cell" style="width:100px;padding-right:20px;text-align:right">${row.status==='rolled_back'?'<span class="tms-cell-sub">已回滚</span>':`<span class="tms-action-link" onclick="runThirdPartySyncRollback('${esc(row.operationId||'')}')">回滚</span>`}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="7"><div class="empty"><p>暂无写入结果</p></div></td></tr>';
+  }).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无写入结果</p></div></td></tr>';
+}
+function thirdPartySyncChangeTypeText(type){
+  return ({cancelled:'取消',refunded:'退款',amount_changed:'金额变化',booking_changed:'订场变化',remark_changed:'备注修改',updated:'内容变化'})[type]||type||'-';
+}
+function renderThirdPartySyncChanges(){
+  const host=document.getElementById('thirdPartySyncChangeTbody');
+  if(!host)return;
+  const rows=[...(thirdPartySyncData().changes||[])].sort((a,b)=>String(b.detectedAt||'').localeCompare(String(a.detectedAt||'')));
+  host.innerHTML=rows.map(row=>`<tr>
+    <td style="padding-left:20px">${renderStandardCellText(row.sourceRecordId||'-')}</td>
+    <td>${renderStandardCellText(thirdPartySyncChangeTypeText(row.changeType))}</td>
+    <td>${renderStandardCellText((row.changedFields||[]).map(item=>item.field).join(' / ')||'-')}</td>
+    <td>${renderStandardCellText(row.detectedAt?String(row.detectedAt).replace('T',' ').slice(0,16):'-')}</td>
+    <td>${renderStandardCellText(row.status||'-')}</td>
+  </tr>`).join('')||'<tr><td colspan="5"><div class="empty"><p>暂无第三方变更</p></div></td></tr>';
+}
+function renderThirdPartySyncAlerts(){
+  const host=document.getElementById('thirdPartySyncAlertTbody');
+  if(!host)return;
+  const rows=[...(thirdPartySyncData().alerts||[])].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  host.innerHTML=rows.map(row=>`<tr>
+    <td style="padding-left:20px">${renderStandardCellText(row.batchId||'-')}</td>
+    <td>${renderStandardCellText(row.reason||'-')}</td>
+    <td><span class="tms-tag">${esc(row.status||'-')}</span></td>
+    <td>${renderStandardCellText(row.createdAt?String(row.createdAt).replace('T',' ').slice(0,16):'-')}</td>
+  </tr>`).join('')||'<tr><td colspan="4"><div class="empty"><p>暂无异常报警</p></div></td></tr>';
+}
+function renderThirdPartySyncRollbacks(){
+  const host=document.getElementById('thirdPartySyncRollbackTbody');
+  if(!host)return;
+  const rows=[...(thirdPartySyncData().rollbacks||[])].sort((a,b)=>String(b.rolledBackAt||'').localeCompare(String(a.rolledBackAt||'')));
+  host.innerHTML=rows.map(row=>{
+    const impact=(row.restored||[]).map(item=>`${item.table||'-'} / ${item.id||'-'} / ${item.action||'-'}`).join('；');
+    return `<tr>
+      <td style="padding-left:20px">${renderStandardCellText(row.batchId||'-')}</td>
+      <td>${renderStandardCellText(row.operationId||'-')}</td>
+      <td>${renderStandardCellText(row.rolledBackAt?String(row.rolledBackAt).replace('T',' ').slice(0,16):'-')}</td>
+      <td>${renderStandardCellText(row.rolledBackBy||'-')}</td>
+      <td>${renderStandardCellText(impact||'-')}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="5"><div class="empty"><p>暂无回滚影响</p></div></td></tr>';
 }
 async function loadThirdPartySyncCenter(force=false){
   try{
@@ -175,6 +221,18 @@ async function runThirdPartySyncImport(batchId){
     toast(status==='completed'?'导入完成':status==='partial_completed'?'已导入可写入项，仍有阻断项待处理':'导入结束，请查看失败原因',['completed','partial_completed'].includes(status)?'success':'warning');
   }catch(e){
     toast('导入失败：'+e.message,'error');
+  }
+}
+async function runThirdPartySyncRollback(operationId){
+  if(!operationId)return toast('缺少操作ID','error');
+  if(!await appConfirm('将按本次导入前备份回滚写入结果。',{title:'批次回滚',confirmText:'确认回滚'}))return;
+  try{
+    await apiCall('POST','/third-party-sync/rollback',{operationId});
+    staleCachedDatasets.add('thirdPartySyncCenterPage');
+    await loadThirdPartySyncCenter(true);
+    toast('批次已回滚','success');
+  }catch(e){
+    toast('回滚失败：'+e.message,'error');
   }
 }
 function openThirdPartySyncConfirmModal(batchId,sourceRecordId){
@@ -225,11 +283,20 @@ function renderThirdPartySyncCenter(){
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:150px;padding-left:20px">日期/时间段</th><th style="width:100px">场地</th><th style="width:170px">第三方用户</th><th style="width:180px">第三方备注</th><th style="width:100px">金额</th><th style="width:110px">来源</th><th style="width:130px">系统判断</th><th style="width:150px">计划动作</th><th style="width:180px">高危原因</th><th style="width:220px">财务影响</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">确认</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div>
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:140px">最终类型</th><th style="width:120px">支付方式</th><th style="width:100px">金额</th><th style="width:120px">确认人</th><th style="width:160px">确认时间</th><th style="width:240px">备注</th></tr></thead><tbody id="thirdPartySyncConfirmTbody"></tbody></table></div></div>
     <div class="tms-section-header">写入结果</div>
-    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:100px">状态</th><th style="width:150px">导入时间</th><th style="width:240px">操作ID</th><th style="width:220px">写入表</th><th style="width:160px">写入数量</th><th style="width:240px">失败原因</th></tr></thead><tbody id="thirdPartySyncImportResultTbody"></tbody></table></div></div>
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:100px">状态</th><th style="width:150px">导入时间</th><th style="width:240px">操作ID</th><th style="width:220px">写入表</th><th style="width:160px">写入数量</th><th style="width:240px">失败原因</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">回滚</th></tr></thead><tbody id="thirdPartySyncImportResultTbody"></tbody></table></div></div>
+    <div class="tms-section-header">第三方变更回看</div>
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:120px">变更类型</th><th style="width:220px">变更字段</th><th style="width:160px">发现时间</th><th style="width:120px">状态</th></tr></thead><tbody id="thirdPartySyncChangeTbody"></tbody></table></div></div>
+    <div class="tms-section-header">异常报警</div>
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:360px">原因</th><th style="width:120px">状态</th><th style="width:160px">时间</th></tr></thead><tbody id="thirdPartySyncAlertTbody"></tbody></table></div></div>
+    <div class="tms-section-header">回滚影响</div>
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:240px">操作ID</th><th style="width:160px">回滚时间</th><th style="width:120px">操作人</th><th style="width:420px">影响明细</th></tr></thead><tbody id="thirdPartySyncRollbackTbody"></tbody></table></div></div>
   </div>`;
   renderThirdPartySyncStats();
   renderThirdPartySyncBatches();
   renderThirdPartySyncPrechecks();
   renderThirdPartySyncConfirmations();
   renderThirdPartySyncImportResults();
+  renderThirdPartySyncChanges();
+  renderThirdPartySyncAlerts();
+  renderThirdPartySyncRollbacks();
 }
