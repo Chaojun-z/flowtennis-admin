@@ -24,7 +24,7 @@ assert.match(appSource, /currentPage='schedule'[\s\S]*localStorage\.setItem\(PAG
 [
   ['customer', '客户中心'],
   ['teaching', '教学中心'],
-  ['court', '场地会员'],
+  ['court', '场地运营'],
   ['pricing', '产品定价'],
   ['finance', '财务中心'],
   ['operations', '经营分析'],

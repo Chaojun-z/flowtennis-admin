@@ -355,10 +355,11 @@ function adminMobileNavConfig(){
       {label:'排课日历',goPage:'coachschedule',icon:'coachschedule'},
       {label:'教练管理',goPage:'coaches',icon:'coaches'}
     ]},
-    {key:'court',label:'场地会员',defaultPage:'courts',items:[
+    {key:'court',label:'场地运营',defaultPage:'courts',items:[
       {label:'订场用户',goPage:'courts',icon:'courts'},
       {label:'会员管理',goPage:'memberships',icon:'memberships'},
-      {label:'约球活动',goPage:'matches',icon:'matches'}
+      {label:'约球活动',goPage:'matches',icon:'matches'},
+      {label:'第三方同步中心',goPage:'third-party-sync',icon:'coachops'}
     ]},
     {key:'pricing',label:'产品定价',defaultPage:'packages',items:[
       {label:'课包产品',goPage:'packages',icon:'packages'},
@@ -493,9 +494,11 @@ function renderSidebarShell(){
   <div class="sb-item" onclick="goPage('leads',this)">${sidebarIcon('leads')}线索池</div>
   <div class="sb-item" onclick="goPage('trial-students',this)">${sidebarIcon('trial-students')}历史学员</div>
   <div class="sb-item active" onclick="goPage('package-students',this)">${sidebarIcon('students')}在期学员</div>
+  <div class="sb-sec">场地运营</div>
   <div class="sb-item" onclick="goPage('courts',this)">${sidebarIcon('courts')}订场用户</div>
   <div class="sb-item" onclick="goPage('memberships',this)">${sidebarIcon('memberships')}会员管理</div>
   <div class="sb-item" onclick="goPage('matches',this)">${sidebarIcon('matches')}约球活动</div>
+  <div class="sb-item" onclick="goPage('third-party-sync',this)">${sidebarIcon('coachops')}第三方同步中心</div>
   <div class="sb-sec">教学中心</div>
   <div class="sb-item" onclick="goPage('schedule',this)">${sidebarIcon('schedule')}排课管理</div>
   <div class="sb-item" onclick="goPage('coachschedule',this)">${sidebarIcon('coachschedule')}排课日历</div>

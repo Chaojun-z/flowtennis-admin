@@ -1,0 +1,37 @@
+name: Third Party Sync Center
+
+on:
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      lookbackDays:
+        description: '回看天数'
+        required: false
+        default: '3'
+
+permissions:
+  contents: read
+
+jobs:
+  sync-third-party:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Asia/Shanghai
+      CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
+      TARGET_URL: https://www.flowtennis.cn/api/cron/third-party-sync-center
+
+    steps:
+      - name: Trigger third party sync center
+        shell: bash
+        run: |
+          target="$TARGET_URL"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            target="${TARGET_URL}?lookbackDays=${{ github.event.inputs.lookbackDays }}"
+          fi
+          curl_args=(-fsS -X GET "$target" -H "User-Agent: vercel-cron")
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
+          fi
+          curl "${curl_args[@]}"

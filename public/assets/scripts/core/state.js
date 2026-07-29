@@ -7,6 +7,7 @@ function syncViewportMode(){
 
 let leads=[],leadFollowups=[];
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],coachProposals=[],adminUsers=[],matches=[];
+let thirdPartySyncCenterData={summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[]};
 let customerLifecycleRows=[];
 let teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
 let standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
@@ -245,6 +246,7 @@ const PAGE_DATA_REQUIREMENTS={
   'admin-users':['campuses','coaches'],
   courts:[],
   matches:['matchesPage'],
+  'third-party-sync':['thirdPartySyncCenterPage'],
   memberships:[],
   'membership-orders':[],
   'membership-ledger':[],
@@ -267,6 +269,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   finance:['financePage'],
   courts:['courtsPage'],
   matches:['matchesPage'],
+  'third-party-sync':['thirdPartySyncCenterPage'],
   memberships:[],
   workbench:['workbenchPage'],
   postfeedback:['workbenchPage'],
@@ -446,6 +449,7 @@ const DATASET_LOADERS={
   ,courtAccountListViewComparePage:()=>apiCall('GET','/page-data/court-account-list-view-compare?sample=fixed')
   ,operationsPage:()=>loadOperationsPageDataset()
   ,matchesPage:()=>apiCall('GET','/admin/matches')
+  ,thirdPartySyncCenterPage:()=>apiCall('GET','/third-party-sync/overview')
   ,workbenchPage:()=>apiCall('GET','/page-data/workbench')
 };
 const GLOBAL_DATASET_NAMES=Object.keys(DATASET_LOADERS);
@@ -529,6 +533,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='feedbacks')feedbacks=rows;
   if(name==='coachProposals')coachProposals=rows;
   if(name==='matches')matches=rows;
+  if(name==='thirdPartySyncCenterData')thirdPartySyncCenterData=data||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[]};
   if(name==='customerLifecycleRows')customerLifecycleRows=rows;
   markDatasetLoaded(name);
   if(persist)persistDatasetCache(name,rows);
@@ -803,6 +808,11 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('matches',data.items||[]);
       staleCachedDatasets.delete('matches');
       markDatasetLoaded('matchesPage',requestKey);
+      return;
+    }
+    if(name==='thirdPartySyncCenterPage'){
+      thirdPartySyncCenterData=data||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[]};
+      markDatasetLoaded('thirdPartySyncCenterPage',requestKey);
       return;
     }
     if(name==='workbenchPage'){
@@ -1308,6 +1318,7 @@ function renderPageData(pg){
   if(pg==='admin-users')loadAdminUsers();
   if(pg==='courts')renderCourts();
   if(pg==='matches')renderMatches();
+  if(pg==='third-party-sync')renderThirdPartySyncCenter();
   if(pg==='memberships')renderMemberships();
   if(pg==='membership-orders')renderMembershipOrdersAuditPage();
   if(pg==='membership-ledger')renderMembershipLedgerAuditPage();

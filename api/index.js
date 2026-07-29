@@ -27,7 +27,7 @@ const { createMembershipRules } = require('../server/membership');
 const { createCourtRoutes } = require('../server/courts-routes');
 const { createMembershipRoutes } = require('../server/membership-routes');
 const { createPurchaseEntitlementRoutes } = require('../server/purchase-entitlement-routes');
-const { createScheduleRoutes } = require('../server/schedule-routes'), { createFeishuScheduleSyncRoutes } = require('../server/feishu-schedule-sync-routes');
+const { createScheduleRoutes } = require('../server/schedule-routes'), { createFeishuScheduleSyncRoutes } = require('../server/feishu-schedule-sync-routes'), { createThirdPartySyncCenterRoutes } = require('../server/third-party-sync-center-routes');
 const { createScheduleSaveValidation } = require('../server/schedule-save-validation');
 const { createAdminUserRoutes } = require('../server/admin-users-routes');
 const { createAdminToolRoutes, TEST_DATA_RESET_TABLES, getTestDataResetTables } = require('../server/admin-tools-routes');
@@ -1943,7 +1943,7 @@ async function updateFeishuScheduleRecord(scheduleId,body){if(!String(scheduleId
 async function createFeishuLeadRecord(body){return callInternalJsonRoute(handleLeadsRoutes,{path:'/leads',method:'POST',body,user:feishuSyncUser,query:new URLSearchParams()});}
 async function convertFeishuLeadToStudent(leadId){if(!String(leadId||'').trim())throw new Error('缺少线索 ID');return callInternalJsonRoute(handleLeadsRoutes,{path:`/leads/${encodeURIComponent(String(leadId).trim())}/convert-student`,method:'POST',body:{},user:feishuSyncUser,query:new URLSearchParams()});}
 async function purchaseFeishuTrialPackage(body){return callInternalJsonRoute(handlePurchaseEntitlementRoutes,{path:'/purchases',method:'POST',body,user:feishuSyncUser,query:new URLSearchParams()});}
-const handleFeishuScheduleSyncRoutes=createFeishuScheduleSyncRoutes({init,sendJson:routeSendJson,sendPlainText,getCachedScan,put,mkTable,uuidv4,cancelScheduleById:cancelFeishuScheduleById,createSchedule:createFeishuScheduleRecord,updateSchedule:updateFeishuScheduleRecord,createLead:createFeishuLeadRecord,convertLeadToStudent:convertFeishuLeadToStudent,purchasePackage:purchaseFeishuTrialPackage,recommendEntitlements,T_SCHEDULE,T_STUDENTS,T_COACHES,T_USERS,T_PACKAGES,T_ENTITLEMENTS,T_LEADS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
+const handleFeishuScheduleSyncRoutes=createFeishuScheduleSyncRoutes({init,sendJson:routeSendJson,sendPlainText,getCachedScan,put,mkTable,uuidv4,cancelScheduleById:cancelFeishuScheduleById,createSchedule:createFeishuScheduleRecord,updateSchedule:updateFeishuScheduleRecord,createLead:createFeishuLeadRecord,convertLeadToStudent:convertFeishuLeadToStudent,purchasePackage:purchaseFeishuTrialPackage,recommendEntitlements,T_SCHEDULE,T_STUDENTS,T_COACHES,T_USERS,T_PACKAGES,T_ENTITLEMENTS,T_LEADS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS}),handleThirdPartySyncCenterRoutes=createThirdPartySyncCenterRoutes({init,sendJson:routeSendJson,getCachedScan,put,mkTable,uuidv4});
 const handleAdminUserRoutes=createAdminUserRoutes({
   init,sendJson:routeSendJson,bcrypt,assertPhone,buildStoredPermissionFields,put,get,
   unbindWechatUserWithIndex,buildOfficialAccountUnboundUser,isProductionRuntime,
@@ -7003,7 +7003,7 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendFeishuCoachDailyDigests());
     }
-    if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
+    if(path==='/cron/third-party-sync-center'&&await handleThirdPartySyncCenterRoutes({path,method,body,req,res,query}))return;if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
     if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;
     if(await handleMatchRoutes({path,method,body,req,res,query}))return;
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
@@ -7012,7 +7012,7 @@ module.exports = async (req, res) => {
     user=mergeStoredAuthUser(user,storedAuthUser);
     try{assertAuthUserActive(user);}catch(e){return sendJson(res,{error:e.message},403);}
     if(await handlePackageBoardRoutes({path,method,body,user,res}))return;
-    if(await handleMatchRoutes({path,method,body,req,res,user,query}))return;
+    if(await handleMatchRoutes({path,method,body,req,res,user,query}))return;if(await handleThirdPartySyncCenterRoutes({path,method,body,user,req,res,query}))return;
     if(await handleAdminUserRoutes({path,method,body,user,res}))return;
     if(await handleAdminToolRoutes({path,method,body,user,res}))return;
     if(path==='/admin/replace-courts'&&method==='POST'){

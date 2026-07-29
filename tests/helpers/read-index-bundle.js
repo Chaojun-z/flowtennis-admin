@@ -26,6 +26,7 @@ const pageScriptFiles = [
   'courts-helpers.js',
   'courts.js',
   'matches.js',
+  'third-party-sync-center.js',
   'coach-portal.js'
 ];
 const appSource = [
