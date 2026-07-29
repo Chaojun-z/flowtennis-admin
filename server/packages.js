@@ -1,7 +1,7 @@
 const DEFAULT_ID_FACTORY=()=>`${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 const SMALL_CLASS_TYPES=['single','bootcamp','dropin','family'];
-const SPECIAL_COURSE_SKILL_LEVELS=['1.0','1.5','2.0','2.5','3.0','3.5','4.0'];
+const SPECIAL_COURSE_SKILL_LEVELS=['零基础','1.0','1.5','2.0','2.5','3.0','3.5','4.0'];
 const PACKAGE_MERGE_CORE_FIELDS=[
   'ownerCoach','courseType','price','lessons','validDays',
   'saleStartDate','saleEndDate','usageStartDate','usageEndDate',
@@ -20,6 +20,7 @@ function normalizePackageCampusValue(value){
 function normalizeSpecialCourseSkillLevel(value){
   const raw=String(value??'').trim();
   if(!raw)return '';
+  if(raw==='零基础'||raw==='0'||raw==='0.0')return '零基础';
   const n=Number(raw);
   if(Number.isFinite(n))return n.toFixed(1);
   return raw;

@@ -90,6 +90,20 @@ const normalizedSpecialProduct = rules.normalizeProductRecord({
 assert.strictEqual(normalizedSpecialProduct.skillLevelMin, '2.0', 'special course product should normalize numeric min level to standard label');
 assert.strictEqual(normalizedSpecialProduct.skillLevelMax, '2.0', 'special course product should normalize numeric max level to standard label');
 
+const normalizedZeroSpecialProduct = rules.normalizeProductRecord({
+  id: 'zero-special-product',
+  name: '【零基础】初阶专项课',
+  type: '专项课',
+  skillLevelMin: '零基础',
+  skillLevelMax: '零基础',
+  specialTopic: '初阶专项课',
+  maxStudents: 4,
+  price: 199,
+  lessons: 1
+}, null, now);
+assert.strictEqual(normalizedZeroSpecialProduct.skillLevelMin, '零基础', 'special course product should allow zero-basics level');
+assert.strictEqual(normalizedZeroSpecialProduct.skillLevelMax, '零基础', 'zero-basics max level should stay zero-basics');
+
 assert.doesNotThrow(
   () => rules.assertCanEditProductWithReferences(
     { id: 'special-product', type: '专项课', maxStudents: 4, lessons: 1, price: 0 },

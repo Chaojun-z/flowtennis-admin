@@ -71,6 +71,16 @@ assert.strictEqual(specialCourses[0].course.skillLevelMin, '2.5', 'special cours
 assert.strictEqual(specialCourses[0].course.skillLevelMax, '3.0', 'special course should parse max skill level');
 assert.strictEqual(specialCourses[0].course.specialTopic, '发接发与实战练习', 'special course should parse free-form topic');
 
+const beginnerSpecialValues = [
+  ['时间', null, null, '杨教练', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
+  [46223, '一', '10:00-11:30', '初阶训练课体验课/正式课', '马坡室内', '1号', '王有理、艾斯、李鹏昊']
+];
+const beginnerSpecialCourses = sync.parseFeishuScheduleRows({ values: beginnerSpecialValues, sheetId: 'GrbZdi', sheetTitle: '7.20-7.26' });
+assert.strictEqual(beginnerSpecialCourses[0].course.courseType, '专项课', 'beginner mixed training should map to special course');
+assert.strictEqual(beginnerSpecialCourses[0].course.skillLevelMin, '零基础', 'beginner special course should use zero-basics level');
+assert.strictEqual(beginnerSpecialCourses[0].course.specialTopic, '初阶专项课', 'beginner special course should use the standard topic');
+
 const noiseValues = [
   ['时间', null, null, '外部场地', null, null, null],
   ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
@@ -233,6 +243,47 @@ const xiaozhuSingleSmallClassPlan = sync.buildDryRunPlan({
   entitlements: [{ id: 'ent-xiaozhu', studentId: 'stu-xiaozhu', courseType: '小班课', totalLessons: 20, usedLessons: 8, remainingLessons: 12, status: 'active' }]
 });
 assert.notStrictEqual(xiaozhuSingleSmallClassPlan.actions[0].reason, '小班课至少 2 人到场才能开课，需要运营确认', 'Xiaozhu should be allowed to schedule one-person small class');
+
+const specialEntitlementSelectionPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...beginnerSpecialCourses[0],
+    sourceKey: 'beginner-special-entitlement-key'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-wang', name: '王有理' },
+    { id: 'stu-ace', name: '艾斯' },
+    { id: 'stu-li', name: '李鹏昊' }
+  ],
+  coaches: [{ id: 'coach-yang', name: '杨教练' }],
+  users: [],
+  entitlements: [
+    { id: 'ent-wang-other', studentId: 'stu-wang', courseType: '专项课', skillLevelMin: '2.5', skillLevelMax: '3.0', specialTopic: '发接发与实战练习', totalLessons: 1, usedLessons: 0, remainingLessons: 1, status: 'active' },
+    { id: 'ent-wang-beginner', studentId: 'stu-wang', courseType: '专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', specialTopic: '初阶专项课', totalLessons: 1, usedLessons: 0, remainingLessons: 1, status: 'active' },
+    { id: 'ent-ace-beginner', studentId: 'stu-ace', courseType: '专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', specialTopic: '初阶专项课', totalLessons: 1, usedLessons: 0, remainingLessons: 1, status: 'active' },
+    { id: 'ent-li-beginner', studentId: 'stu-li', courseType: '专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', specialTopic: '初阶专项课', totalLessons: 1, usedLessons: 0, remainingLessons: 1, status: 'active' }
+  ],
+  nowKey: '2026-07-20 00:00'
+});
+assert.strictEqual(specialEntitlementSelectionPlan.summary.create, 1, 'beginner special course should become schedulable when each student has matching special entitlement');
+assert.deepStrictEqual(sync.buildScheduleBody(specialEntitlementSelectionPlan.actions[0].candidate).entitlementIds, ['ent-wang-beginner', 'ent-ace-beginner', 'ent-li-beginner'], 'special course schedule should use matching topic entitlements only');
+
+const ignoredSourcePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...beginnerSpecialCourses[0],
+    sourceKey: 'ignored-source-key',
+    studentNames: ['3人'],
+    studentText: '3人'
+  }],
+  syncRows: [{ id: 'ignore-row', sourceKey: 'ignored-source-key', status: 'ignored' }],
+  schedules: [],
+  students: [],
+  coaches: [],
+  users: []
+});
+assert.strictEqual(ignoredSourcePlan.summary.notifyError, 0, 'ignored Feishu source rows should not keep notifying operations');
+assert.strictEqual(ignoredSourcePlan.summary.noop, 1, 'ignored Feishu source rows should count as noop');
 
 const legacyCampusExistingPlan = sync.buildDryRunPlan({
   feishuCourses: [{

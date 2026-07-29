@@ -151,6 +151,7 @@ function normalizeCourseType(value){
 
 function normalizeSkillLevelText(value){
   const raw=cleanText(value).replace(/[～—–~]/g,'-');
+  if(/零基础|初阶/.test(raw))return {min:'零基础',max:'零基础'};
   const m=raw.match(/(\d(?:\.\d)?)(?:\s*-\s*(\d(?:\.\d)?))?/);
   if(!m)return {min:'',max:''};
   return {min:m[1],max:m[2]||m[1]};
@@ -158,6 +159,14 @@ function normalizeSkillLevelText(value){
 
 function parseSpecialCourseText(value){
   const text=cleanText(value);
+  if(/初阶训练课|初阶专项课/.test(text)){
+    return {
+      skillLevelMin:'零基础',
+      skillLevelMax:'零基础',
+      specialTopic:'初阶专项课',
+      courseDisplayName:'【零基础】初阶专项课'
+    };
+  }
   const bracket=text.match(/^【([^】]+)】\s*(.+)$/);
   if(bracket){
     const level=normalizeSkillLevelText(bracket[1]);
@@ -180,6 +189,38 @@ function parseSpecialCourseText(value){
     };
   }
   return null;
+}
+
+function normalizeSpecialLevelValue(value){
+  const raw=cleanText(value);
+  if(!raw)return '';
+  if(raw==='零基础'||raw==='0'||raw==='0.0')return '零基础';
+  const n=Number(raw);
+  if(Number.isFinite(n))return n.toFixed(1);
+  return raw;
+}
+
+function normalizedSpecialTopicKey(value){
+  return normalizeNameKey(value).replace(/^专项课/,'');
+}
+
+function specialCourseEntitlementMatches(row={},candidate={}){
+  if(candidate.course?.courseType!=='专项课')return true;
+  const min=normalizeSpecialLevelValue(candidate.course.skillLevelMin);
+  const max=normalizeSpecialLevelValue(candidate.course.skillLevelMax||candidate.course.skillLevelMin);
+  const rowMin=normalizeSpecialLevelValue(row.skillLevelMin);
+  const rowMax=normalizeSpecialLevelValue(row.skillLevelMax||row.skillLevelMin);
+  if(min&&rowMin&&rowMin!==min)return false;
+  if(max&&rowMax&&rowMax!==max)return false;
+  const topic=normalizedSpecialTopicKey(candidate.course.specialTopic||candidate.course.courseDisplayName);
+  const rowTopic=normalizedSpecialTopicKey(row.specialTopic||row.courseDisplayName||row.productName||row.packageName||row.name);
+  if(topic&&rowTopic&&rowTopic!==topic)return false;
+  return true;
+}
+
+function candidateEntitlementLessonCount(candidate={}){
+  if(['专项课','小班课'].includes(candidate.course?.courseType))return 1;
+  return Number(candidate.lessonCount||1);
 }
 
 function normalizeVenueName(value){
@@ -588,22 +629,27 @@ function confirmedSingleStudentSmallClass(raw={}){
 }
 
 function hasSelectableEntitlement(student,candidate,entitlements=[],recommendEntitlements){
-  if(!student?.id)return false;
+  return !!selectEntitlementForStudent(student,candidate,entitlements,recommendEntitlements);
+}
+
+function selectEntitlementForStudent(student,candidate,entitlements=[],recommendEntitlements){
+  if(!student?.id)return null;
   const body=buildScheduleBody({...candidate,scheduleStudents:[student]});
-  const rows=(entitlements||[]).filter(row=>String(row.studentId||'')===String(student.id||''));
+  const rows=(entitlements||[]).filter(row=>String(row.studentId||'')===String(student.id||'')&&specialCourseEntitlementMatches(row,candidate));
   if(typeof recommendEntitlements==='function'){
     const result=recommendEntitlements(rows,body);
-    if(!result?.recommended)return false;
+    if(!result?.recommended)return null;
     const selected=rows.find(row=>String(row.id||'')===String(result.recommended.entitlementId||result.recommended.id||''));
-    return !!selected&&entitlementLessonIndexMatches(selected,candidate);
+    return selected&&entitlementLessonIndexMatches(selected,candidate)?selected:null;
   }
-  return rows.some(row=>{
+  return rows.find(row=>{
     if(row.status&&row.status!=='active')return false;
     if(row.courseType&&row.courseType!==candidate.course.courseType)return false;
     if(row.experienceType&&candidate.course.experienceType&&row.experienceType!==candidate.course.experienceType)return false;
+    if(!specialCourseEntitlementMatches(row,candidate))return false;
     if(!entitlementLessonIndexMatches(row,candidate))return false;
-    return Number(row.remainingLessons||0)>=Number(candidate.lessonCount||1);
-  });
+    return Number(row.remainingLessons||0)>=candidateEntitlementLessonCount(candidate);
+  })||null;
 }
 
 function entitlementExpectedLessonIndex(row={}){
@@ -632,7 +678,8 @@ function entitlementCourseMatches(row={},candidate={}){
   if(row.status&&row.status!=='active')return false;
   if(row.courseType&&row.courseType!==candidate.course.courseType)return false;
   if(row.experienceType&&candidate.course.experienceType&&row.experienceType!==candidate.course.experienceType)return false;
-  return Number(row.remainingLessons||0)>=Number(candidate.lessonCount||1);
+  if(!specialCourseEntitlementMatches(row,candidate))return false;
+  return Number(row.remainingLessons||0)>=candidateEntitlementLessonCount(candidate);
 }
 
 function hasSelectableEntitlementIgnoringLessonIndex(student,candidate,entitlements=[],recommendEntitlements){
@@ -670,7 +717,15 @@ function attachSchedulableStudents(candidate,ctx={}){
   if(candidate.errors.length)return candidate;
   if(candidate.course.isTrial)return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
   if(candidate.course.courseType==='陪打')return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
-  const scheduleStudents=candidate.resolvedStudents.filter(student=>hasSelectableEntitlement(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
+  const selectedEntitlements=[];
+  const scheduleStudents=candidate.resolvedStudents.filter(student=>{
+    const selected=selectEntitlementForStudent(student,candidate,ctx.entitlements,ctx.recommendEntitlements);
+    if(selected){
+      selectedEntitlements.push(selected);
+      return true;
+    }
+    return false;
+  });
   if(!scheduleStudents.length){
     const hasPackageWithMismatchedIndex=Number(candidate.lessonIndex)>0&&candidate.resolvedStudents.some(student=>hasSelectableEntitlementIgnoringLessonIndex(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
     if(hasPackageWithMismatchedIndex){
@@ -679,15 +734,22 @@ function attachSchedulableStudents(candidate,ctx={}){
     }
     return {...candidate,scheduleStudents:[],errors:[...candidate.errors,'没有可自动扣课的可用课包']};
   }
-  return {...candidate,scheduleStudents};
+  return {...candidate,scheduleStudents,selectedEntitlements};
 }
 
 function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],coaches=[],users=[],entitlements=[],recommendEntitlements=null,nowKey=''}={}){
   const ctx={students,coaches,users,schedules,entitlements,recommendEntitlements};
+  const ignoredByKey=new Map((syncRows||[]).filter(row=>row.status==='ignored').map(row=>[String(row.sourceKey||''),row]));
   const syncByKey=new Map((syncRows||[]).filter(row=>row.status!=='ignored').map(row=>[String(row.sourceKey||''),row]));
   const activeSourceKeys=new Set();
   const actions=[];
   for(const raw of feishuCourses){
+    const ignored=ignoredByKey.get(String(raw.sourceKey||''));
+    if(ignored){
+      activeSourceKeys.add(raw.sourceKey);
+      actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:ignored});
+      continue;
+    }
     let candidate=buildResolvedCandidate(raw,ctx);
     const historicalCourse=!!nowKey&&!isFutureCourse(candidate,nowKey);
     activeSourceKeys.add(candidate.sourceKey);
@@ -775,7 +837,11 @@ function buildScheduleBody(candidate,extra={}){
   const locationType=candidate.locationType==='external'?'external':'own';
   const entitlement=extra.entitlement||{};
   const purchase=extra.purchase||{};
-  const entitlementId=extra.entitlementId||entitlement.id||'';
+  const selectedEntitlements=Array.isArray(candidate.selectedEntitlements)?candidate.selectedEntitlements:[];
+  const selectedEntitlementIds=selectedEntitlements.map(row=>row.id).filter(Boolean);
+  const entitlementId=extra.entitlementId||entitlement.id||(selectedEntitlementIds.length===1?selectedEntitlementIds[0]:'');
+  const explicitEntitlementIds=Array.isArray(extra.entitlementIds)?extra.entitlementIds.filter(Boolean):[];
+  const entitlementIds=explicitEntitlementIds.length?explicitEntitlementIds:(selectedEntitlementIds.length?selectedEntitlementIds:(entitlementId?[entitlementId]:[]));
   return {
     startTime:candidate.startTime,
     endTime:candidate.endTime,
@@ -807,7 +873,7 @@ function buildScheduleBody(candidate,extra={}){
     payMethod:isCompanion?'待确认':'',
     paidAmount:isCompanion?100:0,
     entitlementId,
-    entitlementIds:entitlementId?[entitlementId]:[],
+    entitlementIds,
     packageName:extra.packageName||entitlement.packageName||purchase.packageName||'',
     purchaseId:extra.purchaseId||entitlement.purchaseId||purchase.id||'',
     timeBand:'',

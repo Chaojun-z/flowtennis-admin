@@ -608,7 +608,7 @@ function packageTimeScopeOptions(){
   return FlowTennisBusinessTaxonomy.optionList('packageTimeScopes');
 }
 function packageSpecialLevelOptions(){
-  return ['','1.0','1.5','2.0','2.5','3.0','3.5','4.0'].map(value=>({value,label:value||'—'}));
+  return ['','零基础','1.0','1.5','2.0','2.5','3.0','3.5','4.0'].map(value=>({value,label:value||'—'}));
 }
 function packageSpecialProductOptions(){
   return products.filter(p=>normalizeCourseType(p.type||p.courseType)==='专项课').map(p=>{
@@ -864,7 +864,7 @@ function packageSaveErrorText(err){
     '可用结束时间不能早于可用开始时间':'可用时间结束日期不能早于开始日期',
     '可用时段请填写完整':'请把可用时段的开始和结束时间都填完整',
     '可用结束时间必须晚于开始时间':'可用时段结束时间要晚于开始时间',
-    '专项课水平不在标准范围内':'专项课水平只能选 1.0 到 4.0',
+    '专项课水平不在标准范围内':'专项课水平只能选零基础或 1.0 到 4.0',
     '专项课最高水平不能低于最低水平':'专项课最高水平不能低于最低水平',
     '专项课水平范围不能跨两个以上级别':'专项课水平范围最多选相邻级别',
     '可用教练不存在':'可上课教练里有已删除的教练，请重新勾选',
