@@ -13,8 +13,12 @@ assert.match(html, /thirdPartySyncCenterPage:\(\)=>apiCall\('GET','\/third-party
 assert.match(html, /function renderThirdPartySyncCenter\(/, 'sync center page renderer should exist');
 assert.match(html, /thirdPartySyncStatsCompactCards/, 'sync center should use compact one-row stats cards');
 assert.match(html, /third-party-sync-stats-row/, 'sync center stats should stay on one compact row');
+assert.match(html, /订场订单[\s\S]*会员资料[\s\S]*接口缺口/, 'sync center should split pulled records by business meaning');
 assert.match(html, /待确认[\s\S]*高危异常[\s\S]*重复跳过/, 'sync center should display precheck categories');
 assert.match(html, /<th style="width:120px;padding-left:20px">日期<\/th><th style="width:120px">时间段<\/th>/, 'precheck table should split date and time range into separate columns');
+assert.match(html, /thirdPartySyncBookingPrechecks/, 'precheck table should default to booking records only');
+assert.match(html, /thirdPartySyncMemberProfileNote/, 'sync center should show member profiles as a separate note');
+assert.match(html, /会员资料只同步到资料层，不进入订场预检判断/, 'member profile note should explain why profiles are not booking confirmations');
 assert.match(html, /第三方用户[\s\S]*第三方备注[\s\S]*金额/, 'sync center should expose operator-facing third party fields');
 assert.match(html, /confirmThirdPartySyncItem/, 'sync center should support operation confirmation');
 assert.match(html, /runThirdPartySyncImportPlan/, 'sync center should expose import plan preview');

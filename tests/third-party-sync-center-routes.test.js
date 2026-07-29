@@ -108,6 +108,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
     fetchThirdPartyData: async () => ({
       records: [
         { sourceType: 'order', orderNo: 'O1', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' },
+        { sourceType: 'member', thirdPartyId: 'M1', memberName: '会员资料A', memberPhone: '13900000000' },
         { sourceType: 'order', orderNo: 'OLD1', bookingDate: '2026-05-27', venue: '2号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' }
       ],
       gaps: ['member-ledger']
@@ -124,14 +125,19 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
 
   const listRes = await call(handler, { path: '/third-party-sync/overview', method: 'GET' });
   assert.strictEqual(listRes.body.batches.length, 1, 'overview should return batches');
-  assert.strictEqual(listRes.body.summary.rawCount, 2, 'overview should include source and gap raw records');
+  assert.strictEqual(listRes.body.summary.rawCount, 3, 'overview should include source and gap raw records');
+  assert.strictEqual(listRes.body.summary.bookingOrderCount, 1, 'overview should split booking order count from all pulled records');
+  assert.strictEqual(listRes.body.summary.memberProfileCount, 1, 'overview should split member profile count from all pulled records');
+  assert.strictEqual(listRes.body.summary.syncGapCount, 1, 'overview should split sync gap count from all pulled records');
   assert.ok(!scans.ft_third_party_sync_prechecks.some(row => row.sourceRecordId === 'OLD1'), 'pull should ignore booking records outside requested date range');
   scans.ft_third_party_sync_batches.push({ id: 'old-batch', batchId: 'old-batch', pulledAt: '2026-07-01T00:00:00+08:00', status: 'prechecked' });
   scans.ft_third_party_sync_raw_records.push({ id: 'old-raw-1', batchId: 'old-batch', sourceType: 'order' });
   scans.ft_third_party_sync_prechecks.push({ id: 'old-precheck-1', batchId: 'old-batch', sourceRecordId: 'OLD-RISK', recommendedType: 'high_risk_exception', needsConfirmation: true });
   const scopedOverviewRes = await call(handler, { path: '/third-party-sync/overview', method: 'GET' });
-  assert.strictEqual(scopedOverviewRes.body.summary.rawCount, 2, 'overview summary should default to latest batch raw count');
-  assert.strictEqual(scopedOverviewRes.body.summary.exceptionCount, 1, 'overview summary should not let old bad batches dominate current stats');
+  assert.strictEqual(scopedOverviewRes.body.summary.rawCount, 3, 'overview summary should default to latest batch raw count');
+  assert.strictEqual(scopedOverviewRes.body.summary.bookingOrderCount, 1, 'latest batch summary should keep booking order count separate');
+  assert.strictEqual(scopedOverviewRes.body.summary.memberProfileCount, 1, 'latest batch summary should keep member profile count separate');
+  assert.strictEqual(scopedOverviewRes.body.summary.exceptionCount, 0, 'overview summary should keep sync gaps out of booking high-risk stats');
 
   const confirmRes = await call(handler, {
     path: '/third-party-sync/confirmations',

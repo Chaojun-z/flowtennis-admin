@@ -74,6 +74,14 @@ function normalizeSourceType(value) {
   return text || 'other';
 }
 
+function isBookingSourceType(sourceType = '') {
+  return ['order', 'lock'].includes(normalizeSourceType(sourceType));
+}
+
+function isSyncGapSourceType(sourceType = '') {
+  return /-gap$/.test(normalizeSourceType(sourceType));
+}
+
 function recordSourceId(record = {}, index = 0) {
   return cleanText(record.thirdPartyId || record.orderNo || record.orderId || record.id || record.sourceId) || `generated-${stableHash(record).slice(0, 16)}-${index}`;
 }
@@ -950,14 +958,18 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       const currentChanges = latestBatchId ? changes.filter(row => String(row.batchId || '') === latestBatchId) : changes;
       const currentAlerts = latestBatchId ? alerts.filter(row => String(row.batchId || '') === latestBatchId) : alerts;
       const currentRollbacks = latestBatchId ? rollbacks.filter(row => String(row.batchId || '') === latestBatchId) : rollbacks;
+      const currentBookingPrechecks = currentPrechecks.filter(row => isBookingSourceType(row.sourceType));
       const summary = {
         batchCount: batches.length,
         currentBatchId: latestBatchId,
         rawCount: currentRawRecords.length,
-        autoImportCount: currentPrechecks.filter(row => row.recommendedType === 'auto_import').length,
-        pendingCount: currentPrechecks.filter(row => row.needsConfirmation || row.recommendedType === 'needs_confirmation').length,
-        exceptionCount: currentPrechecks.filter(row => row.recommendedType === 'high_risk_exception').length,
-        duplicateCount: currentPrechecks.filter(row => row.recommendedType === 'duplicate_skip').length,
+        bookingOrderCount: currentRawRecords.filter(row => isBookingSourceType(row.sourceType)).length,
+        memberProfileCount: currentRawRecords.filter(row => normalizeSourceType(row.sourceType) === 'member').length,
+        syncGapCount: currentRawRecords.filter(row => isSyncGapSourceType(row.sourceType)).length,
+        autoImportCount: currentBookingPrechecks.filter(row => row.recommendedType === 'auto_import').length,
+        pendingCount: currentBookingPrechecks.filter(row => row.needsConfirmation || row.recommendedType === 'needs_confirmation').length,
+        exceptionCount: currentBookingPrechecks.filter(row => row.recommendedType === 'high_risk_exception').length,
+        duplicateCount: currentBookingPrechecks.filter(row => row.recommendedType === 'duplicate_skip').length,
         importedCount: currentImportResults.filter(row => ['completed', 'partial_completed'].includes(row.status)).length,
         failedImportCount: currentImportResults.filter(row => row.status === 'partial_failed' || row.status === 'failed').length,
         changeCount: currentChanges.length,

@@ -31,6 +31,33 @@ function thirdPartySyncTypeText(type){
     high_risk_exception:'高危异常'
   })[type]||type||'-';
 }
+function thirdPartySyncIsBookingSourceType(type){
+  return ['order','lock'].includes(String(type||'').toLowerCase());
+}
+function thirdPartySyncIsGapSourceType(type){
+  return /-gap$/.test(String(type||'').toLowerCase());
+}
+function thirdPartySyncRowsForBatch(rows=[],batchId=''){
+  return (rows||[]).filter(row=>String(row.batchId||'')===String(batchId||''));
+}
+function thirdPartySyncBatchCountText(row={}){
+  const batchId=row.batchId||row.id||'';
+  const data=thirdPartySyncData();
+  const raws=thirdPartySyncRowsForBatch(data.rawRecords||[],batchId);
+  const prechecks=thirdPartySyncRowsForBatch(data.prechecks||[],batchId).filter(item=>thirdPartySyncIsBookingSourceType(item.sourceType));
+  const bookingCount=raws.filter(item=>thirdPartySyncIsBookingSourceType(item.sourceType)).length;
+  const memberCount=raws.filter(item=>String(item.sourceType||'').toLowerCase()==='member').length;
+  const gapCount=raws.filter(item=>thirdPartySyncIsGapSourceType(item.sourceType)).length;
+  const parts=[
+    `订场订单 ${bookingCount}`,
+    `会员资料 ${memberCount}`,
+    `接口缺口 ${gapCount}`,
+    `可自动导入 ${prechecks.filter(item=>item.recommendedType==='auto_import').length}`,
+    `需确认 ${prechecks.filter(item=>item.needsConfirmation||item.recommendedType==='needs_confirmation').length}`,
+    `高危 ${prechecks.filter(item=>item.recommendedType==='high_risk_exception').length}`
+  ];
+  return parts.join(' / ');
+}
 function thirdPartySyncMoneyImpactText(impact={}){
   const cash=Number(impact.cashDelta||0)||0;
   const recognized=Number(impact.recognizedRevenueDelta||0)||0;
@@ -43,13 +70,13 @@ function thirdPartySyncStatsCompactCards(){
   const latest=thirdPartySyncLatestBatch();
   return [
     {label:'最近同步',value:latest?.pulledAt?String(latest.pulledAt).replace('T',' ').slice(5,16):'-',sub:latest?thirdPartySyncStatusText(latest.status):'暂无批次'},
-    {label:'拉取数量',value:Number(summary.rawCount||0),sub:'原始记录池'},
-    {label:'自动通过',value:Number(summary.autoImportCount||0),sub:'可导入'},
-    {label:'待确认',value:Number(summary.pendingCount||0),sub:'运营判断'},
-    {label:'高危异常',value:Number(summary.exceptionCount||0),sub:'暂不导入'},
+    {label:'订场订单',value:Number(summary.bookingOrderCount||0),sub:'进入预检'},
+    {label:'会员资料',value:Number(summary.memberProfileCount||0),sub:'资料层'},
+    {label:'接口缺口',value:Number(summary.syncGapCount||0),sub:'待补接口'},
+    {label:'可自动导入',value:Number(summary.autoImportCount||0),sub:'订场订单'},
+    {label:'需运营确认',value:Number(summary.pendingCount||0),sub:'订场订单'},
+    {label:'高危异常',value:Number(summary.exceptionCount||0),sub:'订场订单'},
     {label:'重复跳过',value:Number(summary.duplicateCount||0),sub:'同场地时段去重'},
-    {label:'稳定自动同步',value:Number(summary.importedCount||0),sub:'每日自动导入批次'},
-    {label:'变更/报警',value:`${Number(summary.changeCount||0)}/${Number(summary.openAlertCount||0)}`,sub:'回看/待处理'}
   ];
 }
 function renderThirdPartySyncStats(){
@@ -66,7 +93,7 @@ function renderThirdPartySyncBatches(){
     <td>${renderStandardCellText(`${row.rangeStart||'-'} 至 ${row.rangeEnd||'-'}`)}</td>
     <td><span class="tms-tag">${esc(thirdPartySyncStatusText(row.status))}</span></td>
     <td>${renderStandardCellText(row.pulledAt?String(row.pulledAt).replace('T',' ').slice(0,16):'-')}</td>
-    <td>${renderStandardCellText(Object.entries(row.counts||{}).map(([k,v])=>`${thirdPartySyncTypeText(k)} ${v}`).join(' / ')||'-')}</td>
+    <td>${renderStandardCellText(thirdPartySyncBatchCountText(row))}</td>
     <td>${renderStandardCellText(thirdPartySyncMoneyImpactText(row.financeImpact||{}))}</td>
     <td class="tms-sticky-r tms-action-cell" style="width:240px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="filterThirdPartySyncBatch('${esc(row.batchId||row.id||'')}')">查看</span><span class="tms-action-link" onclick="runThirdPartySyncImportPlan('${esc(row.batchId||row.id||'')}')">导入计划</span><span class="tms-action-link" onclick="runThirdPartySyncImport('${esc(row.batchId||row.id||'')}')">一键导入</span></td>
   </tr>`).join('')||'<tr><td colspan="7"><div class="empty"><p>暂无同步批次</p></div></td></tr>';
@@ -84,7 +111,19 @@ function thirdPartySyncEffectiveBatchId(){
 function thirdPartySyncVisiblePrechecks(){
   const rows=thirdPartySyncData().prechecks||[];
   const batchId=thirdPartySyncEffectiveBatchId();
-  return batchId?rows.filter(row=>String(row.batchId||'')===String(batchId)):rows;
+  const scoped=batchId?rows.filter(row=>String(row.batchId||'')===String(batchId)):rows;
+  return thirdPartySyncBookingPrechecks(scoped);
+}
+function thirdPartySyncBookingPrechecks(rows=[]){
+  return (rows||[]).filter(row=>thirdPartySyncIsBookingSourceType(row.sourceType));
+}
+function thirdPartySyncMemberProfileNote(){
+  const data=thirdPartySyncData();
+  const batchId=thirdPartySyncEffectiveBatchId();
+  const rawRows=thirdPartySyncRowsForBatch(data.rawRecords||[],batchId);
+  const memberCount=rawRows.filter(row=>String(row.sourceType||'').toLowerCase()==='member').length;
+  const gapCount=rawRows.filter(row=>thirdPartySyncIsGapSourceType(row.sourceType)).length;
+  return `<div class="tms-audit-note third-party-sync-member-note">会员资料 ${memberCount} 条、接口缺口 ${gapCount} 条。会员资料只同步到资料层，不进入订场预检判断。</div>`;
 }
 function renderThirdPartySyncPrechecks(){
   const host=document.getElementById('thirdPartySyncPrecheckTbody');
@@ -316,7 +355,7 @@ function renderThirdPartySyncCenter(){
       #page-third-party-sync .tms-btn-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:-2px;animation:thirdPartySyncSpin .8s linear infinite}
       @keyframes thirdPartySyncSpin{to{transform:rotate(360deg)}}
     </style>
-    <div class="tms-stats-row third-party-sync-stats-row" id="thirdPartySyncStats"></div>
+    <div class="tms-stats-row third-party-sync-stats-row" id="thirdPartySyncStats" aria-label="稳定自动同步"></div>
     <div class="tms-toolbar">
       <div class="tms-filters"></div>
       <div class="tms-toolbar-right">${pullButtonHtml}<button class="tms-btn tms-btn-ghost" onclick="loadThirdPartySyncCenter(true)">刷新</button></div>
@@ -328,7 +367,7 @@ function renderThirdPartySyncCenter(){
       ${thirdPartySyncTableTabButton('changes','变更报警')}
     </div>
     ${thirdPartySyncTablePanel('batches','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">批次</th><th style="width:280px">时间范围</th><th style="width:100px">状态</th><th style="width:150px">最近同步</th><th style="width:260px">数据量</th><th style="width:240px">财务影响预估</th><th class="tms-sticky-r" style="width:240px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>')}
-    ${thirdPartySyncTablePanel('prechecks','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">日期</th><th style="width:120px">时间段</th><th style="width:100px">场地</th><th style="width:170px">第三方用户</th><th style="width:180px">第三方备注</th><th style="width:100px">金额</th><th style="width:110px">来源</th><th style="width:130px">系统判断</th><th style="width:150px">计划动作</th><th style="width:180px">高危原因</th><th style="width:220px">财务影响</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">确认</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div><div class="tms-section-header">确认记录</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:140px">最终类型</th><th style="width:120px">支付方式</th><th style="width:100px">金额</th><th style="width:120px">确认人</th><th style="width:160px">确认时间</th><th style="width:240px">备注</th></tr></thead><tbody id="thirdPartySyncConfirmTbody"></tbody></table></div></div>')}
+    ${thirdPartySyncTablePanel('prechecks',`${thirdPartySyncMemberProfileNote()}<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">日期</th><th style="width:120px">时间段</th><th style="width:100px">场地</th><th style="width:170px">第三方用户</th><th style="width:180px">第三方备注</th><th style="width:100px">金额</th><th style="width:110px">来源</th><th style="width:130px">系统判断</th><th style="width:150px">计划动作</th><th style="width:180px">高危原因</th><th style="width:220px">财务影响</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">确认</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div><div class="tms-section-header">确认记录</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:140px">最终类型</th><th style="width:120px">支付方式</th><th style="width:100px">金额</th><th style="width:120px">确认人</th><th style="width:160px">确认时间</th><th style="width:240px">备注</th></tr></thead><tbody id="thirdPartySyncConfirmTbody"></tbody></table></div></div>`)}
     ${thirdPartySyncTablePanel('writes','<div class="tms-section-header" style="margin-top:0">写入结果</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:100px">状态</th><th style="width:150px">导入时间</th><th style="width:240px">操作ID</th><th style="width:220px">写入表</th><th style="width:160px">写入数量</th><th style="width:240px">失败原因</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">回滚</th></tr></thead><tbody id="thirdPartySyncImportResultTbody"></tbody></table></div></div><div class="tms-section-header">回滚影响</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:240px">操作ID</th><th style="width:160px">回滚时间</th><th style="width:120px">操作人</th><th style="width:420px">影响明细</th></tr></thead><tbody id="thirdPartySyncRollbackTbody"></tbody></table></div></div>')}
     ${thirdPartySyncTablePanel('changes','<div class="tms-section-header" style="margin-top:0">第三方变更回看</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:120px">变更类型</th><th style="width:220px">变更字段</th><th style="width:160px">发现时间</th><th style="width:120px">状态</th></tr></thead><tbody id="thirdPartySyncChangeTbody"></tbody></table></div></div><div class="tms-section-header">异常报警</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:360px">原因</th><th style="width:120px">状态</th><th style="width:160px">时间</th></tr></thead><tbody id="thirdPartySyncAlertTbody"></tbody></table></div></div>')}
   </div>`;
