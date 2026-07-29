@@ -157,6 +157,83 @@ const contiguousSchedulePlan = sync.buildDryRunPlan({
 assert.strictEqual(contiguousSchedulePlan.summary.bindExisting, 1, 'one Feishu course should bind to split contiguous system schedules instead of staying as an exception');
 assert.deepStrictEqual(contiguousSchedulePlan.actions[0].scheduleIds, ['sch-split-1', 'sch-split-2'], 'split schedule binding should keep all related schedule ids');
 
+const historicalSameDayTimeMismatchPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'same-day-time-mismatch-key',
+    startTime: '2026-07-20 17:00',
+    endTime: '2026-07-20 18:00',
+    date: '2026-07-20',
+    startClock: '17:00',
+    endClock: '18:00',
+    coachName: '杨',
+    studentNames: ['张先生'],
+    studentText: '张先生（2）',
+    lessonIndex: 2,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{
+    id: 'sch-zhang-package-2',
+    startTime: '2026-07-20 15:00',
+    endTime: '2026-07-20 16:00',
+    coach: '杨教练',
+    campus: 'shunyi_mapo',
+    venue: '2号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-zhang'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-zhang', name: '张先生（张昊然）' }],
+  coaches: [],
+  users: [],
+  nowKey: '2026-07-21 00:00'
+});
+assert.strictEqual(historicalSameDayTimeMismatchPlan.summary.bindExisting, 1, 'historical Feishu rows should bind the unique same-day system schedule when the system time is authoritative');
+
+const companionDirectPayPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'companion-direct-pay-key',
+    startTime: '2026-07-21 14:00',
+    endTime: '2026-07-21 15:00',
+    date: '2026-07-21',
+    coachName: '岳克舟',
+    studentNames: ['林姐'],
+    studentText: '林姐',
+    course: { ok: true, courseType: '陪打', experienceType: '', audience: '', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-lin', name: '林姐' }],
+  coaches: [{ id: 'coach-yue', name: '岳克舟' }],
+  users: [],
+  entitlements: [],
+  nowKey: '2026-07-20 00:00'
+});
+assert.strictEqual(companionDirectPayPlan.summary.create, 1, 'future companion lessons should not require package entitlement');
+assert.strictEqual(sync.buildScheduleBody(companionDirectPayPlan.actions[0].candidate).settlementType, 'direct', 'companion lesson should use direct payment settlement');
+assert.strictEqual(sync.buildScheduleBody(companionDirectPayPlan.actions[0].candidate).paidAmount, 100, 'companion lesson should default to 100 yuan direct payment');
+
+const xiaozhuSingleSmallClassPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'xiaozhu-single-small-class-key',
+    coachName: '杨',
+    studentNames: ['笑逐'],
+    studentText: '笑逐',
+    course: { ok: true, courseType: '小班课', smallClassType: 'bootcamp', experienceType: '', audience: '青少年', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-xiaozhu', name: '笑逐' }],
+  coaches: [{ id: 'coach-yang', name: '杨教练' }],
+  users: [],
+  entitlements: [{ id: 'ent-xiaozhu', studentId: 'stu-xiaozhu', courseType: '小班课', totalLessons: 20, usedLessons: 8, remainingLessons: 12, status: 'active' }]
+});
+assert.notStrictEqual(xiaozhuSingleSmallClassPlan.actions[0].reason, '小班课至少 2 人到场才能开课，需要运营确认', 'Xiaozhu should be allowed to schedule one-person small class');
+
 const legacyCampusExistingPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -340,8 +417,7 @@ const singleBootcampPlan = sync.buildDryRunPlan({
   users: [],
   entitlements: [{ id: 'ent-bootcamp', studentId: 'stu-xiaozhu', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }]
 });
-assert.strictEqual(singleBootcampPlan.summary.notifyError, 1, 'single-student bootcamp should require operations confirmation');
-assert.match(singleBootcampPlan.actions[0].reason, /小班课至少 2 人/, 'single-student bootcamp should explain the attendance-count blocker');
+assert.strictEqual(singleBootcampPlan.summary.create, 1, 'Xiaozhu single-student bootcamp should be allowed by the confirmed operations rule');
 
 const wangBossFamilyPlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -617,8 +693,9 @@ const companionPlan = sync.buildDryRunPlan({
   users: [],
   entitlements: []
 });
-assert.strictEqual(companionPlan.summary.notifyError, 1, 'companion courses without a selectable package should still require manual handling');
-assert.doesNotMatch(companionPlan.actions[0].reason, /无法识别课程类型/, 'companion course should not be reported as an unknown course type');
+assert.strictEqual(companionPlan.summary.create, 1, 'companion courses should not require package entitlement');
+assert.strictEqual(sync.buildScheduleBody(companionPlan.actions[0].candidate).settlementType, 'direct', 'companion course should use direct payment settlement');
+assert.strictEqual(sync.buildScheduleBody(companionPlan.actions[0].candidate).paidAmount, 100, 'companion course should default to 100 yuan direct payment');
 assert.strictEqual(sync.buildScheduleBody({ ...companionCourses[0], resolvedCoach: { name: 'Siren 教练' }, scheduleStudents: [{ id: 'stu-1', name: 'W.Jing' }] }).standardCourseType, '陪打', 'companion schedule body should persist companion type');
 
 const lessonIndexMismatchPlan = sync.buildDryRunPlan({

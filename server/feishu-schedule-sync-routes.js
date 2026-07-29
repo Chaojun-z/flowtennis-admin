@@ -455,6 +455,23 @@ function contiguousScheduleGroupMatch(candidate,schedules=[],options={}){
   return {...rows[0],scheduleIds:rows.map(row=>row.id),groupStartTime:fields.startTime,groupEndTime:fields.endTime};
 }
 
+function sameDayUniqueScheduleMatch(candidate,schedules=[],options={}){
+  const fields=scheduleCandidateFields(candidate);
+  const studentSet=new Set(fields.studentIds.map(String));
+  const rows=(schedules||[]).filter(row=>{
+    if(!activeSchedule(row))return false;
+    if(String(row.startTime||'').slice(0,10)!==String(fields.startTime||'').slice(0,10))return false;
+    if(normalizeNameKey(row.coach)!==normalizeNameKey(fields.coach))return false;
+    if(normalizeCampusKey(row.campus)!==normalizeCampusKey(fields.campus))return false;
+    if(!options.ignoreVenue&&String(row.venue||'')!==String(fields.venue||''))return false;
+    if(String(row.courseType||'')!==String(fields.courseType||''))return false;
+    if(String(row.experienceType||'')!==String(fields.experienceType||''))return false;
+    const ids=parseMaybeArray(row.studentIds).map(String);
+    return ids.length===studentSet.size&&ids.every(id=>studentSet.has(id));
+  });
+  return rows.length===1?rows[0]:null;
+}
+
 function parseMaybeArray(value){
   if(Array.isArray(value))return value;
   if(typeof value==='string'&&value){
@@ -566,6 +583,7 @@ function confirmedSingleStudentSmallClass(raw={}){
   const names=Array.isArray(raw.studentNames)?raw.studentNames:[];
   const keys=[...names,...text.split(/[、,，/&]+/)].map(name=>normalizeStudentNameKey(resolveFeishuStudentAlias(name)));
   if(keys.includes(normalizeStudentNameKey('王老板')))return true;
+  if(keys.includes(normalizeStudentNameKey('笑逐')))return true;
   return keys.includes(normalizeStudentNameKey('曦曦🐳'))&&keys.includes(normalizeStudentNameKey('朋友'));
 }
 
@@ -651,6 +669,7 @@ function lessonIndexMismatchDetails(candidate,ctx={}){
 function attachSchedulableStudents(candidate,ctx={}){
   if(candidate.errors.length)return candidate;
   if(candidate.course.isTrial)return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
+  if(candidate.course.courseType==='陪打')return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
   const scheduleStudents=candidate.resolvedStudents.filter(student=>hasSelectableEntitlement(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
   if(!scheduleStudents.length){
     const hasPackageWithMismatchedIndex=Number(candidate.lessonIndex)>0&&candidate.resolvedStudents.some(student=>hasSelectableEntitlementIgnoringLessonIndex(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
@@ -712,6 +731,18 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueGroupMatch,scheduleIds:systemVenueGroupMatch.scheduleIds,venueSource:'system'});
       continue;
     }
+    if(historicalCourse){
+      const sameDayMatch=sameDayUniqueScheduleMatch(candidate,schedules);
+      if(sameDayMatch){
+        actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:sameDayMatch,timeSource:'system'});
+        continue;
+      }
+      const systemVenueSameDayMatch=sameDayUniqueScheduleMatch(candidate,schedules,{ignoreVenue:true});
+      if(systemVenueSameDayMatch){
+        actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueSameDayMatch,timeSource:'system',venueSource:'system'});
+        continue;
+      }
+    }
     candidate=attachSchedulableStudents(candidate,ctx);
     if(candidate.errors.length){
       actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,reason:candidate.errors.join('；')});
@@ -737,6 +768,7 @@ function buildScheduleBody(candidate,extra={}){
   const courseType=candidate.course.courseType;
   const experienceType=candidate.course.experienceType||'';
   const isTrial=courseType==='体验课';
+  const isCompanion=courseType==='陪打';
   const smallClassType=courseType==='小班课'?(candidate.course.smallClassType||'single'):'';
   const smallClassLevel2=smallClassType==='bootcamp'?'训练营':(smallClassType==='family'?'亲子课':(smallClassType==='dropin'?'随到随学':'单次'));
   const studentName=scheduleStudents.map(row=>row.name||row.id).join('、');
@@ -771,9 +803,9 @@ function buildScheduleBody(candidate,extra={}){
     externalNotes:'',
     lessonCount:candidate.lessonCount,
     status:'已排课',
-    settlementType:'package',
-    payMethod:'',
-    paidAmount:0,
+    settlementType:isCompanion?'direct':'package',
+    payMethod:isCompanion?'待确认':'',
+    paidAmount:isCompanion?100:0,
     entitlementId,
     entitlementIds:entitlementId?[entitlementId]:[],
     packageName:extra.packageName||entitlement.packageName||purchase.packageName||'',
