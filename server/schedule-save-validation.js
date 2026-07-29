@@ -6,6 +6,17 @@ const {
   staleScheduleConflictIndexRows
 } = require('./schedule-conflict-index');
 
+function scheduleTimeMs(value){
+  const ms=new Date(String(value||'').replace(' ','T')).getTime();
+  return Number.isFinite(ms)?ms:null;
+}
+
+function isHistoricalScheduleRecord(record,now=new Date()){
+  const endMs=scheduleTimeMs(record?.endTime||record?.startTime);
+  if(endMs===null)return false;
+  return endMs<now.getTime();
+}
+
 function createScheduleSaveValidation(deps={}){
   const {
     scanByIdPrefix,put,del,get,mkTable,withRequiredStorageTimeout,withTimeout,timed,getCachedScan,
@@ -64,11 +75,13 @@ function createScheduleSaveValidation(deps={}){
       return withRequiredStorageTimeout(getCachedScan(T_SCHEDULE),3500,'排课校验超时，请稍后重试');
     });
     validateScheduleConflicts(nextRec,schedules,nextRec.id);
-    validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>withTimeout(getCachedScan(T_COURTS).catch(()=>[]),2500,[])));
+    if(!isHistoricalScheduleRecord(nextRec)){
+      validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>withTimeout(getCachedScan(T_COURTS).catch(()=>[]),2500,[])));
+    }
     return {warnings:collectScheduleRiskWarnings(nextRec,schedules,nextRec.id)};
   }
 
   return {validateScheduleSave,syncScheduleConflictIndexes};
 }
 
-module.exports={createScheduleSaveValidation};
+module.exports={createScheduleSaveValidation,isHistoricalScheduleRecord};
