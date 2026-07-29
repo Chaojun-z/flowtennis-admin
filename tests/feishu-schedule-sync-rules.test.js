@@ -81,6 +81,17 @@ assert.strictEqual(beginnerSpecialCourses[0].course.courseType, '专项课', 'be
 assert.strictEqual(beginnerSpecialCourses[0].course.skillLevelMin, '零基础', 'beginner special course should use zero-basics level');
 assert.strictEqual(beginnerSpecialCourses[0].course.specialTopic, '初阶专项课', 'beginner special course should use the standard topic');
 
+const blankContinuationValues = [
+  ['时间', null, null, '杨教练', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
+  [46223, '一', '10:00-11:30', '初阶训练课体验课/正式课', '马坡室内', '1号', '王有理、艾斯、李鹏昊'],
+  [null, null, '11:30-12:00', '', '', '', '王有理、艾斯、李鹏昊']
+];
+const blankContinuationCourses = sync.parseFeishuScheduleRows({ values: blankContinuationValues, sheetId: 'GrbZdi', sheetTitle: '7.20-7.26' });
+assert.strictEqual(blankContinuationCourses.length, 1, 'blank continuation rows with the same student should merge into the previous course');
+assert.strictEqual(blankContinuationCourses[0].endTime, '2026-07-20 12:00', 'blank continuation should extend the course end time');
+assert.strictEqual(blankContinuationCourses[0].course.courseType, '专项课', 'blank continuation should keep the inherited course type');
+
 const noiseValues = [
   ['时间', null, null, '外部场地', null, null, null],
   ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],

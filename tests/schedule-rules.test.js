@@ -114,6 +114,15 @@ assert.deepStrictEqual(
   'direct paid schedule should not consume entitlement balance'
 );
 
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas(
+    { id: 'sch-special', status: '已排课', settlementType: 'package', courseType: '专项课', lessonCount: 1.5, studentIds: ['stu-1'] },
+    [{ id: 'ent-special-1', studentId: 'stu-1', status: 'active', courseType: '专项课', totalLessons: 1, remainingLessons: 1 }]
+  ),
+  [{ studentId: 'stu-1', entitlementId: 'ent-special-1', delta: 1 }],
+  'special course schedules should consume one count even when duration is longer than one hour'
+);
+
 assert.doesNotThrow(
   () => rules.assertScheduleEntitlementRequired({ id: 'sch-direct', status: '已排课', settlementType: 'direct', paidAmount: 99, lessonCount: 1, studentIds: ['stu-1'] }),
   'direct paid schedule should save without a package entitlement'

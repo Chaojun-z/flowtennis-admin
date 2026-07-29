@@ -312,6 +312,7 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
   const merged=applyMergesToValues(values,merges);
   const {headerRow,blocks}=buildCoachBlocks(merged);
   const cells=[];
+  const lastCellByBlock=new Map();
   let currentDate='';
   for(let r=headerRow+1;r<merged.length;r++){
     const row=merged[r]||[];
@@ -320,13 +321,21 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
     const time=parseTimeRange(row[2]);
     if(!date||!time)continue;
     for(const block of blocks){
-      const courseText=cleanText(row[block.courseCol]);
+      let courseText=cleanText(row[block.courseCol]);
       const studentText=cleanText(row[block.studentCol]);
-      const venueText=cleanText(row[block.venueCol]);
-      const courtText=cleanText(row[block.courtCol]);
+      let venueText=cleanText(row[block.venueCol]);
+      let courtText=cleanText(row[block.courtCol]);
+      const prev=lastCellByBlock.get(block.startCol);
+      if(!courseText&&studentText&&prev&&prev.date===date&&prev.time.end===time.start&&normalizeNameKey(prev.studentText)===normalizeNameKey(studentText)){
+        courseText=prev.courseText;
+        venueText=prev.venueText;
+        courtText=prev.courtText;
+      }
       if(!courseText&&!studentText)continue;
       if(isLikelySectionCell({courseText,venueText,courtText,studentText}))continue;
-      cells.push({sheetId,sheetTitle,rowIndex:r,colIndex:block.courseCol,date,time,block,courseText,studentText,venueText,courtText});
+      const cell={sheetId,sheetTitle,rowIndex:r,colIndex:block.courseCol,date,time,block,courseText,studentText,venueText,courtText};
+      cells.push(cell);
+      lastCellByBlock.set(block.startCol,cell);
     }
   }
   const grouped=[];

@@ -559,7 +559,7 @@ function isSmallTrialCourse(row={}){
   return type==='体验课'&&/小班|1v4/.test(text);
 }
 function isCountBasedCourse(row={}){
-  return isSmallGroupCourse(row)||isSmallTrialCourse(row);
+  return isSmallGroupCourse(row)||isSmallTrialCourse(row)||String(row.courseType||row.type||'').trim()==='专项课';
 }
 function normalizeSmallClassType(value='',fallback='single'){
   const raw=String(value||'').trim();
