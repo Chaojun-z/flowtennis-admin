@@ -110,6 +110,53 @@ const plan = sync.buildDryRunPlan({
 assert.strictEqual(plan.summary.bindExisting, 1, 'first baseline should bind exact existing future schedule instead of creating duplicate');
 assert.strictEqual(plan.summary.create, 0, 'exact existing future schedule should not be recreated');
 
+const coachSuffixPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'coach-suffix-key',
+    coachName: 'Siren',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{
+    id: 'sch-siren-suffix',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coach: 'Siren 教练',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-1'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [],
+  users: []
+});
+assert.strictEqual(coachSuffixPlan.summary.bindExisting, 1, 'coach suffix should not block binding an existing schedule');
+
+const contiguousSchedulePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'contiguous-schedule-key',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [
+    { id: 'sch-split-1', startTime: '2026-07-20 12:00', endTime: '2026-07-20 13:00', coach: '晓哲', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', experienceType: '', studentIds: ['stu-1'], status: '已排课' },
+    { id: 'sch-split-2', startTime: '2026-07-20 13:00', endTime: '2026-07-20 13:30', coach: '晓哲', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', experienceType: '', studentIds: ['stu-1'], status: '已排课' }
+  ],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: []
+});
+assert.strictEqual(contiguousSchedulePlan.summary.bindExisting, 1, 'one Feishu course should bind to split contiguous system schedules instead of staying as an exception');
+assert.deepStrictEqual(contiguousSchedulePlan.actions[0].scheduleIds, ['sch-split-1', 'sch-split-2'], 'split schedule binding should keep all related schedule ids');
+
 const legacyCampusExistingPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -922,6 +969,9 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
     assert.strictEqual(jsonPayload.notification.sent, false, 'cron response should mark Feishu webhook non-zero code as notification failure');
     assert.match(jsonPayload.notification.error, /bad webhook/, 'notification failure should keep the Feishu error message');
     assert.match(webhookText, /需要运营处理/, 'group notification should tell operations what to do');
+    assert.match(webhookText, /本次处理：新增/, 'group notification should focus on this run actions');
+    assert.match(webhookText, /历史待清账：/, 'group notification should separate historical cleanup backlog');
+    assert.doesNotMatch(webhookText, /读取文档排课/, 'group notification should not keep reporting the historical document total');
     assert.doesNotMatch(webhookText, /R\d+C\d+/, 'group notification should not expose spreadsheet cell coordinates');
   } finally {
     axios.post = originalAxiosPost;

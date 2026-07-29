@@ -406,7 +406,7 @@ function exactScheduleMatch(candidate,schedules=[],options={}){
   const studentSet=new Set(fields.studentIds.map(String));
   return (schedules||[]).find(row=>{
     if(!activeSchedule(row)||!sameTime(fields,row))return false;
-    if(String(row.coach||'')!==String(fields.coach||''))return false;
+    if(normalizeNameKey(row.coach)!==normalizeNameKey(fields.coach))return false;
     if(normalizeCampusKey(row.campus)!==normalizeCampusKey(fields.campus))return false;
     if(!options.ignoreVenue&&String(row.venue||'')!==String(fields.venue||''))return false;
     if(String(row.courseType||'')!==String(fields.courseType||''))return false;
@@ -414,6 +414,45 @@ function exactScheduleMatch(candidate,schedules=[],options={}){
     const ids=parseMaybeArray(row.studentIds).map(String);
     return ids.length===studentSet.size&&ids.every(id=>studentSet.has(id));
   })||null;
+}
+
+function scheduleMinutes(value){
+  const text=cleanText(value);
+  const m=text.match(/\d{4}-\d{2}-\d{2}\s+(\d{1,2}):(\d{2})/);
+  if(!m)return null;
+  return parseInt(m[1],10)*60+parseInt(m[2],10);
+}
+
+function contiguousScheduleGroupMatch(candidate,schedules=[],options={}){
+  const fields=scheduleCandidateFields(candidate);
+  const studentSet=new Set(fields.studentIds.map(String));
+  const start=scheduleMinutes(fields.startTime);
+  const end=scheduleMinutes(fields.endTime);
+  if(start===null||end===null||end<=start)return null;
+  const rows=(schedules||[]).filter(row=>{
+    if(!activeSchedule(row))return false;
+    if(String(row.startTime||'').slice(0,10)!==String(fields.startTime||'').slice(0,10))return false;
+    if(normalizeNameKey(row.coach)!==normalizeNameKey(fields.coach))return false;
+    if(normalizeCampusKey(row.campus)!==normalizeCampusKey(fields.campus))return false;
+    if(!options.ignoreVenue&&String(row.venue||'')!==String(fields.venue||''))return false;
+    if(String(row.courseType||'')!==String(fields.courseType||''))return false;
+    if(String(row.experienceType||'')!==String(fields.experienceType||''))return false;
+    const ids=parseMaybeArray(row.studentIds).map(String);
+    if(ids.length!==studentSet.size||!ids.every(id=>studentSet.has(id)))return false;
+    const rowStart=scheduleMinutes(row.startTime);
+    const rowEnd=scheduleMinutes(row.endTime);
+    return rowStart!==null&&rowEnd!==null&&rowStart>=start&&rowEnd<=end&&rowEnd>rowStart;
+  }).sort((a,b)=>scheduleMinutes(a.startTime)-scheduleMinutes(b.startTime));
+  if(rows.length<2)return null;
+  let cursor=start;
+  for(const row of rows){
+    const rowStart=scheduleMinutes(row.startTime);
+    const rowEnd=scheduleMinutes(row.endTime);
+    if(rowStart!==cursor)return null;
+    cursor=rowEnd;
+  }
+  if(cursor!==end)return null;
+  return {...rows[0],scheduleIds:rows.map(row=>row.id),groupStartTime:fields.startTime,groupEndTime:fields.endTime};
 }
 
 function parseMaybeArray(value){
@@ -658,9 +697,19 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:exact});
       continue;
     }
+    const contiguous=contiguousScheduleGroupMatch(candidate,schedules);
+    if(contiguous){
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:contiguous,scheduleIds:contiguous.scheduleIds});
+      continue;
+    }
     const systemVenueMatch=exactScheduleMatch(candidate,schedules,{ignoreVenue:true});
     if(systemVenueMatch){
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueMatch,venueSource:'system'});
+      continue;
+    }
+    const systemVenueGroupMatch=contiguousScheduleGroupMatch(candidate,schedules,{ignoreVenue:true});
+    if(systemVenueGroupMatch){
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueGroupMatch,scheduleIds:systemVenueGroupMatch.scheduleIds,venueSource:'system'});
       continue;
     }
     candidate=attachSchedulableStudents(candidate,ctx);
@@ -832,9 +881,9 @@ function operatorActionText(reason=''){
     const detail=text.includes('：')?text.split('：').slice(1).join('：'):'';
     return `请确认按飞书还是按系统扣${detail?`；${detail}`:''}`;
   }
-  if(/无法唯一识别.*学员/.test(text))return '请确认对应系统学员；没有档案就走线索/学员建档流程';
-  if(/没有可自动扣课/.test(text))return '请确认要扣哪个课包；没有课包就先补购买/权益';
-  if(/体验课无法判断/.test(text))return '请标注每个人是体验课还是正式课，以及成人/青少年';
+  if(/无法唯一识别.*学员/.test(text))return '建议新增/绑定学员档案；没有档案请确认是否按线索转学员建档';
+  if(/没有可自动扣课/.test(text))return '课包余额不足或类型不匹配；请确认购买/补录哪个课包';
+  if(/体验课无法判断/.test(text))return '请把飞书学员写成 姓名【体验-成人/青少年】 或 姓名【正式】';
   if(/历史排课缺少系统绑定/.test(text))return '请确认是否补建历史排课；确认后走专项修复';
   if(/历史排课修改/.test(text))return '请确认是否修改历史排课；确认后走专项修复';
   if(/缺少课程类型|缺少场馆|缺少场地号/.test(text))return '请补齐飞书表课程类型、场馆、场地';
@@ -846,8 +895,8 @@ function buildNotificationText(result){
   const s=result.plan.summary;
   const lines=[
     `网球兄弟小助手 排课日报：飞书排课同步${result.dryRun?' dry-run':'执行'}完成（当日上课情况 / 次日排课情况）`,
-    `新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，删除待确认 ${s.pendingDelete}，异常 ${s.notifyError}`,
-    `读取文档排课 ${result.courseCount||0} 节，总排课 ${result.totalCourseCount||0} 节`
+    `本次处理：新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，删除待确认 ${s.pendingDelete}`,
+    `历史待清账：${s.notifyError} 条`
   ];
   const important=result.plan.actions.filter(a=>a.type!=='noop');
   if(important.length){
@@ -956,9 +1005,10 @@ async function applySyncPlan(plan,ctx={}){
   for(const action of plan.actions){
     try{
       if(action.type==='bind_existing'){
-        const row={id:`feishu-sync-${sha256(action.sourceKey).slice(0,24)}`,source:'feishu-sheet',sheetId:action.candidate.sheetId||'',sheetTitle:action.candidate.sheetTitle||'',sourceKey:action.sourceKey,scheduleId:action.schedule.id,startTime:action.candidate.startTime,endTime:action.candidate.endTime,lastFingerprint:action.candidate.fingerprint,status:'active',createdAt:now,updatedAt:now,lastSyncedAt:now};
+        const scheduleIds=Array.isArray(action.scheduleIds)&&action.scheduleIds.length?action.scheduleIds:[action.schedule.id];
+        const row={id:`feishu-sync-${sha256(action.sourceKey).slice(0,24)}`,source:'feishu-sheet',sheetId:action.candidate.sheetId||'',sheetTitle:action.candidate.sheetTitle||'',sourceKey:action.sourceKey,scheduleId:action.schedule.id,scheduleIds,startTime:action.candidate.startTime,endTime:action.candidate.endTime,lastFingerprint:action.candidate.fingerprint,status:'active',createdAt:now,updatedAt:now,lastSyncedAt:now};
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,row.id,row);
-        applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:action.schedule.id});
+        applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:action.schedule.id,scheduleIds});
       }else if(action.type==='create_schedule'){
         const body=buildScheduleBody(action.candidate);
         const result=await ctx.createSchedule(body);
