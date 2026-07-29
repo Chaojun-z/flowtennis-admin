@@ -48,6 +48,30 @@ assert.ok(precheck.items.some(item => item.recommendedType === 'high_risk_except
 assert.ok(precheck.items.some(item => item.riskReason === '会员流水批量接口缺口'), 'member ledger gap should be recorded as an exception');
 assert.ok(precheck.items.some(item => item.customerName === '张三' && item.phone === '13800000000' && item.remark === '散客订场' && item.amount === 100), 'precheck should keep operator-facing third party fields');
 
+const changxiaoerOrderPrecheck = precheckThirdPartyRecords([
+  {
+    sourceType: 'order',
+    orderId: '260729001',
+    bookingDate: '2026-07-29',
+    amount: 14000,
+    realName: '真实订单',
+    phone: '13900000000',
+    status: '已完成',
+    orderInfo: [
+      { time: '2026-07-29', region: '10:30-11:00', priceBasicsInfo: { placeName: '室内2号' } },
+      { time: '2026-07-29', region: '09:30-10:00', priceBasicsInfo: { placeName: '室内2号' } },
+      { time: '2026-07-29', region: '10:00-10:30', priceBasicsInfo: { placeName: '室内2号' } }
+    ]
+  }
+], { batchId: 'batch-cxe-real', now: '2026-07-29T00:00:00+08:00' });
+const changxiaoerOrder = changxiaoerOrderPrecheck.items[0];
+assert.strictEqual(changxiaoerOrder.date, '2026-07-29', 'changxiaoer order should read booking date from order info');
+assert.strictEqual(changxiaoerOrder.startTime, '09:30', 'changxiaoer order should read earliest region start time');
+assert.strictEqual(changxiaoerOrder.endTime, '11:00', 'changxiaoer order should read latest region end time');
+assert.strictEqual(changxiaoerOrder.venue, '2号场', 'changxiaoer order should read court from order info place name');
+assert.strictEqual(changxiaoerOrder.amount, 140, 'changxiaoer cent amounts should display as yuan');
+assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete changxiaoer order should not be marked high risk');
+
 (async () => {
   const writes = [];
   const scans = {
@@ -83,7 +107,8 @@ assert.ok(precheck.items.some(item => item.customerName === '张三' && item.pho
     normalizeCourtRecord: row => row,
     fetchThirdPartyData: async () => ({
       records: [
-        { sourceType: 'order', orderNo: 'O1', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' }
+        { sourceType: 'order', orderNo: 'O1', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' },
+        { sourceType: 'order', orderNo: 'OLD1', bookingDate: '2026-05-27', venue: '2号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' }
       ],
       gaps: ['member-ledger']
     }),
@@ -100,6 +125,13 @@ assert.ok(precheck.items.some(item => item.customerName === '张三' && item.pho
   const listRes = await call(handler, { path: '/third-party-sync/overview', method: 'GET' });
   assert.strictEqual(listRes.body.batches.length, 1, 'overview should return batches');
   assert.strictEqual(listRes.body.summary.rawCount, 2, 'overview should include source and gap raw records');
+  assert.ok(!scans.ft_third_party_sync_prechecks.some(row => row.sourceRecordId === 'OLD1'), 'pull should ignore booking records outside requested date range');
+  scans.ft_third_party_sync_batches.push({ id: 'old-batch', batchId: 'old-batch', pulledAt: '2026-07-01T00:00:00+08:00', status: 'prechecked' });
+  scans.ft_third_party_sync_raw_records.push({ id: 'old-raw-1', batchId: 'old-batch', sourceType: 'order' });
+  scans.ft_third_party_sync_prechecks.push({ id: 'old-precheck-1', batchId: 'old-batch', sourceRecordId: 'OLD-RISK', recommendedType: 'high_risk_exception', needsConfirmation: true });
+  const scopedOverviewRes = await call(handler, { path: '/third-party-sync/overview', method: 'GET' });
+  assert.strictEqual(scopedOverviewRes.body.summary.rawCount, 2, 'overview summary should default to latest batch raw count');
+  assert.strictEqual(scopedOverviewRes.body.summary.exceptionCount, 1, 'overview summary should not let old bad batches dominate current stats');
 
   const confirmRes = await call(handler, {
     path: '/third-party-sync/confirmations',

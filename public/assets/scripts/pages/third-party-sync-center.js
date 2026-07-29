@@ -1,5 +1,6 @@
 // ===== 第三方同步中心 =====
 let thirdPartySyncActiveTableTab='batches';
+let thirdPartySyncPullLoading=false;
 function thirdPartySyncData(){
   return thirdPartySyncCenterData||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[],changes:[],alerts:[],rollbacks:[]};
 }
@@ -77,9 +78,13 @@ function filterThirdPartySyncBatch(batchId){
   renderThirdPartySyncCenter();
   renderThirdPartySyncPrechecks();
 }
+function thirdPartySyncEffectiveBatchId(){
+  return thirdPartySyncBatchFilter || thirdPartySyncLatestBatch()?.batchId || thirdPartySyncLatestBatch()?.id || '';
+}
 function thirdPartySyncVisiblePrechecks(){
   const rows=thirdPartySyncData().prechecks||[];
-  return thirdPartySyncBatchFilter?rows.filter(row=>String(row.batchId||'')===thirdPartySyncBatchFilter):rows;
+  const batchId=thirdPartySyncEffectiveBatchId();
+  return batchId?rows.filter(row=>String(row.batchId||'')===String(batchId)):rows;
 }
 function renderThirdPartySyncPrechecks(){
   const host=document.getElementById('thirdPartySyncPrecheckTbody');
@@ -89,7 +94,8 @@ function renderThirdPartySyncPrechecks(){
     const canConfirm=row.needsConfirmation||row.recommendedType==='needs_confirmation'||row.recommendedType==='high_risk_exception';
     const action=canConfirm?`<span class="tms-action-link" onclick="openThirdPartySyncConfirmModal('${esc(row.batchId||'')}','${esc(row.sourceRecordId||'')}')">确认</span>`:'<span class="tms-cell-sub">-</span>';
     return `<tr>
-      <td style="padding-left:20px"><div class="tms-cell-main">${esc(row.date||'-')}</div><div class="tms-cell-sub">${esc([row.startTime,row.endTime].filter(Boolean).join('-')||'-')}</div></td>
+      <td style="padding-left:20px">${renderStandardCellText(row.date||'-')}</td>
+      <td>${renderStandardCellText([row.startTime,row.endTime].filter(Boolean).join('-')||'-')}</td>
       <td>${renderStandardCellText(row.venue||'-')}</td>
       <td>${renderStandardCellText([row.customerName,row.phone].filter(Boolean).join(' / ')||'-')}</td>
       <td>${renderStandardCellText(row.remark||'-')}</td>
@@ -101,7 +107,7 @@ function renderThirdPartySyncPrechecks(){
       <td>${renderStandardCellText(thirdPartySyncMoneyImpactText(row.financeImpact||{}))}</td>
       <td class="tms-sticky-r tms-action-cell" style="width:100px;padding-right:20px;text-align:right">${action}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="11"><div class="empty"><p>暂无预检结果</p></div></td></tr>';
+  }).join('')||'<tr><td colspan="12"><div class="empty"><p>暂无预检结果</p></div></td></tr>';
 }
 function renderThirdPartySyncConfirmations(){
   const host=document.getElementById('thirdPartySyncConfirmTbody');
@@ -188,8 +194,12 @@ async function loadThirdPartySyncCenter(force=false){
 }
 async function runThirdPartySyncPull(){
   if(!await appConfirm('从第三方平台拉取最近 3 天数据并生成预检；需要先配置 CXE_USER / CXE_PASS。此操作不写业务表。',{title:'手动拉取第三方数据',confirmText:'开始拉取'}))return;
+  thirdPartySyncPullLoading=true;
+  renderThirdPartySyncCenter();
+  toast('正在拉取第三方数据，请稍等','info');
   try{
     await apiCall('POST','/third-party-sync/pull',{lookbackDays:3});
+    thirdPartySyncBatchFilter='';
     staleCachedDatasets.add('thirdPartySyncCenterPage');
     await loadThirdPartySyncCenter(true);
     toast('第三方数据已拉取并完成预检','success');
@@ -197,6 +207,9 @@ async function runThirdPartySyncPull(){
     const message=String(e?.message||'请稍后重试');
     const readable=/CXE_USER|CXE_PASS/.test(message)?'缺少第三方账号配置（CXE_USER / CXE_PASS），请先配置后再拉取。':message;
     toast('手动拉取失败：'+readable,'error');
+  }finally{
+    thirdPartySyncPullLoading=false;
+    renderThirdPartySyncCenter();
   }
 }
 async function runThirdPartySyncImportPlan(batchId){
@@ -287,6 +300,9 @@ function thirdPartySyncTablePanel(tab,bodyHtml){
 function renderThirdPartySyncCenter(){
   const host=document.getElementById('page-third-party-sync');
   if(!host)return;
+  const pullButtonHtml=thirdPartySyncPullLoading
+    ? '<button class="tms-btn tms-btn-primary" disabled><span class="tms-btn-spinner"></span>正在拉取</button>'
+    : '<button class="tms-btn tms-btn-primary" onclick="runThirdPartySyncPull()">手动拉取</button>';
   host.innerHTML=`<div class="section-stack">
     <style>
       #page-third-party-sync .third-party-sync-stats-row{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
@@ -297,11 +313,13 @@ function renderThirdPartySyncCenter(){
       #page-third-party-sync .third-party-sync-table-tabs{display:flex;gap:8px;align-items:center;overflow-x:auto;margin:4px 0 12px}
       #page-third-party-sync .third-party-sync-table-panel{display:none}
       #page-third-party-sync .third-party-sync-table-panel.active{display:block}
+      #page-third-party-sync .tms-btn-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:-2px;animation:thirdPartySyncSpin .8s linear infinite}
+      @keyframes thirdPartySyncSpin{to{transform:rotate(360deg)}}
     </style>
     <div class="tms-stats-row third-party-sync-stats-row" id="thirdPartySyncStats"></div>
     <div class="tms-toolbar">
       <div class="tms-filters"></div>
-      <div class="tms-toolbar-right"><button class="tms-btn tms-btn-primary" onclick="runThirdPartySyncPull()">手动拉取</button><button class="tms-btn tms-btn-ghost" onclick="loadThirdPartySyncCenter(true)">刷新</button></div>
+      <div class="tms-toolbar-right">${pullButtonHtml}<button class="tms-btn tms-btn-ghost" onclick="loadThirdPartySyncCenter(true)">刷新</button></div>
     </div>
     <div class="third-party-sync-table-tabs" role="tablist" aria-label="第三方同步数据表">
       ${thirdPartySyncTableTabButton('batches','同步批次')}
@@ -310,7 +328,7 @@ function renderThirdPartySyncCenter(){
       ${thirdPartySyncTableTabButton('changes','变更报警')}
     </div>
     ${thirdPartySyncTablePanel('batches','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">批次</th><th style="width:280px">时间范围</th><th style="width:100px">状态</th><th style="width:150px">最近同步</th><th style="width:260px">数据量</th><th style="width:240px">财务影响预估</th><th class="tms-sticky-r" style="width:240px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>')}
-    ${thirdPartySyncTablePanel('prechecks','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:150px;padding-left:20px">日期/时间段</th><th style="width:100px">场地</th><th style="width:170px">第三方用户</th><th style="width:180px">第三方备注</th><th style="width:100px">金额</th><th style="width:110px">来源</th><th style="width:130px">系统判断</th><th style="width:150px">计划动作</th><th style="width:180px">高危原因</th><th style="width:220px">财务影响</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">确认</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div><div class="tms-section-header">确认记录</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:140px">最终类型</th><th style="width:120px">支付方式</th><th style="width:100px">金额</th><th style="width:120px">确认人</th><th style="width:160px">确认时间</th><th style="width:240px">备注</th></tr></thead><tbody id="thirdPartySyncConfirmTbody"></tbody></table></div></div>')}
+    ${thirdPartySyncTablePanel('prechecks','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">日期</th><th style="width:120px">时间段</th><th style="width:100px">场地</th><th style="width:170px">第三方用户</th><th style="width:180px">第三方备注</th><th style="width:100px">金额</th><th style="width:110px">来源</th><th style="width:130px">系统判断</th><th style="width:150px">计划动作</th><th style="width:180px">高危原因</th><th style="width:220px">财务影响</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">确认</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div><div class="tms-section-header">确认记录</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:140px">最终类型</th><th style="width:120px">支付方式</th><th style="width:100px">金额</th><th style="width:120px">确认人</th><th style="width:160px">确认时间</th><th style="width:240px">备注</th></tr></thead><tbody id="thirdPartySyncConfirmTbody"></tbody></table></div></div>')}
     ${thirdPartySyncTablePanel('writes','<div class="tms-section-header" style="margin-top:0">写入结果</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:100px">状态</th><th style="width:150px">导入时间</th><th style="width:240px">操作ID</th><th style="width:220px">写入表</th><th style="width:160px">写入数量</th><th style="width:240px">失败原因</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">回滚</th></tr></thead><tbody id="thirdPartySyncImportResultTbody"></tbody></table></div></div><div class="tms-section-header">回滚影响</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:240px">操作ID</th><th style="width:160px">回滚时间</th><th style="width:120px">操作人</th><th style="width:420px">影响明细</th></tr></thead><tbody id="thirdPartySyncRollbackTbody"></tbody></table></div></div>')}
     ${thirdPartySyncTablePanel('changes','<div class="tms-section-header" style="margin-top:0">第三方变更回看</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:120px">变更类型</th><th style="width:220px">变更字段</th><th style="width:160px">发现时间</th><th style="width:120px">状态</th></tr></thead><tbody id="thirdPartySyncChangeTbody"></tbody></table></div></div><div class="tms-section-header">异常报警</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:360px">原因</th><th style="width:120px">状态</th><th style="width:160px">时间</th></tr></thead><tbody id="thirdPartySyncAlertTbody"></tbody></table></div></div>')}
   </div>`;

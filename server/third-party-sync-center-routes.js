@@ -78,12 +78,35 @@ function recordSourceId(record = {}, index = 0) {
   return cleanText(record.thirdPartyId || record.orderNo || record.orderId || record.id || record.sourceId) || `generated-${stableHash(record).slice(0, 16)}-${index}`;
 }
 
+function orderInfoItems(record = {}) {
+  const info = record.orderInfo;
+  if (Array.isArray(info)) return info.filter(Boolean);
+  if (info && typeof info === 'object') return [info];
+  return [];
+}
+
+function orderInfoDate(record = {}) {
+  return cleanText(orderInfoItems(record).map(item => item.time || item.date).filter(Boolean).sort()[0] || '').slice(0, 10);
+}
+
+function orderInfoRegions(record = {}) {
+  return orderInfoItems(record)
+    .map(item => cleanText(item.region || item.timeRegion || item.period))
+    .map(text => {
+      const m = text.match(/(\d{1,2}:\d{2})\s*[-~至]\s*(\d{1,2}:\d{2})/);
+      return m ? { start: m[1].padStart(5, '0'), end: m[2].padStart(5, '0') } : null;
+    })
+    .filter(Boolean);
+}
+
 function bookingDateOf(record = {}) {
-  return cleanText(record.bookingDate || record.useDate || record.date || record.startDate || '').slice(0, 10);
+  return cleanText(orderInfoDate(record) || record.bookingDate || record.useDate || record.date || record.startDate || '').slice(0, 10);
 }
 
 function venueOf(record = {}) {
-  const raw = cleanText(record.venue || record.court || record.courtName || record.spaceName || record.placeName);
+  const orderPlace = orderInfoItems(record).map(item => item?.priceBasicsInfo?.placeName || item?.placeName || item?.courtName).find(Boolean);
+  const spacePlace = record.space && typeof record.space === 'object' ? record.space.placeName || record.space.courtName : '';
+  const raw = cleanText(record.venue || record.court || record.courtName || orderPlace || spacePlace || record.spaceName || record.placeName);
   if (!raw) return '';
   if (/^\d+$/.test(raw)) return `${raw}号场`;
   if (/^\d+号$/.test(raw)) return `${raw}场`;
@@ -92,19 +115,23 @@ function venueOf(record = {}) {
 }
 
 function startTimeOf(record = {}) {
+  const regions = orderInfoRegions(record);
+  if (regions.length) return regions.map(row => row.start).sort()[0] || '';
   const value = cleanText(record.startTime || record.startClock || record.beginTime || '');
   const m = value.match(/(\d{1,2}:\d{2})/);
   return m ? m[1].padStart(5, '0') : '';
 }
 
 function endTimeOf(record = {}) {
+  const regions = orderInfoRegions(record);
+  if (regions.length) return regions.map(row => row.end).sort().slice(-1)[0] || '';
   const value = cleanText(record.endTime || record.endClock || record.finishTime || '');
   const m = value.match(/(\d{1,2}:\d{2})/);
   return m ? m[1].padStart(5, '0') : '';
 }
 
 function customerNameOf(record = {}) {
-  return cleanText(record.customerName || record.userName || record.memberName || record.name || record.contactName || record.nickName);
+  return cleanText(record.customerName || record.userName || record.memberName || record.realName || record.name || record.contactName || record.nickName);
 }
 
 function phoneOf(record = {}) {
@@ -112,11 +139,21 @@ function phoneOf(record = {}) {
 }
 
 function remarkOf(record = {}) {
-  return cleanText(record.remark || record.note || record.description);
+  return cleanText(record.remark || record.userRemark || record.note || record.description);
 }
 
 function amountOf(record = {}) {
-  return Number(record.amount || record.paidAmount || record.actualAmount || record.payAmount || 0) || 0;
+  const raw = Number(record.amount || record.siteAmount || record.paidAmount || record.actualAmount || record.payAmount || 0) || 0;
+  const looksLikeCentAmount = raw >= 1000 && (Array.isArray(record.orderInfo) || record.siteAmount != null || record.wechatPaymentAmount != null || record.balancePaymentAmount != null);
+  return looksLikeCentAmount ? Math.round(raw) / 100 : raw;
+}
+
+function recordWithinRange(record = {}, rangeStart = '', rangeEnd = '') {
+  const date = bookingDateOf(record);
+  const start = cleanText(rangeStart).slice(0, 10);
+  const end = cleanText(rangeEnd).slice(0, 10);
+  if (!date || !start || !end) return true;
+  return date >= start && date <= end;
 }
 
 function uniqueBookingKey(record = {}) {
@@ -694,8 +731,9 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     await ensureTables();
     const pulledAt = now();
     const fetched = await fetchThirdPartyData({ rangeStart, rangeEnd, env });
+    const scopedRecords = (fetched.records || []).filter(record => recordWithinRange(record, rangeStart, rangeEnd));
     const sourceRecords = [
-      ...(fetched.records || []),
+      ...scopedRecords,
       ...(fetched.gaps || []).map(gap => ({ sourceType: `${gap}-gap`, thirdPartyId: `${gap}-gap`, riskReason: '会员流水批量接口缺口' }))
     ];
     const previousRawRecords = await getCachedScan(T_THIRD_PARTY_SYNC_RAW_RECORDS).catch(() => []);
@@ -904,18 +942,27 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         getCachedScan(T_THIRD_PARTY_SYNC_ALERTS).catch(() => []),
         getCachedScan(T_THIRD_PARTY_SYNC_ROLLBACKS).catch(() => [])
       ]);
+      const latestBatch = [...batches].sort((a, b) => String(b.pulledAt || '').localeCompare(String(a.pulledAt || '')))[0] || null;
+      const latestBatchId = cleanText(latestBatch?.batchId || latestBatch?.id);
+      const currentRawRecords = latestBatchId ? rawRecords.filter(row => String(row.batchId || '') === latestBatchId) : rawRecords;
+      const currentPrechecks = latestBatchId ? prechecks.filter(row => String(row.batchId || '') === latestBatchId) : prechecks;
+      const currentImportResults = latestBatchId ? importResults.filter(row => String(row.batchId || '') === latestBatchId) : importResults;
+      const currentChanges = latestBatchId ? changes.filter(row => String(row.batchId || '') === latestBatchId) : changes;
+      const currentAlerts = latestBatchId ? alerts.filter(row => String(row.batchId || '') === latestBatchId) : alerts;
+      const currentRollbacks = latestBatchId ? rollbacks.filter(row => String(row.batchId || '') === latestBatchId) : rollbacks;
       const summary = {
         batchCount: batches.length,
-        rawCount: rawRecords.length,
-        autoImportCount: prechecks.filter(row => row.recommendedType === 'auto_import').length,
-        pendingCount: prechecks.filter(row => row.needsConfirmation || row.recommendedType === 'needs_confirmation').length,
-        exceptionCount: prechecks.filter(row => row.recommendedType === 'high_risk_exception').length,
-        duplicateCount: prechecks.filter(row => row.recommendedType === 'duplicate_skip').length,
-        importedCount: importResults.filter(row => ['completed', 'partial_completed'].includes(row.status)).length,
-        failedImportCount: importResults.filter(row => row.status === 'partial_failed' || row.status === 'failed').length,
-        changeCount: changes.length,
-        openAlertCount: alerts.filter(row => row.status !== 'closed').length,
-        rollbackCount: rollbacks.length
+        currentBatchId: latestBatchId,
+        rawCount: currentRawRecords.length,
+        autoImportCount: currentPrechecks.filter(row => row.recommendedType === 'auto_import').length,
+        pendingCount: currentPrechecks.filter(row => row.needsConfirmation || row.recommendedType === 'needs_confirmation').length,
+        exceptionCount: currentPrechecks.filter(row => row.recommendedType === 'high_risk_exception').length,
+        duplicateCount: currentPrechecks.filter(row => row.recommendedType === 'duplicate_skip').length,
+        importedCount: currentImportResults.filter(row => ['completed', 'partial_completed'].includes(row.status)).length,
+        failedImportCount: currentImportResults.filter(row => row.status === 'partial_failed' || row.status === 'failed').length,
+        changeCount: currentChanges.length,
+        openAlertCount: currentAlerts.filter(row => row.status !== 'closed').length,
+        rollbackCount: currentRollbacks.length
       };
       return sendJson(res, { summary, batches, rawRecords, prechecks, confirmations, importResults, changes, alerts, rollbacks });
     }

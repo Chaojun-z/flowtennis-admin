@@ -14,13 +14,17 @@ assert.match(html, /function renderThirdPartySyncCenter\(/, 'sync center page re
 assert.match(html, /thirdPartySyncStatsCompactCards/, 'sync center should use compact one-row stats cards');
 assert.match(html, /third-party-sync-stats-row/, 'sync center stats should stay on one compact row');
 assert.match(html, /待确认[\s\S]*高危异常[\s\S]*重复跳过/, 'sync center should display precheck categories');
+assert.match(html, /<th style="width:120px;padding-left:20px">日期<\/th><th style="width:120px">时间段<\/th>/, 'precheck table should split date and time range into separate columns');
 assert.match(html, /第三方用户[\s\S]*第三方备注[\s\S]*金额/, 'sync center should expose operator-facing third party fields');
 assert.match(html, /confirmThirdPartySyncItem/, 'sync center should support operation confirmation');
 assert.match(html, /runThirdPartySyncImportPlan/, 'sync center should expose import plan preview');
 assert.match(html, /runThirdPartySyncImport/, 'sync center should support one-click semi-auto import');
 assert.match(html, /手动拉取/, 'manual pull button should make its purpose clear');
 assert.match(html, /缺少第三方账号配置/, 'manual pull errors should explain missing third-party account config');
+assert.match(html, /thirdPartySyncPullLoading/, 'manual pull should expose a loading state');
+assert.match(html, /正在拉取/, 'manual pull button should show progress while waiting');
 assert.match(html, /setThirdPartySyncTableTab/, 'sync center should switch long tables through tabs');
+assert.match(html, /thirdPartySyncEffectiveBatchId/, 'precheck tab should default to the latest batch instead of all historical batches');
 assert.match(html, /同步批次[\s\S]*预检确认[\s\S]*写入回滚[\s\S]*变更报警/, 'sync center should expose four table tabs');
 assert.match(html, /写入结果[\s\S]*失败原因/, 'sync center should show import results and failure reasons');
 assert.match(html, /第三方变更回看[\s\S]*异常报警/, 'sync center should expose third-party change review and alerts');
