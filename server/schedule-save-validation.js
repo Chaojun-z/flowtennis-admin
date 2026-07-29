@@ -74,8 +74,9 @@ function createScheduleSaveValidation(deps={}){
       }
       return withRequiredStorageTimeout(getCachedScan(T_SCHEDULE),3500,'排课校验超时，请稍后重试');
     });
-    validateScheduleConflicts(nextRec,schedules,nextRec.id);
-    if(!isHistoricalScheduleRecord(nextRec)){
+    const isHistorical=isHistoricalScheduleRecord(nextRec);
+    validateScheduleConflicts(nextRec,schedules,nextRec.id,{skipVenueConflicts:isHistorical});
+    if(!isHistorical){
       validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>withTimeout(getCachedScan(T_COURTS).catch(()=>[]),2500,[])));
     }
     return {warnings:collectScheduleRiskWarnings(nextRec,schedules,nextRec.id)};

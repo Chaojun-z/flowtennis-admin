@@ -73,7 +73,8 @@ function normalizedCampusValue(value,normalizeCampusValue){
 function sameCampusValue(a,b,normalizeCampusValue){
   return normalizedCampusValue(a,normalizeCampusValue)===normalizedCampusValue(b,normalizeCampusValue);
 }
-function validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampusValue){
+function validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampusValue,options={}){
+  const skipVenueConflicts=options?.skipVenueConflicts===true;
   if(!isBillableSchedule(candidate))return;
   if(!candidate.startTime)throw new Error('请选择上课时间');
   if(!candidate.endTime)throw new Error('请选择下课时间，系统需要用它校验冲突');
@@ -85,7 +86,7 @@ function validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampus
     if(candidate.coach&&rec.coach&&candidate.coach===rec.coach)throw new Error(`教练「${candidate.coach}」此时间已有课程`);
     const candidateVenue=normalizeVenue(candidate.venue);
     const recVenue=normalizeVenue(rec.venue);
-    if(candidateVenue&&recVenue&&candidateVenue===recVenue&&sameCampusValue(candidate.campus,rec.campus,normalizeCampusValue))throw new Error(`场地「${candidateVenue}」此时间已被占用`);
+    if(!skipVenueConflicts&&candidateVenue&&recVenue&&candidateVenue===recVenue&&sameCampusValue(candidate.campus,rec.campus,normalizeCampusValue))throw new Error(`场地「${candidateVenue}」此时间已被占用`);
     if(shareStudent(candidate,rec))throw new Error('学员此时间已有课程');
   }
 }
@@ -163,8 +164,8 @@ function createScheduleRules({normalizeCourtHistory,campusDisplayName,normalizeC
     effectiveScheduleStatus,
     scheduleLessonChargeStatus,
     assertCanWriteSchedule,
-    validateScheduleConflicts(candidate,schedules,excludeId){
-      return validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampusValue);
+    validateScheduleConflicts(candidate,schedules,excludeId,options){
+      return validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampusValue,options);
     },
     courtBookingRange,
     validateCourtBookingConflicts(candidate,courts){

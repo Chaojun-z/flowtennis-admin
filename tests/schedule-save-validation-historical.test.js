@@ -2,7 +2,7 @@ const assert = require('assert');
 const { createScheduleSaveValidation, isHistoricalScheduleRecord } = require('../server/schedule-save-validation');
 
 function buildValidation(now){
-  const calls = { courtConflictChecks: 0 };
+  const calls = { courtConflictChecks: 0, scheduleConflictOptions: null };
   const validation = createScheduleSaveValidation({
     scanByIdPrefix: async () => [],
     put: async () => {},
@@ -26,7 +26,7 @@ function buildValidation(now){
       }]
     }],
     isTableMissingError: () => false,
-    validateScheduleConflicts: () => {},
+    validateScheduleConflicts: (nextRec, schedules, excludeId, options) => { calls.scheduleConflictOptions = options; },
     validateCourtBookingConflicts: () => { calls.courtConflictChecks += 1; throw new Error('should not check historical court booking conflicts'); },
     collectScheduleRiskWarnings: () => [],
     normalizeCampusValue: value => String(value || ''),
@@ -54,6 +54,7 @@ assert.strictEqual(
     status: '已排课'
   });
   assert.strictEqual(calls.courtConflictChecks, 0, 'historical schedule backfill should not be blocked by imported court booking history');
+  assert.deepStrictEqual(calls.scheduleConflictOptions, { skipVenueConflicts: true }, 'historical schedule backfill should not be blocked by venue-only schedule conflicts');
   console.log('schedule save validation historical tests passed');
 })().catch((err) => {
   console.error(err);
