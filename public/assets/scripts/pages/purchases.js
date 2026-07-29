@@ -666,10 +666,7 @@ async function saveManualEntitlementAdjust(entitlementId, action){
     const data={action,count,relatedDate,reason};
     const result=await apiCall('POST',`/entitlements/${entitlementId}/manual-adjust`,data);
     patchManualEntitlementAdjustResult(result);
-    loadedDatasets.delete('financePage');
-    financeOverviewData=null;
-    financeNormalizedLedgerRows=[];
-    financeSettlementSummaryRows=[];
+    if(typeof markLearningDataStale==='function')markLearningDataStale();
     return result;
   },{
     successText:'已保存',
@@ -736,6 +733,7 @@ async function savePurchaseEdit(id){
         if(i>=0)entitlements[i]=next;
       });
     }
+    if(typeof markLearningDataStale==='function')markLearningDataStale();
   },{
     successText:'购买记录已更新',
     closeOnSuccess:true,
@@ -790,6 +788,7 @@ async function voidPurchase(id){
     patchPurchaseVoidResult(id,reason);
     const rows=Array.isArray(result?.benefitLedgerRows)?result.benefitLedgerRows:[];
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
+    if(typeof markLearningDataStale==='function')markLearningDataStale();
   },{
     loadingText:'作废中…',
     errorPrefix:'作废失败',
@@ -818,6 +817,7 @@ async function savePurchase(){
     if(res.purchase)purchases.unshift(res.purchase);
     if(res.entitlement)entitlements.unshift(res.entitlement);
     if(Array.isArray(res.benefitLedgerRows))res.benefitLedgerRows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
+    if(typeof markLearningDataStale==='function')markLearningDataStale();
   },{
     successText:'购买成功',
     closeOnSuccess:true,

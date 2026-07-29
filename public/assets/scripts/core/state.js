@@ -331,8 +331,9 @@ function appendPageDataQuery(url,params={}){
 function lifecycleMetricsPageDataUrl(){
   return scopedPageDataUrl('/page-data/lifecycle-metrics');
 }
-function customerCenterPageDataUrl(){
-  return scopedPageDataUrl('/page-data/customer-center-list');
+function customerCenterPageDataUrl({fresh=false}={}){
+  const url=scopedPageDataUrl('/page-data/customer-center-list');
+  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
 }
 function financePageDataUrl(){
   return scopedPageDataUrl('/page-data/finance');
@@ -437,7 +438,7 @@ const DATASET_LOADERS={
   ,coachProposals:()=>apiCall('GET','/coach-proposals')
   ,packageCenterPage:()=>apiCall('GET','/page-data/package-center-list')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
-  ,customerCenterPage:()=>apiCall('GET',customerCenterPageDataUrl())
+  ,customerCenterPage:({fresh=false}={})=>apiCall('GET',customerCenterPageDataUrl({fresh}))
   ,lifecycleMetricsPage:()=>apiCall('GET',lifecycleMetricsPageDataUrl())
   ,financePage:()=>apiCall('GET',financePageDataUrl())
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
@@ -534,12 +535,28 @@ function setDatasetValue(name,data,{persist=true}={}){
 }
 function noteScheduleLocalMutation(){
   scheduleLocalMutationAt=Date.now();
-  if(loadedDatasets.has('financePage')){
-    loadedDatasets.delete('financePage');
-    financeOverviewData=null;
-    financeNormalizedLedgerRows=[];
-    financeSettlementSummaryRows=[];
-  }
+  markLearningDataStale();
+}
+function markLearningDataStale(){
+  [
+    'schedule','students','purchases','entitlements','entitlementLedger','customerLifecycleRows',
+    'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage','workbenchPage',
+    'financePage','operationsPage'
+  ].forEach(name=>{
+    staleCachedDatasets.add(name);
+    loadedDatasets.delete(name);
+    loadedDatasetRequestKeys.delete(name);
+  });
+  teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+  standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
+  purchaseUnifiedView={rows:[]};
+  packageUnifiedView={rows:[]};
+  entitlementUnifiedView={rows:[]};
+  customerLifecycleRows=[];
+  financeOverviewData=null;
+  financeNormalizedLedgerRows=[];
+  financeSettlementSummaryRows=[];
+  financePrepaidView={rows:[],summary:{}};
 }
 function setScheduleRowsFromRemote(rows,{persist=true}={}){
   const next=Array.isArray(rows)?rows:[];
@@ -687,7 +704,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
   const results=await Promise.all(pending.map(name=>{
     const requestKey=datasetRequestKey(name);
     if(datasetLoadPromises.has(requestKey))return datasetLoadPromises.get(requestKey);
-    const promise=DATASET_LOADERS[name]().then(data=>[name,data,requestKey]).finally(()=>datasetLoadPromises.delete(requestKey));
+    const promise=DATASET_LOADERS[name]({fresh:force}).then(data=>[name,data,requestKey]).finally(()=>datasetLoadPromises.delete(requestKey));
     datasetLoadPromises.set(requestKey,promise);
     return promise;
   }));

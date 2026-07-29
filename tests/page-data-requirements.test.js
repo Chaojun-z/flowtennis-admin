@@ -34,7 +34,8 @@ assert.match(studentsSource, /function ensureStudentDetailDatasets\(/, 'student 
 assert.match(studentsSource, /ensureDatasetsByName\(STUDENT_DETAIL_REQUIREMENTS\)/, 'student detail should load heavy detail datasets only when the drawer opens');
 assert.match(source, /,packageCenterPage:\(\)=>apiCall\('GET','\/page-data\/package-center-list'\)/, 'package center first-screen pages should use a lightweight list endpoint');
 assert.match(source, /,purchasesPage:\(\)=>apiCall\('GET','\/page-data\/purchases'\)/, 'purchases page should use a dedicated aggregated endpoint');
-assert.match(source, /,customerCenterPage:\(\)=>apiCall\('GET',customerCenterPageDataUrl\(\)\)/, 'customer center first-screen pages should use a lightweight scoped list endpoint');
+assert.match(source, /function customerCenterPageDataUrl\(\{fresh=false\}=\{\}\)\{[\s\S]*fresh\?appendPageDataQuery\(url,\{fresh:1,_ts:Date\.now\(\)\}\):url;/, 'customer center list endpoint url should support forced fresh reads after schedule and package mutations');
+assert.match(source, /,customerCenterPage:\(\{fresh=false\}=\{\}\)=>apiCall\('GET',customerCenterPageDataUrl\(\{fresh\}\)\)/, 'customer center first-screen pages should use a lightweight scoped list endpoint and accept fresh reloads');
 assert.match(source, /,lifecycleMetricsPage:\(\)=>apiCall\('GET',lifecycleMetricsPageDataUrl\(\)\)/, 'standard lifecycle stats should use a lightweight scoped lifecycle metrics endpoint');
 assert.match(source, /,financePage:\(\)=>apiCall\('GET',financePageDataUrl\(\)\)/, 'finance center should use a dedicated scoped aggregated endpoint');
 assert.match(source, /,courtsPage:\(\)=>apiCall\('GET','\/page-data\/courts'\)/, 'courts page should use a dedicated aggregated endpoint');
@@ -70,6 +71,8 @@ assert.doesNotMatch(source, /renderBlockLoading\('coachOpsRevenueStats','财务�
 assert.match(source, /if\(pageNeedsInlineLoading\(pg\)\)\{[\s\S]*renderPageLoading\(pg\);\s*return;\s*\}/, 'page rendering should show inline loading placeholders until the page has the datasets it needs');
 assert.match(source, /const datasetLoadPromises=new Map\(\);/, 'state should de-duplicate concurrent dataset requests');
 assert.match(source, /datasetLoadPromises\.has\(requestKey\)/, 'dataset loading should reuse in-flight requests');
+assert.match(source, /DATASET_LOADERS\[name\]\(\{fresh:force\}\)/, 'forced dataset refreshes should pass fresh=true to loaders that bypass stale page-data summaries');
+assert.match(source, /function markLearningDataStale\(\)\{[\s\S]*'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage','workbenchPage'[\s\S]*financeOverviewData=null;[\s\S]*financePrepaidView=\{rows:\[\],summary:\{\}\};/, 'schedule and package mutations should invalidate student, package, lifecycle, workbench, and finance read-model caches together');
 assert.match(source, /const DATASETS_WITH_REQUEST_KEYS=new Set\(\['operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage'\]\);/, 'scoped page-data datasets should be keyed by their current request url');
 assert.match(source, /function pageDataScopeQuery\(\{dateRange='global'\}=\{\}\)/, 'scoped page-data requests should share the global campus and date filter query builder');
 assert.match(source, /function datasetHasCurrentRequestKey\(name\)/, 'loaded scoped datasets should be invalidated when the top filter query changes');
@@ -81,13 +84,19 @@ assert.match(source, /return false;/, 'top filters should repaint the current pa
 assert.match(source, /loadPageBackgroundDatasets\(pg,requestVersion,\{force\}\);/, 'page background loading should revalidate cached data without blocking first paint');
 assert.match(apiSource, /schedule:2000,entitlementLedger:2000,/, 'production lifecycle page-data schedule reads must not be capped below current live schedule volume');
 assert.doesNotMatch(corePagesSource, /T_SCHEDULE \? cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)\.catch\(\(\)=>\[\]\) : Promise\.resolve\(\[\]\)/, 'student lifecycle page-data must not silently treat schedule read overflow as an empty schedule table');
+const packageCenterRouteSource = corePagesSource.slice(
+  corePagesSource.indexOf("path==='/page-data/package-center-list'&&method==='GET'"),
+  corePagesSource.indexOf("path==='/page-data/customer-center-list'&&method==='GET'")
+);
 assert.match(corePagesSource, /path==='\/page-data\/package-center-list'&&method==='GET'[\s\S]*cappedScan\(T_PURCHASES\)[\s\S]*cappedScan\(T_PACKAGES\)[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_ENTITLEMENTS\)/, 'package center list endpoint should read only first-screen package datasets');
-assert.doesNotMatch(corePagesSource, /path==='\/page-data\/package-center-list'&&method==='GET'[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*path==='\/page-data\/purchases'&&method==='GET'/, 'package center list endpoint must not scan lesson ledger rows');
-assert.doesNotMatch(corePagesSource, /path==='\/page-data\/package-center-list'&&method==='GET'[\s\S]*T_SCHEDULE[\s\S]*path==='\/page-data\/purchases'&&method==='GET'/, 'package center list endpoint must not scan schedule rows');
+assert.doesNotMatch(packageCenterRouteSource, /T_ENTITLEMENT_LEDGER/, 'package center list endpoint must not scan lesson ledger rows');
+assert.doesNotMatch(packageCenterRouteSource, /T_SCHEDULE/, 'package center list endpoint must not scan schedule rows');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_PURCHASES\)[\s\S]*cappedScan\(T_ENTITLEMENTS\)/, 'customer center list endpoint should read the lightweight customer and course facts');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'customer center list endpoint should read precomputed student teaching summary rows for schedule facts');
-assert.doesNotMatch(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*path==='\/page-data\/purchases'&&method==='GET'/, 'customer center list endpoint must not scan lesson ledger rows');
-assert.doesNotMatch(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*T_SCHEDULE[\s\S]*path==='\/page-data\/purchases'&&method==='GET'/, 'customer center list endpoint must not scan schedule rows');
+assert.match(corePagesSource, /const fresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';/, 'customer center list endpoint should accept an explicit fresh flag');
+assert.match(corePagesSource, /fresh \? Promise\.resolve\(\[\]\) : \(T_STUDENT_TEACHING_SUMMARY \? getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'fresh customer center reads should bypass the precomputed student teaching summary');
+assert.match(corePagesSource, /fresh&&T_ENTITLEMENT_LEDGER \? cappedScan\(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS\.entitlementLedger\)/, 'fresh customer center reads should include live lesson ledger rows');
+assert.match(corePagesSource, /fresh&&T_SCHEDULE \? cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)/, 'fresh customer center reads should include live schedule rows');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryRows/, 'customer center should expose an explicit admin-only rebuild path for the student teaching summary read model');
 assert.match(apiSource, /T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary'/, 'api should declare the student teaching summary read model table');
 assert.match(apiSource, /queueStudentTeachingSummaryRefresh\(t,meta\)/, 'source table writes should queue student teaching summary refreshes outside the first-screen read path');

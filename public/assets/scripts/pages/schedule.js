@@ -625,6 +625,7 @@ async function confirmScheduleCancel(id){
       const result=await apiCall('PUT','/schedule/'+item.id,{status:'已取消',cancelReason:reason});
       mergeScheduleSaveResult(result,item.id);
     }
+    noteScheduleLocalMutation();
   },{
     loadingText:'取消中…',
     errorPrefix:'取消失败',
@@ -1845,6 +1846,7 @@ async function saveScheduleDetailSectionEdit(scheduleId,section){
       const data={courseType:scheduleDetailValue('sd_courseType')||s.courseType,coach:scheduleDetailValue('sd_coach')||s.coach,scheduleSource:scheduleDetailValue('sd_scheduleSource')||s.scheduleSource};
       const result=await apiCall('PUT','/schedule/'+s.id,data);
       mergeScheduleSaveResult(result,s.id);
+      noteScheduleLocalMutation();
       renderAfterScheduleMutation();
     }else if(section==='notes'){
       const result=await apiCall('PUT','/schedule/'+s.id,{notes:scheduleDetailValue('sd_notes')});
