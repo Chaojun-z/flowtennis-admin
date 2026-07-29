@@ -13,6 +13,9 @@ function thirdPartySyncStatusText(status){
     pending_confirmation:'待确认',
     writable:'可写入',
     completed:'已完成',
+    partial_completed:'部分完成',
+    partial_failed:'部分失败',
+    failed:'失败',
     paused:'已暂停',
     rolled_back:'已回滚'
   })[status]||status||'-';
@@ -44,7 +47,9 @@ function renderThirdPartySyncStats(){
     {label:'自动通过数量',value:Number(summary.autoImportCount||0),sub:'只生成导入计划'},
     {label:'待确认数量',value:Number(summary.pendingCount||0),sub:'需要运营判断'},
     {label:'高危异常',value:Number(summary.exceptionCount||0),sub:'暂不导入'},
-    {label:'重复跳过',value:Number(summary.duplicateCount||0),sub:'同场地时段去重'}
+    {label:'重复跳过',value:Number(summary.duplicateCount||0),sub:'同场地时段去重'},
+    {label:'已导入批次',value:Number(summary.importedCount||0),sub:'有写入结果'},
+    {label:'失败批次',value:Number(summary.failedImportCount||0),sub:'需复查原因'}
   ]);
 }
 function renderThirdPartySyncBatches(){
@@ -58,7 +63,7 @@ function renderThirdPartySyncBatches(){
     <td>${renderStandardCellText(row.pulledAt?String(row.pulledAt).replace('T',' ').slice(0,16):'-')}</td>
     <td>${renderStandardCellText(Object.entries(row.counts||{}).map(([k,v])=>`${thirdPartySyncTypeText(k)} ${v}`).join(' / ')||'-')}</td>
     <td>${renderStandardCellText(thirdPartySyncMoneyImpactText(row.financeImpact||{}))}</td>
-    <td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="filterThirdPartySyncBatch('${esc(row.batchId||row.id||'')}')">查看</span></td>
+    <td class="tms-sticky-r tms-action-cell" style="width:240px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="filterThirdPartySyncBatch('${esc(row.batchId||row.id||'')}')">查看</span><span class="tms-action-link" onclick="runThirdPartySyncImportPlan('${esc(row.batchId||row.id||'')}')">导入计划</span><span class="tms-action-link" onclick="runThirdPartySyncImport('${esc(row.batchId||row.id||'')}')">一键导入</span></td>
   </tr>`).join('')||'<tr><td colspan="7"><div class="empty"><p>暂无同步批次</p></div></td></tr>';
 }
 let thirdPartySyncBatchFilter='';
@@ -106,6 +111,24 @@ function renderThirdPartySyncConfirmations(){
     <td>${renderStandardCellText(row.confirmNote||'-')}</td>
   </tr>`).join('')||'<tr><td colspan="7"><div class="empty"><p>暂无确认记录</p></div></td></tr>';
 }
+function renderThirdPartySyncImportResults(){
+  const host=document.getElementById('thirdPartySyncImportResultTbody');
+  if(!host)return;
+  const rows=[...(thirdPartySyncData().importResults||[])].sort((a,b)=>String(b.importedAt||'').localeCompare(String(a.importedAt||'')));
+  host.innerHTML=rows.map(row=>{
+    const failed=(row.failed||[]).map(item=>`${item.sourceRecordId||'-'}：${item.reason||'-'}`).join(' / ');
+    const skipped=(row.skippedIds||[]).length;
+    return `<tr>
+      <td style="padding-left:20px">${renderStandardCellText(row.batchId||'-')}</td>
+      <td><span class="tms-tag">${esc(thirdPartySyncStatusText(row.status))}</span></td>
+      <td>${renderStandardCellText(row.importedAt?String(row.importedAt).replace('T',' ').slice(0,16):'-')}</td>
+      <td>${renderStandardCellText(row.operationId||'-')}</td>
+      <td>${renderStandardCellText((row.writtenTables||[]).join(' / ')||'-')}</td>
+      <td>${renderStandardCellText(`${(row.writtenIds||[]).length} 条写入 / ${skipped} 条跳过`)}</td>
+      <td>${renderStandardCellText(failed||'-')}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7"><div class="empty"><p>暂无写入结果</p></div></td></tr>';
+}
 async function loadThirdPartySyncCenter(force=false){
   try{
     await ensureDatasetsByName(['thirdPartySyncCenterPage'],{force});
@@ -124,6 +147,34 @@ async function runThirdPartySyncPull(){
     toast('第三方数据已拉取并完成预检','success');
   }catch(e){
     toast('拉取失败：'+e.message,'error');
+  }
+}
+async function runThirdPartySyncImportPlan(batchId){
+  try{
+    const res=await apiCall('POST','/third-party-sync/import-plan',{batchId});
+    const plan=res.plan||{};
+    const body=`<div class="tms-stats-row">${renderStandardDataCards([
+      {label:'可导入',value:Number(plan.counts?.importable||0),sub:'高确定性/已确认'},
+      {label:'阻断',value:Number(plan.counts?.blocked||0),sub:'需继续处理'},
+      {label:'跳过',value:Number(plan.counts?.skipped||0),sub:'重复或不导入'}
+    ])}</div>
+    <div class="tms-section-header">阻断原因</div>
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px">第三方记录</th><th>原因</th></tr></thead><tbody>${(plan.blocked||[]).slice(0,20).map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.sourceRecordId||'-')}</td><td>${renderStandardCellText(row.reason||row.riskReason||'-')}</td></tr>`).join('')||'<tr><td colspan="2"><div class="empty"><p>暂无阻断项</p></div></td></tr>'}</tbody></table></div></div>`;
+    openStandardModal({title:'导入计划',bodyHtml:body,actionsHtml:'<button class="tms-btn tms-btn-primary" onclick="closeModal()">知道了</button>',extraClass:'modal-wide'});
+  }catch(e){
+    toast('导入计划生成失败：'+e.message,'error');
+  }
+}
+async function runThirdPartySyncImport(batchId){
+  if(!await appConfirm('将按批次写入高确定性数据和已确认异常项。系统会先备份，写入后记录财务、订场、会员、排课核验结果。',{title:'一键半自动导入',confirmText:'开始导入'}))return;
+  try{
+    const res=await apiCall('POST','/third-party-sync/import',{batchId});
+    staleCachedDatasets.add('thirdPartySyncCenterPage');
+    await loadThirdPartySyncCenter(true);
+    const status=res.result?.status||'';
+    toast(status==='completed'?'导入完成':status==='partial_completed'?'已导入可写入项，仍有阻断项待处理':'导入结束，请查看失败原因',['completed','partial_completed'].includes(status)?'success':'warning');
+  }catch(e){
+    toast('导入失败：'+e.message,'error');
   }
 }
 function openThirdPartySyncConfirmModal(batchId,sourceRecordId){
@@ -170,12 +221,15 @@ function renderThirdPartySyncCenter(){
       <div class="tms-filters"></div>
       <div class="tms-toolbar-right"><button class="tms-btn tms-btn-primary" onclick="runThirdPartySyncPull()">拉取并预检</button><button class="tms-btn tms-btn-ghost" onclick="loadThirdPartySyncCenter(true)">刷新</button></div>
     </div>
-    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">批次</th><th style="width:280px">时间范围</th><th style="width:100px">状态</th><th style="width:150px">最近同步</th><th style="width:260px">数据量</th><th style="width:240px">财务影响预估</th><th class="tms-sticky-r" style="width:120px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">批次</th><th style="width:280px">时间范围</th><th style="width:100px">状态</th><th style="width:150px">最近同步</th><th style="width:260px">数据量</th><th style="width:240px">财务影响预估</th><th class="tms-sticky-r" style="width:240px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:150px;padding-left:20px">日期/时间段</th><th style="width:100px">场地</th><th style="width:170px">第三方用户</th><th style="width:180px">第三方备注</th><th style="width:100px">金额</th><th style="width:110px">来源</th><th style="width:130px">系统判断</th><th style="width:150px">计划动作</th><th style="width:180px">高危原因</th><th style="width:220px">财务影响</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">确认</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div>
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:140px">最终类型</th><th style="width:120px">支付方式</th><th style="width:100px">金额</th><th style="width:120px">确认人</th><th style="width:160px">确认时间</th><th style="width:240px">备注</th></tr></thead><tbody id="thirdPartySyncConfirmTbody"></tbody></table></div></div>
+    <div class="tms-section-header">写入结果</div>
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">批次</th><th style="width:100px">状态</th><th style="width:150px">导入时间</th><th style="width:240px">操作ID</th><th style="width:220px">写入表</th><th style="width:160px">写入数量</th><th style="width:240px">失败原因</th></tr></thead><tbody id="thirdPartySyncImportResultTbody"></tbody></table></div></div>
   </div>`;
   renderThirdPartySyncStats();
   renderThirdPartySyncBatches();
   renderThirdPartySyncPrechecks();
   renderThirdPartySyncConfirmations();
+  renderThirdPartySyncImportResults();
 }

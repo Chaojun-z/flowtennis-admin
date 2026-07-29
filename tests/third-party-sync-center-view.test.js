@@ -14,6 +14,9 @@ assert.match(html, /function renderThirdPartySyncCenter\(/, 'sync center page re
 assert.match(html, /待确认[\s\S]*高危异常[\s\S]*重复跳过/, 'sync center should display precheck categories');
 assert.match(html, /第三方用户[\s\S]*第三方备注[\s\S]*金额/, 'sync center should expose operator-facing third party fields');
 assert.match(html, /confirmThirdPartySyncItem/, 'sync center should support operation confirmation');
+assert.match(html, /runThirdPartySyncImportPlan/, 'sync center should expose import plan preview');
+assert.match(html, /runThirdPartySyncImport/, 'sync center should support one-click semi-auto import');
+assert.match(html, /写入结果[\s\S]*失败原因/, 'sync center should show import results and failure reasons');
 assert.match(html, /third-party-sync-center\.js/, 'index should load sync center page script');
 
 assert.ok(fs.existsSync(workflowPath), 'daily sync workflow should exist');

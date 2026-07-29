@@ -6,12 +6,18 @@ const T_THIRD_PARTY_SYNC_RAW_RECORDS = 'ft_third_party_sync_raw_records';
 const T_THIRD_PARTY_SYNC_PRECHECKS = 'ft_third_party_sync_prechecks';
 const T_THIRD_PARTY_SYNC_CONFIRMATIONS = 'ft_third_party_sync_confirmations';
 const T_THIRD_PARTY_SYNC_IMPORT_RESULTS = 'ft_third_party_sync_import_results';
+const T_THIRD_PARTY_SYNC_IMPORT_BACKUPS = 'ft_third_party_sync_import_backups';
+const T_COURTS = 'ft_courts';
+const T_FINANCIAL_LEDGER = 'ft_financial_ledger';
+const T_SCHEDULE = 'ft_schedule';
+const T_MEMBERSHIP_ACCOUNTS = 'ft_membership_accounts';
 const THIRD_PARTY_SYNC_TABLES = [
   T_THIRD_PARTY_SYNC_BATCHES,
   T_THIRD_PARTY_SYNC_RAW_RECORDS,
   T_THIRD_PARTY_SYNC_PRECHECKS,
   T_THIRD_PARTY_SYNC_CONFIRMATIONS,
-  T_THIRD_PARTY_SYNC_IMPORT_RESULTS
+  T_THIRD_PARTY_SYNC_IMPORT_RESULTS,
+  T_THIRD_PARTY_SYNC_IMPORT_BACKUPS
 ];
 
 function cleanText(value) {
@@ -192,6 +198,267 @@ function precheckThirdPartyRecords(records = [], { batchId = '', now = new Date(
   return { items, counts };
 }
 
+function latestConfirmationFor(precheck = {}, confirmations = []) {
+  return (confirmations || [])
+    .filter(row => String(row.batchId || '') === String(precheck.batchId || '') && String(row.sourceRecordId || '') === String(precheck.sourceRecordId || ''))
+    .sort((a, b) => String(b.confirmedAt || '').localeCompare(String(a.confirmedAt || '')))[0] || null;
+}
+
+function isAlreadyImported(precheck = {}, importResults = []) {
+  return (importResults || []).some(result =>
+    ['completed', 'partial_failed'].includes(String(result.status || '')) &&
+    (result.writtenIds || []).some(row => String(row.sourceRecordId || '') === String(precheck.sourceRecordId || ''))
+  );
+}
+
+function confirmationIsImportable(confirmation = {}) {
+  const finalType = cleanText(confirmation.finalType);
+  return !!finalType && !['忽略不导入', '待老板确认'].includes(finalType);
+}
+
+function confirmedAmount(precheck = {}, confirmation = {}) {
+  return Number(confirmation.amount || precheck.amount || 0) || 0;
+}
+
+function needsPositiveAmount(finalType = '') {
+  return ['会员余额订场', '散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场陪打'].includes(cleanText(finalType));
+}
+
+function importTargetsFor({ sourceType = '', finalType = '', recommendedType = '' } = {}) {
+  const type = cleanText(finalType);
+  if (type === '排课占场') return [T_SCHEDULE];
+  if (type === '内部占用') return [T_COURTS];
+  if (['散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场陪打'].includes(type)) return [T_COURTS, T_FINANCIAL_LEDGER];
+  if (recommendedType === 'auto_import' && sourceType === 'lock') return [T_COURTS];
+  if (recommendedType === 'auto_import' && sourceType === 'order') return [T_COURTS, T_FINANCIAL_LEDGER];
+  return [];
+}
+
+function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations = [], importResults = [] } = {}) {
+  const scoped = (prechecks || []).filter(row => !batchId || String(row.batchId || '') === String(batchId));
+  const plan = { batchId, importable: [], blocked: [], skipped: [], counts: { importable: 0, blocked: 0, skipped: 0 } };
+  for (const precheck of scoped) {
+    const sourceRecordId = cleanText(precheck.sourceRecordId);
+    if (isAlreadyImported(precheck, importResults)) {
+      plan.skipped.push({ ...precheck, sourceRecordId, reason: '已导入' });
+      continue;
+    }
+    if (['duplicate_skip', 'do_not_import'].includes(precheck.recommendedType)) {
+      plan.skipped.push({ ...precheck, sourceRecordId, reason: precheck.plannedAction || '不导入' });
+      continue;
+    }
+    if (precheck.riskReason === '会员流水批量接口缺口') {
+      plan.blocked.push({ ...precheck, sourceRecordId, reason: '会员流水批量接口缺口' });
+      continue;
+    }
+    const confirmation = latestConfirmationFor(precheck, confirmations);
+    const finalType = confirmation?.finalType || (precheck.recommendedType === 'auto_import' ? (precheck.sourceType === 'lock' ? '内部占用' : '散客微信转账订场') : '');
+    if (precheck.needsConfirmation && !confirmation) {
+      plan.blocked.push({ ...precheck, sourceRecordId, reason: '等待运营确认' });
+      continue;
+    }
+    if (confirmation && !confirmationIsImportable(confirmation)) {
+      plan.skipped.push({ ...precheck, sourceRecordId, confirmation, reason: confirmation.finalType || '不导入' });
+      continue;
+    }
+    const amount = confirmedAmount(precheck, confirmation || {});
+    if (needsPositiveAmount(finalType) && amount <= 0) {
+      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '缺少确认金额' });
+      continue;
+    }
+    if (finalType === '排课占场' && !cleanText(confirmation?.bindTargetId || precheck.bindTargetId)) {
+      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '排课占场缺少绑定排课ID' });
+      continue;
+    }
+    if (finalType === '会员余额订场') {
+      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '会员余额订场需会员流水审计链，暂不支持自动导入' });
+      continue;
+    }
+    const targetTables = importTargetsFor({ sourceType: precheck.sourceType, finalType, recommendedType: precheck.recommendedType });
+    if (!targetTables.length) {
+      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '暂未支持该类型导入' });
+      continue;
+    }
+    plan.importable.push({ ...precheck, sourceRecordId, confirmation, finalType, amount, targetTables });
+  }
+  plan.counts.importable = plan.importable.length;
+  plan.counts.blocked = plan.blocked.length;
+  plan.counts.skipped = plan.skipped.length;
+  return plan;
+}
+
+function payMethodForImport(item = {}) {
+  if (item.finalType === '会员余额订场') return '储值扣款';
+  const method = cleanText(item.confirmation?.paymentMethod || item.payMethod);
+  if (method === '会员余额') return '储值扣款';
+  if (method === '不涉及支付') return '不涉及支付';
+  return method || '微信转账';
+}
+
+function cents(amount) {
+  return Math.round((Number(amount || 0) || 0) * 100);
+}
+
+function buildImportTrace({ batchId = '', operationId = '', operator = '', now = '' } = {}) {
+  return { operationId, batchId, operationType: 'third-party-sync-import', operationAt: now, operationBy: operator };
+}
+
+async function buildImportBackup({ getCachedScan, put, uuidv4, batchId = '', operationId = '', operator = '', tables = [], now = '' } = {}) {
+  const backupId = `cxe-backup-${uuidv4()}`;
+  const backup = { backupId, batchId, operationId, createdAt: now, createdBy: operator, tables: {}, rowIds: [] };
+  for (const table of tables) {
+    const rows = await getCachedScan(table).catch(() => []);
+    const chunkSize = 100;
+    const chunks = Math.max(1, Math.ceil(rows.length / chunkSize));
+    backup.tables[table] = { count: rows.length, chunks };
+    for (let index = 0; index < chunks; index++) {
+      const id = `${backupId}-${table}-${index + 1}`;
+      const row = {
+        id,
+        backupId,
+        batchId,
+        operationId,
+        tableName: table,
+        chunkIndex: index + 1,
+        chunkCount: chunks,
+        rows: rows.slice(index * chunkSize, (index + 1) * chunkSize),
+        createdAt: now,
+        createdBy: operator
+      };
+      await put(T_THIRD_PARTY_SYNC_IMPORT_BACKUPS, id, row);
+      backup.rowIds.push(id);
+    }
+  }
+  return backup;
+}
+
+function scheduleDateOf(row = {}) {
+  return cleanText(row.date || row.scheduleDate || row.startDate || row.startTime).slice(0, 10);
+}
+
+function scheduleClockOf(value = '') {
+  const m = cleanText(value).match(/(\d{1,2}:\d{2})/);
+  return m ? m[1].padStart(5, '0') : '';
+}
+
+function assertScheduleMatchesImportItem(schedule = {}, item = {}) {
+  const mismatches = [];
+  if (item.date && scheduleDateOf(schedule) !== item.date) mismatches.push('日期不一致');
+  if (item.startTime && scheduleClockOf(schedule.startTime || schedule.startClock || schedule.beginTime) !== item.startTime) mismatches.push('开始时间不一致');
+  if (item.endTime && scheduleClockOf(schedule.endTime || schedule.endClock || schedule.finishTime) !== item.endTime) mismatches.push('结束时间不一致');
+  if (item.venue && cleanText(schedule.venue || schedule.court || schedule.courtName) !== item.venue) mismatches.push('场地不一致');
+  if (mismatches.length) throw new Error(`绑定排课${mismatches.join('、')}`);
+}
+
+function buildCourtHistoryForImport(item = {}, trace = {}, now = '') {
+  const isInternal = item.finalType === '内部占用';
+  return {
+    id: `third-party-sync-${item.sourceRecordId}`,
+    date: item.date,
+    occurredDate: item.date,
+    type: '消费',
+    category: isInternal ? '内部占用' : '订场',
+    payMethod: isInternal ? '不涉及支付' : payMethodForImport(item),
+    amount: isInternal ? 0 : Number(item.amount || 0) || 0,
+    venue: item.venue,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    note: item.confirmation?.confirmNote || item.remark || item.plannedAction || '第三方同步导入',
+    source: 'third-party-sync',
+    sourceSystem: 'changxiaoer',
+    sourceRecordId: item.sourceRecordId,
+    sourceType: item.sourceType,
+    importedAt: now,
+    ...trace
+  };
+}
+
+function buildFinancialLedgerForImport(item = {}, trace = {}, now = '') {
+  if (!item.targetTables.includes(T_FINANCIAL_LEDGER)) return null;
+  const amount = Number(item.amount || 0) || 0;
+  const payMethod = payMethodForImport(item);
+  const isStoredValue = payMethod === '储值扣款';
+  return {
+    id: `third-party-sync-finance-${item.sourceRecordId}`,
+    ledgerVersion: 'third-party-sync-v2',
+    status: 'active',
+    businessDate: item.date || now.slice(0, 10),
+    createdAt: now,
+    updatedAt: now,
+    businessType: isStoredValue ? '会员订场' : '散客订场',
+    transactionType: '收款',
+    cashDelta: isStoredValue ? 0 : cents(amount),
+    recognizedRevenueDelta: cents(amount),
+    deferredRevenueDelta: isStoredValue ? -cents(amount) : 0,
+    refundDelta: 0,
+    paymentMethod: payMethod,
+    paymentChannel: payMethod,
+    sourceType: 'third-party-sync',
+    sourceId: item.sourceRecordId,
+    idempotencyKey: `third-party-sync|${item.batchId}|${item.sourceRecordId}`,
+    operator: trace.operationBy || '',
+    sourceSnapshot: {
+      batchId: item.batchId,
+      sourceRecordId: item.sourceRecordId,
+      finalType: item.finalType,
+      date: item.date,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      venue: item.venue
+    },
+    ...trace
+  };
+}
+
+async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
+  const { getCachedScan, getCachedRow, put, uuidv4, normalizeCourtRecord = row => row, now = '', trace = {}, tables = {} } = context;
+  const written = [];
+  if (item.finalType === '会员余额订场') throw new Error('会员余额订场需会员流水审计链，暂不支持自动导入');
+  if (item.finalType === '排课占场') {
+    const scheduleId = cleanText(item.confirmation?.bindTargetId || item.bindTargetId);
+    if (!scheduleId) throw new Error('排课占场缺少绑定排课ID');
+    const table = tables.T_SCHEDULE || T_SCHEDULE;
+    const schedule = await getCachedRow(table, scheduleId).catch(() => null);
+    if (!schedule) throw new Error('绑定排课不存在');
+    assertScheduleMatchesImportItem(schedule, item);
+    const imports = Array.isArray(schedule.thirdPartySyncImports) ? schedule.thirdPartySyncImports : [];
+    const next = { ...schedule, thirdPartySyncImports: [...imports, { batchId: item.batchId, sourceRecordId: item.sourceRecordId, importedAt: now }], updatedAt: now, ...trace };
+    await put(table, schedule.id, next);
+    written.push({ table, id: schedule.id, sourceRecordId: item.sourceRecordId });
+    return written;
+  }
+
+  const courtTable = tables.T_COURTS || T_COURTS;
+  const financeTable = tables.T_FINANCIAL_LEDGER || T_FINANCIAL_LEDGER;
+  const courts = await getCachedScan(courtTable).catch(() => []);
+  const bindId = cleanText(item.confirmation?.bindTargetId || item.bindTargetId);
+  const court = courts.find(row => bindId && String(row.id) === bindId)
+    || courts.find(row => item.phone && String(row.phone || '').trim() === String(item.phone).trim())
+    || { id: bindId || `third-party-court-${uuidv4()}`, name: item.customerName || '第三方订场用户', phone: item.phone || '', status: 'active', history: [], createdAt: now };
+  const existingHistory = Array.isArray(court.history) ? court.history : [];
+  const historyRow = buildCourtHistoryForImport(item, trace, now);
+  const nextCourt = normalizeCourtRecord({ ...court, history: [...existingHistory.filter(row => String(row.sourceRecordId || '') !== item.sourceRecordId), historyRow], updatedAt: now }, { allowNegativeBalance: true });
+  await put(courtTable, nextCourt.id, nextCourt);
+  written.push({ table: courtTable, id: nextCourt.id, sourceRecordId: item.sourceRecordId });
+
+  const ledger = buildFinancialLedgerForImport(item, trace, now);
+  if (ledger) {
+    await put(financeTable, ledger.id, ledger);
+    written.push({ table: financeTable, id: ledger.id, sourceRecordId: item.sourceRecordId });
+  }
+  return written;
+}
+
+function verifyThirdPartyImportResult({ plan = {}, writtenIds = [], failed = [] } = {}) {
+  const tables = new Set(writtenIds.map(row => row.table));
+  return {
+    finance: { checked: true, ok: !failed.length && (!plan.importable.some(item => item.targetTables.includes(T_FINANCIAL_LEDGER)) || tables.has(T_FINANCIAL_LEDGER)) },
+    courts: { checked: true, ok: !failed.length && (!plan.importable.some(item => item.targetTables.includes(T_COURTS)) || tables.has(T_COURTS)) },
+    membership: { checked: true, ok: !plan.blocked.some(item => item.finalType === '会员余额订场'), note: plan.blocked.some(item => item.finalType === '会员余额订场') ? '会员余额订场已阻断，等待会员流水审计链' : '本批次无会员余额订场' },
+    schedule: { checked: true, ok: !failed.length, note: plan.importable.some(item => item.targetTables.includes(T_SCHEDULE)) ? '已检查排课绑定计划' : '本批次无排课写入' }
+  };
+}
+
 function buildThirdPartySyncBatch({ id = '', rangeStart = '', rangeEnd = '', now = new Date().toISOString(), counts = {}, financeImpact = {} } = {}) {
   const batchId = id || `cxe-sync-${String(rangeStart || now).slice(0, 10).replace(/-/g, '')}-${stableHash({ rangeStart, rangeEnd, now }).slice(0, 8)}`;
   return {
@@ -290,12 +557,16 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     init = async () => {},
     sendJson = (res, payload, code = 200) => res.status(code).json(payload),
     getCachedScan = async () => [],
+    getCachedRow = async () => null,
     put = async () => {},
     mkTable = async () => {},
     uuidv4 = () => crypto.randomUUID(),
+    normalizeCourtRecord = row => row,
+    writeImportItem = defaultWriteThirdPartyImportItem,
     fetchThirdPartyData = fetchChangxiaoerData,
     now = () => new Date().toISOString(),
-    env = process.env
+    env = process.env,
+    tables = {}
   } = deps;
   let tablesReady = false;
 
@@ -355,7 +626,9 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         autoImportCount: prechecks.filter(row => row.recommendedType === 'auto_import').length,
         pendingCount: prechecks.filter(row => row.needsConfirmation || row.recommendedType === 'needs_confirmation').length,
         exceptionCount: prechecks.filter(row => row.recommendedType === 'high_risk_exception').length,
-        duplicateCount: prechecks.filter(row => row.recommendedType === 'duplicate_skip').length
+        duplicateCount: prechecks.filter(row => row.recommendedType === 'duplicate_skip').length,
+        importedCount: importResults.filter(row => ['completed', 'partial_completed'].includes(row.status)).length,
+        failedImportCount: importResults.filter(row => row.status === 'partial_failed' || row.status === 'failed').length
       };
       return sendJson(res, { summary, batches, rawRecords, prechecks, confirmations, importResults });
     }
@@ -382,6 +655,69 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       await put(T_THIRD_PARTY_SYNC_CONFIRMATIONS, confirmation.id, confirmation);
       return sendJson(res, { success: true, confirmation });
     }
+    if (path === '/third-party-sync/import-plan' && method === 'POST') {
+      const [prechecks, confirmations, importResults] = await Promise.all([
+        getCachedScan(T_THIRD_PARTY_SYNC_PRECHECKS).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_CONFIRMATIONS).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => [])
+      ]);
+      return sendJson(res, { plan: buildThirdPartyImportPlan({ batchId: cleanText(body.batchId), prechecks, confirmations, importResults }) });
+    }
+    if (path === '/third-party-sync/import' && method === 'POST') {
+      const batchId = cleanText(body.batchId);
+      if (!batchId) return sendJson(res, { error: '缺少批次 ID' }, 400);
+      const importedAt = now();
+      const [batches, prechecks, confirmations, importResults] = await Promise.all([
+        getCachedScan(T_THIRD_PARTY_SYNC_BATCHES).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_PRECHECKS).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_CONFIRMATIONS).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => [])
+      ]);
+      const batch = batches.find(row => String(row.batchId || row.id || '') === batchId);
+      if (!batch) return sendJson(res, { error: '同步批次不存在' }, 404);
+      const plan = buildThirdPartyImportPlan({ batchId, prechecks, confirmations, importResults });
+      const operationId = `third-party-sync-import-${uuidv4()}`;
+      const trace = buildImportTrace({ batchId, operationId, operator: user.name || user.id || 'admin', now: importedAt });
+      const backupTables = [T_COURTS, T_FINANCIAL_LEDGER, T_SCHEDULE, T_MEMBERSHIP_ACCOUNTS, T_THIRD_PARTY_SYNC_IMPORT_RESULTS];
+      const backup = await buildImportBackup({ getCachedScan, put, uuidv4, batchId, operationId, operator: trace.operationBy, tables: backupTables, now: importedAt });
+      const writtenIds = [];
+      const failed = [];
+      for (const item of plan.importable) {
+        try {
+          const rows = await writeImportItem(item, { getCachedScan, getCachedRow, put, uuidv4, normalizeCourtRecord, now: importedAt, trace, tables });
+          writtenIds.push(...(rows || []));
+        } catch (err) {
+          failed.push({ sourceRecordId: item.sourceRecordId, reason: err.message || '导入失败' });
+        }
+      }
+      const writtenTables = [...new Set(writtenIds.map(row => row.table))];
+      const verification = verifyThirdPartyImportResult({ plan, writtenIds, failed });
+      const hasBlocked = plan.blocked.length > 0;
+      const importStatus = failed.length
+        ? (writtenIds.length ? 'partial_failed' : 'failed')
+        : (hasBlocked ? (writtenIds.length ? 'partial_completed' : 'paused') : 'completed');
+      const result = {
+        id: `cxe-import-${uuidv4()}`,
+        batchId,
+        operationId,
+        status: importStatus,
+        importedAt,
+        importedBy: user.name || user.id || 'admin',
+        plannedCount: plan.importable.length,
+        writtenTables,
+        writtenIds,
+        skippedIds: [...plan.blocked, ...plan.skipped].map(row => ({ sourceRecordId: row.sourceRecordId, reason: row.reason || row.riskReason || '跳过' })),
+        failed,
+        backupFile: `table:${T_THIRD_PARTY_SYNC_IMPORT_RESULTS}/${batchId}`,
+        backup,
+        reportFile: `table:${T_THIRD_PARTY_SYNC_IMPORT_RESULTS}`,
+        verifiedAt: importedAt,
+        verification
+      };
+      await put(T_THIRD_PARTY_SYNC_IMPORT_RESULTS, result.id, result);
+      await put(T_THIRD_PARTY_SYNC_BATCHES, batch.id || batch.batchId, { ...batch, status: result.status === 'completed' ? 'completed' : 'paused', importedAt, confirmedBy: result.importedBy });
+      return sendJson(res, { success: ['completed', 'partial_completed'].includes(result.status), plan, result });
+    }
     return false;
   };
 }
@@ -390,6 +726,7 @@ module.exports = {
   createThirdPartySyncCenterRoutes,
   buildThirdPartySyncBatch,
   precheckThirdPartyRecords,
+  buildThirdPartyImportPlan,
   fetchChangxiaoerData,
   defaultDailyRange,
   THIRD_PARTY_SYNC_TABLES,
