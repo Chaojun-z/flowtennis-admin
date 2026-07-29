@@ -157,6 +157,37 @@ assert.throws(
   'family small group lesson should reject fewer than 2 actual attendees'
 );
 
+assert.doesNotThrow(
+  () => rules.assertScheduleEntitlementRequired({
+    id: 'sch-xiaozhu-single',
+    status: '已排课',
+    settlementType: 'package',
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    lessonCount: 1,
+    studentIds: ['student-xiaozhu'],
+    studentName: '笑逐',
+    actualStudentCount: 1
+  }),
+  'confirmed Xiaozhu single-student small group lesson should be allowed'
+);
+
+assert.throws(
+  () => rules.assertScheduleEntitlementRequired({
+    id: 'sch-small-group-too-few',
+    status: '已排课',
+    settlementType: 'package',
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    lessonCount: 1,
+    studentIds: ['student-other'],
+    studentName: '普通学员',
+    actualStudentCount: 1
+  }),
+  /小班课至少 2 人到场/,
+  'ordinary one-student small group lessons should still require operations confirmation'
+);
+
 assert.throws(
   () => rules.validateEntitlementForSchedule(
     { id: 'ent-family-3', studentId: 'parent-1', status: 'active', courseType: '小班课', smallClassType: 'family', maxStudents: 3, totalLessons: 6, remainingLessons: 6 },

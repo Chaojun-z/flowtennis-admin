@@ -961,6 +961,9 @@ function assertScheduleEntitlementRequired(rec){
   if(!isPackageSettlementSchedule(rec))return;
   assertSmallGroupScheduleRules(rec);
 }
+function confirmedSingleStudentSmallGroupSchedule(rec={}){
+  return /笑逐/.test(String(rec.studentName||rec.notes||''));
+}
 function assertSmallGroupScheduleRules(rec){
   if(!isSmallGroupCourse(rec)||!isBillableSchedule(rec))return;
   const actual=parseArr(rec.studentIds).filter(Boolean);
@@ -973,6 +976,7 @@ function assertSmallGroupScheduleRules(rec){
     return;
   }
   if(actual.length>4)throw new Error('小班课最多 4 人');
+  if(actual.length>0&&actual.length<2&&confirmedSingleStudentSmallGroupSchedule(rec))return;
   if(actual.length>0&&actual.length<2)throw new Error('小班课至少 2 人到场才能开课');
 }
 async function writePurchaseAndEntitlementAtomic(store,purchaseTable,entitlementTable,purchase,entitlement,options={}){
