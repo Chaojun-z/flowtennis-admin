@@ -51,6 +51,8 @@ const created = rules.buildScheduleStoredValueCourtUpdate({
 assert.strictEqual(created.schedule.storedValueCourtId, 'court-1');
 assert.strictEqual(created.schedule.storedValueAmount, 224);
 assert.strictEqual(created.court.id, 'court-1');
+assert.strictEqual(created.court.balance, 1056);
+assert.strictEqual(created.court.storedValueSpent, 224);
 assert.strictEqual(created.historyRows.length, 1);
 assert.strictEqual(created.historyRows[0].type, '消费');
 assert.strictEqual(created.historyRows[0].payMethod, '储值卡');
@@ -89,6 +91,7 @@ assert.strictEqual(edited.historyRows.length, 1);
 assert.strictEqual(edited.historyRows[0].type, '消费');
 assert.strictEqual(edited.historyRows[0].amount, 76);
 assert.match(edited.historyRows[0].note, /编辑排课补扣储值卡/);
+assert.strictEqual(edited.court.balance, 980);
 assert.strictEqual(rules.computeCourtFinance(edited.court).balance, 980);
 
 const cancelled = rules.buildScheduleStoredValueCourtUpdate({
@@ -104,6 +107,7 @@ assert.strictEqual(cancelled.historyRows.length, 1);
 assert.strictEqual(cancelled.historyRows[0].type, '冲正');
 assert.strictEqual(cancelled.historyRows[0].amount, 300);
 assert.match(cancelled.historyRows[0].note, /取消排课退回储值卡/);
+assert.strictEqual(cancelled.court.balance, 1280);
 assert.strictEqual(rules.computeCourtFinance(cancelled.court).balance, 1280);
 
 const financeRows = rules.buildFinanceUnifiedRows({

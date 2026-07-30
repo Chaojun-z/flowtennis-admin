@@ -259,8 +259,8 @@ function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule
     }
   });
   const updatedCourts=[...updates.values()].map(court=>{
-    computeCourtFinance(court);
-    return {...court,updatedAt:now};
+    const finance=computeCourtFinance(court);
+    return {...court,...finance,updatedAt:now};
   });
   return {schedule:next,court:updatedCourts[0]||null,courts:updatedCourts,originalCourts:[...originals.values()],historyRows};
 }

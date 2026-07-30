@@ -44,6 +44,11 @@ assert.strictEqual(sync.validDateKey('2026/07/01'), '', 'invalid history date qu
 assert.strictEqual(sync.courseInDateRange({ startTime: '2026-07-01 09:00' }, '2026-07-01', '2026-07-26'), true, 'history range should include the first day');
 assert.strictEqual(sync.courseInDateRange({ startTime: '2026-07-26 18:00' }, '2026-07-01', '2026-07-26'), true, 'history range should include the last day');
 assert.strictEqual(sync.courseInDateRange({ startTime: '2026-07-27 09:00' }, '2026-07-01', '2026-07-26'), false, 'history range should exclude dates after the end');
+assert.deepStrictEqual(sync.sheetTitleDateRange('7.27-8.2（当前周）', '2026-07-30'), { start: '2026-07-27', end: '2026-08-02' }, 'weekly sheet title should parse month rollover ranges');
+assert.strictEqual(sync.selectFeishuScheduleSheet([
+  { sheet_id: 'GrbZdi', title: '7.20-7.26' },
+  { sheet_id: 'CurrentWeek', title: '7.27-8.2（当前周）' }
+], 'GrbZdi', '2026-07-30').sheet_id, 'CurrentWeek', 'cron sync should automatically move from stale configured sheet to the current weekly sheet');
 
 const interleavedValues = [
   ['时间', null, null, 'Siren', null, null, null, '杨教练', null, null, null],
@@ -785,6 +790,15 @@ assert.strictEqual(companionPlan.summary.create, 1, 'companion courses should no
 assert.strictEqual(sync.buildScheduleBody(companionPlan.actions[0].candidate).settlementType, 'direct', 'companion course should use direct payment settlement');
 assert.strictEqual(sync.buildScheduleBody(companionPlan.actions[0].candidate).paidAmount, 100, 'companion course should default to 100 yuan direct payment');
 assert.strictEqual(sync.buildScheduleBody({ ...companionCourses[0], resolvedCoach: { name: 'Siren 教练' }, scheduleStudents: [{ id: 'stu-1', name: 'W.Jing' }] }).standardCourseType, '陪打', 'companion schedule body should persist companion type');
+
+const tangguoCompanionCorrection = sync.parseFeishuScheduleRows({ values: [
+  ['时间', null, null, '马坡室内', null, null, null, '杨教练', null, null, null],
+  ['日期', '星期', '时段', '1号', '2号', '3号', '4号', '课程', '场馆', '场地号', '学员'],
+  ['2026-07-20', '一', '15:00-17:00', null, '杨教练', null, null, '成人私教【正式】', '马坡室内', '2号', '唐果']
+], sheetId: 'GrbZdi', sheetTitle: '7.20-7.26（当前周）' });
+assert.strictEqual(tangguoCompanionCorrection[0].course.courseType, '陪打', 'confirmed Tangguo private lesson typo should import as companion');
+assert.strictEqual(tangguoCompanionCorrection[0].course.payMethod, '储值卡', 'Tangguo companion correction should use stored value payment');
+assert.strictEqual(sync.buildScheduleBody({ ...tangguoCompanionCorrection[0], resolvedCoach: { name: '杨教练' }, scheduleStudents: [{ id: 'stu-tangguo', name: '唐果' }] }).paidAmount, 400, 'Tangguo companion correction should use confirmed 400 yuan amount');
 
 const lessonIndexMismatchPlan = sync.buildDryRunPlan({
   feishuCourses: [{

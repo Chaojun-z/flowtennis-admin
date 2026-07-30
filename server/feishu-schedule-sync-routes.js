@@ -68,6 +68,9 @@ function parseSharedPackageStudentCell(raw){
 function applyConfirmedCourseCorrection(row={},course={},students={}){
   const studentKeys=(students.names||[]).map(normalizeStudentNameKey);
   const rawStudentKey=normalizeStudentNameKey(students.raw||row.studentText||'');
+  if(studentKeys.includes(normalizeStudentNameKey('唐果'))&&/私教/.test(cleanText(row.courseText))){
+    return {ok:true,raw:course.raw||row.courseText,courseType:'陪打',experienceType:'',audience:'',isTrial:false,payMethod:'储值卡',paidAmount:400,confirmedCorrection:'唐果私教误写按陪打处理'};
+  }
   if(/亲子小班/.test(cleanText(row.courseText))&&(studentKeys.includes(normalizeStudentNameKey('晨曦'))||rawStudentKey.includes(normalizeStudentNameKey('晨曦')))){
     return {ok:true,raw:course.raw||row.courseText,courseType:'私教课',experienceType:'',audience:'成人',isTrial:false,confirmedCorrection:'晨曦朋友亲子小班按私教课处理'};
   }
@@ -897,8 +900,8 @@ function buildScheduleBody(candidate,extra={}){
     lessonCount:candidate.lessonCount,
     status:'已排课',
     settlementType:isCompanion?'direct':'package',
-    payMethod:isCompanion?'待确认':'',
-    paidAmount:isCompanion?100:0,
+    payMethod:isCompanion?(candidate.course.payMethod||'待确认'):'',
+    paidAmount:isCompanion?Number(candidate.course.paidAmount||100):0,
     entitlementId,
     entitlementIds,
     packageName:extra.packageName||entitlement.packageName||purchase.packageName||'',
@@ -951,7 +954,10 @@ async function fetchTenantAccessToken({appId,appSecret}){
 }
 
 async function fetchFeishuSheetValues({spreadsheetToken,sheetId,range,accessToken}){
-  const safeRange=range||`${sheetId}!A1:AZ200`;
+  const rawRange=cleanText(range);
+  const safeRange=rawRange
+    ? (rawRange.includes('!')?`${sheetId}!${rawRange.split('!').slice(1).join('!')}`:`${sheetId}!${rawRange}`)
+    : `${sheetId}!A1:AZ200`;
   const url=`https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/${encodeURIComponent(spreadsheetToken)}/values/${encodeURIComponent(safeRange)}`;
   const res=await axios.get(url,{headers:{Authorization:`Bearer ${accessToken}`},params:{valueRenderOption:'ToString'},timeout:15000});
   if(res.data?.code!==0)throw new Error(`读取飞书表失败：${res.data?.msg||res.data?.code}`);
@@ -964,6 +970,42 @@ async function fetchFeishuSheetMeta({spreadsheetToken,accessToken}){
   if(res.data?.code!==0)throw new Error(`读取飞书表元数据失败：${res.data?.msg||res.data?.code}`);
   const sheets=res.data?.data?.sheets;
   return Array.isArray(sheets)?sheets:(sheets?.sheets||[]);
+}
+
+function chinaTodayKey(now=new Date()){
+  const parts=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
+  const pick=type=>parts.find(part=>part.type===type)?.value||'';
+  return `${pick('year')}-${pick('month')}-${pick('day')}`;
+}
+
+function sheetTitleDateRange(title='',todayKey=chinaTodayKey()){
+  const text=cleanText(title).replace(/[～—–~至]/g,'-');
+  const m=text.match(/(\d{1,2})[.月/-](\d{1,2})(?:日)?\s*-\s*(?:(\d{1,2})[.月/-])?(\d{1,2})(?:日)?/);
+  if(!m)return null;
+  const todayYear=Number(String(todayKey).slice(0,4));
+  const startMonth=Number(m[1]);
+  const startDay=Number(m[2]);
+  const endMonth=Number(m[3]||m[1]);
+  const endDay=Number(m[4]);
+  if(!startMonth||!startDay||!endMonth||!endDay)return null;
+  const endYear=endMonth<startMonth?todayYear+1:todayYear;
+  return {
+    start:`${todayYear}-${String(startMonth).padStart(2,'0')}-${String(startDay).padStart(2,'0')}`,
+    end:`${endYear}-${String(endMonth).padStart(2,'0')}-${String(endDay).padStart(2,'0')}`
+  };
+}
+
+function sheetTitleIncludesDate(sheet={},todayKey=chinaTodayKey()){
+  const range=sheetTitleDateRange(sheet.title||'',todayKey);
+  return !!range&&todayKey>=range.start&&todayKey<=range.end;
+}
+
+function selectFeishuScheduleSheet(meta=[],configuredSheetId='',todayKey=chinaTodayKey()){
+  const sheets=Array.isArray(meta)?meta:[];
+  const configured=cleanText(configuredSheetId);
+  const configuredSheet=sheets.find(row=>String(row.sheet_id||'')===configured)||null;
+  if(configuredSheet&&sheetTitleIncludesDate(configuredSheet,todayKey))return configuredSheet;
+  return sheets.find(row=>sheetTitleIncludesDate(row,todayKey))||configuredSheet||sheets[0]||null;
 }
 
 async function sendFeishuWebhook(webhook,text){
@@ -1203,18 +1245,18 @@ function createFeishuScheduleSyncRoutes(deps={}){
       appId:cleanText(process.env.FEISHU_SCHEDULE_APP_ID),
       appSecret:cleanText(process.env.FEISHU_SCHEDULE_APP_SECRET)
     });
-    const [values,meta]=await Promise.all([
-      fetchFeishuSheetValues({spreadsheetToken,sheetId,range:process.env.FEISHU_SCHEDULE_RANGE,accessToken}),
-      fetchFeishuSheetMeta({spreadsheetToken,accessToken}).catch(()=>[])
-    ]);
-    const sheet=(meta||[]).find(row=>String(row.sheet_id||'')===sheetId)||{};
-    return parseFeishuScheduleRows({values,merges:sheet.merges||[],sheetId,sheetTitle:sheet.title||sheetId});
+    const meta=await fetchFeishuSheetMeta({spreadsheetToken,accessToken}).catch(()=>[]);
+    const sheet=selectFeishuScheduleSheet(meta,sheetId);
+    const selectedSheetId=cleanText(sheet?.sheet_id||sheetId);
+    const values=await fetchFeishuSheetValues({spreadsheetToken,sheetId:selectedSheetId,range:process.env.FEISHU_SCHEDULE_RANGE,accessToken});
+    const courses=parseFeishuScheduleRows({values,merges:sheet?.merges||[],sheetId:selectedSheetId,sheetTitle:sheet?.title||selectedSheetId});
+    return {courses,sheetId:selectedSheetId,sheetTitle:sheet?.title||selectedSheetId};
   }
 
   async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode='',historyTrialMode='',notifyDryRun=false,suppressNotification=false}={}){
     await init();
     await ensureFeishuSyncTables();
-    const [feishuCourses,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
+    const [feishuSheet,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
       loadFeishuCourses(),
       getCachedScan(T_FEISHU_SCHEDULE_SYNC).catch(()=>[]),
       getCachedScan(T_SCHEDULE).catch(()=>[]),
@@ -1225,6 +1267,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
       getCachedScan(T_LEADS).catch(()=>[])
     ]);
+    const feishuCourses=feishuSheet.courses||[];
     const now=new Date().toISOString();
     const nowKey=chinaDateTimeKey();
     const rangeMode=includeHistorical||!!startDate||!!endDate;
@@ -1232,7 +1275,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       ? feishuCourses.filter(course=>courseInDateRange(course,startDate,endDate))
       : feishuCourses;
     const selectedScheduleIds=new Set((schedules||[]).filter(row=>rangeMode?courseInDateRange(row,startDate,endDate):true).map(row=>String(row.id||'')).filter(Boolean));
-    const sheetId=cleanText(process.env.FEISHU_SCHEDULE_SHEET_ID||process.env.FEISHU_SCHEDULE_DEFAULT_SHEET_ID);
+    const sheetId=cleanText(feishuSheet.sheetId||process.env.FEISHU_SCHEDULE_SHEET_ID||process.env.FEISHU_SCHEDULE_DEFAULT_SHEET_ID);
     const scopedSyncRows=(syncRows||[]).filter(row=>{
       const rowSheet=cleanText(row.sheetId||String(row.sourceKey||'').split('|')[0]);
       if(sheetId&&rowSheet&&rowSheet!==sheetId)return false;
@@ -1240,7 +1283,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       return !row.scheduleId||selectedScheduleIds.has(String(row.scheduleId||''));
     });
     const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,recommendEntitlements,nowKey});
-    const result={ok:true,dryRun,mode:rangeMode?'date_range':'sheet',startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:0,plan};
+    const result={ok:true,dryRun,mode:rangeMode?'date_range':'sheet',sheetId,sheetTitle:feishuSheet.sheetTitle||sheetId,startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:0,plan};
     if(!dryRun){
       const applyPlan=rangeMode?safeHistoryApplyPlan(plan,{includeTrial:historyTrialMode==='confirmed'}):plan;
       if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
@@ -1315,6 +1358,8 @@ module.exports={
   isFutureCourse,
   validDateKey,
   courseInDateRange,
+  sheetTitleDateRange,
+  selectFeishuScheduleSheet,
   applyMergesToValues,
   parseFeishuScheduleRows,
   buildDryRunPlan,
