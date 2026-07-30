@@ -21,7 +21,9 @@ assert.match(officialDigestsWorkflow, /\/api\/cron\/official-account-daily-diges
 assert.match(feishuCoachDigestsWorkflow, /cron: '0 12 \* \* \*'/, '飞书教练私发次日排课应每天北京时间 20:00 触发');
 assert.match(feishuCoachDigestsWorkflow, /\/api\/cron\/feishu-coach-daily-digests/, '飞书教练私发次日排课应由 GitHub Actions 触发');
 assert.match(feishuCoachDigestsWorkflow, /FEISHU_COACH_DIGEST_PHONE_OVERRIDES/, '飞书教练私发次日排课应支持用 GitHub Secret 覆盖缺失手机号');
+assert.match(feishuCoachDigestsWorkflow, /FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES/, '飞书教练私发次日排课应支持用 GitHub Secret 覆盖 open_id');
 assert.match(apiSource, /x-feishu-coach-digest-phone-overrides/, '飞书教练私发次日排课接口应读取安全请求头里的手机号覆盖配置');
+assert.match(apiSource, /x-feishu-coach-digest-open-id-overrides/, '飞书教练私发次日排课接口应读取安全请求头里的 open_id 覆盖配置');
 assert.match(feishuScheduleSyncWorkflow, /cron:\s*'0 0,10 \* \* \*'/, '飞书排课表同步应在北京时间 08:00、18:00 各触发一次');
 assert.match(feishuScheduleSyncWorkflow, /\/api\/cron\/feishu-schedule-sync/, '飞书排课表同步应由 GitHub Actions 触发');
 const matchKeepaliveWorkflow = fs.readFileSync(matchKeepaliveWorkflowPath, 'utf8');

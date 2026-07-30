@@ -28,6 +28,7 @@ jobs:
       COACH_NAME: ${{ inputs.coachName || '' }}
       MARK_SENT: ${{ inputs.markSent || 'true' }}
       PHONE_OVERRIDES: ${{ secrets.FEISHU_COACH_DIGEST_PHONE_OVERRIDES || '' }}
+      OPEN_ID_OVERRIDES: ${{ secrets.FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES || '' }}
 
     steps:
       - name: Trigger feishu coach digest endpoint
@@ -40,5 +41,8 @@ jobs:
           fi
           if [ -n "${PHONE_OVERRIDES:-}" ]; then
             curl_args+=(-H "X-Feishu-Coach-Digest-Phone-Overrides: ${PHONE_OVERRIDES}")
+          fi
+          if [ -n "${OPEN_ID_OVERRIDES:-}" ]; then
+            curl_args+=(-H "X-Feishu-Coach-Digest-Open-Id-Overrides: ${OPEN_ID_OVERRIDES}")
           fi
           curl "${curl_args[@]}"

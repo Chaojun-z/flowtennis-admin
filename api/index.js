@@ -86,7 +86,7 @@ const WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY = process.env.WECHAT_OFFICIAL_ACC
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_URL = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_URL || '';
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET || '';
 const FEISHU_DAILY_REPORT_WEBHOOK = String(process.env.FEISHU_DAILY_REPORT_WEBHOOK || process.env.FEISHU_WEBHOOK_URL || '').trim();
-const FEISHU_COACH_BOT_APP_ID = String(process.env.FEISHU_COACH_BOT_APP_ID || '').trim(), FEISHU_COACH_BOT_APP_SECRET = String(process.env.FEISHU_COACH_BOT_APP_SECRET || '').trim(), FEISHU_COACH_DIGEST_PHONE_OVERRIDES = String(process.env.FEISHU_COACH_DIGEST_PHONE_OVERRIDES || '').trim();
+const FEISHU_COACH_BOT_APP_ID = String(process.env.FEISHU_COACH_BOT_APP_ID || '').trim(), FEISHU_COACH_BOT_APP_SECRET = String(process.env.FEISHU_COACH_BOT_APP_SECRET || '').trim(), FEISHU_COACH_DIGEST_PHONE_OVERRIDES = String(process.env.FEISHU_COACH_DIGEST_PHONE_OVERRIDES || '').trim(), FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES = String(process.env.FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES || '').trim();
 const STUDENT_REMINDER_PUBLIC_BASE_URL = process.env.STUDENT_REMINDER_PUBLIC_BASE_URL || 'https://www.flowtennis.cn';
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
 const MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID = process.env.MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID || '';
@@ -3344,7 +3344,7 @@ function firstFeishuField(row={},fields=[]){for(const field of fields){const val
 function firstFeishuOpenId(row={}){return firstFeishuField(row,FEISHU_OPEN_ID_FIELDS).value;}
 function firstFeishuMobile(row={}){return normalizeFeishuMobile(firstFeishuField(row,FEISHU_MOBILE_FIELDS).value);}
 function normalizeCoachDigestName(value){return String(value||'').replace(/\s+/g,'').replace(/教练/g,'').trim();}
-function parseFeishuCoachPhoneOverrides(value=''){const map=new Map();const text=String(value||'').trim();if(!text)return map;let entries=[];try{entries=Object.entries(JSON.parse(text));}catch{entries=text.split(/[,，\n]/).map(part=>part.split(/[=:：]/)).filter(pair=>pair.length>=2);}entries.forEach(([key,phone])=>{const mobile=normalizeFeishuMobile(phone);if(key&&mobile){map.set(String(key).trim(),mobile);map.set(normalizeCoachDigestName(key),mobile);}});return map;}
+function parseFeishuCoachOverrides(value='',normalizeValue=value=>String(value||'').trim()){const map=new Map();const text=String(value||'').trim();if(!text)return map;let entries=[];try{entries=Object.entries(JSON.parse(text));}catch{entries=text.split(/[,，\n]/).map(part=>part.split(/[=:：]/)).filter(pair=>pair.length>=2);}entries.forEach(([key,raw])=>{const next=normalizeValue(raw);if(key&&next){map.set(String(key).trim(),next);map.set(normalizeCoachDigestName(key),next);}});return map;}
 function findFeishuCoachDigestRecipient(item={},refs={}){
   const coachId=String(item?.coachId||'').trim();
   const coachName=String(item?.coachName||item?.coach||'').trim();
@@ -3361,12 +3361,13 @@ function findFeishuCoachDigestRecipient(item={},refs={}){
     if(coachId&&String(c?.id||'').trim()===coachId)return true;
     return coachNameKey&&[c?.name,c?.coachName,c?.nickname,c?.displayName].some(name=>normalizeCoachDigestName(name)===coachNameKey);
   })||null;
-  const overrides=refs?.phoneOverrides instanceof Map?refs.phoneOverrides:parseFeishuCoachPhoneOverrides(refs?.phoneOverrides||'');
-  const overrideMobile=normalizeFeishuMobile(overrides.get(coachId)||overrides.get(coachName)||overrides.get(coachNameKey)||'');
+  const mobileOverrides=refs?.phoneOverrides instanceof Map?refs.phoneOverrides:parseFeishuCoachOverrides(refs?.phoneOverrides||'',normalizeFeishuMobile), openIdOverrides=refs?.openIdOverrides instanceof Map?refs.openIdOverrides:parseFeishuCoachOverrides(refs?.openIdOverrides||'');
+  const overrideMobile=normalizeFeishuMobile(mobileOverrides.get(coachId)||mobileOverrides.get(coachName)||mobileOverrides.get(coachNameKey)||'');
+  const overrideOpenId=String(openIdOverrides.get(coachId)||openIdOverrides.get(coachName)||openIdOverrides.get(coachNameKey)||'').trim();
   const userOpenId=firstFeishuOpenId(user),coachOpenId=firstFeishuOpenId(coach);
   const userMobile=firstFeishuMobile(user),coachMobile=firstFeishuMobile(coach);
-  const openId=userOpenId||coachOpenId,mobile=overrideMobile||userMobile||coachMobile;
-  return {coachId,coachName,openId,mobile,source:user?'user':coach?'coach':'',openIdSource:userOpenId?'user':coachOpenId?'coach':'',mobileSource:overrideMobile?'override':userMobile?'user':coachMobile?'coach':'',mobileSuffix:mobile?mobile.slice(-4):''};
+  const openId=overrideOpenId||userOpenId||coachOpenId,mobile=overrideMobile||userMobile||coachMobile;
+  return {coachId,coachName,openId,mobile,source:user?'user':coach?'coach':'',openIdSource:overrideOpenId?'override':userOpenId?'user':coachOpenId?'coach':'',mobileSource:overrideMobile?'override':userMobile?'user':coachMobile?'coach':'',mobileSuffix:mobile?mobile.slice(-4):''};
 }
 function buildFeishuCoachDailyDigestText(message={}){
   const coachName=String(message?.coachName||'教练').trim()||'教练';
@@ -3708,7 +3709,7 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
   }
   return result;
 }
-async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch,buildPosterPng=buildCoachDailyDigestPosterPng,uploadImage=uploadFeishuImage,sendImage=sendFeishuBotImageMessage,sendText=sendFeishuBotTextMessage,sendPosterMessage=sendFeishuCoachDigestPosterMessage,targetCoach='',markSent=true,phoneOverrides=FEISHU_COACH_DIGEST_PHONE_OVERRIDES}={}){
+async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch,buildPosterPng=buildCoachDailyDigestPosterPng,uploadImage=uploadFeishuImage,sendImage=sendFeishuBotImageMessage,sendText=sendFeishuBotTextMessage,sendPosterMessage=sendFeishuCoachDigestPosterMessage,targetCoach='',markSent=true,phoneOverrides=FEISHU_COACH_DIGEST_PHONE_OVERRIDES,openIdOverrides=FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES}={}){
   const [resolvedRows,resolvedUsers,resolvedCoaches]=await Promise.all([rows||loadRows(),users||loadUsers(),coaches||loadCoaches()]);
   const targetCoachKey=normalizeCoachDigestName(targetCoach);
   const candidates=collectCoachDailyDigestCandidates(resolvedRows,now,{sentDateField:'feishuCoachDailyDigestSentDate'}).filter(item=>!targetCoachKey||String(item.coachId||'')===String(targetCoach||'').trim()||normalizeCoachDigestName(item.coachName)===targetCoachKey);
@@ -3716,7 +3717,7 @@ async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,
   if(!String(appId||'').trim()||!String(appSecret||'').trim()){
     return {...result,success:true,skipped:candidates.length,reason:'missing_feishu_credentials',items:candidates.map(item=>({coachId:item.coachId,skipped:true,reason:'missing_feishu_credentials'}))};
   }
-  const recipients=candidates.map(item=>({item,recipient:findFeishuCoachDigestRecipient(item,{users:resolvedUsers,coaches:resolvedCoaches,phoneOverrides})}));
+  const recipients=candidates.map(item=>({item,recipient:findFeishuCoachDigestRecipient(item,{users:resolvedUsers,coaches:resolvedCoaches,phoneOverrides,openIdOverrides})}));
   const mobiles=recipients.filter(row=>!row.recipient.openId&&row.recipient.mobile).map(row=>row.recipient.mobile);
   let tenantAccessToken='';
   let openIdsByMobile=new Map();
@@ -7008,7 +7009,7 @@ module.exports = async (req, res) => {
         return sendJson(res,{error:'无权限'},403);
       }
       await init();
-      return sendJson(res,await sendFeishuCoachDailyDigests({targetCoach:query.get('coach')||query.get('coachName')||query.get('coachId')||'',markSent:query.get('markSent')!=='false',phoneOverrides:req.headers['x-feishu-coach-digest-phone-overrides']||FEISHU_COACH_DIGEST_PHONE_OVERRIDES}));
+      return sendJson(res,await sendFeishuCoachDailyDigests({targetCoach:query.get('coach')||query.get('coachName')||query.get('coachId')||'',markSent:query.get('markSent')!=='false',phoneOverrides:req.headers['x-feishu-coach-digest-phone-overrides']||FEISHU_COACH_DIGEST_PHONE_OVERRIDES,openIdOverrides:req.headers['x-feishu-coach-digest-open-id-overrides']||FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES}));
     }
     if(path==='/cron/third-party-sync-center'&&await handleThirdPartySyncCenterRoutes({path,method,body,req,res,query}))return;if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
     if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;

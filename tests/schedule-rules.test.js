@@ -1239,6 +1239,15 @@ assert.deepStrictEqual(
 );
 
 assert.deepStrictEqual(
+  rules.findFeishuCoachDigestRecipient(
+    { coachId: 'coach-lin', coachName: '林铭教练' },
+    { users: [{ id: 'lming', role: 'editor', coachId: 'coach-lin', coachName: '林铭', phone: '13800134958' }], coaches: [], openIdOverrides: '{"林铭教练":"ou_linming"}' }
+  ),
+  { coachId: 'coach-lin', coachName: '林铭教练', openId: 'ou_linming', mobile: '13800134958', source: 'user', openIdSource: 'override', mobileSource: 'user', mobileSuffix: '4958' },
+  'feishu digest recipient should support configured coach open_id overrides'
+);
+
+assert.deepStrictEqual(
   rules.buildFeishuCoachDailyDigestText({
     coachName: '朝珺',
     digestDate: '2026-05-16',
