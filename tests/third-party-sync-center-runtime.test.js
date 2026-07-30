@@ -44,6 +44,10 @@ const context = {
       sourceRecordId: 'ORDER-1',
       reason: '手机号格式不正确',
       status: 'open'
+    }, {
+      batchId: 'batch-1',
+      reason: '历史空壳报警',
+      status: 'open'
     }],
     confirmations: [],
     importResults: [],
@@ -61,6 +65,7 @@ vm.runInContext(source, context, { filename: 'third-party-sync-center.js' });
 
 const rows = vm.runInContext("thirdPartySyncNeedsProcessingRows('batch-1')", context);
 assert.ok(rows.length >= 2, 'runtime should expose change and alert rows as needs-processing rows');
+assert.ok(!rows.some(row => row.reason === '历史空壳报警'), 'source-less legacy alerts should not pollute operator handling rows');
 for (const row of rows) {
   assert.strictEqual(row.date, '2026-07-29', 'needs-processing row should show booking date, not pull date');
   assert.strictEqual(row.time, '09:30-10:30', 'needs-processing row should show booking time range');

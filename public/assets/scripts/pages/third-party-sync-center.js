@@ -267,7 +267,7 @@ function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchI
     .map(row=>{
       const snapshot=thirdPartySyncSourceSnapshot({row,batchId:row.batchId||batchId,sourceRecordId:row.sourceRecordId});
       return {kind:'异常报警',row,...snapshot,reason:row.reason||'-',suggestion:/失败|缺口|格式|等待/.test(String(row.reason||''))?'处理后再导入':'确认后关闭',action:thirdPartySyncProcessingAction(snapshot)};
-    });
+    }).filter(item=>item.sourceRecordId||item.date||item.time||item.venue||item.customerName||item.phone||item.remark);
   return [...prechecks,...changes,...alerts];
 }
 function thirdPartySyncBookingPrechecks(rows=[]){
