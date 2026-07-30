@@ -880,6 +880,8 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 .modal.modal-court .purchase-compact-row .tms-form-item{min-width:0}
 .modal.modal-court.modal-purchase-drawer #pur_packageId_dropdown .tms-dropdown-display{position:relative;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:30px;font-size:12px;line-height:38px}
 .modal.modal-court.modal-purchase-drawer #pur_packageId_dropdown .tms-dropdown-display::after{position:absolute;right:8px;top:50%;transform:translateY(-50%)}
+.modal.modal-court.modal-purchase-drawer #pur_edit_packageId_dropdown .tms-dropdown-display{position:relative;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:30px;font-size:10px;line-height:38px}
+.modal.modal-court.modal-purchase-drawer #pur_edit_packageId_dropdown .tms-dropdown-display::after{position:absolute;right:8px;top:50%;transform:translateY(-50%)}
 .modal.modal-court .modal-footer .tms-btn,.modal.modal-court .mactions .tms-btn{min-width:84px;padding:0 12px}
 .tms-form-readonly{background-color:#FDF7F2;border-radius:8px;padding:12px;font-size:14px;color:#332A24;min-height:20px;word-break:break-all;box-sizing:border-box;width:100%}
 .tms-panel-tip{font-size:13px;color:#5C4D43;margin-bottom:16px;display:block}

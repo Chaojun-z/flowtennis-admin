@@ -157,6 +157,34 @@ assert.strictEqual(
   '【2.5-3.0】',
   'special course rule line should preserve one decimal levels without the course type prefix'
 );
+assert.strictEqual(
+  context.purchasePackageListLabel({
+    id: 'pur-special-zero',
+    packageId: 'pkg-special-zero',
+    courseType: '专项课',
+    skillLevelMin: '零基础',
+    skillLevelMax: '零基础',
+    courseDisplayName: '【零基础】初阶专项课',
+    packageLessons: 1,
+    packageTimeBand: '全天'
+  }),
+  '专项课 · 【零基础】初阶专项课 · 1次 · 全天',
+  'purchase special course label should not repeat the level before a bracketed title'
+);
+assert.strictEqual(
+  context.purchasePackageListLabel({
+    id: 'pur-special-3',
+    packageId: 'pkg-special-3',
+    courseType: '专项课',
+    skillLevelMin: '2.5',
+    skillLevelMax: 3,
+    courseDisplayName: '发接发与实战练习',
+    packageLessons: 1,
+    packageTimeBand: '全天'
+  }),
+  '专项课 · 【2.5-3.0】发接发与实战练习 · 1次 · 全天',
+  'purchase special course label should preserve the full 3.0 level'
+);
 
 context.packages = [smallTrialPackage];
 context.entitlements = [];

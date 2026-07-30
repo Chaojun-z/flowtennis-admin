@@ -23,7 +23,7 @@ function createPurchaseEntitlementRoutes(deps={}){
     normalizeEntitlementLedgerRowsForDetailView,getIndexedActiveEntitlementsForStudents,recommendEntitlements,
     validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,buildStudentBenefitLedgerRecord,
     assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
-    buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,
+    buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,normalizePurchasePayMethod,
     validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,
     T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
   }=deps;
@@ -126,7 +126,23 @@ function createPurchaseEntitlementRoutes(deps={}){
         const ledger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
         const now=new Date().toISOString();
         if(purchaseHasEntitlementLedger(id,ents,ledger)){
-          const r={...old,notes:body.notes!==undefined?body.notes:old.notes,updatedAt:now};
+          const finalAmount=body.amountPaid!==undefined?Math.round((Number(body.amountPaid)||0)*100)/100:Math.round((Number(old.finalAmount??old.amountPaid)||0)*100)/100;
+          const systemAmount=Math.round((Number(old.systemAmount??old.packagePrice)||0)*100)/100;
+          const priceOverridden=systemAmount!==finalAmount;
+          const overrideReason=body.overrideReason!==undefined?String(body.overrideReason||'').trim():(priceOverridden?String(old.overrideReason||'').trim():'');
+          if(priceOverridden&&!overrideReason)return sendJson(res,{error:'请填写改价原因'},400);
+          const r={
+            ...old,
+            purchaseDate:body.purchaseDate!==undefined?body.purchaseDate:old.purchaseDate,
+            ownerCoach:body.ownerCoach!==undefined?body.ownerCoach:old.ownerCoach,
+            amountPaid:finalAmount,
+            finalAmount,
+            priceOverridden,
+            overrideReason:priceOverridden?overrideReason:'',
+            payMethod:normalizePurchasePayMethod?normalizePurchasePayMethod(body.payMethod!==undefined?body.payMethod:old.payMethod):(body.payMethod!==undefined?body.payMethod:old.payMethod),
+            notes:body.notes!==undefined?body.notes:old.notes,
+            updatedAt:now
+          };
           assertCanEditPurchaseWithLedger(old,r,ents,ledger);
           await put(T_PURCHASES,id,r);
           return sendJson(res,{purchase:r,entitlements:[]});

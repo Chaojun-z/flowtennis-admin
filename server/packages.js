@@ -7,6 +7,7 @@ const PACKAGE_MERGE_CORE_FIELDS=[
   'saleStartDate','saleEndDate','usageStartDate','usageEndDate',
   'dailyTimeWindows','timeBand','coachIds','coachNames','campusIds','maxStudents'
 ];
+const PURCHASE_LEDGER_EDITABLE_FIELDS=new Set(['notes','updatedAt','amountPaid','finalAmount','priceOverridden','overrideReason','purchaseDate','payMethod','ownerCoach']);
 
 function fallbackParseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
 function fallbackParseLessonValue(v,fallback=0){const n=Number(v);return Number.isFinite(n)?n:fallback;}
@@ -23,6 +24,11 @@ function normalizeSpecialCourseSkillLevel(value){
   if(raw==='零基础'||raw==='0'||raw==='0.0')return '零基础';
   const n=Number(raw);
   if(Number.isFinite(n))return n.toFixed(1);
+  return raw;
+}
+function normalizePurchasePayMethod(value){
+  const raw=String(value??'').trim();
+  if(!raw||['待确认','微信支付','微信转账','微信转账支付','会员充值','单独支付','商家码支付'].includes(raw))return '微信';
   return raw;
 }
 function specialCourseSnapshot(source={}){
@@ -160,7 +166,7 @@ function createPackageRules(deps={}){
       usageEndDate:pkg.usageEndDate||'',
       purchaseDate,
       amountPaid:finalAmount,
-      payMethod:body.payMethod||'',
+      payMethod:normalizePurchasePayMethod(body.payMethod),
       operator:opts.operator||body.operator||'',
       status:body.status||'active',
       createdAt:body.createdAt||now,
@@ -354,8 +360,8 @@ function createPackageRules(deps={}){
     if(!oldPurchase||!nextPurchase)return;
     const entitlementIds=new Set((entitlements||[]).filter(e=>e.purchaseId===oldPurchase.id).map(e=>e.id));
     if(!(ledger||[]).some(l=>entitlementIds.has(l.entitlementId)))return;
-    const changed=Object.keys({...oldPurchase,...nextPurchase}).filter(k=>!['notes','updatedAt'].includes(k)&&stableRuleValue(oldPurchase[k],parseArr)!==stableRuleValue(nextPurchase[k],parseArr));
-    if(changed.length)throw new Error('该购买已有课时消耗，只能修改备注');
+    const changed=Object.keys({...oldPurchase,...nextPurchase}).filter(k=>!PURCHASE_LEDGER_EDITABLE_FIELDS.has(k)&&stableRuleValue(oldPurchase[k],parseArr)!==stableRuleValue(nextPurchase[k],parseArr));
+    if(changed.length)throw new Error('该购买已有课时消耗，不能修改学员、课包或权益规则');
   }
   function purchaseHasEntitlementLedger(purchaseId,entitlements=[],ledger=[]){
     const entitlementIds=new Set((entitlements||[]).filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
@@ -396,6 +402,7 @@ function createPackageRules(deps={}){
     assertCanMergePackages,
     buildPackageMergeUpdates,
     assertCanEditPurchaseWithLedger,
+    normalizePurchasePayMethod,
     purchaseHasEntitlementLedger,
     validatePurchaseInputForPackage,
     syncEntitlementFromPurchase

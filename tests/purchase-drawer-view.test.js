@@ -67,6 +67,7 @@ assert.match(source, /String\(l\.purchaseId\|\|''\)===String\(purchaseId\|\|''\)
 assert.match(corePageDataSource, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*entitlementLedger:scoped\.entitlementLedger/, 'purchase page aggregate endpoint should return lesson ledger rows');
 assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker should have scoped drawer styling');
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_packageId_dropdown[\s\S]*text-overflow:ellipsis/, 'purchase package dropdown should clip long package names instead of overflowing the input');
+assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_edit_packageId_dropdown[\s\S]*font-size:10px/, 'purchase edit package dropdown should use smaller text for long package names');
 assert.match(savePurchase, /ensureDatasetsByName\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage'\],\{force:true\}\)/, 'purchase save should force-refresh package list data and customer lifecycle views after creating a purchase');
 assert.match(savePurchase, /giftLessons:parseFloat\(document\.getElementById\('pur_giftLessons'\)\?\.value\)\|\|0/, 'purchase save should submit gifted lesson count');
 assert.match(savePurchase, /courtBookingGiftCount:parseInt\(document\.getElementById\('pur_courtBookingGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit booking benefit gifts');

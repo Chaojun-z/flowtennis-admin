@@ -56,6 +56,8 @@ assert.strictEqual(taxonomy.normalizePaymentMethod('储值卡'), '储值扣款')
 assert.strictEqual(taxonomy.normalizePaymentMethod('大众点评支付'), '大众点评券码');
 assert.strictEqual(taxonomy.normalizePaymentMethod('微信转账支付'), '微信');
 assert.strictEqual(taxonomy.normalizePaymentMethod('会员充值'), '微信');
+assert.strictEqual(taxonomy.normalizePaymentMethod('待确认'), '微信');
+assert.strictEqual(taxonomy.normalizePaymentMethod('微信支付'), '微信');
 assert.strictEqual(taxonomy.normalizePaymentMethod('支付宝转账支付'), '支付宝');
 assert.strictEqual(taxonomy.normalizePaymentMethod('历史导入'), '其他');
 

@@ -1431,15 +1431,14 @@ assert.doesNotThrow(
   'sold package can still edit non-core fields'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertCanEditPurchaseWithLedger(
     { ...purchase, packageId: 'pkg-1', notes: '' },
-    { ...purchase, packageId: 'pkg-1', amountPaid: 1200, notes: '' },
+    { ...purchase, packageId: 'pkg-1', amountPaid: 1200, finalAmount: 1200, purchaseDate: '2026-05-03', payMethod: '微信', ownerCoach: '朝珺', notes: '' },
     [{ id: 'ent-1', purchaseId: 'pur-1' }],
     [{ id: 'led-1', entitlementId: 'ent-1', lessonDelta: -1 }]
   ),
-  /已有课时消耗，只能修改备注/,
-  'consumed purchase should not allow changing payment amount'
+  'consumed purchase can still edit order payment fields'
 );
 
 assert.doesNotThrow(
@@ -1450,6 +1449,17 @@ assert.doesNotThrow(
     [{ id: 'led-1', entitlementId: 'ent-1', lessonDelta: -1 }]
   ),
   'consumed purchase can still edit notes'
+);
+
+assert.throws(
+  () => rules.assertCanEditPurchaseWithLedger(
+    { ...purchase, packageId: 'pkg-1', notes: '' },
+    { ...purchase, packageId: 'pkg-2', notes: '' },
+    [{ id: 'ent-1', purchaseId: 'pur-1' }],
+    [{ id: 'led-1', entitlementId: 'ent-1', lessonDelta: -1 }]
+  ),
+  /已有课时消耗，不能修改学员、课包或权益规则/,
+  'consumed purchase should still block package changes'
 );
 
 assert.throws(

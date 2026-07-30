@@ -2,6 +2,7 @@
 let studentDetailActiveTab='basic';
 let studentDetailEditingSection='';
 let studentDetailEditingStudentId='';
+let studentDetailRequestSeq=0;
 let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
@@ -1225,15 +1226,20 @@ function studentDetailTabNeedsDatasets(tab=studentDetailActiveTab){
 function studentDetailDrawerIsOpenFor(id){
   return String(document.getElementById('overlay')?.dataset.studentDetailId||'')===String(id||'');
 }
+function studentDetailPageStillValid(){
+  return ['students','package-students','trial-students'].includes(currentPage);
+}
 function ensureStudentDetailDatasets(id,{block=false}={}){
   if(studentDetailDatasetsReady())return false;
   const s=studentUnifiedRecordForId(id);if(!s)return false;
+  const requestSeq=++studentDetailRequestSeq;
   if(block){
     const loadingBody='<div class="schedule-detail-content"><div class="empty"><p>详情加载中...</p></div></div>';
     openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:loadingBody,actionsHtml:'',studentId:s.id});
   }
   ensureDatasetsByName(STUDENT_DETAIL_REQUIREMENTS).then(()=>{
-    if(studentDetailDrawerIsOpenFor(id)&&!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))openStudentDetail(id);
+    if(studentDetailRequestSeq!==requestSeq||!studentDetailDrawerIsOpenFor(id)||!studentDetailPageStillValid())return;
+    if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))openStudentDetail(id);
   }).catch(e=>{
     console.error('student detail data load failed',e);
     if(block)toast('学员详情加载失败，请刷新后重试','error');

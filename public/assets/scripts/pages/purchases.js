@@ -113,7 +113,7 @@ function getFilteredPurchases(){
   const dateRange=activePurchaseDateRange();
   return purchaseUnifiedRows().filter(p=>{
     if(!isMeaningfulPurchaseRecord(p))return false;
-    if(!searchHit(q,p.studentName,purchasePackageListLabel(p),p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
+    if(!searchHit(q,p.studentName,purchasePackageListLabel(p),purchaseActualAmount(p),purchasePayMethodText(p.payMethod),p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
     if(packageId&&!purchaseMatchesPackage(p,packageId))return false;
     if(ownerCoachFilter&&coachName(p.ownerCoach)!==ownerCoachFilter)return false;
     if(!purchaseMatchesCampus(p,campus))return false;
@@ -176,6 +176,20 @@ function purchasePackageListLabel(p){
   const label=standardPackageLabel(meta,true)||meta.packageName||'';
   return renderStandardEmptyText(label.replace(/\s*·\s*已停售\s*$/,'').replace(/\s*已停售\s*$/,''));
 }
+function purchasePayMethodText(value){
+  const raw=String(value||'').trim();
+  if(!raw||raw==='待确认'||raw==='微信支付')return '微信';
+  return raw;
+}
+function purchaseReceivableAmount(p={}){
+  return Number(p.systemAmount??p.packagePrice??p.price??0)||0;
+}
+function purchaseActualAmount(p={}){
+  return Number(p.finalAmount??p.amountPaid??0)||0;
+}
+function purchasePriceDiffAmount(p={}){
+  return Math.round((purchaseActualAmount(p)-purchaseReceivableAmount(p))*100)/100;
+}
 function purchaseEntitlementMiniBar(ent){
   if(!ent)return renderStandardCellText('-',false);
   const remaining=Number(ent.remainingLessons)||0,total=Number(ent.totalLessons)||0;
@@ -194,7 +208,7 @@ function purchaseEmptyStateHtml(){
   const filtered=purchaseHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的购买记录':'暂无购买记录';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角课包购买开始录入';
-  return `<tr><td colspan="9"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderPurchaseMobileCards(list){
   const host=document.getElementById('purchaseMobileCards');
@@ -217,10 +231,12 @@ function renderPurchaseMobileCards(list){
         <div><strong>${esc(renderStandardEmptyText(p.studentName))}</strong><span>${esc(p.purchaseDate||'-')}</span></div>
         <span class="tms-tag ${balanceTagClass}">${esc(balanceStatus)}</span>
       </div>
-      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(p.payMethod||'-')}</span><span class="tms-tag">${esc(coachName(p.ownerCoach)||'-')}</span></div>
+      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(purchasePayMethodText(p.payMethod)||'-')}</span><span class="tms-tag">${esc(coachName(p.ownerCoach)||'-')}</span></div>
       <div class="admin-h5-card-grid">
         <span><b>课包</b>${esc(purchasePackageListLabel(p))}</span>
-        <span><b>实收</b>¥${esc(fmt(p.amountPaid))}</span>
+        <span><b>应收</b>¥${esc(fmt(purchaseReceivableAmount(p)))}</span>
+        <span><b>实收</b>¥${esc(fmt(purchaseActualAmount(p)))}</span>
+        <span><b>差价</b>¥${esc(fmt(purchasePriceDiffAmount(p)))}</span>
         <span><b>余额</b>${esc(balanceText)}</span>
         <span><b>状态</b>${esc(balanceStatus)}</span>
       </div>
@@ -245,7 +261,7 @@ function renderPurchases(){
     const ent=entitlements.find(e=>e.purchaseId===p.id);
     const balanceStatus=ent?entitlementStatusText(ent):(p.status==='voided'?'已作废':'未生成');
     const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
-    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderStandardEmptyText(p.studentName))}</div></td><td><div class="tms-text-primary">${esc(purchasePackageListLabel(p))}</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${purchaseEntitlementMiniBar(ent)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(p.payMethod,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
+    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderStandardEmptyText(p.studentName))}</div></td><td><div class="tms-text-primary">${esc(purchasePackageListLabel(p))}</div></td><td><div class="tms-cell-text">¥${fmt(purchaseReceivableAmount(p))}</div></td><td><div class="tms-cell-text">¥${fmt(purchaseActualAmount(p))}</div></td><td><div class="tms-cell-text">¥${fmt(purchasePriceDiffAmount(p))}</div></td><td>${purchaseEntitlementMiniBar(ent)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(purchasePayMethodText(p.payMethod),false)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
   }).join(''):purchaseEmptyStateHtml();
   renderPurchaseMobileCards(slice);
 }
@@ -578,7 +594,7 @@ function openPurchaseDetailModal(id,tab='deal'){
     purchasePriceSummaryDrawerFields(p),
     renderDetailDrawerField('归属教练',coachName(p.ownerCoach)),
     renderDetailDrawerField('可上课教练',parseArr(p.allowedCoaches).map(coachName).filter(Boolean).join('、')),
-    renderDetailDrawerField('支付方式',p.payMethod),
+    renderDetailDrawerField('支付方式',purchasePayMethodText(p.payMethod)),
     renderDetailDrawerField('购买状态',purchaseStatusText(p)),
     renderDetailDrawerField('操作人',p.operator),
     renderDetailDrawerField('备注',p.notes)
@@ -691,7 +707,7 @@ function openPurchaseEditModal(id){
   const payOptions=PAY_METHODS.map(t=>({value:t,label:t}));
   const ownerOptions=[{value:'',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const actions=purchaseDrawerActions(`openPurchaseDetailModal('${p.id}')`,`savePurchaseEdit('${p.id}')`,'purchaseEditSaveBtn');
-  const purchaseForm=`${locked?'<div class="inline-help package-drawer-danger-help">该购买记录已有课时消耗，只能修改备注。</div>':''}<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">学员 *</label>${renderStandardDropdownHtml('pur_edit_studentId','选择学员',studentOptions,p.studentId,true)}</div><div class="tms-form-item"><label class="tms-form-label">选择课包 *</label>${renderCoursePackagePickerDropdownHtml('pur_edit_packageId','选择课包',packages.filter(pkg=>(pkg.status!=='inactive'&&pkg.status!=='merged')||pkg.id===p.packageId),p.packageId,{includeCoach:true,onchange:'onPurchaseEditPackageChange'})}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">支付日期</label>${courtDateButtonHtml('pur_edit_purchaseDate',p.purchaseDate||today(),'支付日期')}</div><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderStandardDropdownHtml('pur_edit_ownerCoach','归属教练',ownerOptions,coachName(p.ownerCoach),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">系统价格</label><input class="finput tms-form-control" id="pur_edit_systemAmount" type="number" value="${Number(p.systemAmount??p.packagePrice??0)||0}" readonly></div><div class="tms-form-item"><label class="tms-form-label">实收金额</label><input class="finput tms-form-control" id="pur_edit_amountPaid" type="number" value="${parseFloat(p.finalAmount??p.amountPaid)||0}"${locked?' readonly':''} oninput="purchasePriceOverrideChanged('pur_edit')"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">支付方式</label>${renderStandardDropdownHtml('pur_edit_payMethod','支付方式',payOptions,p.payMethod||'微信',true)}</div><div class="tms-form-item" id="pur_edit_overrideReasonWrap" style="display:${Number(p.systemAmount??p.packagePrice??0)!==Number(p.finalAmount??p.amountPaid??0)?'block':'none'}"><label class="tms-form-label">改价原因</label><input class="finput tms-form-control" id="pur_edit_overrideReason" value="${esc(p.overrideReason||'')}" ${locked?'readonly':''} placeholder="实际成交价不一致时必填"></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item"><label class="tms-form-label">可上课教练</label><div class="tms-checkbox-matrix purchase-coach-picker">${purchaseAllowedCoachChecks(p.allowedCoaches, 'pur-edit-allowed-coach-cb')}</div></div><div class="tms-form-item"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pur_edit_notes">${esc(p.notes||'')}</textarea></div></div>`;
+  const purchaseForm=`${locked?'<div class="inline-help package-drawer-danger-help">该购买记录已有课时消耗，不能修改学员、课包或权益规则。</div>':''}<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">学员 *</label>${renderStandardDropdownHtml('pur_edit_studentId','选择学员',studentOptions,p.studentId,true)}</div><div class="tms-form-item"><label class="tms-form-label">选择课包 *</label>${renderCoursePackagePickerDropdownHtml('pur_edit_packageId','选择课包',packages.filter(pkg=>(pkg.status!=='inactive'&&pkg.status!=='merged')||pkg.id===p.packageId),p.packageId,{includeCoach:true,onchange:'onPurchaseEditPackageChange'})}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">支付日期</label>${courtDateButtonHtml('pur_edit_purchaseDate',p.purchaseDate||today(),'支付日期')}</div><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderStandardDropdownHtml('pur_edit_ownerCoach','归属教练',ownerOptions,coachName(p.ownerCoach),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">系统价格</label><input class="finput tms-form-control" id="pur_edit_systemAmount" type="number" value="${Number(p.systemAmount??p.packagePrice??0)||0}" readonly></div><div class="tms-form-item"><label class="tms-form-label">实收金额</label><input class="finput tms-form-control" id="pur_edit_amountPaid" type="number" value="${parseFloat(p.finalAmount??p.amountPaid)||0}" oninput="purchasePriceOverrideChanged('pur_edit')"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">支付方式</label>${renderStandardDropdownHtml('pur_edit_payMethod','支付方式',payOptions,purchasePayMethodText(p.payMethod),true)}</div><div class="tms-form-item" id="pur_edit_overrideReasonWrap" style="display:${Number(p.systemAmount??p.packagePrice??0)!==Number(p.finalAmount??p.amountPaid??0)?'block':'none'}"><label class="tms-form-label">改价原因</label><input class="finput tms-form-control" id="pur_edit_overrideReason" value="${esc(p.overrideReason||'')}" placeholder="实际成交价不一致时必填"></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item"><label class="tms-form-label">可上课教练</label><div class="tms-checkbox-matrix purchase-coach-picker">${purchaseAllowedCoachChecks(p.allowedCoaches, 'pur-edit-allowed-coach-cb')}</div></div><div class="tms-form-item"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pur_edit_notes">${esc(p.notes||'')}</textarea></div></div>`;
   const body=renderDetailDrawerContent([
     renderDetailDrawerFormCard('购买信息',purchaseForm,actions)
   ].join(''));
@@ -702,12 +718,10 @@ function openPurchaseEditModal(id){
     {purchaseDetailId:p.id}
   );
   if(locked){
-    ['pur_edit_studentId_dropdown','pur_edit_packageId_dropdown','pur_edit_payMethod_dropdown','pur_edit_ownerCoach_dropdown'].forEach(id=>{
+    ['pur_edit_studentId_dropdown','pur_edit_packageId_dropdown'].forEach(id=>{
       const el=document.getElementById(id);
       if(el){el.style.pointerEvents='none';el.style.opacity='0.6';}
     });
-    const dateBtn=document.getElementById('pur_edit_purchaseDate_btn');
-    if(dateBtn){dateBtn.disabled=true;dateBtn.style.pointerEvents='none';dateBtn.style.opacity='0.6';}
     document.querySelectorAll('.pur-edit-allowed-coach-cb').forEach(cb=>{cb.disabled=true;});
   }
   fillPurchaseEditPackageMeta();
@@ -720,7 +734,7 @@ async function savePurchaseEdit(id){
   const btn=document.getElementById('purchaseEditSaveBtn');
   const data={studentId:document.getElementById('pur_edit_studentId')?.value||'',packageId:document.getElementById('pur_edit_packageId')?.value||'',ownerCoach:document.getElementById('pur_edit_ownerCoach')?.value||'',allowedCoaches:[...document.querySelectorAll('.pur-edit-allowed-coach-cb:checked')].map(cb=>cb.value),purchaseDate:document.getElementById('pur_edit_purchaseDate')?.value||'',amountPaid:parseFloat(document.getElementById('pur_edit_amountPaid')?.value)||0,overrideReason:document.getElementById('pur_edit_overrideReason')?.value.trim()||'',payMethod:document.getElementById('pur_edit_payMethod')?.value||'',notes:document.getElementById('pur_edit_notes')?.value.trim()||''};
   const systemAmount=Number(document.getElementById('pur_edit_systemAmount')?.value)||0;
-  if(!purchaseHasLedger(id)&&systemAmount!==Number(data.amountPaid||0)&&!data.overrideReason){toast('请填写改价原因','warn');if(btn){btn.disabled=false;btn.textContent='保存';}return;}
+  if(systemAmount!==Number(data.amountPaid||0)&&!data.overrideReason){toast('请填写改价原因','warn');if(btn){btn.disabled=false;btn.textContent='保存';}return;}
   await runStandardMutation(btn,async()=>{
     const res=await apiCall('PUT','/purchases/'+id,data);
     if(res.purchase){
@@ -856,7 +870,7 @@ function exportPurchaseCSV(){
   let csv='购买日期,学员,售卖课包,课程类型,实收,剩余课时,总课时,有效开始,有效结束,支付方式,状态,备注\n';
   csv+=list.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id)||{};
-    return [p.purchaseDate||'',p.studentName||'',standardPackageLabel(p,true)||p.packageName||'',p.courseType||'',parseFloat(p.amountPaid)||0,Number(ent.remainingLessons)||0,Number(ent.totalLessons)||0,ent.validFrom||'',ent.validUntil||'',p.payMethod||'',purchaseStatusText(p),'"'+String(p.notes||'').replace(/"/g,'""')+'"'].join(',');
+    return [p.purchaseDate||'',p.studentName||'',standardPackageLabel(p,true)||p.packageName||'',p.courseType||'',parseFloat(p.amountPaid)||0,Number(ent.remainingLessons)||0,Number(ent.totalLessons)||0,ent.validFrom||'',ent.validUntil||'',purchasePayMethodText(p.payMethod)||'',purchaseStatusText(p),'"'+String(p.notes||'').replace(/"/g,'""')+'"'].join(',');
   }).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_购买记录_'+today()+'.csv';a.click();toast('导出成功','success');

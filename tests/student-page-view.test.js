@@ -23,6 +23,7 @@ function fnBody(name){
 }
 
 assert.match(source, /function renderScheduleStudentSuggestions/, 'schedule modal should provide a dedicated student suggestion helper');
+assert.match(fnBody('scheduleStudentRosterRows'), /students\.forEach[\s\S]*teachingStudentViews\?\.historicalStudents[\s\S]*teachingStudentViews\?\.activeStudents/, 'schedule student search should include the full student list before teaching view rows');
 assert.match(source, /function scheduleSelectedStudentHomeCampusMeta/, 'schedule modal should derive the selected student home campus');
 assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*\$\{campus\}｜\$\{last\}\$\{last\.endsWith\('有课'\)\?'':'上课'\}/, 'schedule modal should show selected student home campus inline with the selected tag');
 assert.doesNotMatch(source, /id="sch_homeCampusSummary"/, 'schedule modal should not show home campus as a separate row');
@@ -91,6 +92,8 @@ assert.doesNotMatch(fnBody('studentPageStats'), /standardSummary\.total\|\|base\
 assert.match(source, /function studentUnifiedRecordForId\(/, 'student detail and edit flows should resolve the same unified student view row used by the list');
 assert.match(fnBody('openStudentDetail'), /studentUnifiedRecordForId\(id\)/, 'student detail should use the unified student view row instead of raw students as the display source');
 assert.match(fnBody('openStudentModal'), /studentUnifiedRecordForId\(id\)/, 'student edit default values should use the unified student view row instead of raw students');
+assert.match(source, /let studentDetailRequestSeq=0/, 'student detail async loading should track the latest request');
+assert.match(fnBody('ensureStudentDetailDatasets'), /const requestSeq=\+\+studentDetailRequestSeq[\s\S]*studentDetailRequestSeq!==requestSeq[\s\S]*studentDetailDrawerIsOpenFor\(id\)[\s\S]*studentDetailPageStillValid\(\)/, 'student detail async loading should not reopen after the drawer is closed or the page changes');
 assert.doesNotMatch(fnBody('studentLastLessonDate'), /schedules\.filter/, 'student recent lesson must come from backend unified detail rows, not frontend schedule scanning');
 assert.doesNotMatch(fnBody('studentCompletedLessonCount'), /studentCompletedLessonUnits/, 'student cumulative lesson count must come from backend unified completedLessons, not frontend schedule or ledger scanning');
 assert.doesNotMatch(fnBody('studentCampusValuesForList'), /entitlements\.filter|purchases\.filter|packages\.filter|schedules\.filter/, 'student campus filter should read the unified student row campus fields instead of scanning raw business tables');
@@ -429,7 +432,7 @@ assert.match(source, /实际成交价与系统价格不一致时必填/, 'purcha
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');
 assert.match(source, /purchase-coach-picker[\s\S]*purchase-notes-row/, 'purchase allowed coach picker should reuse the student picker block style');
 assert.match(source, /function purchaseAllowedCoachChecks[\s\S]*tms-checkbox-wrap[\s\S]*tms-checkbox/, 'purchase allowed coach options should use the standard checkbox row style');
-assert.match(source, /\{key:'purchases'[\s\S]*columns:\[\{label:'支付日期',style:'width:100px;padding-left:20px'\},\{label:'姓名',style:'width:80px'\},\{label:'课包',style:'width:260px'\},\{label:'实收',style:'width:70px'\},\{label:'余额',style:'width:80px'\},\{label:'状态',style:'width:64px'\},\{label:'归属教练',style:'width:78px'\},\{label:'支付方式',style:'width:78px'\}/, 'purchase record table should follow the current column order');
+assert.match(source, /\{key:'purchases'[\s\S]*columns:\[\{label:'支付日期',style:'width:100px;padding-left:20px'\},\{label:'姓名',style:'width:80px'\},\{label:'课包',style:'width:260px'\},\{label:'应收',style:'width:70px'\},\{label:'实收',style:'width:70px'\},\{label:'差价',style:'width:70px'\},\{label:'余额',style:'width:80px'\},\{label:'状态',style:'width:64px'\},\{label:'归属教练',style:'width:78px'\},\{label:'支付方式',style:'width:78px'\}/, 'purchase record table should follow the current column order');
 assert.match(source, /pager:\{infoId:'purPagerInfo',pageSizeId:'purPageSize',buttonsId:'purPagerBtns'\}/, 'purchase record page should expose the standard pager');
 assert.match(source, /function onPurchaseFilterChange\(\)[\s\S]*purPackageFilterValue=document\.getElementById\('purPackageFilter'\)\?\.value\|\|''[\s\S]*purPage=standardListFirstPage\(\)[\s\S]*renderPurchases\(\)/, 'purchase filters should store the selected package and reset pagination through the standard list flow');
 assert.match(source, /function purchaseSelectedPackageFilter\(\)[\s\S]*purPackageFilterValue\|\|document\.getElementById\('purPackageFilter'\)\?\.value\|\|''/, 'purchase package filter should survive navigation before the dropdown is rendered');

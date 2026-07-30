@@ -701,7 +701,7 @@ const {
   assertCanMergePackages,
   buildPackageMergeUpdates,
   assertCanEditPurchaseWithLedger,
-  purchaseHasEntitlementLedger,
+  purchaseHasEntitlementLedger,normalizePurchasePayMethod,
   validatePurchaseInputForPackage,
   syncEntitlementFromPurchase
 }=packageRules;
@@ -712,7 +712,7 @@ const handlePurchaseEntitlementRoutes=createPurchaseEntitlementRoutes({
   normalizeEntitlementLedgerRowsForDetailView,getIndexedActiveEntitlementsForStudents,recommendEntitlements,
   validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,buildStudentBenefitLedgerRecord,
   assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
-  buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,
+  buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,normalizePurchasePayMethod,
   validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,
   T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
 });

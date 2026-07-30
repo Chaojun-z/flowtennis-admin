@@ -125,11 +125,7 @@ function renderSchedule(){
 function scheduleStudentTextByIds(ids){
   return parseArr(ids).map(id=>{const student=students.find(s=>s.id===id);return student?(student.phone?`${student.name}（${student.phone}）`:student.name):id;}).join('、');
 }
-function scheduleStudentRosterRows(){
-  const map=new Map();
-  [...(teachingStudentViews?.historicalStudents||[]),...(teachingStudentViews?.activeStudents||[])].forEach(row=>{const id=String(row.studentId||row.id||'').trim();if(!id||map.has(id))return;const student=students.find(item=>String(item.id||'')===id)||{};map.set(id,{...student,...row,id,name:row.name||row.displayName||student.name||'',phone:row.phone||student.phone||'',campus:row.campus||student.campus||'',primaryCoach:row.primaryCoach||row.owner||student.primaryCoach||''});});
-  return [...map.values()];
-}
+function scheduleStudentRosterRows(){const map=new Map();const upsert=(row,base={})=>{const id=String(row.studentId||row.id||'').trim();if(!id)return;const current=map.get(id)||{};map.set(id,{...current,...base,...row,id,name:row.name||row.displayName||base.name||current.name||'',phone:row.phone||base.phone||current.phone||'',campus:row.campus||base.campus||current.campus||'',primaryCoach:row.primaryCoach||row.owner||base.primaryCoach||current.primaryCoach||''});};students.forEach(row=>upsert(row));[...(teachingStudentViews?.historicalStudents||[]),...(teachingStudentViews?.activeStudents||[])].forEach(row=>upsert(row,students.find(item=>String(item.id||'')===String(row.studentId||row.id||''))||{}));return [...map.values()];}
 function scheduleStudentById(id){const sid=String(id||'').trim();return sid?(scheduleStudentRosterRows().find(s=>String(s.id||'')===sid)||students.find(s=>String(s.id||'')===sid)||null):null;}
 function scheduleStudentSearchRows(selectedIds=[]){
   const map=new Map();scheduleStudentRosterRows().forEach(s=>{if(s?.id)map.set(String(s.id),s);});
