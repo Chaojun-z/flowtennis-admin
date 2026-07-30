@@ -4,7 +4,8 @@ const {
   createThirdPartySyncCenterRoutes,
   buildThirdPartySyncBatch,
   precheckThirdPartyRecords,
-  buildThirdPartyImportPlan
+  buildThirdPartyImportPlan,
+  defaultDailyRange
 } = require('../server/third-party-sync-center-routes');
 
 function createRes() {
@@ -33,6 +34,12 @@ assert.strictEqual(
   buildThirdPartySyncBatch({ rangeStart: '2026-07-27 00:00:00', rangeEnd: '2026-07-27 23:59:59', now: '2026-07-28T00:00:00+08:00' }).mode,
   'readonly',
   'new sync batches must default to readonly mode'
+);
+
+assert.deepStrictEqual(
+  defaultDailyRange(new Date('2026-07-29T16:00:00.000Z')),
+  { rangeStart: '2026-07-29 00:00:00', rangeEnd: '2026-07-30 00:00:00' },
+  'daily auto sync should only cover the previous Beijing business day'
 );
 
 const precheck = precheckThirdPartyRecords([
@@ -108,6 +115,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
     fetchThirdPartyData: async () => ({
       records: [
         { sourceType: 'order', orderNo: 'O1', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' },
+        { sourceType: 'order', orderNo: 'NEXTDAY', bookingDate: '2026-07-28', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' },
         { sourceType: 'member', thirdPartyId: 'M1', memberName: '会员资料A', memberPhone: '13900000000' },
         { sourceType: 'order', orderNo: 'OLD1', bookingDate: '2026-05-27', venue: '2号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' }
       ],
@@ -130,6 +138,10 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
   assert.strictEqual(listRes.body.summary.memberProfileCount, 1, 'overview should split member profile count from all pulled records');
   assert.strictEqual(listRes.body.summary.syncGapCount, 1, 'overview should split sync gap count from all pulled records');
   assert.ok(!scans.ft_third_party_sync_prechecks.some(row => row.sourceRecordId === 'OLD1'), 'pull should ignore booking records outside requested date range');
+  const pullExclusiveEndRes = await call(handler, { path: '/third-party-sync/pull', method: 'POST', body: { rangeStart: '2026-07-27 00:00:00', rangeEnd: '2026-07-28 00:00:00' } });
+  const exclusiveBatchId = pullExclusiveEndRes.body.batch.batchId;
+  assert.ok(scans.ft_third_party_sync_prechecks.some(row => row.batchId === exclusiveBatchId && row.sourceRecordId === 'O1'), 'previous day half-open range should include the target day');
+  assert.ok(!scans.ft_third_party_sync_prechecks.some(row => row.batchId === exclusiveBatchId && row.sourceRecordId === 'NEXTDAY'), 'previous day half-open range should exclude the next day');
   scans.ft_third_party_sync_batches.push({ id: 'old-batch', batchId: 'old-batch', pulledAt: '2026-07-01T00:00:00+08:00', status: 'prechecked' });
   scans.ft_third_party_sync_raw_records.push({ id: 'old-raw-1', batchId: 'old-batch', sourceType: 'order' });
   scans.ft_third_party_sync_prechecks.push({ id: 'old-precheck-1', batchId: 'old-batch', sourceRecordId: 'OLD-RISK', recommendedType: 'high_risk_exception', needsConfirmation: true });
@@ -276,6 +288,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
     ft_membership_accounts: []
   };
   const cronWrites = [];
+  const cronNotifications = [];
   const cronHandler = createThirdPartySyncCenterRoutes({
     init: async () => {},
     sendJson: (res, payload, code = 200) => res.status(code).json(payload),
@@ -295,11 +308,12 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
       return () => `cron-uuid-${++n}`;
     })(),
     normalizeCourtRecord: row => row,
+    notifyThirdPartySyncResult: async payload => cronNotifications.push(payload),
     fetchThirdPartyData: async () => ({
       records: [
-        { sourceType: 'order', orderNo: 'O8', bookingDate: '2026-07-27', venue: '4号场', startTime: '13:00', endTime: '14:00', amount: 90, payMethod: '微信支付', status: '已完成', customerName: '自动订单' },
-        { sourceType: 'order', orderNo: 'O9', bookingDate: '2026-07-27', venue: '5号场', startTime: '15:00', endTime: '16:00', amount: 120, payMethod: '微信支付', status: '已取消', remark: '取消订单' },
-        { sourceType: 'lock', thirdPartyId: 'L9', bookingDate: '2026-07-27', venue: '6号场', startTime: '17:00', endTime: '18:00', remark: '私教课' }
+        { sourceType: 'order', orderNo: 'O8', bookingDate: '2026-07-29', venue: '4号场', startTime: '13:00', endTime: '14:00', amount: 90, payMethod: '微信支付', status: '已完成', customerName: '自动订单' },
+        { sourceType: 'order', orderNo: 'O9', bookingDate: '2026-07-29', venue: '5号场', startTime: '15:00', endTime: '16:00', amount: 120, payMethod: '微信支付', status: '已取消', remark: '取消订单' },
+        { sourceType: 'lock', thirdPartyId: 'L9', bookingDate: '2026-07-29', venue: '6号场', startTime: '17:00', endTime: '18:00', remark: '私教课' }
       ],
       gaps: []
     }),
@@ -313,6 +327,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
     query: new URLSearchParams('lookbackDays=3')
   });
   assert.strictEqual(cronRes.body.autoImport.result.status, 'partial_completed', 'cron should auto import stable rows and pause unsafe rows');
+  assert.ok(cronNotifications.some(item => item.type === 'success' && item.result?.writtenIds?.length > 0), 'cron should notify Feishu group after successful auto import');
   assert.ok(cronWrites.some(row => row.table === 'ft_courts' && row.row.history?.some(history => history.sourceRecordId === 'O8')), 'cron should write stable high-confidence order');
   assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_changes' && row.row.sourceRecordId === 'O9' && row.row.changeType === 'cancelled'), 'cron should record third-party cancellation changes');
   assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_alerts' && /取消|退款|阻断|低置信/.test(row.row.reason)), 'cron should create alerts for unsafe rows');
@@ -348,6 +363,66 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
   assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_rollbacks'), 'rollback should write an audit row');
   assert.ok(rollbackRes.body.rollback.restored.some(row => row.table === 'ft_courts' && row.action === 'delete_created_empty_court'), 'rollback should delete import-created empty court only after later changes are cleared');
   assert.ok(cronScans.ft_third_party_sync_import_results.some(row => row.operationId === cronRes.body.autoImport.result.operationId && row.status === 'rolled_back'), 'rollback should mark import result rolled back');
+
+  const failedCronScans = {
+    ft_third_party_sync_batches: [],
+    ft_third_party_sync_raw_records: [],
+    ft_third_party_sync_prechecks: [],
+    ft_third_party_sync_confirmations: [],
+    ft_third_party_sync_import_results: [],
+    ft_third_party_sync_import_backups: [],
+    ft_third_party_sync_changes: [],
+    ft_third_party_sync_alerts: [],
+    ft_third_party_sync_rollbacks: [],
+    ft_courts: [],
+    ft_financial_ledger: [],
+    ft_schedule: [],
+    ft_membership_accounts: []
+  };
+  const failedCronWrites = [];
+  const failedCronNotifications = [];
+  const failedCronHandler = createThirdPartySyncCenterRoutes({
+    init: async () => {},
+    sendJson: (res, payload, code = 200) => res.status(code).json(payload),
+    getCachedScan: async table => failedCronScans[table] || [],
+    getCachedRow: async (table, id) => (failedCronScans[table] || []).find(row => String(row.id) === String(id)) || null,
+    put: async (table, id, row) => {
+      failedCronWrites.push({ table, id, row });
+      failedCronScans[table] = [...(failedCronScans[table] || []).filter(item => String(item.id) !== String(id)), row];
+    },
+    del: async (table, id) => {
+      failedCronWrites.push({ table, id, deleted: true });
+      failedCronScans[table] = (failedCronScans[table] || []).filter(item => String(item.id) !== String(id));
+    },
+    mkTable: async () => 'ok',
+    uuidv4: (() => {
+      let n = 0;
+      return () => `failed-cron-uuid-${++n}`;
+    })(),
+    normalizeCourtRecord: row => row,
+    writeImportItem: async () => {
+      throw new Error('模拟业务写入失败');
+    },
+    notifyThirdPartySyncResult: async payload => failedCronNotifications.push(payload),
+    fetchThirdPartyData: async () => ({
+      records: [
+        { sourceType: 'order', orderNo: 'FAIL1', bookingDate: '2026-07-29', venue: '4号场', startTime: '13:00', endTime: '14:00', amount: 90, payMethod: '微信支付', status: '已完成', customerName: '失败订单' }
+      ],
+      gaps: []
+    }),
+    now: () => '2026-07-29T00:00:00+08:00',
+    env: { CRON_SECRET: 'secret' }
+  });
+  const failedCronRes = await call(failedCronHandler, {
+    path: '/cron/third-party-sync-center',
+    method: 'GET',
+    req: { headers: { authorization: 'Bearer secret' } },
+    query: new URLSearchParams('lookbackDays=3')
+  });
+  assert.strictEqual(failedCronRes.statusCode, 500, 'cron should fail when stable importable rows all fail to write');
+  assert.strictEqual(failedCronRes.body.autoImport.result.status, 'failed', 'cron response should expose the failed import result');
+  assert.ok(failedCronWrites.some(row => row.table === 'ft_third_party_sync_alerts' && /模拟业务写入失败/.test(row.row.reason)), 'cron import failure should write an alert row');
+  assert.ok(failedCronNotifications.some(item => item.type === 'failure' && /模拟业务写入失败/.test(item.result?.failed?.[0]?.reason || '')), 'cron import failure should notify Feishu group');
 
   console.log('third-party sync center routes tests passed');
 })().catch(err => {

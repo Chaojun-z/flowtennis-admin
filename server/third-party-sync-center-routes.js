@@ -58,13 +58,12 @@ function addDays(dateKey, delta) {
   return new Date(utc).toISOString().slice(0, 10);
 }
 
-function defaultDailyRange(now = new Date(), lookbackDays = 3) {
+function defaultDailyRange(now = new Date()) {
   const today = chinaDateKey(now);
   const yesterday = addDays(today, -1);
-  const start = addDays(yesterday, -Math.max(0, Number(lookbackDays || 3) - 1));
   return {
-    rangeStart: `${start} 00:00:00`,
-    rangeEnd: `${yesterday} 23:59:59`
+    rangeStart: `${yesterday} 00:00:00`,
+    rangeEnd: `${today} 00:00:00`
   };
 }
 
@@ -161,6 +160,7 @@ function recordWithinRange(record = {}, rangeStart = '', rangeEnd = '') {
   const start = cleanText(rangeStart).slice(0, 10);
   const end = cleanText(rangeEnd).slice(0, 10);
   if (!date || !start || !end) return true;
+  if (/00:00(?::00)?$/.test(cleanText(rangeEnd)) && end > start) return date >= start && date < end;
   return date >= start && date <= end;
 }
 
@@ -710,6 +710,57 @@ function requireCronAccess(req, env = process.env) {
   return token === expected;
 }
 
+function importResultWriteCount(result = {}) {
+  return Array.isArray(result.writtenIds) ? result.writtenIds.length : 0;
+}
+
+function importResultFailedCount(result = {}) {
+  return Array.isArray(result.failed) ? result.failed.length : 0;
+}
+
+function shouldFailCronForImportResult(result = {}) {
+  const status = cleanText(result.status);
+  if (['failed', 'partial_failed'].includes(status)) return true;
+  return Number(result.plannedCount || 0) > 0 && importResultWriteCount(result) === 0;
+}
+
+function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, result = {}, alerts = [] } = {}) {
+  const failed = Array.isArray(result.failed) ? result.failed : [];
+  const skipped = Array.isArray(result.skippedIds) ? result.skippedIds : [];
+  const prefix = type === 'failure' ? '第三方同步失败报警' : '第三方同步导入成功';
+  const lines = [
+    `网球兄弟小助手 ${prefix}`,
+    `批次：${batch.batchId || result.batchId || '-'}`,
+    `范围：${batch.rangeStart || '-'} 至 ${batch.rangeEnd || '-'}`,
+    `计划导入：${Number(result.plannedCount || 0)} 条`,
+    `实际写入：${importResultWriteCount(result)} 条`,
+    `失败：${importResultFailedCount(result)} 条`,
+    `跳过/阻断：${skipped.length} 条`,
+    `状态：${result.status || '-'}`
+  ];
+  if (failed.length) {
+    lines.push('失败原因：');
+    lines.push(...failed.slice(0, 8).map(row => `${row.sourceRecordId || '-'}：${row.reason || '-'}`));
+    if (failed.length > 8) lines.push(`其余 ${failed.length - 8} 条请到第三方同步中心查看。`);
+  }
+  const alertRows = (alerts || []).filter(row => row.reason).slice(0, 5);
+  if (alertRows.length) {
+    lines.push('异常提醒：');
+    lines.push(...alertRows.map(row => row.reason));
+  }
+  return lines.join('\n');
+}
+
+async function defaultNotifyThirdPartySyncResult({ type = 'success', batch = {}, result = {}, alerts = [], env = process.env, client = axios } = {}) {
+  const webhook = cleanText(env.THIRD_PARTY_SYNC_NOTIFY_WEBHOOK || env.FEISHU_THIRD_PARTY_SYNC_WEBHOOK || env.FEISHU_MONITOR_WEBHOOK_URL || env.FEISHU_WEBHOOK_URL);
+  if (!webhook) return { skipped: true };
+  const text = buildThirdPartySyncNotificationText({ type, batch, result, alerts });
+  const res = await client.post(webhook, { msg_type: 'text', content: { text } }, { timeout: 10000 });
+  const code = Number(res.data?.code ?? 0);
+  if (code !== 0) throw new Error(`飞书群通知失败：${res.data?.msg || code}`);
+  return { sent: true, code };
+}
+
 function createThirdPartySyncCenterRoutes(deps = {}) {
   const {
     init = async () => {},
@@ -723,6 +774,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     normalizeCourtRecord = row => row,
     writeImportItem = defaultWriteThirdPartyImportItem,
     fetchThirdPartyData = fetchChangxiaoerData,
+    notifyThirdPartySyncResult = defaultNotifyThirdPartySyncResult,
     now = () => new Date().toISOString(),
     env = process.env,
     tables = {}
@@ -929,11 +981,20 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     if (path === '/cron/third-party-sync-center' && method === 'GET') {
       if (!requireCronAccess(req, env)) return sendJson(res, { error: '无权限' }, 401);
       await init();
-      const range = defaultDailyRange(new Date(), Number(query.get('lookbackDays') || 3));
+      const range = defaultDailyRange(new Date());
       const pulled = await pullAndPrecheck({ ...range, operator: 'daily-auto-sync' });
       const autoImport = await runImportForBatch({ batchId: pulled.batch.batchId, operator: 'daily-auto-sync', importedAt: now() });
       const alerts = await createImportAlerts({ batchId: pulled.batch.batchId, plan: autoImport.plan, changes: pulled.changes, result: autoImport.result, operator: 'daily-auto-sync', nowValue: now() });
-      return sendJson(res, { ...pulled, autoImport, alerts });
+      const failed = shouldFailCronForImportResult(autoImport.result);
+      let notification = null;
+      try {
+        notification = await notifyThirdPartySyncResult({ type: failed ? 'failure' : 'success', batch: pulled.batch, result: autoImport.result, alerts, env });
+      } catch (err) {
+        notification = { sent: false, error: err.message || '飞书通知失败' };
+      }
+      const payload = { ...pulled, autoImport, alerts, notification };
+      if (failed) return sendJson(res, { ...payload, error: '第三方同步导入失败，已生成报警' }, 500);
+      return sendJson(res, payload);
     }
     if (!path.startsWith('/third-party-sync')) return false;
     if (user?.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
@@ -979,7 +1040,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       return sendJson(res, { summary, batches, rawRecords, prechecks, confirmations, importResults, changes, alerts, rollbacks });
     }
     if (path === '/third-party-sync/pull' && method === 'POST') {
-      const range = body.rangeStart && body.rangeEnd ? { rangeStart: body.rangeStart, rangeEnd: body.rangeEnd } : defaultDailyRange(new Date(), Number(body.lookbackDays || 3));
+      const range = body.rangeStart && body.rangeEnd ? { rangeStart: body.rangeStart, rangeEnd: body.rangeEnd } : defaultDailyRange(new Date());
       return sendJson(res, await pullAndPrecheck({ ...range, operator: user.name || 'admin' }));
     }
     if (path === '/third-party-sync/confirmations' && method === 'POST') {

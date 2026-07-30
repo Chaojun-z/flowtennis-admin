@@ -232,12 +232,12 @@ async function loadThirdPartySyncCenter(force=false){
   }
 }
 async function runThirdPartySyncPull(){
-  if(!await appConfirm('从第三方平台拉取最近 3 天数据并生成预检；需要先配置 CXE_USER / CXE_PASS。此操作不写业务表。',{title:'手动拉取第三方数据',confirmText:'开始拉取'}))return;
+  if(!await appConfirm('从第三方平台拉取前一天数据并生成预检；需要先配置 CXE_USER / CXE_PASS。此操作不写业务表。',{title:'手动拉取第三方数据',confirmText:'开始拉取'}))return;
   thirdPartySyncPullLoading=true;
   renderThirdPartySyncCenter();
   toast('正在拉取第三方数据，请稍等','info');
   try{
-    await apiCall('POST','/third-party-sync/pull',{lookbackDays:3});
+    await apiCall('POST','/third-party-sync/pull',{});
     thirdPartySyncBatchFilter='';
     staleCachedDatasets.add('thirdPartySyncCenterPage');
     await loadThirdPartySyncCenter(true);
