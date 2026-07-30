@@ -141,8 +141,14 @@ function customerNameOf(record = {}) {
   return cleanText(record.customerName || record.userName || record.memberName || record.realName || record.name || record.contactName || record.nickName);
 }
 
+function normalizeThirdPartyPhone(value = '') {
+  const digits = cleanText(value).replace(/[^\d]/g, '');
+  if (/^86(1[3-9]\d{9})$/.test(digits)) return digits.slice(2);
+  return digits || cleanText(value);
+}
+
 function phoneOf(record = {}) {
-  return cleanText(record.phone || record.mobile || record.userPhone || record.memberPhone || record.contactPhone);
+  return normalizeThirdPartyPhone(record.phone || record.mobile || record.userPhone || record.memberPhone || record.contactPhone);
 }
 
 function remarkOf(record = {}) {
@@ -847,7 +853,20 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
 
   async function createImportAlerts({ batchId = '', plan = {}, changes = [], result = null, operator = 'system', nowValue = now() } = {}) {
     const alerts = [];
-    const pushAlert = reason => {
+    const alertSourcePayload = source => ({
+      sourceRecordId: cleanText(source?.sourceRecordId),
+      sourceType: normalizeSourceType(source?.sourceType),
+      date: cleanText(source?.date || bookingDateOf(source?.currentRaw || {})),
+      startTime: cleanText(source?.startTime || startTimeOf(source?.currentRaw || {})),
+      endTime: cleanText(source?.endTime || endTimeOf(source?.currentRaw || {})),
+      venue: cleanText(source?.venue || venueOf(source?.currentRaw || {})),
+      customerName: cleanText(source?.customerName || customerNameOf(source?.currentRaw || {})),
+      phone: normalizeThirdPartyPhone(source?.phone || phoneOf(source?.currentRaw || {})),
+      bookingMode: cleanText(source?.bookingMode || bookingModeOf(source?.currentRaw || source || {})),
+      operatorAccount: cleanText(source?.operatorAccount || operatorAccountOf(source?.currentRaw || {})),
+      remark: cleanText(source?.remark || remarkOf(source?.currentRaw || {}))
+    });
+    const pushAlert = (reason, source = {}) => {
       const text = cleanText(reason);
       if (!text) return;
       alerts.push({
@@ -855,20 +874,24 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         batchId,
         operationId: result?.operationId || '',
         reason: text,
+        ...alertSourcePayload(source),
         status: 'open',
         createdAt: nowValue,
         createdBy: operator
       });
     };
-    for (const row of plan.blocked || []) pushAlert(row.reason || row.riskReason || '低置信数据待确认');
+    for (const row of plan.blocked || []) pushAlert(row.reason || row.riskReason || '低置信数据待确认', row);
     for (const row of plan.informational || []) {
-      if (/缺口/.test(String(row.reason || row.riskReason || ''))) pushAlert(row.reason || row.riskReason);
+      if (/缺口/.test(String(row.reason || row.riskReason || ''))) pushAlert(row.reason || row.riskReason, row);
     }
     for (const row of plan.skipped || []) {
-      if (/取消|退款|作废/.test(String(row.reason || row.riskReason || row.plannedAction || ''))) pushAlert(row.reason || row.riskReason || row.plannedAction);
+      if (/取消|退款|作废/.test(String(row.reason || row.riskReason || row.plannedAction || ''))) pushAlert(row.reason || row.riskReason || row.plannedAction, row);
     }
-    for (const row of changes || []) pushAlert(`第三方${row.changeType === 'cancelled' ? '取消' : row.changeType === 'refunded' ? '退款' : '变更'}：${row.sourceRecordId}`);
-    for (const row of result?.failed || []) pushAlert(row.reason || '导入失败');
+    for (const row of changes || []) pushAlert(`第三方${row.changeType === 'cancelled' ? '取消' : row.changeType === 'refunded' ? '退款' : '变更'}：${row.sourceRecordId}`, row);
+    for (const row of result?.failed || []) {
+      const source = (plan.importable || []).find(item => String(item.sourceRecordId || '') === String(row.sourceRecordId || '')) || row;
+      pushAlert(row.reason || '导入失败', source);
+    }
     await Promise.all(alerts.map(row => put(T_THIRD_PARTY_SYNC_ALERTS, row.id, row)));
     return alerts;
   }

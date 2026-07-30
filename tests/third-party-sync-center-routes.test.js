@@ -56,6 +56,11 @@ assert.ok(precheck.items.some(item => item.riskReason === '会员流水批量接
 assert.ok(precheck.items.some(item => item.customerName === '张三' && item.phone === '13800000000' && item.remark === '散客订场' && item.amount === 100), 'precheck should keep operator-facing third party fields');
 assert.ok(precheck.items.some(item => item.sourceRecordId === 'O1' && item.bookingMode === '用户自助订场'), 'precheck should label user self-service bookings');
 assert.ok(precheck.items.some(item => item.sourceRecordId === 'lock-1' && item.bookingMode === '运营锁场' && item.operatorAccount === '前台A'), 'precheck should label operator locks with operator account');
+assert.strictEqual(
+  precheckThirdPartyRecords([{ sourceType: 'order', orderNo: 'P86', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', phone: '8613800000000' }], { batchId: 'phone-batch' }).items[0].phone,
+  '13800000000',
+  'third-party phone with 86 country code should be normalized before import'
+);
 
 const changxiaoerOrderPrecheck = precheckThirdPartyRecords([
   {
@@ -426,6 +431,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
   assert.strictEqual(failedCronRes.statusCode, 500, 'cron should fail when stable importable rows all fail to write');
   assert.strictEqual(failedCronRes.body.autoImport.result.status, 'failed', 'cron response should expose the failed import result');
   assert.ok(failedCronWrites.some(row => row.table === 'ft_third_party_sync_alerts' && /模拟业务写入失败/.test(row.row.reason)), 'cron import failure should write an alert row');
+  assert.ok(failedCronWrites.some(row => row.table === 'ft_third_party_sync_alerts' && row.row.sourceRecordId === 'FAIL1' && row.row.date === '2026-07-29' && row.row.venue === '4号场'), 'failure alert should keep source booking fields for operator handling');
   assert.ok(failedCronNotifications.some(item => item.type === 'failure' && /模拟业务写入失败/.test(item.result?.failed?.[0]?.reason || '')), 'cron import failure should notify Feishu group');
 
   console.log('third-party sync center routes tests passed');

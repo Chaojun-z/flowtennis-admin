@@ -184,61 +184,90 @@ function thirdPartySyncVisiblePrechecks(batchId=thirdPartySyncEffectiveBatchId()
 function thirdPartySyncPrecheckForSource(batchId='',sourceRecordId=''){
   return (thirdPartySyncData().prechecks||[]).find(row=>String(row.batchId||'')===String(batchId||'')&&String(row.sourceRecordId||'')===String(sourceRecordId||''))||{};
 }
+function thirdPartySyncRawForSource(batchId='',sourceRecordId=''){
+  return (thirdPartySyncData().rawRecords||[]).find(row=>String(row.batchId||'')===String(batchId||'')&&String(row.thirdPartyId||row.sourceRecordId||row.orderNo||'')===String(sourceRecordId||''))||{};
+}
+function thirdPartySyncOrderInfoItems(record={}){
+  const info=record.orderInfo;
+  if(Array.isArray(info))return info.filter(Boolean);
+  return info&&typeof info==='object'?[info]:[];
+}
+function thirdPartySyncOrderInfoRegions(record={}){
+  return thirdPartySyncOrderInfoItems(record).map(item=>String(item.region||item.timeRegion||item.period||'').trim()).map(text=>{
+    const m=text.match(/(\d{1,2}:\d{2})\s*[-~至]\s*(\d{1,2}:\d{2})/);
+    return m?{start:m[1].padStart(5,'0'),end:m[2].padStart(5,'0')}:null;
+  }).filter(Boolean);
+}
+function thirdPartySyncNormalizePhone(value=''){
+  const digits=String(value||'').replace(/[^\d]/g,'');
+  if(/^86(1[3-9]\d{9})$/.test(digits))return digits.slice(2);
+  return digits||String(value||'').trim();
+}
+function thirdPartySyncVenueText(value=''){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  if(/^\d+$/.test(raw))return `${raw}号场`;
+  if(/^\d+号$/.test(raw))return `${raw}场`;
+  if(/室内\s*(\d+)/.test(raw))return raw.replace(/.*室内\s*(\d+).*/,'$1号场');
+  return raw;
+}
+function thirdPartySyncSourceSnapshot(item={}){
+  const row=item.row||item;
+  const batchId=row.batchId||item.batchId||thirdPartySyncEffectiveBatchId();
+  const sourceRecordId=row.sourceRecordId||item.sourceRecordId||'';
+  const precheck=thirdPartySyncPrecheckForSource(batchId,sourceRecordId);
+  const rawRow=thirdPartySyncRawForSource(batchId,sourceRecordId);
+  const raw=row.currentRaw||rawRow.rawJson||{};
+  const orderDate=thirdPartySyncOrderInfoItems(raw).map(info=>info.time||info.date).filter(Boolean).sort()[0]||'';
+  const regions=thirdPartySyncOrderInfoRegions(raw);
+  const orderPlace=thirdPartySyncOrderInfoItems(raw).map(info=>info?.priceBasicsInfo?.placeName||info?.placeName||info?.courtName).find(Boolean)||'';
+  const spacePlace=raw.space&&typeof raw.space==='object'?(raw.space.placeName||raw.space.courtName):'';
+  return {
+    batchId,
+    sourceRecordId,
+    sourceType:precheck.sourceType||row.sourceType||raw.sourceType||'',
+    date:precheck.date||row.date||String(orderDate||raw.bookingDate||raw.useDate||raw.date||raw.startDate||'').slice(0,10),
+    time:[precheck.startTime||row.startTime||(regions.length?regions.map(r=>r.start).sort()[0]:String(raw.startTime||raw.startClock||raw.beginTime||'').match(/(\d{1,2}:\d{2})/)?.[1]?.padStart(5,'0')),precheck.endTime||row.endTime||(regions.length?regions.map(r=>r.end).sort().slice(-1)[0]:String(raw.endTime||raw.endClock||raw.finishTime||'').match(/(\d{1,2}:\d{2})/)?.[1]?.padStart(5,'0'))].filter(Boolean).join('-'),
+    venue:precheck.venue||row.venue||thirdPartySyncVenueText(raw.venue||raw.court||raw.courtName||orderPlace||spacePlace||raw.spaceName||raw.placeName),
+    customerName:precheck.customerName||row.customerName||raw.customerName||raw.userName||raw.memberName||raw.realName||raw.name||raw.contactName||raw.nickName,
+    phone:thirdPartySyncNormalizePhone(precheck.phone||row.phone||raw.phone||raw.mobile||raw.userPhone||raw.memberPhone||raw.contactPhone),
+    bookingMode:precheck.bookingMode||row.bookingMode||thirdPartySyncBookingModeText({sourceType:precheck.sourceType||row.sourceType||raw.sourceType}),
+    operatorAccount:precheck.operatorAccount||row.operatorAccount||raw.operatorName||raw.operator||raw.adminName||raw.creatorName||raw.createdByName||raw.createName||raw.accountName||raw.userAccount||raw.createUserName||raw.staffName,
+    remark:precheck.remark||row.remark||raw.remark||raw.userRemark||raw.note||raw.description||raw.memo||raw.reason||raw.occupyReason||raw.lockReason
+  };
+}
+function thirdPartySyncProcessingAction(item={}){
+  const sourceRecordId=item.sourceRecordId||item.row?.sourceRecordId||'';
+  const batchId=item.batchId||item.row?.batchId||thirdPartySyncEffectiveBatchId();
+  if(!sourceRecordId)return '<span class="tms-cell-sub">查看同步记录</span>';
+  return `<span class="tms-action-link" onclick="openThirdPartySyncConfirmModal('${esc(batchId)}','${esc(sourceRecordId)}')">处理</span>`;
+}
 function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchId()){
   const data=thirdPartySyncData();
-  const prechecks=thirdPartySyncVisiblePrechecks(batchId).map(row=>({
-    kind:'订场确认',
-    row,
-    date:row.date,
-    time:[row.startTime,row.endTime].filter(Boolean).join('-'),
-    venue:row.venue,
-    customerName:row.customerName,
-    phone:row.phone,
-    bookingMode:thirdPartySyncBookingModeText(row),
-    operatorAccount:row.operatorAccount,
-    remark:row.remark,
-    reason:row.riskReason||thirdPartySyncTypeText(row.recommendedType),
-    suggestion:row.recommendedType==='high_risk_exception'?'补齐信息后确认':'确认业务类型后导入',
-    action:`<span class="tms-action-link" onclick="openThirdPartySyncConfirmModal('${esc(row.batchId||'')}','${esc(row.sourceRecordId||'')}')">确认</span>`
-  }));
+  const prechecks=thirdPartySyncVisiblePrechecks(batchId).map(row=>{
+    const snapshot=thirdPartySyncSourceSnapshot({row});
+    return {kind:'订场确认',row,...snapshot,reason:row.riskReason||thirdPartySyncTypeText(row.recommendedType),suggestion:row.recommendedType==='high_risk_exception'?'补齐信息后确认':'确认业务类型后导入',action:thirdPartySyncProcessingAction(snapshot)};
+  });
   const changes=thirdPartySyncRowsForBatch(data.changes||[],batchId)
     .filter(row=>String(row.status||'pending_review')==='pending_review')
     .map(row=>{
-      const precheck=thirdPartySyncPrecheckForSource(batchId,row.sourceRecordId);
+      const snapshot=thirdPartySyncSourceSnapshot({row,batchId,sourceRecordId:row.sourceRecordId});
       const changeText=thirdPartySyncChangeTypeText(row.changeType);
       return {
         kind:'第三方变更',
         row,
-        date:precheck.date||String(row.currentRaw?.bookingDate||row.currentRaw?.date||'').slice(0,10),
-        time:[precheck.startTime,precheck.endTime].filter(Boolean).join('-'),
-        venue:precheck.venue,
-        customerName:precheck.customerName,
-        phone:precheck.phone,
-        bookingMode:thirdPartySyncBookingModeText(precheck),
-        operatorAccount:precheck.operatorAccount,
-        remark:precheck.remark,
+        ...snapshot,
         reason:changeText,
         suggestion:/取消|退款|金额|订场/.test(changeText)?'核对是否需要回滚或人工调整':'确认备注变化即可',
-        action:'<span class="tms-cell-sub">按建议处理</span>'
+        action:thirdPartySyncProcessingAction(snapshot)
       };
     });
   const alerts=thirdPartySyncRowsForBatch(data.alerts||[],batchId)
     .filter(row=>String(row.status||'open')==='open')
-    .map(row=>({
-      kind:'异常报警',
-      row,
-      date:thirdPartySyncBatchDateText(thirdPartySyncBatchById(row.batchId)||{}),
-      time:'',
-      venue:'',
-      customerName:'',
-      phone:'',
-      bookingMode:'',
-      operatorAccount:'',
-      remark:'',
-      reason:row.reason||'-',
-      suggestion:/失败|缺口|格式|等待/.test(String(row.reason||''))?'处理后再导入':'确认后关闭',
-      action:'<span class="tms-cell-sub">按建议处理</span>'
-    }));
+    .map(row=>{
+      const snapshot=thirdPartySyncSourceSnapshot({row,batchId:row.batchId||batchId,sourceRecordId:row.sourceRecordId});
+      return {kind:'异常报警',row,...snapshot,reason:row.reason||'-',suggestion:/失败|缺口|格式|等待/.test(String(row.reason||''))?'处理后再导入':'确认后关闭',action:thirdPartySyncProcessingAction(snapshot)};
+    });
   return [...prechecks,...changes,...alerts];
 }
 function thirdPartySyncBookingPrechecks(rows=[]){
@@ -432,7 +461,10 @@ async function runThirdPartySyncRollback(operationId){
 function openThirdPartySyncConfirmModal(batchId,sourceRecordId){
   const typeOptions=['排课占场','内部占用','会员余额订场','散客微信转账订场','散客现金订场','大众点评券码订场','教练代订场','畅打活动','订场陪打','忽略不导入','待老板确认'];
   const payOptions=['不涉及支付','会员余额','微信转账','现金','大众点评券码','其他平台券码','已在活动中收款'];
+  const snapshot=thirdPartySyncSourceSnapshot({batchId,sourceRecordId});
+  const sourceLine=[snapshot.date,snapshot.time,snapshot.venue,snapshot.customerName,snapshot.phone].filter(Boolean).join(' / ')||sourceRecordId;
   const body=`<div class="tms-section-header" style="margin-top:0;">运营确认</div>
+    <div class="tms-audit-note">${renderStandardCellText(sourceLine)}</div>
     <div class="tms-form-row">
       <div class="tms-form-item"><label class="tms-form-label">最终业务类型 *</label><select class="finput tms-form-control" id="thirdPartyConfirmType">${typeOptions.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}</select></div>
       <div class="tms-form-item"><label class="tms-form-label">支付方式</label><select class="finput tms-form-control" id="thirdPartyConfirmPay">${payOptions.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}</select></div>
@@ -442,10 +474,10 @@ function openThirdPartySyncConfirmModal(batchId,sourceRecordId){
       <div class="tms-form-item"><label class="tms-form-label">绑定对象ID</label><input class="finput tms-form-control" id="thirdPartyConfirmBindId" placeholder="会员、排课或订场用户 ID"></div>
     </div>
     <div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">确认备注</label><input class="finput tms-form-control" id="thirdPartyConfirmNote" placeholder="填写运营判断依据"></div></div>`;
-  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="confirmThirdPartySyncItem('${esc(batchId)}','${esc(sourceRecordId)}')">保存确认</button>`;
+  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-default" onclick="confirmThirdPartySyncItem('${esc(batchId)}','${esc(sourceRecordId)}')">保存确认</button><button class="tms-btn tms-btn-primary" onclick="confirmThirdPartySyncItem('${esc(batchId)}','${esc(sourceRecordId)}',{importAfter:true})">保存并导入</button>`;
   openStandardModal({title:'确认第三方异常项',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
-async function confirmThirdPartySyncItem(batchId,sourceRecordId){
+async function confirmThirdPartySyncItem(batchId,sourceRecordId,options={}){
   try{
     await apiCall('POST','/third-party-sync/confirmations',{
       batchId,
@@ -456,12 +488,17 @@ async function confirmThirdPartySyncItem(batchId,sourceRecordId){
       bindTargetId:document.getElementById('thirdPartyConfirmBindId')?.value.trim()||'',
       confirmNote:document.getElementById('thirdPartyConfirmNote')?.value.trim()||''
     });
+    if(options.importAfter){
+      await apiCall('POST','/third-party-sync/import',{batchId});
+      toast('确认已保存，并已执行导入','success');
+    }else{
+      toast('确认已保存','success');
+    }
     closeModal();
     staleCachedDatasets.add('thirdPartySyncCenterPage');
     await loadThirdPartySyncCenter(true);
-    toast('确认已保存','success');
   }catch(e){
-    toast('保存失败：'+e.message,'error');
+    toast((options.importAfter?'保存或导入失败：':'保存失败：')+e.message,'error');
   }
 }
 function setThirdPartySyncTableTab(tab){
