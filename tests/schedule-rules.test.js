@@ -1211,8 +1211,31 @@ assert.deepStrictEqual(
       coaches: []
     }
   ),
-  { coachId: 'coach-chaojun', coachName: '朝珺', openId: '', mobile: '13800138000' },
+  { coachId: 'coach-chaojun', coachName: '朝珺', openId: '', mobile: '13800138000', source: 'user', openIdSource: '', mobileSource: 'user', mobileSuffix: '8000' },
   'feishu digest recipient should resolve coach mobile from bound backend user'
+);
+
+assert.deepStrictEqual(
+  rules.findFeishuCoachDigestRecipient(
+    { coachId: '', coachName: '林铭教练' },
+    {
+      users: [],
+      coaches: [
+        { id: 'coach-linming', name: '林铭', contactPhone: '+86 138-0013-8001', lark_open_id: 'ou_linming' }
+      ]
+    }
+  ),
+  { coachId: '', coachName: '林铭教练', openId: 'ou_linming', mobile: '13800138001', source: 'coach', openIdSource: 'coach', mobileSource: 'coach', mobileSuffix: '8001' },
+  'feishu digest recipient should match coach profiles when schedule names include the coach suffix'
+);
+
+assert.deepStrictEqual(
+  rules.findFeishuCoachDigestRecipient(
+    { coachId: 'coach-yang', coachName: '杨教练' },
+    { users: [], coaches: [{ id: 'coach-yang', name: '杨教练' }], phoneOverrides: '{"杨教练":"15376279489"}' }
+  ),
+  { coachId: 'coach-yang', coachName: '杨教练', openId: '', mobile: '15376279489', source: 'coach', openIdSource: '', mobileSource: 'override', mobileSuffix: '9489' },
+  'feishu digest recipient should support configured coach phone overrides'
 );
 
 assert.deepStrictEqual(
@@ -1351,7 +1374,7 @@ assert.strictEqual(
       { id: 'f-dig-2', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 14:00', endTime: '2026-05-20 15:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '双人课', studentName: 'Misha', status: '已排课' }
     ];
     const users=[
-      { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', phone: '13800138000' }
+      { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', phone: '+86 138-0013-8000' }
     ];
     const calls=[];
     const fetchImpl=async (url,options={})=>{
@@ -1399,6 +1422,59 @@ assert.strictEqual(
       [['f-dig-1', '2026-05-20'], ['f-dig-2', '2026-05-20']],
       'feishu coach daily digest should mark every schedule in the coach group'
     );
+  }
+
+  {
+    await assert.rejects(
+      () => poster.uploadFeishuImage({
+        tenantAccessToken: 'tenant-token',
+        imageBuffer: Buffer.from('png-bytes'),
+        fetchImpl: async () => ({
+          ok: false,
+          status: 400,
+          text: async () => JSON.stringify({ code: 234001, msg: 'bad image data' })
+        })
+      }),
+      /飞书上传图片 HTTP 400：code=234001 bad image data/,
+      'feishu image upload errors should include the Feishu response body'
+    );
+  }
+
+  {
+    const rows=[
+      { id:'lin-1', coachId:'coach-lin', coach:'林铭教练', startTime:'2026-05-20 10:00', endTime:'2026-05-20 11:00', campus:'shunyi_mapo', venue:'4号场', courseType:'私教课', studentName:'Andy', status:'已排课' },
+      { id:'yang-1', coachId:'coach-yang', coach:'杨教练', startTime:'2026-05-20 12:00', endTime:'2026-05-20 13:00', campus:'shunyi_mapo', venue:'3号场', courseType:'私教课', studentName:'小杨', status:'已排课' }
+    ];
+    const calls=[];
+    const fetchImpl=async (url,options={})=>{
+      calls.push({url:String(url),options});
+      if(String(url).includes('/auth/v3/tenant_access_token/internal'))return {ok:true,text:async()=>JSON.stringify({code:0,tenant_access_token:'tenant-token',expire:7200})};
+      if(String(url).includes('/contact/v3/users/batch_get_id'))return {ok:true,text:async()=>JSON.stringify({code:0,data:{user_list:[{mobile:'13800134958',user_id:'ou_linming'}]}})};
+      if(String(url).includes('/im/v1/images'))return {ok:true,text:async()=>JSON.stringify({code:0,data:{image_key:'img_linming'}})};
+      if(String(url).includes('/im/v1/messages'))return {ok:true,text:async()=>JSON.stringify({code:0,data:{message_id:'om_linming'}})};
+      throw new Error(`unexpected url ${url}`);
+    };
+    const writes=[];
+    const result=await rules.sendFeishuCoachDailyDigests({
+      now:new Date('2026-05-19 20:02:00'),
+      rows,
+      users:[{ id:'lming', role:'editor', coachId:'coach-lin', coachName:'林铭', phone:'13800134958' }],
+      coaches:[{ id:'coach-yang', name:'杨教练' }],
+      appId:'cli_app',
+      appSecret:'secret',
+      fetchImpl,
+      buildPosterPng:async item=>{assert.strictEqual(item.coachName,'林铭教练');return Buffer.from('png-bytes');},
+      putSchedule:async (id,row)=>writes.push([id,row]),
+      targetCoach:'林铭教练',
+      markSent:false,
+      phoneOverrides:'{"杨教练":"15376279489"}'
+    });
+    assert.strictEqual(result.checked,1,'single-coach feishu digest should only check the selected coach');
+    assert.strictEqual(result.sent,1,'single-coach feishu digest should send the selected coach poster');
+    assert.strictEqual(result.items[0].marked,false,'single-coach preview send should be able to avoid marking schedules sent');
+    assert.deepStrictEqual(writes,[],'single-coach preview send should not write schedule sent markers when markSent=false');
+    const lookupCall=calls.find(call=>call.url.includes('/contact/v3/users/batch_get_id'));
+    assert.deepStrictEqual(JSON.parse(lookupCall.options.body),{mobiles:['13800134958'],include_resigned:false},'single-coach send should not look up non-target coach mobiles');
   }
 
   {

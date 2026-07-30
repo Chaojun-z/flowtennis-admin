@@ -1,4 +1,6 @@
 const { displayCampusName } = require('../public/assets/scripts/core/campus.js');
+const axios = require('axios');
+const NodeFormData = require('form-data');
 
 function parseArr(v){
   if(Array.isArray(v))return v;
@@ -138,26 +140,39 @@ async function readFeishuJsonResponse(response){
   return null;
 }
 
+function feishuApiErrorDetail(data){
+  return [data?.code!==undefined?`code=${data.code}`:'',data?.msg||data?.message||'',data?.raw?String(data.raw).slice(0,240):''].filter(Boolean).join(' ');
+}
+
 function assertFeishuApiOk(response,data,action){
-  if(!response?.ok)throw new Error(`${action} HTTP ${response?.status||'unknown'}`);
-  if(data&&data.code!==undefined&&data.code!==0)throw new Error(`${action}失败：${data.msg||data.message||data.code}`);
+  const detail=feishuApiErrorDetail(data);
+  if(!response?.ok)throw new Error(`${action} HTTP ${response?.status||'unknown'}${detail?`：${detail}`:''}`);
+  if(data&&data.code!==undefined&&data.code!==0)throw new Error(`${action}失败：${detail||data.code}`);
 }
 
 function buildFeishuImageUploadForm(imageBuffer,filename='coach-schedule.png'){
-  if(typeof FormData==='undefined'||typeof Blob==='undefined')throw new Error('当前 Node 环境缺少 FormData/Blob，无法上传飞书图片');
-  const form=new FormData();
+  const form=new NodeFormData();
   form.append('image_type','message');
-  form.append('image',new Blob([imageBuffer],{type:'image/png'}),filename);
+  form.append('image',imageBuffer,{filename,contentType:'image/png'});
   return form;
+}
+
+async function postFeishuImageUpload({tenantAccessToken='',form=null,fetchImpl=fetch}={}){
+  const url='https://open.feishu.cn/open-apis/im/v1/images';
+  const headers={authorization:`Bearer ${tenantAccessToken}`,...(form&&typeof form.getHeaders==='function'?form.getHeaders():{})};
+  if(fetchImpl&&fetchImpl!==fetch)return fetchImpl(url,{method:'POST',headers,body:form});
+  const response=await axios.post(url,form,{headers,maxBodyLength:Infinity,maxContentLength:Infinity,validateStatus:()=>true});
+  return {
+    ok:response.status>=200&&response.status<300,
+    status:response.status,
+    text:async()=>typeof response.data==='string'?response.data:JSON.stringify(response.data||{}),
+    json:async()=>response.data
+  };
 }
 
 async function uploadFeishuImage({tenantAccessToken='',imageBuffer=null,filename='coach-schedule.png',fetchImpl=fetch}={}){
   if(!Buffer.isBuffer(imageBuffer)||!imageBuffer.length)throw new Error('缺少飞书图片内容');
-  const response=await fetchImpl('https://open.feishu.cn/open-apis/im/v1/images',{
-    method:'POST',
-    headers:{authorization:`Bearer ${tenantAccessToken}`},
-    body:buildFeishuImageUploadForm(imageBuffer,filename)
-  });
+  const response=await postFeishuImageUpload({tenantAccessToken,form:buildFeishuImageUploadForm(imageBuffer,filename),fetchImpl});
   const data=await readFeishuJsonResponse(response);
   assertFeishuApiOk(response,data,'飞书上传图片');
   const imageKey=String(data?.data?.image_key||data?.image_key||'').trim();

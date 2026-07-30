@@ -86,8 +86,7 @@ const WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY = process.env.WECHAT_OFFICIAL_ACC
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_URL = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_URL || '';
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET || '';
 const FEISHU_DAILY_REPORT_WEBHOOK = String(process.env.FEISHU_DAILY_REPORT_WEBHOOK || process.env.FEISHU_WEBHOOK_URL || '').trim();
-const FEISHU_COACH_BOT_APP_ID = String(process.env.FEISHU_COACH_BOT_APP_ID || '').trim();
-const FEISHU_COACH_BOT_APP_SECRET = String(process.env.FEISHU_COACH_BOT_APP_SECRET || '').trim();
+const FEISHU_COACH_BOT_APP_ID = String(process.env.FEISHU_COACH_BOT_APP_ID || '').trim(), FEISHU_COACH_BOT_APP_SECRET = String(process.env.FEISHU_COACH_BOT_APP_SECRET || '').trim(), FEISHU_COACH_DIGEST_PHONE_OVERRIDES = String(process.env.FEISHU_COACH_DIGEST_PHONE_OVERRIDES || '').trim();
 const STUDENT_REMINDER_PUBLIC_BASE_URL = process.env.STUDENT_REMINDER_PUBLIC_BASE_URL || 'https://www.flowtennis.cn';
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
 const MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID = process.env.MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID || '';
@@ -3338,32 +3337,36 @@ function buildCoachDailyDigestMessage({coachName='',digestDate='',schedules=[]}=
     lines:rows.map(schedule=>`${String(schedule.startTime||'').slice(11,16)}-${String(schedule.endTime||'').slice(11,16)} ${schedule.courseType||'课程'}｜${schedule.studentName||'学员'}｜${[displayCampusName(schedule.campus),schedule.venue||schedule.externalVenueName||schedule.externalCourtName].filter(Boolean).join(' ')}`)
   };
 }
-function normalizeFeishuMobile(value){
-  return String(value||'').trim().replace(/[\s-]/g,'');
-}
-function firstFeishuOpenId(row={}){
-  return String(row?.feishuOpenId||row?.larkOpenId||row?.feishuUserId||row?.larkUserId||'').trim();
-}
-function firstFeishuMobile(row={}){
-  return normalizeFeishuMobile(row?.phone||row?.mobile||row?.tel||row?.telephone||'');
-}
+const FEISHU_OPEN_ID_FIELDS=['feishuOpenId','larkOpenId','feishuUserId','larkUserId','feishuCoachOpenId','larkCoachOpenId','openId','open_id','feishu_open_id','lark_open_id','feishu_user_id','lark_user_id'];
+const FEISHU_MOBILE_FIELDS=['phone','mobile','tel','telephone','phoneNumber','purePhoneNumber','contactPhone','userPhone','memberPhone','wechatPhone','feishuMobile','larkMobile','mobileVisible','mobile_visible'];
+function normalizeFeishuMobile(value){const digits=String(value||'').replace(/\D/g,'');if(/^00861[3-9]\d{9}$/.test(digits))return digits.slice(4);if(/^861[3-9]\d{9}$/.test(digits))return digits.slice(2);return digits;}
+function firstFeishuField(row={},fields=[]){for(const field of fields){const value=String(row?.[field]||'').trim();if(value)return {value,field};}return {value:'',field:''};}
+function firstFeishuOpenId(row={}){return firstFeishuField(row,FEISHU_OPEN_ID_FIELDS).value;}
+function firstFeishuMobile(row={}){return normalizeFeishuMobile(firstFeishuField(row,FEISHU_MOBILE_FIELDS).value);}
+function normalizeCoachDigestName(value){return String(value||'').replace(/\s+/g,'').replace(/教练/g,'').trim();}
+function parseFeishuCoachPhoneOverrides(value=''){const map=new Map();const text=String(value||'').trim();if(!text)return map;let entries=[];try{entries=Object.entries(JSON.parse(text));}catch{entries=text.split(/[,，\n]/).map(part=>part.split(/[=:：]/)).filter(pair=>pair.length>=2);}entries.forEach(([key,phone])=>{const mobile=normalizeFeishuMobile(phone);if(key&&mobile){map.set(String(key).trim(),mobile);map.set(normalizeCoachDigestName(key),mobile);}});return map;}
 function findFeishuCoachDigestRecipient(item={},refs={}){
   const coachId=String(item?.coachId||'').trim();
   const coachName=String(item?.coachName||item?.coach||'').trim();
+  const coachNameKey=normalizeCoachDigestName(coachName);
   const users=refs?.users||[];
   const coaches=refs?.coaches||[];
   const user=(users||[]).find(u=>{
-    if(String(u?.role||'')!=='editor')return false;
+    const role=String(u?.role||'').trim();
+    if(role&&!['editor','coach','teacher','教练'].includes(role)&&!u?.coachId&&!u?.coachName)return false;
     if(coachId&&String(u?.coachId||u?.id||u?.username||'').trim()===coachId)return true;
-    return coachName&&String(u?.coachName||u?.name||'').trim()===coachName;
+    return coachNameKey&&[u?.coachName,u?.name,u?.username,u?.nickname,u?.displayName].some(name=>normalizeCoachDigestName(name)===coachNameKey);
   })||null;
   const coach=(coaches||[]).find(c=>{
     if(coachId&&String(c?.id||'').trim()===coachId)return true;
-    return coachName&&String(c?.name||'').trim()===coachName;
+    return coachNameKey&&[c?.name,c?.coachName,c?.nickname,c?.displayName].some(name=>normalizeCoachDigestName(name)===coachNameKey);
   })||null;
-  const openId=firstFeishuOpenId(user)||firstFeishuOpenId(coach);
-  const mobile=firstFeishuMobile(user)||firstFeishuMobile(coach);
-  return {coachId,coachName,openId,mobile};
+  const overrides=refs?.phoneOverrides instanceof Map?refs.phoneOverrides:parseFeishuCoachPhoneOverrides(refs?.phoneOverrides||'');
+  const overrideMobile=normalizeFeishuMobile(overrides.get(coachId)||overrides.get(coachName)||overrides.get(coachNameKey)||'');
+  const userOpenId=firstFeishuOpenId(user),coachOpenId=firstFeishuOpenId(coach);
+  const userMobile=firstFeishuMobile(user),coachMobile=firstFeishuMobile(coach);
+  const openId=userOpenId||coachOpenId,mobile=overrideMobile||userMobile||coachMobile;
+  return {coachId,coachName,openId,mobile,source:user?'user':coach?'coach':'',openIdSource:userOpenId?'user':coachOpenId?'coach':'',mobileSource:overrideMobile?'override':userMobile?'user':coachMobile?'coach':'',mobileSuffix:mobile?mobile.slice(-4):''};
 }
 function buildFeishuCoachDailyDigestText(message={}){
   const coachName=String(message?.coachName||'教练').trim()||'教练';
@@ -3382,10 +3385,8 @@ async function readFeishuJsonResponse(response){
   if(typeof response?.json==='function')return response.json();
   return null;
 }
-function assertFeishuApiOk(response,data,action){
-  if(!response?.ok)throw new Error(`${action} HTTP ${response?.status||'unknown'}`);
-  if(data&&data.code!==undefined&&data.code!==0)throw new Error(`${action}失败：${data.msg||data.message||data.code}`);
-}
+function feishuApiErrorDetail(data){return [data?.code!==undefined?`code=${data.code}`:'',data?.msg||data?.message||'',data?.raw?String(data.raw).slice(0,240):''].filter(Boolean).join(' ');}
+function assertFeishuApiOk(response,data,action){const detail=feishuApiErrorDetail(data);if(!response?.ok)throw new Error(`${action} HTTP ${response?.status||'unknown'}${detail?`：${detail}`:''}`);if(data&&data.code!==undefined&&data.code!==0)throw new Error(`${action}失败：${detail||data.code}`);}
 async function fetchFeishuTenantAccessToken({appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch}={}){
   const id=String(appId||'').trim();
   const secret=String(appSecret||'').trim();
@@ -3406,14 +3407,14 @@ async function fetchFeishuTenantAccessToken({appId=FEISHU_COACH_BOT_APP_ID,appSe
   feishuTenantAccessTokenCacheByApp.set(id,{token,expiresAt:now+ttlMs});
   return token;
 }
-function extractFeishuMobileOpenIdMap(data={}){
+function extractFeishuMobileOpenIdMap(data={},expectedMobiles=[]){
   const map=new Map();
   const rows=data?.data?.user_list||data?.user_list||[];
-  for(const row of rows||[]){
-    const mobile=normalizeFeishuMobile(row?.mobile||row?.phone||row?.mobile_visible||'');
+  (rows||[]).forEach((row,index)=>{
+    const mobile=normalizeFeishuMobile(row?.mobile||row?.phone||row?.mobile_visible||expectedMobiles[index]||'');
     const openId=String(row?.user_id||row?.open_id||row?.id||'').trim();
     if(mobile&&openId)map.set(mobile,openId);
-  }
+  });
   return map;
 }
 async function resolveFeishuOpenIdsByMobiles({mobiles=[],tenantAccessToken='',fetchImpl=fetch}={}){
@@ -3426,7 +3427,7 @@ async function resolveFeishuOpenIdsByMobiles({mobiles=[],tenantAccessToken='',fe
   });
   const data=await readFeishuJsonResponse(response);
   assertFeishuApiOk(response,data,'飞书手机号换 open_id');
-  return extractFeishuMobileOpenIdMap(data);
+  return extractFeishuMobileOpenIdMap(data,unique);
 }
 async function sendFeishuBotTextMessage({tenantAccessToken='',openId='',text='',fetchImpl=fetch}={}){
   const response=await fetchImpl('https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id',{
@@ -3707,14 +3708,15 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
   }
   return result;
 }
-async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch,buildPosterPng=buildCoachDailyDigestPosterPng,uploadImage=uploadFeishuImage,sendImage=sendFeishuBotImageMessage,sendText=sendFeishuBotTextMessage,sendPosterMessage=sendFeishuCoachDigestPosterMessage}={}){
+async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch,buildPosterPng=buildCoachDailyDigestPosterPng,uploadImage=uploadFeishuImage,sendImage=sendFeishuBotImageMessage,sendText=sendFeishuBotTextMessage,sendPosterMessage=sendFeishuCoachDigestPosterMessage,targetCoach='',markSent=true,phoneOverrides=FEISHU_COACH_DIGEST_PHONE_OVERRIDES}={}){
   const [resolvedRows,resolvedUsers,resolvedCoaches]=await Promise.all([rows||loadRows(),users||loadUsers(),coaches||loadCoaches()]);
-  const candidates=collectCoachDailyDigestCandidates(resolvedRows,now,{sentDateField:'feishuCoachDailyDigestSentDate'});
+  const targetCoachKey=normalizeCoachDigestName(targetCoach);
+  const candidates=collectCoachDailyDigestCandidates(resolvedRows,now,{sentDateField:'feishuCoachDailyDigestSentDate'}).filter(item=>!targetCoachKey||String(item.coachId||'')===String(targetCoach||'').trim()||normalizeCoachDigestName(item.coachName)===targetCoachKey);
   const result={success:true,checked:candidates.length,sent:0,failed:0,skipped:0,items:[]};
   if(!String(appId||'').trim()||!String(appSecret||'').trim()){
     return {...result,success:true,skipped:candidates.length,reason:'missing_feishu_credentials',items:candidates.map(item=>({coachId:item.coachId,skipped:true,reason:'missing_feishu_credentials'}))};
   }
-  const recipients=candidates.map(item=>({item,recipient:findFeishuCoachDigestRecipient(item,{users:resolvedUsers,coaches:resolvedCoaches})}));
+  const recipients=candidates.map(item=>({item,recipient:findFeishuCoachDigestRecipient(item,{users:resolvedUsers,coaches:resolvedCoaches,phoneOverrides})}));
   const mobiles=recipients.filter(row=>!row.recipient.openId&&row.recipient.mobile).map(row=>row.recipient.mobile);
   let tenantAccessToken='';
   let openIdsByMobile=new Map();
@@ -3728,19 +3730,19 @@ async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,
     const openId=recipient.openId||openIdsByMobile.get(recipient.mobile)||'';
     if(!openId){
       result.skipped++;
-      result.items.push({coachId:item.coachId,coachName:item.coachName,skipped:true,reason:recipient.mobile?'missing_feishu_open_id':'missing_coach_mobile'});
+      result.items.push({coachId:item.coachId,coachName:item.coachName,skipped:true,reason:recipient.mobile?'missing_feishu_open_id':'missing_coach_mobile',hasMobile:!!recipient.mobile,mobileSuffix:recipient.mobileSuffix||'',recipientSource:recipient.source||'',mobileSource:recipient.mobileSource||'',mobileLookupTried:!!recipient.mobile,mobileLookupMatched:!!(recipient.mobile&&openIdsByMobile.has(recipient.mobile))});
       continue;
     }
     try{
       const digestMessage=buildCoachDailyDigestMessage(item);
       const posterResult=await sendPosterMessage({item,tenantAccessToken,openId,fetchImpl,buildPosterPng,uploadImage,sendImage,sendText,fallbackText:buildFeishuCoachDailyDigestText({...digestMessage,coachName:item.coachName,digestDate:item.digestDate})});
-      await Promise.all((item.scheduleIds||[]).map(scheduleId=>putSchedule(scheduleId,{
+      if(markSent!==false)await Promise.all((item.scheduleIds||[]).map(scheduleId=>putSchedule(scheduleId,{
         ...(((resolvedRows||[]).find(schedule=>String(schedule.id||'')===String(scheduleId)))||{}),
         feishuCoachDailyDigestSentDate:item.digestDate,
         feishuCoachDailyDigestSentAt:new Date(now).toISOString()
       })));
       result.sent++;
-      result.items.push({coachId:item.coachId,coachName:item.coachName,sent:true,lessonCount:item.lessonCount,...posterResult});
+      result.items.push({coachId:item.coachId,coachName:item.coachName,sent:true,lessonCount:item.lessonCount,marked:markSent!==false,...posterResult});
     }catch(err){
       result.failed++;
       result.items.push({coachId:item.coachId,coachName:item.coachName,sent:false,error:err.message});
@@ -7006,7 +7008,7 @@ module.exports = async (req, res) => {
         return sendJson(res,{error:'无权限'},403);
       }
       await init();
-      return sendJson(res,await sendFeishuCoachDailyDigests());
+      return sendJson(res,await sendFeishuCoachDailyDigests({targetCoach:query.get('coach')||query.get('coachName')||query.get('coachId')||'',markSent:query.get('markSent')!=='false',phoneOverrides:req.headers['x-feishu-coach-digest-phone-overrides']||FEISHU_COACH_DIGEST_PHONE_OVERRIDES}));
     }
     if(path==='/cron/third-party-sync-center'&&await handleThirdPartySyncCenterRoutes({path,method,body,req,res,query}))return;if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
     if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;
