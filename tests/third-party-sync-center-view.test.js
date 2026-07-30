@@ -43,5 +43,6 @@ assert.match(workflow, /cron:\s*'0 16 \* \* \*'/, 'daily sync should run at 00:0
 assert.match(workflow, /TZ:\s*Asia\/Shanghai/, 'workflow should pin Asia/Shanghai timezone');
 assert.match(workflow, /\/api\/cron\/third-party-sync-center/, 'workflow should trigger sync center cron endpoint');
 assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, 'workflow should reuse existing cron auth fallback');
+assert.match(workflow, /sleep 3600/, 'daily sync should retry once after 1 hour when the first run fails');
 
 console.log('third-party sync center view tests passed');

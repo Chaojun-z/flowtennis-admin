@@ -167,7 +167,8 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
     importResults: scans.ft_third_party_sync_import_results
   });
   assert.strictEqual(plan.importable.length, 1, 'high confidence order should be importable');
-  assert.ok(plan.blocked.some(item => item.reason === '会员流水批量接口缺口'), 'member ledger gap should stay blocked');
+  assert.ok(plan.informational.some(item => item.reason === '会员资料仅同步留档，不进入订场导入'), 'member profiles should stay out of booking import blockers');
+  assert.ok(plan.informational.some(item => item.reason === '会员流水批量接口缺口'), 'member ledger gap should be tracked as sync information');
   const unboundMemberPlan = buildThirdPartyImportPlan({
     batchId: 'member-batch',
     prechecks: [{ batchId: 'member-batch', sourceRecordId: 'M1', sourceType: 'order', recommendedType: 'needs_confirmation', needsConfirmation: true, amount: 80 }],
@@ -181,7 +182,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
     method: 'POST',
     body: { batchId }
   });
-  assert.strictEqual(importRes.body.result.status, 'partial_completed', 'import should mark partial completion when blocked items remain');
+  assert.strictEqual(importRes.body.result.status, 'completed', 'member profile information should not make a booking import partial');
   assert.ok(importRes.body.result.backup?.tables?.ft_courts, 'import should save a pre-write backup snapshot');
   assert.ok(!importRes.body.result.backup.tables.ft_courts.rows, 'import result should keep backup metadata instead of truncating rows inline');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_backups' && row.row.tableName === 'ft_courts'), 'import should write backup chunks before business writes');
@@ -193,7 +194,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
   assert.ok(importRes.body.result.verification.schedule.checked, 'schedule verification should be recorded');
   assert.ok(writes.some(row => row.table === 'ft_courts'), 'business import should write courts table');
   assert.ok(writes.some(row => row.table === 'ft_financial_ledger'), 'business import should write finance ledger table');
-  assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_results' && row.row.status === 'partial_completed'), 'import result should be auditable');
+  assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_results' && row.row.status === 'completed'), 'import result should be auditable');
 
   scans.ft_third_party_sync_batches.push({ id: 'member-batch', batchId: 'member-batch', status: 'prechecked' });
   scans.ft_third_party_sync_prechecks.push({

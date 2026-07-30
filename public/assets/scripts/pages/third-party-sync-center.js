@@ -258,7 +258,8 @@ async function runThirdPartySyncImportPlan(batchId){
     const body=`<div class="tms-stats-row">${renderStandardDataCards([
       {label:'可导入',value:Number(plan.counts?.importable||0),sub:'高确定性/已确认'},
       {label:'阻断',value:Number(plan.counts?.blocked||0),sub:'需继续处理'},
-      {label:'跳过',value:Number(plan.counts?.skipped||0),sub:'重复或不导入'}
+      {label:'跳过',value:Number(plan.counts?.skipped||0),sub:'重复或不导入'},
+      {label:'同步信息',value:Number(plan.counts?.informational||0),sub:'会员资料/接口缺口'}
     ])}</div>
     <div class="tms-section-header">阻断原因</div>
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px">第三方记录</th><th>原因</th></tr></thead><tbody>${(plan.blocked||[]).slice(0,20).map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.sourceRecordId||'-')}</td><td>${renderStandardCellText(row.reason||row.riskReason||'-')}</td></tr>`).join('')||'<tr><td colspan="2"><div class="empty"><p>暂无阻断项</p></div></td></tr>'}</tbody></table></div></div>`;

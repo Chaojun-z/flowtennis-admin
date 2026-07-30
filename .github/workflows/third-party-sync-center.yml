@@ -11,7 +11,7 @@ permissions:
 jobs:
   sync-third-party:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 75
     env:
       TZ: Asia/Shanghai
       CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
@@ -26,4 +26,9 @@ jobs:
           if [ -n "${CRON_SECRET:-}" ]; then
             curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
           fi
+          if curl "${curl_args[@]}"; then
+            exit 0
+          fi
+          echo "third party sync failed, retrying after 1 hour..."
+          sleep 3600
           curl "${curl_args[@]}"

@@ -287,19 +287,23 @@ function importTargetsFor({ sourceType = '', finalType = '', recommendedType = '
 
 function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations = [], importResults = [] } = {}) {
   const scoped = (prechecks || []).filter(row => !batchId || String(row.batchId || '') === String(batchId));
-  const plan = { batchId, importable: [], blocked: [], skipped: [], counts: { importable: 0, blocked: 0, skipped: 0 } };
+  const plan = { batchId, importable: [], blocked: [], skipped: [], informational: [], counts: { importable: 0, blocked: 0, skipped: 0, informational: 0 } };
   for (const precheck of scoped) {
     const sourceRecordId = cleanText(precheck.sourceRecordId);
+    if (precheck.sourceType === 'member') {
+      plan.informational.push({ ...precheck, sourceRecordId, reason: '会员资料仅同步留档，不进入订场导入' });
+      continue;
+    }
+    if (precheck.riskReason === '会员流水批量接口缺口') {
+      plan.informational.push({ ...precheck, sourceRecordId, reason: '会员流水批量接口缺口' });
+      continue;
+    }
     if (isAlreadyImported(precheck, importResults)) {
       plan.skipped.push({ ...precheck, sourceRecordId, reason: '已导入' });
       continue;
     }
     if (['duplicate_skip', 'do_not_import'].includes(precheck.recommendedType)) {
       plan.skipped.push({ ...precheck, sourceRecordId, reason: precheck.plannedAction || '不导入' });
-      continue;
-    }
-    if (precheck.riskReason === '会员流水批量接口缺口') {
-      plan.blocked.push({ ...precheck, sourceRecordId, reason: '会员流水批量接口缺口' });
       continue;
     }
     const confirmation = latestConfirmationFor(precheck, confirmations);
@@ -335,6 +339,7 @@ function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations
   plan.counts.importable = plan.importable.length;
   plan.counts.blocked = plan.blocked.length;
   plan.counts.skipped = plan.skipped.length;
+  plan.counts.informational = plan.informational.length;
   return plan;
 }
 
@@ -842,6 +847,9 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       });
     };
     for (const row of plan.blocked || []) pushAlert(row.reason || row.riskReason || '低置信数据待确认');
+    for (const row of plan.informational || []) {
+      if (/缺口/.test(String(row.reason || row.riskReason || ''))) pushAlert(row.reason || row.riskReason);
+    }
     for (const row of plan.skipped || []) {
       if (/取消|退款|作废/.test(String(row.reason || row.riskReason || row.plannedAction || ''))) pushAlert(row.reason || row.riskReason || row.plannedAction);
     }
@@ -898,6 +906,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       writtenTables,
       writtenIds,
       skippedIds: [...plan.blocked, ...plan.skipped].map(row => ({ sourceRecordId: row.sourceRecordId, reason: row.reason || row.riskReason || '跳过' })),
+      informationalIds: (plan.informational || []).map(row => ({ sourceRecordId: row.sourceRecordId, reason: row.reason || row.riskReason || '仅同步留档' })),
       failed,
       backupFile: `table:${T_THIRD_PARTY_SYNC_IMPORT_BACKUPS}/${backup.backupId}`,
       backup,
