@@ -1,6 +1,7 @@
 const assert = require('assert');
 const crypto = require('crypto');
 const api = require('../api/index.js');
+const poster = require('../server/feishu-coach-digest-poster.js');
 
 const rules = api._test;
 const legacyMapoCode = ['ma', 'bao'].join('');
@@ -36,6 +37,8 @@ assert.ok(rules.buildOfficialAccountScheduleQueryReply, 'api._test should expose
 assert.ok(rules.collectCoachDailyDigestCandidates, 'api._test should expose coach daily digest collector');
 assert.ok(rules.buildCoachDailyDigestMessage, 'api._test should expose coach daily digest message builder');
 assert.ok(rules.buildFeishuCoachDailyDigestText, 'api._test should expose feishu coach digest text builder');
+assert.ok(poster.buildCoachDailyDigestPosterSvg, 'poster module should expose coach digest poster svg builder');
+assert.ok(poster.buildCoachDailyDigestPosterPng, 'poster module should expose coach digest poster png builder');
 assert.ok(rules.findFeishuCoachDigestRecipient, 'api._test should expose feishu coach recipient finder');
 assert.ok(rules.sendFeishuCoachDailyDigests, 'api._test should expose feishu coach digest sender');
 assert.ok(rules.resolveOfficialAccountSendMode, 'api._test should expose official account send mode helper');
@@ -1226,6 +1229,25 @@ assert.deepStrictEqual(
   'feishu digest text should be concise and suitable for private messages'
 );
 
+{
+  const posterSvg=poster.buildCoachDailyDigestPosterSvg({
+    coachId:'coach-chaojun',
+    coachName:'朝珺',
+    digestDate:'2026-05-20',
+    lessonCount:2,
+    schedules:[
+      { id:'poster-1', startTime:'2026-05-20 09:00', endTime:'2026-05-20 10:00', campus:'shunyi_mapo', venue:'1号场', courseType:'私教课', studentName:'小鹿', studentIds:['stu-1'] },
+      { id:'poster-2', startTime:'2026-05-20 14:00', endTime:'2026-05-20 15:30', campus:'shunyi_mapo', venue:'2号场', courseType:'体验课', studentName:'Misha', studentIds:['stu-2','stu-3'] }
+    ]
+  });
+  assert.match(posterSvg, /COACH SCHEDULE/, 'feishu coach poster should keep the Gemini schedule label');
+  assert.match(posterSvg, /朝珺/, 'feishu coach poster should render the coach name');
+  assert.match(posterSvg, /5 \/ 20/, 'feishu coach poster should render the digest date');
+  assert.match(posterSvg, /共计/, 'feishu coach poster should render the summary label');
+  assert.match(posterSvg, /网球兄弟 · FLOWTENNIS/, 'feishu coach poster should render the brand footer');
+  assert.match(posterSvg, /Misha/, 'feishu coach poster should render real lesson rows');
+}
+
 assert.strictEqual(
   rules.resolveOfficialAccountSendMode({
     appId: 'wx-appid',
@@ -1340,6 +1362,9 @@ assert.strictEqual(
       if(String(url).includes('/contact/v3/users/batch_get_id')){
         return {ok:true,json:async()=>({code:0,data:{user_list:[{mobile:'13800138000',user_id:'ou_coach'}]}}),text:async()=>''};
       }
+      if(String(url).includes('/im/v1/images')){
+        return {ok:true,json:async()=>({code:0,data:{image_key:'img_coach_schedule'}}),text:async()=>''};
+      }
       if(String(url).includes('/im/v1/messages')){
         return {ok:true,json:async()=>({code:0,data:{message_id:'om_1'}}),text:async()=>''};
       }
@@ -1354,13 +1379,21 @@ assert.strictEqual(
       appId: 'cli_app',
       appSecret: 'secret',
       fetchImpl,
+      buildPosterPng: async item => {
+        assert.strictEqual(item.coachName, '朝珺', 'feishu coach daily digest should build poster from the coach group');
+        return Buffer.from('png-bytes');
+      },
       putSchedule: async (id,row) => writes.push([id,row])
     });
 
     assert.strictEqual(result.sent, 1, 'feishu coach daily digest should private-message once per coach');
     assert.match(calls[1].url, /user_id_type=open_id/, 'feishu mobile lookup should request open_id values');
     assert.deepStrictEqual(JSON.parse(calls[1].options.body), { mobiles: ['13800138000'], include_resigned: false }, 'feishu mobile lookup should use bound coach phones');
-    assert.strictEqual(JSON.parse(calls[2].options.body).receive_id, 'ou_coach', 'feishu private message should target resolved coach open_id');
+    assert.match(calls[2].url, /\/im\/v1\/images/, 'feishu coach daily digest should upload the poster image');
+    assert.strictEqual(JSON.parse(calls[3].options.body).receive_id, 'ou_coach', 'feishu private image message should target resolved coach open_id');
+    assert.strictEqual(JSON.parse(calls[3].options.body).msg_type, 'image', 'feishu coach daily digest should send an image message');
+    assert.deepStrictEqual(JSON.parse(JSON.parse(calls[3].options.body).content), { image_key: 'img_coach_schedule' }, 'feishu image message should use uploaded image_key');
+    assert.strictEqual(result.items[0].poster, true, 'feishu coach daily digest result should report poster delivery');
     assert.deepStrictEqual(
       writes.map(item => [item[0], item[1].feishuCoachDailyDigestSentDate]).sort(),
       [['f-dig-1', '2026-05-20'], ['f-dig-2', '2026-05-20']],

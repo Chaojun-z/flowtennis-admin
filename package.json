@@ -16,6 +16,7 @@
     "guard:deps-security": "node scripts/dependency-audit-guard.js"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "axios": "^1.18.1",
     "bcryptjs": "^2.4.3",
     "dayjs": "^1.11.20",

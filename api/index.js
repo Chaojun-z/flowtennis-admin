@@ -46,6 +46,7 @@ const { LEAD_SOURCE_READ_LIMIT } = require('../server/lead-source-read-model.js'
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
+const { buildCoachDailyDigestPosterPng, uploadFeishuImage, sendFeishuBotImageMessage, sendFeishuCoachDigestPosterMessage } = require('../server/feishu-coach-digest-poster.js');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TS_ENDPOINT = process.env.TS_ENDPOINT;
@@ -3706,7 +3707,7 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
   }
   return result;
 }
-async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch}={}){
+async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch,buildPosterPng=buildCoachDailyDigestPosterPng,uploadImage=uploadFeishuImage,sendImage=sendFeishuBotImageMessage,sendText=sendFeishuBotTextMessage,sendPosterMessage=sendFeishuCoachDigestPosterMessage}={}){
   const [resolvedRows,resolvedUsers,resolvedCoaches]=await Promise.all([rows||loadRows(),users||loadUsers(),coaches||loadCoaches()]);
   const candidates=collectCoachDailyDigestCandidates(resolvedRows,now,{sentDateField:'feishuCoachDailyDigestSentDate'});
   const result={success:true,checked:candidates.length,sent:0,failed:0,skipped:0,items:[]};
@@ -3732,14 +3733,14 @@ async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,
     }
     try{
       const digestMessage=buildCoachDailyDigestMessage(item);
-      await sendFeishuBotTextMessage({tenantAccessToken,openId,text:buildFeishuCoachDailyDigestText({...digestMessage,coachName:item.coachName,digestDate:item.digestDate}),fetchImpl});
+      const posterResult=await sendPosterMessage({item,tenantAccessToken,openId,fetchImpl,buildPosterPng,uploadImage,sendImage,sendText,fallbackText:buildFeishuCoachDailyDigestText({...digestMessage,coachName:item.coachName,digestDate:item.digestDate})});
       await Promise.all((item.scheduleIds||[]).map(scheduleId=>putSchedule(scheduleId,{
         ...(((resolvedRows||[]).find(schedule=>String(schedule.id||'')===String(scheduleId)))||{}),
         feishuCoachDailyDigestSentDate:item.digestDate,
         feishuCoachDailyDigestSentAt:new Date(now).toISOString()
       })));
       result.sent++;
-      result.items.push({coachId:item.coachId,coachName:item.coachName,sent:true,lessonCount:item.lessonCount});
+      result.items.push({coachId:item.coachId,coachName:item.coachName,sent:true,lessonCount:item.lessonCount,...posterResult});
     }catch(err){
       result.failed++;
       result.items.push({coachId:item.coachId,coachName:item.coachName,sent:false,error:err.message});
@@ -7319,22 +7320,14 @@ module.exports._test={
   collectCoachDailyDigestCandidates,
   buildCoachDailyDigestMessage,
   buildFeishuCoachDailyDigestText,
-  findFeishuCoachDigestRecipient,
-  fetchFeishuTenantAccessToken,
-  resolveFeishuOpenIdsByMobiles,
-  sendFeishuBotTextMessage,
+  findFeishuCoachDigestRecipient,fetchFeishuTenantAccessToken,resolveFeishuOpenIdsByMobiles,sendFeishuBotTextMessage,
   buildOfficialAccountDigestTemplatePayload,
   resolveOfficialAccountSendMode,
   extractOfficialAccountSubscribeStatus,
   fetchOfficialAccountSubscribeStatus,
   sendOfficialAccountTemplateMessage,
-  sendOfficialAccountCourseReminders,
-  sendOfficialAccountCoachFeedbackReminders,
-  sendOfficialAccountStudentCourseReminders,
-  sendOfficialAccountReminderJobs,
-  sendOfficialAccountDailyDigests,
-  sendFeishuCoachDailyDigests,
-  sendFeishuDailyScheduleReport,
+  sendOfficialAccountCourseReminders,sendOfficialAccountCoachFeedbackReminders,sendOfficialAccountStudentCourseReminders,
+  sendOfficialAccountReminderJobs,sendOfficialAccountDailyDigests,sendFeishuCoachDailyDigests,sendFeishuDailyScheduleReport,
   normalizeVenue,
   rangesOverlap,
   computeCourtFinance,
