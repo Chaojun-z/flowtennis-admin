@@ -1219,22 +1219,31 @@ function studentDetailDatasetsReady(){
   const names=Array.isArray(STUDENT_DETAIL_REQUIREMENTS)?STUDENT_DETAIL_REQUIREMENTS:[];
   return names.every(name=>loadedDatasets.has(name)&&!(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has(name))&&(!(typeof datasetHasCurrentRequestKey==='function')||datasetHasCurrentRequestKey(name)));
 }
-function ensureStudentDetailDatasets(id){
+function studentDetailTabNeedsDatasets(tab=studentDetailActiveTab){
+  return ['orders','benefits'].includes(tab);
+}
+function studentDetailDrawerIsOpenFor(id){
+  return String(document.getElementById('overlay')?.dataset.studentDetailId||'')===String(id||'');
+}
+function ensureStudentDetailDatasets(id,{block=false}={}){
   if(studentDetailDatasetsReady())return false;
   const s=studentUnifiedRecordForId(id);if(!s)return false;
-  const loadingBody='<div class="schedule-detail-content"><div class="empty"><p>详情加载中...</p></div></div>';
-  openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:loadingBody,actionsHtml:'',studentId:s.id});
+  if(block){
+    const loadingBody='<div class="schedule-detail-content"><div class="empty"><p>详情加载中...</p></div></div>';
+    openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:loadingBody,actionsHtml:'',studentId:s.id});
+  }
   ensureDatasetsByName(STUDENT_DETAIL_REQUIREMENTS).then(()=>{
-    openStudentDetail(id);
+    if(studentDetailDrawerIsOpenFor(id)&&!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))openStudentDetail(id);
   }).catch(e=>{
     console.error('student detail data load failed',e);
-    toast('学员详情加载失败，请刷新后重试','error');
+    if(block)toast('学员详情加载失败，请刷新后重试','error');
   });
-  return true;
+  return block;
 }
 function openStudentDetail(id){
   const s=studentUnifiedRecordForId(id);if(!s)return;
-  if(ensureStudentDetailDatasets(id))return;
+  if(studentDetailTabNeedsDatasets()&&ensureStudentDetailDatasets(id,{block:true}))return;
+  if(!studentDetailTabNeedsDatasets())ensureStudentDetailDatasets(id,{block:false});
   if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))editId=null;
   const body=studentDetailActiveTab==='basic'?studentDetailBasicTabHtml(s):studentDetailActiveTab==='orders'?studentDetailOrdersTabHtml(s):studentDetailBenefitsTabHtml(s);
   openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
