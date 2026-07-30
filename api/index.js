@@ -3340,6 +3340,7 @@ function buildCoachDailyDigestMessage({coachName='',digestDate='',schedules=[]}=
 const FEISHU_OPEN_ID_FIELDS=['feishuOpenId','larkOpenId','feishuUserId','larkUserId','feishuCoachOpenId','larkCoachOpenId','openId','open_id','feishu_open_id','lark_open_id','feishu_user_id','lark_user_id'];
 const FEISHU_MOBILE_FIELDS=['phone','mobile','tel','telephone','phoneNumber','purePhoneNumber','contactPhone','userPhone','memberPhone','wechatPhone','feishuMobile','larkMobile','mobileVisible','mobile_visible'];
 function normalizeFeishuMobile(value){const digits=String(value||'').replace(/\D/g,'');if(/^00861[3-9]\d{9}$/.test(digits))return digits.slice(4);if(/^861[3-9]\d{9}$/.test(digits))return digits.slice(2);return digits;}
+function feishuMobileLookupVariants(value){const mobile=normalizeFeishuMobile(value);return mobile?[...new Set([mobile,/^1[3-9]\d{9}$/.test(mobile)?`+86${mobile}`:''].filter(Boolean))]:[];}
 function firstFeishuField(row={},fields=[]){for(const field of fields){const value=String(row?.[field]||'').trim();if(value)return {value,field};}return {value:'',field:''};}
 function firstFeishuOpenId(row={}){return firstFeishuField(row,FEISHU_OPEN_ID_FIELDS).value;}
 function firstFeishuMobile(row={}){return normalizeFeishuMobile(firstFeishuField(row,FEISHU_MOBILE_FIELDS).value);}
@@ -3419,16 +3420,15 @@ function extractFeishuMobileOpenIdMap(data={},expectedMobiles=[]){
   return map;
 }
 async function resolveFeishuOpenIdsByMobiles({mobiles=[],tenantAccessToken='',fetchImpl=fetch}={}){
-  const unique=[...new Set((mobiles||[]).map(normalizeFeishuMobile).filter(Boolean))];
-  if(!unique.length)return new Map();
+  const unique=[...new Set((mobiles||[]).map(normalizeFeishuMobile).filter(Boolean))];if(!unique.length)return new Map();const lookupMobiles=[...new Set(unique.flatMap(feishuMobileLookupVariants))];
   const response=await fetchImpl('https://open.feishu.cn/open-apis/contact/v3/users/batch_get_id?user_id_type=open_id',{
     method:'POST',
     headers:{'content-type':'application/json',authorization:`Bearer ${tenantAccessToken}`},
-    body:JSON.stringify({mobiles:unique,include_resigned:false})
+    body:JSON.stringify({mobiles:lookupMobiles,include_resigned:false})
   });
   const data=await readFeishuJsonResponse(response);
   assertFeishuApiOk(response,data,'飞书手机号换 open_id');
-  return extractFeishuMobileOpenIdMap(data,unique);
+  return extractFeishuMobileOpenIdMap(data,lookupMobiles);
 }
 async function sendFeishuBotTextMessage({tenantAccessToken='',openId='',text='',fetchImpl=fetch}={}){
   const response=await fetchImpl('https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id',{

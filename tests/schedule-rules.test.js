@@ -1420,7 +1420,7 @@ assert.strictEqual(
 
     assert.strictEqual(result.sent, 1, 'feishu coach daily digest should private-message once per coach');
     assert.match(calls[1].url, /user_id_type=open_id/, 'feishu mobile lookup should request open_id values');
-    assert.deepStrictEqual(JSON.parse(calls[1].options.body), { mobiles: ['13800138000'], include_resigned: false }, 'feishu mobile lookup should use bound coach phones');
+    assert.deepStrictEqual(JSON.parse(calls[1].options.body), { mobiles: ['13800138000', '+8613800138000'], include_resigned: false }, 'feishu mobile lookup should use bound coach phones with China country-code fallback');
     assert.match(calls[2].url, /\/im\/v1\/images/, 'feishu coach daily digest should upload the poster image');
     assert.strictEqual(JSON.parse(calls[3].options.body).receive_id, 'ou_coach', 'feishu private image message should target resolved coach open_id');
     assert.strictEqual(JSON.parse(calls[3].options.body).msg_type, 'image', 'feishu coach daily digest should send an image message');
@@ -1483,7 +1483,7 @@ assert.strictEqual(
     assert.strictEqual(result.items[0].marked,false,'single-coach preview send should be able to avoid marking schedules sent');
     assert.deepStrictEqual(writes,[],'single-coach preview send should not write schedule sent markers when markSent=false');
     const lookupCall=calls.find(call=>call.url.includes('/contact/v3/users/batch_get_id'));
-    assert.deepStrictEqual(JSON.parse(lookupCall.options.body),{mobiles:['13800134958'],include_resigned:false},'single-coach send should not look up non-target coach mobiles');
+    assert.deepStrictEqual(JSON.parse(lookupCall.options.body),{mobiles:['13800134958','+8613800134958'],include_resigned:false},'single-coach send should not look up non-target coach mobiles except country-code fallback');
   }
 
   {
