@@ -44,7 +44,7 @@ assert.deepStrictEqual(
 
 const precheck = precheckThirdPartyRecords([
   { id: 'order-1', sourceType: 'order', orderNo: 'O1', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成', customerName: '张三', phone: '13800000000', remark: '散客订场' },
-  { id: 'lock-1', sourceType: 'lock', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', remark: '私教课' },
+  { id: 'lock-1', sourceType: 'lock', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', remark: '私教课', operatorName: '前台A' },
   { id: 'lock-2', sourceType: 'lock', bookingDate: '', venue: '2号场', startTime: '10:00', endTime: '11:00', remark: '' },
   { id: 'member-gap', sourceType: 'member-ledger-gap', thirdPartyId: 'member-ledger-gap' }
 ], { batchId: 'batch-test', now: '2026-07-28T00:00:00+08:00' });
@@ -54,6 +54,8 @@ assert.ok(precheck.items.some(item => item.recommendedType === 'duplicate_skip')
 assert.ok(precheck.items.some(item => item.recommendedType === 'high_risk_exception'), 'missing date should be high risk exception');
 assert.ok(precheck.items.some(item => item.riskReason === '会员流水批量接口缺口'), 'member ledger gap should be recorded as an exception');
 assert.ok(precheck.items.some(item => item.customerName === '张三' && item.phone === '13800000000' && item.remark === '散客订场' && item.amount === 100), 'precheck should keep operator-facing third party fields');
+assert.ok(precheck.items.some(item => item.sourceRecordId === 'O1' && item.bookingMode === '用户自助订场'), 'precheck should label user self-service bookings');
+assert.ok(precheck.items.some(item => item.sourceRecordId === 'lock-1' && item.bookingMode === '运营锁场' && item.operatorAccount === '前台A'), 'precheck should label operator locks with operator account');
 
 const changxiaoerOrderPrecheck = precheckThirdPartyRecords([
   {
@@ -77,6 +79,7 @@ assert.strictEqual(changxiaoerOrder.startTime, '09:30', 'changxiaoer order shoul
 assert.strictEqual(changxiaoerOrder.endTime, '11:00', 'changxiaoer order should read latest region end time');
 assert.strictEqual(changxiaoerOrder.venue, '2号场', 'changxiaoer order should read court from order info place name');
 assert.strictEqual(changxiaoerOrder.amount, 140, 'changxiaoer cent amounts should display as yuan');
+assert.strictEqual(changxiaoerOrder.bookingMode, '用户自助订场', 'changxiaoer order should label self-service booking mode');
 assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete changxiaoer order should not be marked high risk');
 
 (async () => {

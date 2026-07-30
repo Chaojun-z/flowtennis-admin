@@ -146,7 +146,19 @@ function phoneOf(record = {}) {
 }
 
 function remarkOf(record = {}) {
-  return cleanText(record.remark || record.userRemark || record.note || record.description);
+  const orderRemark = orderInfoItems(record).map(item => item.remark || item.userRemark || item.note || item.description).find(Boolean);
+  return cleanText(record.remark || record.userRemark || record.note || record.description || record.memo || record.reason || record.occupyReason || record.lockReason || orderRemark);
+}
+
+function bookingModeOf(record = {}) {
+  const sourceType = normalizeSourceType(record.sourceType);
+  if (sourceType === 'lock') return '运营锁场';
+  if (sourceType === 'order') return '用户自助订场';
+  return '第三方记录';
+}
+
+function operatorAccountOf(record = {}) {
+  return cleanText(record.operatorName || record.operator || record.adminName || record.creatorName || record.createdByName || record.createName || record.accountName || record.userAccount || record.createUserName || record.staffName);
 }
 
 function amountOf(record = {}) {
@@ -230,6 +242,8 @@ function precheckThirdPartyRecords(records = [], { batchId = '', now = new Date(
       venue: venueOf(record),
       customerName: customerNameOf(record),
       phone: phoneOf(record),
+      bookingMode: bookingModeOf(record),
+      operatorAccount: operatorAccountOf(record),
       remark: remarkOf(record),
       amount: amountOf(record),
       recommendedType: classification.recommendedType,
