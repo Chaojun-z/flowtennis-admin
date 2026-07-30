@@ -12,7 +12,7 @@ function createScheduleRoutes(deps={}){
     get,withTimeout,scanFeedbacks,assertScheduleEditableAfterFeedback,scan,scheduleEntitlementDeltas,
     restoreSmallGroupFreeAbsenceLedgerRows,parseLessonValue,returnEntitlementFreeAbsence,
     diffScheduleEntitlementDeltas,effectiveScheduleStatus,assertCanDeleteSchedule,
-    T_SCHEDULE,T_COACHES,T_USERS,T_ENTITLEMENTS,T_COURTS,T_ENTITLEMENT_LEDGER
+    T_SCHEDULE,T_COACHES,T_USERS,T_ENTITLEMENTS,T_COURTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ACCOUNTS
   }=deps;
 
   return async function handleScheduleRoutes({path,method,body,user,res}){
@@ -44,11 +44,12 @@ function createScheduleRoutes(deps={}){
             await assertScheduleEntitlementCapacity({...r,coachRefs},null);
             let storedValueUpdate={schedule:r,courts:[],originalCourts:[],historyRows:[]};
             if(scheduleStoredValuePaymentAmount(r)>0){
-              const [courtRows,studentRows]=await Promise.all([
+              const [courtRows,studentRows,membershipAccounts]=await Promise.all([
                 withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
-                getFastStudentsRead().catch(()=>[])
+                getFastStudentsRead().catch(()=>[]),
+                T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([])
               ]);
-              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:null,nextSchedule:r,courts:courtRows,students:studentRows,now,operator:user.name||'',operationTrace});
+              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:null,nextSchedule:r,courts:courtRows,students:studentRows,membershipAccounts,now,operator:user.name||'',operationTrace});
               Object.assign(r,storedValueUpdate.schedule);
             }
             return {risk,entitlementDeltas,entitlementRows,storedValueUpdate};
@@ -118,11 +119,12 @@ function createScheduleRoutes(deps={}){
             const oldFreeAbsenceLedger=allLedger.filter(row=>row.scheduleId===id&&row.action==='free_absence');
             let storedValueUpdate={schedule:r,courts:[],originalCourts:[],historyRows:[]};
             if(scheduleStoredValuePaymentAmount(ex)>0){
-              const [courtRows,studentRows]=await Promise.all([
+              const [courtRows,studentRows,membershipAccounts]=await Promise.all([
                 withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
-                getFastStudentsRead().catch(()=>[])
+                getFastStudentsRead().catch(()=>[]),
+                T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([])
               ]);
-              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:r,courts:courtRows,students:studentRows,now:r.updatedAt,operator:user.name||'',operationTrace});
+              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:r,courts:courtRows,students:studentRows,membershipAccounts,now:r.updatedAt,operator:user.name||'',operationTrace});
               Object.assign(r,storedValueUpdate.schedule);
             }
             await timed('schedule cancel persist',()=>put(T_SCHEDULE,id,r));
@@ -191,11 +193,12 @@ function createScheduleRoutes(deps={}){
             await assertScheduleEntitlementCapacity({...r,coachRefs},ex);
             let storedValueUpdate={schedule:r,courts:[],originalCourts:[],historyRows:[]};
             if(scheduleStoredValuePaymentAmount(ex)>0||scheduleStoredValuePaymentAmount(r)>0){
-              const [courtRows,studentRows]=await Promise.all([
+              const [courtRows,studentRows,membershipAccounts]=await Promise.all([
                 withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
-                getFastStudentsRead().catch(()=>[])
+                getFastStudentsRead().catch(()=>[]),
+                T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([])
               ]);
-              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:r,courts:courtRows,students:studentRows,now:r.updatedAt,operator:user.name||'',operationTrace});
+              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:r,courts:courtRows,students:studentRows,membershipAccounts,now:r.updatedAt,operator:user.name||'',operationTrace});
               Object.assign(r,storedValueUpdate.schedule);
             }
             return {risk,oldEntDeltas,nextEntDeltas,oldFreeAbsenceLedger,nextBaseRows,storedValueUpdate};
@@ -256,11 +259,12 @@ function createScheduleRoutes(deps={}){
         const isCancelled=ex&&effectiveScheduleStatus(ex)==='已取消';
         let storedValueUpdate={schedule:{...(ex||{}),status:'已取消'},courts:[],originalCourts:[],historyRows:[]};
         if(scheduleStoredValuePaymentAmount(ex)>0){
-          const [courtRows,studentRows]=await Promise.all([
+          const [courtRows,studentRows,membershipAccounts]=await Promise.all([
             withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
-            getFastStudentsRead().catch(()=>[])
+            getFastStudentsRead().catch(()=>[]),
+            T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([])
           ]);
-          storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:{...ex,status:'已取消'},courts:courtRows,students:studentRows,now:operationTrace.operationAt,operator:user.name||'',operationTrace});
+          storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:{...ex,status:'已取消'},courts:courtRows,students:studentRows,membershipAccounts,now:operationTrace.operationAt,operator:user.name||'',operationTrace});
         }
         const appliedEntitlements=[];
         const deletedLedger=[];

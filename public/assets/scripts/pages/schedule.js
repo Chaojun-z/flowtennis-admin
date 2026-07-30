@@ -158,6 +158,27 @@ function scheduleStudentLastLessonBrief(student){
 }
 function scheduleStudentDisplayName(student){return String(student?.name||student?.studentName||student?.displayName||student?.nickName||student?.nickname||'').trim();}
 function scheduleStudentPhone(student){return String(student?.phone||student?.mobile||student?.studentPhone||'').trim();}
+function scheduleStoredValueNormalizePhone(value){let phone=String(value||'').replace(/\D/g,'');if(phone.startsWith('86')&&phone.length>11)phone=phone.slice(2);return phone;}
+function scheduleStoredValueActiveMembership(court){return membershipAccounts.find(account=>String(account?.courtId||'')===String(court?.id||'')&&!['voided','cleared','inactive','deleted'].includes(String(account?.status||'active')));}
+function scheduleStoredValueCourtScore(court,student){
+  if(!court||['inactive','deleted'].includes(String(court.status||'active'))||court.deletedAt||court.mergedIntoCourtId)return 0;
+  const studentId=String(student?.id||'').trim(),studentPhone=scheduleStoredValueNormalizePhone(scheduleStudentPhone(student)),studentName=scheduleStudentDisplayName(student);
+  const ids=parseArr(court.studentIds),courtPhone=scheduleStoredValueNormalizePhone(court.phone),courtName=String(court.name||'').trim();
+  let score=0;
+  if(studentId&&ids.includes(studentId))score+=500;
+  if(studentId&&String(court.studentId||'')===studentId)score+=500;
+  if(studentPhone&&courtPhone&&courtPhone===studentPhone)score+=300;
+  if(studentName&&courtName&&courtName===studentName)score+=120;
+  if(!score)return 0;
+  const finance=courtFinanceLocal(court);
+  if(scheduleStoredValueActiveMembership(court))score+=1000;
+  if((Number(court.cachedBalance??finance.balance)||0)>0)score+=300;
+  if((Number(court.cachedTotalDeposit??finance.totalDeposit)||0)>0)score+=100;
+  return score;
+}
+function scheduleStoredValueCourtForStudent(student){
+  return courts.map(court=>({court,score:scheduleStoredValueCourtScore(court,student)})).filter(item=>item.score>0).sort((a,b)=>b.score-a.score||String(b.court.updatedAt||b.court.createdAt||'').localeCompare(String(a.court.updatedAt||a.court.createdAt||'')))[0]?.court||null;
+}
 function scheduleStudentSearchTokens(student){
   const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;
   return [scheduleStudentDisplayName(student),scheduleStudentPhone(student),cn(lifecycleCampus),lifecycleCampus].filter(Boolean);
@@ -454,7 +475,7 @@ function scheduleStoredValuePaymentState(kind='lesson'){
   if(!enabled||!isStoredValuePayMethod(payMethod))return {active:false};
   if(!studentIds.length)return {active:true,valid:false,message:'请选择学员后查看储值卡余额'};
   if(studentIds.length>1)return {active:true,valid:false,message:'储值卡扣款请只选择 1 名学员'};
-  const student=students.find(s=>s.id===studentIds[0]),court=courtsForStudent(student)[0]||null;
+  const student=students.find(s=>s.id===studentIds[0]),court=scheduleStoredValueCourtForStudent(student);
   if(!court)return {active:true,valid:false,message:'未找到该学员的会员储值卡'};
   const balance=courtFinanceLocal(court).balance||0,lessonStored=currentScheduleSettlementType()==='direct'&&isStoredValuePayMethod(document.getElementById('sch_payMethod')?.value||'')?(parseFloat(document.getElementById('sch_paidAmount')?.value||'0')||0):0;
   const fieldFeeStored=currentScheduleFieldFeeMode()==='separate'&&isStoredValuePayMethod(document.getElementById('sch_fieldFeePayMethod')?.value||'')?(parseFloat(document.getElementById('sch_fieldFeeAmount')?.value||'0')||0):0,total=Math.round((lessonStored+fieldFeeStored)*100)/100;

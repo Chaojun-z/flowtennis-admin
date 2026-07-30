@@ -78,6 +78,49 @@ assert.throws(
   'stored-value schedule save should reject insufficient balance'
 );
 
+const unlinkedMemberCourt = {
+  id: 'court-member-unlinked',
+  name: '秋明',
+  phone: '18600689666',
+  studentIds: [],
+  campus: 'shunyi_mapo',
+  updatedAt: '2026-07-30T02:38:57.625Z',
+  history: [
+    { id: 'member-recharge-1', date: '2026-07-28', type: '充值', category: '会员充值', payMethod: '会员充值', amount: 5000 }
+  ]
+};
+const olderGuestCourtWithSameName = {
+  id: 'court-guest-same-name',
+  name: '秋明',
+  phone: '',
+  studentIds: [],
+  campus: 'shunyi_mapo',
+  updatedAt: '2026-07-30T06:44:35.138Z',
+  history: [
+    { id: 'guest-booking-1', date: '2026-01-14', type: '消费', category: '订场', payMethod: '小程序', amount: 210 }
+  ]
+};
+const unlinkedStudent = { id: 'stu-unlinked-member', name: '秋明', phone: '' };
+const unlinkedSchedule = {
+  ...schedule,
+  id: 'sch-unlinked-member',
+  studentIds: ['stu-unlinked-member'],
+  studentName: '秋明',
+  paidAmount: 400
+};
+const unlinkedCreated = rules.buildScheduleStoredValueCourtUpdate({
+  previousSchedule: null,
+  nextSchedule: unlinkedSchedule,
+  courts: [olderGuestCourtWithSameName, unlinkedMemberCourt],
+  students: [unlinkedStudent],
+  membershipAccounts: [{ id: 'member-account-1', courtId: 'court-member-unlinked', status: 'active' }],
+  now,
+  operator: '管理员',
+  operationTrace: { ...trace, operationId: 'op-unlinked-member', batchId: 'batch-op-unlinked-member' }
+});
+assert.strictEqual(unlinkedCreated.schedule.storedValueCourtId, 'court-member-unlinked', 'unlinked member account should beat same-name old guest court');
+assert.strictEqual(unlinkedCreated.court.balance, 4600);
+
 const edited = rules.buildScheduleStoredValueCourtUpdate({
   previousSchedule: created.schedule,
   nextSchedule: { ...created.schedule, paidAmount: 300 },

@@ -1937,7 +1937,7 @@ const handleScheduleRoutes=createScheduleRoutes({
   scheduleSaveErrorStatus,get,withTimeout,scanFeedbacks,assertScheduleEditableAfterFeedback,scan,
   scheduleEntitlementDeltas,restoreSmallGroupFreeAbsenceLedgerRows,parseLessonValue,returnEntitlementFreeAbsence,
   diffScheduleEntitlementDeltas,effectiveScheduleStatus,assertCanDeleteSchedule,
-  T_SCHEDULE,T_COACHES,T_USERS,T_ENTITLEMENTS,T_COURTS,T_ENTITLEMENT_LEDGER
+  T_SCHEDULE,T_COACHES,T_USERS,T_ENTITLEMENTS,T_COURTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ACCOUNTS
 });
 async function callInternalJsonRoute(handler,args={}){let statusCode=200,payload;const fakeRes={req:{headers:{}},status(code){statusCode=code;return this;},json(body){payload=body;return this;},send(body){payload=body;return this;},setHeader(){return this;}};const handled=await handler({...args,res:fakeRes});if(!handled&&payload===undefined)throw new Error('内部接口未处理请求');if(statusCode>=400)throw new Error(String(payload?.error||payload||`内部接口失败 ${statusCode}`));return payload;}
 const feishuSyncUser={role:'admin',name:'飞书同步'},scheduleRoutePath=id=>`/schedule/${encodeURIComponent(String(id||'').trim())}`;

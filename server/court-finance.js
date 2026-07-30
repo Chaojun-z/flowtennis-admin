@@ -7,6 +7,12 @@ function fallbackNormalizeMoney(value){const n=Number(value);return Number.isFin
 function fallbackDateMs(v){if(!v)return NaN;if(v instanceof Date)return v.getTime();return new Date(String(v).replace(' ','T')).getTime();}
 function fallbackAssertPhone(value){return String(value||'').trim();}
 function hasMoneyValue(value){return value!==undefined&&value!==null&&String(value).trim()!=='';}
+function cleanStoredValueText(value){return String(value||'').trim();}
+function normalizeStoredValuePhone(value){
+  let phone=cleanStoredValueText(value).replace(/\D/g,'');
+  if(phone.startsWith('86')&&phone.length>11)phone=phone.slice(2);
+  return phone;
+}
 
 function createCourtFinanceRules(deps={}){
   const uuidv4=deps.uuidv4||DEFAULT_ID_FACTORY;
@@ -101,7 +107,35 @@ function activeCourtForStoredValue(court){
   const status=String(court?.status||'active');
   return court&&status!=='inactive'&&status!=='deleted'&&!court.deletedAt&&!court.mergedIntoCourtId;
 }
-function resolveScheduleStoredValueCourt(schedule,courts=[],students=[],charge={}){
+function activeMembershipAccountForCourt(court,membershipAccounts=[]){
+  return (membershipAccounts||[]).find(account=>String(account?.courtId||'')===String(court?.id||'')&&!['voided','cleared','inactive','deleted'].includes(String(account?.status||'active')));
+}
+function storedValueFinanceSnapshot(court){
+  try{return computeCourtFinance(court||{});}catch{
+    return {
+      balance:normalizeMoney(court?.cachedBalance??court?.balance),
+      totalDeposit:normalizeMoney(court?.cachedTotalDeposit??court?.totalDeposit),
+      spentAmount:normalizeMoney(court?.cachedTotalSpent??court?.spentAmount)
+    };
+  }
+}
+function storedValueCourtMatchScore(court,{studentId='',studentPhone='',studentName='',membershipAccounts=[]}={}){
+  const ids=normalizeStudentIds(court);
+  const courtPhone=normalizeStoredValuePhone(court?.phone);
+  const courtName=cleanStoredValueText(court?.name);
+  let score=0;
+  if(studentId&&ids.includes(String(studentId)))score+=500;
+  if(studentPhone&&courtPhone&&courtPhone===studentPhone)score+=300;
+  if(studentName&&courtName&&courtName===studentName)score+=120;
+  if(!score)return 0;
+  const account=activeMembershipAccountForCourt(court,membershipAccounts);
+  const finance=storedValueFinanceSnapshot(court);
+  if(account)score+=1000;
+  if(finance.balance>0)score+=300;
+  if(finance.totalDeposit>0)score+=100;
+  return score;
+}
+function resolveScheduleStoredValueCourt(schedule,courts=[],students=[],charge={},membershipAccounts=[]){
   const storedCourtId=String(schedule?.[charge.courtIdField||'storedValueCourtId']||'').trim();
   if(storedCourtId){
     const court=(courts||[]).find(item=>String(item?.id||'')===storedCourtId&&activeCourtForStoredValue(item));
@@ -111,16 +145,17 @@ function resolveScheduleStoredValueCourt(schedule,courts=[],students=[],charge={
   if(studentIds.length!==1)throw new Error('储值卡扣款请只选择 1 名学员');
   const studentId=studentIds[0];
   const student=(students||[]).find(item=>String(item?.id||'')===String(studentId))||{};
-  const studentPhone=String(student.phone||student.mobile||student.studentPhone||'').trim();
-  const studentName=String(student.name||schedule?.studentName||'').trim();
+  const studentPhone=normalizeStoredValuePhone(student.phone||student.mobile||student.studentPhone);
+  const studentName=cleanStoredValueText(student.name||schedule?.studentName);
   const rows=(courts||[]).filter(activeCourtForStoredValue).filter(court=>{
-    const ids=normalizeStudentIds(court);
-    if(ids.includes(String(studentId)))return true;
-    if(studentPhone&&String(court.phone||'').trim()===studentPhone)return true;
-    return !studentPhone&&studentName&&String(court.name||'').trim()===studentName;
+    return storedValueCourtMatchScore(court,{studentId,studentPhone,studentName,membershipAccounts})>0;
   });
   if(!rows.length)throw new Error('未找到该学员的会员储值卡');
-  return rows.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')))[0];
+  return rows.sort((a,b)=>{
+    const scoreDiff=storedValueCourtMatchScore(b,{studentId,studentPhone,studentName,membershipAccounts})-storedValueCourtMatchScore(a,{studentId,studentPhone,studentName,membershipAccounts});
+    if(scoreDiff)return scoreDiff;
+    return String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));
+  })[0];
 }
 function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount=0,now=new Date().toISOString(),operator='',operationTrace=null,note='',idSuffix='consume',charge=null}={}){
   const courseLabel=schedule?.courseType==='体验课'?(schedule.experienceType||'体验课'):(schedule?.courseType||'课程');
@@ -161,7 +196,7 @@ function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount
   },operationTrace);
   return row;
 }
-function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule=null,courts=[],students=[],now=new Date().toISOString(),operator='',operationTrace=null}={}){
+function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule=null,courts=[],students=[],membershipAccounts=[],now=new Date().toISOString(),operator='',operationTrace=null}={}){
   const next={...(nextSchedule||{})};
   const previousCharges=scheduleStoredValueChargeSpecs(previousSchedule);
   const nextCharges=scheduleStoredValueChargeSpecs(nextSchedule);
@@ -194,8 +229,8 @@ function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule
     const previousAmount=roundMoney(previousCharge?.amount||0);
     const nextAmount=roundMoney(nextCharge?.amount||0);
     const charge=nextCharge||previousCharge;
-    const previousCourt=previousAmount?resolveScheduleStoredValueCourt(previousSchedule,courts,students,previousCharge):null;
-    const nextCourt=nextAmount?resolveScheduleStoredValueCourt(next,courts,students,nextCharge):null;
+    const previousCourt=previousAmount?resolveScheduleStoredValueCourt(previousSchedule,courts,students,previousCharge,membershipAccounts):null;
+    const nextCourt=nextAmount?resolveScheduleStoredValueCourt(next,courts,students,nextCharge,membershipAccounts):null;
     if(nextCharge&&nextCourt){
       next[nextCharge.courtIdField]=nextCourt.id;
       next[nextCharge.amountField]=nextAmount;
