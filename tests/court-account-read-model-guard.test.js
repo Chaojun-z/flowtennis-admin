@@ -111,7 +111,7 @@ async function main() {
   });
 
   const view = await loadView();
-  assert.deepStrictEqual(Object.keys(view), ['summary', 'filters', 'items', 'membershipOrderAuditRows', 'membershipLedgerAuditRows', 'meta'], '读模型应返回 summary/filters/items/audit/meta');
+  assert.deepStrictEqual(Object.keys(view), ['summary', 'filters', 'items', 'membershipOrderAuditRows', 'membershipLedgerAuditRows', 'pagination', 'meta'], '读模型应返回 summary/filters/items/audit/pagination/meta');
   assert.strictEqual(view.items.length, 2, '读模型应返回可渲染列表项');
   assert.strictEqual(view.items[0].displayName, '客户A');
   assert.strictEqual(view.items[0].campusCode, 'shunyi_mapo', '订场用户读模型必须把历史 mabao 归一为标准校区代码');
@@ -158,6 +158,11 @@ async function main() {
   assert.ok(Array.isArray(detailView.items[0].rechargeRows) && detailView.items[0].rechargeRows.length === 2, '详情读模型应返回当前用户充值明细');
   assert.ok(Array.isArray(detailView.items[0].bookingRows) && detailView.items[0].bookingRows.length === 4, '详情读模型应返回当前用户订场明细');
   assert.ok(detailView.membershipOrderAuditRows.length === 2, '详情读模型可返回当前用户订单审计行');
+
+  const pagedView = await loadView({ page: 1, pageSize: 1, q: '客户A' });
+  assert.strictEqual(pagedView.items.length, 1, '读模型应支持服务端分页');
+  assert.strictEqual(pagedView.pagination.total, 1, '读模型分页应返回筛选后的总数');
+  assert.strictEqual(pagedView.pagination.pageSize, 1, '读模型分页应返回当前 pageSize');
 
   const compare = await loadCompare({ sampleIds: ['court-1'] });
   assert.deepStrictEqual(Object.keys(compare), ['meta', 'summaryDiffs', 'items'], 'compare 输出应返回 meta/summaryDiffs/items');

@@ -9,6 +9,7 @@ const standardSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/stan
 const bootstrapSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/bootstrap.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/state.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const leadsRoutesSource = fs.readFileSync(path.join(__dirname, '../server/leads-routes.js'), 'utf8');
 const css = [
   'assets/styles/pages.css',
   'assets/styles/components/tables.css',
@@ -240,6 +241,8 @@ assert.match(fnBody('leadPayloadFromForm'), /const levelValue=document\.getEleme
 assert.match(fnBody('leadPayloadFromForm'), /followupPriority:document\.getElementById\('lead_followupPriority'\)\?\.value\|\|''/, 'lead save payload should include follow-up priority');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'level'[\s\S]*\]/, 'lead list API projection should include level');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'followupPriority'[\s\S]*\]/, 'lead list API projection should include follow-up priority');
+assert.match(leadsRoutesSource, /function parseLeadPaging\(query\)/, 'lead list API should expose server-side paging');
+assert.match(leadsRoutesSource, /return sendJson\(res,paging\?buildLeadListPage\(filtered,paging\):filtered\)/, 'lead list API should keep old array responses and return paged metadata when requested');
 assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',15,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
 assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',15/, 'leads loading state should pass all visible columns to the skeleton helper');

@@ -658,6 +658,39 @@ function rate(part, total) {
   return total ? Math.round((Number(part) || 0) * 1000 / (Number(total) || 1)) / 10 : 0;
 }
 
+function textSearchHit(q,...values) {
+  const keyword = String(q || '').trim().toLowerCase();
+  if (!keyword) return true;
+  return values.some(value => String(value || '').toLowerCase().includes(keyword));
+}
+
+function parsePositiveInt(value, fallback) {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function buildListPage(rows = [], options = {}) {
+  if (!options.page && !options.pageSize) return null;
+  const pageSize = Math.max(1, Math.min(parsePositiveInt(options.pageSize, 15), 100));
+  const requestedPage = parsePositiveInt(options.page, 1);
+  const total = rows.length;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(requestedPage, pages);
+  const start = (page - 1) * pageSize;
+  return { rows: rows.slice(start, start + pageSize), total, page, pageSize, pages };
+}
+
+function filterCourtAccountItems(items = [], options = {}) {
+  const q = String(options.q || '').trim();
+  const owner = String(options.owner || '').trim();
+  const accountType = String(options.accountType || '').trim();
+  return (items || []).filter(item => {
+    if (owner && String(item.owner || '').trim() !== owner) return false;
+    if (accountType && String(item.accountType || '').trim() !== accountType) return false;
+    return textSearchHit(q, item.displayName, item.phone, item.campusName, item.owner, item.depositAttitude, item.notesSummary, item.balance, item.totalDeposit, item.totalSpent, item.totalReceived, item.linkedStudentSummary, item.membershipTierLabel, item.membershipStatus);
+  });
+}
+
 function buildCourtChainMetricsFromItems(items = []) {
   const activeItems = (items || []).filter((item) => item && String(item.id || '') !== MATCH_COURT_FINANCE_ACCOUNT_ID);
   const courtUsers = activeItems.filter((item) => (Number(item.bookingCount) || 0) > 0);
@@ -699,15 +732,19 @@ function buildCourtAccountListViewFromData(source = {}, options = {}) {
   const detailItems = activeCourts
     .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
     .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));
-  const items = includeDetails ? detailItems : detailItems.map(courtAccountLightListItem);
-  const summary = buildSummary(detailItems);
-  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: detailItems });
+  const filteredDetailItems = filterCourtAccountItems(detailItems, options);
+  const paging = buildListPage(filteredDetailItems, options);
+  const detailPageItems = paging ? paging.rows : filteredDetailItems;
+  const items = (includeDetails ? detailPageItems : detailPageItems.map(courtAccountLightListItem));
+  const summary = buildSummary(filteredDetailItems);
+  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: filteredDetailItems });
   return {
     summary,
     filters: buildFilters({ items: detailItems, campuses }),
     items,
-    membershipOrderAuditRows: includeDetails ? buildMembershipOrderAuditRows(detailItems) : [],
-    membershipLedgerAuditRows: includeDetails ? buildMembershipLedgerAuditRows(detailItems) : [],
+    membershipOrderAuditRows: includeDetails ? buildMembershipOrderAuditRows(detailPageItems) : [],
+    membershipLedgerAuditRows: includeDetails ? buildMembershipLedgerAuditRows(detailPageItems) : [],
+    pagination: paging ? { total: paging.total, page: paging.page, pageSize: paging.pageSize, pages: paging.pages } : null,
     meta: {
       generatedAt: new Date().toISOString(),
       source: useLegacy ? 'legacy' : 'unified-court-membership-read-model',
@@ -752,7 +789,7 @@ function createCourtAccountListViewLoader(deps) {
       membershipPlans,
       membershipBenefitLedger,
       membershipAccountEvents
-    }, { sampleIds, sample: options.sample, useLegacy, includeDetails: options.includeDetails === true });
+    }, { sampleIds, sample: options.sample, useLegacy, includeDetails: options.includeDetails === true, page: options.page, pageSize: options.pageSize, q: options.q, owner: options.owner, accountType: options.accountType });
   };
 }
 

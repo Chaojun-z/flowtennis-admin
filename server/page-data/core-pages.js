@@ -42,6 +42,30 @@ function rowHasStudent(row={},studentId=''){
   return parseSnapshotArray(row.studentIds).some(id=>String(id||'').trim()===sid);
 }
 
+function textSearchHit(q,...values){
+  const keyword=String(q||'').trim().toLowerCase();
+  if(!keyword)return true;
+  return values.some(value=>String(value||'').toLowerCase().includes(keyword));
+}
+
+function parseListPaging(query){
+  const enabled=query?.get('paged')==='1'||query?.get('page')||query?.get('pageSize');
+  if(!enabled)return null;
+  const page=Math.max(1,parseInt(query?.get('page')||'1',10)||1);
+  const pageSize=Math.max(1,Math.min(parseInt(query?.get('pageSize')||'15',10)||15,100));
+  return {page,pageSize};
+}
+
+function buildListPage(rows=[],paging=null){
+  const list=Array.isArray(rows)?rows:[];
+  if(!paging)return null;
+  const total=list.length;
+  const pages=Math.max(1,Math.ceil(total/paging.pageSize));
+  const page=Math.min(paging.page,pages);
+  const start=(page-1)*paging.pageSize;
+  return {rows:list.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages};
+}
+
 function createCorePageDataRoutes(deps={}){
   const {
     init,sendJson,cappedScan,filterLoadAllForUser,listCampusesWithDefaults,getFastStudentsRead,
@@ -92,7 +116,26 @@ function createCorePageDataRoutes(deps={}){
         purchases:scoped.purchases,
         entitlements:scoped.entitlements
       });
-      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,customerLifecycleRows,purchaseUnifiedView:buildPurchaseUnifiedView({...scoped,customerLifecycleRows}),packageUnifiedView:buildPackageUnifiedView(scoped),entitlementUnifiedView:buildEntitlementUnifiedView(scoped)});
+      const purchaseUnifiedView=buildPurchaseUnifiedView({...scoped,customerLifecycleRows});
+      const packageUnifiedView=buildPackageUnifiedView(scoped);
+      const entitlementUnifiedView=buildEntitlementUnifiedView(scoped);
+      const paging=parseListPaging(query);
+      const view=String(query?.get('view')||'').trim();
+      let listPage=null;
+      if(paging){
+        const q=String(query?.get('q')||'').trim();
+        if(view==='purchases'){
+          const rows=(purchaseUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.studentName,row.packageName,row.productName,row.courseType,row.ownerCoach,row.payMethod,row.purchaseDate,row.amountPaid));
+          listPage={view, ...buildListPage(rows,paging)};
+        }else if(view==='packages'){
+          const rows=(packageUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.name,row.packageName,row.productName,row.courseType,row.ownerCoach,row.price,row.lessons));
+          listPage={view, ...buildListPage(rows,paging)};
+        }else if(view==='entitlements'){
+          const rows=(entitlementUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.studentName,row.packageName,row.productName,row.courseType,row.ownerCoach,row.status,row.remainingLessons,row.totalLessons));
+          listPage={view, ...buildListPage(rows,paging)};
+        }
+      }
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,customerLifecycleRows,purchaseUnifiedView,packageUnifiedView,entitlementUnifiedView,listPage});
     }
     if(path==='/page-data/customer-center-list'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -120,12 +163,19 @@ function createCorePageDataRoutes(deps={}){
       });
       const teachingData={...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries};
       const metricScope=pageDataScopeFromQuery(query);
+      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,teachingData);
+      const paging=parseListPaging(query);
+      const view=String(query?.get('view')||'').trim();
+      const q=String(query?.get('q')||'').trim();
+      const studentRows=Array.isArray(teachingStudentViews[view])?teachingStudentViews[view]:[];
+      const listPage=paging&&view?{view,...buildListPage(studentRows.filter(row=>textSearchHit(q,row.name,row.phone,row.type,row.source,row.sourceText,row.paymentModeText,row.packageStatusText,row.activityStatusText,row.lifecycleStatusText,row.campus,row.primaryCoach,row.notes)),paging)}:null;
       return sendJson(res,{
         customerLifecycleRows,
-        teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,teachingData),
+        teachingStudentViews,
         standardLifecycleMetrics:hasPageDataScope(metricScope)
           ? buildScopedStandardLifecycleMetrics({...teachingData,customerLifecycleRows},metricScope)
-          : buildStandardLifecycleMetrics({...teachingData,customerLifecycleRows})
+          : buildStandardLifecycleMetrics({...teachingData,customerLifecycleRows}),
+        listPage
       });
     }
     if(path==='/page-data/purchase-detail'&&method==='GET'){

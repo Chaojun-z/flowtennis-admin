@@ -22,6 +22,23 @@ function createLeadsRoutes(deps={}){
     return values.some(v=>String(v||'').toLowerCase().includes(keyword));
   }
 
+  function parseLeadPaging(query){
+    const enabled=query?.get('paged')==='1'||query?.get('page')||query?.get('pageSize');
+    if(!enabled)return null;
+    const page=Math.max(1,parseInt(query?.get('page')||'1',10)||1);
+    const pageSize=Math.max(1,Math.min(parseInt(query?.get('pageSize')||'15',10)||15,100));
+    return {page,pageSize};
+  }
+
+  function buildLeadListPage(rows=[],paging=null){
+    if(!paging)return null;
+    const total=rows.length;
+    const pages=Math.max(1,Math.ceil(total/paging.pageSize));
+    const page=Math.min(paging.page,pages);
+    const start=(page-1)*paging.pageSize;
+    return {rows:rows.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages};
+  }
+
   function visibleLeadSourceRows(rows=[]){
     return (rows||[]).filter(row=>!['merged','voided','deleted'].includes(cleanLeadText(row?.status)));
   }
@@ -414,6 +431,7 @@ function createLeadsRoutes(deps={}){
         const waiting=cleanLeadText(query.get('waiting'));
         const dateFrom=cleanLeadText(query.get('dateFrom'));
         const dateTo=cleanLeadText(query.get('dateTo'));
+        const paging=parseLeadPaging(query);
         const todayStr=new Date().toISOString().slice(0,10);
         const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
         const filtered=visibleRows.filter(row=>{
@@ -428,7 +446,7 @@ function createLeadsRoutes(deps={}){
           if(waiting==='overdue'&&String(row.nextFollowupAt||'').slice(0,10)>=todayStr)return false;
           return true;
         }).sort((a,b)=>String(b.leadDate||b.createdAt||'').localeCompare(String(a.leadDate||a.createdAt||'')));
-        return sendJson(res,filtered);
+        return sendJson(res,paging?buildLeadListPage(filtered,paging):filtered);
       }
       if(method==='POST'){
         const now=new Date().toISOString();

@@ -95,9 +95,11 @@ const packageCenterRouteSource = corePagesSource.slice(
   corePagesSource.indexOf("path==='/page-data/customer-center-list'&&method==='GET'")
 );
 assert.match(corePagesSource, /path==='\/page-data\/package-center-list'&&method==='GET'[\s\S]*cappedScan\(T_PURCHASES\)[\s\S]*cappedScan\(T_PACKAGES\)[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_ENTITLEMENTS\)/, 'package center list endpoint should read only first-screen package datasets');
+assert.match(corePagesSource, /path==='\/page-data\/package-center-list'&&method==='GET'[\s\S]*parseListPaging\(query\)[\s\S]*listPage=\{view, \.\.\.buildListPage\(rows,paging\)\}/, 'package center list endpoint should expose server-side paged list views');
 assert.doesNotMatch(packageCenterRouteSource, /T_ENTITLEMENT_LEDGER/, 'package center list endpoint must not scan lesson ledger rows');
 assert.doesNotMatch(packageCenterRouteSource, /T_SCHEDULE/, 'package center list endpoint must not scan schedule rows');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_PURCHASES\)[\s\S]*cappedScan\(T_ENTITLEMENTS\)/, 'customer center list endpoint should read the lightweight customer and course facts');
+assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*const listPage=paging&&view\?\{view,\.\.\.buildListPage/, 'customer center list endpoint should expose server-side paged student views');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'customer center list endpoint should read precomputed student teaching summary rows for schedule facts');
 assert.match(corePagesSource, /const fresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';/, 'customer center list endpoint should accept an explicit fresh flag');
 assert.match(corePagesSource, /fresh \? Promise\.resolve\(\[\]\) : \(T_STUDENT_TEACHING_SUMMARY \? getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'fresh customer center reads should bypass the precomputed student teaching summary');
