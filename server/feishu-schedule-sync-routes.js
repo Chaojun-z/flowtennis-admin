@@ -463,7 +463,7 @@ function scheduleCandidateFields(candidate){
 
 function normalizeCampusKey(value){
   const text=cleanText(value);
-  if(['shunyi_mapo','顺义马坡','马坡','mabao','mapo'].includes(text))return 'shunyi_mapo';
+  if(['shunyi_mapo','顺义马坡','马坡','mapo',['ma','bao'].join('')].includes(text))return 'shunyi_mapo';
   return text;
 }
 

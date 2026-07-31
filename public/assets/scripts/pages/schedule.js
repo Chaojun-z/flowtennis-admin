@@ -1946,43 +1946,27 @@ function scheduleProposalEmptyIcon(kind){
   return `<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M909.016 820.828H841a30 30 0 0 1 0-60h38.016a20 20 0 0 0 20-20V145.185a20 20 0 0 0-20-20H352a20 20 0 0 0-20 20v28h370.016a50 50 0 0 1 50 50v223.36a29.989 29.989 0 1 1-59.507 5.283h-0.493V253.185a20 20 0 0 0-20-20H145a20 20 0 0 0-20 20v625.643a20 20 0 0 0 20 20h337a30 30 0 0 1 0 60H115a50 50 0 0 1-50-50V223.185a50 50 0 0 1 50-50h157v-58a50 50 0 0 1 50-50h587.016a50 50 0 0 1 50 50v655.643a50 50 0 0 1-50 50z m-663.037-484H572.74a29.979 29.979 0 1 1 0 59.957H245.979a29.979 29.979 0 1 1 0-59.957z m0 290.043h74.912a29.979 29.979 0 0 1 29.979 29.978 29.979 29.979 0 0 1-29.979 29.979h-74.912A29.979 29.979 0 0 1 216 656.849a29.979 29.979 0 0 1 29.979-29.978zM216 511.807a29.979 29.979 0 0 1 29.979-29.979h140.935a29.979 29.979 0 0 1 29.979 29.979v0.042a29.979 29.979 0 0 1-29.979 29.979H245.979A29.979 29.979 0 0 1 216 511.849v-0.042z m163 177.521c0-107.419 87.081-194.5 194.5-194.5S768 581.909 768 689.328a193.618 193.618 0 0 1-37.9 115.356l84.115 84.115a30 30 0 1 1-42.425 42.429l-84.3-84.3a193.6 193.6 0 0 1-113.99 36.9c-107.419 0-194.5-87.081-194.5-194.5z m194.5 134.5a134.5 134.5 0 1 0-134.5-134.5 134.5 134.5 0 0 0 134.5 134.5z" fill="currentColor"/></svg>`;
 }
 function scheduleDetailProposalEmptyHtml(kind){
-  const title='暂无教练提案';
-  const text=kind==='not-required'?'当前学员无需填写教练提案。':kind==='missing'?'教练尚未提交教练提案，可联系教练提交。':'请填写本节课教练提案。';
+  const title='暂无教练提案',text=kind==='not-required'?'当前学员无需填写教练提案。':kind==='missing'?'教练尚未提交教练提案，可联系教练提交。':'请填写本节课教练提案。';
   return `<div class="schedule-proposal-empty"><div class="schedule-proposal-empty-icon">${scheduleProposalEmptyIcon(kind)}</div><div class="schedule-proposal-empty-title">${title}</div><div class="schedule-proposal-empty-text">${esc(text)}</div></div>`;
 }
 function scheduleDetailProposalCardsHtml(s,proposal,{section='',scheduleId=''}={}){
-  const p=proposal||{};
-  const editing=scheduleDetailEditingSection==='proposal';
-  const studentCount=p.studentCount||parseArr(s.studentIds).length||'';
+  const p=proposal||{},editing=scheduleDetailEditingSection==='proposal',studentCount=p.studentCount||parseArr(s.studentIds).length||'';
   const studentInfoTitle='学员信息';
   const studentInfo=editing?[
-      scheduleDetailInput('学员级别','sd_cp_studentLevel',p.studentLevel||''),
-      scheduleDetailInput('学员数量','sd_cp_studentCount',studentCount),
-      scheduleDetailInput('教学目标','sd_cp_teachingGoal',p.teachingGoal||'','textarea')
-    ].join(''):[
-      scheduleDetailField('学员级别',p.studentLevel),
-      scheduleDetailField('学员数量',studentCount),
-      scheduleDetailField('教学目标',p.teachingGoal,{full:true})
-    ].join('');
-  const organizationTitle='教学组织';
-  const organization=editing?[
-      scheduleDetailInput('1级进阶','sd_cp_progression1',p.progression1||'','textarea'),
-      scheduleDetailInput('2级进阶','sd_cp_progression2',p.progression2||'','textarea'),
-      scheduleDetailInput('3级进阶','sd_cp_progression3',p.progression3||'','textarea')
-    ].join(''):[
-      scheduleDetailField('1级进阶',p.progression1,{full:true}),
-      scheduleDetailField('2级进阶',p.progression2,{full:true}),
-      scheduleDetailField('3级进阶',p.progression3,{full:true})
-    ].join('');
-  const logicTitle='进阶逻辑';
-  const logic=editing?[
-      scheduleDetailInput('进阶逻辑','sd_cp_progressionLogic',p.progressionLogic||'','textarea'),
-      scheduleDetailInput('结语','sd_cp_conclusion',p.conclusion||'','textarea')
-    ].join(''):[
-      scheduleDetailField('进阶逻辑',p.progressionLogic,{full:true}),
-      scheduleDetailField('结语',p.conclusion,{full:true}),
-      scheduleDetailField('提交时间',p.submittedAt?fmtDt(p.submittedAt):'',{full:true})
-    ].join('');
+    scheduleDetailInput('学员级别','sd_cp_studentLevel',p.studentLevel||''),scheduleDetailInput('学员数量','sd_cp_studentCount',studentCount),scheduleDetailInput('教学目标','sd_cp_teachingGoal',p.teachingGoal||'','textarea')
+  ].join(''):[
+    scheduleDetailField('学员级别',p.studentLevel),scheduleDetailField('学员数量',studentCount),scheduleDetailField('教学目标',p.teachingGoal,{full:true})
+  ].join('');
+  const organizationTitle='教学组织',organization=editing?[
+    scheduleDetailInput('1级进阶','sd_cp_progression1',p.progression1||'','textarea'),scheduleDetailInput('2级进阶','sd_cp_progression2',p.progression2||'','textarea'),scheduleDetailInput('3级进阶','sd_cp_progression3',p.progression3||'','textarea')
+  ].join(''):[
+    scheduleDetailField('1级进阶',p.progression1,{full:true}),scheduleDetailField('2级进阶',p.progression2,{full:true}),scheduleDetailField('3级进阶',p.progression3,{full:true})
+  ].join('');
+  const logicTitle='进阶逻辑',logic=editing?[
+    scheduleDetailInput('进阶逻辑','sd_cp_progressionLogic',p.progressionLogic||'','textarea'),scheduleDetailInput('结语','sd_cp_conclusion',p.conclusion||'','textarea')
+  ].join(''):[
+    scheduleDetailField('进阶逻辑',p.progressionLogic,{full:true}),scheduleDetailField('结语',p.conclusion,{full:true}),scheduleDetailField('提交时间',p.submittedAt?fmtDt(p.submittedAt):'',{full:true})
+  ].join('');
   return [
     renderScheduleDetailCard(studentInfoTitle,studentInfo,{section,scheduleId,className:'schedule-proposal-card'}),
     renderScheduleDetailCard(organizationTitle,organization,{className:'schedule-proposal-card'}),
@@ -1997,37 +1981,19 @@ function scheduleDetailProposalHtml(s,proposal,{section='',scheduleId=''}={}){
   return scheduleDetailProposalCardsHtml(s,proposal,{section,scheduleId});
 }
 function scheduleDetailFeedbackFormHtml(s,fb){
-  return [
-    `<div class="schedule-detail-field full-width">${feedbackListStyleSelect('sd_fb_list_style')}</div>`,
-    scheduleDetailInput('今天练习了','sd_fb_practiced',fb?.practicedToday||fb?.template?.focus||fb?.performance||'','textarea'),
-    scheduleDetailInput('练习情况','sd_fb_knowledge',fb?.knowledgePoint||fb?.problems||'','textarea'),
-    scheduleDetailInput('下次练习','sd_fb_nextTraining',fb?.nextTraining||fb?.nextAdvice||'','textarea')
-  ].join('');
+  return [`<div class="schedule-detail-field full-width">${feedbackListStyleSelect('sd_fb_list_style')}</div>`,scheduleDetailInput('今天练习了','sd_fb_practiced',fb?.practicedToday||fb?.template?.focus||fb?.performance||'','textarea'),scheduleDetailInput('练习情况','sd_fb_knowledge',fb?.knowledgePoint||fb?.problems||'','textarea'),scheduleDetailInput('下次练习','sd_fb_nextTraining',fb?.nextTraining||fb?.nextAdvice||'','textarea')].join('');
 }
 function scheduleDetailFeedbackHtml(s,fb){
   if(!fb&&isCoachPortalUser()&&scheduleDetailEditingSection==='feedback')return scheduleDetailFeedbackFormHtml(s,{});
   if(!fb)return scheduleDetailFeedbackEmptyHtml();
-  if(scheduleDetailEditingSection==='feedback'){
-    return [
-      scheduleDetailFeedbackFormHtml(s,fb)
-    ].join('');
-  }
-  return [
-    scheduleDetailField('今天练习了',fb?.practicedToday||fb?.template?.focus||fb?.performance||'',{full:true}),
-    scheduleDetailField('练习情况',fb?.knowledgePoint||fb?.problems||'',{full:true}),
-    scheduleDetailField('下次练习',fb?.nextTraining||fb?.nextAdvice||'',{full:true})
-  ].join('');
+  if(scheduleDetailEditingSection==='feedback')return scheduleDetailFeedbackFormHtml(s,fb);
+  return [scheduleDetailField('今天练习了',fb?.practicedToday||fb?.template?.focus||fb?.performance||'',{full:true}),scheduleDetailField('练习情况',fb?.knowledgePoint||fb?.problems||'',{full:true}),scheduleDetailField('下次练习',fb?.nextTraining||fb?.nextAdvice||'',{full:true})].join('');
 }
 function scheduleDetailFeedbackEmptyHtml(){
   return `<div class="schedule-proposal-empty"><div class="schedule-proposal-empty-icon">${scheduleProposalEmptyIcon('missing')}</div><div class="schedule-proposal-empty-title">暂无课后反馈</div><div class="schedule-proposal-empty-text">教练尚未填写课后反馈。</div></div>`;
 }
 function scheduleDetailLateHtml(s){
-  return [
-    scheduleDetailField('是否迟到',s.coachLateFree?'是，本节课不扣学员课时':'否'),
-    scheduleDetailField('迟到原因',s.lateReason),
-    scheduleDetailField('迟到时长',`${parseInt(s.lateMinutes)||0} 分钟`),
-    scheduleDetailField('需承担场地费用',`¥${fmt(parseFloat(s.coachLateFieldFeeAmount)||0)}`)
-  ].join('');
+  return [scheduleDetailField('是否迟到',s.coachLateFree?'是，本节课不扣学员课时':'否'),scheduleDetailField('迟到原因',s.lateReason),scheduleDetailField('迟到时长',`${parseInt(s.lateMinutes)||0} 分钟`),scheduleDetailField('需承担场地费用',`¥${fmt(parseFloat(s.coachLateFieldFeeAmount)||0)}`)].join('');
 }
 function openScheduleDetail(scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);if(!s)return;

@@ -92,6 +92,13 @@ function orderInfoItems(record = {}) {
   return [];
 }
 
+function periodInfoItems(record = {}) {
+  const info = record.periodsInfo || record.periodInfo || record.periods;
+  if (Array.isArray(info)) return info.filter(Boolean);
+  if (info && typeof info === 'object') return [info];
+  return [];
+}
+
 function orderInfoDate(record = {}) {
   return cleanText(orderInfoItems(record).map(item => item.time || item.date).filter(Boolean).sort()[0] || '').slice(0, 10);
 }
@@ -107,13 +114,14 @@ function orderInfoRegions(record = {}) {
 }
 
 function bookingDateOf(record = {}) {
-  return cleanText(orderInfoDate(record) || record.bookingDate || record.useDate || record.date || record.startDate || '').slice(0, 10);
+  return cleanText(orderInfoDate(record) || record.usageDate || record.bookingDate || record.useDate || record.date || record.startDate || '').slice(0, 10);
 }
 
 function venueOf(record = {}) {
   const orderPlace = orderInfoItems(record).map(item => item?.priceBasicsInfo?.placeName || item?.placeName || item?.courtName).find(Boolean);
+  const periodPlace = periodInfoItems(record).map(item => item?.priceBasicsInfo?.placeName || item?.placeName || item?.courtName).find(Boolean);
   const spacePlace = record.space && typeof record.space === 'object' ? record.space.placeName || record.space.courtName : '';
-  const raw = cleanText(record.venue || record.court || record.courtName || orderPlace || spacePlace || record.spaceName || record.placeName);
+  const raw = cleanText(record.venue || record.court || record.courtName || orderPlace || periodPlace || spacePlace || record.spaceName || record.placeName);
   if (!raw) return '';
   if (/^\d+$/.test(raw)) return `${raw}号场`;
   if (/^\d+号$/.test(raw)) return `${raw}场`;
@@ -124,6 +132,8 @@ function venueOf(record = {}) {
 function startTimeOf(record = {}) {
   const regions = orderInfoRegions(record);
   if (regions.length) return regions.map(row => row.start).sort()[0] || '';
+  const periods = periodInfoItems(record).map(item => cleanText(item.startTime || item.startClock || item.beginTime)).filter(Boolean);
+  if (periods.length) return periods.map(value => value.match(/(\d{1,2}:\d{2})/)?.[1]?.padStart(5, '0')).filter(Boolean).sort()[0] || '';
   const value = cleanText(record.startTime || record.startClock || record.beginTime || '');
   const m = value.match(/(\d{1,2}:\d{2})/);
   return m ? m[1].padStart(5, '0') : '';
@@ -132,13 +142,15 @@ function startTimeOf(record = {}) {
 function endTimeOf(record = {}) {
   const regions = orderInfoRegions(record);
   if (regions.length) return regions.map(row => row.end).sort().slice(-1)[0] || '';
+  const periods = periodInfoItems(record).map(item => cleanText(item.endTime || item.endClock || item.finishTime)).filter(Boolean);
+  if (periods.length) return periods.map(value => value.match(/(\d{1,2}:\d{2})/)?.[1]?.padStart(5, '0')).filter(Boolean).sort().slice(-1)[0] || '';
   const value = cleanText(record.endTime || record.endClock || record.finishTime || '');
   const m = value.match(/(\d{1,2}:\d{2})/);
   return m ? m[1].padStart(5, '0') : '';
 }
 
 function customerNameOf(record = {}) {
-  return cleanText(record.customerName || record.userName || record.memberName || record.realName || record.name || record.contactName || record.nickName);
+  return cleanText(record.customerName || record.userName || record.memberName || record.realName || record.name || record.contactName || record.nickName || record.customer?.customerName || record.customer?.name);
 }
 
 function normalizeThirdPartyPhone(value = '') {
@@ -148,7 +160,7 @@ function normalizeThirdPartyPhone(value = '') {
 }
 
 function phoneOf(record = {}) {
-  return normalizeThirdPartyPhone(record.phone || record.mobile || record.userPhone || record.memberPhone || record.contactPhone);
+  return normalizeThirdPartyPhone(record.phone || record.mobile || record.userPhone || record.memberPhone || record.contactPhone || record.customer?.phoneNumber?.phoneNumber || record.customer?.phoneNumber || record.customer?.phone);
 }
 
 function remarkOf(record = {}) {
@@ -164,7 +176,8 @@ function bookingModeOf(record = {}) {
 }
 
 function operatorAccountOf(record = {}) {
-  return cleanText(record.operatorName || record.operator || record.adminName || record.creatorName || record.createdByName || record.createName || record.accountName || record.userAccount || record.createUserName || record.staffName);
+  const operator = record.operator && typeof record.operator === 'object' ? record.operator.operatorName || record.operator.name : record.operator;
+  return cleanText(record.operatorName || operator || record.adminName || record.creatorName || record.createdByName || record.createName || record.accountName || record.userAccount || record.createUserName || record.staffName);
 }
 
 function amountOf(record = {}) {
@@ -190,32 +203,68 @@ function uniqueBookingKey(record = {}) {
   return date && venue && start && end ? `${date}|${venue}|${start}|${end}` : '';
 }
 
+function ruleBasePayload(record = {}, overrides = {}) {
+  return {
+    businessCategory: overrides.businessCategory || '',
+    processLayer: overrides.processLayer || '',
+    suggestedFinalType: overrides.suggestedFinalType || '',
+    paymentMethod: overrides.paymentMethod || '',
+    ...overrides
+  };
+}
+
+function lockRuleText(record = {}) {
+  return [remarkOf(record), customerNameOf(record), operatorAccountOf(record)].filter(Boolean).join(' ');
+}
+
 function classifyRecord(record = {}, duplicateKeys = new Set()) {
   const sourceType = normalizeSourceType(record.sourceType);
   const key = uniqueBookingKey(record);
   if (sourceType === 'member-ledger-gap') {
-    return { recommendedType: 'high_risk_exception', plannedAction: '暂不导入', confidence: 0, riskReason: '会员流水批量接口缺口', needsConfirmation: true };
+    return ruleBasePayload(record, { recommendedType: 'high_risk_exception', plannedAction: '暂不导入', confidence: 0, riskReason: '会员流水批量接口缺口', needsConfirmation: true, businessCategory: '会员流水缺口', processLayer: 'membership_ledger' });
   }
   if (['order', 'lock'].includes(sourceType) && (!bookingDateOf(record) || !venueOf(record) || !startTimeOf(record) || !endTimeOf(record))) {
-    return { recommendedType: 'high_risk_exception', plannedAction: '暂不导入', confidence: 0, riskReason: '缺日期/时间/场地', needsConfirmation: true };
+    return ruleBasePayload(record, { recommendedType: 'high_risk_exception', plannedAction: '暂不导入', confidence: 0, riskReason: '缺日期/时间/场地', needsConfirmation: true, businessCategory: sourceType === 'lock' ? '运营锁场待补字段' : '订场待补字段', processLayer: 'booking' });
   }
   if (key && duplicateKeys.has(key)) {
-    return { recommendedType: 'duplicate_skip', plannedAction: '重复跳过', confidence: 0.9, riskReason: '同一日期场地时段重复', needsConfirmation: false };
+    return ruleBasePayload(record, { recommendedType: 'duplicate_skip', plannedAction: '重复跳过', confidence: 0.9, riskReason: '同一日期场地时段重复', needsConfirmation: false, businessCategory: '重复占场', processLayer: 'booking' });
   }
   const remark = remarkOf(record);
   if (sourceType === 'lock') {
-    if (/清洗|打扫|维修/.test(remark)) return { recommendedType: 'auto_import', plannedAction: '标记内部占用', confidence: 0.85, riskReason: '', needsConfirmation: false };
-    return { recommendedType: 'needs_confirmation', plannedAction: '运营确认锁场类型', confidence: 0.45, riskReason: remark ? '锁场需确认业务归属' : '备注为空', needsConfirmation: true };
+    const ruleText = lockRuleText(record);
+    if (/清洗|打扫|维修|领导|内部使用/.test(remark)) return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '标记内部占用', confidence: 0.85, riskReason: '', needsConfirmation: false, businessCategory: '内部占用', processLayer: 'occupancy', suggestedFinalType: '内部占用', paymentMethod: '不涉及支付' });
+    if (/晓哲|小哲/.test(ruleText) && /定场|订场/.test(ruleText)) {
+      const hasAmount = amountOf(record) > 0;
+      return ruleBasePayload(record, {
+        recommendedType: hasAmount ? 'auto_import' : 'needs_confirmation',
+        plannedAction: '按教练订场8折微信导入',
+        confidence: hasAmount ? 0.9 : 0.65,
+        riskReason: hasAmount ? '' : '教练代订场缺少确认金额',
+        needsConfirmation: !hasAmount,
+        businessCategory: '教练代订场',
+        processLayer: 'booking_finance',
+        suggestedFinalType: '教练代订场',
+        paymentMethod: '微信转账'
+      });
+    }
+    if (/发球机/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '拆分订场和发球机费用', confidence: 0.6, riskReason: '发球机额外服务需确认金额和支付方式', needsConfirmation: true, businessCategory: '订场+发球机', processLayer: 'booking_extra_service' });
+    if (/陪打/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '拆分订场和陪打服务', confidence: 0.6, riskReason: '陪打需确认订场费和陪打费归属', needsConfirmation: true, businessCategory: '订场陪打', processLayer: 'schedule_and_finance', suggestedFinalType: '订场陪打' });
+    if (/畅打|4人畅打|四人畅打/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '确认畅打参与人和收款方式', confidence: 0.6, riskReason: '畅打活动需确认参与人和支付方式', needsConfirmation: true, businessCategory: '畅打活动', processLayer: 'activity_occupancy', suggestedFinalType: '畅打活动' });
+    if (/私教课|体验课|上课|小班|训练营/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '匹配或创建排课占场', confidence: 0.7, riskReason: '排课占场待匹配', needsConfirmation: true, businessCategory: '排课占场', processLayer: 'schedule', suggestedFinalType: '排课占场', paymentMethod: '不涉及支付' });
+    if (/大众点评|大众券码|点评券|大众券|美团券|团购|核销|券/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '确认券码来源和结算金额', confidence: 0.65, riskReason: '第三方券码结算金额需确认', needsConfirmation: true, businessCategory: '第三方券码订场', processLayer: 'booking_finance', suggestedFinalType: '大众点评券码订场', paymentMethod: '大众点评券码' });
+    return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '运营确认锁场类型', confidence: 0.45, riskReason: remark ? '锁场需确认业务归属' : '备注为空', needsConfirmation: true, businessCategory: '运营锁场待确认', processLayer: 'booking' });
   }
   if (sourceType === 'order') {
     const status = cleanText(record.status || record.orderStatus);
-    if (/取消|退款|作废/.test(status)) return { recommendedType: 'do_not_import', plannedAction: '暂不导入', confidence: 0.8, riskReason: '取消/退款订单', needsConfirmation: false };
-    return { recommendedType: 'auto_import', plannedAction: '生成导入计划', confidence: 0.85, riskReason: '', needsConfirmation: false };
+    if (/取消|退款|作废/.test(status)) return ruleBasePayload(record, { recommendedType: 'do_not_import', plannedAction: '暂不导入', confidence: 0.8, riskReason: '取消/退款订单', needsConfirmation: false, businessCategory: '取消/退款订场', processLayer: 'refund' });
+    const payMethod = cleanText(record.payMethod || record.paymentMethod);
+    const voucher = /大众点评|大众券码|点评券|大众券|美团券|团购|核销|券/.test(`${remark} ${payMethod}`);
+    return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '生成导入计划', confidence: 0.85, riskReason: '', needsConfirmation: false, businessCategory: voucher ? '第三方券码订场' : '普通订场', processLayer: 'booking_finance', suggestedFinalType: voucher ? '大众点评券码订场' : '散客微信转账订场', paymentMethod: voucher ? '大众点评券码' : payMethod });
   }
   if (sourceType === 'member') {
-    return { recommendedType: 'needs_confirmation', plannedAction: '会员资料待核对', confidence: 0.5, riskReason: '会员流水未自动获取', needsConfirmation: true };
+    return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '会员资料待核对', confidence: 0.5, riskReason: '会员流水未自动获取', needsConfirmation: true, businessCategory: '会员资料变更', processLayer: 'member_profile' });
   }
-  return { recommendedType: 'needs_confirmation', plannedAction: '运营确认', confidence: 0.3, riskReason: '来源类型不明', needsConfirmation: true };
+  return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '运营确认', confidence: 0.3, riskReason: '来源类型不明', needsConfirmation: true, businessCategory: '未知第三方记录', processLayer: 'unknown' });
 }
 
 function financeImpactFor(record = {}, classification = {}) {
@@ -252,6 +301,10 @@ function precheckThirdPartyRecords(records = [], { batchId = '', now = new Date(
       operatorAccount: operatorAccountOf(record),
       remark: remarkOf(record),
       amount: amountOf(record),
+      businessCategory: classification.businessCategory,
+      processLayer: classification.processLayer,
+      suggestedFinalType: classification.suggestedFinalType,
+      paymentMethod: classification.paymentMethod || cleanText(record.payMethod || record.paymentMethod),
       recommendedType: classification.recommendedType,
       confidence: classification.confidence,
       riskReason: classification.riskReason,
@@ -305,6 +358,51 @@ function importTargetsFor({ sourceType = '', finalType = '', recommendedType = '
   return [];
 }
 
+function thirdPartySourceCounts(records = []) {
+  return {
+    totalSourceCount: (records || []).length,
+    bookingOrderCount: (records || []).filter(row => normalizeSourceType(row.sourceType) === 'order').length,
+    lockCount: (records || []).filter(row => normalizeSourceType(row.sourceType) === 'lock').length,
+    memberProfileCount: (records || []).filter(row => normalizeSourceType(row.sourceType) === 'member').length,
+    syncGapCount: (records || []).filter(row => isSyncGapSourceType(row.sourceType)).length
+  };
+}
+
+function countBy(rows = [], key) {
+  return (rows || []).reduce((acc, row) => {
+    const value = cleanText(row?.[key]) || '未分类';
+    acc[value] = (acc[value] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function buildThirdPartySyncAuditReport({ batch = {}, precheck = {}, plan = null, changes = [] } = {}) {
+  const items = precheck.items || [];
+  const sourceCounts = batch.counts?.totalSourceCount ? {
+    totalSourceCount: Number(batch.counts.totalSourceCount || 0),
+    bookingOrderCount: Number(batch.counts.bookingOrderCount || 0),
+    lockCount: Number(batch.counts.lockCount || 0),
+    memberProfileCount: Number(batch.counts.memberProfileCount || 0),
+    syncGapCount: Number(batch.counts.syncGapCount || 0)
+  } : thirdPartySourceCounts(items);
+  const importPlan = plan || buildThirdPartyImportPlan({ batchId: batch.batchId || batch.id, prechecks: items, confirmations: [], importResults: [] });
+  return {
+    ...sourceCounts,
+    sourceTotalCount: sourceCounts.totalSourceCount,
+    actionableSourceCount: items.filter(row => isBookingSourceType(row.sourceType)).length,
+    businessCategoryCounts: countBy(items, 'businessCategory'),
+    processLayerCounts: countBy(items, 'processLayer'),
+    destinationCounts: {
+      autoImport: importPlan.importable.length,
+      needsConfirmation: importPlan.blocked.length,
+      skipped: importPlan.skipped.length,
+      informational: importPlan.informational.length
+    },
+    changeCount: (changes || []).length,
+    unresolvedCount: importPlan.blocked.length + (changes || []).filter(row => String(row.status || 'pending_review') !== 'resolved').length
+  };
+}
+
 function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations = [], importResults = [] } = {}) {
   const scoped = (prechecks || []).filter(row => !batchId || String(row.batchId || '') === String(batchId));
   const plan = { batchId, importable: [], blocked: [], skipped: [], informational: [], counts: { importable: 0, blocked: 0, skipped: 0, informational: 0 } };
@@ -327,7 +425,7 @@ function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations
       continue;
     }
     const confirmation = latestConfirmationFor(precheck, confirmations);
-    const finalType = confirmation?.finalType || (precheck.recommendedType === 'auto_import' ? (precheck.sourceType === 'lock' ? '内部占用' : '散客微信转账订场') : '');
+    const finalType = confirmation?.finalType || precheck.suggestedFinalType || (precheck.recommendedType === 'auto_import' ? (precheck.sourceType === 'lock' ? '内部占用' : '散客微信转账订场') : '');
     if (precheck.needsConfirmation && !confirmation) {
       plan.blocked.push({ ...precheck, sourceRecordId, reason: '等待运营确认' });
       continue;
@@ -365,7 +463,7 @@ function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations
 
 function payMethodForImport(item = {}) {
   if (item.finalType === '会员余额订场') return '储值扣款';
-  const method = cleanText(item.confirmation?.paymentMethod || item.payMethod);
+  const method = cleanText(item.confirmation?.paymentMethod || item.paymentMethod || item.payMethod);
   if (method === '会员余额') return '储值扣款';
   if (method === '不涉及支付') return '不涉及支付';
   return method || '微信转账';
@@ -682,7 +780,9 @@ async function fetchPaged({ client, method = 'POST', url, token, rangeStart, ran
   const rows = [];
   for (let pageNum = 1; pageNum <= 300; pageNum++) {
     const pageBody = { ...body, pageNum, pageSize: 100, dateFrom: rangeStart, dateTo: rangeEnd, startTime: rangeStart, endTime: rangeEnd };
-    const pageParams = { ...params, pageNum, pageSize: 100, dateFrom: rangeStart, dateTo: rangeEnd };
+    const dateFrom = cleanText(rangeStart).slice(0, 10);
+    const dateTo = /00:00(?::00)?$/.test(cleanText(rangeEnd)) && cleanText(rangeEnd).slice(0, 10) > dateFrom ? addDays(cleanText(rangeEnd).slice(0, 10), -1) : cleanText(rangeEnd).slice(0, 10);
+    const pageParams = { ...params, pageNum, pageSize: 100, dateFrom, dateTo };
     const res = method === 'GET'
       ? await client.get(url, { params: pageParams, headers: cxeHeaders(token) })
       : await client.post(url, pageBody, { headers: cxeHeaders(token) });
@@ -797,6 +897,7 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
   const skipped = Array.isArray(result.skippedIds) ? result.skippedIds : [];
   const successBookings = notificationSuccessBookingCount(result);
   const planned = Number(result.plannedCount || 0);
+  const sourceTotal = Number(batch.counts?.totalSourceCount || result.sourceTotalCount || planned || 0);
   const prefix = type === 'failure' ? '第三方同步失败报警' : '第三方同步完成';
   const alertRows = (alerts || []).filter(row => row.reason);
   const memberChangeCount = alertRows.filter(row => normalizeSourceType(row.sourceType) === 'member' || (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue)).length;
@@ -810,7 +911,9 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
   const lines = [
     `网球兄弟小助手 ${prefix}`,
     `数据日期：${notificationDateText(batch)}`,
-    `订场导入：${successBookings}/${planned} 条成功`,
+    `第三方总数：${sourceTotal} 条`,
+    `自动导入：${successBookings}/${sourceTotal || planned} 条`,
+    `可自动导入：${successBookings}/${planned} 条成功`,
     `财务入账：${notificationLedgerCount(result)} 条流水，合计 ${notificationMoneyText(notificationImportAmount(batch, result))}`,
     `失败：${importResultFailedCount(result)} 条`,
     `需处理：${skipped.length + failed.length + actionAlerts.length} 条`
@@ -926,7 +1029,8 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       recognizedRevenueDelta: acc.recognizedRevenueDelta + Number(item.financeImpact?.recognizedRevenueDelta || 0),
       deferredRevenueDelta: acc.deferredRevenueDelta + Number(item.financeImpact?.deferredRevenueDelta || 0)
     }), { cashDelta: 0, recognizedRevenueDelta: 0, deferredRevenueDelta: 0 });
-    const batch = { ...buildThirdPartySyncBatch({ id: batchId, rangeStart, rangeEnd, now: pulledAt, counts: precheck.counts, financeImpact }), changeCount: changes.length, createdBy: operator };
+    const batchCounts = { ...thirdPartySourceCounts(sourceRecords), ...precheck.counts };
+    const batch = { ...buildThirdPartySyncBatch({ id: batchId, rangeStart, rangeEnd, now: pulledAt, counts: batchCounts, financeImpact }), changeCount: changes.length, createdBy: operator };
     await put(T_THIRD_PARTY_SYNC_BATCHES, batch.id, batch);
     await Promise.all(sourceRecords.map((record, index) => {
       const row = rawRecordRow(record, { batchId, now: pulledAt, index });
@@ -934,7 +1038,8 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     }));
     await Promise.all(precheck.items.map(row => put(T_THIRD_PARTY_SYNC_PRECHECKS, row.id, row)));
     await Promise.all(changes.map(row => put(T_THIRD_PARTY_SYNC_CHANGES, row.id, row)));
-    return { batch, precheck, changes };
+    const audit = buildThirdPartySyncAuditReport({ batch, precheck, changes });
+    return { batch, precheck, changes, audit };
   }
 
   async function buildCurrentFinanceSnapshot(importedAt = now()) {
@@ -1036,6 +1141,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       importedAt,
       importedBy: operator,
       plannedCount: plan.importable.length,
+      sourceTotalCount: Number(batch.counts?.totalSourceCount || 0),
       writtenTables,
       writtenIds,
       skippedIds: [...plan.blocked, ...plan.skipped].map(row => ({ sourceRecordId: row.sourceRecordId, reason: row.reason || row.riskReason || '跳过' })),
@@ -1162,14 +1268,20 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       const currentAlerts = latestBatchId ? alerts.filter(row => String(row.batchId || '') === latestBatchId) : alerts;
       const currentRollbacks = latestBatchId ? rollbacks.filter(row => String(row.batchId || '') === latestBatchId) : rollbacks;
       const currentBookingPrechecks = currentPrechecks.filter(row => isBookingSourceType(row.sourceType));
+      const currentOrderPrechecks = currentPrechecks.filter(row => normalizeSourceType(row.sourceType) === 'order');
+      const currentLockPrechecks = currentPrechecks.filter(row => normalizeSourceType(row.sourceType) === 'lock');
       const summary = {
         batchCount: batches.length,
         currentBatchId: latestBatchId,
         rawCount: currentRawRecords.length,
-        bookingOrderCount: currentRawRecords.filter(row => isBookingSourceType(row.sourceType)).length,
+        bookingOrderCount: currentRawRecords.filter(row => normalizeSourceType(row.sourceType) === 'order').length,
+        lockCount: currentRawRecords.filter(row => normalizeSourceType(row.sourceType) === 'lock').length,
+        actionableSourceCount: currentRawRecords.filter(row => ['order', 'lock'].includes(normalizeSourceType(row.sourceType))).length,
         memberProfileCount: currentRawRecords.filter(row => normalizeSourceType(row.sourceType) === 'member').length,
         syncGapCount: currentRawRecords.filter(row => isSyncGapSourceType(row.sourceType)).length,
         autoImportCount: currentBookingPrechecks.filter(row => row.recommendedType === 'auto_import').length,
+        autoBookingOrderCount: currentOrderPrechecks.filter(row => row.recommendedType === 'auto_import').length,
+        autoLockCount: currentLockPrechecks.filter(row => row.recommendedType === 'auto_import').length,
         pendingCount: currentBookingPrechecks.filter(row => row.needsConfirmation || row.recommendedType === 'needs_confirmation').length,
         exceptionCount: currentBookingPrechecks.filter(row => row.recommendedType === 'high_risk_exception').length,
         duplicateCount: currentBookingPrechecks.filter(row => row.recommendedType === 'duplicate_skip').length,
@@ -1242,6 +1354,7 @@ module.exports = {
   buildThirdPartySyncBatch,
   precheckThirdPartyRecords,
   buildThirdPartyImportPlan,
+  buildThirdPartySyncAuditReport,
   buildThirdPartySyncNotificationText,
   buildThirdPartySyncNotificationCard,
   defaultNotifyThirdPartySyncResult,

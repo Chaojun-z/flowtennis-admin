@@ -683,6 +683,7 @@ async function saveManualEntitlementAdjust(entitlementId, action){
     const result=await apiCall('POST',`/entitlements/${entitlementId}/manual-adjust`,data);
     patchManualEntitlementAdjustResult(result);
     if(typeof markLearningDataStale==='function')markLearningDataStale();
+    loadedDatasets.delete('financePage');
     return result;
   },{
     successText:'已保存',

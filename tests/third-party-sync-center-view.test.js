@@ -17,7 +17,7 @@ assert.match(html, /订场订单[\s\S]*会员资料[\s\S]*接口缺口/, 'sync c
 assert.match(html, /待确认[\s\S]*高危异常[\s\S]*重复跳过/, 'sync center should display precheck categories');
 assert.match(html, /<th style="width:100px;padding-left:20px">类型<\/th><th style="width:110px">日期<\/th><th style="width:110px">时间段<\/th>/, 'needs-processing table should split type, date and time range into separate columns');
 assert.match(html, /thirdPartySyncBookingPrechecks/, 'precheck table should default to booking records only');
-assert.match(html, /用户名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'sync center should expose operator-facing third party fields');
+assert.match(html, /姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'sync center should expose operator-facing third party fields');
 assert.match(html, /thirdPartySyncStatusClass/, 'sync center should color statuses by severity');
 assert.match(html, /#page-third-party-sync \.tms-table th[\s\S]*#page-third-party-sync \.tms-tag\{font-size:12px/, 'sync center list font should be 12px');
 assert.doesNotMatch(html, /<th style="width:110px">来源<\/th>|<th style="width:130px">系统判断<\/th>/, 'precheck table should not expose unclear source/system judgment columns');
@@ -35,7 +35,7 @@ assert.match(html, /thirdPartySyncEffectiveBatchId/, 'precheck tab should defaul
 assert.match(html, /thirdPartySyncNeedsProcessingRows/, 'sync center should merge all items requiring operation handling into one list');
 assert.match(html, /同步记录[\s\S]*需处理数据/, 'sync center should expose two operator-facing table tabs');
 assert.match(html, /订场订单[\s\S]*会员资料[\s\S]*接口缺口[\s\S]*已导入[\s\S]*需处理[\s\S]*异常/, 'sync record table should show batch-level business metrics');
-assert.match(html, /类型[\s\S]*日期[\s\S]*时间段[\s\S]*场地[\s\S]*用户名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'needs-processing table should show only actionable fields');
+assert.match(html, /类型[\s\S]*日期[\s\S]*时间段[\s\S]*场地[\s\S]*姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'needs-processing table should show only actionable fields');
 assert.doesNotMatch(html, /thirdPartySyncTableTabButton\('writes'|thirdPartySyncTableTabButton\('changes'|写入回滚|异常处理/, 'sync center should not expose technical write/change tabs');
 assert.doesNotMatch(html, /第三方变更待处理[\s\S]*运营要做什么[\s\S]*异常待处理/, 'sync center should not expose separate change and alert panels');
 assert.match(html, /runThirdPartySyncRollback/, 'sync center should support batch rollback action');

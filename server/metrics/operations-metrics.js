@@ -1144,10 +1144,10 @@ function trialScheduleStudentKeys(row = {}) {
   return scheduleStudentKeys(row).filter(Boolean);
 }
 
-function buildCoachTrialCohorts(schedule = []) {
+function buildCoachTrialCohorts(schedule = [], now = new Date()) {
   const cohorts = new Map();
   (schedule || [])
-    .filter(isActiveScheduleForOperations)
+    .filter(row => isCompletedScheduleForOperations(row, now))
     .filter(row => normalizeCoachCourseType(row) === '体验课')
     .forEach(row => {
       const coach = scheduleCoachName(row);
@@ -1174,8 +1174,8 @@ function purchaseMatchesTrialConversion(purchase = {}, trial = {}, coach = '', d
   return dateWithinRange(day, dateRange);
 }
 
-function buildCoachTrialTrendMetrics({ schedule = [], allPurchases = [], dateRange = {}, day = '' } = {}) {
-  const cohorts = buildCoachTrialCohorts(schedule || []);
+function buildCoachTrialTrendMetrics({ schedule = [], allPurchases = [], dateRange = {}, day = '', now = new Date() } = {}) {
+  const cohorts = buildCoachTrialCohorts(schedule || [], now);
   const trialRows = [...cohorts.entries()].flatMap(([coach, rowsByStudent]) => (
     [...rowsByStudent.values()].map(trial => ({ coach, trial }))
   ));
@@ -1195,7 +1195,8 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
   const campusLabels = buildCampusLabelMap(campuses || []);
   const period = coachPeriodInfo({ schedule, purchases: periodPurchases, dateRange, now });
   const availableHours = period.days ? coachAvailableHours({ days: period.days, now }) : selectedCoachAvailableHours(dateRange, now);
-  const trialCohorts = buildCoachTrialCohorts(schedule || []);
+  const completedSchedule = (schedule || []).filter(row => isCompletedScheduleForOperations(row, now));
+  const trialCohorts = buildCoachTrialCohorts(completedSchedule, now);
   const grouped = new Map(activeCoaches
     .map(row => ({
       coach: canonicalCoachName(row.name || row.coachName || ''),
@@ -1227,7 +1228,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
         { type: '陪打', hours: 0 }
       ]
     }]));
-  (schedule || []).filter(isActiveScheduleForOperations).forEach(row => {
+  completedSchedule.forEach(row => {
     const coach = scheduleCoachName(row);
     if (!isBusinessCoachName(coach)) return;
     if (!grouped.has(coach)) grouped.set(coach, {
@@ -1510,7 +1511,7 @@ function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [],
     const trialConverted = rows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
     const oldCustomerBase = rows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
     const renewalCount = rows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
-    const trial = buildCoachTrialTrendMetrics({ schedule, allPurchases, dateRange, day });
+    const trial = buildCoachTrialTrendMetrics({ schedule, allPurchases, dateRange, day, now });
     const renewal = buildCoachRenewalTrendMetrics({ purchases, allPurchases, dateRange, day });
     return {
       date: day,

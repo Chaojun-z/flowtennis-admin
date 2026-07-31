@@ -1552,16 +1552,12 @@ function classSummaryPanelHtml(cls,readonly=false){
   const links=readonly?'':`<div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">快捷跳转</label><div class="finput tms-form-control" style="height:auto;min-height:54px;display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="tms-action-link" onclick="openClassScheduleList('${cls.id}')">查看关联排课</span><span class="tms-action-link" onclick="openClassStudentList('${cls.id}')">查看关联学员</span></div></div></div>`;
   return `<div class="tms-section-header" style="margin-top:0;">班次摘要</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">最近上课</label><input class="finput tms-form-control" value="${recent?.startTime?fmtDt(recent.startTime):'—'}" readonly></div><div class="tms-form-item"><label class="tms-form-label">下次课</label><input class="finput tms-form-control" value="${next?.startTime?fmtDt(next.startTime):'—'}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">关联排课</label><input class="finput tms-form-control" value="${rows.length} 次" readonly></div><div class="tms-form-item"><label class="tms-form-label">关联学员</label><input class="finput tms-form-control" value="${studentCount} 人" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课时进度</label><input class="finput tms-form-control" value="已上 ${lessonQty(used)} / 应上 ${lessonQty(total)} / 剩余 ${lessonQty(remaining)}" readonly></div><div class="tms-form-item"><label class="tms-form-label">风险标签</label><div class="finput tms-form-control" style="height:auto;min-height:54px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${tagsHtml}</div></div></div>${links}`;
 }
-function studentOpts(sel){
-  return '<option value="">— 不关联 —</option>'+students.map(s=>`<option value="${s.id}"${sel===s.id?' selected':''}>${esc(s.name)}${s.phone?' · '+esc(s.phone):''}</option>`).join('');
-}
+function studentOpts(sel){return '<option value="">— 不关联 —</option>'+students.map(s=>`<option value="${s.id}"${sel===s.id?' selected':''}>${esc(s.name)}${s.phone?' · '+esc(s.phone):''}</option>`).join('');}
 function studentChecks(ids){
   ids=parseArr(ids);
   return students.map(s=>`<label class="tms-checkbox-wrap"><input type="checkbox" value="${s.id}" class="tms-checkbox court-stu-cb" ${ids.includes(s.id)?'checked':''}><span>${esc(s.name)}</span></label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无学员</span>';
 }
-function courtStudentSelect(sel){
-  return '<option value="">— 不关联 —</option>'+students.map(s=>`<option value="${s.id}"${sel===s.id?' selected':''}>${esc(s.name)}</option>`).join('');
-}
+function courtStudentSelect(sel){return '<option value="">— 不关联 —</option>'+students.map(s=>`<option value="${s.id}"${sel===s.id?' selected':''}>${esc(s.name)}</option>`).join('');}
 function courtStudentNames(c){
   const ids=parseArr(c?.studentIds);
   const names=ids.map(id=>students.find(s=>s.id===id)?.name).filter(Boolean);
@@ -1581,20 +1577,14 @@ function isActiveCourtRecord(court){
 function resolveStudentIdByText(value){
   const raw=String(value||'').trim();
   if(!raw)return '';
-  const byId=students.find(s=>s.id===raw);
-  if(byId)return byId.id;
-  const byPhone=students.find(s=>String(s.phone||'').trim()===raw);
-  if(byPhone)return byPhone.id;
-  const byName=students.find(s=>String(s.name||'').trim()===raw);
-  return byName?byName.id:'';
+  const hit=students.find(s=>s.id===raw)||students.find(s=>String(s.phone||'').trim()===raw)||students.find(s=>String(s.name||'').trim()===raw);
+  return hit?.id||'';
 }
 function resolveUniqueStudentIdByText(value){
   const raw=String(value||'').trim();
   if(!raw)return {id:'',reason:'学员未匹配'};
   const hits=students.filter(s=>s.id===raw||String(s.phone||'').trim()===raw||String(s.name||'').trim()===raw);
-  if(hits.length===1)return {id:hits[0].id,reason:''};
-  if(hits.length>1)return {id:'',reason:'学员匹配到多个，请用手机号'};
-  return {id:'',reason:'学员未匹配'};
+  return hits.length===1?{id:hits[0].id,reason:''}:hits.length>1?{id:'',reason:'学员匹配到多个，请用手机号'}:{id:'',reason:'学员未匹配'};
 }
 function resolveUniquePackageIdByText(value){
   const raw=String(value||'').trim();
@@ -1602,9 +1592,7 @@ function resolveUniquePackageIdByText(value){
   const byId=packages.filter(p=>p.id===raw);
   if(byId.length===1)return {id:byId[0].id,reason:''};
   const byName=packages.filter(p=>String(p.name||'').trim()===raw);
-  if(byName.length===1)return {id:byName[0].id,reason:''};
-  if(byName.length>1)return {id:'',reason:'课包匹配到多个，请用课包ID'};
-  return {id:'',reason:'课包未匹配'};
+  return byName.length===1?{id:byName[0].id,reason:''}:byName.length>1?{id:'',reason:'课包匹配到多个，请用课包ID'}:{id:'',reason:'课包未匹配'};
 }
 function productHasReferences(productId){
   return packages.some(p=>p.productId===productId);
@@ -1613,11 +1601,8 @@ function packageHasPurchases(packageId){
   return purchases.some(p=>p.packageId===packageId);
 }
 function normalizeCourtHistoryLocal(history){
-  return parseArr(history).map(h=>{
-    const raw=parseFloat(h.amount)||0;
-    const type=h.type||'消费';
-    return {...h,type,payMethod:h.payMethod||(type==='消费'&&raw<0?'储值扣款':''),category:h.category||'其他',studentId:h.studentId||'',amount:Math.abs(raw),bonusAmount:parseFloat(h.bonusAmount)||0};
-  });
+  return parseArr(history).map(h=>{const raw=parseFloat(h.amount)||0,type=h.type||'消费';
+    return {...h,type,payMethod:h.payMethod||(type==='消费'&&raw<0?'储值扣款':''),category:h.category||'其他',studentId:h.studentId||'',amount:Math.abs(raw),bonusAmount:parseFloat(h.bonusAmount)||0};});
 }
 function courtFinanceLocal(c){
   const currentHistory=normalizeCourtHistoryLocal(c?.history);
@@ -1640,12 +1625,10 @@ function courtFinanceRevenueSummaryLocal(c){
   const t={storedValueBooking:0,onsiteBooking:0,proxyBooking:0,matchBooking:0,internalOccupancyCount:0,internalOccupancyAmount:0,cashReceived:0,confirmedRevenue:0,pendingRevenue:0,bookingUsageAmount:0,paidBookingCount:0};
   hist.forEach(h=>{
     if(!['消费','退款','冲正'].includes(h.type))return;
-    const category=String(h.category||'');
-    const payMethod=String(h.payMethod||'').trim();
+    const category=String(h.category||''),payMethod=String(h.payMethod||'').trim();
     if(category.includes('内部占用')){if(h.type==='消费')t.internalOccupancyCount+=1;return;}
     if(!category.includes('订场'))return;
-    const amount=parseFloat(h.amount)||0;
-    const signed=h.type==='消费'?amount:-amount;
+    const amount=parseFloat(h.amount)||0,signed=h.type==='消费'?amount:-amount;
     if(h.type==='消费')t.paidBookingCount+=1;
     if(h.sourceCategory==='约球订场')t.matchBooking+=signed;
     if(isStoredValuePayMethod(payMethod))t.storedValueBooking+=signed;
@@ -1659,13 +1642,8 @@ function courtFinanceRevenueSummaryLocal(c){
   Object.keys(t).forEach(k=>t[k]=Math.round(t[k]*100)/100);
   return t;
 }
-function membershipBookingCount(court){
-  return normalizeCourtHistoryLocal(court?.history).filter(h=>h.type==='消费'&&isStoredValuePayMethod(h.payMethod)&&String(h.category||'').includes('订场')).length;
-}
-function csvEscapeCell(value){
-  const text=String(value??'');
-  return `"${text.replace(/"/g,'""')}"`;
-}
+function membershipBookingCount(court){return normalizeCourtHistoryLocal(court?.history).filter(h=>h.type==='消费'&&isStoredValuePayMethod(h.payMethod)&&String(h.category||'').includes('订场')).length;}
+function csvEscapeCell(value){const text=String(value??'');return `"${text.replace(/"/g,'""')}"`;}
 function decodeCourtCsvText(buf){
   try{
     return new TextDecoder('utf-8',{fatal:true}).decode(buf);
@@ -1676,17 +1654,9 @@ function decodeCourtCsvText(buf){
     throw e;
   }
 }
-function extractDepositAmountFromText(text){
-  const m=String(text||'').match(/已储值\s*([0-9]+(?:\.[0-9]+)?)/);
-  return m?parseFloat(m[1])||0:0;
-}
-function importMoney(value){
-  const n=parseFloat(String(value??'').replace(/,/g,''));
-  return Number.isFinite(n)?n:0;
-}
-function hasImportValue(value){
-  return value!==undefined&&value!==null&&String(value).trim()!=='';
-}
+function extractDepositAmountFromText(text){const m=String(text||'').match(/已储值\s*([0-9]+(?:\.[0-9]+)?)/);return m?parseFloat(m[1])||0:0;}
+function importMoney(value){const n=parseFloat(String(value??'').replace(/,/g,''));return Number.isFinite(n)?n:0;}
+function hasImportValue(value){return value!==undefined&&value!==null&&String(value).trim()!=='';}
 function courtBaseHistoryForSave(c){
   const hist=normalizeCourtHistoryLocal(c?.history);
   if(hist.length||!c)return hist;

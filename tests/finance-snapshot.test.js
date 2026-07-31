@@ -55,6 +55,8 @@ const snapshot = _test.buildFinancePageSnapshot({
       type:'消费',
       amount:200,
       payMethod:'微信',
+      startTime:'10:00',
+      endTime:'11:30',
       operationId:'op-court-1',
       batchId:'batch-court-1'
     },{
@@ -113,6 +115,7 @@ assert.strictEqual(courtTraceRow.operationId, 'op-court-1', 'court history finan
 assert.strictEqual(courtTraceRow.batchId, 'batch-court-1', 'court history finance row should carry batchId from source history row');
 assert.strictEqual(courtTraceRow.cashDelta, 200, 'court trace passthrough must not change cash amount');
 assert.strictEqual(courtTraceRow.recognizedRevenueDelta, 200, 'court trace passthrough must not change recognized amount');
+assert.strictEqual(courtTraceRow.timeText, '10:00-11:30', 'court history finance time should support HH:mm display fields');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='课程'&&row.action==='消耗').length, 1, 'finance snapshot should include course consume rows');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='会员储值'&&row.action==='收款').length, 1, 'finance snapshot should include membership recharge rows');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='散客订场'&&row.action==='收款').length, 1, 'finance snapshot should include court cash rows');

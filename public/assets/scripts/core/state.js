@@ -541,6 +541,9 @@ function setDatasetValue(name,data,{persist=true}={}){
 function noteScheduleLocalMutation(){
   scheduleLocalMutationAt=Date.now();
   markLearningDataStale();
+  loadedDatasets.delete('financePage');
+  financeNormalizedLedgerRows=[];
+  financeSettlementSummaryRows=[];
 }
 function markLearningDataStale(){
   [

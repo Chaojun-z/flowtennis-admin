@@ -62,6 +62,15 @@ function financeCourtHistoryBusinessDate(historyRow){
 function financeDateKey(value){
   return String(value||'').slice(0,10);
 }
+function financeCourtHistoryClockText(value){
+  const text=String(value||'').trim();
+  if(!text)return '';
+  const shortMatch=text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if(shortMatch)return `${String(shortMatch[1]).padStart(2,'0')}:${shortMatch[2]}`;
+  const dateTimeMatch=text.match(/\d{4}-\d{2}-\d{2}[ T](\d{1,2}):(\d{2})/);
+  if(dateTimeMatch)return `${String(dateTimeMatch[1]).padStart(2,'0')}:${dateTimeMatch[2]}`;
+  return text.slice(11,16)||text.slice(0,5);
+}
 function membershipRechargeAmount(order){
   return roundMoney(order?.finalAmount ?? order?.rechargeAmount ?? order?.amount ?? 0);
 }
@@ -395,7 +404,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         ...financeOperationTraceFields(historyRow),
         businessDate:financeCourtHistoryBusinessDate(historyRow),
         weekdayText:financeWeekdayText(historyRow.occurredDate||historyRow.date),
-        timeText:historyRow.startTime&&historyRow.endTime?`${String(historyRow.startTime).slice(11,16)}-${String(historyRow.endTime).slice(11,16)}`:(historyRow.time||'—'),
+        timeText:historyRow.startTime&&historyRow.endTime?`${financeCourtHistoryClockText(historyRow.startTime)}-${financeCourtHistoryClockText(historyRow.endTime)}`:(historyRow.time||'—'),
         customer:court.name||court.id,
         campusName:rowCampusName,
         businessType:differenceReason?'差异项':businessType,

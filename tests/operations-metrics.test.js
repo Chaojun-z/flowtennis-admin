@@ -927,17 +927,17 @@ const coachA = coachDashboardMetrics.coach.rows.find(row => row.coach === 'A教�
 const coachB = coachDashboardMetrics.coach.rows.find(row => row.coach === 'B教练');
 assert.strictEqual(coachDashboardMetrics.coach.rows.some(row => row.coach === 'C教练'), false, 'coach dashboard should exclude inactive coaches');
 assert.strictEqual(coachA.availableHours, 27.4, 'coach available hours should use the real selected period up to today');
-assert.strictEqual(coachA.usedHours, 5.5, 'coach utilization should include scheduled and completed non-cancelled lessons plus companion work in the selected period');
-assert.strictEqual(coachA.teachingHours, 4.5, 'coach teaching hours should exclude companion work');
+assert.strictEqual(coachA.usedHours, 3, 'coach utilization should only include completed effective services in the selected period');
+assert.strictEqual(coachA.teachingHours, 3, 'coach teaching hours should only include completed non-companion lessons');
 assert.strictEqual(coachA.teachingStudentCount, 2, 'coach detail rows should expose selected-period unique teaching students');
 assert.strictEqual(coachA.feedbackCompleted, 1, 'coach detail rows should count completed feedback by schedule record');
-assert.strictEqual(coachA.feedbackRequired, 3, 'coach detail rows should count one required feedback per valid schedule record');
+assert.strictEqual(coachA.feedbackRequired, 2, 'coach detail rows should count one required feedback per completed valid schedule record');
 assert.deepStrictEqual(
   coachA.usedHoursComparison,
-  { mode: 'previous_period', currentValue: 5.5, previousValue: 1, changeValue: 4.5, changeRate: 450 },
+  { mode: 'previous_period', currentValue: 3, previousValue: 1, changeValue: 2, changeRate: 200 },
   'coach detail rows should expose previous-period work-hour comparison for the table'
 );
-assert.strictEqual(coachA.utilizationRate, 20.1, 'coach utilization should divide used work hours by the real selected-period available hours');
+assert.strictEqual(coachA.utilizationRate, 10.9, 'coach utilization should divide completed work hours by the real selected-period available hours');
 assert.strictEqual(coachA.revenue, 6200, 'coach revenue should use standard finance course receipts inside the selected period');
 assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion should read the unified lifecycle rows');
 assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
@@ -949,8 +949,8 @@ assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalNumerat
 assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalDenominator, 2, 'conversion renewal should expose selected-period paid-student denominator');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '体验课')?.hours, 1, 'coach course mix should include trial lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '私教课')?.hours, 2, 'coach course mix should include private lesson hours');
-assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 1.5, 'coach course mix should include group lesson hours');
-assert.strictEqual(coachA.courseMix.find(row => row.type === '陪打')?.hours, 1, 'coach course mix should show companion work separately');
+assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 0, 'coach course mix should exclude pending group lesson hours');
+assert.strictEqual(coachA.courseMix.find(row => row.type === '陪打')?.hours, 0, 'coach course mix should exclude not-yet-ended companion work');
 assert.strictEqual(coachDashboardMetrics.conversion.cards.convertedLeads.value, 1, 'companion lead should count as converted lead');
 assert.strictEqual(coachDashboardMetrics.conversion.courseFunnel[1].count, 3, 'companion lead should not increase the existing course-chain student count');
 assert.strictEqual(coachB.revenue, 0, 'coach revenue should exclude receipts after today');
@@ -1077,7 +1077,7 @@ assert.deepStrictEqual(futureSafeCoachTrendMetrics.coach.trends.map(row => row.d
 assert.strictEqual(futureSafeCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-02')?.activeCoaches, 1, 'coach active trend should count only coaches with real work or receipts on that day');
 assert.strictEqual(futureSafeCoachTrendMetrics.coach.cards.revenue.value, 500, 'coach cards should exclude future receipts from the current real period');
 assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '0%-20%')?.count >= 1, 'coach dashboard should expose idle utilization band for charting');
-assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '20%-40%')?.count >= 1, 'companion work should move the active coach into the next utilization band');
+assert.strictEqual(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '20%-40%')?.count, 0, 'not-yet-ended companion work must not move coaches into a higher utilization band');
 
 const unifiedTrendMetrics = buildOperationsMetrics({
   campuses: [
@@ -1252,6 +1252,43 @@ const asOfCoachTrendMetrics = buildOperationsMetrics({
 assert.strictEqual(asOfCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-01')?.trialConversionRate, 0, 'coach trial conversion trend must not count purchases after the trend day');
 assert.strictEqual(asOfCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.trialConversionRate, 100, 'coach trial conversion trend should keep the selected trial cohort denominator across trend days');
 assert.strictEqual(asOfCoachTrendMetrics.coach.cards.trialConversionRate.value, 100, 'coach cards should still show selected-period conversion after the purchase has happened');
+
+const selectedWeekCoachCompletionMetrics = buildOperationsMetrics({
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
+  coaches: [{ id: 'siren', name: 'Siren', status: 'active' }],
+  students: [{ id: 'trial-done', primaryCoach: 'Siren' }],
+  schedule: [
+    { id: 'completed-private', coach: 'Siren', studentId: 'stu-private', startTime: '2026-07-29 07:00:00', endTime: '2026-07-29 08:00:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
+    { id: 'completed-trial', coach: 'Siren', studentId: 'trial-done', startTime: '2026-07-27 10:00:00', endTime: '2026-07-27 11:00:00', status: '已排课', courseType: '体验课', campus: 'shunyi_mapo' },
+    { id: 'completed-companion', coach: 'Siren', studentId: 'stu-companion', startTime: '2026-07-28 10:00:00', endTime: '2026-07-28 11:00:00', status: '已排课', courseType: '陪打', campus: 'shunyi_mapo' },
+    { id: 'later-today', coach: 'Siren', studentId: 'stu-later', startTime: '2026-07-29 20:00:00', endTime: '2026-07-29 21:30:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
+    { id: 'future-week', coach: 'Siren', studentId: 'stu-future', startTime: '2026-07-30 10:00:00', endTime: '2026-07-30 12:00:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
+    { id: 'cancelled-past', coach: 'Siren', studentId: 'stu-cancelled', startTime: '2026-07-28 12:00:00', endTime: '2026-07-28 13:00:00', status: '已取消', courseType: '私教课', campus: 'shunyi_mapo' }
+  ],
+  purchases: [{ id: 'trial-done-purchase', ownerCoach: 'Siren', studentId: 'trial-done', actualAmount: 1000, purchaseDate: '2026-07-28', status: 'active', courseType: '私教课' }],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [{ id: 'feedback-private', scheduleId: 'completed-private', coach: 'Siren', createdAt: '2026-07-29 08:30:00' }],
+  financeNormalizedRows: [
+    { id: 'trial-done-finance', ownerCoach: 'Siren', studentId: 'trial-done', businessType: '课程', action: '收款', cashDelta: 1000, businessDate: '2026-07-28' }
+  ],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-07-29 09:30:00'),
+  dateRange: { startDate: '2026-07-27', endDate: '2026-08-02' }
+});
+const selectedWeekSiren = selectedWeekCoachCompletionMetrics.coach.rows.find(row => row.coach === 'Siren 教练');
+assert.strictEqual(selectedWeekSiren?.usedHours, 3, 'coach workload must only include completed effective services in the selected week');
+assert.strictEqual(selectedWeekSiren?.teachingHours, 2, 'coach lesson hours must exclude companion and future or not-yet-ended schedules');
+assert.strictEqual(selectedWeekSiren?.teachingStudentCount, 2, 'coach lesson student count must only use completed non-companion schedules');
+assert.strictEqual(selectedWeekSiren?.feedbackRequired, 2, 'coach feedback denominator must only include completed feedback-required schedules');
+assert.strictEqual(selectedWeekSiren?.feedbackCompleted, 1, 'coach feedback numerator must only count submitted feedback on completed schedules');
+assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '私教课')?.hours, 1, 'coach private course mix must not include later-today or future schedules');
+assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '陪打')?.hours, 1, 'coach workload course mix should keep completed companion services');
+assert.strictEqual(selectedWeekSiren?.trialBase, 1, 'coach trial conversion denominator must only use completed trial lessons');
+assert.strictEqual(selectedWeekSiren?.trialConverted, 1, 'coach trial conversion numerator should use the unified backend attribution source');
 
 assert.deepStrictEqual(
   coachDashboardMetrics.coach.utilizationBands.map(row => `${row.band} ${row.label} ${row.color}`),
