@@ -5,10 +5,9 @@ const fixedCourtAcceptanceSamples = require('../../docs/performance-governance/1
 
 function createResidualPageDataRoutes(deps={}){
   const {
-    init,sendJson,listCampusesWithDefaults,getCachedScan,getCachedRow,getFinancePageScheduleRows,
+    init,sendJson,listCampusesWithDefaults,getCachedScan,getFinancePageScheduleRows,
     isProductionRuntime,
     scanFirstRows,filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
-    COURTS_PAGE_STUDENT_PROJECTION_FIELDS,COURTS_PAGE_COURT_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,
     tables={}
   }=deps;
   const {
@@ -19,10 +18,6 @@ function createResidualPageDataRoutes(deps={}){
   const loadCourtAccountListView=createCourtAccountListViewLoader({
     listCampusesWithDefaults,
     getCachedScan,
-    getCachedRow,
-    courtColumns:COURTS_PAGE_COURT_PROJECTION_FIELDS||[],
-    studentColumns:COURTS_PAGE_STUDENT_PROJECTION_FIELDS||[],
-    leadColumns:LEAD_LIST_PROJECTION_FIELDS||[],
     fixedSampleAccounts:fixedCourtAcceptanceSamples,
     tables:{
       students:T_STUDENTS,

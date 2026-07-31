@@ -4165,10 +4165,10 @@ const {
   parseLessonValue,
   computeCourtFinance
 });
-const handleResidualPageDataRoutes=createResidualPageDataRoutes({init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,getCachedRow,scanFirstRows,isProductionRuntime,getFinancePageScheduleRows,
-  filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshot,getFinancePageSnapshotIfCached,
-  FINANCE_PAGE_COURT_PROJECTION_FIELDS,COURTS_PAGE_STUDENT_PROJECTION_FIELDS,COURTS_PAGE_COURT_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,
-  tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_USERS,T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS}
+const handleResidualPageDataRoutes=createResidualPageDataRoutes({
+  init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,scanFirstRows,isProductionRuntime,getFinancePageScheduleRows,
+  filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
+  tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_USERS,T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS}
 });
 function parseSimpleCsv(text=''){
   const rows=[];

@@ -1023,28 +1023,10 @@ function rawLeadPoolRowsForLeads(leadPoolRows = [], leads = []) {
   return mergeDuplicateLeadPoolRows(rawRows);
 }
 
-function teachingStudentViewRow(row = {}, listFields = {}, options = {}) {
-  const {
-    detailPackageOrderRows,
-    detailLessonRecordRows,
-    detailBenefitRows,
-    detailBenefitGrantRows,
-    detailBenefitConsumeRows,
-    detailRecentFeedbackRows,
-    ...lightListFields
-  } = listFields || {};
-  const detailFields = options.includeDetails ? {
-    detailPackageOrderRows,
-    detailLessonRecordRows,
-    detailBenefitRows,
-    detailBenefitGrantRows,
-    detailBenefitConsumeRows,
-    detailRecentFeedbackRows
-  } : {};
+function teachingStudentViewRow(row = {}, listFields = {}) {
   return {
     ...row,
-    ...lightListFields,
-    ...detailFields,
+    ...listFields,
     id: text(row.studentId || row.customerKey || row.sourceLeadId),
     name: text(row.displayName),
     displayName: text(row.displayName),
@@ -1449,15 +1431,14 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
   return [...byStudentId.values()];
 }
 
-function buildTeachingStudentViews(customerLifecycleRows = [], data = {}, options = {}) {
+function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const studentRows = buildTeachingStudentSourceRows(customerLifecycleRows, data)
     .filter(row => text(row.status) !== 'merged' && !text(row.mergedIntoStudentId));
   const now = data.now || new Date();
   const courseListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: true });
   const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });
-  const viewOptions = { includeDetails: options.includeDetails !== false };
-  const courseViewRow = row => teachingStudentViewRow(row, courseListFieldMap.get(text(row.studentId)) || {}, viewOptions);
-  const formalViewRow = row => teachingStudentViewRow(row, formalListFieldMap.get(text(row.studentId)) || {}, viewOptions);
+  const courseViewRow = row => teachingStudentViewRow(row, courseListFieldMap.get(text(row.studentId)) || {});
+  const formalViewRow = row => teachingStudentViewRow(row, formalListFieldMap.get(text(row.studentId)) || {});
   const hasTrialAttended = row => teachingStudentHasTrialAttendedFact(data, row, now);
   const hasFormalAttended = row => teachingStudentHasFormalAttendedFact(data, row, now);
   const hasCourseStudentEntry = row => !!row.hasTrialExperience
@@ -1577,11 +1558,6 @@ function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOStrin
     detailPackageBalanceText: text(row.detailPackageBalanceText || row.packageBalanceText || '-'),
     detailPackageBalancePercent: numberSnapshotValue(row.detailPackageBalancePercent),
     detailPackageOrderRows: Array.isArray(row.detailPackageOrderRows) ? row.detailPackageOrderRows : [],
-    detailLessonRecordRows: Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [],
-    detailBenefitRows: Array.isArray(row.detailBenefitRows) ? row.detailBenefitRows : [],
-    detailBenefitGrantRows: Array.isArray(row.detailBenefitGrantRows) ? row.detailBenefitGrantRows : [],
-    detailBenefitConsumeRows: Array.isArray(row.detailBenefitConsumeRows) ? row.detailBenefitConsumeRows : [],
-    detailRecentFeedbackRows: Array.isArray(row.detailRecentFeedbackRows) ? row.detailRecentFeedbackRows : [],
     detailRecentLessonDate: text(row.detailRecentLessonDate || row.lastFormalLessonAt),
     cumulativeCoursePaidAmount: money(row.cumulativeCoursePaidAmount || 0),
     cumulativeCoursePaidText: text(row.cumulativeCoursePaidText || moneyText(row.cumulativeCoursePaidAmount || 0)),

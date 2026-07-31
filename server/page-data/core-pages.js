@@ -100,49 +100,6 @@ function buildListPage(rows=[],paging=null){
   return {rows:list.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages};
 }
 
-function studentDetailViewFromSummary(student={},summary={}){
-  const studentId=textValue(student.id||student.studentId||summary.studentId||summary.id);
-  if(!studentId)return null;
-  return {
-    ...student,
-    ...summary,
-    id:studentId,
-    studentId,
-    name:textValue(summary.name||summary.displayName||student.name),
-    displayName:textValue(summary.displayName||summary.name||student.name),
-    phone:textValue(summary.phone||student.phone),
-    type:textValue(summary.type||student.type),
-    source:textValue(summary.source||student.source),
-    campus:textValue(summary.campus||student.campus),
-    primaryCoach:textValue(summary.primaryCoach||student.primaryCoach),
-    hasTeachingSummarySnapshot:true
-  };
-}
-
-function lifecycleRowFromStudentSummary(student={},summary={}){
-  const studentId=textValue(student.id||student.studentId||summary.studentId||summary.id);
-  if(!studentId)return null;
-  return {
-    customerKey:textValue(summary.sourceLeadId)||studentId,
-    sourceLeadId:textValue(summary.sourceLeadId||student.sourceLeadId),
-    leadId:textValue(summary.sourceLeadId||student.sourceLeadId),
-    studentId,
-    displayName:textValue(summary.displayName||summary.name||student.name),
-    phone:textValue(summary.phone||student.phone),
-    source:textValue(summary.source||student.source),
-    campus:textValue(summary.campus||student.campus),
-    owner:textValue(summary.primaryCoach||student.primaryCoach),
-    formalCoach:textValue(summary.primaryCoach||student.primaryCoach),
-    studentStage:textValue(summary.studentStage),
-    trialStatus:textValue(summary.trialStatus),
-    courseDealPath:textValue(summary.courseDealPath),
-    coursePurchaseCount:Number(summary.coursePurchaseCount)||0,
-    hasTrialExperience:summary.hasTrialAttended===true||String(summary.hasTrialAttended)==='true',
-    createdAt:textValue(student.createdAt||summary.createdAt),
-    updatedAt:textValue(summary.updatedAt||student.updatedAt)
-  };
-}
-
 function createCorePageDataRoutes(deps={}){
   const {
     init,sendJson,cappedScan,filterLoadAllForUser,listCampusesWithDefaults,getFastStudentsRead,
@@ -273,7 +230,7 @@ function createCorePageDataRoutes(deps={}){
       });
       const teachingData={...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries};
       const metricScope=pageDataScopeFromQuery(query);
-      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,teachingData,{includeDetails:false});
+      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,teachingData);
       const paging=parseListPaging(query);
       const view=String(query?.get('view')||'').trim();
       const q=String(query?.get('q')||'').trim();
@@ -360,32 +317,7 @@ function createCorePageDataRoutes(deps={}){
       if(!studentId)return sendJson(res,{error:'缺少学员 ID'},400);
       const student=await getCachedRow(T_STUDENTS,studentId).catch(()=>null);
       if(!student)return sendJson(res,{error:'学员不存在'},404);
-      const fresh=query?.get('fresh')==='1'||query?.get('forceFresh')==='1';
-      const studentTeachingSummary=T_STUDENT_TEACHING_SUMMARY&&!fresh
-        ? await getCachedRow(T_STUDENT_TEACHING_SUMMARY,studentId).catch(()=>null)
-        : null;
-      if(studentTeachingSummary){
-        const detailStudentView=studentDetailViewFromSummary(student,studentTeachingSummary);
-        const lifecycleRow=lifecycleRowFromStudentSummary(student,studentTeachingSummary);
-        const scoped=filterLoadAllForUser({
-          students:[student],
-          studentTeachingSummaries:[studentTeachingSummary]
-        },user);
-        return sendJson(res,{
-          students:scoped.students,
-          purchases:[],
-          packages:[],
-          entitlements:[],
-          entitlementLedger:[],
-          schedule:[],
-          membershipBenefitLedger:[],
-          feedbacks:[],
-          customerLifecycleRows:lifecycleRow?[lifecycleRow]:[],
-          teachingStudentViews:{},
-          detailStudentView
-        });
-      }
-      const [purchases,packages,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks,studentTeachingSummaryRow]=await Promise.all([
+      const [purchases,packages,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks,studentTeachingSummary]=await Promise.all([
         cappedScan(T_PURCHASES).catch(()=>[]),
         cappedScan(T_PACKAGES).catch(()=>[]),
         cappedScan(T_ENTITLEMENTS).catch(()=>[]),
@@ -407,7 +339,7 @@ function createCorePageDataRoutes(deps={}){
         schedule:schedule.filter(row=>rowHasStudent(row,studentId)),
         membershipBenefitLedger:membershipBenefitLedger.filter(row=>String(row.studentId||'')===studentId),
         feedbacks:feedbacks.filter(row=>rowHasStudent(row,studentId)),
-        studentTeachingSummaries:studentTeachingSummaryRow?[studentTeachingSummaryRow]:[]
+        studentTeachingSummaries:studentTeachingSummary?[studentTeachingSummary]:[]
       },user);
       scoped.schedule=await hydrateScheduleRowsByLedgerIds(scoped.schedule,scoped.entitlementLedger);
       const customerLifecycleRows=buildCustomerLifecycleRows({
@@ -417,14 +349,13 @@ function createCorePageDataRoutes(deps={}){
         schedule:scoped.schedule,
         feedbacks:scoped.feedbacks
       });
-      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,{...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries},{includeDetails:false});
-      const detailTeachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,{...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries},{includeDetails:true});
+      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,{...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries});
       const allViews=[
-        ...(detailTeachingStudentViews.historicalStudents||[]),
-        ...(detailTeachingStudentViews.activeStudents||[]),
-        ...(detailTeachingStudentViews.courseStudents||[]),
-        ...(detailTeachingStudentViews.trialStudents||[]),
-        ...(detailTeachingStudentViews.formalStudents||[])
+        ...(teachingStudentViews.historicalStudents||[]),
+        ...(teachingStudentViews.activeStudents||[]),
+        ...(teachingStudentViews.courseStudents||[]),
+        ...(teachingStudentViews.trialStudents||[]),
+        ...(teachingStudentViews.formalStudents||[])
       ];
       const detailStudentView=allViews.find(row=>String(row.id||'')===studentId)||null;
       return sendJson(res,{
@@ -465,7 +396,7 @@ function createCorePageDataRoutes(deps={}){
         schedule:scoped.schedule,
         feedbacks:scoped.feedbacks
       });
-      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,membershipBenefitLedger:scoped.membershipBenefitLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped,{includeDetails:false}),standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows}),purchaseUnifiedView:buildPurchaseUnifiedView({...scoped,customerLifecycleRows}),packageUnifiedView:buildPackageUnifiedView(scoped),entitlementUnifiedView:buildEntitlementUnifiedView(scoped)});
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,membershipBenefitLedger:scoped.membershipBenefitLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows}),purchaseUnifiedView:buildPurchaseUnifiedView({...scoped,customerLifecycleRows}),packageUnifiedView:buildPackageUnifiedView(scoped),entitlementUnifiedView:buildEntitlementUnifiedView(scoped)});
     }
     if(path==='/page-data/lifecycle-metrics'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -492,7 +423,7 @@ function createCorePageDataRoutes(deps={}){
       const metricScope=pageDataScopeFromQuery(query);
       return sendJson(res,{
         customerLifecycleRows,
-        teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped,{includeDetails:false}),
+        teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),
         standardLifecycleMetrics:hasPageDataScope(metricScope)
           ? buildScopedStandardLifecycleMetrics({...scoped,customerLifecycleRows},metricScope)
           : buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})
