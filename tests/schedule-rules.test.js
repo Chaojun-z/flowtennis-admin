@@ -1487,6 +1487,35 @@ assert.strictEqual(
   }
 
   {
+    const rows=[
+      { id:'poster-fail-1', coachId:'coach-lin', coach:'林铭教练', startTime:'2026-05-20 10:00', endTime:'2026-05-20 11:00', campus:'shunyi_mapo', venue:'4号场', courseType:'私教课', studentName:'Andy', status:'已排课' }
+    ];
+    const fetchImpl=async (url)=>{
+      if(String(url).includes('/auth/v3/tenant_access_token/internal'))return {ok:true,text:async()=>JSON.stringify({code:0,tenant_access_token:'tenant-token',expire:7200})};
+      if(String(url).includes('/contact/v3/users/batch_get_id'))return {ok:true,text:async()=>JSON.stringify({code:0,data:{user_list:[{mobile:'13800134958',user_id:'ou_linming'}]}})};
+      if(String(url).includes('/im/v1/images'))return {ok:false,status:400,text:async()=>JSON.stringify({code:99991672,msg:'Access denied'})};
+      if(String(url).includes('/im/v1/messages'))return {ok:true,text:async()=>JSON.stringify({code:0,data:{message_id:'om_text_fallback'}})};
+      throw new Error(`unexpected url ${url}`);
+    };
+    const writes=[];
+    const result=await rules.sendFeishuCoachDailyDigests({
+      now:new Date('2026-05-19 20:02:00'),
+      rows,
+      users:[{ id:'lming', role:'editor', coachId:'coach-lin', coachName:'林铭', phone:'13800134958' }],
+      coaches:[],
+      appId:'cli_app',
+      appSecret:'secret',
+      fetchImpl,
+      buildPosterPng:async ()=>Buffer.from('png-bytes'),
+      putSchedule:async (id,row)=>writes.push([id,row])
+    });
+    assert.strictEqual(result.sent,0,'failed poster delivery should not count as a sent poster');
+    assert.strictEqual(result.failed,1,'failed poster delivery should be visible as a failure');
+    assert.strictEqual(result.items[0].fallbackSent,true,'failed poster delivery may still send text fallback');
+    assert.deepStrictEqual(writes,[],'failed poster delivery should not mark schedules as sent');
+  }
+
+  {
     const token='flowtennisoa2026';
     const appId='wx4c76dc29b1d48df3';
     const now=new Date('2026-05-19 20:02:00');

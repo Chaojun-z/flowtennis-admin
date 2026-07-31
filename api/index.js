@@ -3735,8 +3735,8 @@ async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,
       continue;
     }
     try{
-      const digestMessage=buildCoachDailyDigestMessage(item);
-      const posterResult=await sendPosterMessage({item,tenantAccessToken,openId,fetchImpl,buildPosterPng,uploadImage,sendImage,sendText,fallbackText:buildFeishuCoachDailyDigestText({...digestMessage,coachName:item.coachName,digestDate:item.digestDate})});
+      const digestMessage=buildCoachDailyDigestMessage(item),posterResult=await sendPosterMessage({item,tenantAccessToken,openId,fetchImpl,buildPosterPng,uploadImage,sendImage,sendText,fallbackText:buildFeishuCoachDailyDigestText({...digestMessage,coachName:item.coachName,digestDate:item.digestDate})});
+      if(!posterResult?.poster){result.failed++;result.items.push({coachId:item.coachId,coachName:item.coachName,sent:false,error:posterResult?.posterError||'feishu_poster_not_sent',fallbackSent:posterResult?.fallback==='text',...posterResult});continue;}
       if(markSent!==false)await Promise.all((item.scheduleIds||[]).map(scheduleId=>putSchedule(scheduleId,{
         ...(((resolvedRows||[]).find(schedule=>String(schedule.id||'')===String(scheduleId)))||{}),
         feishuCoachDailyDigestSentDate:item.digestDate,
