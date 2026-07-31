@@ -845,7 +845,7 @@ function importResultFailedCount(result = {}) {
 
 function shouldFailCronForImportResult(result = {}) {
   const status = cleanText(result.status);
-  if (['failed', 'partial_failed'].includes(status)) return true;
+  if (['failed', 'partial_failed', 'partial_completed', 'paused'].includes(status)) return true;
   return Number(result.plannedCount || 0) > 0 && importResultWriteCount(result) === 0;
 }
 
