@@ -749,38 +749,134 @@ function shouldFailCronForImportResult(result = {}) {
   return Number(result.plannedCount || 0) > 0 && importResultWriteCount(result) === 0;
 }
 
+function notificationDateText(batch = {}) {
+  const start = cleanText(batch.rangeStart).slice(0, 10);
+  const end = cleanText(batch.rangeEnd).slice(0, 10);
+  if (!start) return '-';
+  if (end === addDays(start, 1)) return start;
+  return end && end !== start ? `${start} 至 ${end}` : start;
+}
+
+function notificationMoneyText(value = 0) {
+  const amount = Math.round((Number(value || 0) || 0) * 100) / 100;
+  return `¥${amount.toLocaleString('zh-CN')}`;
+}
+
+function notificationImportAmount(batch = {}, result = {}) {
+  const impactAmount = Number(batch.financeImpact?.cashDelta || 0) || 0;
+  if (impactAmount) return impactAmount;
+  const before = Number(result.financeSnapshot?.before?.cashDelta || 0) || 0;
+  const after = Number(result.financeSnapshot?.after?.cashDelta || 0) || 0;
+  return Math.max(0, Math.round((after - before) * 100) / 100);
+}
+
+function notificationSuccessBookingCount(result = {}) {
+  const ids = new Set();
+  for (const row of result.writtenIds || []) {
+    if (row.table === T_COURTS || row.table === T_SCHEDULE) {
+      const id = cleanText(row.sourceRecordId);
+      if (id) ids.add(id);
+    }
+  }
+  return ids.size;
+}
+
+function notificationLedgerCount(result = {}) {
+  return (result.writtenIds || []).filter(row => row.table === T_FINANCIAL_LEDGER).length;
+}
+
+function notificationAlertLabel(row = {}) {
+  const time = [row.startTime, row.endTime].filter(Boolean).join('-');
+  const main = [row.date, time, row.venue, row.customerName || row.phone].filter(Boolean).join(' ');
+  const reason = cleanText(row.reason).replace(/：.+$/, '');
+  return main ? `${main}：${reason || '待处理'}` : reason || '待处理';
+}
+
 function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, result = {}, alerts = [] } = {}) {
   const failed = Array.isArray(result.failed) ? result.failed : [];
   const skipped = Array.isArray(result.skippedIds) ? result.skippedIds : [];
-  const prefix = type === 'failure' ? '第三方同步失败报警' : '第三方同步导入成功';
+  const successBookings = notificationSuccessBookingCount(result);
+  const planned = Number(result.plannedCount || 0);
+  const prefix = type === 'failure' ? '第三方同步失败报警' : '第三方同步完成';
+  const alertRows = (alerts || []).filter(row => row.reason);
+  const memberChangeCount = alertRows.filter(row => normalizeSourceType(row.sourceType) === 'member' || (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue)).length;
+  const memberGapCount = alertRows.filter(row => /会员流水批量接口缺口/.test(cleanText(row.reason))).length;
+  const actionAlerts = alertRows.filter(row => {
+    if (/会员流水批量接口缺口/.test(cleanText(row.reason))) return false;
+    if (normalizeSourceType(row.sourceType) === 'member') return false;
+    if (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue) return false;
+    return true;
+  });
   const lines = [
     `网球兄弟小助手 ${prefix}`,
-    `批次：${batch.batchId || result.batchId || '-'}`,
-    `范围：${batch.rangeStart || '-'} 至 ${batch.rangeEnd || '-'}`,
-    `计划导入：${Number(result.plannedCount || 0)} 条`,
-    `实际写入：${importResultWriteCount(result)} 条`,
+    `数据日期：${notificationDateText(batch)}`,
+    `订场导入：${successBookings}/${planned} 条成功`,
+    `财务入账：${notificationLedgerCount(result)} 条流水，合计 ${notificationMoneyText(notificationImportAmount(batch, result))}`,
     `失败：${importResultFailedCount(result)} 条`,
-    `跳过/阻断：${skipped.length} 条`,
-    `状态：${result.status || '-'}`
+    `需处理：${skipped.length + failed.length + actionAlerts.length} 条`
   ];
   if (failed.length) {
-    lines.push('失败原因：');
-    lines.push(...failed.slice(0, 8).map(row => `${row.sourceRecordId || '-'}：${row.reason || '-'}`));
+    lines.push('失败明细：');
+    lines.push(...failed.slice(0, 8).map(row => `- ${notificationAlertLabel(row)}`));
     if (failed.length > 8) lines.push(`其余 ${failed.length - 8} 条请到第三方同步中心查看。`);
   }
-  const alertRows = (alerts || []).filter(row => row.reason).slice(0, 5);
-  if (alertRows.length) {
-    lines.push('异常提醒：');
-    lines.push(...alertRows.map(row => row.reason));
+  if (actionAlerts.length) {
+    lines.push('需处理事项：');
+    lines.push(...actionAlerts.slice(0, 8).map(row => `- ${notificationAlertLabel(row)}`));
+    if (actionAlerts.length > 8) lines.push(`其余 ${actionAlerts.length - 8} 条请到第三方同步中心查看。`);
+  }
+  const reminders = [];
+  if (memberChangeCount) reminders.push(`会员资料变更 ${memberChangeCount} 条：仅留档，不影响订场导入`);
+  if (memberGapCount) reminders.push('会员流水接口缺口：第三方暂不能批量拉取会员储值流水');
+  if (reminders.length) {
+    lines.push('提醒：');
+    lines.push(...reminders.map(row => `- ${row}`));
   }
   return lines.join('\n');
+}
+
+function buildThirdPartySyncNotificationCard({ type = 'success', batch = {}, result = {}, alerts = [] } = {}) {
+  const lines = buildThirdPartySyncNotificationText({ type, batch, result, alerts }).split('\n');
+  const dateLine = lines.find(line => /^数据日期：/.test(line)) || `数据日期：${notificationDateText(batch)}`;
+  const detailLines = lines.filter((line, index) => index > 0 && line !== dateLine);
+  return {
+    config: {
+      wide_screen_mode: true
+    },
+    header: {
+      template: type === 'failure' ? 'red' : 'blue',
+      title: {
+        tag: 'plain_text',
+        content: '长小二订场数据'
+      }
+    },
+    elements: [
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: `**${dateLine}**`
+        }
+      },
+      {
+        tag: 'hr'
+      },
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: detailLines.join('\n')
+        }
+      }
+    ]
+  };
 }
 
 async function defaultNotifyThirdPartySyncResult({ type = 'success', batch = {}, result = {}, alerts = [], env = process.env, client = axios } = {}) {
   const webhook = cleanText(env.THIRD_PARTY_SYNC_NOTIFY_WEBHOOK || env.FEISHU_THIRD_PARTY_SYNC_WEBHOOK || env.FEISHU_MONITOR_WEBHOOK_URL || env.FEISHU_WEBHOOK_URL);
   if (!webhook) return { skipped: true };
-  const text = buildThirdPartySyncNotificationText({ type, batch, result, alerts });
-  const res = await client.post(webhook, { msg_type: 'text', content: { text } }, { timeout: 10000 });
+  const card = buildThirdPartySyncNotificationCard({ type, batch, result, alerts });
+  const res = await client.post(webhook, { msg_type: 'interactive', card }, { timeout: 10000 });
   const code = Number(res.data?.code ?? 0);
   if (code !== 0) throw new Error(`飞书群通知失败：${res.data?.msg || code}`);
   return { sent: true, code };
@@ -1027,7 +1123,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     if (path === '/cron/third-party-sync-center' && method === 'GET') {
       if (!requireCronAccess(req, env)) return sendJson(res, { error: '无权限' }, 401);
       await init();
-      const range = defaultDailyRange(new Date());
+      const range = defaultDailyRange(new Date(now()));
       const pulled = await pullAndPrecheck({ ...range, operator: 'daily-auto-sync' });
       const autoImport = await runImportForBatch({ batchId: pulled.batch.batchId, operator: 'daily-auto-sync', importedAt: now() });
       const alerts = await createImportAlerts({ batchId: pulled.batch.batchId, plan: autoImport.plan, changes: pulled.changes, result: autoImport.result, operator: 'daily-auto-sync', nowValue: now() });
@@ -1146,6 +1242,9 @@ module.exports = {
   buildThirdPartySyncBatch,
   precheckThirdPartyRecords,
   buildThirdPartyImportPlan,
+  buildThirdPartySyncNotificationText,
+  buildThirdPartySyncNotificationCard,
+  defaultNotifyThirdPartySyncResult,
   fetchChangxiaoerData,
   defaultDailyRange,
   THIRD_PARTY_SYNC_TABLES,

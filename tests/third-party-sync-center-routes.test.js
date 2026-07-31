@@ -5,6 +5,8 @@ const {
   buildThirdPartySyncBatch,
   precheckThirdPartyRecords,
   buildThirdPartyImportPlan,
+  buildThirdPartySyncNotificationText,
+  defaultNotifyThirdPartySyncResult,
   defaultDailyRange
 } = require('../server/third-party-sync-center-routes');
 
@@ -87,7 +89,75 @@ assert.strictEqual(changxiaoerOrder.amount, 140, 'changxiaoer cent amounts shoul
 assert.strictEqual(changxiaoerOrder.bookingMode, '用户自助订场', 'changxiaoer order should label self-service booking mode');
 assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete changxiaoer order should not be marked high risk');
 
+const notificationText = buildThirdPartySyncNotificationText({
+  type: 'success',
+  batch: {
+    batchId: 'cxe-sync-technical-id',
+    rangeStart: '2026-07-30 00:00:00',
+    rangeEnd: '2026-07-31 00:00:00',
+    financeImpact: { cashDelta: 1350 }
+  },
+  result: {
+    status: 'completed',
+    plannedCount: 7,
+    writtenIds: [
+      { table: 'ft_courts', sourceRecordId: 'order-a' },
+      { table: 'ft_financial_ledger', sourceRecordId: 'order-a' }
+    ],
+    failed: [],
+    skippedIds: []
+  },
+  alerts: [
+    { reason: '第三方变更：531449', sourceType: 'member', customerName: '秋明', phone: '18600689666' },
+    { reason: '会员流水批量接口缺口', sourceType: 'member-ledger-gap' }
+  ]
+});
+assert.match(notificationText, /数据日期：2026-07-30/, 'notification should show business date');
+assert.match(notificationText, /订场导入：1\/7 条成功/, 'notification should show booking-level import progress');
+assert.match(notificationText, /财务入账：1 条流水，合计 ¥1,350/, 'notification should show finance impact in operator language');
+assert.match(notificationText, /会员资料变更 1 条：仅留档，不影响订场导入/, 'notification should summarize member profile changes');
+assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notification should hide technical batch ids and raw third-party ids');
+
 (async () => {
+  const feishuPosts = [];
+  const notifyRes = await defaultNotifyThirdPartySyncResult({
+    type: 'success',
+    batch: {
+      batchId: 'cxe-sync-technical-id',
+      rangeStart: '2026-07-30 00:00:00',
+      rangeEnd: '2026-07-31 00:00:00',
+      financeImpact: { cashDelta: 1350 }
+    },
+    result: {
+      plannedCount: 7,
+      writtenIds: [
+        { table: 'ft_courts', sourceRecordId: 'order-a' },
+        { table: 'ft_financial_ledger', sourceRecordId: 'order-a' }
+      ],
+      failed: [],
+      skippedIds: []
+    },
+    alerts: [
+      { reason: '第三方变更：531449', sourceType: 'member' },
+      { reason: '会员流水批量接口缺口', sourceType: 'member-ledger-gap' }
+    ],
+    env: { THIRD_PARTY_SYNC_NOTIFY_WEBHOOK: 'https://example.test/webhook' },
+    client: {
+      post: async (url, payload, options) => {
+        feishuPosts.push({ url, payload, options });
+        return { data: { code: 0 } };
+      }
+    }
+  });
+  assert.strictEqual(notifyRes.sent, true, 'notification should report sent when Feishu accepts the card');
+  assert.strictEqual(feishuPosts[0].payload.msg_type, 'interactive', 'notification should send a Feishu card');
+  const cardText = JSON.stringify(feishuPosts[0].payload.card);
+  assert.match(cardText, /长小二订场数据/, 'card should use the requested business title');
+  assert.match(cardText, /数据日期：2026-07-30/, 'card should highlight the business date');
+  assert.match(cardText, /订场导入：1\/7 条成功/, 'card should show booking import result');
+  assert.match(cardText, /财务入账：1 条流水，合计 ¥1,350/, 'card should show finance result');
+  assert.doesNotMatch(cardText, /cxe-sync-technical-id|531449/, 'card should hide technical ids');
+
   const writes = [];
   const scans = {
     ft_third_party_sync_batches: [],
@@ -326,7 +396,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
       ],
       gaps: []
     }),
-    now: () => '2026-07-29T00:00:00+08:00',
+    now: () => '2026-07-30T00:00:00+08:00',
     env: { CRON_SECRET: 'secret' }
   });
   const cronRes = await call(cronHandler, {
@@ -419,7 +489,7 @@ assert.strictEqual(changxiaoerOrder.recommendedType, 'auto_import', 'complete ch
       ],
       gaps: []
     }),
-    now: () => '2026-07-29T00:00:00+08:00',
+    now: () => '2026-07-30T00:00:00+08:00',
     env: { CRON_SECRET: 'secret' }
   });
   const failedCronRes = await call(failedCronHandler, {
