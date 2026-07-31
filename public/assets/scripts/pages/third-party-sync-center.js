@@ -459,7 +459,7 @@ async function runThirdPartySyncRollback(operationId){
   }
 }
 function openThirdPartySyncConfirmModal(batchId,sourceRecordId){
-  const typeOptions=['排课占场','内部占用','会员余额订场','散客微信转账订场','散客现金订场','大众点评券码订场','教练代订场','畅打活动','订场陪打','忽略不导入','待老板确认'];
+  const typeOptions=['排课占场','内部占用','会员余额订场','散客微信转账订场','散客现金订场','大众点评券码订场','教练代订场','畅打活动','订场陪打','订场+发球机','忽略不导入','待老板确认'];
   const payOptions=['不涉及支付','会员余额','微信转账','现金','大众点评券码','其他平台券码','已在活动中收款'];
   const snapshot=thirdPartySyncSourceSnapshot({batchId,sourceRecordId});
   const sourceLine=[snapshot.date,snapshot.time,snapshot.venue,snapshot.customerName,snapshot.phone].filter(Boolean).join(' / ')||sourceRecordId;
@@ -469,22 +469,30 @@ function openThirdPartySyncConfirmModal(batchId,sourceRecordId){
       <div class="tms-form-item"><label class="tms-form-label">最终业务类型 *</label><select class="finput tms-form-control" id="thirdPartyConfirmType">${typeOptions.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}</select></div>
       <div class="tms-form-item"><label class="tms-form-label">支付方式</label><select class="finput tms-form-control" id="thirdPartyConfirmPay">${payOptions.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}</select></div>
     </div>
-    <div class="tms-form-row">
-      <div class="tms-form-item"><label class="tms-form-label">确认金额</label><input class="finput tms-form-control" id="thirdPartyConfirmAmount" type="number" min="0" placeholder="涉及收入时填写"></div>
-      <div class="tms-form-item"><label class="tms-form-label">绑定对象ID</label><input class="finput tms-form-control" id="thirdPartyConfirmBindId" placeholder="会员、排课或订场用户 ID"></div>
-    </div>
-    <div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">确认备注</label><input class="finput tms-form-control" id="thirdPartyConfirmNote" placeholder="填写运营判断依据"></div></div>`;
+	    <div class="tms-form-row">
+	      <div class="tms-form-item"><label class="tms-form-label">确认金额</label><input class="finput tms-form-control" id="thirdPartyConfirmAmount" type="number" min="0" placeholder="涉及收入时填写"></div>
+	      <div class="tms-form-item"><label class="tms-form-label">绑定对象ID</label><input class="finput tms-form-control" id="thirdPartyConfirmBindId" placeholder="会员、排课或订场用户 ID"></div>
+	    </div>
+	    <div class="tms-form-row">
+	      <div class="tms-form-item"><label class="tms-form-label">订场费</label><input class="finput tms-form-control" id="thirdPartyConfirmBookingAmount" type="number" min="0" placeholder="陪打/发球机拆账时填写"></div>
+	      <div class="tms-form-item"><label class="tms-form-label">服务费</label><input class="finput tms-form-control" id="thirdPartyConfirmServiceAmount" type="number" min="0" placeholder="陪打费或发球机费"></div>
+	    </div>
+	    <div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">确认备注</label><input class="finput tms-form-control" id="thirdPartyConfirmNote" placeholder="填写运营判断依据"></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-default" onclick="confirmThirdPartySyncItem('${esc(batchId)}','${esc(sourceRecordId)}')">保存确认</button><button class="tms-btn tms-btn-primary" onclick="confirmThirdPartySyncItem('${esc(batchId)}','${esc(sourceRecordId)}',{importAfter:true})">保存并导入</button>`;
   openStandardModal({title:'确认第三方异常项',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
 async function confirmThirdPartySyncItem(batchId,sourceRecordId,options={}){
   try{
+    const finalType=document.getElementById('thirdPartyConfirmType')?.value||'';
+    const bookingAmount=Number(document.getElementById('thirdPartyConfirmBookingAmount')?.value||0)||0;
+    const serviceAmount=Number(document.getElementById('thirdPartyConfirmServiceAmount')?.value||0)||0;
     await apiCall('POST','/third-party-sync/confirmations',{
       batchId,
       sourceRecordId,
-      finalType:document.getElementById('thirdPartyConfirmType')?.value||'',
+      finalType,
       paymentMethod:document.getElementById('thirdPartyConfirmPay')?.value||'',
       amount:Number(document.getElementById('thirdPartyConfirmAmount')?.value||0)||0,
+      amountBreakdown:bookingAmount||serviceAmount?{bookingAmount,serviceAmount,serviceType:finalType==='订场+发球机'?'发球机':finalType==='订场陪打'?'陪打':''}:null,
       bindTargetId:document.getElementById('thirdPartyConfirmBindId')?.value.trim()||'',
       confirmNote:document.getElementById('thirdPartyConfirmNote')?.value.trim()||''
     });

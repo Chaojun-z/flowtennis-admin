@@ -22,6 +22,7 @@ assert.match(html, /thirdPartySyncStatusClass/, 'sync center should color status
 assert.match(html, /#page-third-party-sync \.tms-table th[\s\S]*#page-third-party-sync \.tms-tag\{font-size:12px/, 'sync center list font should be 12px');
 assert.doesNotMatch(html, /<th style="width:110px">来源<\/th>|<th style="width:130px">系统判断<\/th>/, 'precheck table should not expose unclear source/system judgment columns');
 assert.match(html, /confirmThirdPartySyncItem/, 'sync center should support operation confirmation');
+assert.match(html, /订场\+发球机[\s\S]*thirdPartyConfirmBookingAmount[\s\S]*thirdPartyConfirmServiceAmount/, 'sync center confirmation modal should support booking and extra service fee split');
 assert.match(html, /保存并导入/, 'sync center should let operators save confirmation and import the batch immediately');
 assert.match(html, /runThirdPartySyncImportPlan/, 'sync center should expose import plan preview');
 assert.match(html, /runThirdPartySyncImport/, 'sync center should support one-click semi-auto import');

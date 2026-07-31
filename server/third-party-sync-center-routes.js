@@ -1066,7 +1066,7 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
   const planned = Number(result.plannedCount || 0);
   const disposition = result.fullDisposition || {};
   const sourceTotal = Number(disposition.total || batch.counts?.totalSourceCount || result.sourceTotalCount || planned || 0);
-  const prefix = type === 'failure' ? '长小二订场数据需要处理' : '长小二订场数据同步完成';
+  const prefix = type === 'failure' ? '订场数据需要处理' : '订场数据同步完成';
   const alertRows = (alerts || []).filter(row => row.reason);
   const memberChangeCount = alertRows.filter(row => normalizeSourceType(row.sourceType) === 'member' || (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue)).length;
   const memberGapCount = alertRows.filter(row => /会员流水批量接口缺口/.test(cleanText(row.reason))).length;
@@ -1478,6 +1478,13 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       return sendJson(res, await pullAndPrecheck({ ...range, operator: user.name || 'admin' }));
     }
     if (path === '/third-party-sync/confirmations' && method === 'POST') {
+      const rawBreakdown = body.amountBreakdown && typeof body.amountBreakdown === 'object' ? body.amountBreakdown : null;
+      const amountBreakdown = rawBreakdown ? {
+        bookingAmount: Number(rawBreakdown.bookingAmount || 0) || 0,
+        serviceAmount: Number(rawBreakdown.serviceAmount || 0) || 0,
+        serviceType: cleanText(rawBreakdown.serviceType),
+        totalAmount: Math.round(((Number(rawBreakdown.bookingAmount || 0) || 0) + (Number(rawBreakdown.serviceAmount || 0) || 0)) * 100) / 100
+      } : null;
       const confirmation = {
         id: `cxe-confirm-${uuidv4()}`,
         batchId: cleanText(body.batchId),
@@ -1485,6 +1492,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         finalType: cleanText(body.finalType),
         paymentMethod: cleanText(body.paymentMethod),
         amount: Number(body.amount || 0) || 0,
+        amountBreakdown,
         bindTargetType: cleanText(body.bindTargetType),
         bindTargetId: cleanText(body.bindTargetId),
         confirmNote: cleanText(body.confirmNote),

@@ -158,7 +158,9 @@ const notificationText = buildThirdPartySyncNotificationText({
     { reason: '会员流水批量接口缺口', sourceType: 'member-ledger-gap' }
   ]
 });
+assert.match(notificationText, /^\[场小二\] 订场数据同步完成/, 'notification title should use the requested operator-facing title');
 assert.match(notificationText, /数据日期：2026-07-30/, 'notification should show business date');
+assert.doesNotMatch(notificationText, /\[场小二\] 长小二订场数据同步完成/, 'notification title should not include the old duplicated product name');
 assert.match(notificationText, /第三方数据：共 61 条/, 'notification should show the full third-party source count');
 assert.match(notificationText, /自动完成：1 条/, 'notification should show imported business rows without pretending every source row was imported');
 assert.doesNotMatch(notificationText, /订场导入：1\/7 条成功/, 'notification must not call partial import success by using only importable rows as denominator');
@@ -337,6 +339,33 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     importResults: []
   });
   assert.ok(unboundMemberPlan.blocked.some(item => item.reason === '会员余额订场需会员流水审计链，暂不支持自动导入'), 'member stored-value booking should stay blocked until member audit chain exists');
+  const confirmedCompanionPlan = buildThirdPartyImportPlan({
+    batchId: 'manual-companion',
+    prechecks: [{
+      batchId: 'manual-companion',
+      sourceRecordId: 'COMPANION1',
+      sourceType: 'lock',
+      date: '2026-07-30',
+      venue: '2号场',
+      startTime: '14:00',
+      endTime: '15:00',
+      recommendedType: 'needs_confirmation',
+      needsConfirmation: true,
+      suggestedFinalType: '订场陪打',
+      amount: 400
+    }],
+    confirmations: [{
+      batchId: 'manual-companion',
+      sourceRecordId: 'COMPANION1',
+      finalType: '订场陪打',
+      paymentMethod: '微信转账',
+      amount: 400,
+      amountBreakdown: { bookingAmount: 100, serviceAmount: 300, serviceType: '陪打' }
+    }],
+    importResults: []
+  });
+  assert.strictEqual(confirmedCompanionPlan.importable.length, 1, 'operator-confirmed companion fee split should become importable');
+  assert.strictEqual(confirmedCompanionPlan.importable[0].amountBreakdown.serviceAmount, 300, 'confirmed companion split should keep service amount for two-ledger import');
 
   const importRes = await call(handler, {
     path: '/third-party-sync/import',
