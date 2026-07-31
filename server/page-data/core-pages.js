@@ -48,40 +48,6 @@ function textSearchHit(q,...values){
   return values.some(value=>String(value||'').toLowerCase().includes(keyword));
 }
 
-function textValue(value){
-  return String(value||'').trim();
-}
-
-function dateKey(value){
-  return textValue(value).slice(0,10);
-}
-
-function rowMatchesCampus(row={},campus=''){
-  const target=textValue(campus);
-  if(!target||target==='all')return true;
-  const values=[
-    row.campus,row.campusId,row.campusCode,row.campusName,
-    ...(Array.isArray(row.campusIds)?row.campusIds:[])
-  ].map(textValue).filter(Boolean);
-  if(!values.length)return true;
-  return values.some(value=>value===target||value===row.campusName||value.includes(target)||target.includes(value));
-}
-
-function rowMatchesDate(row={},fields=[],start='',end=''){
-  const from=dateKey(start);
-  const to=dateKey(end);
-  if(!from&&!to)return true;
-  const raw=fields.map(field=>dateKey(row[field])).find(Boolean);
-  if(!raw)return false;
-  if(from&&raw<from)return false;
-  if(to&&raw>to)return false;
-  return true;
-}
-
-function splitQueryList(value){
-  return textValue(value).split(',').map(textValue).filter(Boolean);
-}
-
 function parseListPaging(query){
   const enabled=query?.get('paged')==='1'||query?.get('page')||query?.get('pageSize');
   if(!enabled)return null;
@@ -158,49 +124,16 @@ function createCorePageDataRoutes(deps={}){
       let listPage=null;
       if(paging){
         const q=String(query?.get('q')||'').trim();
-        const campusFilter=String(query?.get('campus')||'').trim();
-        const startDate=String(query?.get('startDate')||'').trim();
-        const endDate=String(query?.get('endDate')||'').trim();
         if(view==='purchases'){
-          const packageId=String(query?.get('packageId')||'').trim();
-          const ownerCoach=String(query?.get('ownerCoach')||'').trim();
-          const rows=(purchaseUnifiedView.rows||[]).filter(row=>{
-            if(!textSearchHit(q,row.studentName,row.packageName,row.productName,row.courseType,row.ownerCoach,row.payMethod,row.purchaseDate,row.amountPaid))return false;
-            if(packageId&&![row.packageId,row.originalPackageId,row.productId].map(textValue).includes(packageId))return false;
-            if(ownerCoach&&textValue(row.ownerCoach)!==ownerCoach)return false;
-            if(!rowMatchesCampus(row,campusFilter))return false;
-            if(!rowMatchesDate(row,['purchaseDate','createdAt'],startDate,endDate))return false;
-            return true;
-          });
+          const rows=(purchaseUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.studentName,row.packageName,row.productName,row.courseType,row.ownerCoach,row.payMethod,row.purchaseDate,row.amountPaid));
           listPage={view, ...buildListPage(rows,paging)};
         }else if(view==='packages'){
-          const status=String(query?.get('status')||'').trim();
-          const rows=(packageUnifiedView.rows||[]).filter(row=>{
-            if(!textSearchHit(q,row.name,row.packageName,row.productName,row.courseType,row.ownerCoach,row.price,row.lessons,row.timeBand,row.audience))return false;
-            if(status&&textValue(row.status||'active')!==status)return false;
-            if(!rowMatchesCampus(row,campusFilter))return false;
-            return true;
-          });
+          const rows=(packageUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.name,row.packageName,row.productName,row.courseType,row.ownerCoach,row.price,row.lessons));
           listPage={view, ...buildListPage(rows,paging)};
         }else if(view==='entitlements'){
-          const status=String(query?.get('status')||'').trim();
-          const rows=(entitlementUnifiedView.rows||[]).filter(row=>{
-            if(!textSearchHit(q,row.studentName,row.packageName,row.productName,row.courseType,row.ownerCoach,row.status,row.remainingLessons,row.totalLessons,row.timeBand,row.validUntil))return false;
-            if(status&&textValue(row.status||'active')!==status)return false;
-            if(!rowMatchesCampus(row,campusFilter))return false;
-            return true;
-          });
+          const rows=(entitlementUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.studentName,row.packageName,row.productName,row.courseType,row.ownerCoach,row.status,row.remainingLessons,row.totalLessons));
           listPage={view, ...buildListPage(rows,paging)};
         }
-      }
-      if(paging&&view&&listPage){
-        return sendJson(res,{
-          customerLifecycleRows,
-          purchaseUnifiedView:view==='purchases'?{rows:listPage.rows}:undefined,
-          packageUnifiedView:view==='packages'?{rows:listPage.rows}:undefined,
-          entitlementUnifiedView:view==='entitlements'?{rows:listPage.rows}:undefined,
-          listPage
-        });
       }
       return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,customerLifecycleRows,purchaseUnifiedView,packageUnifiedView,entitlementUnifiedView,listPage});
     }
@@ -235,39 +168,7 @@ function createCorePageDataRoutes(deps={}){
       const view=String(query?.get('view')||'').trim();
       const q=String(query?.get('q')||'').trim();
       const studentRows=Array.isArray(teachingStudentViews[view])?teachingStudentViews[view]:[];
-      const campusFilter=String(query?.get('campus')||'').trim();
-      const type=String(query?.get('type')||'').trim();
-      const source=String(query?.get('source')||'').trim();
-      const coach=String(query?.get('coach')||'').trim();
-      const packageStatus=splitQueryList(query?.get('packageStatus'));
-      const paymentMode=splitQueryList(query?.get('paymentMode'));
-      const activityStatus=splitQueryList(query?.get('activityStatus'));
-      const lessonVolume=splitQueryList(query?.get('lessonVolume'));
-      const lifecycleStatus=splitQueryList(query?.get('lifecycleStatus'));
-      const filteredStudentRows=studentRows.filter(row=>{
-        if(!textSearchHit(q,row.name,row.displayName,row.phone,row.type,row.source,row.sourceText,row.paymentModeText,row.packageStatusText,row.activityStatusText,row.lessonVolumeText,row.lifecycleStatusText,row.campus,row.primaryCoach,row.notes))return false;
-        if(type&&textValue(row.type)!==type)return false;
-        if(source&&textValue(row.sourceText||row.source)!==source)return false;
-        if(coach&&textValue(row.primaryCoach)!==coach)return false;
-        if(packageStatus.length&&!packageStatus.includes(textValue(row.packageStatusText)))return false;
-        if(paymentMode.length&&!paymentMode.includes(textValue(row.paymentModeText)))return false;
-        if(activityStatus.length&&!activityStatus.includes(textValue(row.activityStatusText)))return false;
-        if(lessonVolume.length&&!lessonVolume.includes(textValue(row.lessonVolumeText)))return false;
-        if(lifecycleStatus.length&&!lifecycleStatus.includes(textValue(row.lifecycleStatusText)))return false;
-        if(!rowMatchesCampus(row,campusFilter))return false;
-        if(!rowMatchesDate(row,['createdAt','enrollDate','registerDate','joinDate','lastLessonDate'],metricScope.startDate,metricScope.endDate))return false;
-        return true;
-      });
-      const listPage=paging&&view?{view,...buildListPage(filteredStudentRows,paging)}:null;
-      if(paging&&view&&listPage){
-        return sendJson(res,{
-          teachingStudentViews:{...teachingStudentViews,[view]:listPage.rows},
-          standardLifecycleMetrics:hasPageDataScope(metricScope)
-            ? buildScopedStandardLifecycleMetrics({...teachingData,customerLifecycleRows},metricScope)
-            : buildStandardLifecycleMetrics({...teachingData,customerLifecycleRows}),
-          listPage
-        });
-      }
+      const listPage=paging&&view?{view,...buildListPage(studentRows.filter(row=>textSearchHit(q,row.name,row.phone,row.type,row.source,row.sourceText,row.paymentModeText,row.packageStatusText,row.activityStatusText,row.lifecycleStatusText,row.campus,row.primaryCoach,row.notes)),paging)}:null;
       return sendJson(res,{
         customerLifecycleRows,
         teachingStudentViews,

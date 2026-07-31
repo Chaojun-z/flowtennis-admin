@@ -20,9 +20,6 @@ let coachOpsUnifiedView={rows:[]};
 let purchaseUnifiedView={rows:[]};
 let packageUnifiedView={rows:[]};
 let entitlementUnifiedView={rows:[]};
-let packageCenterListPages={purchases:null,packages:null,entitlements:null};
-let customerCenterListPages={historicalStudents:null,activeStudents:null};
-let leadListPage=null;
 let studentLessonRecordExpandedState={};
 const loadedPurchaseDetailIds=new Set();
 const loadedStudentDetailIds=new Set();
@@ -197,13 +194,9 @@ const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
-const DATASETS_WITH_REQUEST_KEYS=new Set(['leads','operationsPage','packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
+const DATASETS_WITH_REQUEST_KEYS=new Set(['operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
 let operationsPageRequestSeq=0;
 let operationsPageBackgroundRefreshSeq=0;
-let packageCenterListPageRequestSeq=0;
-let customerCenterListPageRequestSeq=0;
-let leadListPageRequestSeq=0;
-let courtAccountListPageRequestSeq=0;
 let courtAccountListViewRequestKey='';
 function resolveClientRuntimeStage(){
   const host=String(window.location.hostname||'').trim().toLowerCase();
@@ -241,8 +234,8 @@ function shouldBypassDatasetCache(name){
 }
 const PAGE_DATA_REQUIREMENTS={
   students:['campuses','students','coaches'],
-  'package-students':['campuses','coaches','customerCenterPage'],
-  'trial-students':['campuses','coaches','customerCenterPage'],
+  'package-students':['campuses','students','coaches','customerCenterPage'],
+  'trial-students':['campuses','students','coaches','customerCenterPage'],
   leads:['campuses','leads'],
   operations:['operationsPage'],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals','lifecycleMetricsPage'],
@@ -345,107 +338,16 @@ function appendPageDataQuery(url,params={}){
 function lifecycleMetricsPageDataUrl(){
   return scopedPageDataUrl('/page-data/lifecycle-metrics');
 }
-function packageCenterListViewForPage(){
-  if(currentPage==='purchases')return 'purchases';
-  if(currentPage==='entitlements')return 'entitlements';
-  return '';
-}
-function activePurchaseRangeForRequest(){
-  if(typeof activePurchaseDateRange==='function')return activePurchaseDateRange();
-  return {startDate:'',endDate:''};
-}
-function packageCenterListPageParams({view=packageCenterListViewForPage(),page=1,pageSize=15}={}){
-  const range=activePurchaseRangeForRequest();
-  return {
-    view,
-    paged:1,
-    page,
-    pageSize,
-    q:document.getElementById(view==='entitlements'?'entSearch':'purSearch')?.value||document.getElementById('pkgSearch')?.value||'',
-    packageId:typeof purchaseSelectedPackageFilter==='function'?purchaseSelectedPackageFilter():'',
-    status:view==='entitlements'?document.getElementById('entStatusFilter')?.value||'':document.getElementById('pkgStatusFilter')?.value||'',
-    ownerCoach:typeof purOwnerCoachFilterValue!=='undefined'?purOwnerCoachFilterValue:'',
-    campus:campus&&campus!=='all'?campus:'',
-    startDate:range.startDate||'',
-    endDate:range.endDate||''
-  };
-}
-function packageCenterPageDataUrl({fresh=false,view='',page=1,pageSize=15}={}){
-  const listView=view||packageCenterListViewForPage();
-  const params=listView?packageCenterListPageParams({view:listView,page,pageSize}):{};
-  const url=appendPageDataQuery('/page-data/package-center-list',params);
-  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
-}
-function customerCenterListViewForPage(){
-  return (typeof studentListViewMode==='function'&&studentListViewMode()==='trial')?'historicalStudents':'activeStudents';
-}
-function studentTagFilterParam(key){
-  if(typeof studentTagFilterState!=='object'||!studentTagFilterState)return '';
-  return Array.isArray(studentTagFilterState[key])?studentTagFilterState[key].join(','):'';
-}
-function customerCenterListPageParams({view=customerCenterListViewForPage(),page=1,pageSize=15}={}){
-  return {
-    view,
-    paged:1,
-    page,
-    pageSize,
-    q:document.getElementById('stuSearch')?.value||'',
-    type:document.getElementById('stuTypeFilter')?.value||'',
-    source:document.getElementById('stuSourceFilter')?.value||'',
-    coach:document.getElementById('stuCoachFilter')?.value||'',
-    campus:campus&&campus!=='all'?campus:'',
-    packageStatus:studentTagFilterParam('packageStatus'),
-    paymentMode:studentTagFilterParam('paymentMode'),
-    activityStatus:studentTagFilterParam('activityStatus'),
-    lessonVolume:studentTagFilterParam('lessonVolume'),
-    lifecycleStatus:studentTagFilterParam('lifecycleStatus')
-  };
-}
-function customerCenterPageDataUrl({fresh=false,view='',page=1,pageSize=15}={}){
+function customerCenterPageDataUrl({fresh=false}={}){
   const url=scopedPageDataUrl('/page-data/customer-center-list');
-  const listView=view||customerCenterListViewForPage();
-  const next=appendPageDataQuery(url,listView?customerCenterListPageParams({view:listView,page,pageSize}):{});
-  return fresh?appendPageDataQuery(next,{fresh:1,_ts:Date.now()}):next;
+  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
 }
 function financePageDataUrl(){
   return scopedPageDataUrl('/page-data/finance');
 }
-function leadListPageParams({page=1,pageSize=15}={}){
-  const range=typeof getLeadDateFilterRange==='function'?getLeadDateFilterRange():{start:'',end:''};
-  return {
-    paged:1,
-    page,
-    pageSize,
-    q:document.getElementById('leadSearch')?.value||'',
-    source:document.getElementById('leadSourceFilter')?.value||'',
-    customerType:document.getElementById('leadCustomerTypeFilter')?.value||'',
-    consultType:document.getElementById('leadConsultFilter')?.value||'',
-    stage:document.getElementById('leadStageFilter')?.value||'',
-    dealType:document.getElementById('leadDealTypeFilter')?.value||'',
-    owners:typeof leadOwnerFilterValues==='function'?leadOwnerFilterValues().join(','):'',
-    campus:campus&&campus!=='all'?campus:'',
-    dateFrom:range.start||'',
-    dateTo:range.end||''
-  };
-}
-function leadListPageDataUrl({fresh=false,page=1,pageSize=15}={}){
-  const url=appendPageDataQuery('/leads',leadListPageParams({page,pageSize}));
-  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
-}
-function courtAccountListPageParams({page=1,pageSize=15,accountType=''}={}){
-  return {
-    page,
-    pageSize,
-    q:document.getElementById(accountType==='会员账户'?'membershipSearch':'courtSearch')?.value||'',
-    owner:accountType==='会员账户'?'':courtOwnerFilterValue||'',
-    accountType:accountType||courtAccountTypeFilterValue||'',
-    membershipTier:accountType==='会员账户'?(membershipTierFilterValue||''):''
-  };
-}
-function courtAccountListViewPageDataUrl({fresh=false,page=1,pageSize=15,accountType=''}={}){
+function courtAccountListViewPageDataUrl({fresh=false}={}){
   const url=scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'});
-  const next=appendPageDataQuery(url,courtAccountListPageParams({page,pageSize,accountType}));
-  return fresh?appendPageDataQuery(next,{fresh:1,_ts:Date.now()}):next;
+  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
 }
 function courtAccountDetailPageDataUrl(courtId,{fresh=false}={}){
   const url=appendPageDataQuery(scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'}),{ids:courtId});
@@ -498,12 +400,10 @@ function hydrateOperationsPageFromClientCache(){
 }
 function datasetRequestKey(name){
   if(name==='operationsPage')return operationsPageDatasetRequestKey();
-  if(name==='packageCenterPage')return 'packageCenterPage:'+packageCenterPageDataUrl({page:currentPage==='entitlements'?1:purPage,pageSize:currentPage==='entitlements'?15:purPageSize});
-  if(name==='customerCenterPage')return 'customerCenterPage:'+customerCenterPageDataUrl({page:stuPage,pageSize:stuPageSize});
+  if(name==='customerCenterPage')return 'customerCenterPage:'+customerCenterPageDataUrl();
   if(name==='lifecycleMetricsPage')return 'lifecycleMetricsPage:'+lifecycleMetricsPageDataUrl();
   if(name==='financePage')return 'financePage:'+financePageDataUrl();
-  if(name==='courtAccountListViewPage')return 'courtAccountListViewPage:'+courtAccountListViewPageDataUrl({page:currentPage==='memberships'?membershipPage:courtPage,pageSize:currentPage==='memberships'?membershipPageSize:courtPageSize,accountType:currentPage==='memberships'?'会员账户':''});
-  if(name==='leads')return 'leads:'+leadListPageDataUrl({page:leadPage,pageSize:leadPageSize});
+  if(name==='courtAccountListViewPage')return 'courtAccountListViewPage:'+courtAccountListViewPageDataUrl();
   return name;
 }
 function datasetHasCurrentRequestKey(name){
@@ -525,7 +425,7 @@ function loadOperationsPageDataset(){
   return apiCall('GET',url).then(data=>({...data,__operationsRequestKey:requestKey}));
 }
 const DATASET_LOADERS={
-  leads:({fresh=false}={})=>apiCall('GET',leadListPageDataUrl({fresh,page:leadPage,pageSize:leadPageSize})),
+  leads:()=>apiCall('GET','/leads'),
   leadFollowups:()=>apiCall('GET','/lead-followups'),
   courts:()=>apiCall('GET','/courts'),
   students:()=>apiCall('GET','/students'),
@@ -547,13 +447,13 @@ const DATASET_LOADERS={
   campuses:()=>apiCall('GET','/campuses'),
   feedbacks:()=>apiCall('GET','/feedbacks')
   ,coachProposals:()=>apiCall('GET','/coach-proposals')
-  ,packageCenterPage:({fresh=false}={})=>apiCall('GET',packageCenterPageDataUrl({fresh,page:currentPage==='entitlements'?1:purPage,pageSize:currentPage==='entitlements'?15:purPageSize}))
+  ,packageCenterPage:()=>apiCall('GET','/page-data/package-center-list')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
   ,customerCenterPage:({fresh=false}={})=>apiCall('GET',customerCenterPageDataUrl({fresh}))
   ,lifecycleMetricsPage:()=>apiCall('GET',lifecycleMetricsPageDataUrl())
   ,financePage:()=>apiCall('GET',financePageDataUrl())
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
-  ,courtAccountListViewPage:({fresh=false,page=1,pageSize=15,accountType=''}={})=>apiCall('GET',courtAccountListViewPageDataUrl({fresh,page,pageSize,accountType}))
+  ,courtAccountListViewPage:({fresh=false}={})=>apiCall('GET',courtAccountListViewPageDataUrl({fresh}))
   ,courtAccountListViewComparePage:()=>apiCall('GET','/page-data/court-account-list-view-compare?sample=fixed')
   ,operationsPage:()=>loadOperationsPageDataset()
   ,matchesPage:()=>apiCall('GET','/admin/matches')
@@ -670,81 +570,6 @@ function mergeDatasetRowsById(name,rows=[]){
   incoming.forEach(row=>map.set(String(row.id),row));
   setDatasetValue(name,[...map.values()],{persist:false});
 }
-function normalizeServerListPage(data={},view=''){
-  const page=data?.listPage||data;
-  if(!page||!Array.isArray(page.rows))return null;
-  return {
-    view:view||page.view||'',
-    rows:page.rows,
-    total:Number(page.total)||page.rows.length,
-    page:Number(page.page)||1,
-    pageSize:Number(page.pageSize)||page.rows.length||15,
-    pages:Number(page.pages)||1
-  };
-}
-function currentPackageCenterListPage(view){
-  return packageCenterListPages?.[view]||null;
-}
-function currentCustomerCenterListPage(view){
-  return customerCenterListPages?.[view]||null;
-}
-function currentLeadListPage(){
-  return leadListPage||null;
-}
-function mergePackageCenterListPage(data={},view=''){
-  const page=normalizeServerListPage(data,view);
-  if(!page)return null;
-  packageCenterListPages={...packageCenterListPages,[page.view]:page};
-  if(page.view==='purchases')purchaseUnifiedView={...(data.purchaseUnifiedView||purchaseUnifiedView),rows:page.rows};
-  if(page.view==='packages')packageUnifiedView={...(data.packageUnifiedView||packageUnifiedView),rows:page.rows};
-  if(page.view==='entitlements')entitlementUnifiedView={...(data.entitlementUnifiedView||entitlementUnifiedView),rows:page.rows};
-  return page;
-}
-function mergeCustomerCenterListPage(data={},view=''){
-  const page=normalizeServerListPage(data,view);
-  if(!page)return null;
-  customerCenterListPages={...customerCenterListPages,[page.view]:page};
-  teachingStudentViews={...teachingStudentViews,...(data.teachingStudentViews||{}),[page.view]:page.rows};
-  mergeDatasetRowsById('students',page.rows);
-  if(data.standardLifecycleMetrics)standardLifecycleMetrics=data.standardLifecycleMetrics;
-  return page;
-}
-function mergeLeadListPage(data={}){
-  const page=normalizeServerListPage(data,'leads');
-  if(!page)return null;
-  leadListPage=page;
-  leads=page.rows;
-  return page;
-}
-async function loadPackageCenterListPage({view=packageCenterListViewForPage(),page=1,pageSize=15,force=false}={}){
-  if(!view)return null;
-  const requestSeq=++packageCenterListPageRequestSeq;
-  const data=await apiCall('GET',packageCenterPageDataUrl({fresh:force,view,page,pageSize}));
-  if(requestSeq!==packageCenterListPageRequestSeq)return null;
-  return mergePackageCenterListPage(data,view);
-}
-async function loadCustomerCenterListPage({view=customerCenterListViewForPage(),page=1,pageSize=15,force=false}={}){
-  if(!view)return null;
-  const requestSeq=++customerCenterListPageRequestSeq;
-  const data=await apiCall('GET',customerCenterPageDataUrl({fresh:force,view,page,pageSize}));
-  if(requestSeq!==customerCenterListPageRequestSeq)return null;
-  return mergeCustomerCenterListPage(data,view);
-}
-async function loadLeadListPage({page=1,pageSize=15,force=false}={}){
-  const requestSeq=++leadListPageRequestSeq;
-  const data=await apiCall('GET',leadListPageDataUrl({fresh:force,page,pageSize}));
-  if(requestSeq!==leadListPageRequestSeq)return null;
-  return mergeLeadListPage(data);
-}
-async function loadCourtAccountListPage({page=1,pageSize=15,accountType='',force=false}={}){
-  const requestSeq=++courtAccountListPageRequestSeq;
-  const view=await DATASET_LOADERS.courtAccountListViewPage({fresh:force,page,pageSize,accountType});
-  if(requestSeq!==courtAccountListPageRequestSeq)return null;
-  courtAccountListViewData=view||null;
-  courtAccountListViewRequestKey=datasetRequestKey('courtAccountListViewPage');
-  window.__courtAccountListViewData=courtAccountListViewData;
-  return view;
-}
 function mergeTeachingStudentDetail(row){
   if(!row?.id)return;
   const groups=['historicalStudents','activeStudents','courseStudents','trialStudents','formalStudents','trialAttendedStudents','trialAttendedToFormalPurchaseStudents','trialAttendedWithoutFormalStudents','trialPathStudents','trialPathDealStudents','trialPathPendingStudents','directCourseDealStudents'];
@@ -844,7 +669,7 @@ function markLearningDataStale(){
   loadedCourtAccountDetailIds.clear();
   [
     'schedule','students','purchases','entitlements','entitlementLedger','customerLifecycleRows',
-    'leads','customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage','workbenchPage',
+    'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage','workbenchPage',
     'financePage','operationsPage'
   ].forEach(name=>{
     staleCachedDatasets.add(name);
@@ -856,9 +681,6 @@ function markLearningDataStale(){
   purchaseUnifiedView={rows:[]};
   packageUnifiedView={rows:[]};
   entitlementUnifiedView={rows:[]};
-  packageCenterListPages={purchases:null,packages:null,entitlements:null};
-  customerCenterListPages={historicalStudents:null,activeStudents:null};
-  leadListPage=null;
   customerLifecycleRows=[];
   financeOverviewData=null;
   financeNormalizedLedgerRows=[];
@@ -1017,22 +839,15 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
   }));
   results.forEach(([name,data,requestKey])=>{
     if(DATASETS_WITH_REQUEST_KEYS.has(name)&&requestKey!==datasetRequestKey(name))return;
-    if(name==='leads'&&data&&Array.isArray(data.rows)){
-      mergeLeadListPage(data);
-      staleCachedDatasets.delete('leads');
-      markDatasetLoaded('leads',requestKey);
-      return;
-    }
     if(name==='packageCenterPage'){
-      if(data.listPage)mergePackageCenterListPage(data);
-      if(Array.isArray(data.purchases))setDatasetValue('purchases',data.purchases);
-      if(Array.isArray(data.packages))setDatasetValue('packages',data.packages);
-      if(Array.isArray(data.students))setDatasetValue('students',data.students);
-      if(Array.isArray(data.entitlements))setDatasetValue('entitlements',data.entitlements);
-      if(Array.isArray(data.customerLifecycleRows))setDatasetValue('customerLifecycleRows',data.customerLifecycleRows,{persist:false});
-      if(data.purchaseUnifiedView&&!data.listPage)purchaseUnifiedView=data.purchaseUnifiedView||{rows:[]};
-      if(data.packageUnifiedView&&!data.listPage)packageUnifiedView=data.packageUnifiedView||{rows:[]};
-      if(data.entitlementUnifiedView&&!data.listPage)entitlementUnifiedView=data.entitlementUnifiedView||{rows:[]};
+      setDatasetValue('purchases',data.purchases||[]);
+      setDatasetValue('packages',data.packages||[]);
+      setDatasetValue('students',data.students||[]);
+      setDatasetValue('entitlements',data.entitlements||[]);
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      purchaseUnifiedView=data.purchaseUnifiedView||{rows:[]};
+      packageUnifiedView=data.packageUnifiedView||{rows:[]};
+      entitlementUnifiedView=data.entitlementUnifiedView||{rows:[]};
       staleCachedDatasets.delete('purchases');
       staleCachedDatasets.delete('packages');
       staleCachedDatasets.delete('students');
@@ -1065,10 +880,9 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       return;
     }
     if(name==='customerCenterPage'){
-      if(data.listPage)mergeCustomerCenterListPage(data);
-      if(Array.isArray(data.customerLifecycleRows))setDatasetValue('customerLifecycleRows',data.customerLifecycleRows,{persist:false});
-      if(data.teachingStudentViews&&!data.listPage)teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
-      standardLifecycleMetrics=data.standardLifecycleMetrics||standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+      standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
       staleCachedDatasets.delete('customerLifecycleRows');
       markDatasetLoaded('customerCenterPage',requestKey);
       return;
@@ -1216,9 +1030,6 @@ function clearLoadedData(){
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];financePrepaidView={rows:[],summary:{}};membershipFinanceSummary=null;operationsPageData=null;
   coachOpsUnifiedView={rows:[]};purchaseUnifiedView={rows:[]};packageUnifiedView={rows:[]};entitlementUnifiedView={rows:[]};
-  packageCenterListPages={purchases:null,packages:null,entitlements:null};
-  customerCenterListPages={historicalStudents:null,activeStudents:null};
-  leadListPage=null;
   customerLifecycleRows=[];teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   courtAccountListViewRequestKey='';
@@ -1466,12 +1277,7 @@ async function loadCourtReadModelGuardData({force=false,allowStaleOnError=false}
   const requestKey=datasetRequestKey('courtAccountListViewPage');
   if(courtAccountListViewData&&!force&&courtAccountListViewRequestKey===requestKey)return;
   try{
-    const view=await DATASET_LOADERS.courtAccountListViewPage({
-      fresh:force,
-      page:currentPage==='memberships'?membershipPage:courtPage,
-      pageSize:currentPage==='memberships'?membershipPageSize:courtPageSize,
-      accountType:currentPage==='memberships'?'会员账户':''
-    });
+    const view=await DATASET_LOADERS.courtAccountListViewPage({fresh:force});
     courtAccountListViewData=view||null;
     courtAccountListViewRequestKey=requestKey;
     if(force)loadedCourtAccountDetailIds.clear();

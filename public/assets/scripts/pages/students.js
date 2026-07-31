@@ -64,7 +64,7 @@ function studentUnifiedRecordForId(id){
     || students.find(row=>String(row.id||'')===sid)
     || null;
 }
-function onStudentFilterChange(){stuPage=standardListFirstPage();requestStudentListPage();}
+function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents();}
 function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
 }
@@ -504,7 +504,7 @@ function cycleStudentSort(key){
   else if(stuSortDir==='asc')stuSortDir='desc';
   else {stuSortKey='';stuSortDir='';}
   stuPage=standardListFirstPage();
-  requestStudentListPage();
+  renderStudents();
 }
 function updateStudentSortHeaders(){
   document.querySelectorAll('#page-students [data-student-sort]').forEach(btn=>{
@@ -552,34 +552,19 @@ function renderStudentPagerControls(total,pages){
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(stuPage,pages,'setStudentPage');
 }
 function setStudentPage(value){
-  const total=studentServerListPage()?.total||getFilteredStudents().length;
+  const total=getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
-  requestStudentListPage();
+  renderStudents();
 }
 function setStudentPageSize(value){
   stuPageSize=standardListPageSize(value,stuPageSize);
   stuPage=standardListFirstPage();
-  requestStudentListPage();
+  renderStudents();
 }
 function jumpStudentPage(value){
-  const total=studentServerListPage()?.total||getFilteredStudents().length;
+  const total=getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
-  requestStudentListPage();
-}
-function studentServerListPage(){
-  const view=typeof customerCenterListViewForPage==='function'?customerCenterListViewForPage():(studentListViewMode()==='trial'?'historicalStudents':'activeStudents');
-  return typeof currentCustomerCenterListPage==='function'?currentCustomerCenterListPage(view):null;
-}
-function requestStudentListPage(){
-  if(typeof loadCustomerCenterListPage!=='function'){renderStudents();return;}
-  const view=typeof customerCenterListViewForPage==='function'?customerCenterListViewForPage():(studentListViewMode()==='trial'?'historicalStudents':'activeStudents');
-  loadCustomerCenterListPage({view,page:stuPage,pageSize:stuPageSize}).then(page=>{
-    if(page)stuPage=page.page;
-    if(isStudentListPage(currentPage))renderStudents();
-  }).catch(e=>{
-    console.error('student list page load failed',e);
-    toast('学员列表加载失败，请稍后重试','error');
-  });
+  renderStudents();
 }
 function studentCampusValuesForList(stu){
   const values=[stu?.campus,stu?.campusId,stu?.campusName,...parseArr(stu?.campusIds)];
@@ -1004,7 +989,6 @@ function renderStudents(options={}){
   ensureStudentDefaultSort();
   renderStudentTableHeaders();
   updateStudentSortHeaders();
-  const serverPage=studentServerListPage();
   const filteredStudents=getFilteredStudents();
   let list=getSortedStudents(filteredStudents);
   const stats=studentPageStats(filteredStudents);
@@ -1012,9 +996,7 @@ function renderStudents(options={}){
   if(stats.total==null&&typeof renderStandardSkeletonKpiCards==='function')statsHost.innerHTML=renderStandardSkeletonKpiCards(5);
   else statsHost.innerHTML=renderStandardDataCards(studentTopStatsCards(stats));
   const isMobileList=document.body.classList.contains('admin-mobile');
-  const pageState=serverPage
-    ? {total:serverPage.total,pages:serverPage.pages,slice:list,page:serverPage.page,pageSize:serverPage.pageSize}
-    : (isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,stuPage,stuPageSize));
+  const pageState=isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,stuPage,stuPageSize);
   stuPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-students .tms-pagination');

@@ -269,8 +269,8 @@ assert.match(html, /let purPackageFilterValue=''/, 'purchase package filter shou
 assert.match(html, /let purDateRangeFilterValue='全部'/, 'purchase page should keep a top time filter value');
 assert.match(html, /function renderPurchaseTopFilters\([\s\S]*purchaseTopCampus[\s\S]*purchaseTopDate/, 'purchase page should render top campus and time filters');
 assert.match(fnBody('buildCampusTabs'), /currentPage==='purchases'[\s\S]*renderPurchaseTopFilters/, 'purchase page should show top campus and time filters');
-assert.match(html, /function selectPurchaseTopCampus\([\s\S]*refreshPurchaseTopFilters\(\)[\s\S]*requestPurchaseListPage\(\)/, 'purchase top campus selector should refresh orders from the server-side list page');
-assert.match(html, /function onPurchaseDateRangeFilterChange\([\s\S]*purDateRangeFilterValue=value[\s\S]*requestPurchaseListPage\(\)/, 'purchase top time selector should refresh orders from the server-side list page');
+assert.match(html, /function selectPurchaseTopCampus\([\s\S]*refreshPurchaseTopFilters\(\)[\s\S]*renderPurchases\(\)/, 'purchase top campus selector should refresh orders');
+assert.match(html, /function onPurchaseDateRangeFilterChange\([\s\S]*purDateRangeFilterValue=value[\s\S]*renderPurchases\(\)/, 'purchase top time selector should refresh orders');
 assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/, 'purchase filtering should not depend only on the rendered dropdown input');
 assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
 assert.match(fnBody('focusPurchaseByPackage'), /purOwnerCoachFilterValue=coachName\(ownerCoach\|\|''\)/, 'package order drilldown should keep the package owner coach filter');

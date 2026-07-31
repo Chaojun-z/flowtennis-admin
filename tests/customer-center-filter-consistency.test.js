@@ -80,8 +80,8 @@ assert.doesNotMatch(
 
 assert.match(
   functionBody(courtsSource, 'renderCourtAccountListView'),
-  /const summary=courtAccountListViewData\?\.summary\|\|FlowTennisPlatformDataStandards\.currentCourtAccountSummary\(list\);[\s\S]*renderCourtStatsCards\(summary\);/,
-  '订场用户顶部必须优先使用服务端当前筛选汇总，旧数据兜底时才按当前列表汇总'
+  /const summary=FlowTennisPlatformDataStandards\.currentCourtAccountSummary\(list\);[\s\S]*renderCourtStatsCards\(summary\);/,
+  '订场用户顶部必须基于当前筛选后的订场用户列表汇总'
 );
 assert.doesNotMatch(
   functionBody(courtsSource, 'renderCourtAccountListView'),
@@ -96,8 +96,8 @@ assert.match(
 
 assert.match(
   functionBody(courtsSource, 'renderMemberships'),
-  /const stats=serverPaging&&courtAccountListViewData\?\.summary\?\.membershipSummary[\s\S]*: FlowTennisPlatformDataStandards\.currentMembershipSummary\(rows\);[\s\S]*renderMembershipStats\(stats\);/,
-  '会员管理顶部必须优先使用服务端当前筛选汇总，旧数据兜底时才按当前列表汇总'
+  /const stats=FlowTennisPlatformDataStandards\.currentMembershipSummary\(rows\);[\s\S]*renderMembershipStats\(stats\);/,
+  '会员管理顶部必须基于当前筛选后的会员列表汇总'
 );
 assert.doesNotMatch(
   functionBody(courtsSource, 'renderMembershipStats'),

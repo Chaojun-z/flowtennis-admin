@@ -684,20 +684,9 @@ function filterCourtAccountItems(items = [], options = {}) {
   const q = String(options.q || '').trim();
   const owner = String(options.owner || '').trim();
   const accountType = String(options.accountType || '').trim();
-  const membershipTier = String(options.membershipTier || '').trim();
-  const scope = {
-    campus: String(options.campus || '').trim(),
-    campusName: String(options.campusName || '').trim(),
-    startDate: String(options.startDate || '').trim(),
-    endDate: String(options.endDate || '').trim()
-  };
-  const hasScope = !!((scope.campus && scope.campus !== 'all') || (scope.campusName && scope.campusName !== 'all') || scope.startDate || scope.endDate);
   return (items || []).filter(item => {
     if (owner && String(item.owner || '').trim() !== owner) return false;
     if (accountType && String(item.accountType || '').trim() !== accountType) return false;
-    if (membershipTier && String(item.membershipTierLabel || '').trim() !== membershipTier) return false;
-    if (hasScope && !courtItemMatchesScope(item, scope)) return false;
-    if ((scope.startDate || scope.endDate) && (Number(scopedCourtItem(item, scope).bookingCount) || 0) <= 0) return false;
     return textSearchHit(q, item.displayName, item.phone, item.campusName, item.owner, item.depositAttitude, item.notesSummary, item.balance, item.totalDeposit, item.totalSpent, item.totalReceived, item.linkedStudentSummary, item.membershipTierLabel, item.membershipStatus);
   });
 }
@@ -716,29 +705,6 @@ function buildCourtChainMetricsFromItems(items = []) {
     memberConversionRate: rate(memberItems.length, courtUsers.length),
     memberRepeatRate: rate(memberRepeatCount, memberItems.length),
     courtRepeatRate: rate(repeatBookingCount, courtUsers.length)
-  };
-}
-
-function buildMembershipSummary(items = []) {
-  const base = (items || []).filter(item => item?.accountType === '会员账户');
-  const rechargeRows = base.flatMap(item => Array.isArray(item.rechargeRows) ? item.rechargeRows : []);
-  const paidAmount = money(rechargeRows.length
-    ? rechargeRows.reduce((sum, row) => sum + money(row.paidAmount ?? row.rechargeAmount ?? row.finalAmount ?? row.amount), 0)
-    : base.reduce((sum, row) => sum + money(row.totalDeposit), 0));
-  const bonusAmount = money(rechargeRows.length
-    ? rechargeRows.reduce((sum, row) => sum + money(row.bonusAmount), 0)
-    : base.reduce((sum, row) => sum + money(row.totalBonus || row.bonusAmount), 0));
-  const pendingAmount = money(base.reduce((sum, row) => sum + money(row.balance), 0));
-  const consumableAmount = paidAmount + bonusAmount > 0 ? money(paidAmount + bonusAmount) : pendingAmount;
-  const consumedAmount = money(Math.max(0, consumableAmount - pendingAmount));
-  return {
-    memberCount: base.length,
-    rechargeCount: base.reduce((sum, row) => sum + ((Array.isArray(row.rechargeRows) && row.rechargeRows.length) || (Number(row.membershipRechargeCount) || 0)), 0),
-    paidAmount,
-    bonusAmount,
-    consumableAmount,
-    consumedAmount,
-    pendingAmount
   };
 }
 
@@ -772,7 +738,6 @@ function buildCourtAccountListViewFromData(source = {}, options = {}) {
   const items = (includeDetails ? detailPageItems : detailPageItems.map(courtAccountLightListItem));
   const summary = buildSummary(filteredDetailItems);
   summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: filteredDetailItems });
-  summary.membershipSummary = buildMembershipSummary(filteredDetailItems);
   return {
     summary,
     filters: buildFilters({ items: detailItems, campuses }),
@@ -824,22 +789,7 @@ function createCourtAccountListViewLoader(deps) {
       membershipPlans,
       membershipBenefitLedger,
       membershipAccountEvents
-    }, {
-      sampleIds,
-      sample: options.sample,
-      useLegacy,
-      includeDetails: options.includeDetails === true,
-      page: options.page,
-      pageSize: options.pageSize,
-      q: options.q,
-      owner: options.owner,
-      accountType: options.accountType,
-      membershipTier: options.membershipTier,
-      campus: options.campus,
-      campusName: options.campusName,
-      startDate: options.startDate,
-      endDate: options.endDate
-    });
+    }, { sampleIds, sample: options.sample, useLegacy, includeDetails: options.includeDetails === true, page: options.page, pageSize: options.pageSize, q: options.q, owner: options.owner, accountType: options.accountType });
   };
 }
 

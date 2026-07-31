@@ -43,7 +43,7 @@ function onCourtToolbarFilterChange(){
   courtOwnerFilterValue=document.getElementById('courtOwnerValue')?.value||'';
   courtAccountTypeFilterValue=document.getElementById('courtAccountTypeValue')?.value||'';
   courtPage=1;
-  requestCourtAccountListPage();
+  renderCourts();
 }
 function selectCourtTopCampus(value,event){
   if(event)event.stopPropagation();
@@ -51,7 +51,7 @@ function selectCourtTopCampus(value,event){
   localStorage.setItem(CAMPUS_KEY,campus);
   courtPage=1;
   refreshCourtTopFilters();
-  requestCourtAccountListPage();
+  renderCourts();
   closeStandardTopDropdowns();
 }
 function isGlobalDateRangeDraftContext(){
@@ -177,7 +177,7 @@ function clearCourtCustomDateRange(event){
   courtDateRangeFilterValue='全部';
   if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
   refreshCourtTopFilters();
-  requestCourtAccountListPage();
+  renderCourts();
   closeStandardTopDropdowns();
 }
 function confirmCourtCustomDateRange(event){
@@ -192,7 +192,7 @@ function confirmCourtCustomDateRange(event){
   }else{
     if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
     refreshCourtTopFilters();
-    requestCourtAccountListPage();
+    renderCourts();
   }
   closeStandardTopDropdowns();
 }
@@ -240,18 +240,18 @@ function onCourtDateRangeFilterChange(value,event){
   courtPage=1;
   if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(true);
   refreshCourtTopFilters();
-  requestCourtAccountListPage();
+  renderCourts();
   closeStandardTopDropdowns();
 }
 function setCourtPageSize(value){
   const next=parseInt(value,10)||20;
   courtPageSize=next;
   courtPage=1;
-  requestCourtAccountListPage();
+  renderCourts();
 }
 function onCourtFilterChange(){
   courtPage=1;
-  requestCourtAccountListPage();
+  renderCourts();
 }
 function handleCourtMoreAction(value){
   const action=value||document.getElementById('courtMoreActionValue')?.value||'';
@@ -274,7 +274,7 @@ function setCourtSort(key){
   else if(courtSortDir==='desc')courtSortDir='asc';
   else{courtSortKey='';courtSortDir='desc';}
   courtPage=1;
-  requestCourtAccountListPage();
+  renderCourts();
 }
 function courtPageNumbers(page,pages){
   if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
@@ -293,26 +293,16 @@ function renderCourtPagerControls(total,pages){
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(courtPage,pages,'setCourtPage');
 }
 function setCourtPage(value){
-  const total=Number(courtAccountListViewData?.pagination?.total)||(courtAccountListViewData?.items||courts||[]).length;
+  const total=(courtAccountListViewData?.items||courts||[]).length;
   const pages=Math.max(1,Math.ceil(total/courtPageSize));
   courtPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
-  requestCourtAccountListPage();
+  renderCourts();
 }
 function jumpCourtPage(value){
-  const total=Number(courtAccountListViewData?.pagination?.total)||(courtAccountListViewData?.items||courts||[]).length;
+  const total=(courtAccountListViewData?.items||courts||[]).length;
   const pages=Math.max(1,Math.ceil(total/courtPageSize));
   courtPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
-  requestCourtAccountListPage();
-}
-function requestCourtAccountListPage(){
-  if(typeof loadCourtAccountListPage!=='function'){renderCourts();return;}
-  loadCourtAccountListPage({page:courtPage,pageSize:courtPageSize}).then(view=>{
-    if(view?.pagination)courtPage=view.pagination.page;
-    if(currentPage==='courts')renderCourts();
-  }).catch(e=>{
-    console.error('court account list page load failed',e);
-    toast('订场用户加载失败，请稍后重试','error');
-  });
+  renderCourts();
 }
 
 function membershipPlansTableHtml(q=''){
@@ -456,11 +446,11 @@ function renderMembershipHeaderFilters(rows=[]){
 function onMembershipToolbarFilterChange(){
   membershipTierFilterValue=document.getElementById('membershipTierValue')?.value||'';
   membershipPage=1;
-  requestMembershipListPage();
+  renderMemberships();
 }
 function onMembershipSearchChange(){
   membershipPage=1;
-  requestMembershipListPage();
+  renderMemberships();
 }
 function membershipDefaultSortDir(key){
   return 'desc';
@@ -471,13 +461,13 @@ function setMembershipSort(key){
   else if(membershipSortDir===initialDir)membershipSortDir=initialDir==='asc'?'desc':'asc';
   else{membershipSortKey='';membershipSortDir='desc';}
   membershipPage=1;
-  requestMembershipListPage();
+  renderMemberships();
 }
 function setMembershipPageSize(value){
   const next=parseInt(value,10);
   membershipPageSize=standardListPageSize(next,membershipPageSize);
   membershipPage=1;
-  requestMembershipListPage();
+  renderMemberships();
 }
 function membershipPageNumbers(page,pages){
   if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
@@ -498,26 +488,16 @@ function renderMembershipPagerControls(total,pages){
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(membershipPage,pages,'setMembershipPage');
 }
 function setMembershipPage(value){
-  const total=Number(courtAccountListViewData?.pagination?.total)||membershipBaseRows().length;
+  const total=membershipBaseRows().length;
   const pages=Math.max(1,Math.ceil(total/membershipPageSize));
   membershipPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
-  requestMembershipListPage();
+  renderMemberships();
 }
 function jumpMembershipPage(value){
-  const total=Number(courtAccountListViewData?.pagination?.total)||getMembershipRows().length;
+  const total=getMembershipRows().length;
   const pages=Math.max(1,Math.ceil(total/membershipPageSize));
   membershipPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
-  requestMembershipListPage();
-}
-function requestMembershipListPage(){
-  if(typeof loadCourtAccountListPage!=='function'){renderMemberships();return;}
-  loadCourtAccountListPage({page:membershipPage,pageSize:membershipPageSize,accountType:'会员账户'}).then(view=>{
-    if(view?.pagination)membershipPage=view.pagination.page;
-    if(currentPage==='memberships')renderMemberships();
-  }).catch(e=>{
-    console.error('membership list page load failed',e);
-    toast('会员列表加载失败，请稍后重试','error');
-  });
+  renderMemberships();
 }
 function membershipSortMetric(row,key){
   if(key==='balance')return {empty:false,value:membershipReadModelFinanceForCourt(row).balance};
@@ -551,12 +531,9 @@ function renderMembershipMobileCards(list){
 }
 function renderMemberships(){
   const body=document.getElementById('membershipTbody');if(!body)return;
-  const serverPaging=courtAccountListViewData?.pagination||null;
   renderMembershipHeaderFilters(membershipBaseRows());
-  const rows=serverPaging?membershipBaseRows():getMembershipRows();
-  const stats=serverPaging&&courtAccountListViewData?.summary?.membershipSummary
-    ? courtAccountListViewData.summary.membershipSummary
-    : FlowTennisPlatformDataStandards.currentMembershipSummary(rows);
+  const rows=getMembershipRows();
+  const stats=FlowTennisPlatformDataStandards.currentMembershipSummary(rows);
   renderMembershipStats(stats);
   const sortedRows=[...rows];
   if(membershipSortKey){
@@ -568,9 +545,9 @@ function renderMemberships(){
     });
   }
   const isMobileList=document.body.classList.contains('admin-mobile');
-  const total=Number(serverPaging?.total)||sortedRows.length,pages=Number(serverPaging?.pages)||(isMobileList?1:Math.max(1,Math.ceil(total/membershipPageSize)));
+  const total=sortedRows.length,pages=isMobileList?1:Math.max(1,Math.ceil(total/membershipPageSize));
   if(membershipPage>pages)membershipPage=pages;
-  const slice=serverPaging?sortedRows:(isMobileList?sortedRows:sortedRows.slice((membershipPage-1)*membershipPageSize,membershipPage*membershipPageSize));
+  const slice=isMobileList?sortedRows:sortedRows.slice((membershipPage-1)*membershipPageSize,membershipPage*membershipPageSize);
   body.innerHTML=slice.map(item=>{const finance=membershipReadModelFinanceForCourt(item);const booking=membershipReadModelBookingForCourt(item);const benefitRows=membershipReadModelBenefitRowsForCourt(item);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'-';const tierLabel=item.membershipTierLabel||'-';const firstOpenDate=String(item.firstOpenDate||'').slice(0,10);const renewalCount=Math.max(0,Number(item.membershipRenewalCount)||0);const memberBookingCount=Number(item.memberBookingCount??booking.memberCount)||0;const bookingCount=Number(item.bookingCount??booking.count)||0;const lowBalance=finance.balance>0&&finance.balance<=500;return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(item.displayName)}</div></td><td>${renderStandardCellText(item.phone)}</td><td>${tierLabel==='-'?'-':`<span class="tms-tag ${courtMembershipTierTagClass(tierLabel)}">${esc(tierLabel)}</span>`}</td><td>${renderStandardCellText(firstOpenDate,false)}</td><td><div class="tms-cell-text">${renewalCount}次</div></td><td>${renderCourtMiniBar(finance.balance,finance.totalDeposit,lowBalance)}</td><td>${renderStandardCellText(item.membershipDiscountText,false)}</td><td><div class="tms-cell-text">${memberBookingCount}次</div></td><td><div class="tms-cell-text">${bookingCount}次</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px;color:#A3968F">${esc(renderStandardEmptyText(benefits))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:90px;padding-right:12px;text-align:right"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;}).join('')||'<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员账户</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
   renderMembershipMobileCards(slice);
   const pagerInfo=document.getElementById('membershipPagerInfo');
@@ -1163,7 +1140,6 @@ function getCurrentCourtAccountRows(){
 function renderCourtAccountListView(){
   document.getElementById('page-courts')?.classList.toggle('court-batch-mode',courtBatchMode);
   window.__courtAccountListViewCompare=courtAccountListViewCompareData||null;
-  const serverPaging=courtAccountListViewData?.pagination||null;
   const visibleItems=(courtAccountListViewData?.items||[]).filter(Boolean);
   const base=visibleItems.filter(item=>campus==='all'||sameCampusValue(item.campusCode,campus));
   const filters=courtAccountListViewData?.filters||{};
@@ -1172,7 +1148,7 @@ function renderCourtAccountListView(){
     accountTypes:['会员账户','普通账户']
   };
   renderCourtHeaderFilters(base,scopedFilters);
-  let list=serverPaging?visibleItems:getCurrentCourtAccountRows();
+  let list=getCurrentCourtAccountRows();
   const sortedList=[...list];
   if(courtSortKey){
     sortedList.sort((a,b)=>{
@@ -1184,12 +1160,12 @@ function renderCourtAccountListView(){
   }else{
     sortedList.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   }
-  const summary=courtAccountListViewData?.summary||FlowTennisPlatformDataStandards.currentCourtAccountSummary(list);
+  const summary=FlowTennisPlatformDataStandards.currentCourtAccountSummary(list);
   renderCourtStatsCards(summary);
   const isMobileList=document.body.classList.contains('admin-mobile');
-  const total=Number(serverPaging?.total)||sortedList.length,pages=Number(serverPaging?.pages)||(isMobileList?1:Math.max(1,Math.ceil(total/courtPageSize)));
+  const total=sortedList.length,pages=isMobileList?1:Math.max(1,Math.ceil(total/courtPageSize));
   if(courtPage>pages)courtPage=pages;
-  const slice=serverPaging?sortedList:(isMobileList?sortedList:sortedList.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize));
+  const slice=isMobileList?sortedList:sortedList.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize);
   const pager=document.querySelector('#page-courts .tms-pagination');
   if(pager)pager.style.display=!isMobileList&&pages>1?'flex':'none';
   document.getElementById('courtPagerInfo').innerHTML=renderPagerInfoHtml(total);

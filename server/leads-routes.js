@@ -22,16 +22,6 @@ function createLeadsRoutes(deps={}){
     return values.some(v=>String(v||'').toLowerCase().includes(keyword));
   }
 
-  function splitQueryList(value){
-    return cleanLeadText(value).split(',').map(cleanLeadText).filter(Boolean);
-  }
-
-  function leadFieldHit(expected,...values){
-    const target=cleanLeadText(expected);
-    if(!target)return true;
-    return values.some(value=>cleanLeadText(value)===target);
-  }
-
   function parseLeadPaging(query){
     const enabled=query?.get('paged')==='1'||query?.get('page')||query?.get('pageSize');
     if(!enabled)return null;
@@ -435,14 +425,9 @@ function createLeadsRoutes(deps={}){
         const q=cleanLeadText(query.get('q')).toLowerCase();
         const rows=await readVisibleLeadRows({expandLifecycleSearch:!!q});
         const source=cleanLeadText(query.get('source'));
-        const customerType=cleanLeadText(query.get('customerType'));
         const consultType=cleanLeadText(query.get('consultType'));
-        const dealType=cleanLeadText(query.get('dealType'));
         const owner=cleanLeadText(query.get('owner'));
-        const owners=splitQueryList(query.get('owners')||owner);
-        const campus=cleanLeadText(query.get('campus'));
         const systemStatus=cleanLeadText(query.get('systemStatus'));
-        const stage=cleanLeadText(query.get('stage'));
         const waiting=cleanLeadText(query.get('waiting'));
         const dateFrom=cleanLeadText(query.get('dateFrom'));
         const dateTo=cleanLeadText(query.get('dateTo'));
@@ -451,14 +436,10 @@ function createLeadsRoutes(deps={}){
         const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
         const filtered=visibleRows.filter(row=>{
           if(q&&!leadSearchHit(q,row.displayName,row.wechatName,row.name,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.leadStage,row.studentStage,row.courtStage,row.membershipStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
-          if(source&&!leadFieldHit(source,row.source,row.sourceText,row.channel))return false;
-          if(customerType&&!leadFieldHit(customerType,row.customerType,row.type,row.studentType,row.customerTypeText))return false;
-          if(consultType&&!leadFieldHit(consultType,row.consultType,row.demandProduct,row.demandProductText,row.productType))return false;
-          if(dealType&&!leadFieldHit(dealType,row.dealType,row.conversionType,row.dealTypeText))return false;
-          if(owners.length&&!owners.includes(cleanLeadText(row.owner)))return false;
-          if(campus&&campus!=='all'&&!leadFieldHit(campus,row.campus,row.campusId,row.campusCode,row.campusName))return false;
+          if(source&&row.source!==source)return false;
+          if(consultType&&row.consultType!==consultType)return false;
+          if(owner&&row.owner!==owner)return false;
           if(systemStatus&&row.systemStatus!==systemStatus)return false;
-          if(stage&&!leadFieldHit(stage,row.leadStage,row.systemStatus,row.rawStatus,row.status))return false;
           if(dateFrom&&String(row.leadDate||'')<dateFrom)return false;
           if(dateTo&&String(row.leadDate||'')>dateTo)return false;
           if(waiting==='today'&&String(row.nextFollowupAt||'').slice(0,10)!==todayStr)return false;
