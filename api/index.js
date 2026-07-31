@@ -3310,7 +3310,7 @@ function collectCoachDailyDigestCandidates(rows=[],now=new Date(),options={}){
     .filter(schedule=>{
       if(effectiveScheduleStatus(schedule,now)!=='已排课')return false;
       if(dateKey(schedule.startTime)!==digestDate)return false;
-      return String(schedule?.[sentDateField]||'').trim()!==digestDate;
+      return options?.includeSent||String(schedule?.[sentDateField]||'').trim()!==digestDate;
     })
     .sort((a,b)=>dateMs(a.startTime)-dateMs(b.startTime))
     .forEach(schedule=>{
@@ -3709,10 +3709,10 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
   }
   return result;
 }
-async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch,buildPosterPng=buildCoachDailyDigestPosterPng,uploadImage=uploadFeishuImage,sendImage=sendFeishuBotImageMessage,sendText=sendFeishuBotTextMessage,sendPosterMessage=sendFeishuCoachDigestPosterMessage,targetCoach='',markSent=true,phoneOverrides=FEISHU_COACH_DIGEST_PHONE_OVERRIDES,openIdOverrides=FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES}={}){
+async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch,buildPosterPng=buildCoachDailyDigestPosterPng,uploadImage=uploadFeishuImage,sendImage=sendFeishuBotImageMessage,sendText=sendFeishuBotTextMessage,sendPosterMessage=sendFeishuCoachDigestPosterMessage,targetCoach='',markSent=true,force=false,phoneOverrides=FEISHU_COACH_DIGEST_PHONE_OVERRIDES,openIdOverrides=FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES}={}){
   const [resolvedRows,resolvedUsers,resolvedCoaches]=await Promise.all([rows||loadRows(),users||loadUsers(),coaches||loadCoaches()]);
   const targetCoachKey=normalizeCoachDigestName(targetCoach);
-  const candidates=collectCoachDailyDigestCandidates(resolvedRows,now,{sentDateField:'feishuCoachDailyDigestSentDate'}).filter(item=>!targetCoachKey||String(item.coachId||'')===String(targetCoach||'').trim()||normalizeCoachDigestName(item.coachName)===targetCoachKey);
+  const candidates=collectCoachDailyDigestCandidates(resolvedRows,now,{sentDateField:'feishuCoachDailyDigestSentDate',includeSent:!!(force&&targetCoachKey)}).filter(item=>!targetCoachKey||String(item.coachId||'')===String(targetCoach||'').trim()||normalizeCoachDigestName(item.coachName)===targetCoachKey);
   const result={success:true,checked:candidates.length,sent:0,failed:0,skipped:0,items:[]};
   if(!String(appId||'').trim()||!String(appSecret||'').trim()){
     return {...result,success:true,skipped:candidates.length,reason:'missing_feishu_credentials',items:candidates.map(item=>({coachId:item.coachId,skipped:true,reason:'missing_feishu_credentials'}))};
@@ -7009,7 +7009,7 @@ module.exports = async (req, res) => {
         return sendJson(res,{error:'无权限'},403);
       }
       await init();
-      return sendJson(res,await sendFeishuCoachDailyDigests({targetCoach:query.get('coach')||query.get('coachName')||query.get('coachId')||'',markSent:query.get('markSent')!=='false',phoneOverrides:req.headers['x-feishu-coach-digest-phone-overrides']||FEISHU_COACH_DIGEST_PHONE_OVERRIDES,openIdOverrides:req.headers['x-feishu-coach-digest-open-id-overrides']||FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES}));
+      return sendJson(res,await sendFeishuCoachDailyDigests({targetCoach:query.get('coach')||query.get('coachName')||query.get('coachId')||'',markSent:query.get('markSent')!=='false',force:query.get('force')==='true',phoneOverrides:req.headers['x-feishu-coach-digest-phone-overrides']||FEISHU_COACH_DIGEST_PHONE_OVERRIDES,openIdOverrides:req.headers['x-feishu-coach-digest-open-id-overrides']||FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES}));
     }
     if(path==='/cron/third-party-sync-center'&&await handleThirdPartySyncCenterRoutes({path,method,body,req,res,query}))return;if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
     if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;

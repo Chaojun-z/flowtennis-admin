@@ -1516,6 +1516,27 @@ assert.strictEqual(
   }
 
   {
+    const rows=[
+      { id:'force-1', coachId:'coach-lin', coach:'林铭教练', startTime:'2026-05-20 10:00', endTime:'2026-05-20 11:00', campus:'shunyi_mapo', venue:'4号场', courseType:'私教课', studentName:'Andy', status:'已排课', feishuCoachDailyDigestSentDate:'2026-05-20' }
+    ];
+    const result=await rules.sendFeishuCoachDailyDigests({
+      now:new Date('2026-05-19 20:02:00'),
+      rows,
+      users:[{ id:'lming', role:'editor', coachId:'coach-lin', coachName:'林铭', feishuOpenId:'ou_linming' }],
+      coaches:[],
+      appId:'cli_app',
+      appSecret:'secret',
+      fetchImpl:async url=>String(url).includes('/auth/v3/tenant_access_token/internal')?{ok:true,text:async()=>JSON.stringify({code:0,tenant_access_token:'tenant-token',expire:7200})}: (()=>{throw new Error(`unexpected url ${url}`);})(),
+      sendPosterMessage:async ()=>({poster:true,fallback:'',posterError:''}),
+      putSchedule:async ()=>{},
+      targetCoach:'林铭教练',
+      force:true
+    });
+    assert.strictEqual(result.checked,1,'manual force send should include the selected coach even when already marked sent');
+    assert.strictEqual(result.sent,1,'manual force send should resend the selected coach poster');
+  }
+
+  {
     const token='flowtennisoa2026';
     const appId='wx4c76dc29b1d48df3';
     const now=new Date('2026-05-19 20:02:00');

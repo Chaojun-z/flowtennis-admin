@@ -13,6 +13,10 @@ on:
         description: '是否写入已发送标记；测试单发建议 false'
         required: false
         default: 'true'
+      force:
+        description: '是否忽略已发送标记；只用于指定单个教练补发'
+        required: false
+        default: 'false'
 
 permissions:
   contents: read
@@ -27,6 +31,7 @@ jobs:
       TARGET_URL: https://www.flowtennis.cn/api/cron/feishu-coach-daily-digests
       COACH_NAME: ${{ inputs.coachName || '' }}
       MARK_SENT: ${{ inputs.markSent || 'true' }}
+      FORCE: ${{ inputs.force || 'false' }}
       PHONE_OVERRIDES: ${{ secrets.FEISHU_COACH_DIGEST_PHONE_OVERRIDES || '' }}
       OPEN_ID_OVERRIDES: ${{ secrets.FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES || '' }}
 
@@ -34,7 +39,7 @@ jobs:
       - name: Trigger feishu coach digest endpoint
         shell: bash
         run: |
-          query="$(node -e 'const p=new URLSearchParams(); if(process.env.COACH_NAME)p.set("coachName",process.env.COACH_NAME); if(process.env.MARK_SENT)p.set("markSent",process.env.MARK_SENT); process.stdout.write(p.toString() ? `?${p}` : "");')"
+          query="$(node -e 'const p=new URLSearchParams(); if(process.env.COACH_NAME)p.set("coachName",process.env.COACH_NAME); if(process.env.MARK_SENT)p.set("markSent",process.env.MARK_SENT); if(process.env.FORCE)p.set("force",process.env.FORCE); process.stdout.write(p.toString() ? `?${p}` : "");')"
           curl_args=(-fsS -X GET "$TARGET_URL$query" -H "User-Agent: vercel-cron")
           if [ -n "${CRON_SECRET:-}" ]; then
             curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
