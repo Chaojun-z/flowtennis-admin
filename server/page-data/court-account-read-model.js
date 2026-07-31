@@ -669,6 +669,12 @@ function parsePositiveInt(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+async function readRowsByIds({ table, ids = [], getCachedRow }) {
+  const normalized = [...new Set((ids || []).map(item => String(item || '').trim()).filter(Boolean))];
+  if (!table || !normalized.length || typeof getCachedRow !== 'function') return [];
+  return (await Promise.all(normalized.map(id => getCachedRow(table, id).catch(() => null)))).filter(Boolean);
+}
+
 function buildListPage(rows = [], options = {}) {
   if (!options.page && !options.pageSize) return null;
   const pageSize = Math.max(1, Math.min(parsePositiveInt(options.pageSize, 15), 100));
@@ -794,7 +800,11 @@ function createCourtAccountListViewLoader(deps) {
   const {
     listCampusesWithDefaults,
     getCachedScan,
+    getCachedRow,
     tables,
+    courtColumns = [],
+    studentColumns = [],
+    leadColumns = [],
     fixedSampleAccounts = []
   } = deps;
 
@@ -802,17 +812,35 @@ function createCourtAccountListViewLoader(deps) {
     const sampleIds = resolveSampleIds({ sampleIds: options.sampleIds, sample: options.sample, fixedSampleAccounts });
     const useLegacy = options.useLegacy === true;
     const scanOptions = options.forceFresh ? { fresh: true } : {};
-    const scanRows = (table) => getCachedScan(table, scanOptions).catch(() => []);
-    const [campuses, students, courts, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents] = await Promise.all([
+    const scanRows = (table, columns = []) => table ? getCachedScan(table, { ...scanOptions, ...(columns.length ? { columns } : {}) }).catch(() => []) : Promise.resolve([]);
+    const detailById = options.includeDetails === true && sampleIds.length > 0 && typeof getCachedRow === 'function';
+    const courtsPromise = detailById
+      ? readRowsByIds({ table: tables.courts, ids: sampleIds, getCachedRow })
+      : scanRows(tables.courts, courtColumns);
+    const [campuses, courts, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents] = await Promise.all([
       listCampusesWithDefaults(),
-      scanRows(tables.students),
-      scanRows(tables.courts),
-      scanRows(tables.leads),
+      courtsPromise,
       scanRows(tables.membershipAccounts),
       scanRows(tables.membershipOrders),
       scanRows(tables.membershipPlans),
       scanRows(tables.membershipBenefitLedger),
       scanRows(tables.membershipAccountEvents)
+    ]);
+    const linkedStudentIds = [...new Set((courts || []).flatMap(row => [
+      row?.studentId,
+      ...parseArr(row?.studentIds)
+    ]).map(item => String(item || '').trim()).filter(Boolean))];
+    const linkedLeadIds = [...new Set((courts || []).flatMap(row => [
+      row?.sourceLeadId,
+      row?.leadId,
+      row?.fromLeadId
+    ]).map(item => String(item || '').trim()).filter(Boolean))];
+    const [students, leads] = detailById ? await Promise.all([
+      readRowsByIds({ table: tables.students, ids: linkedStudentIds, getCachedRow }),
+      readRowsByIds({ table: tables.leads, ids: linkedLeadIds, getCachedRow })
+    ]) : await Promise.all([
+      scanRows(tables.students, studentColumns),
+      scanRows(tables.leads, leadColumns)
     ]);
     return buildCourtAccountListViewFromData({
       campuses,
