@@ -47,6 +47,45 @@ assert.deepStrictEqual(
   '线索池统一生命周期统计未就绪时，顶部五张卡必须整体等待，不能用列表字段兜底显示假数字或 0'
 );
 
+context.currentLeadListPage = () => ({
+  total: 28,
+  rows: Array.from({ length: 15 }, (_, index) => ({ id: `lead-page-${index}` })),
+  summary: {
+    total: 28,
+    historicalStudents: 20,
+    activeStudents: 12,
+    trialAttended: 18,
+    trialAttendedToFormalPurchase: 9
+  }
+});
+const pagedSummaryStats = context.leadStatsData([{ id: 'lead-page-1' }]);
+assert.deepStrictEqual(
+  {
+    total: pagedSummaryStats.total,
+    historicalStudents: pagedSummaryStats.historicalStudents,
+    historicalStudentRate: pagedSummaryStats.historicalStudentRate,
+    activeStudents: pagedSummaryStats.activeStudents,
+    activeStudentRate: pagedSummaryStats.activeStudentRate,
+    trialAttended: pagedSummaryStats.trialAttended,
+    trialAttendedRate: pagedSummaryStats.trialAttendedRate,
+    trialAttendedToFormalPurchase: pagedSummaryStats.trialAttendedToFormalPurchase,
+    trialAttendedToFormalPurchaseRate: pagedSummaryStats.trialAttendedToFormalPurchaseRate
+  },
+  {
+    total: 28,
+    historicalStudents: 20,
+    historicalStudentRate: '71.4%',
+    activeStudents: 12,
+    activeStudentRate: '60%',
+    trialAttended: 18,
+    trialAttendedRate: '64.3%',
+    trialAttendedToFormalPurchase: 9,
+    trialAttendedToFormalPurchaseRate: '50%'
+  },
+  '线索池分页加载时，顶部统计必须使用服务端筛选后汇总，不能被当前页 15 条覆盖'
+);
+context.currentLeadListPage = () => null;
+
 context.datasetHasCurrentRequestKey = () => true;
 context.standardLifecycleMetrics = {
   teachingSummary: {

@@ -9,7 +9,8 @@ let studentReminderLinkGenerating=false;
 let studentSortMode='';
 const STUDENT_DEAL_PATH_LABELS=['体验转化','直接成交','老客续费'];
 function studentListViewMode(){
-  return currentPage==='trial-students'?'trial':'package';
+  const page=typeof normalizeStudentListPage==='function'?normalizeStudentListPage(currentPage):currentPage;
+  return page==='trial-students'?'trial':'package';
 }
 function studentPackageRecordIsTrial(row={}){
   const lifecycle=studentLifecycleRow(row)||{};

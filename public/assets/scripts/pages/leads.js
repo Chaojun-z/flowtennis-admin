@@ -792,6 +792,19 @@ function leadTrialCourseConverted(lead){
   return leadTrialDone(lead)&&leadCourseConverted(lead);
 }
 function leadStatsData(list){
+  const page=leadServerListPage();
+  const summary=page?.summary||null;
+  if(summary)return {
+    total:Number(summary.total)||0,
+    historicalStudents:Number(summary.historicalStudents)||0,
+    historicalStudentRate:summary.historicalStudentRate||leadCurrentListRateText(summary.historicalStudents,summary.total),
+    activeStudents:Number(summary.activeStudents)||0,
+    activeStudentRate:summary.activeStudentRate||leadCurrentListRateText(summary.activeStudents,summary.historicalStudents),
+    trialAttended:Number(summary.trialAttended)||0,
+    trialAttendedRate:summary.trialAttendedRate||leadCurrentListRateText(summary.trialAttended,summary.total),
+    trialAttendedToFormalPurchase:Number(summary.trialAttendedToFormalPurchase)||0,
+    trialAttendedToFormalPurchaseRate:summary.trialAttendedToFormalPurchaseRate||leadCurrentListRateText(summary.trialAttendedToFormalPurchase,summary.trialAttended)
+  };
   if(!leadLifecycleMetricsReady())return leadStatsLoadingData();
   return FlowTennisPlatformDataStandards.currentLeadSummary(list, leadStandardMetrics());
 }
