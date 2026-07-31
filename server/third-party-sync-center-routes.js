@@ -25,6 +25,15 @@ const THIRD_PARTY_SYNC_TABLES = [
   T_THIRD_PARTY_SYNC_ALERTS,
   T_THIRD_PARTY_SYNC_ROLLBACKS
 ];
+const THIRD_PARTY_LOCK_RULES = Object.freeze([
+  { id: 'internal-occupancy', pattern: /清洗|打扫|维修|领导|内部使用/, finalType: '内部占用', businessCategory: '内部占用', processLayer: 'occupancy', paymentMethod: '不涉及支付' },
+  { id: 'coach-booking-xiaozhe', pattern: /晓哲|小哲/, requirePattern: /定场|订场/, finalType: '教练代订场', businessCategory: '教练代订场', processLayer: 'booking_finance', paymentMethod: '微信转账' },
+  { id: 'ball-machine', pattern: /发球机/, finalType: '订场+发球机', businessCategory: '订场+发球机', processLayer: 'booking_extra_service', serviceType: '发球机' },
+  { id: 'companion', pattern: /陪打/, finalType: '订场陪打', businessCategory: '订场陪打', processLayer: 'booking_extra_service', serviceType: '陪打' },
+  { id: 'changda', pattern: /畅打|4人畅打|四人畅打/, finalType: '畅打活动', businessCategory: '畅打活动', processLayer: 'activity_occupancy', paymentMethod: '微信转账' },
+  { id: 'schedule-occupancy', pattern: /私教课|体验课|上课|小班|训练营/, finalType: '排课占场', businessCategory: '排课占场', processLayer: 'schedule', paymentMethod: '不涉及支付' },
+  { id: 'voucher-booking', pattern: /大众点评|大众券码|点评券|大众券|美团券|团购|核销|券/, finalType: '大众点评券码订场', businessCategory: '第三方券码订场', processLayer: 'booking_finance', paymentMethod: '大众点评券码' }
+]);
 
 function cleanText(value) {
   return String(value ?? '').trim();
@@ -186,6 +195,35 @@ function amountOf(record = {}) {
   return looksLikeCentAmount ? Math.round(raw) / 100 : raw;
 }
 
+function moneyValueFromText(text = '', labels = []) {
+  const source = cleanText(text);
+  for (const label of labels) {
+    const after = source.match(new RegExp(`${label}[^0-9]{0,12}(\\d+(?:\\.\\d+)?)\\s*元?`));
+    if (after) return Number(after[1]) || 0;
+    const before = source.match(new RegExp(`(\\d+(?:\\.\\d+)?)\\s*元?[^0-9]{0,12}${label}`));
+    if (before) return Number(before[1]) || 0;
+  }
+  return 0;
+}
+
+function extraServiceBreakdown(record = {}, finalType = '') {
+  const total = amountOf(record);
+  const text = [remarkOf(record), cleanText(record.payRemark || record.paymentRemark || record.description)].filter(Boolean).join(' ');
+  const serviceLabels = finalType === '订场+发球机' ? ['发球机'] : finalType === '订场陪打' ? ['陪打'] : [];
+  if (!serviceLabels.length || total <= 0) return null;
+  const serviceAmount = moneyValueFromText(text, serviceLabels);
+  const bookingAmount = moneyValueFromText(text, ['订场', '定场', '场地', '场地费']);
+  if (serviceAmount > 0 && bookingAmount > 0 && Math.round((serviceAmount + bookingAmount) * 100) <= Math.round(total * 100)) {
+    return {
+      bookingAmount,
+      serviceAmount,
+      serviceType: serviceLabels[0],
+      totalAmount: Math.round((bookingAmount + serviceAmount) * 100) / 100
+    };
+  }
+  return null;
+}
+
 function recordWithinRange(record = {}, rangeStart = '', rangeEnd = '') {
   const date = bookingDateOf(record);
   const start = cleanText(rangeStart).slice(0, 10);
@@ -209,6 +247,7 @@ function ruleBasePayload(record = {}, overrides = {}) {
     processLayer: overrides.processLayer || '',
     suggestedFinalType: overrides.suggestedFinalType || '',
     paymentMethod: overrides.paymentMethod || '',
+    amountBreakdown: overrides.amountBreakdown || null,
     ...overrides
   };
 }
@@ -232,7 +271,25 @@ function classifyRecord(record = {}, duplicateKeys = new Set()) {
   const remark = remarkOf(record);
   if (sourceType === 'lock') {
     const ruleText = lockRuleText(record);
-    if (/清洗|打扫|维修|领导|内部使用/.test(remark)) return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '标记内部占用', confidence: 0.85, riskReason: '', needsConfirmation: false, businessCategory: '内部占用', processLayer: 'occupancy', suggestedFinalType: '内部占用', paymentMethod: '不涉及支付' });
+    const rule = THIRD_PARTY_LOCK_RULES.find(item => item.pattern.test(item.id === 'coach-booking-xiaozhe' ? ruleText : remark) && (!item.requirePattern || item.requirePattern.test(ruleText)));
+    if (rule?.id === 'internal-occupancy') return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '自动标记内部占场', confidence: 0.9, riskReason: '', needsConfirmation: false, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
+    if (rule?.id === 'schedule-occupancy') return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '自动匹配已有排课，匹配不到则创建第三方同步排课', confidence: 0.85, riskReason: '', needsConfirmation: false, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
+    if (rule?.id === 'changda') return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: amountOf(record) > 0 ? '自动写畅打占场和活动收入' : '自动写畅打占场', confidence: 0.82, riskReason: '', needsConfirmation: false, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
+    if (rule?.id === 'ball-machine' || rule?.id === 'companion') {
+      const amountBreakdown = extraServiceBreakdown(record, rule.finalType);
+      return ruleBasePayload(record, {
+        recommendedType: amountBreakdown ? 'auto_import' : 'needs_confirmation',
+        plannedAction: amountBreakdown ? `自动拆分订场费和${rule.serviceType}服务费` : `确认订场费和${rule.serviceType}服务费拆分`,
+        confidence: amountBreakdown ? 0.86 : 0.6,
+        riskReason: amountBreakdown ? '' : `${rule.serviceType}额外服务需确认金额拆分`,
+        needsConfirmation: !amountBreakdown,
+        businessCategory: rule.businessCategory,
+        processLayer: rule.processLayer,
+        suggestedFinalType: rule.finalType,
+        paymentMethod: '微信转账',
+        amountBreakdown
+      });
+    }
     if (/晓哲|小哲/.test(ruleText) && /定场|订场/.test(ruleText)) {
       const hasAmount = amountOf(record) > 0;
       return ruleBasePayload(record, {
@@ -247,11 +304,7 @@ function classifyRecord(record = {}, duplicateKeys = new Set()) {
         paymentMethod: '微信转账'
       });
     }
-    if (/发球机/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '拆分订场和发球机费用', confidence: 0.6, riskReason: '发球机额外服务需确认金额和支付方式', needsConfirmation: true, businessCategory: '订场+发球机', processLayer: 'booking_extra_service' });
-    if (/陪打/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '拆分订场和陪打服务', confidence: 0.6, riskReason: '陪打需确认订场费和陪打费归属', needsConfirmation: true, businessCategory: '订场陪打', processLayer: 'schedule_and_finance', suggestedFinalType: '订场陪打' });
-    if (/畅打|4人畅打|四人畅打/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '确认畅打参与人和收款方式', confidence: 0.6, riskReason: '畅打活动需确认参与人和支付方式', needsConfirmation: true, businessCategory: '畅打活动', processLayer: 'activity_occupancy', suggestedFinalType: '畅打活动' });
-    if (/私教课|体验课|上课|小班|训练营/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '匹配或创建排课占场', confidence: 0.7, riskReason: '排课占场待匹配', needsConfirmation: true, businessCategory: '排课占场', processLayer: 'schedule', suggestedFinalType: '排课占场', paymentMethod: '不涉及支付' });
-    if (/大众点评|大众券码|点评券|大众券|美团券|团购|核销|券/.test(remark)) return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '确认券码来源和结算金额', confidence: 0.65, riskReason: '第三方券码结算金额需确认', needsConfirmation: true, businessCategory: '第三方券码订场', processLayer: 'booking_finance', suggestedFinalType: '大众点评券码订场', paymentMethod: '大众点评券码' });
+    if (rule?.id === 'voucher-booking') return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '确认券码来源和结算金额', confidence: 0.65, riskReason: '第三方券码结算金额需确认', needsConfirmation: true, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
     return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '运营确认锁场类型', confidence: 0.45, riskReason: remark ? '锁场需确认业务归属' : '备注为空', needsConfirmation: true, businessCategory: '运营锁场待确认', processLayer: 'booking' });
   }
   if (sourceType === 'order') {
@@ -301,6 +354,7 @@ function precheckThirdPartyRecords(records = [], { batchId = '', now = new Date(
       operatorAccount: operatorAccountOf(record),
       remark: remarkOf(record),
       amount: amountOf(record),
+      amountBreakdown: classification.amountBreakdown,
       businessCategory: classification.businessCategory,
       processLayer: classification.processLayer,
       suggestedFinalType: classification.suggestedFinalType,
@@ -345,17 +399,23 @@ function confirmedAmount(precheck = {}, confirmation = {}) {
 }
 
 function needsPositiveAmount(finalType = '') {
-  return ['会员余额订场', '散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场陪打'].includes(cleanText(finalType));
+  return ['会员余额订场', '散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场陪打', '订场+发球机'].includes(cleanText(finalType));
 }
 
-function importTargetsFor({ sourceType = '', finalType = '', recommendedType = '' } = {}) {
+function importTargetsFor({ sourceType = '', finalType = '', recommendedType = '', amount = 0 } = {}) {
   const type = cleanText(finalType);
   if (type === '排课占场') return [T_SCHEDULE];
   if (type === '内部占用') return [T_COURTS];
-  if (['散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场陪打'].includes(type)) return [T_COURTS, T_FINANCIAL_LEDGER];
+  if (type === '畅打活动') return Number(amount || 0) > 0 ? [T_COURTS, T_FINANCIAL_LEDGER] : [T_COURTS];
+  if (type === '订场陪打') return [T_COURTS, T_FINANCIAL_LEDGER, T_SCHEDULE];
+  if (['散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场+发球机'].includes(type)) return [T_COURTS, T_FINANCIAL_LEDGER];
   if (recommendedType === 'auto_import' && sourceType === 'lock') return [T_COURTS];
   if (recommendedType === 'auto_import' && sourceType === 'order') return [T_COURTS, T_FINANCIAL_LEDGER];
   return [];
+}
+
+function needsExtraServiceBreakdown(finalType = '') {
+  return ['订场陪打', '订场+发球机'].includes(cleanText(finalType));
 }
 
 function thirdPartySourceCounts(records = []) {
@@ -439,20 +499,21 @@ function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations
       plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '缺少确认金额' });
       continue;
     }
-    if (finalType === '排课占场' && !cleanText(confirmation?.bindTargetId || precheck.bindTargetId)) {
-      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '排课占场缺少绑定排课ID' });
+    const amountBreakdown = confirmation?.amountBreakdown || precheck.amountBreakdown || null;
+    if (needsExtraServiceBreakdown(finalType) && !amountBreakdown) {
+      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '额外服务缺少订场费和服务费拆分' });
       continue;
     }
     if (finalType === '会员余额订场') {
       plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '会员余额订场需会员流水审计链，暂不支持自动导入' });
       continue;
     }
-    const targetTables = importTargetsFor({ sourceType: precheck.sourceType, finalType, recommendedType: precheck.recommendedType });
+    const targetTables = importTargetsFor({ sourceType: precheck.sourceType, finalType, recommendedType: precheck.recommendedType, amount });
     if (!targetTables.length) {
       plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '暂未支持该类型导入' });
       continue;
     }
-    plan.importable.push({ ...precheck, sourceRecordId, confirmation, finalType, amount, targetTables });
+    plan.importable.push({ ...precheck, sourceRecordId, confirmation, finalType, amount, amountBreakdown, targetTables });
   }
   plan.counts.importable = plan.importable.length;
   plan.counts.blocked = plan.blocked.length;
@@ -633,14 +694,17 @@ function assertScheduleMatchesImportItem(schedule = {}, item = {}) {
 
 function buildCourtHistoryForImport(item = {}, trace = {}, now = '') {
   const isInternal = item.finalType === '内部占用';
+  const isActivity = item.finalType === '畅打活动';
+  const isExtraService = needsExtraServiceBreakdown(item.finalType);
+  const bookingAmount = isExtraService ? Number(item.amountBreakdown?.bookingAmount || 0) : Number(item.amount || 0) || 0;
   return {
     id: `third-party-sync-${item.sourceRecordId}`,
     date: item.date,
     occurredDate: item.date,
     type: '消费',
-    category: isInternal ? '内部占用' : '订场',
+    category: isInternal ? '内部占用' : (isActivity ? '畅打活动' : '订场'),
     payMethod: isInternal ? '不涉及支付' : payMethodForImport(item),
-    amount: isInternal ? 0 : Number(item.amount || 0) || 0,
+    amount: isInternal ? 0 : bookingAmount,
     venue: item.venue,
     startTime: item.startTime,
     endTime: item.endTime,
@@ -654,19 +718,20 @@ function buildCourtHistoryForImport(item = {}, trace = {}, now = '') {
   };
 }
 
-function buildFinancialLedgerForImport(item = {}, trace = {}, now = '') {
-  if (!item.targetTables.includes(T_FINANCIAL_LEDGER)) return null;
-  const amount = Number(item.amount || 0) || 0;
+function buildOneFinancialLedgerForImport(item = {}, trace = {}, now = '', overrides = {}) {
+  const amount = Number(overrides.amount ?? item.amount ?? 0) || 0;
   const payMethod = payMethodForImport(item);
   const isStoredValue = payMethod === '储值扣款';
+  const businessType = overrides.businessType || (isStoredValue ? '会员订场' : (item.finalType === '畅打活动' ? '畅打活动' : '散客订场'));
+  const ledgerSuffix = overrides.ledgerSuffix ? `-${overrides.ledgerSuffix}` : '';
   return {
-    id: `third-party-sync-finance-${item.sourceRecordId}`,
+    id: `third-party-sync-finance-${item.sourceRecordId}${ledgerSuffix}`,
     ledgerVersion: 'third-party-sync-v2',
     status: 'active',
     businessDate: item.date || now.slice(0, 10),
     createdAt: now,
     updatedAt: now,
-    businessType: isStoredValue ? '会员订场' : '散客订场',
+    businessType,
     transactionType: '收款',
     cashDelta: isStoredValue ? 0 : cents(amount),
     recognizedRevenueDelta: cents(amount),
@@ -676,17 +741,79 @@ function buildFinancialLedgerForImport(item = {}, trace = {}, now = '') {
     paymentChannel: payMethod,
     sourceType: 'third-party-sync',
     sourceId: item.sourceRecordId,
-    idempotencyKey: `third-party-sync|${item.batchId}|${item.sourceRecordId}`,
+    idempotencyKey: `third-party-sync|${item.batchId}|${item.sourceRecordId}${ledgerSuffix}`,
     operator: trace.operationBy || '',
     sourceSnapshot: {
       batchId: item.batchId,
       sourceRecordId: item.sourceRecordId,
       finalType: item.finalType,
+      serviceType: overrides.serviceType || '',
       date: item.date,
       startTime: item.startTime,
       endTime: item.endTime,
       venue: item.venue
     },
+    ...trace
+  };
+}
+
+function buildFinancialLedgerRowsForImport(item = {}, trace = {}, now = '') {
+  if (!item.targetTables.includes(T_FINANCIAL_LEDGER)) return [];
+  if (needsExtraServiceBreakdown(item.finalType)) {
+    const bookingAmount = Number(item.amountBreakdown?.bookingAmount || 0);
+    const serviceAmount = Number(item.amountBreakdown?.serviceAmount || 0);
+    const serviceType = cleanText(item.amountBreakdown?.serviceType) || (item.finalType === '订场+发球机' ? '发球机' : '陪打');
+    return [
+      buildOneFinancialLedgerForImport(item, trace, now, { amount: bookingAmount, businessType: '散客订场', ledgerSuffix: 'booking', serviceType: '订场' }),
+      buildOneFinancialLedgerForImport(item, trace, now, { amount: serviceAmount, businessType: serviceType === '发球机' ? '发球机服务' : '陪打服务', ledgerSuffix: serviceType === '发球机' ? 'ball-machine' : 'companion', serviceType })
+    ].filter(row => Number(row.recognizedRevenueDelta || 0) > 0);
+  }
+  return [buildOneFinancialLedgerForImport(item, trace, now)];
+}
+
+function scheduleRowMatchesImportItem(schedule = {}, item = {}) {
+  return scheduleDateOf(schedule) === item.date
+    && scheduleClockOf(schedule.startTime || schedule.startClock || schedule.beginTime) === item.startTime
+    && scheduleClockOf(schedule.endTime || schedule.endClock || schedule.finishTime) === item.endTime
+    && (!item.venue || cleanText(schedule.venue || schedule.court || schedule.courtName) === item.venue);
+}
+
+function scheduleCourseTypeForImport(item = {}) {
+  const text = `${item.remark || ''} ${item.customerName || ''}`;
+  if (/体验/.test(text)) return '体验课';
+  if (/小班/.test(text)) return '小班课';
+  if (/训练营/.test(text)) return '训练营';
+  return '私教课';
+}
+
+function buildScheduleForThirdPartyImport(item = {}, trace = {}, now = '', uuidv4 = () => crypto.randomUUID()) {
+  const id = `third-party-schedule-${uuidv4()}`;
+  const courseType = scheduleCourseTypeForImport(item);
+  return {
+    id,
+    date: item.date,
+    startTime: `${item.date} ${item.startTime}:00`,
+    endTime: `${item.date} ${item.endTime}:00`,
+    studentIds: [],
+    expectedStudentIds: [],
+    absentStudentIds: [],
+    studentName: item.customerName || item.remark || '第三方同步排课',
+    courseType,
+    standardCourseType: courseType,
+    coach: item.operatorAccount || '',
+    coachId: '',
+    venue: item.venue,
+    campus: item.campus || '',
+    lessonCount: 0,
+    status: '已排课',
+    notifyStatus: '未通知',
+    confirmStatus: '待确认',
+    scheduleSource: '第三方同步排课',
+    notes: item.remark || '第三方同步自动创建排课',
+    thirdPartySyncImports: [{ batchId: item.batchId, sourceRecordId: item.sourceRecordId, operationId: trace.operationId || '', importedAt: now }],
+    createdBy: trace.operationBy || 'third-party-sync',
+    createdAt: now,
+    updatedAt: now,
     ...trace
   };
 }
@@ -697,16 +824,31 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
   if (item.finalType === '会员余额订场') throw new Error('会员余额订场需会员流水审计链，暂不支持自动导入');
   if (item.finalType === '排课占场') {
     const scheduleId = cleanText(item.confirmation?.bindTargetId || item.bindTargetId);
-    if (!scheduleId) throw new Error('排课占场缺少绑定排课ID');
     const table = tables.T_SCHEDULE || T_SCHEDULE;
-    const schedule = await getCachedRow(table, scheduleId).catch(() => null);
-    if (!schedule) throw new Error('绑定排课不存在');
-    assertScheduleMatchesImportItem(schedule, item);
-    const imports = Array.isArray(schedule.thirdPartySyncImports) ? schedule.thirdPartySyncImports : [];
-    const next = { ...schedule, thirdPartySyncImports: [...imports, { batchId: item.batchId, sourceRecordId: item.sourceRecordId, operationId: trace.operationId || '', importedAt: now }], updatedAt: now, ...trace };
-    await put(table, schedule.id, next);
-    written.push({ table, id: schedule.id, sourceRecordId: item.sourceRecordId });
+    const schedules = await getCachedScan(table).catch(() => []);
+    const schedule = scheduleId
+      ? await getCachedRow(table, scheduleId).catch(() => null)
+      : schedules.find(row => scheduleRowMatchesImportItem(row, item));
+    if (scheduleId && !schedule) throw new Error('绑定排课不存在');
+    if (schedule) {
+      assertScheduleMatchesImportItem(schedule, item);
+      const imports = Array.isArray(schedule.thirdPartySyncImports) ? schedule.thirdPartySyncImports : [];
+      const next = { ...schedule, thirdPartySyncImports: [...imports.filter(row => String(row.sourceRecordId || '') !== item.sourceRecordId), { batchId: item.batchId, sourceRecordId: item.sourceRecordId, operationId: trace.operationId || '', importedAt: now }], updatedAt: now, ...trace };
+      await put(table, schedule.id, next);
+      written.push({ table, id: schedule.id, sourceRecordId: item.sourceRecordId });
+      return written;
+    }
+    const nextSchedule = buildScheduleForThirdPartyImport(item, trace, now, uuidv4);
+    await put(table, nextSchedule.id, nextSchedule);
+    written.push({ table, id: nextSchedule.id, sourceRecordId: item.sourceRecordId });
     return written;
+  }
+  if (item.finalType === '订场陪打') {
+    const table = tables.T_SCHEDULE || T_SCHEDULE;
+    const companionSchedule = buildScheduleForThirdPartyImport({ ...item, remark: item.remark || '第三方同步陪打' }, trace, now, uuidv4);
+    const nextSchedule = { ...companionSchedule, courseType: '陪打', standardCourseType: '陪打', scheduleSource: '第三方同步陪打', lessonCount: 0 };
+    await put(table, nextSchedule.id, nextSchedule);
+    written.push({ table, id: nextSchedule.id, sourceRecordId: item.sourceRecordId });
   }
 
   const courtTable = tables.T_COURTS || T_COURTS;
@@ -722,8 +864,8 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
   await put(courtTable, nextCourt.id, nextCourt);
   written.push({ table: courtTable, id: nextCourt.id, sourceRecordId: item.sourceRecordId });
 
-  const ledger = buildFinancialLedgerForImport(item, trace, now);
-  if (ledger) {
+  const ledgers = buildFinancialLedgerRowsForImport(item, trace, now);
+  for (const ledger of ledgers) {
     await put(financeTable, ledger.id, ledger);
     written.push({ table: financeTable, id: ledger.id, sourceRecordId: item.sourceRecordId });
   }
@@ -737,6 +879,30 @@ function verifyThirdPartyImportResult({ plan = {}, writtenIds = [], failed = [] 
     courts: { checked: true, ok: !failed.length && (!plan.importable.some(item => item.targetTables.includes(T_COURTS)) || tables.has(T_COURTS)) },
     membership: { checked: true, ok: !plan.blocked.some(item => item.finalType === '会员余额订场'), note: plan.blocked.some(item => item.finalType === '会员余额订场') ? '会员余额订场已阻断，等待会员流水审计链' : '本批次无会员余额订场' },
     schedule: { checked: true, ok: !failed.length, note: plan.importable.some(item => item.targetTables.includes(T_SCHEDULE)) ? '已检查排课绑定计划' : '本批次无排课写入' }
+  };
+}
+
+function uniqueSourceCount(rows = []) {
+  return new Set((rows || []).map(row => cleanText(row.sourceRecordId)).filter(Boolean)).size;
+}
+
+function buildFullDisposition({ sourceTotalCount = 0, plan = {}, writtenIds = [], failed = [] } = {}) {
+  const importedSourceCount = uniqueSourceCount((writtenIds || []).filter(row => [T_COURTS, T_SCHEDULE].includes(row.table)));
+  const failedCount = uniqueSourceCount(failed);
+  const skippedCount = uniqueSourceCount([...(plan.blocked || []), ...(plan.skipped || [])]);
+  const informationalCount = uniqueSourceCount(plan.informational || []);
+  const total = Number(sourceTotalCount || 0) || (plan.counts.importable + plan.counts.blocked + plan.counts.skipped + plan.counts.informational);
+  const accountedCount = importedSourceCount + skippedCount + informationalCount;
+  const unresolvedCount = (plan.blocked || []).length + failedCount;
+  return {
+    total,
+    importedSourceCount,
+    skippedCount,
+    informationalCount,
+    failedCount,
+    unresolvedCount,
+    accountedCount,
+    ok: total === accountedCount && unresolvedCount === 0
   };
 }
 
@@ -846,6 +1012,7 @@ function importResultFailedCount(result = {}) {
 function shouldFailCronForImportResult(result = {}) {
   const status = cleanText(result.status);
   if (['failed', 'partial_failed', 'partial_completed', 'paused'].includes(status)) return true;
+  if (result.fullDisposition && result.fullDisposition.ok === false) return true;
   return Number(result.plannedCount || 0) > 0 && importResultWriteCount(result) === 0;
 }
 
@@ -863,11 +1030,11 @@ function notificationMoneyText(value = 0) {
 }
 
 function notificationImportAmount(batch = {}, result = {}) {
-  const impactAmount = Number(batch.financeImpact?.cashDelta || 0) || 0;
-  if (impactAmount) return impactAmount;
   const before = Number(result.financeSnapshot?.before?.cashDelta || 0) || 0;
   const after = Number(result.financeSnapshot?.after?.cashDelta || 0) || 0;
-  return Math.max(0, Math.round((after - before) * 100) / 100);
+  const delta = Math.max(0, Math.round((after - before) * 100) / 100);
+  if (delta) return delta;
+  return Number(batch.financeImpact?.cashDelta || 0) || 0;
 }
 
 function notificationSuccessBookingCount(result = {}) {
@@ -897,8 +1064,9 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
   const skipped = Array.isArray(result.skippedIds) ? result.skippedIds : [];
   const successBookings = notificationSuccessBookingCount(result);
   const planned = Number(result.plannedCount || 0);
-  const sourceTotal = Number(batch.counts?.totalSourceCount || result.sourceTotalCount || planned || 0);
-  const prefix = type === 'failure' ? '第三方同步失败报警' : '第三方同步完成';
+  const disposition = result.fullDisposition || {};
+  const sourceTotal = Number(disposition.total || batch.counts?.totalSourceCount || result.sourceTotalCount || planned || 0);
+  const prefix = type === 'failure' ? '长小二订场数据需要处理' : '长小二订场数据同步完成';
   const alertRows = (alerts || []).filter(row => row.reason);
   const memberChangeCount = alertRows.filter(row => normalizeSourceType(row.sourceType) === 'member' || (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue)).length;
   const memberGapCount = alertRows.filter(row => /会员流水批量接口缺口/.test(cleanText(row.reason))).length;
@@ -908,15 +1076,19 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
     if (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue) return false;
     return true;
   });
+  const unresolvedCount = Number(disposition.unresolvedCount ?? (skipped.length + failed.length + actionAlerts.length)) || 0;
+  const informationalCount = Number(disposition.informationalCount || 0) || 0;
+  const skippedOnlyCount = Math.max(0, Number(disposition.skippedCount || skipped.length) - unresolvedCount);
   const lines = [
-    `网球兄弟小助手 ${prefix}`,
+    `[场小二] ${prefix}`,
     `数据日期：${notificationDateText(batch)}`,
-    `第三方总数：${sourceTotal} 条`,
-    `自动导入：${successBookings}/${sourceTotal || planned} 条`,
-    `可自动导入：${successBookings}/${planned} 条成功`,
+    `第三方数据：共 ${sourceTotal} 条`,
+    `自动完成：${successBookings} 条`,
     `财务入账：${notificationLedgerCount(result)} 条流水，合计 ${notificationMoneyText(notificationImportAmount(batch, result))}`,
+    `自动留档：${informationalCount} 条`,
+    `自动忽略：${skippedOnlyCount} 条`,
     `失败：${importResultFailedCount(result)} 条`,
-    `需处理：${skipped.length + failed.length + actionAlerts.length} 条`
+    `需人工处理：${unresolvedCount} 条`
   ];
   if (failed.length) {
     lines.push('失败明细：');
@@ -924,7 +1096,7 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
     if (failed.length > 8) lines.push(`其余 ${failed.length - 8} 条请到第三方同步中心查看。`);
   }
   if (actionAlerts.length) {
-    lines.push('需处理事项：');
+    lines.push('需要你处理：');
     lines.push(...actionAlerts.slice(0, 8).map(row => `- ${notificationAlertLabel(row)}`));
     if (actionAlerts.length > 8) lines.push(`其余 ${actionAlerts.length - 8} 条请到第三方同步中心查看。`);
   }
@@ -947,7 +1119,7 @@ function buildThirdPartySyncNotificationCard({ type = 'success', batch = {}, res
       wide_screen_mode: true
     },
     header: {
-      template: type === 'failure' ? 'red' : 'blue',
+      template: type === 'failure' ? 'red' : 'green',
       title: {
         tag: 'plain_text',
         content: '长小二订场数据'
@@ -1128,6 +1300,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     }
     const writtenTables = [...new Set(writtenIds.map(row => row.table))];
     const verification = verifyThirdPartyImportResult({ plan, writtenIds, failed });
+    const fullDisposition = buildFullDisposition({ sourceTotalCount: Number(batch.counts?.totalSourceCount || 0), plan, writtenIds, failed });
     const hasBlocked = plan.blocked.length > 0;
     const importStatus = failed.length
       ? (writtenIds.length ? 'partial_failed' : 'failed')
@@ -1152,6 +1325,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       reportFile: `table:${T_THIRD_PARTY_SYNC_IMPORT_RESULTS}`,
       verifiedAt: importedAt,
       verification,
+      fullDisposition,
       financeSnapshot: { before: financeBefore, after: financeAfter }
     };
     await put(T_THIRD_PARTY_SYNC_IMPORT_RESULTS, result.id, result);
@@ -1233,7 +1407,13 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       const pulled = await pullAndPrecheck({ ...range, operator: 'daily-auto-sync' });
       const autoImport = await runImportForBatch({ batchId: pulled.batch.batchId, operator: 'daily-auto-sync', importedAt: now() });
       const alerts = await createImportAlerts({ batchId: pulled.batch.batchId, plan: autoImport.plan, changes: pulled.changes, result: autoImport.result, operator: 'daily-auto-sync', nowValue: now() });
-      const failed = shouldFailCronForImportResult(autoImport.result);
+      const actionableAlerts = alerts.filter(row => {
+        if (/会员流水批量接口缺口/.test(cleanText(row.reason))) return false;
+        if (normalizeSourceType(row.sourceType) === 'member') return false;
+        if (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue) return false;
+        return true;
+      });
+      const failed = shouldFailCronForImportResult(autoImport.result) || actionableAlerts.length > 0;
       let notification = null;
       try {
         notification = await notifyThirdPartySyncResult({ type: failed ? 'failure' : 'success', batch: pulled.batch, result: autoImport.result, alerts, env });

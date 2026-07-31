@@ -61,6 +61,7 @@ assert.ok(precheck.items.some(item => item.customerName === '张三' && item.pho
 assert.ok(precheck.items.some(item => item.sourceRecordId === 'O1' && item.bookingMode === '用户自助订场'), 'precheck should label user self-service bookings');
 assert.ok(precheck.items.some(item => item.sourceRecordId === 'lock-1' && item.bookingMode === '运营锁场' && item.operatorAccount === '前台A'), 'precheck should label operator locks with operator account');
 assert.ok(precheck.items.some(item => item.sourceRecordId === 'lock-1' && item.businessCategory === '排课占场' && /排课/.test(item.plannedAction)), 'private lesson locks should be classified as schedule occupancy instead of generic lock');
+assert.ok(precheck.items.some(item => item.sourceRecordId === 'lock-1' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '排课占场'), 'private lesson locks should become auto importable schedule occupancy rows');
 assert.strictEqual(
   precheckThirdPartyRecords([{ sourceType: 'order', orderNo: 'P86', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', phone: '8613800000000' }], { batchId: 'phone-batch' }).items[0].phone,
   '13800000000',
@@ -71,13 +72,17 @@ const historicalRulePrecheck = precheckThirdPartyRecords([
   { id: 'coach-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '1号场', startTime: '12:00', endTime: '13:00', customerName: '晓哲', remark: '晓哲 定场', amount: 176 },
   { id: 'companion-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '2号场', startTime: '14:00', endTime: '15:00', remark: 'Siren 陪打' },
   { id: 'machine-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '3号场', startTime: '16:00', endTime: '17:00', remark: '发球机 1小时' },
+  { id: 'machine-split-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '3号场', startTime: '17:00', endTime: '18:00', remark: '订场120 发球机80', amount: 200 },
+  { id: 'companion-split-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '2号场', startTime: '15:00', endTime: '16:00', remark: '订场100 陪打300', amount: 400 },
   { id: 'changda-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '1号场', startTime: '10:00', endTime: '12:00', remark: '畅打' },
   { id: 'leader-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '4号场', startTime: '16:00', endTime: '18:00', remark: '领导' }
 ], { batchId: 'historical-rules', now: '2026-07-31T00:00:00+08:00' });
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'coach-lock' && item.businessCategory === '教练代订场' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '教练代订场' && item.paymentMethod === '微信转账' && /8折/.test(item.plannedAction)), 'xiaozhe coach booking rule should be auto importable when amount is known');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'companion-lock' && item.businessCategory === '订场陪打' && /拆分/.test(item.plannedAction) && item.needsConfirmation), 'companion locks should be classified as booking plus companion service and require confirmation before split import');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'machine-lock' && item.businessCategory === '订场+发球机' && /发球机/.test(item.plannedAction) && item.needsConfirmation), 'ball-machine locks should be classified as booking plus extra service and require confirmation before split import');
-assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'changda-lock' && item.businessCategory === '畅打活动' && item.needsConfirmation), 'changda locks should be classified as activity occupancy that requires participant/payment confirmation');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'machine-split-lock' && item.recommendedType === 'auto_import' && item.amountBreakdown?.bookingAmount === 120 && item.amountBreakdown?.serviceAmount === 80), 'ball-machine locks should auto import when booking and service fees are explicit');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'companion-split-lock' && item.recommendedType === 'auto_import' && item.amountBreakdown?.bookingAmount === 100 && item.amountBreakdown?.serviceAmount === 300), 'companion locks should auto import when booking and companion fees are explicit');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'changda-lock' && item.businessCategory === '畅打活动' && item.recommendedType === 'auto_import'), 'changda locks should automatically create an activity occupancy destination');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'leader-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), 'leader/internal usage locks should be classified as internal occupancy');
 
 const changxiaoerOrderPrecheck = precheckThirdPartyRecords([
@@ -140,6 +145,7 @@ const notificationText = buildThirdPartySyncNotificationText({
   result: {
     status: 'completed',
     plannedCount: 7,
+    fullDisposition: { total: 61, importedSourceCount: 1, informationalCount: 2, skippedCount: 0, unresolvedCount: 0, ok: true },
     writtenIds: [
       { table: 'ft_courts', sourceRecordId: 'order-a' },
       { table: 'ft_financial_ledger', sourceRecordId: 'order-a' }
@@ -153,7 +159,8 @@ const notificationText = buildThirdPartySyncNotificationText({
   ]
 });
 assert.match(notificationText, /数据日期：2026-07-30/, 'notification should show business date');
-assert.match(notificationText, /自动导入：1\/61 条/, 'notification should compare imported rows with every third-party source row');
+assert.match(notificationText, /第三方数据：共 61 条/, 'notification should show the full third-party source count');
+assert.match(notificationText, /自动完成：1 条/, 'notification should show imported business rows without pretending every source row was imported');
 assert.doesNotMatch(notificationText, /订场导入：1\/7 条成功/, 'notification must not call partial import success by using only importable rows as denominator');
 assert.match(notificationText, /财务入账：1 条流水，合计 ¥1,350/, 'notification should show finance impact in operator language');
 assert.match(notificationText, /会员资料变更 1 条：仅留档，不影响订场导入/, 'notification should summarize member profile changes');
@@ -195,6 +202,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     },
     result: {
       plannedCount: 7,
+      fullDisposition: { total: 61, importedSourceCount: 1, informationalCount: 2, skippedCount: 0, unresolvedCount: 0, ok: true },
       writtenIds: [
         { table: 'ft_courts', sourceRecordId: 'order-a' },
         { table: 'ft_financial_ledger', sourceRecordId: 'order-a' }
@@ -219,7 +227,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   const cardText = JSON.stringify(feishuPosts[0].payload.card);
   assert.match(cardText, /长小二订场数据/, 'card should use the requested business title');
   assert.match(cardText, /数据日期：2026-07-30/, 'card should highlight the business date');
-  assert.match(cardText, /自动导入：1\/61 条/, 'card should show source-total processing result');
+  assert.match(cardText, /第三方数据：共 61 条/, 'card should show source-total processing result');
+  assert.match(cardText, /自动完成：1 条/, 'card should show imported result in operator language');
   assert.match(cardText, /财务入账：1 条流水，合计 ¥1,350/, 'card should show finance result');
   assert.doesNotMatch(cardText, /cxe-sync-technical-id|531449/, 'card should hide technical ids');
 
@@ -273,8 +282,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(pullRes.body.audit.sourceTotalCount, 4, 'pull audit should count every third-party source row including locks and gaps');
   assert.strictEqual(pullRes.body.audit.lockCount, 1, 'pull audit should expose operator locks separately');
   assert.strictEqual(pullRes.body.audit.businessCategoryCounts['排课占场'], 1, 'pull audit should show private lesson lock category');
-  assert.strictEqual(pullRes.body.audit.destinationCounts.needsConfirmation, 1, 'pull audit should show unprocessed locks as needing action');
-  assert.strictEqual(pullRes.body.audit.destinationCounts.autoImport, 1, 'pull audit should count only truly auto-importable source rows');
+  assert.strictEqual(pullRes.body.audit.destinationCounts.needsConfirmation, 0, 'private lesson locks should no longer require manual action when schedule can be auto-created');
+  assert.strictEqual(pullRes.body.audit.destinationCounts.autoImport, 2, 'pull audit should count stable orders and schedule occupancy locks as auto-importable source rows');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_batches'), 'pull should write batch table');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_raw_records'), 'pull should save raw records');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_prechecks'), 'pull should save precheck rows');
@@ -318,7 +327,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     confirmations: scans.ft_third_party_sync_confirmations,
     importResults: scans.ft_third_party_sync_import_results
   });
-  assert.strictEqual(plan.importable.length, 1, 'high confidence order should be importable');
+  assert.strictEqual(plan.importable.length, 2, 'high confidence order and private lesson occupancy should be importable');
   assert.ok(plan.informational.some(item => item.reason === '会员资料仅同步留档，不进入订场导入'), 'member profiles should stay out of booking import blockers');
   assert.ok(plan.informational.some(item => item.reason === '会员流水批量接口缺口'), 'member ledger gap should be tracked as sync information');
   const unboundMemberPlan = buildThirdPartyImportPlan({
@@ -334,19 +343,21 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     method: 'POST',
     body: { batchId }
   });
-  assert.strictEqual(importRes.body.result.status, 'partial_completed', 'unprocessed operator locks should keep the batch partial instead of reporting complete');
+  assert.strictEqual(importRes.body.result.status, 'completed', 'stable order plus schedule occupancy should complete when every source row has a safe destination');
   assert.ok(importRes.body.result.backup?.tables?.ft_courts, 'import should save a pre-write backup snapshot');
   assert.ok(!importRes.body.result.backup.tables.ft_courts.rows, 'import result should keep backup metadata instead of truncating rows inline');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_backups' && row.row.tableName === 'ft_courts'), 'import should write backup chunks before business writes');
   assert.ok(importRes.body.result.writtenTables.includes('ft_courts'), 'import should write booking users/history');
   assert.ok(importRes.body.result.writtenTables.includes('ft_financial_ledger'), 'import should write finance ledger candidate rows');
+  assert.ok(importRes.body.result.writtenTables.includes('ft_schedule'), 'import should create or bind third-party schedule occupancy rows');
   assert.ok(importRes.body.result.verification.finance.ok, 'finance verification should pass');
   assert.ok(importRes.body.result.verification.courts.ok, 'court verification should pass');
   assert.ok(importRes.body.result.verification.membership.checked, 'membership verification should be recorded');
   assert.ok(importRes.body.result.verification.schedule.checked, 'schedule verification should be recorded');
   assert.ok(writes.some(row => row.table === 'ft_courts'), 'business import should write courts table');
   assert.ok(writes.some(row => row.table === 'ft_financial_ledger'), 'business import should write finance ledger table');
-  assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_results' && row.row.status === 'partial_completed'), 'partial import result should be auditable');
+  assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课'), 'private lesson locks should create a schedule row when no existing schedule is bound');
+  assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_results' && row.row.status === 'completed' && row.row.fullDisposition?.ok), 'full import result should be auditable');
 
   scans.ft_third_party_sync_batches.push({ id: 'member-batch', batchId: 'member-batch', status: 'prechecked' });
   scans.ft_third_party_sync_prechecks.push({
@@ -416,6 +427,43 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(scheduleImportRes.body.result.status, 'failed', 'mismatched schedule binding should fail');
   assert.ok(scheduleImportRes.body.result.failed.some(row => row.reason.includes('场地不一致')), 'schedule binding should validate venue');
 
+  scans.ft_third_party_sync_batches.push({ id: 'extra-service-batch', batchId: 'extra-service-batch', status: 'prechecked', counts: { totalSourceCount: 2 } });
+  const extraServicePrecheck = precheckThirdPartyRecords([
+    { id: 'EXTRA1', sourceType: 'lock', bookingDate: '2026-07-30', venue: '2号场', startTime: '14:00', endTime: '15:00', customerName: '陪打客人', phone: '13911112222', remark: '订场100 陪打300', amount: 400 },
+    { id: 'EXTRA2', sourceType: 'lock', bookingDate: '2026-07-30', venue: '3号场', startTime: '16:00', endTime: '17:00', customerName: '发球机客人', phone: '13933334444', remark: '订场120 发球机80', amount: 200 }
+  ], { batchId: 'extra-service-batch', now: '2026-07-31T00:00:00+08:00' });
+  scans.ft_third_party_sync_prechecks.push(...extraServicePrecheck.items);
+  const extraServiceImportRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'extra-service-batch' }
+  });
+  assert.strictEqual(extraServiceImportRes.body.result.status, 'completed', 'explicit companion and ball-machine fee splits should import automatically');
+  assert.strictEqual(extraServiceImportRes.body.result.fullDisposition.importedSourceCount, 2, 'extra service sources should count as imported source rows');
+  assert.strictEqual(extraServiceImportRes.body.result.fullDisposition.ok, true, 'extra service batch should have a complete disposition');
+  assert.ok(extraServiceImportRes.body.result.writtenTables.includes('ft_schedule'), 'companion import should create a companion schedule row');
+  assert.ok(scans.ft_financial_ledger.some(row => row.sourceId === 'EXTRA1' && row.businessType === '散客订场' && row.cashDelta === 10000), 'companion import should write booking income');
+  assert.ok(scans.ft_financial_ledger.some(row => row.sourceId === 'EXTRA1' && row.businessType === '陪打服务' && row.cashDelta === 30000), 'companion import should write companion service income');
+  assert.ok(scans.ft_financial_ledger.some(row => row.sourceId === 'EXTRA2' && row.businessType === '发球机服务' && row.cashDelta === 8000), 'ball-machine import should write ball-machine service income');
+
+  const replay730Records = [
+    ...Array.from({ length: 7 }, (_, index) => ({ sourceType: 'order', orderNo: `730-O-${index}`, bookingDate: '2026-07-30', venue: `${index + 1}号场`, startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' })),
+    ...Array.from({ length: 14 }, (_, index) => ({ sourceType: 'lock', thirdPartyId: `730-S-${index}`, bookingDate: '2026-07-30', venue: `${index + 10}号场`, startTime: '10:00', endTime: '11:00', remark: '私教课' })),
+    { sourceType: 'lock', thirdPartyId: '730-INTERNAL', bookingDate: '2026-07-30', venue: '1号场', startTime: '11:00', endTime: '12:00', remark: '领导内部使用' },
+    { sourceType: 'lock', thirdPartyId: '730-COACH', bookingDate: '2026-07-30', venue: '2号场', startTime: '12:00', endTime: '13:00', customerName: '晓哲', remark: '晓哲 定场' },
+    { sourceType: 'lock', thirdPartyId: '730-CHANGDA', bookingDate: '2026-07-30', venue: '3号场', startTime: '13:00', endTime: '14:00', remark: '畅打' },
+    { sourceType: 'lock', thirdPartyId: '730-COMPANION', bookingDate: '2026-07-30', venue: '4号场', startTime: '14:00', endTime: '15:00', remark: 'Siren 陪打' },
+    ...Array.from({ length: 53 }, (_, index) => ({ sourceType: 'member', thirdPartyId: `730-M-${index}`, memberName: `会员${index}`, memberPhone: `1390000${String(index).padStart(4, '0')}` })),
+    { sourceType: 'member-ledger-gap', thirdPartyId: 'member-ledger-gap' }
+  ];
+  const replay730Precheck = precheckThirdPartyRecords(replay730Records, { batchId: 'replay-730', now: '2026-07-31T00:00:00+08:00' });
+  const replay730Plan = buildThirdPartyImportPlan({ batchId: 'replay-730', prechecks: replay730Precheck.items, confirmations: [], importResults: [] });
+  assert.strictEqual(replay730Records.length, 79, '2026-07-30 replay sample should keep the real source-total shape');
+  assert.strictEqual(replay730Precheck.items.filter(row => row.sourceType === 'lock').length, 18, '2026-07-30 replay should include 18 operator lock rows');
+  assert.strictEqual(replay730Plan.importable.length, 23, '2026-07-30 replay should auto-import stable orders, private lessons, internal usage, and changda occupancy');
+  assert.strictEqual(replay730Plan.blocked.length, 2, '2026-07-30 replay should isolate only the coach booking without amount and companion row without fee split');
+  assert.strictEqual(replay730Plan.informational.length, 54, '2026-07-30 replay should keep member profile changes and member ledger gap informational');
+
   const cronScans = {
     ft_third_party_sync_batches: [],
     ft_third_party_sync_raw_records: [{
@@ -479,10 +527,12 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     req: { headers: { authorization: 'Bearer secret' } },
     query: new URLSearchParams('lookbackDays=3')
   });
-  assert.strictEqual(cronRes.statusCode, 500, 'cron should fail when any actionable third-party booking or lock remains unresolved');
-  assert.strictEqual(cronRes.body.autoImport.result.status, 'partial_completed', 'cron should auto import stable rows and pause unsafe rows');
-  assert.ok(cronNotifications.some(item => item.type === 'failure' && item.result?.writtenIds?.length > 0), 'cron should notify Feishu group as failure when only part of actionable source rows are handled');
+  assert.strictEqual(cronRes.statusCode, 500, 'cron should fail when actionable third-party cancellation changes need review');
+  assert.strictEqual(cronRes.body.autoImport.result.status, 'completed', 'cron should auto import stable orders and schedule locks while separately alerting third-party changes');
+  assert.ok(cronRes.body.autoImport.result.fullDisposition?.ok, 'source rows should still have a complete import/skip/informational disposition');
+  assert.ok(cronNotifications.some(item => item.type === 'failure' && item.result?.writtenIds?.length > 0), 'cron should notify Feishu group as failure when actionable third-party changes need review');
   assert.ok(cronWrites.some(row => row.table === 'ft_courts' && row.row.history?.some(history => history.sourceRecordId === 'O8')), 'cron should write stable high-confidence order');
+  assert.ok(cronWrites.some(row => row.table === 'ft_schedule' && row.row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'L9')), 'cron should auto-create schedule occupancy rows for private lesson locks');
   assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_changes' && row.row.sourceRecordId === 'O9' && row.row.changeType === 'cancelled'), 'cron should record third-party cancellation changes');
   assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_alerts' && /取消|退款|阻断|低置信/.test(row.row.reason)), 'cron should create alerts for unsafe rows');
   assert.ok(cronRes.body.autoImport.result.financeSnapshot?.before, 'cron import should record a pre-import finance snapshot');
