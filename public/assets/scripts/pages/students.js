@@ -1216,9 +1216,11 @@ function studentLeadJumpActionHtml(s){
     ?`<button type="button" class="schedule-detail-action" onclick="jumpToLeadDetail('${lead.id}')">查看线索</button>`
     :'';
 }
-function studentDetailDatasetsReady(){
+function studentDetailDatasetsReady(id){
   const names=Array.isArray(STUDENT_DETAIL_REQUIREMENTS)?STUDENT_DETAIL_REQUIREMENTS:[];
-  return names.every(name=>loadedDatasets.has(name)&&!(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has(name))&&(!(typeof datasetHasCurrentRequestKey==='function')||datasetHasCurrentRequestKey(name)));
+  const staticReady=names.every(name=>loadedDatasets.has(name)&&!(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has(name))&&(!(typeof datasetHasCurrentRequestKey==='function')||datasetHasCurrentRequestKey(name)));
+  const detailReady=typeof studentDetailDataReady==='function'?studentDetailDataReady(id):false;
+  return staticReady&&detailReady;
 }
 function studentDetailTabNeedsDatasets(tab=studentDetailActiveTab){
   return ['orders','benefits'].includes(tab);
@@ -1230,14 +1232,17 @@ function studentDetailPageStillValid(){
   return ['students','package-students','trial-students'].includes(currentPage);
 }
 function ensureStudentDetailDatasets(id,{block=false}={}){
-  if(studentDetailDatasetsReady())return false;
+  if(studentDetailDatasetsReady(id))return false;
   const s=studentUnifiedRecordForId(id);if(!s)return false;
   const requestSeq=++studentDetailRequestSeq;
   if(block){
     const loadingBody='<div class="schedule-detail-content"><div class="empty"><p>详情加载中...</p></div></div>';
     openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:loadingBody,actionsHtml:'',studentId:s.id});
   }
-  ensureDatasetsByName(STUDENT_DETAIL_REQUIREMENTS).then(()=>{
+  const tasks=[];
+  if(Array.isArray(STUDENT_DETAIL_REQUIREMENTS)&&STUDENT_DETAIL_REQUIREMENTS.length)tasks.push(ensureDatasetsByName(STUDENT_DETAIL_REQUIREMENTS));
+  if(typeof ensureStudentDetailData==='function')tasks.push(ensureStudentDetailData(id));
+  Promise.all(tasks).then(()=>{
     if(studentDetailRequestSeq!==requestSeq||!studentDetailDrawerIsOpenFor(id)||!studentDetailPageStillValid())return;
     if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))openStudentDetail(id);
   }).catch(e=>{

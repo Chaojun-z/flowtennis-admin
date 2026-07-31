@@ -23,8 +23,8 @@ assert.match(fnBody('renderCourtDateRangePanel'), /清空[\s\S]*确定/, 'court 
 assert.match(source, /function renderCourtDateRangeFilter\(/, 'court page should expose a dedicated date range filter renderer');
 assert.match(source, /function applyCourtDateRangeFilter\(/, 'court page should expose a shared date range filter helper');
 assert.match(source, /function onCourtDateRangeFilterChange\(/, 'court page should expose a date range filter change handler');
-assert.match(fnBody('renderCourtAccountListView'), /applyCourtDateRangeFilter/, 'read-model court rendering should apply the shared date range filter');
-assert.match(fnBody('renderCourtAccountListView'), /const summary=courtAccountListViewData\?\.summary\|\|\{\}/, 'read-model court stats should read the backend scoped summary');
+assert.match(fnBody('getCurrentCourtAccountRows'), /applyCourtDateRangeFilter/, 'read-model court rows should apply the shared date range filter before rendering');
+assert.match(fnBody('renderCourtAccountListView'), /FlowTennisPlatformDataStandards\.currentCourtAccountSummary\(list\)/, 'read-model court stats should use the unified platform summary helper');
 assert.doesNotMatch(fnBody('renderCourtAccountListView'), /summarizeCourtAccountListItems\(list\)/, 'read-model court stats should not recalculate top cards in the frontend');
 assert.match(source, /courtAccountListViewPageDataUrl\(\)/, 'court read-model loader should build a scoped request url');
 assert.match(source, /scopedPageDataUrl\('\/page-data\/court-account-list-view',\{dateRange:'court'\}\)/, 'court read-model request should include the current court date scope');

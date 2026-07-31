@@ -42,7 +42,7 @@ assert.match(fnBody('leadLinkedAccountFieldHtml'), /关联[\s\S]*修改[\s\S]*�
 assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /<button[^>]*class="schedule-detail-action primary"/, 'linked account row should not use framed primary buttons');
 assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /未关联/, 'unlinked accounts should only show the inline link text');
 assert.match(source, /function ensureLeadConversionLookups\(/, 'conversion tab should lazy-load linked student/court/coach names');
-assert.match(fnBody('ensureLeadConversionLookups'), /lead\?\.studentId[\s\S]*purchasesPage/, 'conversion tab should lazy-load purchase data before judging whether the linked student has a formal package');
+assert.doesNotMatch(fnBody('ensureLeadConversionLookups'), /purchasesPage/, 'conversion tab must not lazy-load the full purchases aggregate');
 assert.match(fnBody('leadConversionSummaryHtml'), /leadLinkedAccountFieldHtml\(lead,'student'\)[\s\S]*leadPurchasePackageActionHtml\(lead\)[\s\S]*leadLinkedAccountFieldHtml\(lead,'court'\)[\s\S]*leadFormalCoachText\(lead\)/, 'conversion summary should render linked account helpers, package status, and coach names instead of raw ids');
 assert.match(fnBody('leadConversionSummaryHtml'), /leadCourtConversionActionHtml\(lead\)[\s\S]*leadLinkedAccountFieldHtml\(lead,'court'\)[\s\S]*leadMembershipConversionActionHtml\(lead\)/, 'booking deals should expose create-court and membership next-step entries around the linked court row');
 assert.match(source, /function leadCourtConversionActionHtml\(lead\)/, 'conversion summary should expose a create court account entry for converted booking leads');
@@ -63,7 +63,8 @@ assert.match(source, /async function convertLeadToStudentAndPurchase\(leadId\)/,
 assert.match(source, /function upsertLeadStudentLocal\(/, 'created students should be inserted into the local student list before opening the purchase drawer');
 assert.match(fnBody('convertLeadToStudentAndPurchase'), /upsertLeadStudentLocal\(res\?\.student\)[\s\S]*openPurchaseModal\(studentId\)/, 'create-student-and-purchase should not wait for a later refresh before the purchase drawer can find the student');
 assert.match(source, /function leadFormalCoachText\(lead\)/, 'lead conversion summary should derive deal coach from lifecycle or purchase owner coach');
-assert.match(fnBody('openLeadPurchasePackage'), /ensureDatasetsByName\(\['purchasesPage'\]\)[\s\S]*openPurchaseModal\(lead\.studentId\)/, 'lead purchase entry must lazy-load purchase data and open the existing purchase drawer with the linked student id');
+assert.doesNotMatch(fnBody('openLeadPurchasePackage'), /purchasesPage/, 'lead purchase entry must not lazy-load the full purchases aggregate');
+assert.match(fnBody('openLeadPurchasePackage'), /openPurchaseModal\(lead\.studentId\)/, 'lead purchase entry should open the existing purchase drawer with the linked student id');
 assert.match(source, /function leadLinkSearchRows\(mode,keyword=''\)/, 'lead link forms should expose searchable linked account rows');
 assert.match(source, /function leadLinkPickerHtml\(lead,mode,selectedId='',keyword=''\)/, 'lead link forms should render a searchable picker instead of a long plain dropdown');
 assert.match(fnBody('leadConversionLinkFormHtml'), /lead_link_search[\s\S]*placeholder="搜索姓名 \/ 手机号 \/ 校区"[\s\S]*oninput="renderLeadLinkPicker\(/, 'link student and court forms should support keyword search');

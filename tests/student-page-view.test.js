@@ -336,8 +336,9 @@ assert.match(source, /reason\.match\(\s*\/\^历史导入\\s\*\(\\d\{1,2\}\)月�
 assert.match(source, /dedupeEntitlementLedgerForDisplay/, 'lesson charge history should collapse duplicate ledger rows before display');
 assert.match(source, /function historicalImportedLessonUnitsForStudent\(/, 'student page should expose a historical imported lesson helper');
 assert.match(source, /STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\]/, 'student list should not automatically load heavy detail datasets after first paint');
-assert.match(source, /STUDENT_DETAIL_REQUIREMENTS=\['entitlements','entitlementLedger','feedbacks','products','purchasesPage','membershipBenefitLedger'\]/, 'student detail should lazy-load package consume ledger, purchase amount data, and student benefits');
+assert.match(source, /STUDENT_DETAIL_REQUIREMENTS=\['products'\]/, 'student detail should keep only small static detail dependencies');
 assert.match(source, /function ensureStudentDetailDatasets\(/, 'student detail should own the lazy detail loader');
+assert.match(source, /ensureStudentDetailData\(id\)/, 'student detail should load heavy detail facts by student id instead of the full purchases aggregate');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggregateHistoricalMonthlyLedgerRows[\s\S]*function classScheduleSummaryHtml/, 'student consume history should show imported lesson rows one by one instead of monthly aggregation');
 assert.match(source, /studentCompletedLessonCount[\s\S]*historicalImportedLessonUnitsForStudent/, 'student cumulative lessons should include imported lesson consumption');
 assert.match(source, /教学信息[\s\S]*消费与关联信息/, 'student detail should keep the teaching and consumption sections');

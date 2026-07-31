@@ -1434,6 +1434,24 @@ function initializeMembershipDrawer(courtId){
 }
 function openMembershipDrawer(courtId){
   const court=courts.find(c=>c.id===courtId)||membershipReadModelItemForCourt(courtId);if(!court){toast('当前订场用户数据未加载，请刷新后重试','warn');return;}
+  if(typeof courtAccountDetailDataReady==='function'&&typeof ensureCourtAccountDetailData==='function'&&!courtAccountDetailDataReady(courtId)){
+    openStandardDetailDrawer({
+      titleHtml:`${membershipDetailHeroHtml(court)}${membershipDetailTabsHtml(membershipDetailActiveTab)}`,
+      bodyHtml:'<div class="schedule-detail-content"><div class="empty"><p>会员详情加载中...</p></div></div>',
+      actionsHtml:'',
+      data:{membershipCourtId:court.id,membershipMode:membershipDrawerMode},
+      overlayClasses:['schedule-drawer-overlay'],
+      modalClass:'modal modal-court modal-schedule-drawer modal-membership-drawer'
+    });
+    ensureCourtAccountDetailData(courtId).then(()=>{
+      const currentId=document.getElementById('overlay')?.dataset.membershipCourtId||'';
+      if(currentId===String(courtId))openMembershipDrawer(courtId);
+    }).catch(e=>{
+      console.warn('membership detail load failed',e);
+      toast('会员详情加载失败，请刷新后重试','error');
+    });
+    return;
+  }
   if(membershipDrawerMode!=='profile-edit')editId=null;
   openStandardDetailDrawer({
     titleHtml:`${membershipDetailHeroHtml(court)}${membershipDetailTabsHtml(membershipDetailActiveTab)}`,

@@ -542,6 +542,18 @@ function buildMembershipLedgerAuditRows(items = []) {
   })).sort((a, b) => String(b.createdAt || b.relatedDate || '').localeCompare(String(a.createdAt || a.relatedDate || '')));
 }
 
+function courtAccountLightListItem(item = {}) {
+  const {
+    history,
+    rechargeRows,
+    benefitRows,
+    ledgerRows,
+    bookingRows,
+    ...light
+  } = item || {};
+  return light;
+}
+
 function buildSummary(items = []) {
   const memberItems = items.filter((item) => item?.membershipStatusCode && !['voided', 'cleared'].includes(item.membershipStatusCode));
   return {
@@ -677,28 +689,31 @@ function buildCourtAccountListViewFromData(source = {}, options = {}) {
   } = source;
   const sampleIds = resolveSampleIds({ sampleIds: options.sampleIds, sample: options.sample, fixedSampleAccounts: options.fixedSampleAccounts || [] });
   const useLegacy = options.useLegacy === true;
+  const includeDetails = options.includeDetails === true;
   const campusMap = buildCampusNameMap(campuses || []);
   const activeCourts = (courts || [])
     .filter((row) => String(row?.status || 'active') !== 'inactive')
     .filter((row) => String(row?.id || '') !== MATCH_COURT_FINANCE_ACCOUNT_ID)
     .filter((row) => !sampleIds.length || sampleIds.includes(String(row?.id || '').trim()));
   const ctx = { campuses, campusMap, students, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents };
-  const items = activeCourts
+  const detailItems = activeCourts
     .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
     .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));
-  const summary = buildSummary(items);
-  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: items });
+  const items = includeDetails ? detailItems : detailItems.map(courtAccountLightListItem);
+  const summary = buildSummary(detailItems);
+  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: detailItems });
   return {
     summary,
-    filters: buildFilters({ items, campuses }),
+    filters: buildFilters({ items: detailItems, campuses }),
     items,
-    membershipOrderAuditRows: buildMembershipOrderAuditRows(items),
-    membershipLedgerAuditRows: buildMembershipLedgerAuditRows(items),
+    membershipOrderAuditRows: includeDetails ? buildMembershipOrderAuditRows(detailItems) : [],
+    membershipLedgerAuditRows: includeDetails ? buildMembershipLedgerAuditRows(detailItems) : [],
     meta: {
       generatedAt: new Date().toISOString(),
       source: useLegacy ? 'legacy' : 'unified-court-membership-read-model',
       sampleIds,
-      sample: options.sample || ''
+      sample: options.sample || '',
+      includeDetails
     }
   };
 }
@@ -737,7 +752,7 @@ function createCourtAccountListViewLoader(deps) {
       membershipPlans,
       membershipBenefitLedger,
       membershipAccountEvents
-    }, { sampleIds, sample: options.sample, useLegacy });
+    }, { sampleIds, sample: options.sample, useLegacy, includeDetails: options.includeDetails === true });
   };
 }
 

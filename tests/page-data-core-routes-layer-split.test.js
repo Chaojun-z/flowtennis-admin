@@ -16,6 +16,8 @@ for (const route of [
   '/page-data/coaches',
   '/page-data/package-center-list',
   '/page-data/customer-center-list',
+  '/page-data/purchase-detail',
+  '/page-data/student-detail',
   '/page-data/purchases',
   '/page-data/courts',
   '/page-data/memberships',

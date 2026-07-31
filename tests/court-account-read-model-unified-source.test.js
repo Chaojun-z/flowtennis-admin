@@ -97,16 +97,23 @@ async function main() {
   assert.strictEqual(item.accountType, '会员账户');
   assert.strictEqual(item.firstOpenDate, '2026-06-01');
   assert.strictEqual(item.membershipTierLabel, '黄金卡');
-  assert.strictEqual(item.rechargeRows.length, 2);
-  assert.ok(item.rechargeRows.some((row) => row.paidAmount === 1000), '充值记录应保留正常实收订单');
-  assert.ok(item.rechargeRows.some((row) => row.paidAmount === 0 && row.bonusAmount === 396), '充值记录应保留零实收但有效赠送续充');
-  assert.strictEqual(item.benefitRows.length, 1);
-  assert.strictEqual(item.benefitRows[0].remaining, 2);
-  assert.strictEqual(item.ledgerRows.length, 1);
-  assert.strictEqual(item.ledgerRows[0].action, 'consume');
-  assert.strictEqual(item.bookingRows.length, 2);
+  assert.strictEqual(item.rechargeRows, undefined, '默认列表不应夹带充值明细');
+  assert.strictEqual(item.benefitRows, undefined, '默认列表不应夹带权益明细');
+  assert.strictEqual(item.ledgerRows, undefined, '默认列表不应夹带权益流水明细');
+  assert.strictEqual(item.bookingRows, undefined, '默认列表不应夹带订场明细');
   assert.strictEqual(item.exportRow.displayName, '张三');
   assert.strictEqual(item.exportRow.totalReceived, 1080);
+
+  const detailView = await loader({ sampleIds: ['court-1'], includeDetails: true });
+  const detailItem = detailView.items[0];
+  assert.strictEqual(detailItem.rechargeRows.length, 2);
+  assert.ok(detailItem.rechargeRows.some((row) => row.paidAmount === 1000), '充值记录应保留正常实收订单');
+  assert.ok(detailItem.rechargeRows.some((row) => row.paidAmount === 0 && row.bonusAmount === 396), '充值记录应保留零实收但有效赠送续充');
+  assert.strictEqual(detailItem.benefitRows.length, 1);
+  assert.strictEqual(detailItem.benefitRows[0].remaining, 2);
+  assert.strictEqual(detailItem.ledgerRows.length, 1);
+  assert.strictEqual(detailItem.ledgerRows[0].action, 'consume');
+  assert.strictEqual(detailItem.bookingRows.length, 2);
 }
 
 main().then(() => {

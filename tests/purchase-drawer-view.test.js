@@ -24,6 +24,7 @@ const openPurchaseDetailModal = fnBody('openPurchaseDetailModal');
 const openPurchaseEditModal = fnBody('openPurchaseEditModal');
 const openPurchaseVoidModal = fnBody('openPurchaseVoidModal');
 const openManualEntitlementAdjustModal = fnBody('openManualEntitlementAdjustModal');
+const ensureFullPurchaseData = fnBody('ensureFullPurchaseData');
 const savePurchase = fnBody('savePurchase');
 
 assert.match(renderPurchases, /openPurchaseDetailModal\('\$\{p\.id\}'\)">查看/, 'purchase list should keep a view action');
@@ -39,6 +40,11 @@ assert.match(openPurchaseDrawer, /modal-purchase-drawer/, 'purchase drawer shoul
 
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('学员信息'[\s\S]*renderDetailDrawerFormCard\('购买信息'[\s\S]*renderDetailDrawerFormCard\('备注'/, 'purchase create should group fields into drawer cards');
 assert.match(openPurchaseModal, /ensurePurchaseDataset\('packageCenterPage',\(\)=>openPurchaseModal\(studentId\)\)/, 'purchase create should load lightweight package center data before rendering the package picker');
+assert.match(ensureFullPurchaseData, /ensurePurchaseDetailData\(id\)/, 'purchase detail should load one purchase detail by id');
+assert.doesNotMatch(openPurchaseDetailModal, /purchasesPage/, 'purchase detail drawer must not load the full purchases aggregate');
+assert.doesNotMatch(openPurchaseEditModal, /purchasesPage/, 'purchase edit drawer must not load the full purchases aggregate');
+assert.doesNotMatch(openPurchaseVoidModal, /purchasesPage/, 'purchase void drawer must not load the full purchases aggregate');
+assert.doesNotMatch(openManualEntitlementAdjustModal, /purchasesPage/, 'manual entitlement drawer must not load the full purchases aggregate');
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('本次赠送',giftForm\)/, 'purchase create should render gift fields in its own drawer card');
 assert.match(openPurchaseModal, /pur_giftLessons[\s\S]*pur_courtBookingGiftCount[\s\S]*pur_ballMachineGiftCount/, 'purchase create should expose package lesson and student benefit gift fields');
 assert.match(source, /function refreshPurchaseGiftPreview\(/, 'purchase create should render a gift preview');

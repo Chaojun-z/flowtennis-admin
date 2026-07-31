@@ -849,7 +849,6 @@ function ensureLeadConversionLookups(leadId){
   if(!lead)return;
   const needed=[];
   if((leadDetailConversionMode==='link-student'&&!(Array.isArray(students)&&students.length))||leadNeedsLookup(students,lead?.studentId))needed.push('students');
-  if(lead?.studentId&&!loadedDatasets.has('purchasesPage'))needed.push('purchasesPage');
   if((leadDetailConversionMode==='link-court'&&!(Array.isArray(courts)&&courts.length))||leadNeedsLookup(courts,lead?.courtId))needed.push('courts');
   if((leadStandardField(lead,'formalCoach')||leadFormalPackageCoach(lead))&&!(Array.isArray(coaches)&&coaches.length))needed.push('coaches');
   if(!needed.length)return;
@@ -879,6 +878,29 @@ function setLeadDetailTab(tab){
   leadDetailConversionMode='';
   const id=document.getElementById('overlay')?.dataset.leadDetailId||'';
   if(id)openLeadDetail(id);
+}
+function leadFollowupDetailNeedsLoad(leadId){
+  return leadDetailActiveTab==='followups'&&typeof leadFollowupsDetailReady==='function'&&!leadFollowupsDetailReady(leadId);
+}
+function loadLeadFollowupDetailThenOpen(leadId){
+  if(typeof ensureLeadFollowupsForLead!=='function')return false;
+  const lead=leadById(leadId);if(!lead)return false;
+  openStandardDetailDrawer({
+    titleHtml:`${leadDetailHeroHtml(lead)}${leadDetailTabsHtml(leadDetailActiveTab)}`,
+    bodyHtml:'<div class="schedule-detail-content"><div class="empty"><p>跟进记录加载中...</p></div></div>',
+    actionsHtml:'',
+    data:{leadDetailId:lead.id},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer modal-lead-drawer'
+  });
+  ensureLeadFollowupsForLead(leadId).then(()=>{
+    const currentId=document.getElementById('overlay')?.dataset.leadDetailId||'';
+    if(currentId===String(leadId)&&leadDetailActiveTab==='followups')openLeadDetail(leadId);
+  }).catch(e=>{
+    console.warn('lead followups detail load failed',e);
+    toast('跟进记录加载失败，请刷新后重试','error');
+  });
+  return true;
 }
 function leadDetailFieldHtml(label,value){
   return renderDetailDrawerField(label,value);
@@ -1020,6 +1042,7 @@ async function saveLeadFollowupFromDrawer(leadId,followupId=''){
   },{
     successText:'跟进已保存 ✓',
     refresh:async()=>{
+    if(typeof ensureLeadFollowupsForLead==='function')await ensureLeadFollowupsForLead(leadId,{force:true});
     await refreshLeadRuntime();
     renderLeads();
     leadDetailEditingSection='';
@@ -1180,7 +1203,6 @@ function openLeadStudentSchedule(leadId){
 async function openLeadPurchasePackage(leadId){
   const lead=leads.find(item=>String(item?.id||'')===String(leadId));
   if(!lead?.studentId){toast('请先关联学员','warn');return;}
-  await ensureDatasetsByName(['purchasesPage']);
   openPurchaseModal(lead.studentId);
 }
 function startLeadConversionDrawerMode(leadId,mode){
@@ -1262,6 +1284,7 @@ function leadDetailSectionHtml(title,content,first=false){
 function openLeadDetail(leadId){
   const lead=leadById(leadId);
   if(!lead)return;
+  if(leadFollowupDetailNeedsLoad(leadId)&&loadLeadFollowupDetailThenOpen(leadId))return;
   const body=leadDetailActiveTab==='basic'?leadDetailBasicTabHtml(lead):leadDetailActiveTab==='followups'?leadDetailFollowupsTabHtml(lead):leadDetailConversionTabHtml(lead);
   openStandardDetailDrawer({
     titleHtml:`${leadDetailHeroHtml(lead)}${leadDetailTabsHtml(leadDetailActiveTab)}`,
@@ -1309,7 +1332,7 @@ function openLeadModal(leadId){
   openLeadDetail(leadId);
 }
 async function refreshLeadRuntime({withStudents=false,withCourts=false}={}){
-  const base=['leads','leadFollowups','lifecycleMetricsPage'];
+  const base=['leads','lifecycleMetricsPage'];
   if(withStudents)base.push('students');
   await ensureDatasetsByName(base,{force:true});
   if(withCourts){
@@ -1651,7 +1674,6 @@ async function convertLeadToStudentAndPurchase(leadId){
     const res=await apiCall('POST',`/leads/${leadId}/convert-student`,{});
     if(res?.lead)upsertLeadLocal(res.lead);
     let studentId=upsertLeadStudentLocal(res?.student)||res?.student?.id||leadById(leadId)?.studentId||'';
-    await ensureDatasetsByName(['purchasesPage']);
     studentId=upsertLeadStudentLocal(res?.student)||studentId||leadById(leadId)?.studentId||'';
     renderLeads();
     if(!studentId){toast('学员档案创建失败','error');return;}

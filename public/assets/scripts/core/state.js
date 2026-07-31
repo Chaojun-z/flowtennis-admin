@@ -21,6 +21,10 @@ let purchaseUnifiedView={rows:[]};
 let packageUnifiedView={rows:[]};
 let entitlementUnifiedView={rows:[]};
 let studentLessonRecordExpandedState={};
+const loadedPurchaseDetailIds=new Set();
+const loadedStudentDetailIds=new Set();
+const loadedLeadFollowupDetailIds=new Set();
+const loadedCourtAccountDetailIds=new Set();
 function financeNormalizedRows(){
   return Array.isArray(financeNormalizedLedgerRows)?financeNormalizedLedgerRows:[];
 }
@@ -262,7 +266,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
   'package-students':['classes','schedule','courts'],
   'trial-students':['classes','schedule','courts'],
-  leads:['leadFollowups','lifecycleMetricsPage'],
+  leads:['lifecycleMetricsPage'],
   packages:[],
   purchases:[],
   schedule:['classes','feedbacks','entitlements','entitlementLedger','financePage'],
@@ -277,7 +281,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   myclasses:['students','classes']
 };
 const STUDENT_PAGE_DEFERRED_REQUIREMENTS=[];
-const STUDENT_DETAIL_REQUIREMENTS=['entitlements','entitlementLedger','feedbacks','products','purchasesPage','membershipBenefitLedger'];
+const STUDENT_DETAIL_REQUIREMENTS=['products'];
 const PERFORMANCE_PAGE_DATA_GUARD={
   students:['classes','schedule','courts'],
   workbench:['workbenchPage']
@@ -343,6 +347,10 @@ function financePageDataUrl(){
 }
 function courtAccountListViewPageDataUrl({fresh=false}={}){
   const url=scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'});
+  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
+}
+function courtAccountDetailPageDataUrl(courtId,{fresh=false}={}){
+  const url=appendPageDataQuery(scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'}),{ids:courtId});
   return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
 }
 function operationsPageDatasetRequestKey(){
@@ -538,6 +546,115 @@ function setDatasetValue(name,data,{persist=true}={}){
   markDatasetLoaded(name);
   if(persist)persistDatasetCache(name,rows);
 }
+function datasetRowsByName(name){
+  if(name==='leads')return leads;
+  if(name==='leadFollowups')return leadFollowups;
+  if(name==='courts')return courts;
+  if(name==='students')return students;
+  if(name==='products')return products;
+  if(name==='packages')return packages;
+  if(name==='purchases')return purchases;
+  if(name==='entitlements')return entitlements;
+  if(name==='entitlementLedger')return entitlementLedger;
+  if(name==='membershipBenefitLedger')return membershipBenefitLedger;
+  if(name==='schedule')return schedules;
+  if(name==='feedbacks')return feedbacks;
+  if(name==='customerLifecycleRows')return customerLifecycleRows;
+  return [];
+}
+function mergeDatasetRowsById(name,rows=[]){
+  const incoming=Array.isArray(rows)?rows.filter(row=>row&&row.id):[];
+  if(!incoming.length)return;
+  const current=datasetRowsByName(name);
+  const map=new Map((Array.isArray(current)?current:[]).map(row=>[String(row?.id||''),row]));
+  incoming.forEach(row=>map.set(String(row.id),row));
+  setDatasetValue(name,[...map.values()],{persist:false});
+}
+function mergeTeachingStudentDetail(row){
+  if(!row?.id)return;
+  const groups=['historicalStudents','activeStudents','courseStudents','trialStudents','formalStudents','trialAttendedStudents','trialAttendedToFormalPurchaseStudents','trialAttendedWithoutFormalStudents','trialPathStudents','trialPathDealStudents','trialPathPendingStudents','directCourseDealStudents'];
+  groups.forEach(key=>{
+    const list=Array.isArray(teachingStudentViews?.[key])?teachingStudentViews[key]:[];
+    const index=list.findIndex(item=>String(item?.id||'')===String(row.id));
+    if(index>=0)list[index]={...list[index],...row};
+  });
+}
+function hydratePurchaseDetailData(data={}){
+  mergeDatasetRowsById('purchases',data.purchases||[]);
+  mergeDatasetRowsById('packages',data.packages||[]);
+  mergeDatasetRowsById('students',data.students||[]);
+  mergeDatasetRowsById('entitlements',data.entitlements||[]);
+  mergeDatasetRowsById('entitlementLedger',data.entitlementLedger||[]);
+  mergeDatasetRowsById('membershipBenefitLedger',data.membershipBenefitLedger||[]);
+}
+function purchaseDetailDataReady(purchaseId){
+  return loadedPurchaseDetailIds.has(String(purchaseId||'').trim());
+}
+async function ensurePurchaseDetailData(purchaseId,{force=false}={}){
+  const id=String(purchaseId||'').trim();
+  if(!id)return false;
+  if(!force&&loadedPurchaseDetailIds.has(id))return false;
+  const data=await apiCall('GET',`/page-data/purchase-detail?id=${encodeURIComponent(id)}${force?'&fresh=1':''}`);
+  hydratePurchaseDetailData(data||{});
+  loadedPurchaseDetailIds.add(id);
+  return true;
+}
+function hydrateStudentDetailData(data={}){
+  mergeDatasetRowsById('students',data.students||[]);
+  mergeDatasetRowsById('purchases',data.purchases||[]);
+  mergeDatasetRowsById('packages',data.packages||[]);
+  mergeDatasetRowsById('entitlements',data.entitlements||[]);
+  mergeDatasetRowsById('entitlementLedger',data.entitlementLedger||[]);
+  mergeDatasetRowsById('schedule',data.schedule||[]);
+  mergeDatasetRowsById('membershipBenefitLedger',data.membershipBenefitLedger||[]);
+  mergeDatasetRowsById('feedbacks',data.feedbacks||[]);
+  if(Array.isArray(data.customerLifecycleRows))mergeDatasetRowsById('customerLifecycleRows',data.customerLifecycleRows);
+  if(data.detailStudentView)mergeTeachingStudentDetail(data.detailStudentView);
+}
+function studentDetailDataReady(studentId){
+  return loadedStudentDetailIds.has(String(studentId||'').trim());
+}
+async function ensureStudentDetailData(studentId,{force=false}={}){
+  const id=String(studentId||'').trim();
+  if(!id)return false;
+  if(!force&&loadedStudentDetailIds.has(id))return false;
+  const data=await apiCall('GET',`/page-data/student-detail?id=${encodeURIComponent(id)}${force?'&fresh=1':''}`);
+  hydrateStudentDetailData(data||{});
+  loadedStudentDetailIds.add(id);
+  return true;
+}
+function leadFollowupsDetailReady(leadId){
+  return loadedLeadFollowupDetailIds.has(String(leadId||'').trim());
+}
+async function ensureLeadFollowupsForLead(leadId,{force=false}={}){
+  const id=String(leadId||'').trim();
+  if(!id)return false;
+  if(!force&&loadedLeadFollowupDetailIds.has(id))return false;
+  const rows=await apiCall('GET',`/leads/${encodeURIComponent(id)}/followups`);
+  const merged=new Map((Array.isArray(leadFollowups)?leadFollowups:[]).map(row=>[String(row?.id||''),row]));
+  (Array.isArray(rows)?rows:[]).filter(row=>row&&row.id).forEach(row=>merged.set(String(row.id),row));
+  leadFollowups=[...merged.values()];
+  loadedLeadFollowupDetailIds.add(id);
+  return true;
+}
+function courtAccountDetailDataReady(courtId){
+  return loadedCourtAccountDetailIds.has(String(courtId||'').trim());
+}
+async function ensureCourtAccountDetailData(courtId,{force=false}={}){
+  const id=String(courtId||'').trim();
+  if(!id)return false;
+  if(!force&&loadedCourtAccountDetailIds.has(id))return false;
+  const view=await apiCall('GET',courtAccountDetailPageDataUrl(id,{fresh:force}));
+  const item=Array.isArray(view?.items)?view.items.find(row=>String(row?.id||'')===id):null;
+  if(!item)return false;
+  const current=Array.isArray(courtAccountListViewData?.items)?courtAccountListViewData.items:[];
+  const map=new Map(current.map(row=>[String(row?.id||''),row]));
+  map.set(id,item);
+  courtAccountListViewData={...(courtAccountListViewData||{}),items:[...map.values()]};
+  loadedCourtAccountDetailIds.add(id);
+  window.__courtAccountListViewData=courtAccountListViewData;
+  return true;
+}
 function noteScheduleLocalMutation(){
   scheduleLocalMutationAt=Date.now();
   markLearningDataStale();
@@ -546,6 +663,10 @@ function noteScheduleLocalMutation(){
   financeSettlementSummaryRows=[];
 }
 function markLearningDataStale(){
+  loadedPurchaseDetailIds.clear();
+  loadedStudentDetailIds.clear();
+  loadedLeadFollowupDetailIds.clear();
+  loadedCourtAccountDetailIds.clear();
   [
     'schedule','students','purchases','entitlements','entitlementLedger','customerLifecycleRows',
     'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage','workbenchPage',
@@ -1159,6 +1280,7 @@ async function loadCourtReadModelGuardData({force=false,allowStaleOnError=false}
     const view=await DATASET_LOADERS.courtAccountListViewPage({fresh:force});
     courtAccountListViewData=view||null;
     courtAccountListViewRequestKey=requestKey;
+    if(force)loadedCourtAccountDetailIds.clear();
     window.__courtAccountListViewData=courtAccountListViewData;
   }catch(err){
     if(allowStaleOnError&&courtAccountListViewData){

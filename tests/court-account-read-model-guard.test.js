@@ -135,6 +135,13 @@ async function main() {
   assert.strictEqual(view.items[0].guestBookingAmount, 200, '会员名下的微信订场金额应计入散客金额');
   assert.strictEqual(view.items[0].lastBookingDate, '2026-05-12', '读模型应输出最近订场日期');
   assert.strictEqual(view.items[0].balance, 100, '新读模型应优先读取 cachedBalance');
+  assert.strictEqual(view.items[0].history, undefined, '默认列表不应返回订场历史明细');
+  assert.strictEqual(view.items[0].rechargeRows, undefined, '默认列表不应返回充值明细');
+  assert.strictEqual(view.items[0].benefitRows, undefined, '默认列表不应返回权益明细');
+  assert.strictEqual(view.items[0].ledgerRows, undefined, '默认列表不应返回权益流水明细');
+  assert.strictEqual(view.items[0].bookingRows, undefined, '默认列表不应返回订场明细');
+  assert.deepStrictEqual(view.membershipOrderAuditRows, [], '默认列表不应夹带会员订单审计行');
+  assert.deepStrictEqual(view.membershipLedgerAuditRows, [], '默认列表不应夹带会员权益流水审计行');
   assert.strictEqual(view.summary.totalMemberCount, 1, '读模型汇总应统计有效会员人数');
   assert.strictEqual(view.summary.totalBookingHours, 3.5, '读模型汇总应统计有效订场总时长');
   assert.strictEqual(view.summary.totalMemberBookingCount, 3, '读模型汇总应按新口径统计会员订场次数');
@@ -145,6 +152,12 @@ async function main() {
   assert.strictEqual(view.summary.totalGuestBookingCount, 1, '读模型汇总应把非储值扣款订场统计为散客次数');
   assert.strictEqual(view.summary.totalGuestBookingAmount, 200, '读模型汇总应把非储值扣款订场统计为散客金额');
   assert.strictEqual(view.summary.totalBalance, 100, '订场用户页会员余额只统计有效会员账户余额，不混入散客余额');
+
+  const detailView = await loadView({ sampleIds: ['court-1'], includeDetails: true });
+  assert.strictEqual(detailView.items.length, 1, '详情读模型应支持按单个订场用户 ID 加载');
+  assert.ok(Array.isArray(detailView.items[0].rechargeRows) && detailView.items[0].rechargeRows.length === 2, '详情读模型应返回当前用户充值明细');
+  assert.ok(Array.isArray(detailView.items[0].bookingRows) && detailView.items[0].bookingRows.length === 4, '详情读模型应返回当前用户订场明细');
+  assert.ok(detailView.membershipOrderAuditRows.length === 2, '详情读模型可返回当前用户订单审计行');
 
   const compare = await loadCompare({ sampleIds: ['court-1'] });
   assert.deepStrictEqual(Object.keys(compare), ['meta', 'summaryDiffs', 'items'], 'compare 输出应返回 meta/summaryDiffs/items');

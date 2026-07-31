@@ -280,8 +280,16 @@ function ensurePurchaseDataset(name,afterLoad,errorText){
   });
   return true;
 }
-function ensureFullPurchaseData(afterLoad){
-  return ensurePurchaseDataset('purchasesPage',afterLoad,'购买详情加载失败，请刷新后重试');
+function ensureFullPurchaseData(purchaseId,afterLoad){
+  const id=String(purchaseId||'').trim();
+  if(!id)return false;
+  if(typeof purchaseDetailDataReady==='function'&&purchaseDetailDataReady(id))return false;
+  if(typeof ensurePurchaseDetailData!=='function')return ensurePurchaseDataset('purchasesPage',afterLoad,'购买详情加载失败，请刷新后重试');
+  ensurePurchaseDetailData(id).then(afterLoad).catch(e=>{
+    console.error('purchase detail load failed',e);
+    toast('购买详情加载失败，请刷新后重试','error');
+  });
+  return true;
 }
 function purchaseHasLedger(purchaseId){
   const unified=purchaseUnifiedRows().find(row=>String(row.id||'')===String(purchaseId||''));
@@ -576,7 +584,7 @@ function setPurchaseDetailTab(tab){
   if(id)openPurchaseDetailModal(id,['deal','balance','rules'].includes(tab)?tab:'deal');
 }
 function openPurchaseDetailModal(id,tab='deal'){
-  if(ensureFullPurchaseData(()=>openPurchaseDetailModal(id,tab)))return;
+  if(ensureFullPurchaseData(id,()=>openPurchaseDetailModal(id,tab)))return;
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
   const activeTab=['deal','balance','rules'].includes(tab)?tab:'deal';
   const ent=purchaseEntitlement(id);
@@ -632,9 +640,9 @@ function openPurchaseDetailModal(id,tab='deal'){
   );
 }
 function openManualEntitlementAdjustModal(entitlementId, action='manual_consume', options={}){
-  if(ensureFullPurchaseData(()=>openManualEntitlementAdjustModal(entitlementId,action,options)))return;
   const ent=entitlements.find(e=>e.id===entitlementId);
   if(!ent){toast('课包余额不存在','error');return;}
+  if(ensureFullPurchaseData(ent.purchaseId,()=>openManualEntitlementAdjustModal(entitlementId,action,options)))return;
   const purchase=purchases.find(p=>p.id===ent.purchaseId)||{};
   const meta=purchaseDisplayPackageMeta({...purchase,...ent});
   const unit=packageLessonUnitLabel(meta);
@@ -701,7 +709,7 @@ async function saveManualEntitlementAdjust(entitlementId, action){
   });
 }
 function openPurchaseEditModal(id){
-  if(ensureFullPurchaseData(()=>openPurchaseEditModal(id)))return;
+  if(ensureFullPurchaseData(id,()=>openPurchaseEditModal(id)))return;
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
   const locked=purchaseHasLedger(id);
   const studentOptions=students.map(s=>({value:s.id,label:`${s.name}${s.phone?` · ${s.phone}`:''}`}));
@@ -762,7 +770,7 @@ async function savePurchaseEdit(id){
   });
 }
 function openPurchaseVoidModal(id){
-  if(ensureFullPurchaseData(()=>openPurchaseVoidModal(id)))return;
+  if(ensureFullPurchaseData(id,()=>openPurchaseVoidModal(id)))return;
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
   const ent=purchaseEntitlement(id);
   const meta=purchaseDisplayPackageMeta(p);
