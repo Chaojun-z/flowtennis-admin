@@ -64,7 +64,12 @@ function createResidualPageDataRoutes(deps={}){
         pageSize:query?.get('pageSize')||'',
         q:query?.get('q')||'',
         owner:query?.get('owner')||'',
-        accountType:query?.get('accountType')||''
+        accountType:query?.get('accountType')||'',
+        membershipTier:query?.get('membershipTier')||'',
+        campus:query?.get('campus')||'',
+        campusName:query?.get('campusName')||'',
+        startDate:query?.get('startDate')||'',
+        endDate:query?.get('endDate')||''
       });
       const scope=pageDataScopeFromQuery(query);
       if(hasPageDataScope(scope))view.summary=buildScopedCourtAccountListSummary(view,scope);

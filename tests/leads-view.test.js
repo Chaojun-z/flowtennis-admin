@@ -108,7 +108,7 @@ assert.match(fnBody('leadConvertedYesNo'), /leadStageText\(lead\)==='已成交'/
 assert.doesNotMatch(fnBody('leadConvertedYesNo'), /leadDealTypeText\(lead\)/, 'deal type alone should not mark a lead as converted');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
-assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'leads search should reset pagination through the standard list flow before rendering');
+assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*requestLeadListPage\(\)/, 'leads search should reset pagination and request the server-side list page');
 assert.match(leadsSource, /function cycleLeadSort\([\s\S]*leadSortDir='asc'[\s\S]*leadSortDir='desc'[\s\S]*leadSortKey='';leadSortDir='';/, 'leads sortable headers should cycle asc, desc, and no sort');
 assert.match(leadsSource, /function updateLeadSortHeaders\(/, 'leads page should update sortable header state');
 assert.match(leadsSource, /function getSortedLeads\(/, 'leads page should sort after filtering and before pagination');

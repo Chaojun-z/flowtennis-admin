@@ -5,7 +5,7 @@ function onPurchaseFilterChange(){
   purPackageFilterValue=document.getElementById('purPackageFilter')?.value||'';
   purOwnerCoachFilterValue='';
   purPage=standardListFirstPage();
-  renderPurchases();
+  requestPurchaseListPage();
 }
 function purchaseTopCampusOptions(){
   const campusSource=typeof accessibleCampusRows==='function'?accessibleCampusRows():(Array.isArray(campuses)?campuses:[]);
@@ -47,7 +47,7 @@ function selectPurchaseTopCampus(value,event){
   localStorage.setItem(CAMPUS_KEY,campus);
   purPage=standardListFirstPage();
   refreshPurchaseTopFilters();
-  renderPurchases();
+  requestPurchaseListPage();
   closeStandardTopDropdowns();
 }
 function onPurchaseDateRangeFilterChange(value,event){
@@ -58,7 +58,7 @@ function onPurchaseDateRangeFilterChange(value,event){
   purDateRangeEnd=range.endDate;
   purPage=standardListFirstPage();
   refreshPurchaseTopFilters();
-  renderPurchases();
+  requestPurchaseListPage();
   closeStandardTopDropdowns();
 }
 function refreshPurchaseFilters(){
@@ -128,20 +128,33 @@ function renderPurchasePagerControls(total,pages){
   if(!btns)return;
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(purPage,pages,'setPurchasePage');
 }
+function purchaseServerListPage(){
+  return typeof currentPackageCenterListPage==='function'?currentPackageCenterListPage('purchases'):null;
+}
+function requestPurchaseListPage(){
+  if(typeof loadPackageCenterListPage!=='function'){renderPurchases();return;}
+  loadPackageCenterListPage({view:'purchases',page:purPage,pageSize:purPageSize}).then(page=>{
+    if(page)purPage=page.page;
+    if(currentPage==='purchases')renderPurchases();
+  }).catch(e=>{
+    console.error('purchase list page load failed',e);
+    toast('购买记录加载失败，请稍后重试','error');
+  });
+}
 function setPurchasePage(value){
-  const total=getFilteredPurchases().length;
+  const total=purchaseServerListPage()?.total||getFilteredPurchases().length;
   purPage=standardListPagination(total,value,purPageSize).page;
-  renderPurchases();
+  requestPurchaseListPage();
 }
 function setPurchasePageSize(value){
   purPageSize=standardListPageSize(value,purPageSize);
   purPage=standardListFirstPage();
-  renderPurchases();
+  requestPurchaseListPage();
 }
 function jumpPurchasePage(value){
-  const total=getFilteredPurchases().length;
+  const total=purchaseServerListPage()?.total||getFilteredPurchases().length;
   purPage=standardListPagination(total,value,purPageSize).page;
-  renderPurchases();
+  requestPurchaseListPage();
 }
 function purchaseDisplayPackageMeta(p={}){
   const ent=entitlements.find(e=>String(e.purchaseId||'')===String(p.id||''))||{};
@@ -247,9 +260,12 @@ function renderPurchaseMobileCards(list){
 }
 function renderPurchases(){
   refreshPurchaseFilters();
-  const list=getFilteredPurchases();
+  const serverPage=purchaseServerListPage();
+  const list=serverPage?.rows||getFilteredPurchases();
   const isMobileList=document.body.classList.contains('admin-mobile');
-  const pageState=isMobileList?{total:list.length,pages:1,page:1,slice:list}:standardListSlice(list,purPage,purPageSize);
+  const pageState=serverPage
+    ? {total:serverPage.total,pages:serverPage.pages,page:serverPage.page,pageSize:serverPage.pageSize,slice:list}
+    : (isMobileList?{total:list.length,pages:1,page:1,slice:list}:standardListSlice(list,purPage,purPageSize));
   purPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-purchases .tms-pagination');

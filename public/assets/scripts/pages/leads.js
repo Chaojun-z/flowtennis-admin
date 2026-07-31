@@ -571,14 +571,14 @@ function setLeadDatePreset(preset){
     leadDateCustomEnd='';
   }
   leadPage=standardListFirstPage();
-  renderLeads();
+  requestLeadListPage();
 }
 function setLeadCustomDateRange(){
   leadDatePreset='custom';
   leadDateCustomStart=document.getElementById('leadDateFrom')?.value||'';
   leadDateCustomEnd=document.getElementById('leadDateTo')?.value||'';
   leadPage=standardListFirstPage();
-  renderLeads();
+  requestLeadListPage();
 }
 function leadSortDateValue(value,lead={}){
   const raw=String(value||'').trim().replace(' 00:00:00','').replace('00:00:00','').replace('//','/');
@@ -619,7 +619,7 @@ function cycleLeadSort(key){
   else if(leadSortDir==='asc')leadSortDir='desc';
   else {leadSortKey='';leadSortDir='';}
   leadPage=standardListFirstPage();
-  renderLeads();
+  requestLeadListPage();
 }
 function updateLeadSortHeaders(){
   document.querySelectorAll('#page-leads [data-lead-sort]').forEach(btn=>{
@@ -649,7 +649,7 @@ function leadOwnerFilterHtml(options=[],selectedValues=[]){
 }
 function toggleLeadOwnerFilter(){
   leadPage=standardListFirstPage();
-  renderLeads();
+  requestLeadListPage();
 }
 function getFilteredLeads(){
   const q=(document.getElementById('leadSearch')?.value||'').trim().toLowerCase();
@@ -1825,23 +1825,39 @@ function renderLeadPagerControls(total,pages){
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(leadPage,pages,'setLeadPage');
 }
 function setLeadPage(value){
-  const total=getFilteredLeads().length;
+  const total=leadServerListPage()?.total||getFilteredLeads().length;
   leadPage=standardListPagination(total,value,leadPageSize).page;
-  renderLeads();
+  requestLeadListPage();
 }
 function jumpLeadPage(value){
-  const total=getFilteredLeads().length;
+  const total=leadServerListPage()?.total||getFilteredLeads().length;
   leadPage=standardListPagination(total,value,leadPageSize).page;
-  renderLeads();
+  requestLeadListPage();
+}
+function leadServerListPage(){
+  return typeof currentLeadListPage==='function'?currentLeadListPage():null;
+}
+function requestLeadListPage(){
+  if(typeof loadLeadListPage!=='function'){renderLeads();return;}
+  loadLeadListPage({page:leadPage,pageSize:leadPageSize}).then(page=>{
+    if(page)leadPage=page.page;
+    if(currentPage==='leads')renderLeads();
+  }).catch(e=>{
+    console.error('lead list page load failed',e);
+    toast('线索列表加载失败，请稍后重试','error');
+  });
 }
 function renderLeads(){
   renderLeadDateScopeControls();
   renderLeadToolbarFilters();
   updateLeadSortHeaders();
+  const serverPage=leadServerListPage();
   const list=getSortedLeads(getFilteredLeads());
   renderLeadStats(list);
   const isMobileList=document.body.classList.contains('admin-mobile');
-  const pageState=isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,leadPage,leadPageSize);
+  const pageState=serverPage
+    ? {total:serverPage.total,pages:serverPage.pages,slice:list,page:serverPage.page,pageSize:serverPage.pageSize}
+    : (isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,leadPage,leadPageSize));
   leadPage=pageState.page;
   const {total,pages,slice}=pageState;
   const tbody=document.getElementById('leadTbody');
@@ -1857,11 +1873,11 @@ function renderLeads(){
 }
 function applyLeadSearch(){
   leadPage=standardListFirstPage();
-  renderLeads();
+  requestLeadListPage();
 }
 function onLeadFilterChange(){
   leadPage=standardListFirstPage();
-  renderLeads();
+  requestLeadListPage();
 }
 function resetLeadFilters(){
   const ids=['leadSearch','leadSourceFilter','leadCustomerTypeFilter','leadConsultFilter','leadStageFilter','leadOwnerFilter'];
@@ -1870,10 +1886,10 @@ function resetLeadFilters(){
   leadDateCustomStart='';
   leadDateCustomEnd='';
   leadPage=standardListFirstPage();
-  renderLeads();
+  requestLeadListPage();
 }
 function setLeadPageSize(value){
   leadPageSize=standardListPageSize(value,leadPageSize);
   leadPage=standardListFirstPage();
-  renderLeads();
+  requestLeadListPage();
 }
