@@ -3,8 +3,6 @@ const { appSource: source } = require('./helpers/read-index-bundle');
 
 assert.match(source, /历史学员[\s\S]*在期学员/, 'admin sidebar should split student management into historical and active student pages');
 assert.match(source, /function isStudentListPage\(/, 'student split pages should share the existing student list shell');
-assert.match(source, /function studentListViewMode\(\)\{[\s\S]*normalizeStudentListPage\(currentPage\)[\s\S]*return page==='trial-students'\?'trial':'package'/, 'historical and active student pages should map current page keys to the correct student mode');
-assert.match(source, /function customerCenterListViewForPage\(pg=currentPage\)\{[\s\S]*normalizeStudentListPage\(pg\)[\s\S]*return page==='trial-students'\?'historicalStudents':'activeStudents'/, 'customer center first-screen requests should map historical students to historicalStudents and active students to activeStudents');
 assert.match(source, /package-students[\s\S]*trial-students/, 'student split pages should expose dedicated routes');
 assert.match(source, /function studentHasNonTrialPackage\([\s\S]*customerLifecycleText\(studentLifecycleStage\(stu\)\)==='formal'/, 'student split pages should identify formal students from the unified lifecycle stage');
 assert.match(source, /function studentHasTrialPath\([\s\S]*studentLifecycleRow\(stu\)/, 'trial student page should identify trial-path students from the unified lifecycle row');

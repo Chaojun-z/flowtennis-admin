@@ -242,8 +242,6 @@ assert.match(fnBody('leadPayloadFromForm'), /followupPriority:document\.getEleme
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'level'[\s\S]*\]/, 'lead list API projection should include level');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'followupPriority'[\s\S]*\]/, 'lead list API projection should include follow-up priority');
 assert.match(leadsRoutesSource, /function parseLeadPaging\(query\)/, 'lead list API should expose server-side paging');
-assert.match(leadsRoutesSource, /function buildLeadListSummary\(rows=\[\]\)[\s\S]*total:base\.length[\s\S]*historicalStudents[\s\S]*activeStudents[\s\S]*trialAttended[\s\S]*trialAttendedToFormalPurchase/, 'paged lead list API should include filtered full-list summary for top cards');
-assert.match(leadsRoutesSource, /return \{rows:rows\.slice\(start,start\+paging\.pageSize\),total,page,pageSize:paging\.pageSize,pages,summary:buildLeadListSummary\(rows\)\}/, 'lead list page payload should keep paged rows but attach full filtered summary');
 assert.match(leadsRoutesSource, /return sendJson\(res,paging\?buildLeadListPage\(filtered,paging\):filtered\)/, 'lead list API should keep old array responses and return paged metadata when requested');
 assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',15,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');

@@ -376,9 +376,8 @@ function packageCenterPageDataUrl({fresh=false,view='',page=1,pageSize=15}={}){
   const url=appendPageDataQuery('/page-data/package-center-list',params);
   return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
 }
-function customerCenterListViewForPage(pg=currentPage){
-  const page=typeof normalizeStudentListPage==='function'?normalizeStudentListPage(pg):pg;
-  return page==='trial-students'?'historicalStudents':'activeStudents';
+function customerCenterListViewForPage(){
+  return (typeof studentListViewMode==='function'&&studentListViewMode()==='trial')?'historicalStudents':'activeStudents';
 }
 function studentTagFilterParam(key){
   if(typeof studentTagFilterState!=='object'||!studentTagFilterState)return '';
@@ -680,8 +679,7 @@ function normalizeServerListPage(data={},view=''){
     total:Number(page.total)||page.rows.length,
     page:Number(page.page)||1,
     pageSize:Number(page.pageSize)||page.rows.length||15,
-    pages:Number(page.pages)||1,
-    summary:page.summary||data.summary||null
+    pages:Number(page.pages)||1
   };
 }
 function currentPackageCenterListPage(view){

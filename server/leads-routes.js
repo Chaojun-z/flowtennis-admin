@@ -40,38 +40,13 @@ function createLeadsRoutes(deps={}){
     return {page,pageSize};
   }
 
-  function leadRateText(value,total){
-    if(!total)return '0%';
-    const percent=(Number(value)||0)/(Number(total)||0)*100;
-    return `${Number.isInteger(percent)?percent:percent.toFixed(1)}%`;
-  }
-
-  function buildLeadListSummary(rows=[]){
-    const base=Array.isArray(rows)?rows:[];
-    const historicalStudents=base.filter(row=>row?.isHistoricalStudentRoster||row?.hasTrialAttended||row?.hasCourseConversion).length;
-    const activeStudents=base.filter(row=>row?.isActiveStudentRoster).length;
-    const trialAttended=base.filter(row=>row?.hasTrialAttended||cleanLeadText(row?.trialAttendedAt)).length;
-    const trialAttendedToFormalPurchase=base.filter(row=>row?.hasTrialToCourseConversion).length;
-    return {
-      total:base.length,
-      historicalStudents,
-      historicalStudentRate:leadRateText(historicalStudents,base.length),
-      activeStudents,
-      activeStudentRate:leadRateText(activeStudents,historicalStudents),
-      trialAttended,
-      trialAttendedRate:leadRateText(trialAttended,base.length),
-      trialAttendedToFormalPurchase,
-      trialAttendedToFormalPurchaseRate:leadRateText(trialAttendedToFormalPurchase,trialAttended)
-    };
-  }
-
   function buildLeadListPage(rows=[],paging=null){
     if(!paging)return null;
     const total=rows.length;
     const pages=Math.max(1,Math.ceil(total/paging.pageSize));
     const page=Math.min(paging.page,pages);
     const start=(page-1)*paging.pageSize;
-    return {rows:rows.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages,summary:buildLeadListSummary(rows)};
+    return {rows:rows.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages};
   }
 
   function visibleLeadSourceRows(rows=[]){
