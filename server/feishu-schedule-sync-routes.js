@@ -684,6 +684,7 @@ function buildResolvedCandidate(raw,ctx={}){
 
 function confirmedSingleStudentSmallClass(raw={}){
   if(raw.course?.courseType!=='小班课')return false;
+  if(raw.course?.smallClassType==='family')return true;
   const text=cleanText(raw.studentText||raw.studentNames?.join('、'));
   const names=Array.isArray(raw.studentNames)?raw.studentNames:[];
   const keys=[...names,...text.split(/[、,，/&]+/)].map(name=>normalizeStudentNameKey(resolveFeishuStudentAlias(name)));
@@ -1704,7 +1705,10 @@ function createFeishuScheduleSyncRoutes(deps={}){
         formatDeleteCardLine({scheduleSnapshot:snapshot}),
         '结果：系统排课已取消'
       ].filter(Boolean).join('\n')).catch(()=>null);
-      return sendJson(res,{success:true,task:nextTask,result});
+      const brief=formatDeleteCardLine({scheduleSnapshot:snapshot});
+      const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>排课已取消</title><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:24px;line-height:1.6;background:#f7f7f5;color:#1f2933"><main style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px"><h2 style="margin:0 0 12px;color:#166534">排课已取消</h2><p style="margin:0 0 12px;color:#4b5563">系统已经按你的确认取消这节排课。</p><div style="padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:16px">${escapeHtml(brief||'系统排课')}</div><p style="font-size:13px;color:#6b7280">你可以关闭这个页面，飞书群里也会收到确认结果。</p></main></body>`;
+      res.setHeader('Content-Type','text/html; charset=utf-8');
+      return res.status(200).send(html);
     }
     return false;
   };

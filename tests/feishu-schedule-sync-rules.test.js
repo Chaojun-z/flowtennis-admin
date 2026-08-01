@@ -552,6 +552,24 @@ const wangBossFamilyPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(wangBossFamilyPlan.summary.create, 1, '王老板 family class should allow one canonical family student record');
 
+const regularFamilySinglePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...interleavedCourses[1],
+    sourceKey: 'regular-family-single-key',
+    coachName: '刘润扬',
+    studentNames: ['亲子代表'],
+    studentText: '亲子代表',
+    course: { ok: true, courseType: '小班课', experienceType: '', audience: '青少年', smallClassType: 'family', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-family', name: '亲子代表', primaryCoach: '刘润扬' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-family', studentId: 'stu-family', courseType: '小班课', smallClassType: 'family', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(regularFamilySinglePlan.summary.create, 1, 'family small class should allow one representative student record');
+
 const chenxiFriendFamilyPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...interleavedCourses[1],
