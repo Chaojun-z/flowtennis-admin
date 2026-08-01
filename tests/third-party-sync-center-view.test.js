@@ -34,6 +34,7 @@ assert.match(html, /正在拉取/, 'manual pull button should show progress whil
 assert.match(html, /setThirdPartySyncTableTab/, 'sync center should switch long tables through tabs');
 assert.match(html, /thirdPartySyncEffectiveBatchId/, 'precheck tab should default to the latest batch instead of all historical batches');
 assert.match(html, /thirdPartySyncNeedsProcessingRows/, 'sync center should merge all items requiring operation handling into one list');
+assert.match(html, /thirdPartySyncIsActionableSourceType/, 'needs-processing list should keep member profile and member ledger gap rows out of operator actions');
 assert.match(html, /同步记录[\s\S]*需处理数据/, 'sync center should expose two operator-facing table tabs');
 assert.match(html, /订场订单[\s\S]*会员资料[\s\S]*接口缺口[\s\S]*已导入[\s\S]*需处理[\s\S]*异常/, 'sync record table should show batch-level business metrics');
 assert.match(html, /类型[\s\S]*日期[\s\S]*时间段[\s\S]*场地[\s\S]*姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'needs-processing table should show only actionable fields');
@@ -51,5 +52,7 @@ assert.match(workflow, /TZ:\s*Asia\/Shanghai/, 'workflow should pin Asia/Shangha
 assert.match(workflow, /\/api\/cron\/third-party-sync-center/, 'workflow should trigger sync center cron endpoint');
 assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, 'workflow should reuse existing cron auth fallback');
 assert.match(workflow, /sleep 3600/, 'daily sync should retry once after 1 hour when the first run fails');
+assert.match(workflow, /FEISHU_MONITOR_WEBHOOK_URL:\s*\$\{\{\s*secrets\.FEISHU_MONITOR_ALERT_WEBHOOK\s*\}\}/, 'daily sync should have an action-level Feishu failure fallback');
+assert.match(workflow, /订场数据同步失败/, 'daily sync fallback should send an operator-readable failure notice');
 
 console.log('third-party sync center view tests passed');

@@ -31,7 +31,7 @@ const THIRD_PARTY_LOCK_RULES = Object.freeze([
   { id: 'ball-machine', pattern: /发球机/, finalType: '订场+发球机', businessCategory: '订场+发球机', processLayer: 'booking_extra_service', serviceType: '发球机' },
   { id: 'companion', pattern: /陪打/, finalType: '订场陪打', businessCategory: '订场陪打', processLayer: 'booking_extra_service', serviceType: '陪打' },
   { id: 'changda', pattern: /畅打|4人畅打|四人畅打/, finalType: '畅打活动', businessCategory: '畅打活动', processLayer: 'activity_occupancy', paymentMethod: '微信转账' },
-  { id: 'schedule-occupancy', pattern: /私教课|体验课|上课|小班|训练营/, finalType: '排课占场', businessCategory: '排课占场', processLayer: 'schedule', paymentMethod: '不涉及支付' },
+  { id: 'schedule-occupancy', pattern: /私教课|体验课|亲子课|上课|小班|训练营|训练课|小朋友|成人课|成人\s*$/, finalType: '排课占场', businessCategory: '排课占场', processLayer: 'schedule', paymentMethod: '不涉及支付' },
   { id: 'voucher-booking', pattern: /大众点评|大众券码|点评券|大众券|美团券|团购|核销|券/, finalType: '大众点评券码订场', businessCategory: '第三方券码订场', processLayer: 'booking_finance', paymentMethod: '大众点评券码' }
 ]);
 
@@ -256,6 +256,19 @@ function lockRuleText(record = {}) {
   return [remarkOf(record), customerNameOf(record), operatorAccountOf(record)].filter(Boolean).join(' ');
 }
 
+function isOperatorName(value = '') {
+  return /运营|前台|管理员|客服/.test(cleanText(value));
+}
+
+function isOperatorAssistedBookingLock(record = {}) {
+  const name = customerNameOf(record);
+  const operator = operatorAccountOf(record);
+  if (!name || !operator || remarkOf(record)) return false;
+  if (name === operator) return false;
+  if (isOperatorName(name)) return false;
+  return isOperatorName(operator);
+}
+
 function classifyRecord(record = {}, duplicateKeys = new Set()) {
   const sourceType = normalizeSourceType(record.sourceType);
   const key = uniqueBookingKey(record);
@@ -305,6 +318,7 @@ function classifyRecord(record = {}, duplicateKeys = new Set()) {
       });
     }
     if (rule?.id === 'voucher-booking') return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '确认券码来源和结算金额', confidence: 0.65, riskReason: '第三方券码结算金额需确认', needsConfirmation: true, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
+    if (isOperatorAssistedBookingLock(record)) return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '按运营代订场写入订场用户，不自动补财务金额', confidence: 0.78, riskReason: '', needsConfirmation: false, businessCategory: '运营代订场', processLayer: 'booking', suggestedFinalType: '运营代订场', paymentMethod: amountOf(record) > 0 ? '微信转账' : '不涉及支付' });
     return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '运营确认锁场类型', confidence: 0.45, riskReason: remark ? '锁场需确认业务归属' : '备注为空', needsConfirmation: true, businessCategory: '运营锁场待确认', processLayer: 'booking' });
   }
   if (sourceType === 'order') {
@@ -406,6 +420,7 @@ function importTargetsFor({ sourceType = '', finalType = '', recommendedType = '
   const type = cleanText(finalType);
   if (type === '排课占场') return [T_SCHEDULE];
   if (type === '内部占用') return [T_COURTS];
+  if (type === '运营代订场') return Number(amount || 0) > 0 ? [T_COURTS, T_FINANCIAL_LEDGER] : [T_COURTS];
   if (type === '畅打活动') return Number(amount || 0) > 0 ? [T_COURTS, T_FINANCIAL_LEDGER] : [T_COURTS];
   if (type === '订场陪打') return [T_COURTS, T_FINANCIAL_LEDGER, T_SCHEDULE];
   if (['散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场+发球机'].includes(type)) return [T_COURTS, T_FINANCIAL_LEDGER];

@@ -16,6 +16,7 @@ jobs:
       TZ: Asia/Shanghai
       CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
       TARGET_URL: https://www.flowtennis.cn/api/cron/third-party-sync-center
+      FEISHU_MONITOR_WEBHOOK_URL: ${{ secrets.FEISHU_MONITOR_ALERT_WEBHOOK }}
 
     steps:
       - name: Trigger third party sync center
@@ -31,4 +32,13 @@ jobs:
           fi
           echo "third party sync failed, retrying after 1 hour..."
           sleep 3600
-          curl "${curl_args[@]}"
+          if curl "${curl_args[@]}"; then
+            exit 0
+          fi
+          if [ -n "${FEISHU_MONITOR_WEBHOOK_URL:-}" ]; then
+            business_date="$(TZ=Asia/Shanghai date -d 'yesterday' +%F)"
+            curl -fsS -X POST "$FEISHU_MONITOR_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"[场小二] 订场数据同步失败\\n数据日期：${business_date}\\n系统已自动重试 1 次仍失败，请打开管理后台第三方同步中心查看需处理数据。\"}}" || true
+          fi
+          exit 1

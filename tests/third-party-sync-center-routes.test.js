@@ -75,7 +75,13 @@ const historicalRulePrecheck = precheckThirdPartyRecords([
   { id: 'machine-split-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '3号场', startTime: '17:00', endTime: '18:00', remark: '订场120 发球机80', amount: 200 },
   { id: 'companion-split-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '2号场', startTime: '15:00', endTime: '16:00', remark: '订场100 陪打300', amount: 400 },
   { id: 'changda-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '1号场', startTime: '10:00', endTime: '12:00', remark: '畅打' },
-  { id: 'leader-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '4号场', startTime: '16:00', endTime: '18:00', remark: '领导' }
+  { id: 'leader-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '4号场', startTime: '16:00', endTime: '18:00', remark: '领导' },
+  { id: 'family-lesson-lock', sourceType: 'lock', bookingDate: '2026-07-31', venue: '3号场', startTime: '14:00', endTime: '15:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '刘润扬 王老板 亲子课' },
+  { id: 'junior-lesson-lock', sourceType: 'lock', bookingDate: '2026-07-31', venue: '3号场', startTime: '18:00', endTime: '19:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '刘润扬 小朋友' },
+  { id: 'training-lesson-lock', sourceType: 'lock', bookingDate: '2026-07-31', venue: '1号场', startTime: '12:00', endTime: '13:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '初阶训练课' },
+  { id: 'adult-lesson-lock', sourceType: 'lock', bookingDate: '2026-07-31', venue: '4号场', startTime: '18:00', endTime: '19:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '林铭 成人' },
+  { id: 'ops-assisted-lock', sourceType: 'lock', bookingDate: '2026-07-31', venue: '4号场', startTime: '08:00', endTime: '10:00', customerName: 'Sky', operatorName: '马坡运营', phone: '18813066492', remark: '' },
+  { id: 'ops-empty-lock', sourceType: 'lock', bookingDate: '2026-07-31', venue: '3号场', startTime: '07:00', endTime: '09:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '' }
 ], { batchId: 'historical-rules', now: '2026-07-31T00:00:00+08:00' });
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'coach-lock' && item.businessCategory === '教练代订场' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '教练代订场' && item.paymentMethod === '微信转账' && /8折/.test(item.plannedAction)), 'xiaozhe coach booking rule should be auto importable when amount is known');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'companion-lock' && item.businessCategory === '订场陪打' && /拆分/.test(item.plannedAction) && item.needsConfirmation), 'companion locks should be classified as booking plus companion service and require confirmation before split import');
@@ -84,6 +90,14 @@ assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'mac
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'companion-split-lock' && item.recommendedType === 'auto_import' && item.amountBreakdown?.bookingAmount === 100 && item.amountBreakdown?.serviceAmount === 300), 'companion locks should auto import when booking and companion fees are explicit');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'changda-lock' && item.businessCategory === '畅打活动' && item.recommendedType === 'auto_import'), 'changda locks should automatically create an activity occupancy destination');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'leader-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), 'leader/internal usage locks should be classified as internal occupancy');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'family-lesson-lock' && item.businessCategory === '排课占场' && item.recommendedType === 'auto_import'), 'family lesson locks should auto match or create schedule occupancy');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'junior-lesson-lock' && item.businessCategory === '排课占场' && item.recommendedType === 'auto_import'), 'junior lesson text should auto match schedule occupancy');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'training-lesson-lock' && item.businessCategory === '排课占场' && item.recommendedType === 'auto_import'), 'training lesson text should auto match schedule occupancy');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'adult-lesson-lock' && item.businessCategory === '排课占场' && item.recommendedType === 'auto_import'), 'adult lesson text should auto match schedule occupancy');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'ops-assisted-lock' && item.businessCategory === '运营代订场' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '运营代订场'), 'operator-assisted customer locks should auto import as booking occupancy without finance when amount is empty');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'ops-empty-lock' && item.needsConfirmation && item.riskReason === '备注为空'), 'operator-only empty locks should still require confirmation');
+const historicalRulePlan = buildThirdPartyImportPlan({ batchId: 'historical-rules', prechecks: historicalRulePrecheck.items, confirmations: [], importResults: [] });
+assert.ok(historicalRulePlan.importable.some(item => item.sourceRecordId === 'ops-assisted-lock' && item.finalType === '运营代订场' && item.targetTables.length === 1 && item.targetTables[0] === 'ft_courts'), 'operator-assisted empty-amount locks should not create finance ledger rows');
 
 const changxiaoerOrderPrecheck = precheckThirdPartyRecords([
   {

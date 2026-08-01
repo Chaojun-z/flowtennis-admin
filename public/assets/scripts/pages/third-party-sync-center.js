@@ -51,6 +51,9 @@ function thirdPartySyncIsBookingSourceType(type){
 function thirdPartySyncIsGapSourceType(type){
   return /-gap$/.test(String(type||'').toLowerCase());
 }
+function thirdPartySyncIsActionableSourceType(type){
+  return thirdPartySyncIsBookingSourceType(type);
+}
 function thirdPartySyncRowsForBatch(rows=[],batchId=''){
   return (rows||[]).filter(row=>String(row.batchId||'')===String(batchId||''));
 }
@@ -249,7 +252,7 @@ function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchI
     return {kind:'订场确认',row,...snapshot,reason:row.riskReason||thirdPartySyncTypeText(row.recommendedType),suggestion:row.recommendedType==='high_risk_exception'?'补齐信息后确认':'确认业务类型后导入',action:thirdPartySyncProcessingAction(snapshot)};
   });
   const changes=thirdPartySyncRowsForBatch(data.changes||[],batchId)
-    .filter(row=>String(row.status||'pending_review')==='pending_review')
+    .filter(row=>String(row.status||'pending_review')==='pending_review'&&thirdPartySyncIsActionableSourceType(row.sourceType))
     .map(row=>{
       const snapshot=thirdPartySyncSourceSnapshot({row,batchId,sourceRecordId:row.sourceRecordId});
       const changeText=thirdPartySyncChangeTypeText(row.changeType);
@@ -263,7 +266,7 @@ function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchI
       };
     });
   const alerts=thirdPartySyncRowsForBatch(data.alerts||[],batchId)
-    .filter(row=>String(row.status||'open')==='open')
+    .filter(row=>String(row.status||'open')==='open'&&thirdPartySyncIsActionableSourceType(row.sourceType))
     .map(row=>{
       const snapshot=thirdPartySyncSourceSnapshot({row,batchId:row.batchId||batchId,sourceRecordId:row.sourceRecordId});
       return {kind:'异常报警',row,...snapshot,reason:row.reason||'-',suggestion:/失败|缺口|格式|等待/.test(String(row.reason||''))?'处理后再导入':'确认后关闭',action:thirdPartySyncProcessingAction(snapshot)};
