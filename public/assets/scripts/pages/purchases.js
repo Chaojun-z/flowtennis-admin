@@ -272,6 +272,9 @@ function purchaseEntitlement(purchaseId){
 function purchaseDatasetReady(name){
   return loadedDatasets.has(name)&&!(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has(name))&&(!(typeof datasetHasCurrentRequestKey==='function')||datasetHasCurrentRequestKey(name));
 }
+function purchaseCreateDatasetReady(){
+  return purchaseDatasetReady('purchaseCreatePage')||purchaseDatasetReady('packageCenterPage');
+}
 function ensurePurchaseDataset(name,afterLoad,errorText){
   if(purchaseDatasetReady(name))return false;
   ensureDatasetsByName([name]).then(afterLoad).catch(e=>{
@@ -562,10 +565,10 @@ function openPurchaseCreateErrorDrawer(studentId='',message='课包数据加载�
 function openPurchaseModal(studentId=''){
   const stu=studentId?students.find(x=>x.id===studentId):null;
   if(studentId&&!stu){toast('学员不存在','error');return;}
-  if(!purchaseDatasetReady('packageCenterPage')){
+  if(!purchaseCreateDatasetReady()){
     openPurchaseCreateLoadingDrawer(studentId);
-    ensureDatasetsByName(['packageCenterPage']).then(()=>openPurchaseModal(studentId)).catch(e=>{
-      console.error('packageCenterPage load failed',e);
+    ensureDatasetsByName(['purchaseCreatePage']).then(()=>openPurchaseModal(studentId)).catch(e=>{
+      console.error('purchaseCreatePage load failed',e);
       const message='课包数据加载失败，请刷新后重试';
       toast(message,'error');
       openPurchaseCreateErrorDrawer(studentId,message);

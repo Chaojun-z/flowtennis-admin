@@ -34,6 +34,7 @@ assert.match(studentsSource, /function ensureStudentDetailDatasets\(/, 'student 
 assert.match(studentsSource, /ensureStudentDetailData\(id\)/, 'student detail should load one student detail record by id when the drawer opens');
 assert.match(source, /function ensurePurchaseDetailData\(purchaseId/, 'purchase detail should have a per-purchase detail loader');
 assert.match(source, /\/page-data\/purchase-detail\?id=/, 'purchase detail loader should call the per-purchase endpoint');
+assert.match(source, /,purchaseCreatePage:\(\)=>apiCall\('GET','\/page-data\/purchase-create'\)/, 'purchase create drawer should use a lightweight create endpoint');
 assert.match(source, /function ensureLeadFollowupsForLead\(leadId/, 'lead drawer should have a per-lead followup loader');
 assert.match(source, /\/leads\/\$\{encodeURIComponent\(id\)\}\/followups/, 'lead followups should load by lead id');
 assert.match(source, /function ensureCourtAccountDetailData\(courtId/, 'court membership drawer should have a per-account detail loader');
@@ -53,6 +54,7 @@ assert.match(source, /leadFollowups:\(\)=>apiCall\('GET','\/lead-followups'\)/, 
 assert.match(source, /Promise\.allSettled\(immediateNames\.map/, 'background loading should fetch the current background batch in parallel');
 assert.match(source, /if\(isStudentListPage\(pg\)&&STUDENT_PAGE_DEFERRED_REQUIREMENTS\.length\)\{[\s\S]*setTimeout\(\(\)=>\{[\s\S]*ensureDatasetsByName\(STUDENT_PAGE_DEFERRED_REQUIREMENTS,\{force\}\)/, 'student list background loader should stay guarded when deferred requirements are enabled');
 assert.match(source, /if\(name==='packageCenterPage'\)\{[\s\S]*setDatasetValue\('purchases',data\.purchases\|\|\[\]\);[\s\S]*setDatasetValue\('packages',data\.packages\|\|\[\]\);[\s\S]*setDatasetValue\('students',data\.students\|\|\[\]\);[\s\S]*setDatasetValue\('entitlements',data\.entitlements\|\|\[\]\);[\s\S]*purchaseUnifiedView=data\.purchaseUnifiedView/, 'package center list loader should hydrate first-screen package datasets without ledger rows');
+assert.match(source, /if\(name==='purchaseCreatePage'\)\{[\s\S]*setDatasetValue\('packages',data\.packages\|\|\[\]\);[\s\S]*setDatasetValue\('students',data\.students\|\|\[\]\);[\s\S]*setDatasetValue\('coaches',data\.coaches\|\|\[\]\);[\s\S]*markDatasetLoaded\('purchaseCreatePage',requestKey\);/, 'purchase create loader should hydrate only create-form datasets');
 assert.match(source, /if\(name==='purchasesPage'\)\{[\s\S]*setDatasetValue\('purchases',data\.purchases\|\|\[\]\);[\s\S]*setDatasetValue\('packages',data\.packages\|\|\[\]\);[\s\S]*setDatasetValue\('students',data\.students\|\|\[\]\);[\s\S]*setDatasetValue\('entitlements',data\.entitlements\|\|\[\]\);[\s\S]*setDatasetValue\('entitlementLedger',data\.entitlementLedger\|\|\[\]\);/, 'purchases page aggregate loader should hydrate all dependent datasets from one response');
 assert.match(source, /if\(name==='customerCenterPage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);[\s\S]*teachingStudentViews=data\.teachingStudentViews/, 'customer center list loader should hydrate lifecycle rows and teaching views');
 assert.match(source, /if\(name==='lifecycleMetricsPage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);[\s\S]*teachingStudentViews=data\.teachingStudentViews/, 'lifecycle metrics loader should hydrate only lifecycle rows and teaching views');
@@ -78,7 +80,7 @@ assert.match(source, /if\(pageNeedsInlineLoading\(pg\)\)\{[\s\S]*renderPageLoadi
 assert.match(source, /const datasetLoadPromises=new Map\(\);/, 'state should de-duplicate concurrent dataset requests');
 assert.match(source, /datasetLoadPromises\.has\(requestKey\)/, 'dataset loading should reuse in-flight requests');
 assert.match(source, /DATASET_LOADERS\[name\]\(\{fresh:force\}\)/, 'forced dataset refreshes should pass fresh=true to loaders that bypass stale page-data summaries');
-assert.match(source, /function markLearningDataStale\(\)\{[\s\S]*'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage','workbenchPage'[\s\S]*financeOverviewData=null;[\s\S]*financePrepaidView=\{rows:\[\],summary:\{\}\};/, 'schedule and package mutations should invalidate student, package, lifecycle, workbench, and finance read-model caches together');
+assert.match(source, /function markLearningDataStale\(\)\{[\s\S]*'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchaseCreatePage','purchasesPage','workbenchPage'[\s\S]*financeOverviewData=null;[\s\S]*financePrepaidView=\{rows:\[\],summary:\{\}\};/, 'schedule and package mutations should invalidate student, package, lifecycle, workbench, and finance read-model caches together');
 assert.match(source, /const DATASETS_WITH_REQUEST_KEYS=new Set\(\['operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage'\]\);/, 'scoped page-data datasets should be keyed by their current request url');
 assert.match(source, /function pageDataScopeQuery\(\{dateRange='global'\}=\{\}\)/, 'scoped page-data requests should share the global campus and date filter query builder');
 assert.match(source, /function datasetHasCurrentRequestKey\(name\)/, 'loaded scoped datasets should be invalidated when the top filter query changes');
@@ -107,6 +109,14 @@ assert.match(corePagesSource, /fresh&&T_ENTITLEMENT_LEDGER \? cappedScan\(T_ENTI
 assert.match(corePagesSource, /fresh&&T_SCHEDULE \? cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)/, 'fresh customer center reads should include live schedule rows');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryRows/, 'customer center should expose an explicit admin-only rebuild path for the student teaching summary read model');
 assert.match(corePagesSource, /path==='\/page-data\/purchase-detail'&&method==='GET'[\s\S]*getCachedRow\(T_PURCHASES,purchaseId\)/, 'purchase drawer should have a per-purchase detail endpoint');
+const purchaseCreateRouteSource = corePagesSource.slice(
+  corePagesSource.indexOf("path==='/page-data/purchase-create'&&method==='GET'"),
+  corePagesSource.indexOf("path==='/page-data/package-center-list'&&method==='GET'")
+);
+assert.match(purchaseCreateRouteSource, /getFastStudentsRead\(\{columns:PURCHASE_CREATE_STUDENT_PROJECTION_FIELDS\}\)/, 'purchase create endpoint should use a projected fast student read');
+assert.match(purchaseCreateRouteSource, /getCachedScan\(T_PACKAGES\)/, 'purchase create endpoint should load packages for the package picker');
+assert.match(purchaseCreateRouteSource, /cappedScan\(T_COACHES\)/, 'purchase create endpoint should load coaches for owner coach defaults');
+assert.doesNotMatch(purchaseCreateRouteSource, /T_PURCHASES|T_ENTITLEMENTS|buildPurchaseUnifiedView|buildCustomerLifecycleRows/, 'purchase create endpoint must not load heavy package center facts');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*getCachedRow\(T_STUDENTS,studentId\)/, 'student drawer should have a per-student detail endpoint');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*ignoreTeachingSummaryDetailRows:true/, 'student drawer detail rows must come from per-student fact reads, not stale teaching summary detail snapshots');
 assert.doesNotMatch(studentsSource, /ensureDatasetsByName\(STUDENT_DETAIL_REQUIREMENTS\)[\s\S]*purchasesPage/, 'student detail must not load the full purchases aggregate');

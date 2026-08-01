@@ -66,6 +66,15 @@ function buildListPage(rows=[],paging=null){
   return {rows:list.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages};
 }
 
+const PURCHASE_CREATE_STUDENT_PROJECTION_FIELDS=[
+  'name',
+  'phone',
+  'campus',
+  'primaryCoach',
+  'type',
+  'status'
+];
+
 function createCorePageDataRoutes(deps={}){
   const {
     init,sendJson,cappedScan,filterLoadAllForUser,listCampusesWithDefaults,getFastStudentsRead,
@@ -100,6 +109,17 @@ function createCorePageDataRoutes(deps={}){
       await init();
       const coaches=await cappedScan(T_COACHES);
       return sendJson(res,{coaches:filterLoadAllForUser({coaches},user).coaches});
+    }
+    if(path==='/page-data/purchase-create'&&method==='GET'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const [packages,students,coaches]=await Promise.all([
+        getCachedScan(T_PACKAGES).catch(()=>[]),
+        getFastStudentsRead({columns:PURCHASE_CREATE_STUDENT_PROJECTION_FIELDS}).catch(()=>[]),
+        cappedScan(T_COACHES).catch(()=>[])
+      ]);
+      const scoped=filterLoadAllForUser({packages,students,coaches},user);
+      return sendJson(res,{packages:scoped.packages,students:scoped.students,coaches:scoped.coaches});
     }
     if(path==='/page-data/package-center-list'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

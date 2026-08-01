@@ -448,6 +448,7 @@ const DATASET_LOADERS={
   feedbacks:()=>apiCall('GET','/feedbacks')
   ,coachProposals:()=>apiCall('GET','/coach-proposals')
   ,packageCenterPage:()=>apiCall('GET','/page-data/package-center-list')
+  ,purchaseCreatePage:()=>apiCall('GET','/page-data/purchase-create')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
   ,customerCenterPage:({fresh=false}={})=>apiCall('GET',customerCenterPageDataUrl({fresh}))
   ,lifecycleMetricsPage:()=>apiCall('GET',lifecycleMetricsPageDataUrl())
@@ -669,7 +670,7 @@ function markLearningDataStale(){
   loadedCourtAccountDetailIds.clear();
   [
     'schedule','students','purchases','entitlements','entitlementLedger','customerLifecycleRows',
-    'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage','workbenchPage',
+    'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchaseCreatePage','purchasesPage','workbenchPage',
     'financePage','operationsPage'
   ].forEach(name=>{
     staleCachedDatasets.add(name);
@@ -854,6 +855,16 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('entitlements');
       staleCachedDatasets.delete('customerLifecycleRows');
       markDatasetLoaded('packageCenterPage',requestKey);
+      return;
+    }
+    if(name==='purchaseCreatePage'){
+      setDatasetValue('packages',data.packages||[]);
+      setDatasetValue('students',data.students||[]);
+      setDatasetValue('coaches',data.coaches||[]);
+      staleCachedDatasets.delete('packages');
+      staleCachedDatasets.delete('students');
+      staleCachedDatasets.delete('coaches');
+      markDatasetLoaded('purchaseCreatePage',requestKey);
       return;
     }
     if(name==='purchasesPage'){

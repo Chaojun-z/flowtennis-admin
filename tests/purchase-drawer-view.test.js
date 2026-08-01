@@ -41,7 +41,8 @@ assert.match(openPurchaseDrawer, /modal-schedule-drawer/, 'purchase drawer helpe
 assert.match(openPurchaseDrawer, /modal-purchase-drawer/, 'purchase drawer should expose a scoped class for purchase-only layout fixes');
 
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('学员信息'[\s\S]*renderDetailDrawerFormCard\('购买信息'[\s\S]*renderDetailDrawerFormCard\('备注'/, 'purchase create should group fields into drawer cards');
-assert.match(openPurchaseModal, /!purchaseDatasetReady\('packageCenterPage'\)[\s\S]*openPurchaseCreateLoadingDrawer\(studentId\)[\s\S]*ensureDatasetsByName\(\['packageCenterPage'\]\)\.then\(\(\)=>openPurchaseModal\(studentId\)\)/, 'purchase create should show an immediate loading drawer before loading package center data');
+assert.match(source, /function purchaseCreateDatasetReady\(\)[\s\S]*purchaseCreatePage[\s\S]*packageCenterPage/, 'purchase create should accept either the lightweight create data or existing package center data');
+assert.match(openPurchaseModal, /!purchaseCreateDatasetReady\(\)[\s\S]*openPurchaseCreateLoadingDrawer\(studentId\)[\s\S]*ensureDatasetsByName\(\['purchaseCreatePage'\]\)\.then\(\(\)=>openPurchaseModal\(studentId\)\)/, 'purchase create should show an immediate loading drawer before loading lightweight purchase create data');
 assert.match(openPurchaseCreateLoadingDrawer, /课包数据加载中/, 'purchase create loading drawer should make the click visibly respond');
 assert.match(openPurchaseCreateErrorDrawer, /openPurchaseModal\(\$\{jsArg\(studentId\)\}\)[\s\S]*重试/, 'purchase create load failure should keep a retry action in the drawer');
 assert.match(ensureFullPurchaseData, /ensurePurchaseDetailData\(id\)/, 'purchase detail should load one purchase detail by id');
