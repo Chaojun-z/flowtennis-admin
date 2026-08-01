@@ -153,11 +153,36 @@ function scheduleCampusText(row = {}, campuses = []) {
   return text(hit?.name || raw) || '未记录';
 }
 
+function coachNameKey(value) {
+  return text(value)
+    .toLowerCase()
+    .replace(/[.·\s]/g, '')
+    .replace(/[（(][^）)]*[）)]/g, '')
+    .replace(/教练$/, '')
+    .trim();
+}
+
+function buildCoachDisplayNameResolver(coaches = []) {
+  const map = new Map();
+  (coaches || []).forEach(row => {
+    const name = text(row.name || row.coachName);
+    const id = text(row.id || row.coachId);
+    if (!name) return;
+    [name, id, row.alias, row.aliases, row.nickname, row.nickName, row.displayName, row.username]
+      .flatMap(value => Array.isArray(value) ? value : [value])
+      .map(coachNameKey)
+      .filter(Boolean)
+      .forEach(key => map.set(key, name));
+  });
+  return value => map.get(coachNameKey(value)) || text(value);
+}
+
 function buildCoachOpsUnifiedView({ coaches = [], schedule = [], feedbacks = [], campuses = [] } = {}) {
   const activeCoaches = (coaches || []).filter(row => text(row.status || 'active') !== 'inactive');
+  const coachDisplayName = buildCoachDisplayNameResolver(coaches);
   const coachNames = new Set(activeCoaches.map(row => text(row.name || row.coachName)).filter(Boolean));
   (schedule || []).forEach(row => {
-    const coach = text(row.coach || row.coachName || row.primaryCoach || row.teacher);
+    const coach = coachDisplayName(row.coach || row.coachName || row.primaryCoach || row.teacher);
     if (coach) coachNames.add(coach);
   });
 
@@ -166,7 +191,7 @@ function buildCoachOpsUnifiedView({ coaches = [], schedule = [], feedbacks = [],
     .filter(row => effectiveScheduleStatus(row) !== '已取消')
     .map(row => ({
       ...row,
-      coachDisplayName: text(row.coach || row.coachName || row.primaryCoach || row.teacher) || '未分配',
+      coachDisplayName: coachDisplayName(row.coach || row.coachName || row.primaryCoach || row.teacher) || '未分配',
       date: dateKey(row.startTime),
       month: monthKey(row.startTime),
       lessonUnits: lessonUnits(row),

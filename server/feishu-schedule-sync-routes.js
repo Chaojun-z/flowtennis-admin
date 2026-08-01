@@ -14,6 +14,23 @@ function normalizeNameKey(value){
     .trim();
 }
 
+const FEISHU_COACH_NAME_ALIASES={
+  siren:'Siren 教练',
+  '沙琪儿':'Siren 教练',
+  '朝珺':'朝珺教练',
+  '甄朝珺':'朝珺教练',
+  chaojun:'朝珺教练',
+  rive:'Rive 天昊教练',
+  '天昊':'Rive 天昊教练',
+  'rive天昊':'Rive 天昊教练',
+  '晓哲':'晓哲教练'
+};
+
+function standardCoachName(value){
+  const raw=cleanText(value);
+  return FEISHU_COACH_NAME_ALIASES[normalizeNameKey(raw)]||raw;
+}
+
 function parseLessonIndex(value){
   const m=cleanText(value).match(/[（(]\s*(\d+)\s*[）)]/);
   return m?parseInt(m[1],10):null;
@@ -448,10 +465,11 @@ function sameTime(a,b){
 
 function scheduleCandidateFields(candidate){
   const resolvedStudents=Array.isArray(candidate.scheduleStudents)?candidate.scheduleStudents:candidate.resolvedStudents;
+  const coachName=standardCoachName(candidate.resolvedCoach?.name||candidate.coachName);
   return {
     startTime:candidate.startTime,
     endTime:candidate.endTime,
-    coach:candidate.resolvedCoach?.name||candidate.coachName,
+    coach:coachName,
     campus:candidate.campus,
     venue:candidate.venue,
     courseType:candidate.course.courseType,
@@ -889,7 +907,7 @@ function buildScheduleBody(candidate,extra={}){
     standardCourseType:isTrial?`${experienceType}私教【体验】`:(courseType==='小班课'?`${candidate.course.audience||''}小班课/${smallClassLevel2}`:(courseType==='专项课'?'专项课':(courseType==='陪打'?'陪打':`${candidate.course.audience||''}私教【正式】`))),
     isTrial,
     smallClassType,
-    coach:candidate.resolvedCoach?.name||candidate.coachName,
+    coach:standardCoachName(candidate.resolvedCoach?.name||candidate.coachName),
     coachId:candidate.resolvedCoach?.id||'',
     locationType,
     venue:candidate.venue,

@@ -172,6 +172,22 @@ const coachSuffixPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(coachSuffixPlan.summary.bindExisting, 1, 'coach suffix should not block binding an existing schedule');
 
+const feishuSirenBody = sync.buildScheduleBody({
+  startTime: '2026-08-02 10:00',
+  endTime: '2026-08-02 11:00',
+  coachName: 'Siren',
+  resolvedCoach: { id: 'coach-siren', name: 'Siren 教练' },
+  resolvedStudents: [{ id: 'stu-zhao', name: '赵新阳' }],
+  studentNames: ['赵新阳'],
+  campus: 'shunyi_mapo',
+  venue: '3号场',
+  course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false },
+  lessonCount: 1,
+  sourceKey: 'siren-standard-name'
+}, { existingSchedule: null, entitlements: [], recommendEntitlements: () => [] });
+assert.strictEqual(feishuSirenBody.coach, 'Siren 教练', 'Feishu sync should persist the standard coach name, not the raw sheet alias');
+assert.strictEqual(feishuSirenBody.coachId, 'coach-siren', 'Feishu sync should persist the matched coach id');
+
 const contiguousSchedulePlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
