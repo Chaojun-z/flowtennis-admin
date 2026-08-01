@@ -405,11 +405,16 @@ function createLeadsRoutes(deps={}){
     return readLeadPoolRows({lifecycleScope:expandLifecycleSearch?'all':'course'});
   }
 
+  async function ensureLeadTablesForRequest(){
+    if(typeof isProductionRuntime==='function'&&isProductionRuntime())return;
+    if(typeof ensureLeadTables==='function')await ensureLeadTables();
+  }
+
   return async function handleLeadsRoutes({path,method,body,user,res,query}){
     if(path==='/lead-followups'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const leadId=cleanLeadText(query.get('leadId'));
       const rows=isProductionRuntime()?await scanFirstRows(T_LEAD_FOLLOWUPS,{limit:PRODUCTION_PAGE_READ_LIMITS.leadFollowups,columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_LEAD_FOLLOWUPS,{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]);
       if(!isCampusScopedAdmin(user))return sendJson(res,leadId?rows.filter(row=>String(row.leadId||'')===leadId):rows);
@@ -420,7 +425,7 @@ function createLeadsRoutes(deps={}){
     if(path==='/leads'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       if(method==='GET'){
         const q=cleanLeadText(query.get('q')).toLowerCase();
         const rows=await readVisibleLeadRows({expandLifecycleSearch:!!q});
@@ -461,7 +466,7 @@ function createLeadsRoutes(deps={}){
     if(path==='/leads/merge-preview'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       try{
         const plan=buildLeadMergePlan({
           primaryLeadId:body.primaryLeadId,
@@ -478,7 +483,7 @@ function createLeadsRoutes(deps={}){
     if(path==='/leads/merge'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       try{
         const plan=buildLeadMergePlan({
           primaryLeadId:body.primaryLeadId,
@@ -516,7 +521,7 @@ function createLeadsRoutes(deps={}){
     const leadIdM=path.match(/^\/leads\/([^/]+)$/);
     if(leadIdM){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const leadId=leadIdM[1];
       if(method==='PUT'){
         await init();
@@ -554,7 +559,7 @@ function createLeadsRoutes(deps={}){
     if(leadFollowupIdM){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const followupId=leadFollowupIdM[1];
       if(method==='PUT'){
         const oldFollowup=await get(T_LEAD_FOLLOWUPS,followupId).catch(()=>null);
@@ -576,7 +581,7 @@ function createLeadsRoutes(deps={}){
     if(leadFollowupsM){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const leadId=leadFollowupsM[1];
       const lead=await get(T_LEADS,leadId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
@@ -599,7 +604,7 @@ function createLeadsRoutes(deps={}){
     if(path==='/leads/import-preview'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const leads=normalizeLeadImportRows(body);
       const [students,courts,membershipAccounts]=await Promise.all([
         scan(T_STUDENTS).catch(()=>[]),
@@ -612,7 +617,7 @@ function createLeadsRoutes(deps={}){
     if(path==='/leads/import-commit'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const batchKey=cleanLeadText(body.batchKey)||`preview:${Buffer.from(String(body.csvText||'')).toString('base64').slice(0,48)}`;
       const existingBatch=await get(T_LEAD_IMPORT_BATCHES,batchKey).catch(()=>null);
       if(existingBatch)return sendJson(res,existingBatch);
@@ -651,7 +656,7 @@ function createLeadsRoutes(deps={}){
     if(leadConvertStudentM&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const leadId=leadConvertStudentM[1];
       const lead=await get(T_LEADS,leadId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
@@ -682,7 +687,7 @@ function createLeadsRoutes(deps={}){
     if(leadConvertCourtM&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const leadId=leadConvertCourtM[1];
       const lead=await get(T_LEADS,leadId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
@@ -714,7 +719,7 @@ function createLeadsRoutes(deps={}){
     if(leadLinkStudentM&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const lead=await get(T_LEADS,leadLinkStudentM[1]).catch(()=>null);
       const student=await get(T_STUDENTS,body.studentId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
@@ -730,7 +735,7 @@ function createLeadsRoutes(deps={}){
     if(leadLinkCourtM&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const lead=await get(T_LEADS,leadLinkCourtM[1]).catch(()=>null);
       const court=await get(T_COURTS,body.courtId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
@@ -747,7 +752,7 @@ function createLeadsRoutes(deps={}){
     if(leadUnlinkStudentM&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const lead=await get(T_LEADS,leadUnlinkStudentM[1]).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
       const student=lead.studentId?await get(T_STUDENTS,lead.studentId).catch(()=>null):null;
@@ -765,7 +770,7 @@ function createLeadsRoutes(deps={}){
     if(leadUnlinkCourtM&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      await ensureLeadTables();
+      await ensureLeadTablesForRequest();
       const lead=await get(T_LEADS,leadUnlinkCourtM[1]).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
       const court=lead.courtId?await get(T_COURTS,lead.courtId).catch(()=>null):null;
