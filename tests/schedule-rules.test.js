@@ -1290,7 +1290,7 @@ assert.deepStrictEqual(
   assert.match(posterSvg, /朝珺/, 'feishu coach poster should render the coach name');
   assert.match(posterSvg, /5 \/ 20/, 'feishu coach poster should render the digest date');
   assert.match(posterSvg, /共计/, 'feishu coach poster should render the summary label');
-  assert.match(posterSvg, /网球兄弟 · FLOWTENNIS/, 'feishu coach poster should render the brand footer');
+  assert.match(posterSvg, /网球兄弟 FLOWTENNIS/, 'feishu coach poster should render the brand footer');
   assert.match(posterSvg, /Misha/, 'feishu coach poster should render real lesson rows');
 }
 

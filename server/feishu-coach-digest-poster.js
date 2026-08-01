@@ -2,6 +2,20 @@ const { displayCampusName } = require('../public/assets/scripts/core/campus.js')
 const axios = require('axios');
 const NodeFormData = require('form-data');
 
+const POSTER_FONT_FAMILY='ZCOOL XiaoWei';
+
+function posterFontAttr(){
+  return `font-family="${POSTER_FONT_FAMILY}"`;
+}
+
+function posterFontFiles(){
+  try{
+    return [require.resolve('@expo-google-fonts/zcool-xiaowei/400Regular/ZCOOLXiaoWei_400Regular.ttf')];
+  }catch{
+    return [];
+  }
+}
+
 function parseArr(v){
   if(Array.isArray(v))return v;
   if(v==null||v==='')return [];
@@ -87,45 +101,53 @@ function buildCoachDailyDigestPosterSvg(item={}){
     const badgeFill=type.includes('体验')?'#EEF3EF':'none';
     const campus=displayCampusName(schedule.campus);
     const venue=schedule.venue||schedule.externalVenueName||schedule.externalCourtName||'场地待定';
-    const details=`${campus||'校区待定'} · ${venue}`;
+    const details=`${campus||'校区待定'} - ${venue}`;
     const divider=index<rows.length-1?`<line x1="134" y1="${y+54}" x2="396" y2="${y+54}" stroke="#E0E5E0" stroke-width="0.5"/>`:'';
     return `
       <g>
-        <text x="24" y="${y}" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="15" font-weight="500" fill="#113A22">${posterXmlText(`${start} - ${end}`)}</text>
-        <text x="134" y="${y}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="16" font-weight="500" letter-spacing="1" fill="#113A22">${posterXmlText(posterLessonStudentName(schedule))}</text>
+        <text x="24" y="${y}" ${posterFontAttr()} font-size="15" font-weight="500" fill="#113A22">${posterXmlText(`${start} - ${end}`)}</text>
+        <text x="134" y="${y}" ${posterFontAttr()} font-size="16" font-weight="500" letter-spacing="1" fill="#113A22">${posterXmlText(posterLessonStudentName(schedule))}</text>
         <rect x="222" y="${y-15}" width="${Math.max(48,type.length*18)}" height="22" rx="2" fill="${badgeFill}" stroke="#A8BAAF" stroke-width="1"/>
-        <text x="236" y="${y}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="10" letter-spacing="1.5" fill="#113A22">${posterXmlText(type)}</text>
-        <text x="134" y="${y+32}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="12" letter-spacing="1" fill="#7B9384">${posterXmlText(details)}</text>
-        <text x="286" y="${y+32}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="12" fill="#D1DDD5">|</text>
-        <text x="312" y="${y+32}" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="12" fill="#2D5B3F">${posterXmlText(posterLessonStudentCount(schedule))}</text>
-        <text x="328" y="${y+32}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="12" letter-spacing="1" fill="#7B9384">人</text>
+        <text x="236" y="${y}" ${posterFontAttr()} font-size="10" letter-spacing="1.5" fill="#113A22">${posterXmlText(type)}</text>
+        <text x="134" y="${y+32}" ${posterFontAttr()} font-size="12" letter-spacing="1" fill="#7B9384">${posterXmlText(details)}</text>
+        <text x="286" y="${y+32}" ${posterFontAttr()} font-size="12" fill="#D1DDD5">|</text>
+        <text x="312" y="${y+32}" ${posterFontAttr()} font-size="12" fill="#2D5B3F">${posterXmlText(posterLessonStudentCount(schedule))}</text>
+        <text x="328" y="${y+32}" ${posterFontAttr()} font-size="12" letter-spacing="1" fill="#7B9384">人</text>
         ${divider}
       </g>`;
   }).join('');
-  const emptySvg=rows.length?'':`<text x="24" y="${lessonTop}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="15" fill="#7B9384">明日暂无排课</text>`;
+  const emptySvg=rows.length?'':`<text x="24" y="${lessonTop}" ${posterFontAttr()} font-size="15" fill="#7B9384">明日暂无排课</text>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="${height}" viewBox="0 0 420 ${height}">
     <rect width="420" height="${height}" fill="#F5F7F5"/>
-    <text x="24" y="56" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="10" letter-spacing="2" fill="#7B9384">COACH SCHEDULE</text>
-    <text x="24" y="108" font-family="'Songti SC','Noto Serif SC','Source Han Serif SC','SimSun',serif" font-size="48" font-weight="900" letter-spacing="1" fill="#113A22">${posterXmlText(coachName)}</text>
-    <text x="396" y="78" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="30" font-weight="500" fill="#113A22">${posterXmlText(`${dateParts.month} / ${dateParts.day}`)}</text>
-    <text x="396" y="114" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="11" font-weight="500" letter-spacing="2" fill="#7B9384">${posterXmlText(`${dateParts.weekdayCn} · ${dateParts.weekdayEn}`)}</text>
-    <text x="24" y="164" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="13" letter-spacing="1" fill="#666666">共计</text>
-    <text x="72" y="164" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="13" font-weight="500" fill="#113A22">${posterXmlText(lessonCount)}</text>
-    <text x="92" y="164" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="13" letter-spacing="1" fill="#666666">节</text>
-    <text x="120" y="164" font-family="'Songti SC','SimSun',serif" font-size="13" fill="#CCCCCC">/</text>
-    <text x="144" y="164" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="13" font-weight="500" fill="#113A22">${posterXmlText(posterHoursText(totalHours))}</text>
-    <text x="166" y="164" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="13" letter-spacing="1" fill="#666666">课时</text>
+    <text x="24" y="56" ${posterFontAttr()} font-size="10" letter-spacing="2" fill="#7B9384">COACH SCHEDULE</text>
+    <text x="24" y="108" ${posterFontAttr()} font-size="48" font-weight="900" letter-spacing="1" fill="#113A22">${posterXmlText(coachName)}</text>
+    <text x="396" y="78" text-anchor="end" ${posterFontAttr()} font-size="30" font-weight="500" fill="#113A22">${posterXmlText(`${dateParts.month} / ${dateParts.day}`)}</text>
+    <text x="396" y="114" text-anchor="end" ${posterFontAttr()} font-size="11" font-weight="500" letter-spacing="2" fill="#7B9384">${posterXmlText(`${dateParts.weekdayCn}  ${dateParts.weekdayEn}`)}</text>
+    <text x="24" y="164" ${posterFontAttr()} font-size="13" letter-spacing="1" fill="#666666">共计</text>
+    <text x="72" y="164" ${posterFontAttr()} font-size="13" font-weight="500" fill="#113A22">${posterXmlText(lessonCount)}</text>
+    <text x="92" y="164" ${posterFontAttr()} font-size="13" letter-spacing="1" fill="#666666">节</text>
+    <text x="120" y="164" ${posterFontAttr()} font-size="13" fill="#CCCCCC">/</text>
+    <text x="144" y="164" ${posterFontAttr()} font-size="13" font-weight="500" fill="#113A22">${posterXmlText(posterHoursText(totalHours))}</text>
+    <text x="166" y="164" ${posterFontAttr()} font-size="13" letter-spacing="1" fill="#666666">课时</text>
     <line x1="24" y1="188" x2="396" y2="188" stroke="#E0E5E0" stroke-width="0.5"/>
     ${lessonSvg}${emptySvg}
     <line x1="24" y1="${footerTop}" x2="396" y2="${footerTop}" stroke="#E0E5E0" stroke-width="1"/>
-    <text x="210" y="${footerTop+72}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="11" font-weight="500" letter-spacing="3" fill="#113A22" opacity="0.8">网球兄弟 · FLOWTENNIS</text>
+    <text x="210" y="${footerTop+72}" text-anchor="middle" ${posterFontAttr()} font-size="11" font-weight="500" letter-spacing="3" fill="#113A22" opacity="0.8">网球兄弟 FLOWTENNIS</text>
   </svg>`;
 }
 
 async function buildCoachDailyDigestPosterPng(item={},options={}){
   const ResvgClass=options.Resvg||require('@resvg/resvg-js').Resvg;
   const svg=buildCoachDailyDigestPosterSvg(item);
-  const pngData=new ResvgClass(svg).render().asPng();
+  const fontFiles=posterFontFiles();
+  const renderOptions=fontFiles.length?{
+    font:{
+      loadSystemFonts:false,
+      fontFiles,
+      defaultFontFamily:POSTER_FONT_FAMILY
+    }
+  }:{};
+  const pngData=new ResvgClass(svg,renderOptions).render().asPng();
   return Buffer.isBuffer(pngData)?pngData:Buffer.from(pngData);
 }
 
