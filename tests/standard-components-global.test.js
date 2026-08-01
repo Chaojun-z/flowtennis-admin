@@ -39,10 +39,12 @@ assert.match(courtsSource, /function renderCourtEmptyText\([^)]*\)\{\s*return re
 assert.match(campusSource, /renderStandardCellText\(/, 'a non-court page should use the standard cell helper directly');
 assert.match(campusSource, /renderStandardEmptyText\(/, 'a non-court page should use the standard empty helper directly');
 assert.match(standardSource, /document\.documentElement\.dataset\.standardComponents='loaded'/, 'standard bundle should expose a DOM execution marker for smoke tests');
+assert.match(standardSource, /function closeStandardDropdownElement\(el\)\{[\s\S]*classList\.remove\('open'\)[\s\S]*classList\.remove\('open-upward'\)[\s\S]*formItem\.style\.zIndex='1'/, 'dropdown closing should remove open state and release the elevated form layer together');
+assert.match(standardSource, /function renderStandardSearchableDropdownHtml\([\s\S]*tms-searchable-dropdown-menu" onclick="event\.stopPropagation\(\)"/, 'searchable dropdown menu clicks should not bubble back to the trigger and reopen the menu');
 assert.match(
   standardSource,
-  /dropdown\.classList\.remove\('open'\)[\s\S]*changeHandler=dropdown\.dataset\.onchange\|\|''[\s\S]*defer\(\(\)=>\{[\s\S]*try\{window\[changeHandler\]\(value,label\);\}[\s\S]*catch\(e\)/,
-  'dropdown selection should close the menu before running deferred onchange logic'
+  /closeStandardDropdownElement\(dropdown\)[\s\S]*changeHandler=dropdown\.dataset\.onchange\|\|''[\s\S]*defer\(\(\)=>\{[\s\S]*try\{window\[changeHandler\]\(value,label\);\}[\s\S]*finally\{[\s\S]*const latest=document\.getElementById\(id\+'_dropdown'\)[\s\S]*closeStandardDropdownElement\(latest\)/,
+  'dropdown selection should close the menu before and after deferred onchange logic'
 );
 
 console.log('standard components global tests passed');

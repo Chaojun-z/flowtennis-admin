@@ -275,6 +275,16 @@ function purchaseDatasetReady(name){
 function purchaseCreateDatasetReady(){
   return purchaseDatasetReady('purchaseCreatePage')||purchaseDatasetReady('packageCenterPage');
 }
+let purchaseCreateLoadToken=0;
+function nextPurchaseCreateLoadToken(){
+  purchaseCreateLoadToken+=1;
+  return String(purchaseCreateLoadToken);
+}
+function isPurchaseCreateLoadingActive(token,studentId=''){
+  const ov=document.getElementById('overlay');
+  const modal=ov?.querySelector('.modal');
+  return !!(ov&&modal&&ov.classList.contains('open')&&modal.classList.contains('modal-purchase-drawer')&&String(ov.dataset.purchaseCreateLoadToken||'')===String(token||'')&&String(ov.dataset.purchaseCreateStudentId||'')===String(studentId||''));
+}
 function ensurePurchaseDataset(name,afterLoad,errorText){
   if(purchaseDatasetReady(name))return false;
   ensureDatasetsByName([name]).then(afterLoad).catch(e=>{
@@ -543,14 +553,14 @@ function selectPurchaseStudent(studentId){
 function openPurchaseEntryModal(){
   openPurchaseModal();
 }
-function openPurchaseCreateLoadingDrawer(studentId='',message='课包数据加载中...'){
+function openPurchaseCreateLoadingDrawer(studentId='',message='课包数据加载中...',loadToken=''){
   const stu=studentId?students.find(x=>String(x.id||'')===String(studentId||'')):null;
   const subtitle=stu?(stu.phone?`${stu.name} · ${stu.phone}`:stu.name):'新增购买记录';
   const body=renderDetailDrawerContent(renderDetailDrawerCard('课包购买',`<div class="empty"><p>${esc(message)}</p></div>`,{useGrid:false}));
   openPurchaseDrawer(
     purchaseDrawerHeaderHtml({title:'课包购买',avatar:purchaseDrawerAvatar(stu?.name),subtitle,statusText:'加载中',statusClass:'tms-tag-tier-slate'}),
     body,
-    {purchaseDetailId:'',purchaseCreateStudentId:studentId||''}
+    {purchaseDetailId:'',purchaseCreateStudentId:studentId||'',purchaseCreateLoadToken:loadToken||''}
   );
 }
 function openPurchaseCreateErrorDrawer(studentId='',message='课包数据加载失败，请刷新后重试'){
@@ -566,8 +576,13 @@ function openPurchaseModal(studentId=''){
   const stu=studentId?students.find(x=>x.id===studentId):null;
   if(studentId&&!stu){toast('学员不存在','error');return;}
   if(!purchaseCreateDatasetReady()){
-    openPurchaseCreateLoadingDrawer(studentId);
-    ensureDatasetsByName(['purchaseCreatePage']).then(()=>openPurchaseModal(studentId)).catch(e=>{
+    const loadToken=nextPurchaseCreateLoadToken();
+    openPurchaseCreateLoadingDrawer(studentId,'课包数据加载中...',loadToken);
+    ensureDatasetsByName(['purchaseCreatePage']).then(()=>{
+      if(!isPurchaseCreateLoadingActive(loadToken,studentId))return;
+      openPurchaseModal(studentId);
+    }).catch(e=>{
+      if(!isPurchaseCreateLoadingActive(loadToken,studentId))return;
       console.error('purchaseCreatePage load failed',e);
       const message='课包数据加载失败，请刷新后重试';
       toast(message,'error');

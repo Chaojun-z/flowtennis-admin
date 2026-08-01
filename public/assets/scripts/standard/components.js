@@ -145,7 +145,7 @@ function renderStandardDropdownHtml(id,label,options,value,isForm=false,onchange
   const hasValue=String(active?.value||value||'')!=='';
   const isPageSize=String(id).includes('PageSize');
   const checkIcon='<span class="tms-dropdown-check" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.2L5.7 10.2L11.5 3.8"/></svg></span>';
-  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${isPageSize?'tms-page-size-dropdown ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${onchange}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>{const optionLabel=renderStandardOptionLabel(opt);const isActive=active&&String(opt.value)===String(active.value);return `<div class="tms-dropdown-item ${isActive?'active':''} ${opt.disabled?'disabled':''}" data-value="${esc(opt.value??'')}" aria-disabled="${opt.disabled?'true':'false'}" onclick="${opt.disabled?'event.stopPropagation()':`selectStandardDropdownItem('${id}',${jsArg(opt.value)},${jsArg(optionLabel)},event)`}">${isPageSize?checkIcon:''}<span>${esc(optionLabel)}</span></div>`;}).join('')}</div></div>`;
+  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${isPageSize?'tms-page-size-dropdown ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${onchange}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" onclick="event.stopPropagation()" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>{const optionLabel=renderStandardOptionLabel(opt);const isActive=active&&String(opt.value)===String(active.value);return `<div class="tms-dropdown-item ${isActive?'active':''} ${opt.disabled?'disabled':''}" data-value="${esc(opt.value??'')}" aria-disabled="${opt.disabled?'true':'false'}" onclick="${opt.disabled?'event.stopPropagation()':`selectStandardDropdownItem('${id}',${jsArg(opt.value)},${jsArg(optionLabel)},event)`}">${isPageSize?checkIcon:''}<span>${esc(optionLabel)}</span></div>`;}).join('')}</div></div>`;
 }
 function renderStandardSearchableDropdownHtml(config={}){
   const id=String(config.id||'');
@@ -176,7 +176,7 @@ function renderStandardSearchableDropdownHtml(config={}){
   const searchPlaceholder=String(config.searchPlaceholder||'搜索');
   const emptyText=String(config.emptyText||'没有匹配结果');
   const onchange=String(config.onchange||'');
-  return `<div class="tms-dropdown tms-searchable-dropdown ${config.isForm?'tms-dropdown-form ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${esc(onchange)}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu tms-searchable-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();const o=this.querySelector('.tms-dropdown-options');if(o)o.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()"><div class="tms-dropdown-search-row" onclick="event.stopPropagation()"><input class="tms-dropdown-search-input" id="${id}_search" placeholder="${esc(searchPlaceholder)}" oninput="filterStandardSearchableDropdown('${id}',this.value)" onkeydown="event.stopPropagation()"></div><div class="tms-dropdown-options">${itemsHtml}</div><div class="tms-dropdown-empty">${esc(emptyText)}</div></div></div>`;
+  return `<div class="tms-dropdown tms-searchable-dropdown ${config.isForm?'tms-dropdown-form ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${esc(onchange)}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu tms-searchable-dropdown-menu" onclick="event.stopPropagation()" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();const o=this.querySelector('.tms-dropdown-options');if(o)o.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()"><div class="tms-dropdown-search-row" onclick="event.stopPropagation()"><input class="tms-dropdown-search-input" id="${id}_search" placeholder="${esc(searchPlaceholder)}" oninput="filterStandardSearchableDropdown('${id}',this.value)" onkeydown="event.stopPropagation()"></div><div class="tms-dropdown-options">${itemsHtml}</div><div class="tms-dropdown-empty">${esc(emptyText)}</div></div></div>`;
 }
 function filterStandardSearchableDropdown(id,keyword=''){
   const dropdown=document.getElementById(id+'_dropdown');
@@ -287,13 +287,15 @@ function clearStandardGroupedFilter(id,event){
   const cb=dropdown?.dataset?.onClear;
   if(cb&&typeof window[cb]==='function')window[cb](id);
 }
+function closeStandardDropdownElement(el){
+  if(!el)return;
+  el.classList.remove('open');
+  el.classList.remove('open-upward');
+  const formItem=el.closest('.tms-form-item');
+  if(formItem)formItem.style.zIndex='1';
+}
 function closeStandardDropdowns(){
-  document.querySelectorAll('.tms-dropdown.open').forEach(el=>{
-    el.classList.remove('open');
-    el.classList.remove('open-upward');
-    const formItem=el.closest('.tms-form-item');
-    if(formItem)formItem.style.zIndex='1';
-  });
+  document.querySelectorAll('.tms-dropdown.open').forEach(closeStandardDropdownElement);
 }
 function toggleStandardDropdown(id,event){
   if(event)event.stopPropagation();
@@ -301,9 +303,7 @@ function toggleStandardDropdown(id,event){
   if(!dropdown)return;
   document.querySelectorAll('.tms-dropdown.open').forEach(el=>{
     if(el!==dropdown){
-      el.classList.remove('open');
-      const formItem=el.closest('.tms-form-item');
-      if(formItem)formItem.style.zIndex='1';
+      closeStandardDropdownElement(el);
     }
   });
   dropdown.classList.toggle('open');
@@ -328,7 +328,7 @@ function toggleStandardDropdown(id,event){
   if(formItem)formItem.style.zIndex=dropdown.classList.contains('open')?'10':'1';
 }
 function selectStandardDropdownItem(id,value,label,event){
-  if(event)event.stopPropagation();
+  if(event){event.preventDefault();event.stopPropagation();}
   const dropdown=document.getElementById(id+'_dropdown');
   const input=document.getElementById(id);
   let changeHandler='';
@@ -340,9 +340,7 @@ function selectStandardDropdownItem(id,value,label,event){
     dropdown.querySelectorAll('.tms-dropdown-item').forEach(el=>el.classList.remove('active'));
     const current=[...dropdown.querySelectorAll('.tms-dropdown-item')].find(el=>String(el.dataset.value||'')===String(value||'')||el.textContent===label);
     if(current)current.classList.add('active');
-    dropdown.classList.remove('open');
-    const formItem=dropdown.closest('.tms-form-item');
-    if(formItem)formItem.style.zIndex='1';
+    closeStandardDropdownElement(dropdown);
     changeHandler=dropdown.dataset.onchange||'';
   }
   if(changeHandler&&typeof window[changeHandler]==='function'){
@@ -352,6 +350,9 @@ function selectStandardDropdownItem(id,value,label,event){
       catch(e){
         console.error('dropdown change failed',changeHandler,e);
         if(typeof toast==='function')toast('下拉选项处理失败，请刷新后重试','error');
+      }finally{
+        const latest=document.getElementById(id+'_dropdown');
+        closeStandardDropdownElement(latest);
       }
     });
   }
