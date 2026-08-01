@@ -31,18 +31,20 @@ function posterShortText(value='',max=12){
   return text.length>max?`${text.slice(0,Math.max(0,max-1))}…`:text;
 }
 
+function posterTextWidth(value='',fontSize=14){
+  return String(value||'').split('').reduce((sum,ch)=>sum+(/[\u4e00-\u9fff]/.test(ch)?fontSize:fontSize*0.58),0);
+}
+
 function posterScheduleDateParts(dateKeyText=''){
   const parts=String(dateKeyText||'').slice(0,10).split('-').map(n=>Number(n));
   const [year,month,day]=parts;
   const weekdaysCn=['周日','周一','周二','周三','周四','周五','周六'];
-  const weekdaysEn=['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
   const date=year&&month&&day?new Date(Date.UTC(year,month-1,day,12)):new Date();
   const weekday=date.getUTCDay();
   return {
     month:month||date.getUTCMonth()+1,
     day:day||date.getUTCDate(),
-    weekdayCn:weekdaysCn[weekday],
-    weekdayEn:weekdaysEn[weekday]
+    weekdayCn:weekdaysCn[weekday]
   };
 }
 
@@ -58,6 +60,10 @@ function posterHoursText(value){
   return Number.isInteger(num)?String(num):String(num);
 }
 
+function posterDurationText(value){
+  return `${posterHoursText(value)}h`;
+}
+
 function posterLessonStudentCount(schedule={}){
   const explicit=Number(schedule.actualStudentCount||schedule.expectedStudentCount||schedule.studentCount||0);
   if(explicit>0)return explicit;
@@ -66,7 +72,7 @@ function posterLessonStudentCount(schedule={}){
 }
 
 function posterLessonStudentName(schedule={}){
-  return posterShortText(schedule.studentName||parseArr(schedule.studentNames).join('、')||'学员',10);
+  return posterShortText(schedule.studentName||parseArr(schedule.studentNames).join('、')||'学员',9);
 }
 
 function buildCoachDailyDigestPosterSvg(item={}){
@@ -74,48 +80,42 @@ function buildCoachDailyDigestPosterSvg(item={}){
   const dateParts=posterScheduleDateParts(item.digestDate);
   const lessonCount=Number(item.lessonCount||rows.length)||0;
   const totalHours=rows.reduce((sum,row)=>sum+posterLessonHours(row),0);
-  const lessonTop=220;
-  const lessonGap=78;
-  const footerTop=lessonTop+Math.max(lessonCount,1)*lessonGap+10;
+  const lessonTop=184;
+  const lessonGap=64;
+  const footerTop=lessonTop+(Math.max(lessonCount,1)-1)*lessonGap+32;
   const height=footerTop+116;
-  const coachName=posterShortText(item.coachName||'教练',5);
+  const coachName=posterShortText(item.coachName||'教练',8);
   const lessonSvg=rows.map((schedule,index)=>{
     const y=lessonTop+index*lessonGap;
     const start=String(schedule.startTime||'').slice(11,16)||'--:--';
     const end=String(schedule.endTime||'').slice(11,16)||'--:--';
+    const timeText=`${start}-${end} · ${posterDurationText(posterLessonHours(schedule))}`;
+    const studentName=posterLessonStudentName(schedule);
     const type=posterShortText(schedule.courseType||'课程',5);
+    const badgeWidth=Math.max(44,posterTextWidth(type,10)+18);
+    const badgeX=Math.min(286,148+posterTextWidth(studentName,15)+18);
     const badgeFill=type.includes('体验')?'#EEF3EF':'none';
-    const campus=displayCampusName(schedule.campus);
     const venue=schedule.venue||schedule.externalVenueName||schedule.externalCourtName||'场地待定';
-    const details=`${campus||'校区待定'} · ${venue}`;
-    const divider=index<rows.length-1?`<line x1="134" y1="${y+54}" x2="396" y2="${y+54}" stroke="#E0E5E0" stroke-width="0.5"/>`:'';
+    const details=posterShortText(venue,6);
+    const divider=index<rows.length-1?`<line x1="24" y1="${y+36}" x2="396" y2="${y+36}" stroke="#E0E5E0" stroke-width="0.5"/>`:'';
     return `
       <g>
-        <text x="24" y="${y}" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="15" font-weight="500" fill="#113A22">${posterXmlText(`${start} - ${end}`)}</text>
-        <text x="134" y="${y}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="16" font-weight="500" letter-spacing="1" fill="#113A22">${posterXmlText(posterLessonStudentName(schedule))}</text>
-        <rect x="222" y="${y-15}" width="${Math.max(48,type.length*18)}" height="22" rx="2" fill="${badgeFill}" stroke="#A8BAAF" stroke-width="1"/>
-        <text x="236" y="${y}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="10" letter-spacing="1.5" fill="#113A22">${posterXmlText(type)}</text>
-        <text x="134" y="${y+32}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="12" letter-spacing="1" fill="#7B9384">${posterXmlText(details)}</text>
-        <text x="286" y="${y+32}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="12" fill="#D1DDD5">|</text>
-        <text x="312" y="${y+32}" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="12" fill="#2D5B3F">${posterXmlText(posterLessonStudentCount(schedule))}</text>
-        <text x="328" y="${y+32}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="12" letter-spacing="1" fill="#7B9384">人</text>
+        <text x="24" y="${y}" dominant-baseline="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="13" font-weight="500" fill="#113A22">${posterXmlText(timeText)}</text>
+        <text x="148" y="${y}" dominant-baseline="middle" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="15" font-weight="500" letter-spacing="0.2" fill="#113A22">${posterXmlText(studentName)}</text>
+        <rect x="${badgeX}" y="${y-9}" width="${badgeWidth}" height="18" rx="2" fill="${badgeFill}" stroke="#A8BAAF" stroke-width="1"/>
+        <text x="${badgeX+badgeWidth/2}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="10" letter-spacing="0.2" fill="#113A22">${posterXmlText(type)}</text>
+        <text x="396" y="${y}" dominant-baseline="middle" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="11" letter-spacing="0.2" fill="#7B9384">${posterXmlText(details)}</text>
         ${divider}
       </g>`;
   }).join('');
   const emptySvg=rows.length?'':`<text x="24" y="${lessonTop}" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="15" fill="#7B9384">明日暂无排课</text>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="${height}" viewBox="0 0 420 ${height}">
     <rect width="420" height="${height}" fill="#F5F7F5"/>
-    <text x="24" y="56" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="10" letter-spacing="2" fill="#7B9384">COACH SCHEDULE</text>
-    <text x="24" y="108" font-family="'Songti SC','Noto Serif SC','Source Han Serif SC','SimSun',serif" font-size="48" font-weight="900" letter-spacing="1" fill="#113A22">${posterXmlText(coachName)}</text>
-    <text x="396" y="78" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="30" font-weight="500" fill="#113A22">${posterXmlText(`${dateParts.month} / ${dateParts.day}`)}</text>
-    <text x="396" y="114" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="11" font-weight="500" letter-spacing="2" fill="#7B9384">${posterXmlText(`${dateParts.weekdayCn} · ${dateParts.weekdayEn}`)}</text>
-    <text x="24" y="164" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="13" letter-spacing="1" fill="#666666">共计</text>
-    <text x="72" y="164" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="13" font-weight="500" fill="#113A22">${posterXmlText(lessonCount)}</text>
-    <text x="92" y="164" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="13" letter-spacing="1" fill="#666666">节</text>
-    <text x="120" y="164" font-family="'Songti SC','SimSun',serif" font-size="13" fill="#CCCCCC">/</text>
-    <text x="144" y="164" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="13" font-weight="500" fill="#113A22">${posterXmlText(posterHoursText(totalHours))}</text>
-    <text x="166" y="164" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="13" letter-spacing="1" fill="#666666">课时</text>
-    <line x1="24" y1="188" x2="396" y2="188" stroke="#E0E5E0" stroke-width="0.5"/>
+    <text x="24" y="56" font-family="-apple-system,BlinkMacSystemFont,Arial,Helvetica,sans-serif" font-size="9" letter-spacing="2" fill="#7B9384">COACH SCHEDULE</text>
+    <text x="24" y="96" dominant-baseline="middle" font-family="'Songti SC','Noto Serif SC','Source Han Serif SC','SimSun',serif" font-size="39" font-weight="900" letter-spacing="1" fill="#113A22">${posterXmlText(coachName)}</text>
+    <text x="396" y="91" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',Arial,Helvetica,sans-serif" font-size="23" font-weight="500" fill="#113A22">${posterXmlText(`${dateParts.month} / ${dateParts.day} ${dateParts.weekdayCn}`)}</text>
+    <text x="396" y="115" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',Arial,Helvetica,sans-serif" font-size="12" letter-spacing="0.6" fill="#666666">${posterXmlText(`共 ${lessonCount} 节｜${posterHoursText(totalHours)} 课时`)}</text>
+    <line x1="24" y1="${lessonTop-32}" x2="396" y2="${lessonTop-32}" stroke="#E0E5E0" stroke-width="0.5"/>
     ${lessonSvg}${emptySvg}
     <line x1="24" y1="${footerTop}" x2="396" y2="${footerTop}" stroke="#E0E5E0" stroke-width="1"/>
     <text x="210" y="${footerTop+72}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" font-size="11" font-weight="500" letter-spacing="3" fill="#113A22" opacity="0.8">网球兄弟 · FLOWTENNIS</text>
@@ -125,7 +125,8 @@ function buildCoachDailyDigestPosterSvg(item={}){
 async function buildCoachDailyDigestPosterPng(item={},options={}){
   const ResvgClass=options.Resvg||require('@resvg/resvg-js').Resvg;
   const svg=buildCoachDailyDigestPosterSvg(item);
-  const pngData=new ResvgClass(svg).render().asPng();
+  const scale=Math.max(1,Number(options.scale||3)||3);
+  const pngData=new ResvgClass(svg,{fitTo:{mode:'zoom',value:scale}}).render().asPng();
   return Buffer.isBuffer(pngData)?pngData:Buffer.from(pngData);
 }
 
