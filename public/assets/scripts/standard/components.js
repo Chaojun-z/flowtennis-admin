@@ -331,6 +331,7 @@ function selectStandardDropdownItem(id,value,label,event){
   if(event)event.stopPropagation();
   const dropdown=document.getElementById(id+'_dropdown');
   const input=document.getElementById(id);
+  let changeHandler='';
   if(input)input.value=value;
   if(dropdown){
     const display=dropdown.querySelector('.tms-dropdown-display');
@@ -342,8 +343,17 @@ function selectStandardDropdownItem(id,value,label,event){
     dropdown.classList.remove('open');
     const formItem=dropdown.closest('.tms-form-item');
     if(formItem)formItem.style.zIndex='1';
-    const cb=dropdown.dataset.onchange;
-    if(cb&&typeof window[cb]==='function')window[cb](value,label);
+    changeHandler=dropdown.dataset.onchange||'';
+  }
+  if(changeHandler&&typeof window[changeHandler]==='function'){
+    const defer=typeof requestAnimationFrame==='function'?requestAnimationFrame:(fn)=>setTimeout(fn,0);
+    defer(()=>{
+      try{window[changeHandler](value,label);}
+      catch(e){
+        console.error('dropdown change failed',changeHandler,e);
+        if(typeof toast==='function')toast('下拉选项处理失败，请刷新后重试','error');
+      }
+    });
   }
 }
 function setStandardDropdownValue(id,value,label=''){
