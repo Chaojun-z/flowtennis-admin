@@ -537,6 +537,37 @@ function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations
   return plan;
 }
 
+function rawRecordToSourceRecord(row = {}) {
+  const raw = row.rawJson && typeof row.rawJson === 'object' ? row.rawJson : {};
+  return {
+    ...raw,
+    sourceType: raw.sourceType || row.sourceType,
+    thirdPartyId: raw.thirdPartyId || row.thirdPartyId || row.sourceRecordId
+  };
+}
+
+function prechecksFromRawRecordsForBatch({ batchId = '', rawRecords = [], fallbackPrechecks = [], now = new Date().toISOString() } = {}) {
+  const scopedRaw = (rawRecords || []).filter(row => String(row.batchId || '') === String(batchId || ''));
+  if (!batchId || !scopedRaw.length) return (fallbackPrechecks || []).filter(row => !batchId || String(row.batchId || '') === String(batchId));
+  return precheckThirdPartyRecords(scopedRaw.map(rawRecordToSourceRecord), { batchId, now }).items;
+}
+
+function replacePrechecksForBatch(prechecks = [], batchId = '', refreshed = []) {
+  if (!batchId || !refreshed.length) return prechecks;
+  return [
+    ...(prechecks || []).filter(row => String(row.batchId || '') !== String(batchId)),
+    ...refreshed
+  ];
+}
+
+function filterAlertsForCurrentPlan(alerts = [], plan = {}) {
+  const blockedIds = new Set((plan.blocked || []).map(row => String(row.sourceRecordId || '')));
+  return (alerts || []).filter(row => {
+    if (!isBookingSourceType(row.sourceType)) return true;
+    return blockedIds.has(String(row.sourceRecordId || ''));
+  });
+}
+
 function payMethodForImport(item = {}) {
   if (item.finalType === '会员余额订场') return '储值扣款';
   const method = cleanText(item.confirmation?.paymentMethod || item.paymentMethod || item.payMethod);
@@ -1285,8 +1316,9 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
   }
 
   async function runImportForBatch({ batchId = '', operator = 'admin', importedAt = now() } = {}) {
-    const [batches, prechecks, confirmations, importResults] = await Promise.all([
+    const [batches, rawRecords, prechecks, confirmations, importResults] = await Promise.all([
       getCachedScan(T_THIRD_PARTY_SYNC_BATCHES).catch(() => []),
+      getCachedScan(T_THIRD_PARTY_SYNC_RAW_RECORDS).catch(() => []),
       getCachedScan(T_THIRD_PARTY_SYNC_PRECHECKS).catch(() => []),
       getCachedScan(T_THIRD_PARTY_SYNC_CONFIRMATIONS).catch(() => []),
       getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => [])
@@ -1297,7 +1329,8 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       err.statusCode = 404;
       throw err;
     }
-    const plan = buildThirdPartyImportPlan({ batchId, prechecks, confirmations, importResults });
+    const currentPrechecks = prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks: prechecks, now: importedAt });
+    const plan = buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults });
     const operationId = `third-party-sync-import-${uuidv4()}`;
     const trace = buildImportTrace({ batchId, operationId, operator, now: importedAt });
     const financeBefore = await buildCurrentFinanceSnapshot(importedAt);
@@ -1457,10 +1490,14 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       const latestBatch = [...batches].sort((a, b) => String(b.pulledAt || '').localeCompare(String(a.pulledAt || '')))[0] || null;
       const latestBatchId = cleanText(latestBatch?.batchId || latestBatch?.id);
       const currentRawRecords = latestBatchId ? rawRecords.filter(row => String(row.batchId || '') === latestBatchId) : rawRecords;
-      const currentPrechecks = latestBatchId ? prechecks.filter(row => String(row.batchId || '') === latestBatchId) : prechecks;
+      const currentPrechecks = latestBatchId
+        ? prechecksFromRawRecordsForBatch({ batchId: latestBatchId, rawRecords, fallbackPrechecks: prechecks, now: now() })
+        : prechecks;
       const currentImportResults = latestBatchId ? importResults.filter(row => String(row.batchId || '') === latestBatchId) : importResults;
       const currentChanges = latestBatchId ? changes.filter(row => String(row.batchId || '') === latestBatchId) : changes;
-      const currentAlerts = latestBatchId ? alerts.filter(row => String(row.batchId || '') === latestBatchId) : alerts;
+      const currentPlan = latestBatchId ? buildThirdPartyImportPlan({ batchId: latestBatchId, prechecks: currentPrechecks, confirmations, importResults }) : null;
+      const currentAlertsRaw = latestBatchId ? alerts.filter(row => String(row.batchId || '') === latestBatchId) : alerts;
+      const currentAlerts = currentPlan ? filterAlertsForCurrentPlan(currentAlertsRaw, currentPlan) : currentAlertsRaw;
       const currentRollbacks = latestBatchId ? rollbacks.filter(row => String(row.batchId || '') === latestBatchId) : rollbacks;
       const currentBookingPrechecks = currentPrechecks.filter(row => isBookingSourceType(row.sourceType));
       const currentOrderPrechecks = currentPrechecks.filter(row => normalizeSourceType(row.sourceType) === 'order');
@@ -1486,7 +1523,12 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         openAlertCount: currentAlerts.filter(row => row.status !== 'closed').length,
         rollbackCount: currentRollbacks.length
       };
-      return sendJson(res, { summary, batches, rawRecords, prechecks, confirmations, importResults, changes, alerts, rollbacks });
+      const responsePrechecks = latestBatchId ? replacePrechecksForBatch(prechecks, latestBatchId, currentPrechecks) : prechecks;
+      const responseAlerts = latestBatchId ? [
+        ...alerts.filter(row => String(row.batchId || '') !== latestBatchId),
+        ...currentAlerts
+      ] : alerts;
+      return sendJson(res, { summary, batches, rawRecords, prechecks: responsePrechecks, confirmations, importResults, changes, alerts: responseAlerts, rollbacks });
     }
     if (path === '/third-party-sync/pull' && method === 'POST') {
       const range = body.rangeStart && body.rangeEnd ? { rangeStart: body.rangeStart, rangeEnd: body.rangeEnd } : defaultDailyRange(new Date());
@@ -1520,12 +1562,15 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       return sendJson(res, { success: true, confirmation });
     }
     if (path === '/third-party-sync/import-plan' && method === 'POST') {
-      const [prechecks, confirmations, importResults] = await Promise.all([
+      const batchId = cleanText(body.batchId);
+      const [rawRecords, prechecks, confirmations, importResults] = await Promise.all([
+        getCachedScan(T_THIRD_PARTY_SYNC_RAW_RECORDS).catch(() => []),
         getCachedScan(T_THIRD_PARTY_SYNC_PRECHECKS).catch(() => []),
         getCachedScan(T_THIRD_PARTY_SYNC_CONFIRMATIONS).catch(() => []),
         getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => [])
       ]);
-      return sendJson(res, { plan: buildThirdPartyImportPlan({ batchId: cleanText(body.batchId), prechecks, confirmations, importResults }) });
+      const currentPrechecks = prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks: prechecks, now: now() });
+      return sendJson(res, { plan: buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults }) });
     }
     if (path === '/third-party-sync/import' && method === 'POST') {
       const batchId = cleanText(body.batchId);

@@ -304,6 +304,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_raw_records'), 'pull should save raw records');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_prechecks'), 'pull should save precheck rows');
   assert.ok(!writes.some(row => ['ft_courts', 'ft_membership_accounts', 'ft_membership_orders', 'ft_financial_ledger'].includes(row.table)), 'pull must not write business or finance tables');
+  const batchId = pullRes.body.batch.batchId;
 
   const listRes = await call(handler, { path: '/third-party-sync/overview', method: 'GET' });
   assert.strictEqual(listRes.body.batches.length, 1, 'overview should return batches');
@@ -314,6 +315,14 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(listRes.body.summary.syncGapCount, 1, 'overview should split sync gap count from all pulled records');
   assert.strictEqual(listRes.body.summary.actionableSourceCount, 2, 'overview should show all booking and lock rows that must have a business destination');
   assert.ok(!scans.ft_third_party_sync_prechecks.some(row => row.sourceRecordId === 'OLD1'), 'pull should ignore booking records outside requested date range');
+  scans.ft_third_party_sync_prechecks = scans.ft_third_party_sync_prechecks.map(row => row.sourceRecordId === 'L1' ? { ...row, recommendedType: 'needs_confirmation', needsConfirmation: true, riskReason: '旧规则待确认', status: 'pending_confirmation' } : row);
+  scans.ft_third_party_sync_alerts.push({ id: 'stale-alert-L1', batchId, sourceType: 'lock', sourceRecordId: 'L1', status: 'open', reason: '等待运营确认' });
+  const refreshedOverviewRes = await call(handler, { path: '/third-party-sync/overview', method: 'GET' });
+  assert.strictEqual(refreshedOverviewRes.body.summary.pendingCount, 0, 'overview should recompute latest batch prechecks from raw records after rule upgrades');
+  assert.ok(refreshedOverviewRes.body.prechecks.some(row => row.sourceRecordId === 'L1' && row.recommendedType === 'auto_import'), 'overview should return refreshed current-rule prechecks for the latest batch');
+  assert.ok(!refreshedOverviewRes.body.alerts.some(row => row.id === 'stale-alert-L1'), 'overview should hide stale booking alerts when the current rules make the row importable');
+  const refreshedPlanRes = await call(handler, { path: '/third-party-sync/import-plan', method: 'POST', body: { batchId } });
+  assert.ok(refreshedPlanRes.body.plan.importable.some(row => row.sourceRecordId === 'L1'), 'import plan should also use refreshed current-rule prechecks');
   const pullExclusiveEndRes = await call(handler, { path: '/third-party-sync/pull', method: 'POST', body: { rangeStart: '2026-07-27 00:00:00', rangeEnd: '2026-07-28 00:00:00' } });
   const exclusiveBatchId = pullExclusiveEndRes.body.batch.batchId;
   assert.ok(scans.ft_third_party_sync_prechecks.some(row => row.batchId === exclusiveBatchId && row.sourceRecordId === 'O1'), 'previous day half-open range should include the target day');
@@ -336,7 +345,6 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(confirmRes.body.confirmation.status, 'confirmed', 'confirmation should be auditable');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_confirmations'), 'confirmation should write confirmation table only');
 
-  const batchId = pullRes.body.batch.batchId;
   const plan = buildThirdPartyImportPlan({
     batchId,
     prechecks: scans.ft_third_party_sync_prechecks,
