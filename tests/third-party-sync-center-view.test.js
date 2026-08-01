@@ -13,9 +13,12 @@ assert.match(html, /thirdPartySyncCenterPage:\(\)=>apiCall\('GET','\/third-party
 assert.match(html, /function renderThirdPartySyncCenter\(/, 'sync center page renderer should exist');
 assert.match(html, /thirdPartySyncStatsCompactCards/, 'sync center should use compact one-row stats cards');
 assert.match(html, /third-party-sync-stats-row/, 'sync center stats should stay on one compact row');
-assert.match(html, /订场订单[\s\S]*会员资料[\s\S]*接口缺口/, 'sync center should split pulled records by business meaning');
-assert.match(html, /待确认[\s\S]*高危异常[\s\S]*重复跳过/, 'sync center should display precheck categories');
-assert.match(html, /<th style="width:100px;padding-left:20px">类型<\/th><th style="width:110px">日期<\/th><th style="width:110px">时间段<\/th>/, 'needs-processing table should split type, date and time range into separate columns');
+assert.match(html, /数据日期[\s\S]*订场总数[\s\S]*已自动处理[\s\S]*需运营处理/, 'top stats should only show operator-facing sync progress');
+assert.doesNotMatch(html, /label:'会员资料'|label:'接口缺口'|label:'高危异常'|label:'重复跳过'/, 'top stats should not show noisy technical categories');
+assert.match(html, /<th style="width:120px;padding-left:20px">数据日期<\/th>/, 'sync record table should show data date');
+assert.doesNotMatch(html, /<th[^>]*>时间范围<\/th>|thirdPartySyncBatchRangeText/, 'sync record table should not show time range');
+assert.match(html, /<th style="width:110px;padding-left:20px">处理事项<\/th><th style="width:110px">日期<\/th><th style="width:110px">时间段<\/th>/, 'needs-processing table should use operator-facing action wording');
+assert.doesNotMatch(html, /kind:'订场确认'|kind:'异常报警'|kind:'第三方变更'/, 'needs-processing type should not expose unclear system wording');
 assert.match(html, /thirdPartySyncBookingPrechecks/, 'precheck table should default to booking records only');
 assert.match(html, /姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'sync center should expose operator-facing third party fields');
 assert.match(html, /thirdPartySyncStatusClass/, 'sync center should color statuses by severity');
@@ -36,8 +39,9 @@ assert.match(html, /thirdPartySyncEffectiveBatchId/, 'precheck tab should defaul
 assert.match(html, /thirdPartySyncNeedsProcessingRows/, 'sync center should merge all items requiring operation handling into one list');
 assert.match(html, /thirdPartySyncIsActionableSourceType/, 'needs-processing list should keep member profile and member ledger gap rows out of operator actions');
 assert.match(html, /同步记录[\s\S]*需处理数据/, 'sync center should expose two operator-facing table tabs');
-assert.match(html, /订场订单[\s\S]*会员资料[\s\S]*接口缺口[\s\S]*已导入[\s\S]*需处理[\s\S]*异常/, 'sync record table should show batch-level business metrics');
-assert.match(html, /类型[\s\S]*日期[\s\S]*时间段[\s\S]*场地[\s\S]*姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'needs-processing table should show only actionable fields');
+assert.match(html, /订场总数[\s\S]*已自动处理[\s\S]*需运营处理[\s\S]*异常/, 'sync record table should show actionable booking metrics');
+assert.match(html, /部分完成，待处理[\s\S]*已重试，仍待处理/, 'sync record statuses should explain partial and retry batches');
+assert.match(html, /处理事项[\s\S]*日期[\s\S]*时间段[\s\S]*场地[\s\S]*姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'needs-processing table should show only actionable fields');
 assert.doesNotMatch(html, /thirdPartySyncTableTabButton\('writes'|thirdPartySyncTableTabButton\('changes'|写入回滚|异常处理/, 'sync center should not expose technical write/change tabs');
 assert.doesNotMatch(html, /第三方变更待处理[\s\S]*运营要做什么[\s\S]*异常待处理/, 'sync center should not expose separate change and alert panels');
 assert.match(html, /runThirdPartySyncRollback/, 'sync center should support batch rollback action');

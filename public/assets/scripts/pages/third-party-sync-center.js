@@ -33,8 +33,8 @@ function thirdPartySyncStatusClass(status){
   if(text==='rolled_back')return 'tms-tag-tier-slate';
   return 'tms-tag-tier-slate';
 }
-function thirdPartySyncStatusTag(status){
-  return `<span class="tms-tag ${thirdPartySyncStatusClass(status)}">${esc(thirdPartySyncStatusText(status))}</span>`;
+function thirdPartySyncStatusTag(status,text){
+  return `<span class="tms-tag ${thirdPartySyncStatusClass(status)}">${esc(text||thirdPartySyncStatusText(status))}</span>`;
 }
 function thirdPartySyncTypeText(type){
   return ({
@@ -42,7 +42,7 @@ function thirdPartySyncTypeText(type){
     needs_confirmation:'需要运营确认',
     do_not_import:'暂不导入',
     duplicate_skip:'重复跳过',
-    high_risk_exception:'高危异常'
+    high_risk_exception:'需要补充信息'
   })[type]||type||'-';
 }
 function thirdPartySyncIsBookingSourceType(type){
@@ -63,15 +63,11 @@ function thirdPartySyncBatchCountText(row={}){
   const raws=thirdPartySyncRowsForBatch(data.rawRecords||[],batchId);
   const prechecks=thirdPartySyncRowsForBatch(data.prechecks||[],batchId).filter(item=>thirdPartySyncIsBookingSourceType(item.sourceType));
   const bookingCount=raws.filter(item=>thirdPartySyncIsBookingSourceType(item.sourceType)).length;
-  const memberCount=raws.filter(item=>String(item.sourceType||'').toLowerCase()==='member').length;
-  const gapCount=raws.filter(item=>thirdPartySyncIsGapSourceType(item.sourceType)).length;
   const parts=[
-    `订场订单 ${bookingCount}`,
-    `会员资料 ${memberCount}`,
-    `接口缺口 ${gapCount}`,
+    `订场总数 ${bookingCount}`,
     `可自动导入 ${prechecks.filter(item=>item.recommendedType==='auto_import').length}`,
     `需确认 ${prechecks.filter(item=>item.needsConfirmation||item.recommendedType==='needs_confirmation').length}`,
-    `高危 ${prechecks.filter(item=>item.recommendedType==='high_risk_exception').length}`
+    `需补充 ${prechecks.filter(item=>item.recommendedType==='high_risk_exception').length}`
   ];
   return parts.join(' / ');
 }
@@ -90,14 +86,20 @@ function thirdPartySyncLatestImportResult(batchId=''){
     .filter(row=>String(row.batchId||'')===String(batchId||''))
     .sort((a,b)=>String(b.importedAt||'').localeCompare(String(a.importedAt||'')))[0]||null;
 }
+function thirdPartySyncIsActionableAlert(row={}){
+  const reason=String(row.reason||'');
+  if(/会员流水批量接口缺口|会员资料/.test(reason))return false;
+  if(!thirdPartySyncIsActionableSourceType(row.sourceType))return false;
+  return true;
+}
 function thirdPartySyncBatchMetrics(row={}){
   const batchId=row.batchId||row.id||'';
   const data=thirdPartySyncData();
   const raws=thirdPartySyncRowsForBatch(data.rawRecords||[],batchId);
   const prechecks=thirdPartySyncRowsForBatch(data.prechecks||[],batchId).filter(item=>thirdPartySyncIsBookingSourceType(item.sourceType));
   const needRows=thirdPartySyncNeedsProcessingRows(batchId);
-  const alertCount=thirdPartySyncRowsForBatch(data.alerts||[],batchId).filter(item=>String(item.status||'open')==='open').length;
-  const changeCount=thirdPartySyncRowsForBatch(data.changes||[],batchId).filter(item=>String(item.status||'pending_review')==='pending_review').length;
+  const alertCount=thirdPartySyncRowsForBatch(data.alerts||[],batchId).filter(item=>String(item.status||'open')==='open'&&thirdPartySyncIsActionableAlert(item)).length;
+  const changeCount=thirdPartySyncRowsForBatch(data.changes||[],batchId).filter(item=>String(item.status||'pending_review')==='pending_review'&&thirdPartySyncIsActionableSourceType(item.sourceType)).length;
   return {
     bookingCount:raws.filter(item=>thirdPartySyncIsBookingSourceType(item.sourceType)).length,
     memberCount:raws.filter(item=>String(item.sourceType||'').toLowerCase()==='member').length,
@@ -114,10 +116,13 @@ function thirdPartySyncBatchById(batchId=''){
 function thirdPartySyncBatchDateText(row={}){
   const start=String(row.rangeStart||'').slice(0,10);
   const end=String(row.rangeEnd||'').slice(0,10);
-  return start&&end&&start!==end?`${start} 至 ${end}`:start||end||'-';
+  return start||end||'-';
 }
-function thirdPartySyncBatchRangeText(row={}){
-  return `${row.rangeStart||'-'} 至 ${row.rangeEnd||'-'}`;
+function thirdPartySyncBatchDisplayStatus(row={},latestImport=null,metrics={}){
+  const status=latestImport?.status||row.status;
+  if(status==='partial_completed'&&Number(metrics.needProcessCount||0)>0)return {status,text:'部分完成，待处理'};
+  if(status==='paused'&&Number(metrics.needProcessCount||0)>0)return {status,text:'已重试，仍待处理'};
+  return {status,text:thirdPartySyncStatusText(status)};
 }
 function thirdPartySyncMoneyImpactText(impact={}){
   const cash=Number(impact.cashDelta||0)||0;
@@ -126,18 +131,13 @@ function thirdPartySyncMoneyImpactText(impact={}){
   return `现金 ${fmt(cash)} / 入账 ${fmt(recognized)} / 待履约 ${fmt(deferred)}`;
 }
 function thirdPartySyncStatsCompactCards(){
-  const data=thirdPartySyncData();
-  const summary=data.summary||{};
   const latest=thirdPartySyncLatestBatch();
+  const metrics=latest?thirdPartySyncBatchMetrics(latest):{};
   return [
-    {label:'最近同步',value:latest?.pulledAt?String(latest.pulledAt).replace('T',' ').slice(5,16):'-',sub:latest?thirdPartySyncStatusText(latest.status):'暂无同步'},
-    {label:'订场订单',value:Number(summary.bookingOrderCount||0),sub:'进入预检'},
-    {label:'会员资料',value:Number(summary.memberProfileCount||0),sub:'资料层'},
-    {label:'接口缺口',value:Number(summary.syncGapCount||0),sub:'待补接口'},
-    {label:'可自动导入',value:Number(summary.autoImportCount||0),sub:'订场订单'},
-    {label:'需运营确认',value:Number(summary.pendingCount||0),sub:'订场订单'},
-    {label:'高危异常',value:Number(summary.exceptionCount||0),sub:'订场订单'},
-    {label:'重复跳过',value:Number(summary.duplicateCount||0),sub:'同场地时段去重'},
+    {label:'数据日期',value:latest?thirdPartySyncBatchDateText(latest):'-',sub:latest?.pulledAt?String(latest.pulledAt).replace('T',' ').slice(0,16):'暂无同步'},
+    {label:'订场总数',value:Number(metrics.bookingCount||0),sub:'第三方订场/锁场'},
+    {label:'已自动处理',value:Number(metrics.importedCount||0),sub:'已写入系统'},
+    {label:'需运营处理',value:Number(metrics.needProcessCount||0),sub:'确认后可导入'},
   ];
 }
 function renderThirdPartySyncStats(){
@@ -153,21 +153,18 @@ function renderThirdPartySyncBatches(){
     const batchId=row.batchId||row.id||'';
     const metrics=thirdPartySyncBatchMetrics(row);
     const latestImport=thirdPartySyncLatestImportResult(batchId);
-    const status=latestImport?.status||row.status;
+    const displayStatus=thirdPartySyncBatchDisplayStatus(row,latestImport,metrics);
     return `<tr>
     <td style="padding-left:20px">${renderStandardCellText(thirdPartySyncBatchDateText(row))}</td>
-    <td>${renderStandardCellText(thirdPartySyncBatchRangeText(row))}</td>
     <td>${renderStandardCellText(metrics.bookingCount)}</td>
-    <td>${renderStandardCellText(metrics.memberCount)}</td>
-    <td>${renderStandardCellText(metrics.gapCount)}</td>
     <td>${renderStandardCellText(metrics.importedCount)}</td>
     <td>${renderStandardCellText(metrics.needProcessCount)}</td>
     <td>${renderStandardCellText(metrics.exceptionCount)}</td>
-    <td>${thirdPartySyncStatusTag(status)}</td>
+    <td>${thirdPartySyncStatusTag(displayStatus.status,displayStatus.text)}</td>
     <td>${renderStandardCellText(row.pulledAt?String(row.pulledAt).replace('T',' ').slice(0,16):'-')}</td>
     <td class="tms-sticky-r tms-action-cell" style="width:210px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="filterThirdPartySyncBatch('${esc(batchId)}')">查看需处理</span><span class="tms-action-link" onclick="runThirdPartySyncImport('${esc(batchId)}')">自动导</span></td>
   </tr>`;
-  }).join('')||'<tr><td colspan="11"><div class="empty"><p>暂无同步记录</p></div></td></tr>';
+  }).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无同步记录</p></div></td></tr>';
 }
 let thirdPartySyncBatchFilter='';
 function filterThirdPartySyncBatch(batchId){
@@ -249,7 +246,8 @@ function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchI
   const data=thirdPartySyncData();
   const prechecks=thirdPartySyncVisiblePrechecks(batchId).map(row=>{
     const snapshot=thirdPartySyncSourceSnapshot({row});
-    return {kind:'订场确认',row,...snapshot,reason:row.riskReason||thirdPartySyncTypeText(row.recommendedType),suggestion:row.recommendedType==='high_risk_exception'?'补齐信息后确认':'确认业务类型后导入',action:thirdPartySyncProcessingAction(snapshot)};
+    const kind=row.recommendedType==='high_risk_exception'?'补充金额/备注':(snapshot.bookingMode==='运营锁场'?'确认锁场用途':'确认订场类型');
+    return {kind,row,...snapshot,reason:row.riskReason||thirdPartySyncTypeText(row.recommendedType),suggestion:row.recommendedType==='high_risk_exception'?'补齐信息后导入':'确认后导入',action:thirdPartySyncProcessingAction(snapshot)};
   });
   const changes=thirdPartySyncRowsForBatch(data.changes||[],batchId)
     .filter(row=>String(row.status||'pending_review')==='pending_review'&&thirdPartySyncIsActionableSourceType(row.sourceType))
@@ -257,11 +255,11 @@ function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchI
       const snapshot=thirdPartySyncSourceSnapshot({row,batchId,sourceRecordId:row.sourceRecordId});
       const changeText=thirdPartySyncChangeTypeText(row.changeType);
       return {
-        kind:'第三方变更',
+        kind:/取消|退款|金额|订场/.test(changeText)?'确认订场变更':'确认备注修改',
         row,
         ...snapshot,
         reason:changeText,
-        suggestion:/取消|退款|金额|订场/.test(changeText)?'核对是否需要回滚或人工调整':'确认备注变化即可',
+        suggestion:/取消|退款|金额|订场/.test(changeText)?'核对后处理':'确认后关闭',
         action:thirdPartySyncProcessingAction(snapshot)
       };
     });
@@ -269,7 +267,7 @@ function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchI
     .filter(row=>String(row.status||'open')==='open'&&thirdPartySyncIsActionableSourceType(row.sourceType))
     .map(row=>{
       const snapshot=thirdPartySyncSourceSnapshot({row,batchId:row.batchId||batchId,sourceRecordId:row.sourceRecordId});
-      return {kind:'异常报警',row,...snapshot,reason:row.reason||'-',suggestion:/失败|缺口|格式|等待/.test(String(row.reason||''))?'处理后再导入':'确认后关闭',action:thirdPartySyncProcessingAction(snapshot)};
+      return {kind:/金额/.test(String(row.reason||''))?'补充金额':'补充备注',row,...snapshot,reason:row.reason||'-',suggestion:/失败|缺口|格式|等待/.test(String(row.reason||''))?'处理后再导入':'确认后关闭',action:thirdPartySyncProcessingAction(snapshot)};
     }).filter(item=>item.sourceRecordId||item.date||item.time||item.venue||item.customerName||item.phone||item.remark);
   return [...prechecks,...changes,...alerts];
 }
@@ -282,7 +280,7 @@ function thirdPartySyncMemberProfileNote(){
   const rawRows=thirdPartySyncRowsForBatch(data.rawRecords||[],batchId);
   const memberCount=rawRows.filter(row=>String(row.sourceType||'').toLowerCase()==='member').length;
   const gapCount=rawRows.filter(row=>thirdPartySyncIsGapSourceType(row.sourceType)).length;
-  return `<div class="tms-audit-note third-party-sync-member-note">会员资料 ${memberCount} 条、接口缺口 ${gapCount} 条。会员资料只同步到资料层，不需要人工处理；本表只显示需要运营确认的订场记录。</div>`;
+  return `<div class="tms-audit-note third-party-sync-member-note">资料同步 ${memberCount} 条、接口待补 ${gapCount} 条。本表只显示需要运营确认的订场记录。</div>`;
 }
 function thirdPartySyncBookingModeText(row={}){
   if(row.bookingMode)return row.bookingMode;
@@ -297,7 +295,7 @@ function renderThirdPartySyncPrechecks(){
   const rows=thirdPartySyncNeedsProcessingRows();
   host.innerHTML=rows.map(item=>{
     return `<tr>
-      <td style="padding-left:20px"><span class="tms-tag ${item.kind==='异常报警'?'tms-tag-red':'tms-tag-tier-gold'}">${esc(item.kind)}</span></td>
+      <td style="padding-left:20px"><span class="tms-tag ${/补充|变更/.test(item.kind)?'tms-tag-red':'tms-tag-tier-gold'}">${esc(item.kind)}</span></td>
       <td>${renderStandardCellText(item.date||'-')}</td>
       <td>${renderStandardCellText(item.time||'-')}</td>
       <td>${renderStandardCellText(item.venue||'-')}</td>
@@ -359,7 +357,7 @@ function renderThirdPartySyncChanges(){
     <td>${renderStandardCellText(row.detectedAt?String(row.detectedAt).replace('T',' ').slice(0,16):'-')}</td>
     <td>${renderStandardCellText(/取消|退款|金额|订场/.test(thirdPartySyncChangeTypeText(row.changeType))?'核对是否需要回滚或人工调整':'确认备注变化即可')}</td>
     <td>${thirdPartySyncStatusTag(row.status)}</td>
-  </tr>`).join('')||'<tr><td colspan="6"><div class="empty"><p>暂无第三方变更</p></div></td></tr>';
+  </tr>`).join('')||'<tr><td colspan="6"><div class="empty"><p>暂无变更提醒</p></div></td></tr>';
 }
 function renderThirdPartySyncAlerts(){
   const host=document.getElementById('thirdPartySyncAlertTbody');
@@ -374,7 +372,7 @@ function renderThirdPartySyncAlerts(){
     <td>${thirdPartySyncStatusTag(row.status)}</td>
     <td>${renderStandardCellText(row.createdAt?String(row.createdAt).replace('T',' ').slice(0,16):'-')}</td>
   </tr>`;
-  }).join('')||'<tr><td colspan="5"><div class="empty"><p>暂无异常报警</p></div></td></tr>';
+  }).join('')||'<tr><td colspan="5"><div class="empty"><p>暂无处理提醒</p></div></td></tr>';
 }
 function renderThirdPartySyncRollbacks(){
   const host=document.getElementById('thirdPartySyncRollbackTbody');
@@ -428,10 +426,10 @@ async function runThirdPartySyncImportPlan(batchId){
       {label:'可导入',value:Number(plan.counts?.importable||0),sub:'高确定性/已确认'},
       {label:'阻断',value:Number(plan.counts?.blocked||0),sub:'需继续处理'},
       {label:'跳过',value:Number(plan.counts?.skipped||0),sub:'重复或不导入'},
-      {label:'同步信息',value:Number(plan.counts?.informational||0),sub:'会员资料/接口缺口'}
+      {label:'同步信息',value:Number(plan.counts?.informational||0),sub:'资料同步/接口待补'}
     ])}</div>
     <div class="tms-section-header">阻断原因</div>
-    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px">第三方记录</th><th>原因</th></tr></thead><tbody>${(plan.blocked||[]).slice(0,20).map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.sourceRecordId||'-')}</td><td>${renderStandardCellText(row.reason||row.riskReason||'-')}</td></tr>`).join('')||'<tr><td colspan="2"><div class="empty"><p>暂无阻断项</p></div></td></tr>'}</tbody></table></div></div>`;
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px">数据项</th><th>原因</th></tr></thead><tbody>${(plan.blocked||[]).slice(0,20).map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.sourceRecordId||'-')}</td><td>${renderStandardCellText(row.reason||row.riskReason||'-')}</td></tr>`).join('')||'<tr><td colspan="2"><div class="empty"><p>暂无阻断项</p></div></td></tr>'}</tbody></table></div></div>`;
     openStandardModal({title:'导入计划',bodyHtml:body,actionsHtml:'<button class="tms-btn tms-btn-primary" onclick="closeModal()">知道了</button>',extraClass:'modal-wide'});
   }catch(e){
     toast('导入计划生成失败：'+e.message,'error');
@@ -530,7 +528,7 @@ function renderThirdPartySyncCenter(){
     : '<button class="tms-btn tms-btn-primary" onclick="runThirdPartySyncPull()">手动拉取</button>';
   host.innerHTML=`<div class="section-stack">
     <style>
-      #page-third-party-sync .third-party-sync-stats-row{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+      #page-third-party-sync .third-party-sync-stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
       #page-third-party-sync .third-party-sync-stats-row .tms-stat-card{min-width:0;padding:10px 12px}
       #page-third-party-sync .third-party-sync-stats-row .tms-stat-label{font-size:11px;white-space:nowrap}
       #page-third-party-sync .third-party-sync-stats-row .tms-stat-value{font-size:20px;line-height:1.15;white-space:nowrap}
@@ -552,8 +550,8 @@ function renderThirdPartySyncCenter(){
       ${thirdPartySyncTableTabButton('batches','同步记录')}
       ${thirdPartySyncTableTabButton('prechecks','需处理数据')}
     </div>
-    ${thirdPartySyncTablePanel('batches','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">同步日期</th><th style="width:260px">时间范围</th><th style="width:80px">订场订单</th><th style="width:80px">会员资料</th><th style="width:80px">接口缺口</th><th style="width:80px">已导入</th><th style="width:80px">需处理</th><th style="width:80px">异常</th><th style="width:100px">状态</th><th style="width:140px">最近同步</th><th class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>')}
-    ${thirdPartySyncTablePanel('prechecks','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:100px;padding-left:20px">类型</th><th style="width:110px">日期</th><th style="width:110px">时间段</th><th style="width:80px">场地</th><th style="width:110px">姓名</th><th style="width:140px">手机号</th><th style="width:120px">订场方式</th><th style="width:120px">操作账号</th><th style="width:200px">备注</th><th style="width:180px">问题原因</th><th style="width:180px">建议处理</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div>')}
+    ${thirdPartySyncTablePanel('batches','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">数据日期</th><th style="width:90px">订场总数</th><th style="width:100px">已自动处理</th><th style="width:100px">需运营处理</th><th style="width:80px">异常</th><th style="width:140px">状态</th><th style="width:140px">最近同步</th><th class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>')}
+    ${thirdPartySyncTablePanel('prechecks','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">处理事项</th><th style="width:110px">日期</th><th style="width:110px">时间段</th><th style="width:80px">场地</th><th style="width:110px">姓名</th><th style="width:140px">手机号</th><th style="width:120px">订场方式</th><th style="width:120px">操作账号</th><th style="width:200px">备注</th><th style="width:180px">问题原因</th><th style="width:180px">建议处理</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div>')}
   </div>`;
   renderThirdPartySyncStats();
   renderThirdPartySyncBatches();
