@@ -49,6 +49,12 @@ assert.strictEqual(sync.selectFeishuScheduleSheet([
   { sheet_id: 'GrbZdi', title: '7.20-7.26' },
   { sheet_id: 'CurrentWeek', title: '7.27-8.2（当前周）' }
 ], 'GrbZdi', '2026-07-30').sheet_id, 'CurrentWeek', 'cron sync should automatically move from stale configured sheet to the current weekly sheet');
+assert.deepStrictEqual(sync.selectFeishuScheduleSheets([
+  { sheet_id: 'OldWeek', title: '7.20-7.26' },
+  { sheet_id: 'CurrentWeek', title: '7.27-8.2（当前周）' },
+  { sheet_id: 'NextWeek', title: '8.3-8.9' },
+  { sheet_id: 'LaterWeek', title: '8.10-8.16' }
+], 'OldWeek', '2026-08-01').map(row => row.sheet_id), ['CurrentWeek', 'NextWeek'], 'regular sync should always read current week and next week');
 
 const interleavedValues = [
   ['时间', null, null, 'Siren', null, null, null, '杨教练', null, null, null],
@@ -1089,18 +1095,41 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
       assert.match(url, /tenant_access_token/, 'cron sync should only post to Feishu auth when webhook is not configured');
       return { data: { code: 0, tenant_access_token: 'tenant-token' } };
     };
+    const nextWeekValues = values.map(row => row.slice());
+    nextWeekValues[2][0] = 46237;
+    nextWeekValues[3][0] = null;
+    nextWeekValues[4][0] = null;
+    nextWeekValues[5][0] = null;
+    const oldWeekValues = values.map(row => row.slice());
+    oldWeekValues[2][0] = 46223;
+    oldWeekValues[3][0] = null;
+    oldWeekValues[4][0] = null;
+    oldWeekValues[5][0] = null;
+    const sheetMeta = [
+      { sheet_id: 'OldWeek', title: '7.20-7.26', merges },
+      { sheet_id: 'GrbZdi', title: '7.27-8.2', merges },
+      { sheet_id: 'NextWeek', title: '8.3-8.9', merges }
+    ];
     axios.get = async (url) => {
-      if (/\/values\//.test(url)) return { data: { code: 0, data: { valueRange: { values } } } };
-      if (/\/sheets\/query/.test(url)) return { data: { code: 0, data: { sheets: [{ sheet_id: 'GrbZdi', title: '7.20-7.26', merges }] } } };
+      if (/\/values\//.test(url)) {
+        if (url.includes('OldWeek')) return { data: { code: 0, data: { valueRange: { values: oldWeekValues } } } };
+        if (url.includes('NextWeek')) return { data: { code: 0, data: { valueRange: { values: nextWeekValues } } } };
+        return { data: { code: 0, data: { valueRange: { values } } } };
+      }
+      if (/\/sheets\/query/.test(url)) return { data: { code: 0, data: { sheets: sheetMeta } } };
       throw new Error(`unexpected axios.get ${url}`);
     };
     let jsonPayload = null;
+    let mockedSyncRows = [];
     const route = sync.createFeishuScheduleSyncRoutes({
       init: async () => {},
       mkTable: async () => {},
       sendJson: (res, payload, status = 200) => { jsonPayload = payload; return { status, payload }; },
       sendPlainText: () => {},
-      getCachedScan: async () => [],
+      getCachedScan: async (table) => {
+        if (table === 'ft_feishu_schedule_sync') return mockedSyncRows;
+        return [];
+      },
       put: async () => {},
       uuidv4: () => 'uuid',
       T_SCHEDULE: 'schedules',
@@ -1153,7 +1182,74 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
       query: new URLSearchParams('dryRun=true')
     });
     assert.strictEqual(jsonPayload.mode, 'sheet', 'regular cron sync should compare the whole Feishu document instead of future rows only');
-    assert.strictEqual(jsonPayload.courseCount, 2, 'regular cron sync should include historical document rows in the comparison scope');
+    assert.strictEqual(jsonPayload.courseCount, 4, 'regular cron sync should include current week and next week rows');
+    assert.deepStrictEqual(jsonPayload.sheetIds, ['GrbZdi', 'NextWeek'], 'regular cron sync should not scan old sheets during the non-8am run');
+
+    const baselineWrites = [];
+    const baselineRoute = sync.createFeishuScheduleSyncRoutes({
+      init: async () => {},
+      mkTable: async () => {},
+      sendJson: (res, payload, status = 200) => { jsonPayload = payload; return { status, payload }; },
+      sendPlainText: () => {},
+      getCachedScan: async (table) => {
+        if (table === 'ft_feishu_schedule_sync') return mockedSyncRows;
+        return [];
+      },
+      put: async (table, id, row) => baselineWrites.push({ table, id, row }),
+      uuidv4: () => 'uuid',
+      T_SCHEDULE: 'schedules',
+      T_STUDENTS: 'students',
+      T_COACHES: 'coaches',
+      T_USERS: 'users',
+      T_PACKAGES: 'packages',
+      T_ENTITLEMENTS: 'entitlements',
+      T_LEADS: 'leads',
+      T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+      T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+    });
+    process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED = 'true';
+    await baselineRoute({
+      path: '/cron/feishu-schedule-sync',
+      method: 'GET',
+      req: { headers: { 'user-agent': 'vercel-cron' } },
+      res: {},
+      query: new URLSearchParams('notify=false&scanAllSheets=true')
+    });
+    assert.strictEqual(jsonPayload.courseCount, 4, 'first all-sheet scan should baseline old sheets without processing them');
+    assert.ok(baselineWrites.some(item => item.row.source === 'feishu-sheet-fingerprint' && item.row.sheetId === 'OldWeek'), 'first all-sheet scan should store old sheet fingerprint baseline');
+
+    const changedOldWeekValues = oldWeekValues.map(row => row.slice());
+    changedOldWeekValues[2][10] = '历史修改学员';
+    const changedOldFingerprint = sync.sheetFingerprint(changedOldWeekValues, sheetMeta[0]);
+    const oldFingerprintRows = sheetMeta.map(sheet => ({
+      id: `fp-${sheet.sheet_id}`,
+      source: 'feishu-sheet-fingerprint',
+      status: 'fingerprint',
+      sheetId: sheet.sheet_id,
+      sheetTitle: sheet.title,
+      sheetFingerprint: sheet.sheet_id === 'OldWeek' ? 'previous-fingerprint' : sync.sheetFingerprint(sheet.sheet_id === 'NextWeek' ? nextWeekValues : values, sheet)
+    }));
+    mockedSyncRows = oldFingerprintRows;
+    axios.get = async (url) => {
+      if (/\/values\//.test(url)) {
+        if (url.includes('OldWeek')) return { data: { code: 0, data: { valueRange: { values: changedOldWeekValues } } } };
+        if (url.includes('NextWeek')) return { data: { code: 0, data: { valueRange: { values: nextWeekValues } } } };
+        return { data: { code: 0, data: { valueRange: { values } } } };
+      }
+      if (/\/sheets\/query/.test(url)) return { data: { code: 0, data: { sheets: sheetMeta } } };
+      throw new Error(`unexpected axios.get ${url}`);
+    };
+    process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED = 'false';
+    await baselineRoute({
+      path: '/cron/feishu-schedule-sync',
+      method: 'GET',
+      req: { headers: { 'user-agent': 'vercel-cron' } },
+      res: {},
+      query: new URLSearchParams('dryRun=true&scanAllSheets=true')
+    });
+    assert.strictEqual(changedOldFingerprint.length, 64, 'sheet fingerprint should be a stable hash');
+    assert.deepStrictEqual(jsonPayload.changedSheetIds, ['OldWeek'], 'changed historical sheet should be detected by fingerprint');
+    assert.ok(jsonPayload.sheetIds.includes('OldWeek'), 'changed historical sheet should be included in detailed comparison');
 
     process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/test';
     let webhookCardJson = '';

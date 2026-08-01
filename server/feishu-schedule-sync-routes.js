@@ -448,6 +448,18 @@ function chinaDateTimeKey(date=new Date()){
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
+function chinaHour(date=new Date()){
+  const hour=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',hour:'2-digit',hour12:false}).format(date);
+  return Number(hour);
+}
+
+function addDaysKey(dateKey='',days=0){
+  if(!validDateKey(dateKey))return '';
+  const date=new Date(`${dateKey}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate()+Number(days||0));
+  return date.toISOString().slice(0,10);
+}
+
 function isFutureCourse(course,nowKey=chinaDateTimeKey()){
   return String(course?.startTime||'').slice(0,16)>=nowKey;
 }
@@ -1028,12 +1040,60 @@ function sheetTitleIncludesDate(sheet={},todayKey=chinaTodayKey()){
   return !!range&&todayKey>=range.start&&todayKey<=range.end;
 }
 
+function rangesOverlap(a={},b={}){
+  if(!a.start||!a.end||!b.start||!b.end)return false;
+  return a.start<=b.end&&a.end>=b.start;
+}
+
 function selectFeishuScheduleSheet(meta=[],configuredSheetId='',todayKey=chinaTodayKey()){
   const sheets=Array.isArray(meta)?meta:[];
   const configured=cleanText(configuredSheetId);
   const configuredSheet=sheets.find(row=>String(row.sheet_id||'')===configured)||null;
   if(configuredSheet&&sheetTitleIncludesDate(configuredSheet,todayKey))return configuredSheet;
   return sheets.find(row=>sheetTitleIncludesDate(row,todayKey))||configuredSheet||sheets[0]||null;
+}
+
+function selectFeishuScheduleSheets(meta=[],configuredSheetId='',todayKey=chinaTodayKey()){
+  const sheets=Array.isArray(meta)?meta:[];
+  const current=selectFeishuScheduleSheet(sheets,configuredSheetId,todayKey);
+  if(!current)return [];
+  const currentRange=sheetTitleDateRange(current.title||'',todayKey);
+  if(!currentRange)return [current];
+  const nextRange={start:addDaysKey(currentRange.end,1),end:addDaysKey(currentRange.end,7)};
+  const selected=sheets.filter(sheet=>{
+    const range=sheetTitleDateRange(sheet.title||'',todayKey);
+    return rangesOverlap(range,currentRange)||rangesOverlap(range,nextRange);
+  });
+  return selected.length?selected:[current];
+}
+
+function selectFeishuScheduleSheetsForDateRange(meta=[],configuredSheetId='',startDate='',endDate='',todayKey=chinaTodayKey()){
+  const sheets=Array.isArray(meta)?meta:[];
+  if(!startDate&&!endDate)return selectFeishuScheduleSheets(sheets,configuredSheetId,todayKey);
+  const requested={start:startDate||'0000-01-01',end:endDate||'9999-12-31'};
+  const selected=sheets.filter(sheet=>rangesOverlap(sheetTitleDateRange(sheet.title||'',todayKey),requested));
+  return selected.length?selected:selectFeishuScheduleSheets(sheets,configuredSheetId,todayKey);
+}
+
+function sheetFingerprint(values=[],sheet={}){
+  return sha256(JSON.stringify({title:sheet?.title||'',values}));
+}
+
+function sheetFingerprintRowId(sheetId=''){
+  return `feishu-sheet-fingerprint-${sha256(sheetId).slice(0,24)}`;
+}
+
+function isSheetFingerprintRow(row={}){
+  return row?.source==='feishu-sheet-fingerprint'||row?.status==='fingerprint';
+}
+
+function buildSheetScopeLabel(sheets=[],changedSheetIds=new Set()){
+  const titles=(sheets||[]).map(sheet=>cleanText(sheet.title||sheet.sheet_id)).filter(Boolean);
+  if(!titles.length)return '';
+  const changedCount=(sheets||[]).filter(sheet=>changedSheetIds.has(String(sheet.sheet_id||''))).length;
+  const base=titles.slice(0,3).join(' + ');
+  const suffix=titles.length>3?` 等 ${titles.length} 个 sheet`:'';
+  return changedCount?`${base}${suffix}（含变动历史 ${changedCount} 个）`:`${base}${suffix}`;
 }
 
 async function sendFeishuWebhook(webhook,payload){
@@ -1458,7 +1518,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     await Promise.all([T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS].filter(Boolean).map(table=>mkTable(table).catch(()=>null)));
   }
 
-  async function loadFeishuCourses(){
+  async function loadFeishuCourses({syncRows=[],startDate='',endDate='',scanAllSheets=false}={}){
     const spreadsheetToken=cleanText(process.env.FEISHU_SCHEDULE_SPREADSHEET_TOKEN);
     const sheetId=cleanText(process.env.FEISHU_SCHEDULE_SHEET_ID||process.env.FEISHU_SCHEDULE_DEFAULT_SHEET_ID);
     if(!spreadsheetToken)throw new Error('缺少 FEISHU_SCHEDULE_SPREADSHEET_TOKEN');
@@ -1468,19 +1528,77 @@ function createFeishuScheduleSyncRoutes(deps={}){
       appSecret:cleanText(process.env.FEISHU_SCHEDULE_APP_SECRET)
     });
     const meta=await fetchFeishuSheetMeta({spreadsheetToken,accessToken}).catch(()=>[]);
-    const sheet=selectFeishuScheduleSheet(meta,sheetId);
-    const selectedSheetId=cleanText(sheet?.sheet_id||sheetId);
-    const values=await fetchFeishuSheetValues({spreadsheetToken,sheetId:selectedSheetId,range:process.env.FEISHU_SCHEDULE_RANGE,accessToken});
-    const courses=parseFeishuScheduleRows({values,merges:sheet?.merges||[],sheetId:selectedSheetId,sheetTitle:sheet?.title||selectedSheetId});
-    return {courses,sheetId:selectedSheetId,sheetTitle:sheet?.title||selectedSheetId};
+    const baseSheets=selectFeishuScheduleSheetsForDateRange(meta,sheetId,startDate,endDate);
+    const baseIds=new Set(baseSheets.map(sheet=>String(sheet.sheet_id||'')).filter(Boolean));
+    const fingerprintRows=new Map((syncRows||[]).filter(isSheetFingerprintRow).map(row=>[String(row.sheetId||''),row]));
+    const allSheets=Array.isArray(meta)?meta:[];
+    const sheetValues=new Map();
+    const changedSheetIds=new Set();
+    const baselineOnlySheetIds=new Set();
+
+    async function loadSheet(sheet){
+      const selectedSheetId=cleanText(sheet?.sheet_id||sheetId);
+      if(sheetValues.has(selectedSheetId))return sheetValues.get(selectedSheetId);
+      const values=await fetchFeishuSheetValues({spreadsheetToken,sheetId:selectedSheetId,range:process.env.FEISHU_SCHEDULE_RANGE,accessToken});
+      const fingerprint=sheetFingerprint(values,sheet);
+      const item={sheet,values,fingerprint};
+      sheetValues.set(selectedSheetId,item);
+      return item;
+    }
+
+    for(const sheet of baseSheets)await loadSheet(sheet);
+
+    if(scanAllSheets){
+      for(const sheet of allSheets){
+        const selectedSheetId=cleanText(sheet?.sheet_id||'');
+        if(!selectedSheetId||baseIds.has(selectedSheetId))continue;
+        const item=await loadSheet(sheet);
+        const previous=fingerprintRows.get(selectedSheetId);
+        if(previous?.sheetFingerprint&&previous.sheetFingerprint!==item.fingerprint)changedSheetIds.add(selectedSheetId);
+        if(!previous?.sheetFingerprint)baselineOnlySheetIds.add(selectedSheetId);
+      }
+    }
+
+    const selectedItems=[...sheetValues.values()].filter(item=>{
+      const selectedSheetId=cleanText(item.sheet?.sheet_id||'');
+      return baseIds.has(selectedSheetId)||changedSheetIds.has(selectedSheetId);
+    });
+    const courses=selectedItems.flatMap(item=>{
+      const selectedSheetId=cleanText(item.sheet?.sheet_id||sheetId);
+      return parseFeishuScheduleRows({values:item.values,merges:item.sheet?.merges||[],sheetId:selectedSheetId,sheetTitle:item.sheet?.title||selectedSheetId});
+    });
+    const fingerprintUpdates=[...sheetValues.values()].map(item=>{
+      const selectedSheetId=cleanText(item.sheet?.sheet_id||'');
+      return {
+        id:sheetFingerprintRowId(selectedSheetId),
+        source:'feishu-sheet-fingerprint',
+        status:'fingerprint',
+        sheetId:selectedSheetId,
+        sheetTitle:item.sheet?.title||selectedSheetId,
+        sheetFingerprint:item.fingerprint
+      };
+    });
+    const selectedSheets=selectedItems.map(item=>item.sheet);
+    return {
+      courses,
+      sheets:selectedSheets,
+      sheetIds:selectedSheets.map(sheet=>cleanText(sheet.sheet_id)).filter(Boolean),
+      sheetId:selectedSheets.map(sheet=>cleanText(sheet.sheet_id)).filter(Boolean).join(','),
+      sheetTitle:buildSheetScopeLabel(selectedSheets,changedSheetIds),
+      fingerprintUpdates,
+      changedSheetIds:[...changedSheetIds],
+      baselineOnlySheetIds:[...baselineOnlySheetIds],
+      scannedSheetCount:sheetValues.size
+    };
   }
 
-  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode='',historyTrialMode='',notifyDryRun=false,suppressNotification=false}={}){
+  async function runSync({dryRun=true,startDate='',endDate='',includeHistorical=false,historyApplyMode='',historyTrialMode='',notifyDryRun=false,suppressNotification=false,scanAllSheets=false}={}){
     await init();
     await ensureFeishuSyncTables();
-    const [feishuSheet,syncRows,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
-      loadFeishuCourses(),
-      getCachedScan(T_FEISHU_SCHEDULE_SYNC).catch(()=>[]),
+    const syncRows=await getCachedScan(T_FEISHU_SCHEDULE_SYNC).catch(()=>[]);
+    const shouldScanAllSheets=scanAllSheets||(!startDate&&!endDate&&chinaHour()===8);
+    const [feishuSheet,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
+      loadFeishuCourses({syncRows,startDate,endDate,scanAllSheets:shouldScanAllSheets}),
       getCachedScan(T_SCHEDULE).catch(()=>[]),
       getCachedScan(T_STUDENTS).catch(()=>[]),
       getCachedScan(T_COACHES).catch(()=>[]),
@@ -1497,20 +1615,26 @@ function createFeishuScheduleSyncRoutes(deps={}){
       ? feishuCourses.filter(course=>courseInDateRange(course,startDate,endDate))
       : feishuCourses;
     const selectedScheduleIds=new Set((schedules||[]).filter(row=>rangeMode?courseInDateRange(row,startDate,endDate):true).map(row=>String(row.id||'')).filter(Boolean));
+    const sheetIds=new Set((feishuSheet.sheetIds||[]).map(String).filter(Boolean));
     const sheetId=cleanText(feishuSheet.sheetId||process.env.FEISHU_SCHEDULE_SHEET_ID||process.env.FEISHU_SCHEDULE_DEFAULT_SHEET_ID);
     const scopedSyncRows=(syncRows||[]).filter(row=>{
+      if(isSheetFingerprintRow(row))return false;
       const rowSheet=cleanText(row.sheetId||String(row.sourceKey||'').split('|')[0]);
-      if(sheetId&&rowSheet&&rowSheet!==sheetId)return false;
+      if(sheetIds.size&&rowSheet&&!sheetIds.has(rowSheet))return false;
       if(!rangeMode)return true;
       return !row.scheduleId||selectedScheduleIds.has(String(row.scheduleId||''));
     });
     const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,recommendEntitlements,nowKey});
-    const result={ok:true,dryRun,mode:rangeMode?'date_range':'sheet',sheetId,sheetTitle:feishuSheet.sheetTitle||sheetId,startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,ignoredPastCount:0,plan};
+    const result={ok:true,dryRun,mode:rangeMode?'date_range':'sheet',sheetId,sheetIds:[...sheetIds],sheetTitle:feishuSheet.sheetTitle||sheetId,startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,scannedSheetCount:feishuSheet.scannedSheetCount||0,changedSheetIds:feishuSheet.changedSheetIds||[],baselineOnlySheetIds:feishuSheet.baselineOnlySheetIds||[],ignoredPastCount:0,plan};
     if(!dryRun){
       const applyPlan=rangeMode?safeHistoryApplyPlan(plan,{includeTrial:historyTrialMode==='confirmed'}):plan;
       if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
       result.applied=await applySyncPlan(applyPlan,{put,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
+      const fingerprintNow=new Date().toISOString();
+      for(const row of feishuSheet.fingerprintUpdates||[]){
+        await put(T_FEISHU_SCHEDULE_SYNC,row.id,{...row,lastCheckedAt:fingerprintNow,updatedAt:fingerprintNow});
+      }
     }
     if(suppressNotification){
       result.notification={skipped:true,reason:'本次执行已按参数关闭群通知'};
@@ -1535,7 +1659,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const startDate=validDateKey(query.get('startDate'));
       const endDate=validDateKey(query.get('endDate'));
       const includeHistorical=query.get('history')==='true'||!!startDate||!!endDate;
-      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply')),historyTrialMode:cleanText(query.get('historyTrial')),notifyDryRun:query.get('notify')==='true',suppressNotification:query.get('notify')==='false'||query.get('silent')==='true'}));
+      return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply')),historyTrialMode:cleanText(query.get('historyTrial')),notifyDryRun:query.get('notify')==='true',suppressNotification:query.get('notify')==='false'||query.get('silent')==='true',scanAllSheets:query.get('scanAllSheets')==='true'}));
     }
     if(path==='/feishu-schedule-sync/confirm-delete'&&method==='GET'){
       const taskId=cleanText(query.get('taskId'));
@@ -1598,6 +1722,8 @@ module.exports={
   courseInDateRange,
   sheetTitleDateRange,
   selectFeishuScheduleSheet,
+  selectFeishuScheduleSheets,
+  sheetFingerprint,
   applyMergesToValues,
   parseFeishuScheduleRows,
   buildDryRunPlan,
