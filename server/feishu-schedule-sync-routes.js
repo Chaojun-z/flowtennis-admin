@@ -5,6 +5,15 @@ function cleanText(value){
   return String(value??'').replace(/\u00a0/g,' ').trim();
 }
 
+function escapeHtml(value){
+  return cleanText(value)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
 function normalizeNameKey(value){
   return cleanText(value)
     .toLowerCase()
@@ -868,7 +877,8 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     if(row.status!=='active')continue;
     const key=String(row.sourceKey||'');
     if(!key||activeSourceKeys.has(key))continue;
-    actions.push({type:'pending_delete',sourceKey:key,sync:row});
+    const schedule=(schedules||[]).find(item=>String(item.id||'')===String(row.scheduleId||''))||null;
+    actions.push({type:'pending_delete',sourceKey:key,sync:row,schedule});
   }
   return summarizePlan(actions);
 }
@@ -1026,10 +1036,13 @@ function selectFeishuScheduleSheet(meta=[],configuredSheetId='',todayKey=chinaTo
   return sheets.find(row=>sheetTitleIncludesDate(row,todayKey))||configuredSheet||sheets[0]||null;
 }
 
-async function sendFeishuWebhook(webhook,text){
+async function sendFeishuWebhook(webhook,payload){
   const url=cleanText(webhook);
   if(!url)return {skipped:true};
-  const res=await axios.post(url,{msg_type:'text',content:{text}}, {timeout:10000});
+  const body=payload&&typeof payload==='object'&&payload.msg_type
+    ? payload
+    : {msg_type:'text',content:{text:cleanText(payload)}};
+  const res=await axios.post(url,body, {timeout:10000});
   const code=Number(res.data?.code??0);
   if(code!==0)throw new Error(`飞书群通知失败：${res.data?.msg||code}`);
   return {sent:true,code};
@@ -1046,8 +1059,8 @@ function cronAuthorized(req){
 function formatActionLine(action){
   const c=action.candidate||{};
   if(action.type==='notify_error')return `${formatCourseBrief(c)}：${operatorActionText(action.reason)}`;
-  if(action.type==='pending_delete')return `待确认删除：系统排课 ${action.sync?.scheduleId||''}`;
-  return `${action.type}：${c.date||''} ${c.startClock||''}-${c.endClock||''} ${c.coachName||''} ${c.studentText||''}`;
+  if(action.type==='pending_delete')return `待确认删除：${formatScheduleBrief(action.schedule)||formatCourseBrief(c)||'系统已有排课'}`;
+  return `${formatCourseBrief(c)}：${actionTypeText(action.type)}`;
 }
 
 function formatCourseBrief(candidate={}){
@@ -1058,6 +1071,110 @@ function formatCourseBrief(candidate={}){
   const coach=cleanText(candidate.coachName||candidate.resolvedCoach?.name);
   const venue=[candidate.venueText,candidate.courtText||candidate.venue].map(cleanText).filter(Boolean).join(' ');
   return [date,time,student,course,coach,venue].filter(Boolean).join('｜');
+}
+
+function formatScheduleBrief(schedule={}){
+  if(!schedule)return '';
+  const date=cleanText(String(schedule.startTime||'').slice(0,10));
+  const start=cleanText(String(schedule.startTime||'').slice(11,16));
+  const end=cleanText(String(schedule.endTime||'').slice(11,16));
+  const time=start&&end?`${start}-${end}`:start;
+  const student=cleanText(schedule.studentName);
+  const course=cleanText(schedule.courseDisplayName||schedule.courseText||schedule.courseType);
+  const coach=cleanText(schedule.coach);
+  const venue=formatVenueText(schedule);
+  return [date,time,student,course,coach,venue].filter(Boolean).join('｜');
+}
+
+function formatVenueText(row={}){
+  const venue=cleanText(row.venueText||row.venue||row.campus||row.location);
+  const court=cleanText(row.courtText||row.courtName||row.court||row.courtNumber);
+  if(venue&&court&&!venue.includes(court))return `${venue} ${court}`;
+  const raw=venue||court;
+  if(!raw)return '';
+  if(/马坡|顺义/.test(raw))return raw;
+  return `马坡室内 ${raw}`;
+}
+
+function actionTypeText(type=''){
+  if(type==='bind_existing')return '已绑定已有排课';
+  if(type==='create_schedule')return '已创建并扣课包';
+  if(type==='create_trial_schedule')return '已创建并核销体验课包';
+  if(type==='update_schedule')return '已修改系统排课';
+  return '已处理';
+}
+
+function chinaDateTimeText(value=new Date()){
+  const date=value instanceof Date?value:new Date(value);
+  const parts=new Intl.DateTimeFormat('zh-CN',{
+    timeZone:'Asia/Shanghai',
+    year:'numeric',
+    month:'2-digit',
+    day:'2-digit',
+    hour:'2-digit',
+    minute:'2-digit',
+    hour12:false
+  }).formatToParts(date).reduce((acc,part)=>({...acc,[part.type]:part.value}),{});
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
+function shortDateText(value=''){
+  const text=cleanText(value);
+  const match=text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!match)return text;
+  return `${Number(match[2])}/${Number(match[3])}`;
+}
+
+function cleanCoachDisplay(value=''){
+  return cleanText(value).replace(/教练$/,'');
+}
+
+function formatSheetPeriodText(value=''){
+  return cleanText(value).replace(/[（(]\s*当前周\s*[）)]/,' 当前周').replace(/\s+/g,' ');
+}
+
+function formatCandidateCardLine(candidate={},suffix=''){
+  const date=shortDateText(candidate.date||String(candidate.startTime||'').slice(0,10));
+  const start=cleanText(candidate.startClock||String(candidate.startTime||'').slice(11,16));
+  const end=cleanText(candidate.endClock||String(candidate.endTime||'').slice(11,16));
+  const time=start&&end?`${start}-${end}`:start;
+  const student=cleanText(candidate.studentText||candidate.studentNames?.join('、'));
+  const course=cleanText(candidate.courseText||candidate.course?.raw||candidate.course?.courseType);
+  const coach=cleanCoachDisplay(candidate.coachName||candidate.resolvedCoach?.name);
+  const venue=formatVenueText(candidate);
+  return [date&&time?`${date} ${time}`:date||time,student,course,coach,venue,suffix].filter(Boolean).join('｜');
+}
+
+function formatAppliedCardLine(item={},action=null){
+  const c=action?.candidate||{};
+  const suffix=actionTypeText(item.type);
+  return formatCandidateCardLine(c,suffix)||`${item.scheduleId||''}｜${suffix}`;
+}
+
+function scheduleSnapshot(row={}){
+  if(!row)return null;
+  return {
+    id:row.id||'',
+    startTime:row.startTime||'',
+    endTime:row.endTime||'',
+    studentName:row.studentName||'',
+    courseType:row.courseDisplayName||row.courseText||row.courseType||'',
+    coach:row.coach||row.coachName||'',
+    venue:formatVenueText(row),
+    status:row.status||''
+  };
+}
+
+function formatDeleteCardLine(item={},action=null){
+  const snapshot=item.scheduleSnapshot||action?.scheduleSnapshot||scheduleSnapshot(action?.schedule);
+  if(snapshot){
+    const date=shortDateText(String(snapshot.startTime||'').slice(0,10));
+    const start=cleanText(String(snapshot.startTime||'').slice(11,16));
+    const end=cleanText(String(snapshot.endTime||'').slice(11,16));
+    const time=start&&end?`${start}-${end}`:start;
+    return [date&&time?`${date} ${time}`:date||time,snapshot.studentName,snapshot.courseType,snapshot.coach,snapshot.venue].map(cleanText).filter(Boolean).join('｜');
+  }
+  return `系统排课 ${item.scheduleId||action?.sync?.scheduleId||''}`;
 }
 
 function operatorActionText(reason=''){
@@ -1076,10 +1193,96 @@ function operatorActionText(reason=''){
   return text||'请运营确认';
 }
 
+function actionBySourceKey(result={}){
+  const map=new Map();
+  for(const action of result.plan?.actions||[])map.set(action.sourceKey,action);
+  return map;
+}
+
+function buildNotificationCard(result={}){
+  const s=result.plan?.summary||{};
+  const applied=Array.isArray(result.applied)?result.applied:[];
+  const actionMap=actionBySourceKey(result);
+  const successItems=applied.filter(item=>!['error','pending_delete'].includes(item.type));
+  const pendingDeletes=applied.filter(item=>item.type==='pending_delete');
+  const appliedErrors=applied.filter(item=>item.type==='error');
+  const notifyErrors=(result.plan?.actions||[]).filter(action=>action.type==='notify_error');
+  const needItems=[
+    ...notifyErrors.map(action=>({kind:'notify',action})),
+    ...appliedErrors.map(item=>({kind:'error',item,action:actionMap.get(item.sourceKey)}))
+  ];
+  const count=(type)=>applied.length
+    ? applied.filter(item=>item.type===type).length
+    : Number(s[type==='bind_existing'?'bindExisting':type==='create_schedule'?'create':type==='create_trial_schedule'?'createTrial':type==='update_schedule'?'update':type==='pending_delete'?'pendingDelete':type]||0);
+  const resultLine=[
+    `自动完成：新增 ${count('create_schedule')}｜体验课 ${count('create_trial_schedule')}｜修改 ${count('update_schedule')}｜绑定 ${count('bind_existing')}｜删除待确认 ${count('pending_delete')}`,
+    `需要处理：${needItems.length+pendingDeletes.length} 条`
+  ].join('\n');
+  const elements=[
+    {
+      tag:'div',
+      text:{tag:'lark_md',content:[
+        `**自动同步时间：** ${chinaDateTimeText(result.at||new Date())}`,
+        `**飞书表取数周期：** ${formatSheetPeriodText(result.sheetTitle||result.sheetId||'')}`
+      ].join('\n')}
+    },
+    {tag:'hr'},
+    {tag:'div',text:{tag:'lark_md',content:`**本次结果**\n${resultLine}`}}
+  ];
+  const autoLines=successItems.slice(0,8).map((item,index)=>`${index+1}. ${formatAppliedCardLine(item,actionMap.get(item.sourceKey))}`);
+  if(autoLines.length){
+    elements.push({tag:'hr'});
+    elements.push({tag:'div',text:{tag:'lark_md',content:`**自动完成**\n${autoLines.join('\n')}`}});
+  }
+  if(needItems.length){
+    elements.push({tag:'hr'});
+    const needLines=needItems.slice(0,8).map((item,index)=>{
+      const action=item.action||{};
+      const candidate=action.candidate||{};
+      if(item.kind==='error'){
+        return `${index+1}. ${formatCandidateCardLine(candidate)}\n问题：${cleanText(item.item.error||'自动处理失败')}\n需要你确认：请确认场地、时间、课包或学员信息`;
+      }
+      return `${index+1}. ${formatCandidateCardLine(candidate)}\n问题：${cleanText(action.reason||'需要人工确认')}\n需要你确认：${operatorActionText(action.reason)}`;
+    });
+    if(needItems.length>8)needLines.push(`还有 ${needItems.length-8} 条未展示，请先处理上方事项。`);
+    elements.push({tag:'div',text:{tag:'lark_md',content:`**需要确认**\n${needLines.join('\n\n')}`}});
+  }
+  for(const item of pendingDeletes.slice(0,5)){
+    const action=actionMap.get(item.sourceKey);
+    elements.push({tag:'hr'});
+    elements.push({tag:'div',text:{tag:'lark_md',content:[
+      '**删除确认**',
+      formatDeleteCardLine(item,action),
+      '原因：飞书表已删除，但系统里还有排课'
+    ].join('\n')}});
+    const actions=[{
+      tag:'button',
+      text:{tag:'plain_text',content:'确认取消'},
+      type:'danger',
+      url:item.confirmUrl
+    }];
+    elements.push({tag:'action',actions});
+    elements.push({tag:'note',elements:[{tag:'plain_text',content:'暂不处理：不用点击，系统会保留这条排课'}]});
+  }
+  return {
+    msg_type:'interactive',
+    card:{
+      config:{wide_screen_mode:true},
+      header:{
+        template:needItems.length||pendingDeletes.length?'orange':'green',
+        title:{tag:'plain_text',content:'【网球兄弟】排课自动同步'}
+      },
+      elements
+    }
+  };
+}
+
 function buildNotificationText(result){
   const s=result.plan.summary;
   const lines=[
-    `网球兄弟小助手 排课日报：飞书排课同步${result.dryRun?' dry-run':'执行'}完成（当日上课情况 / 次日排课情况）`,
+    `【网球兄弟】排课自动同步`,
+    `自动同步时间：${chinaDateTimeText(result.at||new Date())}`,
+    `飞书表取数周期：${formatSheetPeriodText(result.sheetTitle||result.sheetId||'')}`,
     `本次处理：新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，删除待确认 ${s.pendingDelete}`,
     `历史待清账：${s.notifyError} 条`
   ];
@@ -1087,7 +1290,7 @@ function buildNotificationText(result){
   if(important.length){
     lines.push('需要运营处理：');
     lines.push(...important.slice(0,10).map(formatActionLine));
-    if(important.length>10)lines.push(`其余 ${important.length-10} 条请看同步结果报告，不在群里刷屏。`);
+    if(important.length>10)lines.push(`其余 ${important.length-10} 条未展示，请先处理上方事项。`);
   }
   const deleteLinks=(result.applied||[]).filter(item=>item.type==='pending_delete'&&item.confirmUrl).slice(0,8).map(item=>`确认取消：${item.confirmUrl}`);
   if(deleteLinks.length)lines.push(...deleteLinks);
@@ -1224,11 +1427,12 @@ async function applySyncPlan(plan,ctx={}){
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:schedule?.id||action.schedule.id});
       }else if(action.type==='pending_delete'){
         const publicBase=cleanText(process.env.FEISHU_SCHEDULE_PUBLIC_BASE_URL||process.env.STUDENT_REMINDER_PUBLIC_BASE_URL||'https://www.flowtennis.cn').replace(/\/+$/,'');
-        const task={id:`feishu-delete-${sha256(`${action.sourceKey}|${now}`).slice(0,24)}`,type:'delete_confirm',sourceKey:action.sourceKey,syncId:action.sync.id,scheduleId:action.sync.scheduleId,status:'pending',createdAt:now,updatedAt:now,expiresAt:new Date(Date.now()+48*3600000).toISOString(),confirmToken:sha256(`${ctx.uuidv4()}|${action.sourceKey}|${now}`)};
+        const snapshot=scheduleSnapshot(action.schedule);
+        const task={id:`feishu-delete-${sha256(`${action.sourceKey}|${now}`).slice(0,24)}`,type:'delete_confirm',sourceKey:action.sourceKey,syncId:action.sync.id,scheduleId:action.sync.scheduleId,scheduleSnapshot:snapshot,status:'pending',createdAt:now,updatedAt:now,expiresAt:new Date(Date.now()+48*3600000).toISOString(),confirmToken:sha256(`${ctx.uuidv4()}|${action.sourceKey}|${now}`)};
         task.confirmUrl=`${publicBase}/api/feishu-schedule-sync/confirm-delete?taskId=${encodeURIComponent(task.id)}&token=${encodeURIComponent(task.confirmToken)}`;
         await ctx.put(ctx.T_FEISHU_SCHEDULE_TASKS,task.id,task);
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,status:'pending_delete',updatedAt:now});
-        applied.push({type:action.type,sourceKey:action.sourceKey,taskId:task.id,scheduleId:task.scheduleId,confirmUrl:task.confirmUrl});
+        applied.push({type:action.type,sourceKey:action.sourceKey,taskId:task.id,scheduleId:task.scheduleId,scheduleSnapshot:snapshot,confirmUrl:task.confirmUrl});
       }
     }catch(err){
       applied.push({type:'error',sourceKey:action.sourceKey,error:err.message});
@@ -1314,7 +1518,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       result.notification={skipped:true,reason:'dry-run 默认不发群'};
     }else{
       try{
-        result.notification=await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationText(result));
+        result.notification=await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,buildNotificationCard(result));
       }catch(err){
         result.notification={sent:false,error:err.message};
         result.notificationError=err.message;
@@ -1341,7 +1545,14 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const tasks=await getCachedScan(T_FEISHU_SCHEDULE_TASKS).catch(()=>[]);
       const task=(tasks||[]).find(row=>String(row.id)===taskId&&String(row.confirmToken)===token);
       if(!task)return sendPlainText(res,'确认链接无效或已过期',404);
-      const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>确认取消排课</title><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:24px;line-height:1.6"><h2>确认取消排课</h2><p>待处理排课 ID：${task.scheduleId||''}</p><p>状态：${task.status||''}</p><form method="post" action="/api/feishu-schedule-sync/confirm-delete?taskId=${encodeURIComponent(task.id)}&token=${encodeURIComponent(task.confirmToken)}"><button style="height:44px;padding:0 18px">确认取消排课</button></form></body>`;
+      let snapshot=task.scheduleSnapshot||null;
+      if(!snapshot){
+        const schedules=await getCachedScan(T_SCHEDULE).catch(()=>[]);
+        snapshot=scheduleSnapshot((schedules||[]).find(row=>String(row.id||'')===String(task.scheduleId||'')));
+      }
+      const brief=formatDeleteCardLine({scheduleSnapshot:snapshot});
+      const statusText=task.status==='pending'?'待确认':task.status==='confirmed'?'已取消':'已处理';
+      const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>确认取消排课</title><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:24px;line-height:1.6;background:#f7f7f5;color:#1f2933"><main style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px"><h2 style="margin:0 0 12px">确认取消排课</h2><p style="margin:0 0 12px;color:#4b5563">飞书表已删除这节课，但系统里还有排课。</p><div style="padding:12px;background:#f9fafb;border-radius:8px;margin-bottom:16px">${escapeHtml(brief||'系统已有排课')}</div><p>当前状态：${escapeHtml(statusText)}</p><form method="post" action="/api/feishu-schedule-sync/confirm-delete?taskId=${encodeURIComponent(task.id)}&token=${encodeURIComponent(task.confirmToken)}"><button style="height:44px;padding:0 18px;border:0;border-radius:6px;background:#dc2626;color:#fff;font-size:16px">确认取消这节排课</button></form><p style="font-size:13px;color:#6b7280">不想处理就直接关闭页面，系统会保留这条排课。</p></main></body>`;
       res.setHeader('Content-Type','text/html; charset=utf-8');
       return res.status(200).send(html);
     }
@@ -1355,11 +1566,20 @@ function createFeishuScheduleSyncRoutes(deps={}){
       if(!task)return sendJson(res,{error:'确认链接无效或已过期'},404);
       if(task.status!=='pending')return sendJson(res,{error:'该确认任务已处理'},409);
       if(task.expiresAt&&new Date(task.expiresAt).getTime()<Date.now())return sendJson(res,{error:'确认链接已过期'},410);
+      let snapshot=task.scheduleSnapshot||null;
+      if(!snapshot){
+        const schedules=await getCachedScan(T_SCHEDULE).catch(()=>[]);
+        snapshot=scheduleSnapshot((schedules||[]).find(row=>String(row.id||'')===String(task.scheduleId||'')));
+      }
       const result=await cancelScheduleById(task.scheduleId,'飞书排课表删除确认');
       const now=new Date().toISOString();
-      const nextTask={...task,status:'confirmed',confirmedAt:now,updatedAt:now,resultScheduleId:task.scheduleId};
+      const nextTask={...task,scheduleSnapshot:snapshot,status:'confirmed',confirmedAt:now,updatedAt:now,resultScheduleId:task.scheduleId};
       await put(T_FEISHU_SCHEDULE_TASKS,task.id,nextTask);
-      await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,`网球兄弟小助手 排课日报：飞书排课删除已确认并取消系统排课：${task.scheduleId}`).catch(()=>null);
+      await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,[
+        '【网球兄弟】排课删除已确认',
+        formatDeleteCardLine({scheduleSnapshot:snapshot}),
+        '结果：系统排课已取消'
+      ].filter(Boolean).join('\n')).catch(()=>null);
       return sendJson(res,{success:true,task:nextTask,result});
     }
     return false;
@@ -1382,6 +1602,10 @@ module.exports={
   parseFeishuScheduleRows,
   buildDryRunPlan,
   buildScheduleBody,
+  buildNotificationCard,
+  buildNotificationText,
+  formatDeleteCardLine,
+  scheduleSnapshot,
   safeHistoryApplyPlan,
   isHighRiskScheduleChange,
   applySyncPlan,

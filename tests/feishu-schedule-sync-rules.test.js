@@ -1040,7 +1040,17 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
     actions: [{
       type: 'pending_delete',
       sourceKey: 'delete-key',
-      sync: { id: 'sync-delete', sourceKey: 'delete-key', scheduleId: 'sch-delete', status: 'active' }
+      sync: { id: 'sync-delete', sourceKey: 'delete-key', scheduleId: 'sch-delete', status: 'active' },
+      schedule: {
+        id: 'sch-delete',
+        startTime: '2026-08-02 10:00',
+        endTime: '2026-08-02 11:00',
+        studentName: '赵新阳 田秀楠',
+        courseType: '私教课',
+        coach: 'Siren',
+        venue: '马坡室内',
+        courtText: '3号场'
+      }
     }]
   }, {
     put: async (table, id, row) => deleteWrites.push({ table, id, row }),
@@ -1051,7 +1061,9 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
 
   assert.strictEqual(appliedDelete[0].type, 'pending_delete', 'delete sync should create a pending confirmation task');
   assert.match(appliedDelete[0].confirmUrl, /\/api\/feishu-schedule-sync\/confirm-delete\?taskId=/, 'pending delete should include a mobile confirmation link');
+  assert.deepStrictEqual(appliedDelete[0].scheduleSnapshot.studentName, '赵新阳 田秀楠', 'pending delete should keep readable schedule information');
   assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.row.status === 'pending'), 'delete sync should not cancel immediately, only create pending task');
+  assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.row.scheduleSnapshot?.studentName === '赵新阳 田秀楠'), 'delete confirmation task should save readable schedule information');
   assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_sync' && item.row.status === 'pending_delete'), 'delete sync should mark relation as pending_delete');
 
   const originalAxiosPost = axios.post;
@@ -1144,12 +1156,13 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
     assert.strictEqual(jsonPayload.courseCount, 2, 'regular cron sync should include historical document rows in the comparison scope');
 
     process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/test';
-    let webhookText = '';
+    let webhookCardJson = '';
     axios.post = async (url, body) => {
       if (/tenant_access_token/.test(url)) return { data: { code: 0, tenant_access_token: 'tenant-token' } };
       if (/\/bot\/v2\/hook\//.test(url)) {
-        webhookText = body.content.text;
-        assert.match(body.content.text, /网球兄弟小助手.*排课日报.*当日上课情况.*次日排课情况/s, 'Feishu webhook notification should include the known bot keywords');
+        assert.strictEqual(body.msg_type, 'interactive', 'Feishu webhook notification should use an interactive card');
+        webhookCardJson = JSON.stringify(body.card);
+        assert.match(body.card.header.title.content, /【网球兄弟】排课自动同步/, 'Feishu card should use the business title');
         return { data: { code: 9499, msg: 'bad webhook' } };
       }
       throw new Error(`unexpected axios.post ${url}`);
@@ -1163,11 +1176,12 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
     });
     assert.strictEqual(jsonPayload.notification.sent, false, 'cron response should mark Feishu webhook non-zero code as notification failure');
     assert.match(jsonPayload.notification.error, /bad webhook/, 'notification failure should keep the Feishu error message');
-    assert.match(webhookText, /需要运营处理/, 'group notification should tell operations what to do');
-    assert.match(webhookText, /本次处理：新增/, 'group notification should focus on this run actions');
-    assert.match(webhookText, /历史待清账：/, 'group notification should separate historical cleanup backlog');
-    assert.doesNotMatch(webhookText, /读取文档排课/, 'group notification should not keep reporting the historical document total');
-    assert.doesNotMatch(webhookText, /R\d+C\d+/, 'group notification should not expose spreadsheet cell coordinates');
+    assert.match(webhookCardJson, /本次结果/, 'group notification should show this run result');
+    assert.match(webhookCardJson, /需要确认/, 'group notification should tell operations what needs confirmation');
+    assert.doesNotMatch(webhookCardJson, /bind_existing|create_trial_schedule|create_schedule/, 'group notification should not expose backend action names');
+    assert.doesNotMatch(webhookCardJson, /同步结果报告/, 'group notification should not point to an invisible report');
+    assert.doesNotMatch(webhookCardJson, /读取文档排课/, 'group notification should not keep reporting the historical document total');
+    assert.doesNotMatch(webhookCardJson, /R\d+C\d+/, 'group notification should not expose spreadsheet cell coordinates');
   } finally {
     axios.post = originalAxiosPost;
     axios.get = originalAxiosGet;
