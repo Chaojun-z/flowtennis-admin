@@ -108,6 +108,7 @@ assert.match(corePagesSource, /fresh&&T_SCHEDULE \? cappedScan\(T_SCHEDULE, PROD
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryRows/, 'customer center should expose an explicit admin-only rebuild path for the student teaching summary read model');
 assert.match(corePagesSource, /path==='\/page-data\/purchase-detail'&&method==='GET'[\s\S]*getCachedRow\(T_PURCHASES,purchaseId\)/, 'purchase drawer should have a per-purchase detail endpoint');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*getCachedRow\(T_STUDENTS,studentId\)/, 'student drawer should have a per-student detail endpoint');
+assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*ignoreTeachingSummaryDetailRows:true/, 'student drawer detail rows must come from per-student fact reads, not stale teaching summary detail snapshots');
 assert.doesNotMatch(studentsSource, /ensureDatasetsByName\(STUDENT_DETAIL_REQUIREMENTS\)[\s\S]*purchasesPage/, 'student detail must not load the full purchases aggregate');
 assert.match(apiSource, /T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary'/, 'api should declare the student teaching summary read model table');
 assert.match(apiSource, /queueStudentTeachingSummaryRefresh\(t,meta\)/, 'source table writes should queue student teaching summary refreshes outside the first-screen read path');

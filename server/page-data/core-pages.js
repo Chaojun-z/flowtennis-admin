@@ -250,7 +250,7 @@ function createCorePageDataRoutes(deps={}){
         schedule:scoped.schedule,
         feedbacks:scoped.feedbacks
       });
-      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,{...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries});
+      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,{...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries,ignoreTeachingSummaryDetailRows:true});
       const allViews=[
         ...(teachingStudentViews.historicalStudents||[]),
         ...(teachingStudentViews.activeStudents||[]),

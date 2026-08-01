@@ -729,7 +729,12 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
   [...new Set([...summaryFieldMap.keys(), ...packageFieldMap.keys(), ...completedByStudent.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
     const summaryFields = summaryFieldMap.get(studentId) || {};
     const packageFields = packageFieldMap.get(studentId) || {};
-    const lessonRows = lessonDetailMap.has(studentId) ? (lessonDetailMap.get(studentId) || []) : (summaryFields.detailLessonRecordRows || []);
+    const summaryLessonRows = data.ignoreTeachingSummaryDetailRows ? [] : (summaryFields.detailLessonRecordRows || []);
+    const summaryRecentLessonDate = data.ignoreTeachingSummaryDetailRows ? '' : summaryFields.detailRecentLessonDate;
+    const lessonRows = lessonDetailMap.has(studentId) ? (lessonDetailMap.get(studentId) || []) : summaryLessonRows;
+    const detailRecentLessonDate = lessonDetailMap.has(studentId)
+      ? (lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : '')
+      : text(summaryRecentLessonDate || (lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : ''));
     const benefitFields = benefitDetailMap.get(studentId) || {};
     const cumulativeCoursePaidAmount = coursePaidByStudent.has(studentId)
       ? money(coursePaidByStudent.get(studentId) || 0)
@@ -764,6 +769,8 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
         ? packageFields.detailPackageOrderRows
         : (Array.isArray(summaryFields.detailPackageOrderRows) ? summaryFields.detailPackageOrderRows : []),
       ...benefitFields,
+      detailLessonRecordRows: lessonRows,
+      detailRecentLessonDate,
       completedLessons
     });
   });

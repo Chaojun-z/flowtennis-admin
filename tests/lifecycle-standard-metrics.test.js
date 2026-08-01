@@ -186,6 +186,29 @@ const lightweightStandard = buildStandardLifecycleMetrics({
     `轻量学员页摘要必须保持 ${key} 与完整教学口径一致`
   );
 });
+const staleEmptyLessonSummaryStandard = buildStandardLifecycleMetrics({
+  ...sample,
+  teachingStudentSummaryRows: [{
+    id: 'student-real-trial-deal',
+    studentId: 'student-real-trial-deal',
+    displayName: '真实体验成交',
+    studentStage: 'formal',
+    detailLessonRecordRows: [],
+    detailRecentLessonDate: '',
+    completedLessons: 0
+  }],
+  customerLifecycleRows,
+  now: new Date('2026-07-09 00:00:00')
+});
+const staleEmptyLessonSummaryRow = staleEmptyLessonSummaryStandard.views.formalStudents.find(row => row.studentId === 'student-real-trial-deal');
+assert.deepStrictEqual(
+  staleEmptyLessonSummaryRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
+  [
+    ['ledger', '2026-06-12', '小班课', -6],
+    ['ledger', '2026-06-10', '私教课', -2]
+  ],
+  '学员抽屉上课明细必须以当前事实表为准，旧摘要空数组不能覆盖真实上课记录'
+);
 assert.ok(
   standard.views.activeStudents.some(row => row.studentId === 'student-single-pay-active' && row.packageBalanceText === '-'),
   '单次付费活跃学员必须进入在期学员，但课包余额展示为空'
