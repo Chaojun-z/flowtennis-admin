@@ -38,7 +38,8 @@ assert.match(html, /setThirdPartySyncTableTab/, 'sync center should switch long 
 assert.match(html, /thirdPartySyncEffectiveBatchId/, 'precheck tab should default to the latest batch instead of all historical batches');
 assert.match(html, /thirdPartySyncNeedsProcessingRows/, 'sync center should merge all items requiring operation handling into one list');
 assert.match(html, /thirdPartySyncIsActionableSourceType/, 'needs-processing list should keep member profile and member ledger gap rows out of operator actions');
-assert.match(html, /同步记录[\s\S]*需处理数据/, 'sync center should expose two operator-facing table tabs');
+assert.match(html, /let thirdPartySyncActiveTableTab='prechecks'/, 'sync center should default to the processing tab');
+assert.match(html, /需处理数据[\s\S]*同步记录/, 'sync center should put processing data before sync records');
 assert.match(html, /订场总数[\s\S]*已自动处理[\s\S]*需运营处理[\s\S]*异常/, 'sync record table should show actionable booking metrics');
 assert.match(html, /部分完成，待处理[\s\S]*已重试，仍待处理/, 'sync record statuses should explain partial and retry batches');
 assert.match(html, /处理事项[\s\S]*日期[\s\S]*时间段[\s\S]*场地[\s\S]*姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'needs-processing table should show only actionable fields');

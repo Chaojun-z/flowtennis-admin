@@ -1,5 +1,5 @@
 // ===== 第三方同步中心 =====
-let thirdPartySyncActiveTableTab='batches';
+let thirdPartySyncActiveTableTab='prechecks';
 let thirdPartySyncPullLoading=false;
 function thirdPartySyncData(){
   return thirdPartySyncCenterData||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[],changes:[],alerts:[],rollbacks:[]};
@@ -547,11 +547,11 @@ function renderThirdPartySyncCenter(){
       <div class="tms-toolbar-right">${pullButtonHtml}<button class="tms-btn tms-btn-ghost" onclick="loadThirdPartySyncCenter(true)">刷新</button></div>
     </div>
     <div class="third-party-sync-table-tabs" role="tablist" aria-label="第三方同步数据表">
-      ${thirdPartySyncTableTabButton('batches','同步记录')}
       ${thirdPartySyncTableTabButton('prechecks','需处理数据')}
+      ${thirdPartySyncTableTabButton('batches','同步记录')}
     </div>
-    ${thirdPartySyncTablePanel('batches','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">数据日期</th><th style="width:90px">订场总数</th><th style="width:100px">已自动处理</th><th style="width:100px">需运营处理</th><th style="width:80px">异常</th><th style="width:140px">状态</th><th style="width:140px">最近同步</th><th class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>')}
     ${thirdPartySyncTablePanel('prechecks','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">处理事项</th><th style="width:110px">日期</th><th style="width:110px">时间段</th><th style="width:80px">场地</th><th style="width:110px">姓名</th><th style="width:140px">手机号</th><th style="width:120px">订场方式</th><th style="width:120px">操作账号</th><th style="width:200px">备注</th><th style="width:180px">问题原因</th><th style="width:180px">建议处理</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div>')}
+    ${thirdPartySyncTablePanel('batches','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">数据日期</th><th style="width:90px">订场总数</th><th style="width:100px">已自动处理</th><th style="width:100px">需运营处理</th><th style="width:80px">异常</th><th style="width:140px">状态</th><th style="width:140px">最近同步</th><th class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>')}
   </div>`;
   renderThirdPartySyncStats();
   renderThirdPartySyncBatches();
