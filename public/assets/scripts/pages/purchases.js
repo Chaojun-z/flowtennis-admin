@@ -540,10 +540,38 @@ function selectPurchaseStudent(studentId){
 function openPurchaseEntryModal(){
   openPurchaseModal();
 }
+function openPurchaseCreateLoadingDrawer(studentId='',message='课包数据加载中...'){
+  const stu=studentId?students.find(x=>String(x.id||'')===String(studentId||'')):null;
+  const subtitle=stu?(stu.phone?`${stu.name} · ${stu.phone}`:stu.name):'新增购买记录';
+  const body=renderDetailDrawerContent(renderDetailDrawerCard('课包购买',`<div class="empty"><p>${esc(message)}</p></div>`,{useGrid:false}));
+  openPurchaseDrawer(
+    purchaseDrawerHeaderHtml({title:'课包购买',avatar:purchaseDrawerAvatar(stu?.name),subtitle,statusText:'加载中',statusClass:'tms-tag-tier-slate'}),
+    body,
+    {purchaseDetailId:'',purchaseCreateStudentId:studentId||''}
+  );
+}
+function openPurchaseCreateErrorDrawer(studentId='',message='课包数据加载失败，请刷新后重试'){
+  const retryAction=`<button type="button" class="schedule-detail-action primary" onclick="openPurchaseModal(${jsArg(studentId)})">重试</button>`;
+  const body=renderDetailDrawerContent(renderDetailDrawerCard('课包购买',`<div class="empty"><p>${esc(message)}</p></div>`,{useGrid:false,actionsHtml:retryAction}));
+  openPurchaseDrawer(
+    purchaseDrawerHeaderHtml({title:'课包购买',avatar:purchaseDrawerAvatar('购'),subtitle:'新增购买记录',statusText:'加载失败',statusClass:'tms-tag-tier-slate'}),
+    body,
+    {purchaseDetailId:'',purchaseCreateStudentId:studentId||''}
+  );
+}
 function openPurchaseModal(studentId=''){
-  if(ensurePurchaseDataset('packageCenterPage',()=>openPurchaseModal(studentId)))return;
   const stu=studentId?students.find(x=>x.id===studentId):null;
   if(studentId&&!stu){toast('学员不存在','error');return;}
+  if(!purchaseDatasetReady('packageCenterPage')){
+    openPurchaseCreateLoadingDrawer(studentId);
+    ensureDatasetsByName(['packageCenterPage']).then(()=>openPurchaseModal(studentId)).catch(e=>{
+      console.error('packageCenterPage load failed',e);
+      const message='课包数据加载失败，请刷新后重试';
+      toast(message,'error');
+      openPurchaseCreateErrorDrawer(studentId,message);
+    });
+    return;
+  }
   editId=null;
   const payOptions=PAY_METHODS.map(t=>({value:t,label:t}));
   const ownerOptions=[{value:'',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];

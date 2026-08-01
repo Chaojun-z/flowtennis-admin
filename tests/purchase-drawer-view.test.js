@@ -18,6 +18,8 @@ function fnBody(name){
 
 const renderPurchases = fnBody('renderPurchases');
 const openPurchaseModal = fnBody('openPurchaseModal');
+const openPurchaseCreateLoadingDrawer = fnBody('openPurchaseCreateLoadingDrawer');
+const openPurchaseCreateErrorDrawer = fnBody('openPurchaseCreateErrorDrawer');
 const openPurchaseDrawer = fnBody('openPurchaseDrawer');
 const purchaseDrawerActions = fnBody('purchaseDrawerActions');
 const openPurchaseDetailModal = fnBody('openPurchaseDetailModal');
@@ -39,7 +41,9 @@ assert.match(openPurchaseDrawer, /modal-schedule-drawer/, 'purchase drawer helpe
 assert.match(openPurchaseDrawer, /modal-purchase-drawer/, 'purchase drawer should expose a scoped class for purchase-only layout fixes');
 
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('学员信息'[\s\S]*renderDetailDrawerFormCard\('购买信息'[\s\S]*renderDetailDrawerFormCard\('备注'/, 'purchase create should group fields into drawer cards');
-assert.match(openPurchaseModal, /ensurePurchaseDataset\('packageCenterPage',\(\)=>openPurchaseModal\(studentId\)\)/, 'purchase create should load lightweight package center data before rendering the package picker');
+assert.match(openPurchaseModal, /!purchaseDatasetReady\('packageCenterPage'\)[\s\S]*openPurchaseCreateLoadingDrawer\(studentId\)[\s\S]*ensureDatasetsByName\(\['packageCenterPage'\]\)\.then\(\(\)=>openPurchaseModal\(studentId\)\)/, 'purchase create should show an immediate loading drawer before loading package center data');
+assert.match(openPurchaseCreateLoadingDrawer, /课包数据加载中/, 'purchase create loading drawer should make the click visibly respond');
+assert.match(openPurchaseCreateErrorDrawer, /openPurchaseModal\(\$\{jsArg\(studentId\)\}\)[\s\S]*重试/, 'purchase create load failure should keep a retry action in the drawer');
 assert.match(ensureFullPurchaseData, /ensurePurchaseDetailData\(id\)/, 'purchase detail should load one purchase detail by id');
 assert.doesNotMatch(openPurchaseDetailModal, /purchasesPage/, 'purchase detail drawer must not load the full purchases aggregate');
 assert.doesNotMatch(openPurchaseEditModal, /purchasesPage/, 'purchase edit drawer must not load the full purchases aggregate');
