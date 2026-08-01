@@ -125,8 +125,7 @@ function buildCoachDailyDigestPosterSvg(item={}){
 async function buildCoachDailyDigestPosterPng(item={},options={}){
   const ResvgClass=options.Resvg||require('@resvg/resvg-js').Resvg;
   const svg=buildCoachDailyDigestPosterSvg(item);
-  const scale=Math.max(1,Number(options.scale||3)||3);
-  const pngData=new ResvgClass(svg,{fitTo:{mode:'zoom',value:scale}}).render().asPng();
+  const pngData=new ResvgClass(svg).render().asPng();
   return Buffer.isBuffer(pngData)?pngData:Buffer.from(pngData);
 }
 
