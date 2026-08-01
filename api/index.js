@@ -3314,9 +3314,8 @@ function collectCoachDailyDigestCandidates(rows=[],now=new Date(),options={}){
     })
     .sort((a,b)=>dateMs(a.startTime)-dateMs(b.startTime))
     .forEach(schedule=>{
-      const coachId=String(schedule.coachId||schedule.coach||'').trim();
-      const coachName=String(schedule.coach||'').trim();
-      const key=`${coachId}::${coachName}`;
+      const rawCoachId=String(schedule.coachId||'').trim(),coachName=String(schedule.coach||schedule.coachName||rawCoachId).trim(),coachId=rawCoachId||coachName;
+      const coachNameKey=normalizeCoachDigestName(coachName),key=coachNameKey?`coach:${coachNameKey}`:`id:${coachId}`;
       if(!grouped.has(key)){
         grouped.set(key,{coachId,coachName,digestDate,schedules:[],scheduleIds:[]});
       }

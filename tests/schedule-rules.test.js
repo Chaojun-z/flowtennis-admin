@@ -1135,6 +1135,20 @@ assert.deepStrictEqual(
   'coach daily digest collector should group tomorrow active unsent schedules by coach'
 );
 
+const digestAliasCandidates = rules.collectCoachDailyDigestCandidates(
+  [
+    { id: 'dig-alias-1', coach: 'Siren', startTime: '2026-08-02 10:00', endTime: '2026-08-02 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
+    { id: 'dig-alias-2', coach: 'Siren 教练', startTime: '2026-08-02 17:00', endTime: '2026-08-02 18:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', studentName: 'Misha', status: '已排课' }
+  ],
+  new Date('2026-08-01 21:00:00'),
+  { sentDateField: 'feishuCoachDailyDigestSentDate', includeSent: true }
+);
+assert.deepStrictEqual(
+  digestAliasCandidates.map(item => [item.coachName, item.lessonCount, item.scheduleIds.join(',')]),
+  [['Siren', 2, 'dig-alias-1,dig-alias-2']],
+  'feishu coach digest should merge coach aliases that only differ by 教练 suffix'
+);
+
 assert.deepStrictEqual(
   rules.buildCoachDailyDigestMessage({
     coachName: '朝珺',
