@@ -138,6 +138,8 @@ async function runRouteTests(){
     buildCoachRefs: () => [],
     recommendEntitlements: rules.recommendEntitlements,
     scheduleEntitlementDeltas: rules.scheduleEntitlementDeltas,
+    uuidv4: () => 'auth-fixed',
+    T_STUDENTS: 'ft_students',
     T_ENTITLEMENTS: 'ft_entitlements',
     T_ENTITLEMENT_AUTHORIZATIONS: 'ft_entitlement_authorizations',
     T_COACHES: 'ft_coaches',
@@ -156,7 +158,81 @@ async function runRouteTests(){
   assert.strictEqual(response.payload.recommended.usedByStudentId, 'student-brother', 'recommend route should mark actual learner');
 }
 
+async function runRouteFallbackTests(){
+  const tables = {
+    ft_entitlements: [{...ownerEntitlement}],
+    ft_coaches: [],
+    ft_users: [],
+    ft_students: [
+      {id:'student-owner',name:'哥哥'},
+      {id:'student-brother',name:'弟弟'}
+    ],
+    ft_entitlement_authorizations: []
+  };
+  const response = {};
+  const handler = createPurchaseEntitlementRoutes({
+    init: async () => {},
+    sendJson: (res, payload, status = 200) => {
+      res.status = status;
+      res.payload = payload;
+      return true;
+    },
+    getCachedScan: async table => tables[table] || [],
+    getCachedRow: async (table, id) => (tables[table] || []).find(row => row.id === id) || null,
+    put: async (table, id, row) => {
+      if(table === 'ft_entitlement_authorizations') {
+        const error = new Error('Requested table does not exist');
+        error.code = 'OTSObjectNotExist';
+        throw error;
+      }
+      const rows = tables[table] || (tables[table] = []);
+      const index = rows.findIndex(item => item.id === id);
+      if(index === -1) rows.push(row);
+      else rows[index] = row;
+      return row;
+    },
+    getIndexedActiveEntitlementsForStudents: async () => [],
+    parseArr: value => Array.isArray(value) ? value : [],
+    parseLessonValue: value => Number(value) || 0,
+    buildCoachRefs: () => [],
+    recommendEntitlements: rules.recommendEntitlements,
+    scheduleEntitlementDeltas: rules.scheduleEntitlementDeltas,
+    uuidv4: () => 'auth-fallback-fixed',
+    T_STUDENTS: 'ft_students',
+    T_ENTITLEMENTS: 'ft_entitlements',
+    T_ENTITLEMENT_AUTHORIZATIONS: 'ft_entitlement_authorizations',
+    T_COACHES: 'ft_coaches',
+    T_USERS: 'ft_users'
+  });
+  await handler({
+    path: '/entitlement-authorizations',
+    method: 'POST',
+    body: { entitlementId: 'ent-owner', authorizedStudentId: 'student-brother', notes: '弟弟使用哥哥课包' },
+    user: { role: 'admin', name: '测试运营' },
+    query: new URLSearchParams(),
+    res: response
+  });
+  assert.strictEqual(response.status, 200, 'authorization save should succeed even when the authorization table is missing');
+  assert.strictEqual(response.payload.authorization.entitlementId, 'ent-owner', 'fallback save should still return the authorization row');
+  assert.strictEqual(tables.ft_entitlements[0].authorizationId, response.payload.authorization.id, 'fallback save should mirror the authorization onto the entitlement row');
+  assert.strictEqual(tables.ft_entitlements[0].isAuthorizedUse, true, 'fallback save should mark the entitlement as authorized');
+
+  const recommendRes = {};
+  await handler({
+    path: '/entitlements/recommend',
+    method: 'POST',
+    body: { studentIds: ['student-brother'], startTime: '2026-07-24 12:00', endTime: '2026-07-24 13:00', courseType: '私教课', settlementType: 'package', lessonCount: 1 },
+    user: { role: 'admin', name: '测试运营' },
+    query: new URLSearchParams(),
+    res: recommendRes
+  });
+  assert.strictEqual(recommendRes.status, 200, 'recommend route should still work from mirrored entitlement data');
+  assert.strictEqual(recommendRes.payload.recommended.entitlementId, 'ent-owner', 'recommend route should pick the mirrored authorization');
+  assert.strictEqual(recommendRes.payload.recommended.usedByStudentId, 'student-brother', 'recommend route should keep the actual learner');
+}
+
 runRouteTests()
+  .then(() => runRouteFallbackTests())
   .then(() => console.log('entitlement authorization rule tests passed'))
   .catch(err => {
     console.error(err);
