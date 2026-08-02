@@ -785,7 +785,7 @@ function studentDetailBasicTabHtml(s){
   const basicCard=editing
     ? renderDetailDrawerFormCard('基本信息',studentBasicInfoFormHtml(s),saveActions)
     : studentDrawerCardHtml('基本信息',studentBasicInfoReadonlyHtml(s),'',editAction);
-  return `<div class="schedule-detail-content">${basicCard}${studentReminderInfoHtml(s)}${studentDeleteCardHtml(s)}${studentDrawerCardHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s))}${leadHtml?studentDrawerCardHtml('关联线索',leadHtml,'student-lead-section',leadAction,{useGrid:false}):''}${linkedHtml?studentDrawerCardHtml('消费与关联',linkedHtml):''}</div>`;
+  return `<div class="schedule-detail-content">${basicCard}${studentReminderInfoHtml(s)}${studentDeleteCardHtml(s)}${studentDrawerCardHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s))}${leadHtml?studentDrawerCardHtml('关联线索',leadHtml,'student-lead-section',leadAction,{useGrid:false}):''}${linkedHtml?studentDrawerCardHtml('消费与关联',linkedHtml,'student-consumption-section','',{useGrid:false}):''}</div>`;
 }
 function studentDetailOrdersTabHtml(s){
   const canBuyPackage=currentUser?.role==='admin';
@@ -919,11 +919,12 @@ function openEntitlementAuthorizationModal(entitlementId){
   const owner=students.find(stu=>String(stu.id||'')===String(ent.studentId||''))||{};
   const options=students
     .filter(stu=>String(stu.id||'')!==String(ent.studentId||''))
-    .map(stu=>({value:stu.id,label:[stu.name,stu.phone].filter(Boolean).join(' · ')||stu.id}));
+    .map(stu=>({value:stu.id,label:[stu.name,stu.phone].filter(Boolean).join(' · ')||stu.id,searchText:[stu.name,stu.phone,stu.wechatName,stu.id].filter(Boolean).join(' ')}));
   if(!options.length){toast('暂无可授权学员','warn');return;}
-  const body=`<div class="tms-section-header" style="margin-top:0;">授权信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课包所有人</label><input class="finput tms-form-control" value="${esc(owner.name||ent.studentName||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">被授权学员</label>${renderStandardDropdownHtml('ent_auth_student','被授权学员',options,options[0]?.value||'',true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="ent_auth_notes" placeholder="例如：弟弟使用哥哥课包"></textarea></div></div>`;
-  const actions=`<button type="button" class="schedule-detail-action muted" onclick="closeModal()">取消</button><button type="button" class="schedule-detail-action primary" id="entAuthSaveBtn" onclick="saveEntitlementAuthorization(${jsArg(entitlementId)})">保存授权</button>`;
-  openStandardModal({title:'授权课包给其他学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight'});
+  const studentPicker=renderStandardSearchableDropdownHtml({id:'ent_auth_student',label:'被授权学员',options,value:options[0]?.value||'',isForm:true,searchPlaceholder:'搜索姓名 / 手机号',emptyText:'没有匹配学员'});
+  const body=`<div class="tms-section-header" style="margin-top:0;">授权信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课包所有人</label><input class="finput tms-form-control" value="${esc(owner.name||ent.studentName||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">被授权学员</label>${studentPicker}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="ent_auth_notes" placeholder="例如：弟弟使用哥哥课包"></textarea></div></div>`;
+  const actions=`<button type="button" class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button type="button" class="tms-btn tms-btn-primary" id="entAuthSaveBtn" onclick="saveEntitlementAuthorization(${jsArg(entitlementId)})">保存授权</button>`;
+  openStandardModal({title:'授权课包给其他学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight modal-entitlement-auth'});
 }
 async function saveEntitlementAuthorization(entitlementId){
   const authorizedStudentId=document.getElementById('ent_auth_student')?.value||'';
@@ -1176,8 +1177,22 @@ function studentOpsInfoHtml(stu){
 }
 function studentConsumptionInfoHtml(stu){
   const linkedCourts=courtsForStudent(stu);
-  const linkedFields=linkedCourts.length?`${studentDetailBlockHtml('订场账户摘要',`${studentAccountSummaryHtml(stu)}<div class="tms-field-help">关联订场账户在「订场/会员」页面编辑用户时选择「关联学员」。</div>`,{hideEmpty:true})}${studentDetailBlockHtml('会员摘要',studentMembershipSummaryHtml(stu),{hideEmpty:true})}`:'';
-  return studentDetailSectionHtml('消费与关联信息',linkedFields);
+  if(!linkedCourts.length)return '<div class="student-detail-empty">暂无关联订场账户</div>';
+  const cards=linkedCourts.flatMap(c=>{
+    const finance=typeof membershipReadModelFinanceForCourt==='function'?membershipReadModelFinanceForCourt(c):courtFinanceLocal(c);
+    const item=typeof membershipReadModelItemForCourt==='function'?membershipReadModelItemForCourt(c):null;
+    const member=courtMembershipSummary(c);
+    const accountType=item?.accountType||member.accountType||'普通';
+    const memberStatus=item?.membershipStatus||member.status||'未开通';
+    const discount=item?.membershipDiscountText||member.discount||'-';
+    const validUntil=item?.membershipValidUntil||member.validUntil||'-';
+    const isMember=!/普通|未开|暂无|^[-—]$/.test(`${accountType} ${memberStatus}`);
+    return [
+      `<div class="student-linked-summary-item"><div class="student-linked-summary-title">订场账户</div><div class="student-linked-summary-main">${esc(c.name||'-')}</div><div class="student-linked-summary-meta"><span>当前余额 ¥${fmt(finance.balance)}</span><span>累计订场消费 ¥${fmt(finance.spentAmount)}</span></div></div>`,
+      `<div class="student-linked-summary-item"><div class="student-linked-summary-title">会员状态</div><div class="student-linked-summary-main">${esc(isMember?`${accountType} · ${memberStatus}`:'未开通会员')}</div><div class="student-linked-summary-meta"><span>折扣 ${esc(discount||'-')}</span><span>到期 ${esc(validUntil||'-')}</span></div></div>`
+    ];
+  });
+  return `<div class="student-linked-summary-list">${cards.join('')}</div><div class="student-linked-summary-help">如需调整关联关系，请到「订场/会员」页面编辑订场用户。</div>`;
 }
 function studentLinkedDetailHtml(s,showAccount=true){
   const latest=schedules.filter(x=>scheduleHasStudent(x,s)).sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0))[0];

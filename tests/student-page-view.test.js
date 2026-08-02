@@ -341,7 +341,9 @@ assert.match(source, /function ensureStudentDetailDatasets\(/, 'student detail s
 assert.match(source, /ensureStudentDetailData\(id\)/, 'student detail should load heavy detail facts by student id instead of the full purchases aggregate');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggregateHistoricalMonthlyLedgerRows[\s\S]*function classScheduleSummaryHtml/, 'student consume history should show imported lesson rows one by one instead of monthly aggregation');
 assert.match(source, /studentCompletedLessonCount[\s\S]*historicalImportedLessonUnitsForStudent/, 'student cumulative lessons should include imported lesson consumption');
-assert.match(source, /教学信息[\s\S]*消费与关联信息/, 'student detail should keep the teaching and consumption sections');
+assert.match(source, /student-consumption-section/, 'student detail should keep a dedicated consumption relation card');
+assert.match(source, /消费与关联/, 'student detail should keep the consumption relation card title');
+assert.match(source, /订场账户[\s\S]*会员状态/, 'student consumption relation card should show readable account and membership summaries');
 assert.match(source, /function studentDetailFieldHtml\(/, 'student detail should render short readonly values without form inputs');
 assert.match(source, /function studentDetailFieldHtml\(label,value\)\{[\s\S]*return renderDetailDrawerField\(label,value\)/, 'student detail readonly fields should use the shared detail drawer field helper');
 assert.match(source, /function studentDetailBlockHtml\(/, 'student detail should render long readonly content as information blocks');
@@ -370,7 +372,8 @@ assert.doesNotMatch(fnBody('studentDetailBasicTabHtml'), /studentDetailBlockHtml
 assert.match(source, /function studentDetailSectionHtml\(/, 'student detail should hide whole empty sections');
 assert.doesNotMatch(source, /function studentOpsInfoHtml[\s\S]*最近活跃[\s\S]*function studentConsumptionInfoHtml/, 'student ops detail should remove duplicated recent active field');
 assert.doesNotMatch(source, /function studentOpsInfoHtml[\s\S]*最近订场[\s\S]*function studentConsumptionInfoHtml/, 'student ops detail should remove recent booking from ops fields');
-assert.match(source, /function studentConsumptionInfoHtml[\s\S]*const linkedFields=linkedCourts\.length\?[\s\S]*:\s*''/, 'student consumption detail should only show linked account fields when linked data exists');
+assert.match(source, /function studentConsumptionInfoHtml[\s\S]*if\(!linkedCourts\.length\)return '<div class="student-detail-empty">暂无关联订场账户<\/div>'/, 'student consumption detail should show an empty state when there is no linked account');
+assert.match(source, /function studentConsumptionInfoHtml[\s\S]*student-linked-summary-list/, 'student consumption detail should only render linked account summary cards when linked data exists');
 assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*studentDetailFieldHtml\('订场 \/ 会员'/, 'student consumption detail should not show unlinked booking membership field');
 assert.match(source, /function studentLessonRecordTimeText\([\s\S]*slice\(11,16\)[\s\S]*-\$\{end\}/, 'student lesson records should show start and end time');
 assert.match(source, /function studentLessonRecordRows\([\s\S]*studentConcreteLessonLedgerItems\(stu\)[\s\S]*studentLessonRecordKey\(\{studentId:stu\?\.id,row,schedule\}\)/, 'student lesson records should merge schedule rows and package consume rows by one lesson identity');
@@ -415,7 +418,7 @@ assert.match(source, /function studentDeleteCardHtml\(s\)[\s\S]*confirmDel\('\$\
 assert.doesNotMatch(source, /openStudentDrawer\(\{titleHtml:`\$\{studentDetailHeroHtml\(s\)\}\$\{studentDetailTabsHtml\(studentDetailActiveTab\)\}\$\{studentDetailDeleteActionHtml\(s\)\}`/, 'student delete action should not sit in the drawer tab header');
 assert.match(source, /DELETE_STUDENT_HISTORY/, 'student delete requests should carry the backend confirmation marker');
 assert.doesNotMatch(source, /课包消耗记录/, 'student detail should avoid a duplicate package consume record block');
-assert.match(source, /关联订场账户在「订场\/会员」页面编辑用户时选择「关联学员」/, 'student detail should explain where to link booking accounts');
+assert.match(source, /如需调整关联关系，请到「订场\/会员」页面编辑订场用户。/, 'student detail should explain where to adjust linked booking accounts');
 assert.doesNotMatch(source, /function openStudentModal[\s\S]*studentLinkedDetailHtml\(s\)/, 'student edit modal should not embed linked detail summary anymore');
 assert.match(source, /function studentBasicInfoFormHtml[\s\S]*姓名 \*[\s\S]*手机号[\s\S]*负责教练[\s\S]*学员类型[\s\S]*来源[\s\S]*活动范围[\s\S]*所在校区[\s\S]*备注/, 'student edit modal should keep base profile fields and expose primary coach');
 assert.match(fnBody('studentBasicInfoFormHtml'), /来源线索摘要[\s\S]*student-lead-summary-readonly[\s\S]*studentLeadSummaryHtml\(s\)/, 'student edit modal should show linked lead summary as readonly text');

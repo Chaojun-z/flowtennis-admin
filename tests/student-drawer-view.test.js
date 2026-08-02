@@ -64,7 +64,7 @@ assert.match(css, /\.modal\.modal-court\.modal-schedule-drawer/, 'shared drawer 
 assert.match(css, /\.student-reminder-section\.schedule-detail-card/, 'student reminder should use the same card surface as basic info');
 assert.match(css, /\.student-reminder-option\{[\s\S]*border:0[\s\S]*background:transparent/, 'student reminder options should look like radios, not button cards');
 assert.match(css, /\.student-lesson-timeline-item::before\{[\s\S]*left:6px[\s\S]*background:#ECE7E1/, 'student lesson timeline line should align through dot center and use card border color');
-assert.match(css, /\.student-lesson-title\{[^}]*font-size:13px/, 'student lesson title should use 13px text');
+assert.match(css, /\.student-lesson-title\{[^}]*font-size:12px/, 'student lesson title should use compact 12px text');
 assert.match(css, /\.student-package-title\{[^}]*font-size:13px/, 'student package title should use 13px text');
 
 console.log('student drawer view tests passed');
