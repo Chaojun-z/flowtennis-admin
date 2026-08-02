@@ -1636,7 +1636,8 @@ assert.strictEqual(
       rows,
       users,
       feedbacks: [{ id: 'feedback-previous', scheduleId: 'previous-1', knowledgePoint: '正手稳定', nextTraining: '练脚步' }],
-      appId: 'wx-appid',
+      appId: 'wx-official-appid',
+      miniProgramAppId: 'wx-mini-appid',
       secret: 'secret',
       templateId: 'tpl',
       forceMock: false,
@@ -1646,7 +1647,7 @@ assert.strictEqual(
 
     assert.strictEqual(result.sent, 1, 'official account course reminder should send once');
     assert.strictEqual(sent.length, 1, 'official account course reminder should build one outgoing message');
-    assert.deepStrictEqual(sent[0].miniprogram, { appid: 'wx-appid', pagepath: 'pages/detail/detail?scheduleId=due-1' }, 'official account course reminder should use mini program jump');
+    assert.deepStrictEqual(sent[0].miniprogram, { appid: 'wx-mini-appid', pagepath: 'pages/detail/detail?scheduleId=due-1' }, 'official account course reminder should use mini program jump');
     assert.strictEqual(sent[0].data.thing6.value, '小鹿｜上节：正手稳定，下节练脚步', 'official account course reminder should append previous feedback to the student field');
     assert.strictEqual(writes[0][0], 'due-1', 'official account course reminder should write back to the same schedule');
     assert.strictEqual(writes[0][1].courseReminderSentAt, reminderNow.toISOString(), 'official account course reminder should mark the sent time');
@@ -1677,7 +1678,8 @@ assert.strictEqual(
       feedbacks,
       entitlements,
       plans: [],
-      appId: 'wx-appid',
+      appId: 'wx-official-appid',
+      miniProgramAppId: 'wx-mini-appid',
       secret: 'secret',
       templateId: 'official-feedback-tpl',
       forceMock: false,
@@ -1690,7 +1692,7 @@ assert.strictEqual(
     assert.strictEqual(sent[0].touser, 'oa-openid-123', 'official account feedback reminder should target the bound coach openid');
     assert.deepStrictEqual(
       sent[0].miniprogram,
-      { appid: 'wx-appid', pagepath: 'pages/schedule/schedule?scheduleId=fb-send-3&action=feedback' },
+      { appid: 'wx-mini-appid', pagepath: 'pages/schedule/schedule?scheduleId=fb-send-3&action=feedback' },
       'official account feedback reminder should deep link to the native feedback entry'
     );
     assert.strictEqual(writes[0][0], 'fb-send-3', 'official account feedback reminder should write back to the same schedule');
@@ -1728,7 +1730,7 @@ assert.strictEqual(
       now: reminderNow,
       rows,
       students,
-      appId: 'wx-appid',
+      appId: 'wx-official-appid',
       secret: 'secret',
       templateId: 'student-tpl',
       forceMock: false,
@@ -1763,7 +1765,8 @@ assert.strictEqual(
       now: digestNow,
       rows,
       users,
-      appId: 'wx-appid',
+      appId: 'wx-official-appid',
+      miniProgramAppId: 'wx-mini-appid',
       secret: 'secret',
       templateId: 'tpl',
       forceMock: false,
@@ -1773,11 +1776,38 @@ assert.strictEqual(
 
     assert.strictEqual(result.sent, 1, 'official account daily digest should send once per coach');
     assert.strictEqual(sent.length, 1, 'official account daily digest should build one outgoing digest');
+    assert.strictEqual(sent[0].miniprogram.appid, 'wx-mini-appid', 'official account daily digest should use the mini program appid, not the service account appid');
     assert.deepStrictEqual(
       writes.map(item => [item[0], item[1].coachDailyDigestSentDate]).sort(),
       [['dig-1', '2026-05-20'], ['dig-2', '2026-05-20']],
       'official account daily digest should mark every schedule in the coach group'
     );
+  }
+
+  {
+    const rows=[
+      { id: 'dig-fail-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' }
+    ];
+    const users=[
+      { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-openid-123' }
+    ];
+    const result=await rules.sendOfficialAccountDailyDigests({
+      now: new Date('2026-05-19 20:02:00'),
+      rows,
+      users,
+      appId: 'wx-official-appid',
+      secret: 'secret',
+      miniProgramAppId: 'wx-mini-appid',
+      templateId: 'tpl',
+      forceMock: false,
+      sendTemplate: async () => { throw new Error('template_send_failed:invalid weapp pagepath'); },
+      putSchedule: async () => { throw new Error('unexpected write after send failure'); }
+    });
+
+    assert.strictEqual(result.success, false, 'official account digest cron should fail when any template send fails');
+    assert.strictEqual(result.sent, 0, 'failed digest should not be counted as sent');
+    assert.strictEqual(result.failed, 1, 'failed digest should expose the send failure count');
+    assert.match(result.items[0].error, /invalid weapp pagepath/, 'failed digest should keep the WeChat send error for Actions logs');
   }
 
   {
@@ -1942,6 +1972,49 @@ assert.strictEqual(
     const past=await ask('查询过去七天排课');
     assert.match(past.plainReply, /这是你过去七天的排课：/, 'past query should use past wording');
     assert.match(past.plainReply, /5月12日 18:00-19:00/, 'past query should include previous classes');
+  }
+
+  {
+    const token='flowtennisoa2026';
+    const appId='wx4c76dc29b1d48df3';
+    const timestamp='1715763720';
+    const nonce='123456';
+    const now=new Date(Date.UTC(2026,4,21,12,0,0)); // 北京时间 20:00，周四
+    const users=[
+      { id: 'coach_1', name: '朝珺', role: 'editor', status: 'active', phone: '13800138000', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-query-coach' }
+    ];
+    const students=[
+      { id: 'stu-1', name: '小鹿', phone: '13800138000' }
+    ];
+    const rows=[
+      { id: 'week-done-1', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-18 09:00', endTime: '2026-05-18 10:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', status: '已排课' },
+      { id: 'week-done-2', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 09:00', endTime: '2026-05-19 10:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', status: '已排课' },
+      { id: 'week-done-3', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', status: '已结束' },
+      { id: 'week-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-22 09:00', endTime: '2026-05-22 10:00', campus: 'shunyi_mapo', venue: '4号场', courseType: '私教课', status: '已排课' },
+      { id: 'last-week-done', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-15 09:00', endTime: '2026-05-15 10:00', campus: 'shunyi_mapo', venue: '5号场', courseType: '私教课', status: '已结束' }
+    ];
+    const result=await rules.processOfficialAccountCallbackRequest({
+      query:new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) }),
+      rawBody:`<xml><ToUserName><![CDATA[gh_test]]></ToUserName><FromUserName><![CDATA[oa-query-coach]]></FromUserName><CreateTime>1715763720</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[我本周上了几节课]]></Content></xml>`,
+      loadUsers:async()=>users,
+      loadStudents:async()=>students,
+      loadCoaches:async()=>[],
+      loadQueryData:async()=>({users,students,coaches:[],rows}),
+      loadQuerySession:async()=>null,
+      putQuerySession:async()=>{ throw new Error('unexpected query session write'); },
+      deleteQuerySession:async()=>{ throw new Error('unexpected query session delete'); },
+      now,
+      token,
+      appId,
+      encodingAesKey:''
+    });
+
+    assert.match(result.plainReply, /这是你本周已上课：/, 'completed weekly query should use completed wording');
+    assert.match(result.plainReply, /身份：学员/, 'completed weekly self query should resolve the student by bound account phone');
+    assert.match(result.plainReply, /共有 3 节/, 'completed weekly query should count ended lessons instead of returning zero');
+    assert.match(result.plainReply, /5月18日 09:00-10:00/, 'completed weekly query should include ended classes from this week');
+    assert.doesNotMatch(result.plainReply, /5月22日 09:00-10:00/, 'completed weekly query should exclude future classes when asking already attended lessons');
+    assert.doesNotMatch(result.plainReply, /5月15日 09:00-10:00/, 'completed weekly query should exclude classes outside this week');
   }
 
   {
