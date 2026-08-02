@@ -1668,16 +1668,16 @@ function courtBaseHistoryForSave(c){
   if(direct>0)rows.push({id:'legacy-direct-spent-'+(c.id||uid()),date,type:'消费',category:'历史消费',payMethod:'历史导入',amount:direct,note:'期初导入汇总',source:'import'});
   return rows;
 }
+function courtDuplicateMatchesInput(c,input){
+  const name=String(input?.name||'').trim(),phone=normalizeImportPhone(input?.phone),campus=String(input?.campus||'').trim(),courtPhone=normalizeImportPhone(c?.phone);
+  if(phone)return courtPhone&&courtPhone===phone;
+  return !!name&&!!campus&&String(c?.name||'').trim()===name&&sameCampusValue(c?.campus,campus);
+}
 function getCourtDuplicateCandidates(input,editingId=''){
-  const name=String(input?.name||'').trim();
-  const phone=normalizeImportPhone(input?.phone);
-  const campus=String(input?.campus||'').trim();
-  return courts.filter(c=>{
-    if(editingId&&c.id===editingId)return false;
-    const courtPhone=normalizeImportPhone(c.phone);
-    if(phone)return courtPhone&&courtPhone===phone;
-    return !!name&&!!campus&&String(c.name||'').trim()===name&&sameCampusValue(c.campus,campus);
-  });
+  return courts.filter(c=>!(editingId&&c.id===editingId)&&isActiveCourtRecord(c)&&courtDuplicateMatchesInput(c,input));
+}
+function getCourtHiddenDuplicateCandidates(input,editingId=''){
+  return courts.filter(c=>!(editingId&&c.id===editingId)&&!(editingId&&String(c?.mergedIntoCourtId||'')===String(editingId))&&!isActiveCourtRecord(c)&&courtDuplicateMatchesInput(c,input));
 }
 function courtFinanceConfirmText(h,studentId){
   const st=studentId?students.find(s=>s.id===studentId):null;

@@ -1738,6 +1738,15 @@ async function saveCourt(options={}){
       if(btn){btn.disabled=false;btn.textContent='保存';}
       return;
     }
+  }else{
+    const hiddenDuplicates=getCourtHiddenDuplicateCandidates({name,phone,campus:campusValue},editId);
+    if(hiddenDuplicates.length){
+      const summary=hiddenDuplicates.map(c=>`${c.name}${c.phone?`（${c.phone}）`:''}${c.campus?` · ${cn(c.campus)}`:''}`).join('、');
+      if(!await appConfirm(`发现隐藏历史档案：${summary}。这些档案不会出现在当前列表里，保存不会产生前台重复；如需合并历史记录，请走订场用户合并治理。是否继续保存？`,{title:'发现隐藏历史档案',confirmText:'继续保存'})){
+        if(btn){btn.disabled=false;btn.textContent='保存';}
+        return;
+      }
+    }
   }
   await runStandardMutation(btn,async()=>{
     if(editId){const saved=await apiCall('PUT','/courts/'+editId,rec);const i=courts.findIndex(u=>u.id===editId);courts[i]=saved;}

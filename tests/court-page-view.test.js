@@ -98,8 +98,12 @@ assert.match(pagesCss, /\.modal\.modal-court \.court-finance-summary-grid\{displ
 assert.match(pagesCss, /\.modal\.modal-court \.tms-record-add-box \.tms-dropdown-display[^}]*font-size:12px/s, 'court finance entry row should use smaller dropdown text to avoid overlapping');
 assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 110px[\s\S]*renderStandardDropdownHtml\('nrType','交易类型'[\s\S]*flex:0 0 128px[\s\S]*renderStandardDropdownHtml\('nrCategory','业务类型'[\s\S]*flex:0 0 128px[\s\S]*renderStandardDropdownHtml\('nrPayMethod','支付方式'/s, 'court finance modal should keep the first three selectors compact enough to avoid stacking');
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');
+assert.match(fnBody('getCourtDuplicateCandidates'), /isActiveCourtRecord\(c\)&&courtDuplicateMatchesInput\(c,input\)/, 'court duplicate save blocker should only use active visible court profiles');
+assert.match(html, /function getCourtHiddenDuplicateCandidates\(/, 'court save flow should classify hidden duplicate profiles separately');
+assert.match(fnBody('getCourtHiddenDuplicateCandidates'), /mergedIntoCourtId\|\|''\)===String\(editingId\)/, 'hidden profiles already merged into the edited court should not warn again');
 assert.match(html, /发现可能重复的订场用户：/, 'court save flow should warn about possible duplicates');
 assert.match(html, /手机号优先，若无手机号则按姓名\+校区/, 'court duplicate reminder should prioritize phone and then name plus campus');
+assert.match(fnBody('saveCourt'), /发现隐藏历史档案：/, 'court save flow should explain hidden archived duplicates without calling them visible duplicate users');
 assert.match(fnBody('getCurrentCourtAccountRows'), /searchHit\(q,item\.displayName,item\.phone,item\.campusName,item\.owner,item\.depositAttitude,item\.notesSummary[\s\S]*item\.linkedStudentSummary,item\.membershipTierLabel,item\.membershipStatus\)/, 'court search should cover standard follow-up fields');
 assert.match(fnBody('courtFollowOwnerText'), /leadForCourtSummary\(court\?\.id\)\?\.owner[\s\S]*court\?\.owner/, 'court follow owner should fall back from lead owner to the old court owner field');
 assert.match(html, /search:\{id:'courtSearch',oninput:'onCourtFilterChange\(\)'/, 'court search should reset to the first page before rendering');
