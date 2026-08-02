@@ -25,8 +25,44 @@ function createPurchaseEntitlementRoutes(deps={}){
     assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
     buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,normalizePurchasePayMethod,
     validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,
-    T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
+    T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
   }=deps;
+
+  function authorizationIsActive(row={},date=''){
+    if(String(row.status||'active')!=='active')return false;
+    const day=String(date||'').slice(0,10);
+    if(row.validFrom&&day&&day<String(row.validFrom).slice(0,10))return false;
+    if(row.validUntil&&day&&day>String(row.validUntil).slice(0,10))return false;
+    return true;
+  }
+  function decorateAuthorizedEntitlement(ent={},auth={}){
+    return {
+      ...ent,
+      isAuthorizedUse:true,
+      authorizationId:auth.id||'',
+      packageOwnerStudentId:auth.ownerStudentId||ent.studentId||'',
+      packageOwnerStudentName:auth.ownerStudentName||ent.studentName||'',
+      authorizedStudentId:auth.authorizedStudentId||'',
+      authorizedStudentName:auth.authorizedStudentName||'',
+      usedByStudentId:auth.authorizedStudentId||'',
+      usedByStudentName:auth.authorizedStudentName||''
+    };
+  }
+  async function authorizedRecommendationEntitlements(studentIds=[],date=''){
+    if(!T_ENTITLEMENT_AUTHORIZATIONS)return [];
+    const ids=new Set(parseArr(studentIds).map(String).filter(Boolean));
+    if(!ids.size)return [];
+    const authorizations=(await getCachedScan(T_ENTITLEMENT_AUTHORIZATIONS).catch(()=>[]))
+      .filter(row=>ids.has(String(row.authorizedStudentId||''))&&authorizationIsActive(row,date));
+    const entitlementIds=[...new Set(authorizations.map(row=>String(row.entitlementId||'')).filter(Boolean))];
+    if(!entitlementIds.length)return [];
+    const rows=(await Promise.all(entitlementIds.map(id=>getCachedRow(T_ENTITLEMENTS,id).catch(()=>null)))).filter(Boolean);
+    const byId=new Map(rows.map(row=>[String(row.id||''),row]));
+    return authorizations.map(auth=>{
+      const ent=byId.get(String(auth.entitlementId||''));
+      return ent?decorateAuthorizedEntitlement(ent,auth):null;
+    }).filter(Boolean);
+  }
 
   function buildPurchaseGiftBenefitRows({purchase,student,user,operationTrace,now,idFactory}={}){
     const giftTypes=[
@@ -212,6 +248,78 @@ function createPurchaseEntitlementRoutes(deps={}){
       }
     }
 
+    if(path==='/entitlement-authorizations'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      if(method==='GET'){
+        const rows=await getCachedScan(T_ENTITLEMENT_AUTHORIZATIONS).catch(()=>[]);
+        const entitlementId=String(query.get('entitlementId')||'').trim();
+        const studentId=String(query.get('studentId')||'').trim();
+        const ownerStudentId=String(query.get('ownerStudentId')||'').trim();
+        const authorizedStudentId=String(query.get('authorizedStudentId')||'').trim();
+        return sendJson(res,rows.filter(row=>{
+          if(entitlementId&&String(row.entitlementId||'')!==entitlementId)return false;
+          if(ownerStudentId&&String(row.ownerStudentId||'')!==ownerStudentId)return false;
+          if(authorizedStudentId&&String(row.authorizedStudentId||'')!==authorizedStudentId)return false;
+          if(studentId&&String(row.ownerStudentId||'')!==studentId&&String(row.authorizedStudentId||'')!==studentId)return false;
+          return true;
+        }));
+      }
+      if(method==='POST'){
+        const entitlement=await getCachedRow(T_ENTITLEMENTS,String(body.entitlementId||'').trim()).catch(()=>null);
+        if(!entitlement)return sendJson(res,{error:'课包余额不存在'},404);
+        const owner=await getCachedRow(T_STUDENTS,entitlement.studentId).catch(()=>null);
+        const authorized=await getCachedRow(T_STUDENTS,String(body.authorizedStudentId||'').trim()).catch(()=>null);
+        if(!authorized)return sendJson(res,{error:'被授权学员不存在'},404);
+        if(String(entitlement.studentId||'')===String(authorized.id||''))return sendJson(res,{error:'不能授权给课包本人'},400);
+        const existing=(await getCachedScan(T_ENTITLEMENT_AUTHORIZATIONS).catch(()=>[])).find(row=>
+          String(row.entitlementId||'')===String(entitlement.id||'')&&
+          String(row.authorizedStudentId||'')===String(authorized.id||'')&&
+          String(row.status||'active')==='active'
+        );
+        if(existing)return sendJson(res,{authorization:existing});
+        const now=new Date().toISOString();
+        const row={
+          id:uuidv4(),
+          entitlementId:entitlement.id,
+          purchaseId:entitlement.purchaseId||'',
+          packageName:entitlement.packageName||'',
+          ownerStudentId:entitlement.studentId||'',
+          ownerStudentName:entitlement.studentName||owner?.name||'',
+          authorizedStudentId:authorized.id||'',
+          authorizedStudentName:authorized.name||'',
+          status:'active',
+          validFrom:String(body.validFrom||'').slice(0,10),
+          validUntil:String(body.validUntil||'').slice(0,10),
+          notes:String(body.notes||'').trim(),
+          createdBy:user.name||'',
+          createdAt:now,
+          updatedAt:now
+        };
+        await put(T_ENTITLEMENT_AUTHORIZATIONS,row.id,row);
+        return sendJson(res,{authorization:row});
+      }
+    }
+
+    const authM=path.match(/^\/entitlement-authorizations\/(.+)$/);
+    if(authM){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const id=authM[1];
+      const old=await getCachedRow(T_ENTITLEMENT_AUTHORIZATIONS,id).catch(()=>null);
+      if(!old)return sendJson(res,{error:'授权记录不存在'},404);
+      if(method==='PUT'){
+        const next={...old,status:body.status!==undefined?String(body.status||'disabled'):old.status,validFrom:body.validFrom!==undefined?String(body.validFrom||'').slice(0,10):old.validFrom,validUntil:body.validUntil!==undefined?String(body.validUntil||'').slice(0,10):old.validUntil,notes:body.notes!==undefined?String(body.notes||'').trim():old.notes,updatedAt:new Date().toISOString()};
+        await put(T_ENTITLEMENT_AUTHORIZATIONS,id,next);
+        return sendJson(res,{authorization:next});
+      }
+      if(method==='DELETE'){
+        const next={...old,status:'disabled',updatedAt:new Date().toISOString(),disabledBy:user.name||''};
+        await put(T_ENTITLEMENT_AUTHORIZATIONS,id,next);
+        return sendJson(res,{success:true,authorization:next});
+      }
+    }
+
     if(path==='/entitlements'){
       await init();
       if(method==='GET'){
@@ -238,12 +346,13 @@ function createPurchaseEntitlementRoutes(deps={}){
     if(path==='/entitlements/recommend'&&method==='POST'){
       await init();
       const scheduleId=String(body.scheduleId||'').trim();
-      const [rows,coaches,users]=await Promise.all([
+      const [ownRows,authorizedRows,coaches,users]=await Promise.all([
         getIndexedActiveEntitlementsForStudents(parseArr(body.studentIds)),
+        authorizedRecommendationEntitlements(parseArr(body.studentIds),body.startTime),
         getCachedScan(T_COACHES).catch(()=>[]),
         getCachedScan(T_USERS).catch(()=>[])
       ]);
-      let recommendationRows=rows;
+      let recommendationRows=[...ownRows,...authorizedRows];
       let currentSchedule=null;
       if(scheduleId){
         currentSchedule=await get(T_SCHEDULE,scheduleId).catch(()=>null);

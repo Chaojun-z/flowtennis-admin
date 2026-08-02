@@ -913,6 +913,27 @@ async function saveStudentBenefit(studentId,mode,benefitCode){
     }
   });
 }
+function openEntitlementAuthorizationModal(entitlementId){
+  const ent=entitlements.find(row=>String(row.id||'')===String(entitlementId||''));
+  if(!ent){toast('课包不存在','warn');return;}
+  const owner=students.find(stu=>String(stu.id||'')===String(ent.studentId||''))||{};
+  const options=students
+    .filter(stu=>String(stu.id||'')!==String(ent.studentId||''))
+    .map(stu=>({value:stu.id,label:[stu.name,stu.phone].filter(Boolean).join(' · ')||stu.id}));
+  if(!options.length){toast('暂无可授权学员','warn');return;}
+  const body=`<div class="tms-section-header" style="margin-top:0;">授权信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课包所有人</label><input class="finput tms-form-control" value="${esc(owner.name||ent.studentName||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">被授权学员</label>${renderStandardDropdownHtml('ent_auth_student','被授权学员',options,options[0]?.value||'',true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="ent_auth_notes" placeholder="例如：弟弟使用哥哥课包"></textarea></div></div>`;
+  const actions=`<button type="button" class="schedule-detail-action muted" onclick="closeModal()">取消</button><button type="button" class="schedule-detail-action primary" id="entAuthSaveBtn" onclick="saveEntitlementAuthorization(${jsArg(entitlementId)})">保存授权</button>`;
+  openStandardModal({title:'授权课包给其他学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight'});
+}
+async function saveEntitlementAuthorization(entitlementId){
+  const authorizedStudentId=document.getElementById('ent_auth_student')?.value||'';
+  if(!authorizedStudentId){toast('请选择被授权学员','warn');return;}
+  const notes=document.getElementById('ent_auth_notes')?.value.trim()||'';
+  const result=await runStandardMutation('entAuthSaveBtn',()=>apiCall('POST','/entitlement-authorizations',{entitlementId,authorizedStudentId,notes}),{loadingText:'保存中...'});
+  if(!result)return;
+  closeModal();
+  toast('授权已保存','success');
+}
 function studentRecentFeedbackSummaryHtml(stu){
   const recentFeedbacks=Array.isArray(stu?.detailRecentFeedbackRows)?stu.detailRecentFeedbackRows:studentRecentFeedbacks(stu,2);
   if(!recentFeedbacks.length)return '';

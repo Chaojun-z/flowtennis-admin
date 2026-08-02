@@ -73,6 +73,13 @@ function normalizedCampusValue(value,normalizeCampusValue){
 function sameCampusValue(a,b,normalizeCampusValue){
   return normalizedCampusValue(a,normalizeCampusValue)===normalizedCampusValue(b,normalizeCampusValue);
 }
+function linkedVenueConflictAllowed(candidate={},record={}){
+  if(!candidate.allowLinkedVenueConflict&&!candidate.linkedScheduleGroupId&&!record.linkedScheduleGroupId)return false;
+  const candidateGroup=String(candidate.linkedScheduleGroupId||'').trim();
+  const recordGroup=String(record.linkedScheduleGroupId||'').trim();
+  if(candidateGroup&&recordGroup&&candidateGroup===recordGroup)return true;
+  return !!candidate.allowLinkedVenueConflict;
+}
 function validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampusValue,options={}){
   const skipVenueConflicts=options?.skipVenueConflicts===true;
   if(!isBillableSchedule(candidate))return;
@@ -86,7 +93,7 @@ function validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampus
     if(candidate.coach&&rec.coach&&candidate.coach===rec.coach)throw new Error(`教练「${candidate.coach}」此时间已有课程`);
     const candidateVenue=normalizeVenue(candidate.venue);
     const recVenue=normalizeVenue(rec.venue);
-    if(!skipVenueConflicts&&candidateVenue&&recVenue&&candidateVenue===recVenue&&sameCampusValue(candidate.campus,rec.campus,normalizeCampusValue))throw new Error(`场地「${candidateVenue}」此时间已被占用`);
+    if(!skipVenueConflicts&&candidateVenue&&recVenue&&candidateVenue===recVenue&&sameCampusValue(candidate.campus,rec.campus,normalizeCampusValue)&&!linkedVenueConflictAllowed(candidate,rec))throw new Error(`场地「${candidateVenue}」此时间已被占用`);
     if(shareStudent(candidate,rec))throw new Error('学员此时间已有课程');
   }
 }

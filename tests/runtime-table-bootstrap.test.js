@@ -14,6 +14,7 @@ assert.deepStrictEqual(
     'ft_packages',
     'ft_purchases',
     'ft_entitlements',
+    'ft_entitlement_authorizations',
     'ft_entitlement_ledger',
     'ft_class_nos',
     'ft_price_plans',

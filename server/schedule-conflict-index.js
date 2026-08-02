@@ -48,6 +48,8 @@ function scheduleConflictIndexRowsForRecord(row={},normalizeCampusValue=defaultN
     studentIds:parseArr(row.studentIds).filter(Boolean),
     campus:scheduleConflictCampus(row,normalizeCampusValue),
     venue:normalizeVenue(row.venue),
+    allowLinkedVenueConflict:!!row.allowLinkedVenueConflict,
+    linkedScheduleGroupId:row.linkedScheduleGroupId||'',
     status:row.status||'已排课',
     updatedAt:new Date().toISOString()
   }));
@@ -70,6 +72,8 @@ function scheduleRowsFromConflictIndex(indexRows=[]){
       studentIds:parseArr(row.studentIds).length?parseArr(row.studentIds):parseArr(existing.studentIds),
       campus:row.campus||existing.campus||'',
       venue:row.venue||existing.venue||'',
+      allowLinkedVenueConflict:!!(row.allowLinkedVenueConflict||existing.allowLinkedVenueConflict),
+      linkedScheduleGroupId:row.linkedScheduleGroupId||existing.linkedScheduleGroupId||'',
       status:row.status||existing.status||'已排课'
     });
   });

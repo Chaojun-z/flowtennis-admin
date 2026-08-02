@@ -418,7 +418,8 @@ function purchaseLedgerHtml(purchaseId){
   return `<div class="finput" style="min-height:42px;white-space:normal;line-height:1.7">${rows.map(l=>{
     const ent=entitlements.find(e=>e.id===l.entitlementId)||{};
     const unit=packageBalanceUnitLabel({...ent,...l,packageName:ent.packageName||l.packageName||''});
-    return `${(Number(l.lessonDelta)||0)>0?'退回':'扣减'} ${lessonQty(Math.abs(Number(l.lessonDelta)||0))} ${unit} · ${esc(renderStandardEmptyText(l.reason))} · ${renderStandardEmptyText(entitlementLedgerDisplayDate(l))}`;
+    const usedByText=l.packageOwnerStudentId&&l.usedByStudentId&&String(l.packageOwnerStudentId)!==String(l.usedByStudentId)?` · 被 ${esc(l.usedByStudentName||'被授权学员')} 使用`:'';
+    return `${(Number(l.lessonDelta)||0)>0?'退回':'扣减'} ${lessonQty(Math.abs(Number(l.lessonDelta)||0))} ${unit}${usedByText} · ${esc(renderStandardEmptyText(l.reason))} · ${renderStandardEmptyText(entitlementLedgerDisplayDate(l))}`;
   }).join('<br>')}</div>`;
 }
 function purchaseSystemAmountForPackage(packageId){

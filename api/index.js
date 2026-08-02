@@ -21,6 +21,7 @@ const { createStorageServices } = require('../server/storage');
 const { createAuthRoutes } = require('../server/auth-routes');
 const { createBootstrapRuntime, buildBootstrapSafetyFlags, readBooleanEnv, logBlockedAutoWrite } = require('../server/bootstrap');
 const { createScheduleRules } = require('../server/schedule');
+const { activeEntitlementAuthorizationForSchedule, entitlementAuthorizedUseContext, scheduleEntitlementUsageContext } = require('../server/entitlement-authorization');
 const { createPackageRules } = require('../server/packages');
 const { createCourtFinanceRules } = require('../server/court-finance');
 const { createMembershipRules } = require('../server/membership');
@@ -99,12 +100,12 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'老吴',name:'刘润扬教练'}
 ];
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_AUTHORIZATIONS='ft_entitlement_authorizations',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,...MEMBERSHIP_TABLES];
 const HOT_SCAN_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -115,9 +116,7 @@ const HOT_SCAN_TABLES=new Map([
   [T_PLANS,{ttlMs:60000}],
   [T_FEEDBACKS,{ttlMs:60000}],
   [T_PACKAGES,{ttlMs:60000}],
-  [T_PURCHASES,{ttlMs:60000}],
-  [T_ENTITLEMENTS,{ttlMs:60000}],
-  [T_ENTITLEMENT_LEDGER,{ttlMs:60000}],
+  [T_PURCHASES,{ttlMs:60000}],[T_ENTITLEMENTS,{ttlMs:60000}],[T_ENTITLEMENT_AUTHORIZATIONS,{ttlMs:60000}],[T_ENTITLEMENT_LEDGER,{ttlMs:60000}],
   [T_MEMBERSHIP_PLANS,{ttlMs:60000}],
   [T_MEMBERSHIP_ACCOUNTS,{ttlMs:60000}],
   [T_MEMBERSHIP_ORDERS,{ttlMs:60000}],
@@ -288,9 +287,7 @@ const HOT_GET_TABLES=new Map([
   [T_COACH_SCHEDULE_INDEX,{ttlMs:60000}],
   [T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,{ttlMs:60000}],
   [T_STUDENT_TEACHING_SUMMARY,{ttlMs:60000}],
-  [T_CLASSES,{ttlMs:60000}],
-  [T_ENTITLEMENTS,{ttlMs:60000}],
-  [T_COURTS,{ttlMs:60000}],
+  [T_CLASSES,{ttlMs:60000}],[T_ENTITLEMENTS,{ttlMs:60000}],[T_ENTITLEMENT_AUTHORIZATIONS,{ttlMs:60000}],[T_COURTS,{ttlMs:60000}],
   [T_MEMBERSHIP_PLANS,{ttlMs:60000}],
   [T_MEMBERSHIP_ACCOUNTS,{ttlMs:60000}],
   [T_MEMBERSHIP_ORDERS,{ttlMs:60000}],
@@ -465,10 +462,7 @@ const bootstrapRuntime=createBootstrapRuntime({
     T_CAMPUSES,
     T_FEEDBACKS,
     T_COACH_PROPOSALS,
-    T_PACKAGES,
-    T_PURCHASES,
-    T_ENTITLEMENTS,
-    T_ENTITLEMENT_LEDGER,
+    T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,
     T_PRICE_PLANS
   },
   storage:{get,put,del,scan,mkTable},
@@ -714,7 +708,7 @@ const handlePurchaseEntitlementRoutes=createPurchaseEntitlementRoutes({
   assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
   buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,normalizePurchasePayMethod,
   validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,
-  T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
+  T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
 });
 const handleCorePageDataRoutes=createCorePageDataRoutes({
   init,sendJson:routeSendJson,cappedScan,filterLoadAllForUser,listCampusesWithDefaults,getFastStudentsRead,
@@ -1115,14 +1109,17 @@ async function rollbackScheduleStoredValueCourts(update){
   const rows=Array.isArray(update?.originalCourts)?update.originalCourts:[];
   for(const court of rows)await put(T_COURTS,court.id,court).catch(()=>null);
 }
-function validateEntitlementForSchedule(entitlement,schedule){
+function validateEntitlementForSchedule(entitlement,schedule,options={}){
   if(!isBillableSchedule(schedule))return;
   if(!entitlement)return;
   if(entitlement.status&&entitlement.status!=='active')throw new Error('课包余额不可用');
   const lessonCount=isCountBasedCourse(schedule)?1:parseLessonValue(schedule.lessonCount,1);
   if(parseLessonValue(entitlement.remainingLessons)<lessonCount)throw new Error('课包剩余课时不足');
   const studentIds=parseArr(schedule.studentIds);
-  if(entitlement.studentId&&studentIds.length&&!studentIds.includes(entitlement.studentId))throw new Error('课包所属学员不匹配');
+  if(entitlement.studentId&&studentIds.length&&!studentIds.includes(entitlement.studentId)){
+    const auth=entitlementAuthorizedUseContext(entitlement,schedule,options.authorizations||[]);
+    if(!auth||String(auth.packageOwnerStudentId||'')!==String(entitlement.studentId||'')||!studentIds.includes(String(auth.usedByStudentId||'')))throw new Error('课包所属学员不匹配');
+  }
   if(entitlement.courseType&&schedule.courseType&&entitlement.courseType!==schedule.courseType)throw new Error('课程类型不匹配');
   const trialExperienceTypesCompatible=(a,b)=>{
     const left=String(a||'').trim(),right=String(b||'').trim();
@@ -1201,15 +1198,14 @@ function recommendEntitlements(entitlements,schedule){
     try{validateEntitlementForSchedule(ent,schedule);}
     catch(e){warnings.push(e.message);}
     const requiresFieldFee=scheduleNeedsFieldFeeForEntitlement(ent,schedule);
+    const auth=entitlementAuthorizedUseContext(ent,schedule);
     return {
-      studentId:ent.studentId||'',
-      entitlementId:ent.id,
-      id:ent.id,
-      packageName:ent.packageName||'',
-      courseType:ent.courseType||'',
-      experienceType:ent.experienceType||'',
-      remainingLessons:parseLessonValue(ent.remainingLessons),
-      totalLessons:parseLessonValue(ent.totalLessons),
+      studentId:auth?.usedByStudentId||ent.studentId||'',entitlementId:ent.id,id:ent.id,
+      authorizationId:auth?.authorizationId||ent.authorizationId||'',isAuthorizedUse:!!auth,
+      packageOwnerStudentId:auth?.packageOwnerStudentId||ent.studentId||'',packageOwnerStudentName:auth?.packageOwnerStudentName||ent.studentName||'',
+      usedByStudentId:auth?.usedByStudentId||ent.studentId||'',usedByStudentName:auth?.usedByStudentName||'',
+      packageName:ent.packageName||'',purchaseId:ent.purchaseId||'',courseType:ent.courseType||'',experienceType:ent.experienceType||'',
+      remainingLessons:parseLessonValue(ent.remainingLessons),totalLessons:parseLessonValue(ent.totalLessons),
       validUntil:ent.validUntil||'',
       timeBand:ent.timeBand||'',
       ownerCoach:ent.ownerCoach||'',
@@ -1386,30 +1382,34 @@ async function assertScheduleEntitlementCapacity(nextRec,oldRec){
   const oldDeltas=scheduleEntitlementDeltas(oldRec);
   const oldMap=new Map(oldDeltas.map(d=>[d.entitlementId,d.delta]));
   const checked=[];
+  const authorizations=await withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENT_AUTHORIZATIONS).catch(()=>[]),2500,'课包授权校验超时，请稍后重试');
   for(const nextDelta of nextDeltas){
     const ent=await withRequiredStorageTimeout(getCachedRow(T_ENTITLEMENTS,nextDelta.entitlementId),2500,'课包余额校验超时，请稍后重试');
     if(!ent)throw new Error('课包余额不存在');
     const adjusted=oldMap.has(nextDelta.entitlementId)?{...ent,status:'active',remainingLessons:parseLessonValue(ent.remainingLessons)+oldMap.get(nextDelta.entitlementId)}:ent;
-    validateEntitlementForSchedule(adjusted,{...nextRec,studentIds:[adjusted.studentId].filter(Boolean)});
+    validateEntitlementForSchedule(adjusted,nextRec,{authorizations});
     checked.push(adjusted);
   }
   return checked;
 }
-async function applyEntitlementDelta(entitlementId,scheduleId,delta,action,reason,user,operationTrace=null){
+async function applyEntitlementDelta(entitlementId,scheduleId,delta,action,reason,user,operationTrace=null,schedule=null){
   if(!entitlementId||!delta)return null;
   const ent=await getCachedRow(T_ENTITLEMENTS,entitlementId);
   if(!ent)return null;
   const next=withOperationTrace(applyEntitlementLessonDelta(ent,delta),operationTrace);
   await put(T_ENTITLEMENTS,entitlementId,next);
   await syncStudentActiveEntitlementIndexes(ent,next);
+  const usage=scheduleEntitlementUsageContext(ent,schedule||{});
+  const usageReason=usage.isAuthorizedUse&&reason&&!/使用/.test(reason)
+    ? `${reason}（${usage.usedByStudentName||'被授权学员'} 使用 ${usage.packageOwnerStudentName||'课包所有人'} 的课包）`
+    : reason;
   const ledger=withOperationTrace({
     id:uuidv4(),
-    entitlementId,
-    studentId:ent.studentId||'',
-    scheduleId:scheduleId||'',
-    lessonDelta:delta,
-    action,
-    reason,
+    entitlementId,studentId:usage.usedByStudentId||ent.studentId||'',purchaseId:ent.purchaseId||'',packageName:ent.packageName||'',
+    authorizationId:usage.authorizationId||'',packageOwnerStudentId:usage.packageOwnerStudentId||ent.studentId||'',packageOwnerStudentName:usage.packageOwnerStudentName||'',
+    usedByStudentId:usage.usedByStudentId||ent.studentId||'',usedByStudentName:usage.usedByStudentName||'',
+    scheduleId:scheduleId||'',lessonDelta:delta,action,
+    reason:usageReason,
     operator:user?.name||'',
     createdAt:new Date().toISOString()
   },operationTrace);
@@ -7219,6 +7219,9 @@ module.exports._test={
   buildScheduleStoredValueHistoryRow,
   buildScheduleStoredValueCourtUpdate,
   validateEntitlementForSchedule,
+  activeEntitlementAuthorizationForSchedule,
+  entitlementAuthorizedUseContext,
+  scheduleEntitlementUsageContext,
   recommendEntitlements,
   normalizeCampusValue,
   displayCampusName,

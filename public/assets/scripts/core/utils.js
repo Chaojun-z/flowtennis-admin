@@ -1160,7 +1160,8 @@ function studentManualEntitlementActionsHtml(entitlement={}){
   if(!canManualAdjust)return '';
   const consumeAction=entitlement.status==='active'&&Number(entitlement.remainingLessons||0)>0?`<button type="button" class="student-package-action-link" onclick="openManualEntitlementAdjustModal(${jsArg(entitlement.id)},'manual_consume',{source:'student',studentId:${jsArg(entitlement.studentId)}})">手动消课</button>`:'';
   const returnAction=Number(entitlement.usedLessons||0)>0?`<button type="button" class="student-package-action-link" onclick="openManualEntitlementAdjustModal(${jsArg(entitlement.id)},'manual_return',{source:'student',studentId:${jsArg(entitlement.studentId)}})">退回课时</button>`:'';
-  return [consumeAction,returnAction].filter(Boolean).join('');
+  const authorizeAction=entitlement.status==='active'?`<button type="button" class="student-package-action-link" onclick="openEntitlementAuthorizationModal(${jsArg(entitlement.id)})">授权使用</button>`:'';
+  return [authorizeAction,consumeAction,returnAction].filter(Boolean).join('');
 }
 function studentEntitlementSummaryHtml(stu){
   const rows=Array.isArray(stu?.detailPackageOrderRows)?stu.detailPackageOrderRows:[];
@@ -1500,10 +1501,14 @@ function studentLessonRecordPackageHtml(row,ent={}){
   const chargeHtml=studentLessonRecordChargeHtml(row,ent,balance,schedule);
   const manualLabel=isManualEntitlementLedgerRow(row)?(Number(row.lessonDelta)>0?'手动退回':'手动消课'):'';
   const title=[manualLabel,studentLessonRecordSectionText(row,ent),`[${esc(renderStandardEmptyText(payText))}]`].filter(Boolean).join(' · ');
+  const authorizedUseText=row?.packageOwnerStudentId&&row?.usedByStudentId&&String(row.packageOwnerStudentId)!==String(row.usedByStudentId)
+    ? `${row.usedByStudentName||'被授权学员'} 使用 ${row.packageOwnerStudentName||'课包所有人'} 的课包`
+    : '';
   const meta=[
     studentEntitlementLedgerTimeText(row,schedule),
     studentEntitlementLedgerLocationText(row,schedule,ent),
     coachName(schedule.coach||row?.coach||ent?.ownerCoach||''),
+    authorizedUseText,
     isManualEntitlementLedgerRow(row)?String(row?.notes||row?.reason||'').replace(/^管理员手动(消课|退回)：/,''):''
   ].filter(Boolean).map(item=>esc(renderStandardEmptyText(item))).join(' · ');
   return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title)}</div><div class="student-lesson-meta">${meta}</div></div><div class="student-lesson-charge">${chargeHtml}</div></div>`;

@@ -25,7 +25,8 @@ function createScheduleRoutes(deps={}){
           const id=uuidv4();
           const now=new Date().toISOString();
           const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now});
-          const r=withOperationTrace({...body,...normalizeCoachLateInfo(body),...normalizeScheduleFieldFee(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:now,updatedAt:now},operationTrace);
+          const linkedScheduleGroupId=body.allowLinkedVenueConflict?String(body.linkedScheduleGroupId||id).trim():'';
+          const r=withOperationTrace({...body,...normalizeCoachLateInfo(body),...normalizeScheduleFieldFee(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',allowLinkedVenueConflict:!!body.allowLinkedVenueConflict,linkedScheduleGroupId,createdBy:user.name,createdAt:now,updatedAt:now},operationTrace);
           let validation;
           try{validation=await timed('schedule create validate',async()=>{
             const risk=await validateScheduleSave(r,null);
@@ -63,7 +64,7 @@ function createScheduleRoutes(deps={}){
             const entitlementChanged=await timed('schedule create entitlement writes',async()=>{
               const changed=[];
               for(const nextEntDelta of entitlementDeltas){
-                const update=await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','排课消课',user,operationTrace);
+                const update=await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','排课消课',user,operationTrace,r);
                 if(update)changed.push(update);
                 appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'排课保存失败退回'});
               }
@@ -91,7 +92,7 @@ function createScheduleRoutes(deps={}){
             await syncScheduleConflictIndexes(r,null).catch(()=>null);
             await rollbackScheduleStoredValueCourts(storedValueUpdate);
             await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
-            for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
+            for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user,operationTrace,r).catch(()=>null);
             if(nextDelta&&lessonApplied)await applyLessonDelta(nextDelta.classId,-nextDelta.delta,r.studentIds).catch(()=>null);
             throw err;
           }
@@ -108,7 +109,9 @@ function createScheduleRoutes(deps={}){
           const ex=await get(T_SCHEDULE,id).catch(()=>null);
           const isCancelOnlyUpdate=String(body.status||'').trim()==='已取消'&&Object.keys(body||{}).every(key=>['status','cancelReason'].includes(key));
           const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now:new Date().toISOString()});
-          const r=withOperationTrace({...ex,...body,...normalizeCoachLateInfo({...ex,...body}),...normalizeScheduleFieldFee({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()},operationTrace);
+          const allowLinkedVenueConflict=!!(body.allowLinkedVenueConflict??ex?.allowLinkedVenueConflict);
+          const linkedScheduleGroupId=allowLinkedVenueConflict?String(body.linkedScheduleGroupId||ex?.linkedScheduleGroupId||id).trim():'';
+          const r=withOperationTrace({...ex,...body,...normalizeCoachLateInfo({...ex,...body}),...normalizeScheduleFieldFee({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),allowLinkedVenueConflict,linkedScheduleGroupId,id,updatedAt:new Date().toISOString()},operationTrace);
           const oldDelta=scheduleLessonDelta(ex);
           const nextDelta=scheduleLessonDelta(r);
           if(isCancelOnlyUpdate&&ex){
@@ -134,7 +137,7 @@ function createScheduleRoutes(deps={}){
               const entitlements=[];
               const entitlementLedger=[];
               for(const oldEntDelta of oldEntDeltas){
-                const updated=await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','取消排课退回权益',user,operationTrace);
+                const updated=await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','取消排课退回权益',user,operationTrace,ex);
                 if(updated){
                   entitlements.push(updated.entitlement);
                   entitlementLedger.push(updated.ledger);
@@ -157,7 +160,7 @@ function createScheduleRoutes(deps={}){
               await rollbackScheduleStoredValueCourts(storedValueUpdate);
               await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
               for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
-              for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
+              for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user,operationTrace,ex).catch(()=>null);
               throw err;
             }
           }
@@ -212,8 +215,8 @@ function createScheduleRoutes(deps={}){
             const entitlementChanged=await timed('schedule update entitlement writes',async()=>{
               const rows=[];
               const entDiff=diffScheduleEntitlementDeltas(oldEntDeltas,nextEntDeltas);
-              for(const oldEntDelta of entDiff.returns){rows.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user,operationTrace));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
-              for(const nextEntDelta of entDiff.consumes){rows.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user,operationTrace));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
+              for(const oldEntDelta of entDiff.returns){rows.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user,operationTrace,ex));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
+              for(const nextEntDelta of entDiff.consumes){rows.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user,operationTrace,r));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
               await rollbackSmallGroupFreeAbsences(oldFreeAbsenceLedger);
               const freeAbsenceRows=await applySmallGroupFreeAbsences(r,nextBaseRows,user,operationTrace);
               freeAbsenceRows.forEach(ledger=>{
@@ -242,7 +245,7 @@ function createScheduleRoutes(deps={}){
             await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
             await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
             for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
-            for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
+            for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user,operationTrace,r).catch(()=>null);
             throw err;
           }
         },{mode:'update'});
@@ -274,7 +277,7 @@ function createScheduleRoutes(deps={}){
         try{
           if(ex&&!isCancelled){
             for(const oldEntDelta of oldEntDeltas){
-              const updated=await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','删除排课退回权益',user,operationTrace);
+              const updated=await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','删除排课退回权益',user,operationTrace,ex);
               if(updated?.ledger)generatedLedger.push(updated.ledger);
               if(updated)appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'删除排课失败重新扣回权益'});
             }
@@ -301,7 +304,7 @@ function createScheduleRoutes(deps={}){
           for(const row of generatedLedger)await del(T_ENTITLEMENT_LEDGER,row.id).catch(()=>null);
           for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
           for(const item of appliedEntitlements){
-            const rollback=await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
+            const rollback=await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user,operationTrace,ex).catch(()=>null);
             if(rollback?.ledger)await del(T_ENTITLEMENT_LEDGER,rollback.ledger.id).catch(()=>null);
           }
           throw err;
