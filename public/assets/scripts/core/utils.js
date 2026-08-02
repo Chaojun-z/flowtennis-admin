@@ -479,8 +479,8 @@ function timeBand(s){
 }
 function searchHit(q,...values){
   if(!q)return true;
-  const keyword=String(q).toLowerCase().trim();
-  return values.some(v=>String(v||'').toLowerCase().includes(keyword));
+  const keyword=String(q).toLowerCase().trim(),compactKeyword=keyword.replace(/[\s\u3000]+/g,'');
+  return values.some(v=>{const text=String(v||'').toLowerCase();return text.includes(keyword)||(compactKeyword&&text.replace(/[\s\u3000]+/g,'').includes(compactKeyword));});
 }
 function setDateInputValue(inputId,value){
   const input=document.getElementById(inputId);

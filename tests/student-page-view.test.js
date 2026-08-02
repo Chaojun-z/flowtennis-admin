@@ -36,7 +36,13 @@ assert.match(source, /校区内[\s\S]*校区外/, 'schedule location type copy s
 assert.match(source, /id="sch_stuSearch"/, 'schedule modal should provide a searchable student input');
 assert.match(source, /id="sch_selectedStudentTags"/, 'schedule modal should show selected students as removable tags');
 assert.doesNotMatch(source, /id="sch_stuName"[^>]*placeholder="选班次自动填入"/, 'schedule modal should not use free text student input as the formal selector');
+assert.match(source, /id="ent_auth_student" value=""><input class="finput tms-form-control" id="ent_auth_student_search" placeholder="搜索姓名 \/ 手机号"/, 'authorization modal should start with an empty searchable input');
+assert.match(source, /function renderEntitlementAuthorizationStudentSuggestions\([\s\S]*<strong>\$\{esc\(stu\.name\|\|stu\.id\|\|''\)\}<\/strong>[\s\S]*<span>\$\{esc\(entitlementAuthorizationStudentMeta\(stu\)\|\|'-'\)\}<\/span>/, 'authorization modal should render the same searchable suggestion style as schedule selection');
+assert.match(source, /function entitlementAuthorizationSaveErrorText\([\s\S]*授权数据表还没准备好，请刷新页面后再试[\s\S]*return '授权保存失败，请稍后重试';/, 'authorization save errors should fall back to readable text');
 assert.match(source, /function getFilteredStudents\(/, 'student page should centralize filtered student list calculation');
+assert.match(fnBody('searchHit'), /compactKeyword=keyword\.replace\(\//, 'global keyword search should build a compact keyword');
+assert.match(fnBody('searchHit'), /text\.replace\(\//, 'global keyword search should compare against compact text');
+assert.match(fnBody('searchHit'), /includes\(compactKeyword\)/, 'global keyword search should ignore spaces between names');
 assert.match(source, /function onStudentFilterChange\(\)\{stuPage=standardListFirstPage\(\);renderStudents\(\);\}/, 'student filters should reset pagination through the standard list flow');
 assert.match(source, /search:\{id:'stuSearch',oninput:'onStudentFilterChange\(\)'/, 'student search should reset pagination before rendering');
 assert.match(source, /function renderStudentToolbarFilters\(/, 'student filters should render through the booking-style dropdown helper');
@@ -128,6 +134,8 @@ assert.doesNotMatch(officialStudentColumns, /label:'电话'|课时\/课包/, 'of
 assert.match(source, /function studentIsHistoricalRosterRow\(/, 'historical student list should use a dedicated historical roster rule');
 assert.match(source, /function studentIsActiveRosterRow\(/, 'active student list should use a dedicated active roster rule');
 assert.match(fnBody('getStudentBaseList'), /studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student base list should switch between historical and active roster rules');
+assert.match(fnBody('getStudentBaseList'), /includeAllRoster[\s\S]*return true[\s\S]*studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student search should be able to find students across active and trial rosters');
+assert.match(fnBody('getFilteredStudents'), /getStudentBaseList\(\{includeAllRoster:!!q\.trim\(\)\}\)/, 'student keyword search should broaden the base roster');
 assert.match(fnBody('getStudentBaseList'), /status\|\|''\)\.trim\(\)==='merged'\|\|String\(s\?\.mergedIntoStudentId/, 'student base list should hide merged student profiles');
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 15, 50, and 100 row page sizes');

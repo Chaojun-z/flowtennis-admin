@@ -574,12 +574,13 @@ function studentMatchesCampusForList(stu){
   if(!campus||campus==='all')return true;
   return studentCampusValuesForList(stu).some(value=>sameCampusValue(value,campus)||sameCampusValue(cn(value),cn(campus))||value===cn(campus));
 }
-function getStudentBaseList(){
+function getStudentBaseList({includeAllRoster=false}={}){
   const viewRows=studentUnifiedViewRows();
   const base=viewRows.length?viewRows:students;
   return base.filter(s=>{
     if(String(s?.status||'').trim()==='merged'||String(s?.mergedIntoStudentId||'').trim())return false;
     if(!studentMatchesCampusForList(s))return false;
+    if(includeAllRoster)return true;
     return studentListViewMode()==='trial'?studentIsHistoricalRosterRow(s):studentIsActiveRosterRow(s);
   });
 }
@@ -591,7 +592,7 @@ function getFilteredStudents(){
   const tf=document.getElementById('stuTypeFilter')?.value||'';
   const sf=document.getElementById('stuSourceFilter')?.value||'';
   const coachFilter=document.getElementById('stuCoachFilter')?.value||'';
-  return getStudentBaseList().filter(s=>{
+  return getStudentBaseList({includeAllRoster:!!q.trim()}).filter(s=>{
     const accountText=courtsForStudent(s).map(c=>`${c.name} ${c.phone||''}`).join(' ');
     if(!searchHit(q,s.name,s.phone,s.type,studentSourceText(s),studentPaymentModeText(s),studentPackageStatusText(s),studentActivityStatusText(s),studentLessonVolumeText(s),studentLifecycleStatusText(s),s.activityRange,s.notes,cn(s.campus),accountText,studentPrimaryCoachText(s)))return false;
     if(!globalDateWithinRange(studentGlobalDateValue(s)))return false;
@@ -917,23 +918,61 @@ function openEntitlementAuthorizationModal(entitlementId){
   const ent=entitlements.find(row=>String(row.id||'')===String(entitlementId||''));
   if(!ent){toast('课包不存在','warn');return;}
   const owner=students.find(stu=>String(stu.id||'')===String(ent.studentId||''))||{};
-  const options=students
-    .filter(stu=>String(stu.id||'')!==String(ent.studentId||''))
-    .map(stu=>({value:stu.id,label:[stu.name,stu.phone].filter(Boolean).join(' · ')||stu.id,searchText:[stu.name,stu.phone,stu.wechatName,stu.id].filter(Boolean).join(' ')}));
-  if(!options.length){toast('暂无可授权学员','warn');return;}
-  const studentPicker=renderStandardSearchableDropdownHtml({id:'ent_auth_student',label:'被授权学员',options,value:options[0]?.value||'',isForm:true,searchPlaceholder:'搜索姓名 / 手机号',emptyText:'没有匹配学员'});
+  if(!entitlementAuthorizationStudentRows(ent).length){toast('暂无可授权学员','warn');return;}
+  const studentPicker=`<input type="hidden" id="ent_auth_student" value=""><input class="finput tms-form-control" id="ent_auth_student_search" placeholder="搜索姓名 / 手机号" oninput="updateEntitlementAuthorizationStudentSearch(${jsArg(entitlementId)})" autocomplete="off"><div id="ent_auth_student_suggest" class="schedule-student-suggest"></div>`;
   const body=`<div class="tms-section-header" style="margin-top:0;">授权信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课包所有人</label><input class="finput tms-form-control" value="${esc(owner.name||ent.studentName||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">被授权学员</label>${studentPicker}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="ent_auth_notes" placeholder="例如：弟弟使用哥哥课包"></textarea></div></div>`;
   const actions=`<button type="button" class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button type="button" class="tms-btn tms-btn-primary" id="entAuthSaveBtn" onclick="saveEntitlementAuthorization(${jsArg(entitlementId)})">保存授权</button>`;
   openStandardModal({title:'授权课包给其他学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight modal-entitlement-auth'});
 }
+function entitlementAuthorizationStudentRows(entitlement){
+  const ownerId=String(entitlement?.studentId||'');
+  return students.filter(stu=>String(stu.id||'')&&String(stu.id||'')!==ownerId&&String(stu.status||'').trim()!=='merged'&&!String(stu.mergedIntoStudentId||'').trim()).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN'));
+}
+function entitlementAuthorizationStudentLabel(stu){
+  return [stu?.name,stu?.phone].filter(Boolean).join(' · ')||stu?.id||'';
+}
+function entitlementAuthorizationStudentMeta(stu){
+  return [stu?.phone,stu?.wechatName].filter(Boolean).join(' · ')||'';
+}
+function renderEntitlementAuthorizationStudentSuggestions(entitlementId,keyword=''){
+  const ent=entitlements.find(row=>String(row.id||'')===String(entitlementId||''))||{};
+  const q=String(keyword||'').trim();
+  if(!q)return '';
+  const rows=entitlementAuthorizationStudentRows(ent).filter(stu=>searchHit(q,stu.name,stu.phone,stu.wechatName,stu.id)).slice(0,8);
+  if(!rows.length)return '<div class="schedule-student-suggest-empty">没有匹配到学员</div>';
+  return `<div class="schedule-student-suggest-list">${rows.map(stu=>`<button type="button" onclick="selectEntitlementAuthorizationStudent(${jsArg(stu.id)})"><strong>${esc(stu.name||stu.id||'')}</strong><span>${esc(entitlementAuthorizationStudentMeta(stu)||'-')}</span></button>`).join('')}</div>`;
+}
+function updateEntitlementAuthorizationStudentSearch(entitlementId){
+  const input=document.getElementById('ent_auth_student_search');
+  const hidden=document.getElementById('ent_auth_student');
+  if(hidden)hidden.value='';
+  const suggest=document.getElementById('ent_auth_student_suggest');
+  if(suggest)suggest.innerHTML=renderEntitlementAuthorizationStudentSuggestions(entitlementId,input?.value||'');
+}
+function selectEntitlementAuthorizationStudent(studentId){
+  const stu=students.find(row=>String(row.id||'')===String(studentId||''));
+  const hidden=document.getElementById('ent_auth_student');
+  const input=document.getElementById('ent_auth_student_search');
+  if(hidden)hidden.value=stu?.id||'';
+  if(input)input.value=entitlementAuthorizationStudentLabel(stu);
+  const suggest=document.getElementById('ent_auth_student_suggest');
+  if(suggest)suggest.innerHTML='';
+}
 async function saveEntitlementAuthorization(entitlementId){
   const authorizedStudentId=document.getElementById('ent_auth_student')?.value||'';
-  if(!authorizedStudentId){toast('请选择被授权学员','warn');return;}
+  if(!authorizedStudentId){toast('请先搜索并选择被授权学员','warn');return;}
   const notes=document.getElementById('ent_auth_notes')?.value.trim()||'';
-  const result=await runStandardMutation('entAuthSaveBtn',()=>apiCall('POST','/entitlement-authorizations',{entitlementId,authorizedStudentId,notes}),{loadingText:'保存中...'});
+  const result=await runStandardMutation('entAuthSaveBtn',()=>apiCall('POST','/entitlement-authorizations',{entitlementId,authorizedStudentId,notes}),{loadingText:'保存中...',formatError:entitlementAuthorizationSaveErrorText});
   if(!result)return;
   closeModal();
   toast('授权已保存','success');
+}
+function entitlementAuthorizationSaveErrorText(error){
+  const message=String(error?.message||error||'');
+  if(/OTSObjectNotExist|Requested table does not exist|ft_entitlement_authorizations/.test(message))return '授权数据表还没准备好，请刷新页面后再试';
+  if(message.includes('/entitlement-authorizations'))return message.replace(/\s*\[\/entitlement-authorizations\]\s*$/,'');
+  if(/[\u4e00-\u9fff]/.test(message))return message;
+  return '授权保存失败，请稍后重试';
 }
 function studentRecentFeedbackSummaryHtml(stu){
   const recentFeedbacks=Array.isArray(stu?.detailRecentFeedbackRows)?stu.detailRecentFeedbackRows:studentRecentFeedbacks(stu,2);

@@ -18,7 +18,7 @@ function restoreEditingScheduleEntitlementRowsForRecommendation(entitlements=[],
 
 function createPurchaseEntitlementRoutes(deps={}){
   const {
-    init,sendJson,getCachedScan,getCachedRow,get,scan,put,del,filterLoadAllForUser,uuidv4,
+    init,sendJson,getCachedScan,getCachedRow,get,scan,put,del,mkTable,filterLoadAllForUser,uuidv4,
     isCampusScopedAdmin,parseArr,parseLessonValue,scheduleEntitlementDeltas,buildCoachRefs,buildOperationTrace,withOperationTrace,
     normalizeEntitlementLedgerRowsForDetailView,getIndexedActiveEntitlementsForStudents,recommendEntitlements,
     validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,buildStudentBenefitLedgerRecord,
@@ -34,6 +34,21 @@ function createPurchaseEntitlementRoutes(deps={}){
     if(row.validFrom&&day&&day<String(row.validFrom).slice(0,10))return false;
     if(row.validUntil&&day&&day>String(row.validUntil).slice(0,10))return false;
     return true;
+  }
+  function entitlementAuthorizationTableMissing(error){
+    return /OTSObjectNotExist|Requested table does not exist/i.test(String(error?.message||error||''));
+  }
+  async function ensureEntitlementAuthorizationTable(){
+    if(typeof mkTable==='function'&&T_ENTITLEMENT_AUTHORIZATIONS)await mkTable(T_ENTITLEMENT_AUTHORIZATIONS);
+  }
+  async function putEntitlementAuthorization(row){
+    try{
+      return await put(T_ENTITLEMENT_AUTHORIZATIONS,row.id,row);
+    }catch(error){
+      if(!entitlementAuthorizationTableMissing(error))throw error;
+      await ensureEntitlementAuthorizationTable();
+      return put(T_ENTITLEMENT_AUTHORIZATIONS,row.id,row);
+    }
   }
   function decorateAuthorizedEntitlement(ent={},auth={}){
     return {
@@ -251,6 +266,7 @@ function createPurchaseEntitlementRoutes(deps={}){
     if(path==='/entitlement-authorizations'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
+      await ensureEntitlementAuthorizationTable();
       if(method==='GET'){
         const rows=await getCachedScan(T_ENTITLEMENT_AUTHORIZATIONS).catch(()=>[]);
         const entitlementId=String(query.get('entitlementId')||'').trim();
@@ -296,7 +312,7 @@ function createPurchaseEntitlementRoutes(deps={}){
           createdAt:now,
           updatedAt:now
         };
-        await put(T_ENTITLEMENT_AUTHORIZATIONS,row.id,row);
+        await putEntitlementAuthorization(row);
         return sendJson(res,{authorization:row});
       }
     }
@@ -310,12 +326,12 @@ function createPurchaseEntitlementRoutes(deps={}){
       if(!old)return sendJson(res,{error:'授权记录不存在'},404);
       if(method==='PUT'){
         const next={...old,status:body.status!==undefined?String(body.status||'disabled'):old.status,validFrom:body.validFrom!==undefined?String(body.validFrom||'').slice(0,10):old.validFrom,validUntil:body.validUntil!==undefined?String(body.validUntil||'').slice(0,10):old.validUntil,notes:body.notes!==undefined?String(body.notes||'').trim():old.notes,updatedAt:new Date().toISOString()};
-        await put(T_ENTITLEMENT_AUTHORIZATIONS,id,next);
+        await putEntitlementAuthorization(next);
         return sendJson(res,{authorization:next});
       }
       if(method==='DELETE'){
         const next={...old,status:'disabled',updatedAt:new Date().toISOString(),disabledBy:user.name||''};
-        await put(T_ENTITLEMENT_AUTHORIZATIONS,id,next);
+        await putEntitlementAuthorization(next);
         return sendJson(res,{success:true,authorization:next});
       }
     }
