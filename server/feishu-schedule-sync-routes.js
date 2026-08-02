@@ -705,14 +705,14 @@ function selectEntitlementForStudent(student,candidate,entitlements=[],recommend
     const result=recommendEntitlements(rows,body);
     if(!result?.recommended)return null;
     const selected=rows.find(row=>String(row.id||'')===String(result.recommended.entitlementId||result.recommended.id||''));
-    return selected&&entitlementLessonIndexMatches(selected,candidate)?selected:null;
+    return selected&&(entitlementLessonIndexMatches(selected,candidate)||splitPackageCycleLessonIndexMatches(rows,candidate))?selected:null;
   }
   return rows.find(row=>{
     if(row.status&&row.status!=='active')return false;
     if(row.courseType&&row.courseType!==candidate.course.courseType)return false;
     if(row.experienceType&&candidate.course.experienceType&&row.experienceType!==candidate.course.experienceType)return false;
     if(!specialCourseEntitlementMatches(row,candidate))return false;
-    if(!entitlementLessonIndexMatches(row,candidate))return false;
+    if(!entitlementLessonIndexMatches(row,candidate)&&!splitPackageCycleLessonIndexMatches(rows,candidate))return false;
     return Number(row.remainingLessons||0)>=candidateEntitlementLessonCount(candidate);
   })||null;
 }
@@ -735,6 +735,41 @@ function entitlementLessonIndexMatches(row={},candidate={}){
   const total=Number(row.totalLessons);
   if(Number.isFinite(total)&&total>=20&&total%10===0&&expected>10){
     return ((expected-1)%10)+1===index;
+  }
+  return false;
+}
+
+function splitPackageCycleLessonIndexMatches(rows=[],candidate={}){
+  const index=Number(candidate.lessonIndex);
+  if(!Number.isFinite(index)||index<=0)return true;
+  const activeRows=(rows||[]).filter(row=>{
+    if(row.status&&row.status!=='active')return false;
+    if(row.courseType&&candidate.course?.courseType&&row.courseType!==candidate.course.courseType)return false;
+    if(row.experienceType&&candidate.course?.experienceType&&row.experienceType!==candidate.course.experienceType)return false;
+    return Number(row.remainingLessons||0)>=0;
+  });
+  const groups=new Map();
+  activeRows.forEach(row=>{
+    const total=Number(row.totalLessons);
+    if(!Number.isFinite(total)||total<20)return;
+    const key=[row.studentId||'',row.courseType||'',row.validFrom||row.purchaseDate||'',row.ownerCoach||''].join('|');
+    const group=groups.get(key)||[];
+    group.push(row);
+    groups.set(key,group);
+  });
+  for(const group of groups.values()){
+    if(group.length<2)continue;
+    const cycleSize=Math.max(...group.map(row=>Number(row.totalLessons)||0));
+    if(!Number.isFinite(cycleSize)||cycleSize<20)return false;
+    const used=group.reduce((sum,row)=>{
+      const rowUsed=Number(row.usedLessons);
+      if(Number.isFinite(rowUsed))return sum+Math.max(0,rowUsed);
+      const total=Number(row.totalLessons);
+      const remaining=Number(row.remainingLessons);
+      return Number.isFinite(total)&&Number.isFinite(remaining)?sum+Math.max(0,total-remaining):sum;
+    },0);
+    const expected=(Math.floor(used)%cycleSize)+1;
+    if(expected===index)return true;
   }
   return false;
 }
@@ -766,7 +801,7 @@ function lessonIndexMismatchDetails(candidate,ctx={}){
       candidates=rows.filter(row=>entitlementCourseMatches(row,candidate));
     }
     candidates
-      .filter(row=>!entitlementLessonIndexMatches(row,candidate))
+      .filter(row=>!entitlementLessonIndexMatches(row,candidate)&&!splitPackageCycleLessonIndexMatches(rows,candidate))
       .slice(0,2)
       .forEach(row=>{
         const expected=entitlementExpectedLessonIndex(row);
@@ -802,8 +837,24 @@ function attachSchedulableStudents(candidate,ctx={}){
   return {...candidate,scheduleStudents,selectedEntitlements};
 }
 
+function applyPlannedEntitlementConsumption(candidate={},ctx={}){
+  if(!Array.isArray(ctx.entitlements)||!Array.isArray(candidate.selectedEntitlements)||!candidate.selectedEntitlements.length)return;
+  const count=candidateEntitlementLessonCount(candidate);
+  candidate.selectedEntitlements.forEach(selected=>{
+    const index=ctx.entitlements.findIndex(row=>String(row.id||'')===String(selected.id||''));
+    if(index<0)return;
+    const row=ctx.entitlements[index];
+    const used=Number(row.usedLessons);
+    const remaining=Number(row.remainingLessons);
+    const total=Number(row.totalLessons);
+    const nextUsed=Number.isFinite(used)?used+count:(Number.isFinite(total)&&Number.isFinite(remaining)?Math.max(0,total-remaining)+count:used);
+    const nextRemaining=Number.isFinite(remaining)?Math.max(0,remaining-count):(Number.isFinite(total)&&Number.isFinite(nextUsed)?Math.max(0,total-nextUsed):remaining);
+    ctx.entitlements[index]={...row,usedLessons:nextUsed,remainingLessons:nextRemaining,status:nextRemaining<=0?'depleted':(row.status||'active')};
+  });
+}
+
 function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],coaches=[],users=[],entitlements=[],recommendEntitlements=null,nowKey=''}={}){
-  const ctx={students,coaches,users,schedules,entitlements,recommendEntitlements};
+  const ctx={students,coaches,users,schedules,entitlements:(entitlements||[]).map(row=>({...row})),recommendEntitlements};
   const ignoredByKey=new Map((syncRows||[]).filter(row=>row.status==='ignored').map(row=>[String(row.sourceKey||''),row]));
   const syncByKey=new Map((syncRows||[]).filter(row=>row.status!=='ignored').map(row=>[String(row.sourceKey||''),row]));
   const activeSourceKeys=new Set();
@@ -885,6 +936,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       continue;
     }
     actions.push({type:candidate.course.isTrial?'create_trial_schedule':'create_schedule',sourceKey:candidate.sourceKey,candidate});
+    if(!candidate.course.isTrial)applyPlannedEntitlementConsumption(candidate,ctx);
   }
   for(const row of syncRows||[]){
     if(row.status!=='active')continue;
@@ -1600,13 +1652,13 @@ function createFeishuScheduleSyncRoutes(deps={}){
     const shouldScanAllSheets=scanAllSheets||(!startDate&&!endDate&&chinaHour()===8);
     const [feishuSheet,schedules,students,coaches,users,packages,entitlements,leads]=await Promise.all([
       loadFeishuCourses({syncRows,startDate,endDate,scanAllSheets:shouldScanAllSheets}),
-      getCachedScan(T_SCHEDULE).catch(()=>[]),
-      getCachedScan(T_STUDENTS).catch(()=>[]),
+      getCachedScan(T_SCHEDULE,{fresh:true}).catch(()=>[]),
+      getCachedScan(T_STUDENTS,{fresh:true}).catch(()=>[]),
       getCachedScan(T_COACHES).catch(()=>[]),
       getCachedScan(T_USERS).catch(()=>[]),
-      getCachedScan(T_PACKAGES).catch(()=>[]),
-      getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
-      getCachedScan(T_LEADS).catch(()=>[])
+      getCachedScan(T_PACKAGES,{fresh:true}).catch(()=>[]),
+      getCachedScan(T_ENTITLEMENTS,{fresh:true}).catch(()=>[]),
+      getCachedScan(T_LEADS,{fresh:true}).catch(()=>[])
     ]);
     const feishuCourses=feishuSheet.courses||[];
     const now=new Date().toISOString();

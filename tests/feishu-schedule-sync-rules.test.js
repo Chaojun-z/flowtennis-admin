@@ -878,6 +878,62 @@ const packageCycleLessonIndexPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(packageCycleLessonIndexPlan.summary.create, 1, '20-lesson packages should allow Feishu numbering to restart every 10 lessons');
 
+const splitPackageCycleLessonIndexPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'split-package-cycle-lesson-index-key',
+    startTime: '2026-08-05 16:30',
+    endTime: '2026-08-05 17:30',
+    coachName: 'Siren',
+    studentNames: ['丫丫'],
+    lessonIndex: 11,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-yaya', name: '丫丫', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [
+    { id: 'ent-yaya-gold', studentId: 'stu-yaya', courseType: '私教课', totalLessons: 20, usedLessons: 19, remainingLessons: 1, status: 'active', validFrom: '2026-04-27', ownerCoach: 'Siren 教练' },
+    { id: 'ent-yaya-nonprime', studentId: 'stu-yaya', courseType: '私教课', totalLessons: 20, usedLessons: 11, remainingLessons: 9, status: 'active', validFrom: '2026-04-27', ownerCoach: 'Siren 教练' }
+  ],
+  recommendEntitlements: rows => ({ recommended: { entitlementId: rows[0]?.id }, options: rows.map(row => ({ entitlementId: row.id, selectable: true })) })
+});
+assert.strictEqual(splitPackageCycleLessonIndexPlan.summary.create, 1, 'split gold/non-prime 20-lesson packages should match Feishu current-package numbering');
+
+const consecutiveFutureLessonIndexPlan = sync.buildDryRunPlan({
+  feishuCourses: [
+    {
+      ...courses[0],
+      sourceKey: 'consecutive-future-lesson-index-1',
+      startTime: '2026-08-06 14:00',
+      endTime: '2026-08-06 15:00',
+      coachName: '刘润扬教练',
+      studentNames: ['小活宝'],
+      lessonIndex: 1,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+    },
+    {
+      ...courses[0],
+      sourceKey: 'consecutive-future-lesson-index-2',
+      startTime: '2026-08-07 15:00',
+      endTime: '2026-08-07 16:00',
+      coachName: '刘润扬教练',
+      studentNames: ['小活宝'],
+      lessonIndex: 2,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+    }
+  ],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-xhb', name: '小活宝', primaryCoach: '刘润扬教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-xhb', studentId: 'stu-xhb', courseType: '私教课', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(consecutiveFutureLessonIndexPlan.summary.create, 2, 'same sync run should count earlier planned schedules before checking the next lesson index');
+
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
   syncRows: [{ id: 'sync-1', sourceKey: 'old-key', scheduleId: 'sch-old', status: 'active' }],
