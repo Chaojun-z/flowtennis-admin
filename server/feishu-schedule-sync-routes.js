@@ -54,10 +54,25 @@ function parseVenueColumnLessonText(value){
   if(parts.length<2)return null;
   const coach=parts[0];
   if(!isKnownFeishuCoachName(coach))return null;
+  const embedded=parseEmbeddedCourseFromStudentText(parts.slice(1).join(' '));
   return {
     coachName:standardCoachName(coach),
-    studentText:parts.slice(1).join(' ')
+    studentText:embedded.studentText,
+    courseText:embedded.courseText
   };
+}
+
+function parseEmbeddedCourseFromStudentText(value){
+  let text=cleanText(value);
+  let courseText='';
+  if(/体验/.test(text)){
+    courseText=/青少|儿童|少儿/.test(text)?'青少年私教【体验】':'成人私教【体验】';
+    text=cleanText(text.replace(/青少年|成人|私教|体验课|体验/g,' '));
+  }else if(/陪打/.test(text)){
+    courseText='陪打';
+    text=cleanText(text.replace(/陪打/g,' '));
+  }
+  return {studentText:text,courseText};
 }
 
 function parseLessonIndex(value){
@@ -90,7 +105,9 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
   [normalizeStudentNameKey('晨曦')]: '曦曦🐳',
   [normalizeStudentNameKey('小土豆的姐姐朋友')]: '小土豆的姐姐的朋友',
   [normalizeStudentNameKey('william弟弟')]: 'william',
-  [normalizeStudentNameKey('willliam弟弟')]: 'william'
+  [normalizeStudentNameKey('willliam弟弟')]: 'william',
+  [normalizeStudentNameKey('小萌')]: '孙小萌',
+  [normalizeStudentNameKey('黄晴 吕瑜')]: '吕瑜 黄晴'
 });
 
 const FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS = new Set([
@@ -438,7 +455,7 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
         date,
         time,
         block:{coachName:parsed.coachName},
-        courseText:'成人私教【正式】',
+        courseText:parsed.courseText||'成人私教【正式】',
         studentText:parsed.studentText,
         venueText:block.venueText,
         courtText:block.courtText
@@ -759,6 +776,71 @@ function confirmedSingleStudentSmallClass(raw={}){
   return keys.includes(normalizeStudentNameKey('曦曦🐳'))&&keys.includes(normalizeStudentNameKey('朋友'));
 }
 
+function confirmedEmptyRecruitingCourse(raw={}){
+  if((raw.studentNames||[]).length>0||cleanText(raw.studentText))return false;
+  const text=cleanText(raw.courseText||raw.course?.raw||raw.course?.specialTopic||raw.course?.courseDisplayName);
+  return /初阶训练课|初阶专项课|零基础训练营|发接发|专项/.test(text);
+}
+
+function candidateStudentNameKeys(candidate={}){
+  const values=[
+    candidate.studentText,
+    ...(candidate.studentNames||[]),
+    ...(candidate.resolvedStudents||[]).flatMap(row=>[row.name,row.studentName,row.displayName])
+  ];
+  return values.map(normalizeStudentNameKey).filter(Boolean);
+}
+
+function ownMapoFieldFeeAmount(candidate={},ratePerHour=220){
+  if(candidate.locationType==='external')return 0;
+  if(candidate.campus&&candidate.campus!=='shunyi_mapo')return 0;
+  return Math.round(Number(candidate.lessonCount||0)*ratePerHour*100)/100;
+}
+
+function confirmedDirectPrivatePayment(candidate={}){
+  if(candidate.course?.isTrial)return null;
+  if(candidate.course?.courseType!=='私教课')return null;
+  const keys=candidateStudentNameKeys(candidate);
+  const has=(name)=>keys.includes(normalizeStudentNameKey(name));
+  if(has('小鹿')){
+    return {settlementType:'direct',payMethod:'赠送',paidAmount:0,confirmedPaymentNote:'小鹿固定免费赠送'};
+  }
+  if(has('小萌')||has('孙小萌')){
+    return {
+      settlementType:'direct',
+      payMethod:'微信',
+      paidAmount:Math.round(Number(candidate.lessonCount||0)*400*100)/100,
+      fieldFeeAmount:ownMapoFieldFeeAmount(candidate),
+      fieldFeePayMethod:'微信',
+      fieldFeeReason:'单次付费场地费',
+      confirmedPaymentNote:'小萌按孙小萌单次付费：课时费400元/小时，场地费按马坡标准'
+    };
+  }
+  if(has('yx')||has('YX')){
+    return {
+      settlementType:'direct',
+      payMethod:'微信',
+      paidAmount:Math.round(Number(candidate.lessonCount||0)*300*100)/100,
+      fieldFeeAmount:ownMapoFieldFeeAmount(candidate),
+      fieldFeePayMethod:'微信',
+      fieldFeeReason:'单次付费场地费',
+      confirmedPaymentNote:'YX单次付费：课时费300元/小时，场地费按马坡原价'
+    };
+  }
+  if(has('胡之超')){
+    return {
+      settlementType:'direct',
+      payMethod:'微信',
+      paidAmount:Math.round(Number(candidate.lessonCount||0)*300*100)/100,
+      fieldFeeAmount:0,
+      fieldFeePayMethod:'',
+      fieldFeeReason:'',
+      confirmedPaymentNote:'胡之超课时费300元/小时；场地费由三方订场会员储值流水处理，排课同步不重复扣款'
+    };
+  }
+  return null;
+}
+
 function hasSelectableEntitlement(student,candidate,entitlements=[],recommendEntitlements){
   return !!selectEntitlementForStudent(student,candidate,entitlements,recommendEntitlements);
 }
@@ -883,6 +965,8 @@ function attachSchedulableStudents(candidate,ctx={}){
   if(candidate.errors.length)return candidate;
   if(candidate.course.isTrial)return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
   if(candidate.course.courseType==='陪打')return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
+  const confirmedPayment=confirmedDirectPrivatePayment(candidate);
+  if(confirmedPayment)return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1),confirmedPayment};
   const selectedEntitlements=[];
   const scheduleStudents=candidate.resolvedStudents.filter(student=>{
     const selected=selectEntitlementForStudent(student,candidate,ctx.entitlements,ctx.recommendEntitlements);
@@ -935,6 +1019,11 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     if(ignored){
       activeSourceKeys.add(raw.sourceKey);
       actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:ignored});
+      continue;
+    }
+    if(confirmedEmptyRecruitingCourse(raw)){
+      activeSourceKeys.add(raw.sourceKey);
+      actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:{status:'ignored',sourceKey:raw.sourceKey,reason:'空学员招募课暂不导入'}});
       continue;
     }
     let candidate=buildResolvedCandidate(raw,ctx);
@@ -1020,6 +1109,8 @@ function buildScheduleBody(candidate,extra={}){
   const experienceType=candidate.course.experienceType||'';
   const isTrial=courseType==='体验课';
   const isCompanion=courseType==='陪打';
+  const confirmedPayment=candidate.confirmedPayment||{};
+  const isConfirmedDirect=confirmedPayment.settlementType==='direct';
   const smallClassType=courseType==='小班课'?(candidate.course.smallClassType||'single'):'';
   const smallClassLevel2=smallClassType==='bootcamp'?'训练营':(smallClassType==='family'?'亲子课':(smallClassType==='dropin'?'随到随学':'单次'));
   const studentName=scheduleStudents.map(row=>row.name||row.id).join('、');
@@ -1058,19 +1149,19 @@ function buildScheduleBody(candidate,extra={}){
     externalNotes:'',
     lessonCount:candidate.lessonCount,
     status:'已排课',
-    settlementType:isCompanion?'direct':'package',
-    payMethod:isCompanion?(candidate.course.payMethod||'待确认'):'',
-    paidAmount:isCompanion?Number(candidate.course.paidAmount||100):0,
+    settlementType:isCompanion||isConfirmedDirect?'direct':'package',
+    payMethod:isConfirmedDirect?(confirmedPayment.payMethod||'待确认'):(isCompanion?(candidate.course.payMethod||'待确认'):''),
+    paidAmount:isConfirmedDirect?Number(confirmedPayment.paidAmount||0):(isCompanion?Number(candidate.course.paidAmount||100):0),
     entitlementId,
     entitlementIds,
     packageName:extra.packageName||entitlement.packageName||purchase.packageName||'',
     purchaseId:extra.purchaseId||entitlement.purchaseId||purchase.id||'',
     timeBand:'',
     requiresFieldFee:false,
-    fieldFeeReason:'',
-    fieldFeeAmount:0,
-    fieldFeePayMethod:'',
-    fieldFeeNote:'',
+    fieldFeeReason:confirmedPayment.fieldFeeReason||'',
+    fieldFeeAmount:Number(confirmedPayment.fieldFeeAmount||0),
+    fieldFeePayMethod:confirmedPayment.fieldFeePayMethod||'',
+    fieldFeeNote:confirmedPayment.fieldFeeNote||'',
     cancelReason:'',
     notifyStatus:'',
     confirmStatus:'',
@@ -1078,7 +1169,7 @@ function buildScheduleBody(candidate,extra={}){
     sourceLeadId:extra.sourceLeadId||'',
     sourceLeadName:extra.sourceLeadName||'',
     actualStudentCount:Math.max(scheduleStudents.length,candidate.studentNames.length||1),
-    notes:[candidate.sharedPackageNote,`飞书排课表同步 ${candidate.sheetTitle||candidate.sheetId||''} ${candidate.sourceCell||''}`.trim()].filter(Boolean).join('；')
+    notes:[candidate.sharedPackageNote,confirmedPayment.confirmedPaymentNote,`飞书排课表同步 ${candidate.sheetTitle||candidate.sheetId||''} ${candidate.sourceCell||''}`.trim()].filter(Boolean).join('；')
   };
 }
 

@@ -292,6 +292,146 @@ assert.strictEqual(companionDirectPayPlan.summary.create, 1, 'future companion l
 assert.strictEqual(sync.buildScheduleBody(companionDirectPayPlan.actions[0].candidate).settlementType, 'direct', 'companion lesson should use direct payment settlement');
 assert.strictEqual(sync.buildScheduleBody(companionDirectPayPlan.actions[0].candidate).paidAmount, 100, 'companion lesson should default to 100 yuan direct payment');
 
+const confirmedGiftPrivatePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'xiaolu-gift-private-key',
+    startTime: '2026-08-05 14:00',
+    endTime: '2026-08-05 16:00',
+    date: '2026-08-05',
+    coachName: '朝珺',
+    studentNames: ['小鹿'],
+    studentText: '小鹿',
+    lessonCount: 2,
+    durationMinutes: 120,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-xiaolu', name: '小鹿' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  entitlements: [],
+  nowKey: '2026-08-05 13:00'
+});
+assert.strictEqual(confirmedGiftPrivatePlan.summary.create, 1, 'confirmed gift private lessons should not require package entitlement');
+assert.strictEqual(sync.buildScheduleBody(confirmedGiftPrivatePlan.actions[0].candidate).payMethod, '赠送', 'Xiaolu private lessons should be free gift lessons');
+assert.strictEqual(sync.buildScheduleBody(confirmedGiftPrivatePlan.actions[0].candidate).paidAmount, 0, 'gift private lessons should not collect payment');
+
+const confirmedDirectPrivatePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'xiaomeng-direct-private-key',
+    startTime: '2026-08-08 10:00',
+    endTime: '2026-08-08 12:00',
+    date: '2026-08-08',
+    coachName: '朝珺',
+    studentNames: ['小萌'],
+    studentText: '小萌',
+    lessonCount: 2,
+    durationMinutes: 120,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-sun-xiaomeng', name: '孙小萌' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  entitlements: [],
+  nowKey: '2026-08-08 09:00'
+});
+assert.strictEqual(confirmedDirectPrivatePlan.summary.create, 1, 'confirmed direct private lessons should not require package entitlement');
+assert.strictEqual(confirmedDirectPrivatePlan.actions[0].candidate.resolvedStudents[0].name, '孙小萌', '小萌 should resolve to 孙小萌');
+const confirmedDirectPrivateBody = sync.buildScheduleBody(confirmedDirectPrivatePlan.actions[0].candidate);
+assert.strictEqual(confirmedDirectPrivateBody.settlementType, 'direct', 'Sun Xiaomeng private lessons should be direct paid');
+assert.strictEqual(confirmedDirectPrivateBody.paidAmount, 800, 'Sun Xiaomeng two-hour lesson fee should be 800');
+assert.strictEqual(confirmedDirectPrivateBody.fieldFeeAmount, 440, 'Sun Xiaomeng two-hour Mapo field fee should be 440');
+assert.strictEqual(confirmedDirectPrivateBody.fieldFeePayMethod, '微信', 'Sun Xiaomeng field fee should be paid by WeChat');
+
+const yxDirectPrivatePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...confirmedDirectPrivatePlan.actions[0].candidate,
+    sourceKey: 'yx-direct-private-key',
+    studentNames: ['yx'],
+    studentText: 'yx'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-yx', name: 'YX' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  entitlements: [],
+  nowKey: '2026-08-08 09:00'
+});
+assert.strictEqual(yxDirectPrivatePlan.summary.create, 1, 'YX direct private lessons should not require package entitlement');
+assert.strictEqual(sync.buildScheduleBody(yxDirectPrivatePlan.actions[0].candidate).paidAmount, 600, 'YX two-hour lesson fee should be 600');
+
+const huZhichaoDirectPrivatePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...confirmedDirectPrivatePlan.actions[0].candidate,
+    sourceKey: 'huzhichao-direct-private-key',
+    studentNames: ['胡之超'],
+    studentText: '胡之超'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-huzhichao', name: '胡之超' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  entitlements: [],
+  nowKey: '2026-08-08 09:00'
+});
+const huZhichaoDirectBody = sync.buildScheduleBody(huZhichaoDirectPrivatePlan.actions[0].candidate);
+assert.strictEqual(huZhichaoDirectPrivatePlan.summary.create, 1, 'Hu Zhichao direct private lessons should not require package entitlement');
+assert.strictEqual(huZhichaoDirectBody.paidAmount, 600, 'Hu Zhichao two-hour lesson fee should be 600');
+assert.strictEqual(huZhichaoDirectBody.fieldFeeAmount, 0, 'Hu Zhichao schedule sync should not duplicate stored-value venue fee ledger');
+assert.match(huZhichaoDirectBody.notes, /场地费由三方订场/, 'Hu Zhichao direct private notes should explain the venue fee source');
+
+const reorderedPairStudentPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'huangqing-lv-yu-key',
+    startTime: '2026-08-08 09:00',
+    endTime: '2026-08-08 10:00',
+    date: '2026-08-08',
+    coachName: '朝珺',
+    studentNames: ['黄晴 吕瑜'],
+    studentText: '黄晴 吕瑜（9）',
+    lessonIndex: 9,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-pair', name: '吕瑜 黄晴' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  entitlements: [{ id: 'ent-pair', studentId: 'stu-pair', courseType: '私教课', totalLessons: 10, usedLessons: 8, remainingLessons: 2, status: 'active' }],
+  nowKey: '2026-08-08 08:00'
+});
+assert.strictEqual(reorderedPairStudentPlan.summary.create, 1, 'confirmed reordered pair name should use the existing package');
+assert.strictEqual(reorderedPairStudentPlan.actions[0].candidate.resolvedStudents[0].name, '吕瑜 黄晴', '黄晴 吕瑜 should resolve to 吕瑜 黄晴');
+
+const emptyRecruitingCoursePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'empty-recruiting-course-key',
+    startTime: '2026-08-08 14:00',
+    endTime: '2026-08-08 16:00',
+    date: '2026-08-08',
+    coachName: '杨',
+    studentNames: [],
+    studentText: '',
+    courseText: '初阶训练课体验课/正式课',
+    course: { ok: true, courseType: '专项课', experienceType: '', audience: '', isTrial: false, specialTopic: '初阶专项课' }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [{ id: 'coach-yang', name: '杨教练' }],
+  users: []
+});
+assert.strictEqual(emptyRecruitingCoursePlan.summary.noop, 1, 'empty recruiting courses should be ignored instead of notifying operations every run');
+
 const xiaozhuSingleSmallClassPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
