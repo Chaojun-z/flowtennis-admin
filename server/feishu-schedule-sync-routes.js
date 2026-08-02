@@ -40,6 +40,26 @@ function standardCoachName(value){
   return FEISHU_COACH_NAME_ALIASES[normalizeNameKey(raw)]||raw;
 }
 
+function isKnownFeishuCoachName(value){
+  const key=normalizeNameKey(value);
+  if(!key)return false;
+  if(FEISHU_COACH_NAME_ALIASES[key])return true;
+  return Object.values(FEISHU_COACH_NAME_ALIASES).some(name=>normalizeNameKey(name)===key);
+}
+
+function parseVenueColumnLessonText(value){
+  const text=cleanText(value).replace(/[：:，,、/]+/g,' ');
+  if(!text)return null;
+  const parts=text.split(/\s+/).map(cleanText).filter(Boolean);
+  if(parts.length<2)return null;
+  const coach=parts[0];
+  if(!isKnownFeishuCoachName(coach))return null;
+  return {
+    coachName:standardCoachName(coach),
+    studentText:parts.slice(1).join(' ')
+  };
+}
+
 function parseLessonIndex(value){
   const m=cleanText(value).match(/[（(]\s*(\d+)\s*[）)]/);
   return m?parseInt(m[1],10):null;
@@ -329,6 +349,33 @@ function buildCoachBlocks(values=[]){
   return {headerRow,blocks};
 }
 
+function titleAtOrBefore(row=[],col=0){
+  for(let c=col;c>=0;c--){
+    const title=cleanText(row[c]);
+    if(title)return title;
+  }
+  return '';
+}
+
+function buildVenueColumnBlocks(values=[],headerRow=1){
+  const row=values[headerRow]||[];
+  const titleRow=values[Math.max(0,headerRow-1)]||[];
+  const blocks=[];
+  for(let c=0;c<row.length;c++){
+    const courtText=cleanText(row[c]);
+    if(!/^\d+\s*号(?:场)?$/.test(courtText))continue;
+    const venueText=titleAtOrBefore(titleRow,c);
+    if(!/马坡/.test(venueText))continue;
+    blocks.push({
+      startCol:c,
+      cellCol:c,
+      venueText,
+      courtText
+    });
+  }
+  return blocks;
+}
+
 function lessonCellKey(cell){
   return [
     cell.date,
@@ -353,6 +400,7 @@ function isLikelySectionCell(cell={}){
 function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}={}){
   const merged=applyMergesToValues(values,merges);
   const {headerRow,blocks}=buildCoachBlocks(merged);
+  const venueBlocks=buildVenueColumnBlocks(merged,headerRow);
   const cells=[];
   const lastCellByBlock=new Map();
   let currentDate='';
@@ -378,6 +426,24 @@ function parseFeishuScheduleRows({values=[],merges=[],sheetId='',sheetTitle=''}=
       const cell={sheetId,sheetTitle,rowIndex:r,colIndex:block.courseCol,date,time,block,courseText,studentText,venueText,courtText};
       cells.push(cell);
       lastCellByBlock.set(block.startCol,cell);
+    }
+    for(const block of venueBlocks){
+      const parsed=parseVenueColumnLessonText(row[block.cellCol]);
+      if(!parsed)continue;
+      const cell={
+        sheetId,
+        sheetTitle,
+        rowIndex:r,
+        colIndex:block.cellCol,
+        date,
+        time,
+        block:{coachName:parsed.coachName},
+        courseText:'成人私教【正式】',
+        studentText:parsed.studentText,
+        venueText:block.venueText,
+        courtText:block.courtText
+      };
+      cells.push(cell);
     }
   }
   const grouped=[];

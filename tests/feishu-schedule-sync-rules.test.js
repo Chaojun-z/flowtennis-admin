@@ -128,6 +128,25 @@ const chenxiCorrectionCourses = sync.parseFeishuScheduleRows({ values: chenxiCor
 assert.strictEqual(chenxiCorrectionCourses[0].course.courseType, '私教课', 'confirmed Chenxi copy-paste mistake should sync as private lesson');
 assert.deepStrictEqual(chenxiCorrectionCourses[0].studentNames, ['晨曦'], 'confirmed Chenxi friend lesson should still use the package owner only');
 
+const venueColumnCoachValues = [
+  ['时间', null, null, '马坡室内', null, null, null],
+  ['日期', '星期', '时段', '1号', '2号', '3号', '4号'],
+  [46235, '六', '10:00-10:30', '朝珺 小萌', '', '林铭', ''],
+  [null, null, '10:30-11:00', '朝珺 小萌', '', 'siren', ''],
+  [null, null, '15:30-16:00', '朝珺 胡之超', '', 'siren', ''],
+  [null, null, '16:00-16:30', '朝珺 胡之超', '', '', ''],
+  [null, null, '17:30-18:00', '朝珺 yx', '', '', ''],
+  [null, null, '18:00-18:30', '朝珺 yx', '', '', '']
+];
+const venueColumnCoachCourses = sync.parseFeishuScheduleRows({ values: venueColumnCoachValues, sheetId: 'CurrentWeek', sheetTitle: '7.27-8.2' });
+assert.strictEqual(venueColumnCoachCourses.length, 3, 'venue columns should import cells written as coach plus student');
+assert.deepStrictEqual(venueColumnCoachCourses.map(item => item.coachName), ['朝珺教练', '朝珺教练', '朝珺教练'], 'venue column coach aliases should be standardized');
+assert.deepStrictEqual(venueColumnCoachCourses.map(item => item.studentNames[0]), ['小萌', '胡之超', 'yx'], 'venue column should keep the student text after the coach name');
+assert.deepStrictEqual(venueColumnCoachCourses.map(item => item.startTime), ['2026-08-01 10:00', '2026-08-01 15:30', '2026-08-01 17:30'], 'venue column courses should keep their start times');
+assert.deepStrictEqual(venueColumnCoachCourses.map(item => item.endTime), ['2026-08-01 11:00', '2026-08-01 16:30', '2026-08-01 18:30'], 'venue column 30-minute rows should merge into 1-hour courses');
+assert.strictEqual(venueColumnCoachCourses[0].venue, '1号场', 'venue column number should become the schedule court');
+assert.strictEqual(venueColumnCoachCourses[0].course.courseType, '私教课', 'venue column coach plus student should default to formal private lesson');
+
 const plan = sync.buildDryRunPlan({
   feishuCourses: courses.slice(0, 1),
   syncRows: [],
