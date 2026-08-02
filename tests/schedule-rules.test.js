@@ -145,9 +145,9 @@ assert.doesNotThrow(
   'family small group lesson should allow one main customer when actual attendance count is at least 2'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertScheduleEntitlementRequired({
-    id: 'sch-family-too-few',
+    id: 'sch-family-single-representative',
     status: '已排课',
     settlementType: 'package',
     courseType: '小班课',
@@ -156,8 +156,7 @@ assert.throws(
     studentIds: ['parent-1'],
     actualStudentCount: 1
   }),
-  /亲子课至少 2 人到场/,
-  'family small group lesson should reject fewer than 2 actual attendees'
+  'family small group lesson should allow one representative customer'
 );
 
 assert.doesNotThrow(

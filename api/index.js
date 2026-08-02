@@ -972,7 +972,6 @@ function assertSmallGroupScheduleRules(rec){
   if(smallClassType==='family'){
     if(actual.length<=0)throw new Error('请先选择亲子课主客户');
     if(actualStudentCount>4)throw new Error('小班课最多 4 人');
-    if(actualStudentCount<2)throw new Error('亲子课至少 2 人到场');
     return;
   }
   if(actual.length>4)throw new Error('小班课最多 4 人');
