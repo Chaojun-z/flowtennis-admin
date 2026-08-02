@@ -21,14 +21,32 @@ assert.doesNotMatch(
 );
 
 assert.match(
+  coachOpsSource,
+  /normalized==='专项课'\)return 'type-special'/,
+  'coach schedule should map special courses to their own color class'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-legend-dot\.special\{background:#0891B2\}/,
+  'coach schedule legend should render special courses with the requested cyan color'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-course-card\.type-special::before,#page-coachschedule \.coach-ops-more-course\.type-special::before\{background:#0891B2\}/,
+  'coach schedule month cards and popover rows should render special courses with the requested cyan color'
+);
+
+assert.match(
   indexHtml,
-  /pages\.css\?v=20260727-coach-month-calendar-v3/,
+  /pages\.css\?v=20260802-course-colors-coachschedule-v1/,
   'coach schedule month calendar CSS version should force a fresh browser load'
 );
 
 assert.match(
   indexHtml,
-  /coachops\.js\?v=20260728-repeatable-coachops-renderer-v6/,
+  /coachops\.js\?v=20260802-course-colors-coachschedule-v1/,
   'coach schedule month calendar JS version should force a fresh browser load'
 );
 

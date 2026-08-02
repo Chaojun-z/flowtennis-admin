@@ -251,7 +251,7 @@ function coachOpsQuickCreate(){
 function coachOpsCourseTypeTagClass(type){
   const normalized=normalizeCourseType(type);
   if(normalized==='体验课')return 'type-trial';
-  if(normalized==='训练营')return 'type-camp';
+  if(normalized==='训练营')return 'type-camp';if(normalized==='专项课')return 'type-special';
   if(normalized==='大师课')return 'type-master';
   if(normalized==='小班课')return 'type-small';
   if(normalized==='陪打')return 'type-partner';
@@ -700,7 +700,7 @@ function renderCoachOpsMobileTimeline(rows,mode,range){
     return `<div class="coach-ops-row coach-ops-mobile-row"><div class="coach-ops-name"><span>${esc(r.name)}</span></div><div class="coach-ops-mobile-list">${list}</div></div>`;
   }).join('');
 }
-function renderCoachOps(){
+function renderCoachOps(){if(currentPage!=='coachschedule'&&currentPage!=='coachops')return;
   const previousScrollLeft=preserveCoachOpsScrollLeft();
   ensureCoachOpsReportDateControls();
   const rangeDropdownId=renderCoachOpsRangeFilter();

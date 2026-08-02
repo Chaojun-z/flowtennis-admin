@@ -1642,6 +1642,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
   #page-operations .operations-funnel-body::before{display:none}
   #page-operations .operations-funnel-loss{align-items:flex-start;text-align:left}
 }
+
 @keyframes tmsSpin{to{transform:rotate(360deg)}}
 .sc-icon{display:none}
 .loading{text-align:center;padding:40px;color:var(--ts);font-size:13px}
@@ -2975,3 +2976,41 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
   body.coach-mobile .ios-list-sub{font-size:13px;color:var(--ts);line-height:1.5}
   body.coach-mobile .ios-list-chevron{color:var(--td);opacity:0.6;display:flex;align-items:center}
 }
+
+/* final course type color overrides */
+.tms-tag.type-private{background:#EFF6FF;color:#1D4ED8}
+.tms-tag.type-trial{background:#FFFBEB;color:#B45309}
+.tms-tag.type-special{background:#ECFEFF;color:#0E7490}
+.tms-tag.type-small,.tms-tag.type-camp{background:#ECFDF5;color:#047857}
+.tms-tag.type-master{background:#FEF2F2;color:#B91C1C}
+.tms-tag.type-partner{background:#F5F3FF;color:#6D28D9}
+#page-coachschedule .coach-ops-legend-dot.private{background:#2563EB}
+#page-coachschedule .coach-ops-legend-dot.trial{background:#F59E0B}
+#page-coachschedule .coach-ops-legend-dot.special{background:#0891B2}
+#page-coachschedule .coach-ops-legend-dot.small,#page-coachschedule .coach-ops-legend-dot.camp{background:#10B981}
+#page-coachschedule .coach-ops-legend-dot.master{background:#EF4444}
+#page-coachschedule .coach-ops-legend-dot.partner{background:#8B5CF6}
+#page-coachschedule .coach-ops-block.type-private,#page-coachschedule .coach-ops-day-board .coach-ops-block.type-private,#page-coachschedule .coach-ops-week-block.type-private{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}
+#page-coachschedule .coach-ops-block.type-trial,#page-coachschedule .coach-ops-day-board .coach-ops-block.type-trial,#page-coachschedule .coach-ops-week-block.type-trial{background:#FFFBEB;border-color:#FDE68A;color:#B45309}
+#page-coachschedule .coach-ops-block.type-special,#page-coachschedule .coach-ops-day-board .coach-ops-block.type-special,#page-coachschedule .coach-ops-week-block.type-special{background:#ECFEFF;border-color:#A5F3FC;color:#0E7490}
+#page-coachschedule .coach-ops-block.type-small,#page-coachschedule .coach-ops-block.type-camp,#page-coachschedule .coach-ops-day-board .coach-ops-block.type-small,#page-coachschedule .coach-ops-day-board .coach-ops-block.type-camp,#page-coachschedule .coach-ops-week-block.type-small,#page-coachschedule .coach-ops-week-block.type-camp{background:#ECFDF5;border-color:#A7F3D0;color:#047857}
+#page-coachschedule .coach-ops-block.type-master,#page-coachschedule .coach-ops-day-board .coach-ops-block.type-master,#page-coachschedule .coach-ops-week-block.type-master{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}
+#page-coachschedule .coach-ops-block.type-partner,#page-coachschedule .coach-ops-day-board .coach-ops-block.type-partner,#page-coachschedule .coach-ops-week-block.type-partner{background:#F5F3FF;border-color:#DDD6FE;color:#6D28D9}
+#page-coachschedule .coach-ops-card-dot,#page-coachschedule .coach-ops-block.type-private .coach-ops-card-dot,#page-coachschedule .coach-ops-week-block.type-private .coach-ops-card-dot{background:#2563EB}
+#page-coachschedule .coach-ops-block.type-trial .coach-ops-card-dot,#page-coachschedule .coach-ops-week-block.type-trial .coach-ops-card-dot{background:#F59E0B}
+#page-coachschedule .coach-ops-block.type-special .coach-ops-card-dot,#page-coachschedule .coach-ops-week-block.type-special .coach-ops-card-dot{background:#0891B2}
+#page-coachschedule .coach-ops-block.type-small .coach-ops-card-dot,#page-coachschedule .coach-ops-block.type-camp .coach-ops-card-dot,#page-coachschedule .coach-ops-week-block.type-small .coach-ops-card-dot,#page-coachschedule .coach-ops-week-block.type-camp .coach-ops-card-dot{background:#10B981}
+#page-coachschedule .coach-ops-block.type-master .coach-ops-card-dot,#page-coachschedule .coach-ops-week-block.type-master .coach-ops-card-dot{background:#EF4444}
+#page-coachschedule .coach-ops-block.type-partner .coach-ops-card-dot,#page-coachschedule .coach-ops-week-block.type-partner .coach-ops-card-dot{background:#8B5CF6}
+#page-coachschedule .coach-ops-course-card::before,#page-coachschedule .coach-ops-more-course::before{background:#2563EB}
+#page-coachschedule .coach-ops-course-card.type-trial::before,#page-coachschedule .coach-ops-more-course.type-trial::before{background:#F59E0B}
+#page-coachschedule .coach-ops-course-card.type-special::before,#page-coachschedule .coach-ops-more-course.type-special::before{background:#0891B2}
+#page-coachschedule .coach-ops-course-card.type-small::before,#page-coachschedule .coach-ops-course-card.type-camp::before,#page-coachschedule .coach-ops-more-course.type-small::before,#page-coachschedule .coach-ops-more-course.type-camp::before{background:#10B981}
+#page-coachschedule .coach-ops-course-card.type-master::before,#page-coachschedule .coach-ops-more-course.type-master::before{background:#EF4444}
+#page-coachschedule .coach-ops-course-card.type-partner::before,#page-coachschedule .coach-ops-more-course.type-partner::before{background:#8B5CF6}
+body.admin-mobile #page-coachschedule .coach-ops-mobile-card{border-left-color:#2563EB}
+body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-trial{border-left-color:#F59E0B}
+body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-special{border-left-color:#0891B2}
+body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-small,body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-camp{border-left-color:#10B981}
+body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-master{border-left-color:#EF4444}
+body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-partner{border-left-color:#8B5CF6}

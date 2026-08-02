@@ -808,6 +808,16 @@ function renderPageLoading(pg){
   if(pg==='students')renderStudentTableLoading();
   if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
+  if(pg==='coachschedule'){
+    loadedDatasets.delete('workbenchPage');
+    const grid=document.querySelector('#page-coachschedule .coach-ops-grid-card');
+    const timeline=document.getElementById('coachOpsTimeline');
+    if(grid)grid.classList.add('is-loading');
+    if(timeline){
+      timeline.classList.add('is-skeleton');
+      timeline.innerHTML='<div class="coach-ops-day-loading-panel"></div>';
+    }
+  }
   if(pg==='leads')renderLeadTableLoading();
   if(pg==='operations'&&typeof renderOperationsLoading==='function')renderOperationsLoading();
   else if(pg==='operations')renderBlockLoading('page-operations','经营分析加载中...');

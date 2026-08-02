@@ -1053,6 +1053,7 @@ function productTypeTagClass(type){
   const normalized=normalizeCourseType(type);
   if(normalized==='体验课')return 'type-trial';
   if(normalized==='训练营')return 'type-camp';
+  if(normalized==='专项课')return 'type-special';
   if(normalized==='大师课')return 'type-master';
   if(normalized==='小班课')return 'type-small';
   if(normalized==='陪打')return 'type-partner';
