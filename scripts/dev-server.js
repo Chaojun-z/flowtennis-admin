@@ -16,6 +16,18 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // API bridge to the Vercel-style handler
 app.all('/api/*', async (req, res) => {
+  if (process.env.LOCAL_FINANCE_PAGE_PROXY === 'online' && req.method === 'GET' && req.path === '/api/page-data/finance') {
+    const target = new URL(req.originalUrl.replace(/^\/api/, '/api'), 'https://www.flowtennis.cn');
+    const headers = { 'Cache-Control': 'no-cache' };
+    if (req.headers.authorization) headers.Authorization = req.headers.authorization;
+    if (req.headers.cookie) headers.Cookie = req.headers.cookie;
+    const upstream = await fetch(target, { headers });
+    const body = await upstream.text();
+    res.status(upstream.status);
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json; charset=utf-8');
+    return res.end(body);
+  }
+
   // Provide minimal Express-style helpers used by api/index.js
   res.status = (code) => {
     res.statusCode = code;
@@ -48,4 +60,3 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(port, () => {
   console.log(`FlowTennis local dev: http://127.0.0.1:${port}`);
 });
-

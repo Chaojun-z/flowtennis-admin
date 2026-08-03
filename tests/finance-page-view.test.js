@@ -77,7 +77,7 @@ assert.match(source,/finance-revenue-remark/,'revenue notes should render as a s
 assert.match(recognizedPanel,/financeConsumeTbody[\s\S]*交易时间[\s\S]*姓名[\s\S]*业务类型[\s\S]*支付方式[\s\S]*扣减标的[\s\S]*确认收入[\s\S]*校区[\s\S]*操作人[\s\S]*备注/,'recognized table should follow the owner-facing ledger column order');
 assert.doesNotMatch(recognizedPanel,/确认日期|客户|确认类型|来源项目|状态|关联单据/,'recognized table should remove old internal source/status columns');
 assert.doesNotMatch(source,/先看总账和顶部汇总/,'finance overview should remove the old guidance note');
-assert.match(ledgerPanel,/financeLedgerTbody[\s\S]*交易时间[\s\S]*姓名[\s\S]*交易类型[\s\S]*交易金额[\s\S]*业务类型[\s\S]*支付方式[\s\S]*校区[\s\S]*操作人[\s\S]*备注/,'ledger table should use the standardized owner-facing column order');
+assert.match(ledgerPanel,/financeLedgerTbody[\s\S]*交易时间[\s\S]*姓名[\s\S]*交易类型[\s\S]*交易金额[\s\S]*业务类型[\s\S]*支付方式[\s\S]*校区[\s\S]*操作来源[\s\S]*业务说明/,'ledger table should use the standardized owner-facing column order');
 assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'业务类型'/,'ledger business type filter should use linked standardized count labels');
 assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'交易类型'/,'ledger transaction type filter should use linked standardized count labels');
 assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'支付方式'/,'ledger pay method filter should use linked standardized count labels');
@@ -91,7 +91,7 @@ assert.doesNotMatch(functionSource(source,'renderFinanceRevenueFilterDropdowns')
 assert.match(source,/financeOperatorDisplayText/,'ledger should normalize operator display text in the frontend');
 assert.match(source,/financeDateTimeDisplayText/,'ledger should render full Beijing datetime text');
 assert.match(source,/const businessDate=String\(row\?\.businessDate\|\|row\?\.purchaseDate\|\|''\)/,'revenue transaction time should read purchaseDate when businessDate is not present');
-assert.match(source,/function financeDateTimeDisplayText\([\s\S]*businessDate\.slice\(0,19\)/,'ledger transaction time should keep seconds when backend provides full datetime');
+assert.match(source,/function financeDateTimeDisplayText\([\s\S]*businessDate\.slice\(11,16\)/,'ledger transaction time should show minute precision without fake seconds');
 assert.doesNotMatch(source,/timeText\.match/,'ledger transaction time should not fall back to course time text');
 assert.match(source,/finance-ledger-remark/,'ledger notes should render as a single-line remark');
 assert.match(source,/function financeHumanNote\(/,'finance tables should clean system-generated audit notes before display');
@@ -118,9 +118,10 @@ assert.match(ledgerShell,/buttonsId:'financeLedgerPagerBtns'/,'ledger should kee
 assert.doesNotMatch(source,/financeLedgerFromHost|financeLedgerToHost|coachOpsRevenueFromHost|coachOpsRevenueToHost|coachOpsConsumeFromHost|coachOpsConsumeToHost/,'finance panels should remove local date filters and use the global top time filter');
 assert.doesNotMatch(source,/document\.getElementById\('financeLedgerFrom'\)|document\.getElementById\('coachOpsRevenueFrom'\)|document\.getElementById\('coachOpsConsumeFrom'\)/,'finance data rows should not read removed local date inputs');
 assert.doesNotMatch(source,/未入账明细/,'ledger should no longer show a second prepaid detail table');
-assert.match(source,/总实收[\s\S]*总核销确收[\s\S]*会员储值[\s\S]*散客订场[\s\S]*课程收入/,'ledger summary should show the five requested owner-facing finance metrics');
+assert.match(source,/收款合计[\s\S]*核销确收[\s\S]*会员储值[\s\S]*散客订场[\s\S]*课程收款/,'ledger summary should show the five requested owner-facing finance metrics');
 assert.doesNotMatch(source,/散客单次课程|课包专项/,'ledger summary should merge direct course and package income into course income');
-assert.match(source,/课程实收 vs 课程已核销/,'merged course summary card should explain course income and recognized revenue');
+assert.match(source,/课程及课包收款[\s\S]*课程核销/,'merged course summary card should explain course income and recognized revenue');
+assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/订场实收 \/ 核销|会员储值 \/ 消耗|financeInlineMoneyWithPercent/,'overview cards should not mix cash income with recognized/consumed amounts in the main value');
 assert.match(source,/class="tms-stat-sub"/,'finance summary card captions should use the visible shared caption style');
 assert.doesNotMatch(source,/总核销确收[\s\S]{0,260}financePercent\(metrics\.totalRecognized,metrics\.totalCash\)/,'overview total recognized card should not show a recognized-vs-cash percentage under date filters');
 assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/storedValueRecognized,metrics\.totalRecognized/,'overview membership recognized amount should not show a percentage');
