@@ -352,7 +352,7 @@ function teachingPackageName(row = {}, purchase = {}) {
 function entitlementLedgerOwnerStudentId(row = {}, entitlementsById = new Map(), purchasesById = new Map()) {
   const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
   const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
-  return text(row.studentId || entitlement.studentId || purchase.studentId);
+  return text(entitlement.studentId || purchase.studentId || row.studentId);
 }
 
 function entitlementLedgerStudentIds(row = {}, entitlementsById = new Map(), purchasesById = new Map(), schedulesById = new Map()) {
@@ -367,6 +367,22 @@ function entitlementLedgerStudentIds(row = {}, entitlementsById = new Map(), pur
 
 function entitlementLedgerStudentId(row = {}, entitlementsById = new Map(), purchasesById = new Map(), schedulesById = new Map()) {
   return entitlementLedgerStudentIds(row, entitlementsById, purchasesById, schedulesById)[0] || '';
+}
+
+function studentDisplayNameById(studentId = '', studentsById = new Map()) {
+  const row = studentsById.get(text(studentId)) || {};
+  return text(row.name || row.studentName || row.displayName);
+}
+
+function ledgerRelationText({ currentStudentId = '', actualStudentIds = [], ownerStudentId = '', studentsById = new Map() } = {}) {
+  const currentId = text(currentStudentId);
+  const ownerId = text(ownerStudentId);
+  if (!currentId || !ownerId || actualStudentIds.includes(ownerId)) return '';
+  const ownerName = studentDisplayNameById(ownerId, studentsById) || '课包所有人';
+  const actualNames = actualStudentIds.map(id => studentDisplayNameById(id, studentsById)).filter(Boolean);
+  if (currentId === ownerId) return `${actualNames.join('、') || '其他学员'} 使用了 ${ownerName} 的课包`;
+  if (actualStudentIds.includes(currentId)) return `使用 ${ownerName} 的课包`;
+  return '';
 }
 
 function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false } = {}) {
@@ -517,6 +533,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
   const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
   const schedulesById = new Map((data.schedule || []).map(row => [text(row.id), row]));
+  const studentsById = new Map((data.students || []).map(row => [text(row.id || row.studentId), row]));
   const rowsByStudent = new Map();
   const ledgerScheduleStudentKeys = new Set();
   const ledgerScheduleFactKeys = new Set();
@@ -540,10 +557,12 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
       const studentIds = entitlementLedgerStudentIds(row, entitlementsById, purchasesById, schedulesById);
       if (!studentIds.length) return;
+      const ownerStudentId = entitlementLedgerOwnerStudentId(row, entitlementsById, purchasesById);
       const schedule = schedulesById.get(text(row.scheduleId)) || {};
       const trial = courseRowIsTrial(row) || courseRowIsTrial(entitlement) || courseRowIsTrial(purchase) || courseRowIsTrial(schedule);
       if (trial !== includeTrial || courseRowIsCompanion(row) || courseRowIsCompanion(entitlement) || courseRowIsCompanion(purchase) || courseRowIsCompanion(schedule)) return;
-      studentIds.forEach(studentId => {
+      const displayStudentIds = [...new Set([...studentIds, ownerStudentId].map(text).filter(Boolean))];
+      displayStudentIds.forEach(studentId => {
         if (text(row.scheduleId)) ledgerScheduleStudentKeys.add(`${studentId}|${text(row.scheduleId)}`);
         ledgerScheduleFactKeys.add(lessonFactKey(studentId, {
           startTime: schedule.startTime,
@@ -558,6 +577,13 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           sortTime,
           time: dateTimeText(schedule, row.relatedDate || row.scheduleTime || row.createdAt),
           packageName: teachingPackageName(entitlement, purchase),
+          lessonRelationText: ledgerRelationText({ currentStudentId: studentId, actualStudentIds: studentIds, ownerStudentId, studentsById }),
+          packageOwnerStudentId: ownerStudentId,
+          packageOwnerName: studentDisplayNameById(ownerStudentId, studentsById),
+          actualStudentIds: studentIds,
+          actualStudentNames: studentIds.map(id => studentDisplayNameById(id, studentsById)).filter(Boolean),
+          isPackageOwnerLedger: ownerStudentId && studentId === ownerStudentId && !studentIds.includes(ownerStudentId),
+          countAsCompletedLesson: studentIds.includes(studentId),
           courseType: courseTypeText(schedule.courseType ? schedule : entitlement),
           campus: text(schedule.campus || row.campus || entitlement.campus),
           venue: text(schedule.venue || row.venue),

@@ -251,12 +251,28 @@ function createCorePageDataRoutes(deps={}){
       const studentPurchases=purchases.filter(row=>String(row.studentId||'')===studentId);
       const studentEntitlements=entitlements.filter(row=>String(row.studentId||'')===studentId);
       const entitlementIds=new Set(studentEntitlements.map(row=>String(row.id||'')).filter(Boolean));
+      const studentScheduleIds=new Set(schedule.filter(row=>rowHasStudent(row,studentId)).map(row=>String(row.id||'')).filter(Boolean));
+      const scopedEntitlementLedger=entitlementLedger.filter(row=>entitlementIds.has(String(row.entitlementId||''))||String(row.studentId||'')===studentId||studentScheduleIds.has(String(row.scheduleId||'')));
+      const relatedEntitlementIds=new Set([...entitlementIds,...scopedEntitlementLedger.map(row=>String(row.entitlementId||'')).filter(Boolean)]);
+      const scopedEntitlements=entitlements.filter(row=>relatedEntitlementIds.has(String(row.id||'')));
+      const relatedPurchaseIds=new Set([
+        ...studentPurchases.map(row=>String(row.id||'')).filter(Boolean),
+        ...scopedEntitlements.map(row=>String(row.purchaseId||'')).filter(Boolean),
+        ...scopedEntitlementLedger.map(row=>String(row.purchaseId||'')).filter(Boolean)
+      ]);
+      const scopedPurchases=purchases.filter(row=>String(row.studentId||'')===studentId||relatedPurchaseIds.has(String(row.id||'')));
+      const relatedStudentIds=new Set([
+        studentId,
+        ...scopedEntitlements.map(row=>String(row.studentId||'')).filter(Boolean),
+        ...scopedPurchases.map(row=>String(row.studentId||'')).filter(Boolean)
+      ]);
+      const relatedStudents=[student,...(await Promise.all([...relatedStudentIds].filter(id=>id&&id!==studentId).map(id=>getCachedRow(T_STUDENTS,id).catch(()=>null))))].filter(Boolean);
       let scoped=filterLoadAllForUser({
-        students:[student],
-        purchases:studentPurchases,
+        students:relatedStudents,
+        purchases:scopedPurchases,
         packages,
-        entitlements:studentEntitlements,
-        entitlementLedger:entitlementLedger.filter(row=>entitlementIds.has(String(row.entitlementId||''))||String(row.studentId||'')===studentId),
+        entitlements:scopedEntitlements,
+        entitlementLedger:scopedEntitlementLedger,
         schedule:schedule.filter(row=>rowHasStudent(row,studentId)),
         membershipBenefitLedger:membershipBenefitLedger.filter(row=>String(row.studentId||'')===studentId),
         feedbacks:feedbacks.filter(row=>rowHasStudent(row,studentId)),

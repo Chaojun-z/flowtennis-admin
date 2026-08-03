@@ -276,38 +276,37 @@ const siblingScheduleOwnerData = {
     { id: 'student-william-brother', name: 'William弟弟' }
   ],
   purchases: [{
-    id: 'purchase-brother-owner',
-    studentId: 'student-william-brother',
+    id: 'purchase-william-owner',
+    studentId: 'student-william',
     packageName: '家庭共享私教课',
     courseType: '私教课',
-    packageLessons: 4,
-    amountPaid: 1800,
+    packageLessons: 10,
+    amountPaid: 4500,
     status: 'active',
     purchaseDate: '2026-07-01'
   }],
   entitlements: [{
-    id: 'ent-brother-owner',
-    studentId: 'student-william-brother',
-    purchaseId: 'purchase-brother-owner',
+    id: 'ent-william-owner',
+    studentId: 'student-william',
+    purchaseId: 'purchase-william-owner',
     packageName: '家庭共享私教课',
     courseType: '私教课',
-    totalLessons: 4,
-    remainingLessons: 1,
+    totalLessons: 10,
+    remainingLessons: 9,
     status: 'active'
   }],
   entitlementLedger: [{
-    id: 'ledger-william-uses-brother-package',
-    entitlementId: 'ent-brother-owner',
-    purchaseId: 'purchase-brother-owner',
+    id: 'ledger-brother-uses-william-package',
+    entitlementId: 'ent-william-owner',
+    purchaseId: 'purchase-william-owner',
     studentId: '',
-    scheduleId: 'schedule-william-future',
+    scheduleId: 'schedule-brother-2',
     lessonDelta: -1,
-    relatedDate: '2026-08-08'
+    relatedDate: '2026-08-01'
   }],
   schedule: [
     { id: 'schedule-brother-1', studentId: 'student-william-brother', studentName: 'William弟弟', courseType: '私教课', startTime: '2026-07-19 16:00:00', endTime: '2026-07-19 17:00:00', status: '已下课', coach: '刘润扬教练', campus: 'shunyi_mapo', venue: '2号场' },
-    { id: 'schedule-brother-2', studentId: 'student-william-brother', studentName: 'William弟弟', courseType: '私教课', startTime: '2026-08-01 16:00:00', endTime: '2026-08-01 17:00:00', status: '已下课', coach: '林铭教练', campus: 'shunyi_mapo', venue: '4号场' },
-    { id: 'schedule-william-future', studentId: 'student-william', studentName: 'William（时节）', courseType: '私教课', startTime: '2026-08-08 16:00:00', endTime: '2026-08-08 17:00:00', status: '待上课', coach: 'Siren 教练', campus: 'shunyi_mapo', venue: '3号场' }
+    { id: 'schedule-brother-2', studentId: 'student-william-brother', studentName: 'William弟弟', courseType: '私教课', startTime: '2026-08-01 16:00:00', endTime: '2026-08-01 17:00:00', status: '已下课', coach: '林铭教练', campus: 'shunyi_mapo', venue: '4号场' }
   ],
   courts: [],
   membershipAccounts: [],
@@ -321,18 +320,29 @@ const siblingScheduleOwnerStandard = buildStandardLifecycleMetrics({
   now: new Date('2026-08-03 00:00:00')
 });
 const siblingBrotherRow = siblingScheduleOwnerStandard.views.historicalStudents.find(row => row.studentId === 'student-william-brother');
+const siblingOwnerRow = siblingScheduleOwnerStandard.views.historicalStudents.find(row => row.studentId === 'student-william');
 assert.strictEqual(
   siblingBrotherRow?.completedLessons,
   2,
   '共享/代扣课包时，累计上课必须按实际排课学员归属，不能把哥哥的排课算到弟弟身上'
 );
 assert.deepStrictEqual(
-  siblingBrotherRow?.detailLessonRecordRows.map(row => [row.time, row.coach, row.venue]),
+  siblingBrotherRow?.detailLessonRecordRows.map(row => [row.time, row.coach, row.venue, row.lessonRelationText]),
   [
-    ['2026-08-01 16:00-17:00', '林铭教练', '4号场'],
-    ['2026-07-19 16:00-17:00', '刘润扬教练', '2号场']
+    ['2026-08-01 16:00-17:00', '林铭教练', '4号场', '使用 William（时节） 的课包'],
+    ['2026-07-19 16:00-17:00', '刘润扬教练', '2号场', undefined]
   ],
   '学员抽屉上课记录必须和该学员自己的排课事实一致，不能混入同名前缀或家庭共享课包的其他学员课程'
+);
+assert.strictEqual(
+  siblingOwnerRow?.completedLessons,
+  0,
+  '课包被授权他人使用时，课包所有人的累计上课不能增加'
+);
+assert.deepStrictEqual(
+  siblingOwnerRow?.detailLessonRecordRows.map(row => [row.time, row.lessonRelationText, row.isPackageOwnerLedger, row.countAsCompletedLesson]),
+  [['2026-08-01 16:00-17:00', 'William弟弟 使用了 William（时节） 的课包', true, false]],
+  '课包所有人的上课记录必须能看到谁使用了他的课包，但这条不计入本人累计上课'
 );
 assert.ok(
   standard.views.activeStudents.some(row => row.studentId === 'student-single-pay-active' && row.packageBalanceText === '-'),
