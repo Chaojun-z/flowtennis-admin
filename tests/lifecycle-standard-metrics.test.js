@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js');
-const { buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics } = require('../server/read-models/platform-metrics.js');
+const { buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildTeachingStudentViews } = require('../server/read-models/platform-metrics.js');
 const { buildOperationsMetrics } = require('../server/metrics/operations-metrics.js');
 
 const sample = {
@@ -219,6 +219,34 @@ const staleEmptyLessonSummaryStandard = buildStandardLifecycleMetrics({
   customerLifecycleRows,
   now: new Date('2026-07-09 00:00:00')
 });
+
+const searchIndexSample = {
+  students: [
+    {
+      id: 'student-li-dong',
+      name: '李东',
+      phone: '13800000000',
+      campus: 'shunyi_mapo',
+      notes: '威廉的爸爸'
+    }
+  ],
+  purchases: [],
+  entitlements: [],
+  schedule: []
+};
+const searchIndexViews = buildTeachingStudentViews(
+  buildCustomerLifecycleRows(searchIndexSample),
+  searchIndexSample
+);
+const liDongSearchRow = searchIndexViews.searchableStudents.find(row => row.studentId === 'student-li-dong');
+assert.ok(liDongSearchRow, '轻量学员页必须返回全量学员搜索索引，避免搜索底表在加载后切换');
+assert.strictEqual(liDongSearchRow.name, '李东', '搜索索引必须保留原始学员姓名');
+assert.match(liDongSearchRow.searchText, /威廉/, '搜索索引必须保留备注关键字，支持按家长/关联人备注搜索');
+assert.ok(
+  !searchIndexViews.historicalStudents.some(row => row.studentId === 'student-li-dong')
+    && !searchIndexViews.activeStudents.some(row => row.studentId === 'student-li-dong'),
+  '全量搜索索引不能改变历史学员和在期学员顶部统计口径'
+);
 const staleEmptyLessonSummaryRow = staleEmptyLessonSummaryStandard.views.formalStudents.find(row => row.studentId === 'student-real-trial-deal');
 assert.deepStrictEqual(
   staleEmptyLessonSummaryRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),

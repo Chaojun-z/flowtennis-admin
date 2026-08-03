@@ -193,7 +193,8 @@ function createCorePageDataRoutes(deps={}){
       const view=String(query?.get('view')||'').trim();
       const q=String(query?.get('q')||'').trim();
       const studentRows=Array.isArray(teachingStudentViews[view])?teachingStudentViews[view]:[];
-      const listPage=paging&&view?{view,...buildListPage(studentRows.filter(row=>textSearchHit(q,row.name,row.phone,row.type,row.source,row.sourceText,row.paymentModeText,row.packageStatusText,row.activityStatusText,row.lifecycleStatusText,row.campus,row.primaryCoach,row.notes)),paging)}:null;
+      const searchableRows=q&&Array.isArray(teachingStudentViews.searchableStudents)?teachingStudentViews.searchableStudents:studentRows;
+      const listPage=paging&&view?{view,...buildListPage(searchableRows.filter(row=>textSearchHit(q,row.searchText,row.name,row.phone,row.type,row.source,row.sourceText,row.paymentModeText,row.packageStatusText,row.activityStatusText,row.lifecycleStatusText,row.campus,row.primaryCoach,row.notes,row.profileNote)),paging)}:null;
       return sendJson(res,{
         customerLifecycleRows,
         teachingStudentViews,

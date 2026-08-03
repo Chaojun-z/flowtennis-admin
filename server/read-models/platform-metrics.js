@@ -1095,6 +1095,29 @@ function rawLeadPoolRowsForLeads(leadPoolRows = [], leads = []) {
 }
 
 function teachingStudentViewRow(row = {}, listFields = {}) {
+  const notes = text(row.notes || row.profileNote);
+  const profileNote = text(row.profileNote || row.notes);
+  const searchText = [
+    row.searchText,
+    row.displayName,
+    row.name,
+    row.studentName,
+    row.phone,
+    row.customerType,
+    row.source,
+    row.campus,
+    row.campusName,
+    row.formalCoach,
+    row.owner,
+    notes,
+    profileNote,
+    listFields.searchText,
+    listFields.paymentModeLabel,
+    listFields.packageStatusLabel,
+    listFields.activityStatusLabel,
+    listFields.lessonVolumeLabel,
+    listFields.studentStatusLabel
+  ].map(text).filter(Boolean).join(' ');
   return {
     ...row,
     ...listFields,
@@ -1106,6 +1129,9 @@ function teachingStudentViewRow(row = {}, listFields = {}) {
     source: businessTaxonomy.normalizeLeadSource(row.source),
     campus: text(row.campus),
     primaryCoach: text(row.formalCoach || row.owner),
+    notes,
+    profileNote,
+    searchText,
     sourceLeadId: text(row.sourceLeadId),
     studentId: text(row.studentId),
     studentStage: text(row.studentStage),
@@ -1121,6 +1147,42 @@ function teachingStudentViewRow(row = {}, listFields = {}) {
     isActiveStudentRoster: !!listFields.isActiveStudentRoster,
     packageListRows: Array.isArray(listFields.packageListRows) ? listFields.packageListRows : []
   };
+}
+
+function buildTeachingStudentSearchableRows(viewRows = [], data = {}) {
+  const byStudentId = new Map();
+  (viewRows || []).forEach(row => {
+    const studentId = text(row.studentId || row.id);
+    if (studentId) byStudentId.set(studentId, row);
+  });
+  (data.students || []).forEach(student => {
+    const studentId = text(student.id || student.studentId);
+    if (!studentId) return;
+    const existing = byStudentId.get(studentId) || {};
+    const source = {
+      ...existing,
+      ...student,
+      studentId,
+      displayName: text(student.name || student.displayName || student.studentName || existing.displayName || existing.name || studentId),
+      phone: text(student.phone || existing.phone),
+      customerType: text(student.customerType || student.type || student.studentType || existing.type || existing.customerType),
+      source: text(student.source || existing.source),
+      campus: text(student.campus || student.campusName || existing.campus),
+      owner: text(student.owner || student.followupOwner || existing.owner),
+      formalCoach: text(student.primaryCoach || student.coach || student.coachName || existing.primaryCoach || existing.formalCoach),
+      profileNote: text(student.profileNote || student.notes || existing.profileNote || existing.notes),
+      notes: text(student.notes || student.profileNote || existing.notes || existing.profileNote),
+      status: text(student.status || existing.status),
+      mergedIntoStudentId: text(student.mergedIntoStudentId || existing.mergedIntoStudentId)
+    };
+    byStudentId.set(studentId, {
+      ...teachingStudentViewRow(source, existing),
+      __searchIndexRow: true
+    });
+  });
+  return [...byStudentId.values()]
+    .filter(row => text(row.studentId || row.id))
+    .filter(row => text(row.status) !== 'merged' && !text(row.mergedIntoStudentId));
 }
 
 function teachingScheduleCompleted(row = {}) {
@@ -1480,7 +1542,8 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
         courseFirstPurchaseAt: text(row.packagePurchaseDate),
         conversionAt: text(row.packagePurchaseDate),
         formalCoach: text(row.primaryCoach),
-        profileNote: '',
+        profileNote: text(row.profileNote || row.notes),
+        notes: text(row.notes || row.profileNote),
         studentStage: text(row.studentStage || 'student'),
         courseDealPath: text(row.courseDealPath),
         trialStatus: text(row.trialStatus),
@@ -1533,6 +1596,7 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
     .filter(row => row.isHistoricalStudentRoster);
   const activeStudents = allLabeledStudents
     .filter(row => row.isActiveStudentRoster);
+  const searchableStudents = buildTeachingStudentSearchableRows(allLabeledStudents, data);
   const trialStudents = studentRows
     .filter(row => text(row.studentStage) === 'trial')
     .map(courseViewRow);
@@ -1561,6 +1625,7 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
     formalStudents,
     historicalStudents,
     activeStudents,
+    searchableStudents,
     trialAttendedStudents,
     trialAttendedToFormalPurchaseStudents,
     trialAttendedWithoutFormalStudents,

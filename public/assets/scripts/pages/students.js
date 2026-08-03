@@ -38,10 +38,14 @@ function studentMatchesListPage(stu){
   const hasPackage=studentHasNonTrialPackage(stu);
   return studentListViewMode()==='trial'?studentHasTrialPath(stu)||hasPackage:hasPackage;
 }
-function studentUnifiedViewRows(){
+function studentUnifiedViewRows({includeSearchIndex=false}={}){
   const rows=typeof teachingStudentViewRows==='function'?teachingStudentViewRows(studentListViewMode()):[];
-  if(!Array.isArray(rows)||!rows.length)return [];
-  return rows.map(row=>{
+  const searchRows=includeSearchIndex&&Array.isArray(teachingStudentViews?.searchableStudents)?teachingStudentViews.searchableStudents:[];
+  const baseRows=Array.isArray(rows)?rows:[];
+  const sourceRows=searchRows.length?baseRows.concat(searchRows):baseRows;
+  if(!sourceRows.length)return [];
+  const seen=new Set();
+  return sourceRows.map(row=>{
     const student=students.find(item=>String(item.id||'')===String(row.studentId||row.id||''))||{};
     return {
       ...student,
@@ -53,9 +57,17 @@ function studentUnifiedViewRows(){
       source:row.source||student.source||'',
       campus:row.campus||student.campus||'',
       primaryCoach:row.primaryCoach||student.primaryCoach||'',
+      notes:row.notes||row.profileNote||student.notes||student.profileNote||'',
+      profileNote:row.profileNote||row.notes||student.profileNote||student.notes||'',
+      searchText:row.searchText||student.searchText||'',
       __unifiedTeachingView:true
     };
-  }).filter(row=>String(row.id||'').trim()&&String(row.status||'').trim()!=='merged'&&!String(row.mergedIntoStudentId||'').trim());
+  }).filter(row=>{
+    const id=String(row.id||'').trim();
+    if(!id||seen.has(id))return false;
+    seen.add(id);
+    return String(row.status||'').trim()!=='merged'&&!String(row.mergedIntoStudentId||'').trim();
+  });
 }
 function studentUnifiedRecordForId(id){
   const sid=String(id||'');
@@ -575,7 +587,7 @@ function studentMatchesCampusForList(stu){
   return studentCampusValuesForList(stu).some(value=>sameCampusValue(value,campus)||sameCampusValue(cn(value),cn(campus))||value===cn(campus));
 }
 function getStudentBaseList({includeAllRoster=false}={}){
-  const viewRows=studentUnifiedViewRows();
+  const viewRows=studentUnifiedViewRows({includeSearchIndex:includeAllRoster});
   const base=viewRows.length?viewRows:students;
   return base.filter(s=>{
     if(String(s?.status||'').trim()==='merged'||String(s?.mergedIntoStudentId||'').trim())return false;
@@ -583,6 +595,26 @@ function getStudentBaseList({includeAllRoster=false}={}){
     if(includeAllRoster)return true;
     return studentListViewMode()==='trial'?studentIsHistoricalRosterRow(s):studentIsActiveRosterRow(s);
   });
+}
+function studentSearchText(s){
+  return [
+    s?.searchText,
+    s?.name,
+    s?.displayName,
+    s?.phone,
+    s?.type,
+    studentSourceText(s),
+    studentPaymentModeText(s),
+    studentPackageStatusText(s),
+    studentActivityStatusText(s),
+    studentLessonVolumeText(s),
+    studentLifecycleStatusText(s),
+    s?.activityRange,
+    s?.notes,
+    s?.profileNote,
+    cn(s?.campus),
+    studentPrimaryCoachText(s)
+  ].filter(Boolean).join(' ');
 }
 function studentGlobalDateValue(s){
   return s.createdAt||s.enrollDate||s.registerDate||s.joinDate||studentLastLessonDate(s);
@@ -594,7 +626,7 @@ function getFilteredStudents(){
   const coachFilter=document.getElementById('stuCoachFilter')?.value||'';
   return getStudentBaseList({includeAllRoster:!!q.trim()}).filter(s=>{
     const accountText=courtsForStudent(s).map(c=>`${c.name} ${c.phone||''}`).join(' ');
-    if(!searchHit(q,s.name,s.phone,s.type,studentSourceText(s),studentPaymentModeText(s),studentPackageStatusText(s),studentActivityStatusText(s),studentLessonVolumeText(s),studentLifecycleStatusText(s),s.activityRange,s.notes,cn(s.campus),accountText,studentPrimaryCoachText(s)))return false;
+    if(!searchHit(q,studentSearchText(s),accountText))return false;
     if(!globalDateWithinRange(studentGlobalDateValue(s)))return false;
     if(tf&&s.type!==tf)return false;
     if(sf&&studentSourceText(s)!==sf)return false;
