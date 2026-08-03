@@ -1080,6 +1080,72 @@ const splitPackageCycleLessonIndexPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(splitPackageCycleLessonIndexPlan.summary.create, 1, 'split gold/non-prime 20-lesson packages should match Feishu current-package numbering');
 
+const historicalEarlierLessonAfterLaterImportedPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'historical-earlier-after-later-imported-key',
+    startTime: '2026-08-06 14:00',
+    endTime: '2026-08-06 15:00',
+    coachName: '林铭教练',
+    studentNames: ['海姐'],
+    lessonIndex: 1,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{
+    id: 'sch-haijie-later',
+    startTime: '2026-08-07 14:00',
+    endTime: '2026-08-07 15:00',
+    coach: '林铭教练',
+    campus: 'shunyi_mapo',
+    venue: '2号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-haijie'],
+    entitlementId: 'ent-haijie',
+    entitlementIds: ['ent-haijie'],
+    lessonCount: 1,
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-haijie', name: '海姐', primaryCoach: '林铭教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-haijie', studentId: 'stu-haijie', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+});
+assert.strictEqual(historicalEarlierLessonAfterLaterImportedPlan.summary.create, 1, 'later imported schedules should not make an earlier Feishu lesson look like a lesson-index mismatch');
+
+const outOfOrderLessonIndexPlan = sync.buildDryRunPlan({
+  feishuCourses: [
+    {
+      ...courses[0],
+      sourceKey: 'out-of-order-lesson-index-2',
+      startTime: '2026-08-07 15:00',
+      endTime: '2026-08-07 16:00',
+      coachName: '刘润扬教练',
+      studentNames: ['小活宝'],
+      lessonIndex: 2,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+    },
+    {
+      ...courses[0],
+      sourceKey: 'out-of-order-lesson-index-1',
+      startTime: '2026-08-06 14:00',
+      endTime: '2026-08-06 15:00',
+      coachName: '刘润扬教练',
+      studentNames: ['小活宝'],
+      lessonIndex: 1,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+    }
+  ],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-xhb', name: '小活宝', primaryCoach: '刘润扬教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-xhb-out-of-order', studentId: 'stu-xhb', courseType: '私教课', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }]
+});
+assert.strictEqual(outOfOrderLessonIndexPlan.summary.create, 2, 'sync should evaluate lesson indexes by class time even when Feishu rows are read out of order');
+
 const consecutiveFutureLessonIndexPlan = sync.buildDryRunPlan({
   feishuCourses: [
     {
