@@ -112,6 +112,8 @@ function createScheduleRoutes(deps={}){
           const allowLinkedVenueConflict=!!(body.allowLinkedVenueConflict??ex?.allowLinkedVenueConflict);
           const linkedScheduleGroupId=allowLinkedVenueConflict?String(body.linkedScheduleGroupId||ex?.linkedScheduleGroupId||id).trim():'';
           const r=withOperationTrace({...ex,...body,...normalizeCoachLateInfo({...ex,...body}),...normalizeScheduleFieldFee({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),allowLinkedVenueConflict,linkedScheduleGroupId,id,updatedAt:new Date().toISOString()},operationTrace);
+          if(Object.prototype.hasOwnProperty.call(body,'entitlementIds'))r.entitlementIds=parseArr(body.entitlementIds).filter(Boolean);
+          else if(Object.prototype.hasOwnProperty.call(body,'entitlementId'))r.entitlementIds=String(body.entitlementId||'').trim()?[String(body.entitlementId).trim()]:[];
           const oldDelta=scheduleLessonDelta(ex);
           const nextDelta=scheduleLessonDelta(r);
           if(isCancelOnlyUpdate&&ex){
