@@ -96,7 +96,12 @@ assert.deepStrictEqual(
   '正式学员课包列表必须由后端统一读模型只展示仍有余额的正式课包'
 );
 assert.strictEqual(formalViewRow.packageBalanceText, '7/10', '正式学员课包余额必须由后端统一读模型按展示课包汇总');
-assert.strictEqual(formalViewRow.completedLessons, 9, '正式学员累计上课必须由后端统一读模型汇总，且包含已完成体验课');
+assert.strictEqual(formalViewRow.completedLessons, 8, '正式学员累计上课必须和正式上课记录使用同一事实集合');
+assert.strictEqual(
+  formalViewRow.completedLessons,
+  formalViewRow.detailLessonRecordRows.reduce((sum, row) => sum + (row.countAsCompletedLesson === false ? 0 : Math.abs(Number(row.lessonDelta) || 0)), 0),
+  '正式学员累计上课必须等于抽屉上课记录中可计入课时的合计'
+);
 assert.strictEqual(formalViewRow.packagePurchaseDate, '2026-06-08', '正式学员课包购买时间必须由后端统一读模型按首次正式课包给出');
 assert.deepStrictEqual(
   standard.views.historicalStudents.map(row => row.studentId).sort(),
@@ -159,6 +164,20 @@ assert.strictEqual(
   '在期学员课包即将耗尽必须来自后端统一读模型'
 );
 const teachingSummaryRows = buildStudentTeachingSummaryRows(customerLifecycleRows, { ...sample, now: new Date('2026-07-09 00:00:00') });
+const formalTeachingSummaryRow = teachingSummaryRows.find(row => row.studentId === 'student-real-trial-deal');
+assert.strictEqual(
+  formalTeachingSummaryRow?.teachingLessonDetailSourceVersion,
+  'lesson-record-v1',
+  '学员教学摘要必须标记新版上课记录口径，避免列表继续读取旧摘要'
+);
+assert.deepStrictEqual(
+  formalTeachingSummaryRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
+  [
+    ['ledger', '2026-06-12', '小班课', -6],
+    ['ledger', '2026-06-10', '私教课', -2]
+  ],
+  '学员教学摘要必须保存和抽屉一致的上课记录，轻量列表不能只有累计数字'
+);
 const lightweightStandard = buildStandardLifecycleMetrics({
   leads: sample.leads,
   students: sample.students,
@@ -208,6 +227,11 @@ assert.deepStrictEqual(
     ['ledger', '2026-06-10', '私教课', -2]
   ],
   '学员抽屉上课明细必须以当前事实表为准，旧摘要空数组不能覆盖真实上课记录'
+);
+assert.strictEqual(
+  staleEmptyLessonSummaryRow?.completedLessons,
+  8,
+  '当前事实表可用时，累计上课必须由同一批上课明细汇总，旧摘要累计不能覆盖真实口径'
 );
 const mixedLedgerStudentIdData = {
   leads: [],
@@ -322,9 +346,19 @@ const siblingScheduleOwnerStandard = buildStandardLifecycleMetrics({
 const siblingBrotherRow = siblingScheduleOwnerStandard.views.historicalStudents.find(row => row.studentId === 'student-william-brother');
 const siblingOwnerRow = siblingScheduleOwnerStandard.views.historicalStudents.find(row => row.studentId === 'student-william');
 assert.strictEqual(
+  siblingScheduleOwnerData.schedule.filter(row => row.studentId === 'student-william-brother').length,
+  2,
+  '测试前提：William弟弟排课表只有 2 节课'
+);
+assert.strictEqual(
   siblingBrotherRow?.completedLessons,
   2,
   '共享/代扣课包时，累计上课必须按实际排课学员归属，不能把哥哥的排课算到弟弟身上'
+);
+assert.strictEqual(
+  siblingBrotherRow?.detailLessonRecordRows.length,
+  2,
+  'William弟弟抽屉上课记录必须和自己的排课事实数量一致'
 );
 assert.deepStrictEqual(
   siblingBrotherRow?.detailLessonRecordRows.map(row => [row.time, row.coach, row.venue, row.lessonRelationText]),

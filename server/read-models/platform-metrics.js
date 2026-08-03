@@ -495,6 +495,15 @@ function buildTeachingStudentCompletedLessonMap(data = {}) {
   return completedByStudent;
 }
 
+function teachingLessonRowsCompletedUnits(rows = []) {
+  return (Array.isArray(rows) ? rows : []).reduce((sum, row) => {
+    if (row?.countAsCompletedLesson === false) return sum;
+    const delta = Number(row?.lessonDelta);
+    if (Number.isFinite(delta) && delta < 0) return sum + Math.abs(delta);
+    return sum;
+  }, 0);
+}
+
 function buildTeachingStudentCoursePaidMap(data = {}) {
   const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
   const purchaseRows = new Map();
@@ -776,13 +785,12 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
 function buildTeachingStudentListFieldMap(data = {}, options = {}) {
   const summaryFieldMap = buildTeachingStudentSummaryFieldMap(data);
   const packageFieldMap = buildTeachingStudentPackageFieldMap(data, options);
-  const completedByStudent = buildTeachingStudentCompletedLessonMap(data);
   const coursePaidByStudent = buildTeachingStudentCoursePaidMap(data);
   const lessonDetailMap = buildTeachingStudentLessonDetailMap(data, options);
   const benefitDetailMap = buildTeachingStudentBenefitDetailMap(data);
   const feedbackMap = buildTeachingStudentRecentFeedbackMap(data);
   const details = new Map();
-  [...new Set([...summaryFieldMap.keys(), ...packageFieldMap.keys(), ...completedByStudent.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
+  [...new Set([...summaryFieldMap.keys(), ...packageFieldMap.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
     const summaryFields = summaryFieldMap.get(studentId) || {};
     const packageFields = packageFieldMap.get(studentId) || {};
     const summaryLessonRows = data.ignoreTeachingSummaryDetailRows ? [] : (summaryFields.detailLessonRecordRows || []);
@@ -795,8 +803,8 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
     const cumulativeCoursePaidAmount = coursePaidByStudent.has(studentId)
       ? money(coursePaidByStudent.get(studentId) || 0)
       : money(summaryFields.cumulativeCoursePaidAmount || 0);
-    const completedLessons = completedByStudent.has(studentId)
-      ? round(completedByStudent.get(studentId) || 0, 1)
+    const completedLessons = lessonDetailMap.has(studentId) || summaryLessonRows.length
+      ? round(teachingLessonRowsCompletedUnits(lessonRows), 1)
       : round(summaryFields.completedLessons || 0, 1);
     details.set(studentId, {
       packageListRows: [],
@@ -1610,6 +1618,8 @@ function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOStrin
     courseDealPath: text(row.courseDealPath),
     lastFormalLessonAt: text(row.lastFormalLessonAt),
     completedLessons: round(row.completedLessons || 0, 1),
+    detailLessonRecordRows: Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [],
+    teachingLessonDetailSourceVersion: 'lesson-record-v1',
     packageListRows: Array.isArray(row.packageListRows) ? row.packageListRows : [],
     packageListText: text(row.packageListText || '-'),
     packageBalanceRemaining: numberSnapshotValue(row.packageBalanceRemaining),

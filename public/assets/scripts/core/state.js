@@ -610,7 +610,10 @@ function hydrateStudentDetailData(data={}){
   mergeDatasetRowsById('membershipBenefitLedger',data.membershipBenefitLedger||[]);
   mergeDatasetRowsById('feedbacks',data.feedbacks||[]);
   if(Array.isArray(data.customerLifecycleRows))mergeDatasetRowsById('customerLifecycleRows',data.customerLifecycleRows);
-  if(data.detailStudentView)mergeTeachingStudentDetail(data.detailStudentView);
+  if(data.detailStudentView){
+    mergeTeachingStudentDetail(data.detailStudentView);
+    if(typeof renderStudentsIfVisible==='function')renderStudentsIfVisible();
+  }
 }
 function studentDetailDataReady(studentId){
   return loadedStudentDetailIds.has(String(studentId||'').trim());

@@ -161,16 +161,21 @@ function createCorePageDataRoutes(deps={}){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
       const fresh=query?.get('fresh')==='1'||query?.get('forceFresh')==='1';
-      const [leads,students,purchases,entitlements,studentTeachingSummaries,entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
+      const [leads,students,purchases,entitlements,studentTeachingSummaries]=await Promise.all([
         T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
         cappedScan(T_STUDENTS),
         cappedScan(T_PURCHASES),
         cappedScan(T_ENTITLEMENTS),
-        fresh ? Promise.resolve([]) : (T_STUDENT_TEACHING_SUMMARY ? getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]) : Promise.resolve([])),
-        fresh&&T_ENTITLEMENT_LEDGER ? cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger).catch(()=>[]) : Promise.resolve([]),
-        fresh&&T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
-        fresh&&T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
-        fresh&&T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
+        fresh ? Promise.resolve([]) : (T_STUDENT_TEACHING_SUMMARY ? getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]) : Promise.resolve([]))
+      ]);
+      const needsTeachingFacts = fresh
+        || !studentTeachingSummaries.length
+        || studentTeachingSummaries.some(row => String(row.teachingLessonDetailSourceVersion||'').trim() !== 'lesson-record-v1');
+      const [entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
+        needsTeachingFacts&&T_ENTITLEMENT_LEDGER ? cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger).catch(()=>[]) : Promise.resolve([]),
+        needsTeachingFacts&&T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
+        needsTeachingFacts&&T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
+        needsTeachingFacts&&T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
       ]);
       const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,studentTeachingSummaries,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
       const customerLifecycleRows=buildCustomerLifecycleRows({
