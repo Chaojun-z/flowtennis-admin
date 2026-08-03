@@ -639,6 +639,7 @@ function operationsCoachCourseColor(type = '') {
   if (type === '体验课') return '#D97706';
   if (type === '私教课') return '#0F766E';
   if (type === '小班课') return '#E7E5E4';
+  if (type === '专项课') return '#2563EB';
   if (type === '陪打') return '#7C3AED';
   return '#8EA0B8';
 }
@@ -906,12 +907,12 @@ function buildOperationsCoachCourseMixChartOption({ rows = [] } = {}) {
   const displayRows = source
     .map(row => ({
       ...row,
-      totalHours: (Number(row.trialHours) || 0) + (Number(row.privateHours) || 0) + (Number(row.smallGroupHours) || 0) + (Number(row.companionHours) || 0)
+      totalHours: (Number(row.trialHours) || 0) + (Number(row.privateHours) || 0) + (Number(row.smallGroupHours) || 0) + (Number(row.specialHours) || 0) + (Number(row.companionHours) || 0)
     }))
     .sort((a, b) => b.totalHours - a.totalHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'))
     .slice(0, 10);
   return {
-    color: [operationsCoachCourseColor('体验课'), operationsCoachCourseColor('私教课'), operationsCoachCourseColor('小班课'), operationsCoachCourseColor('陪打')],
+    color: [operationsCoachCourseColor('体验课'), operationsCoachCourseColor('私教课'), operationsCoachCourseColor('小班课'), operationsCoachCourseColor('专项课'), operationsCoachCourseColor('陪打')],
     tooltip: { trigger: 'axis', axisPointer: { type: 'none' }, textStyle: { ...operationsCoachChartTextStyle, fontSize: 12, fontWeight: 400 } },
     legend: { show: false },
     grid: { top: 0, right: 20, bottom: 20, left: 55, containLabel: false },
@@ -921,6 +922,7 @@ function buildOperationsCoachCourseMixChartOption({ rows = [] } = {}) {
       { name: '体验课', type: 'bar', stack: 'hours', barWidth: 6, data: displayRows.map(row => row.trialHours), itemStyle: { color: operationsCoachCourseColor('体验课'), borderRadius: [2, 0, 0, 2] }, emphasis: { focus: 'series' } },
       { name: '私教课', type: 'bar', stack: 'hours', barWidth: 6, data: displayRows.map(row => row.privateHours), itemStyle: { color: operationsCoachCourseColor('私教课') }, emphasis: { focus: 'series' } },
       { name: '小班课', type: 'bar', stack: 'hours', barWidth: 6, data: displayRows.map(row => row.smallGroupHours), itemStyle: { color: operationsCoachCourseColor('小班课') }, emphasis: { focus: 'series' } },
+      { name: '专项课', type: 'bar', stack: 'hours', barWidth: 6, data: displayRows.map(row => row.specialHours), itemStyle: { color: operationsCoachCourseColor('专项课') }, emphasis: { focus: 'series' } },
       { name: '陪打', type: 'bar', stack: 'hours', barWidth: 6, data: displayRows.map(row => row.companionHours), itemStyle: { color: operationsCoachCourseColor('陪打'), borderRadius: [0, 2, 2, 0] }, emphasis: { focus: 'series' } }
     ]
   };

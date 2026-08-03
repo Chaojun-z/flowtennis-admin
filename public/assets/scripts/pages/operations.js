@@ -739,6 +739,7 @@ function renderOperationsCoach(data) {
         { label: '体验课', color: '#D97706' },
         { label: '私教课', color: '#0F766E' },
         { label: '小班课', color: '#E7E5E4' },
+        { label: '专项课', color: '#2563EB' },
         { label: '陪打', color: '#7C3AED' }
       ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachCourseMixChart"></div>
@@ -758,13 +759,18 @@ function operationsCoachDetailChangeText(comparison = {}) {
   if (!change) return '<span class="operations-coach-detail-change muted">0 课时</span>';
   const direction = change > 0 ? 'up' : 'down';
   const sign = change > 0 ? '+' : '-';
-  return `<span class="operations-coach-detail-change ${direction}">${operationsCoachDetailTrendIcon(direction)}<span>${sign}${fmt(Math.abs(change))} 课时</span></span>`;
+  return `<span class="operations-coach-detail-change ${direction}">${operationsCoachDetailTrendIcon(direction)}<span>${sign}${operationsCoachHourText(Math.abs(change))} 课时</span></span>`;
+}
+
+function operationsCoachHourText(value) {
+  const number = Number(value) || 0;
+  return Number.isInteger(number) ? String(number) : String(number);
 }
 
 function operationsCoachUsedHoursCell(row = {}) {
   const teachingHours=Number(row.teachingHours)||0;
   const teachingStudentCount=Number(row.teachingStudentCount)||0;
-  return `<div class="operations-coach-detail-hours"><span>${fmt(teachingHours)} / ${fmt(teachingStudentCount)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
+  return `<div class="operations-coach-detail-hours"><span>${operationsCoachHourText(teachingHours)} / ${fmt(teachingStudentCount)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
 }
 
 function operationsCoachTrialConversionText(row = {}) {
@@ -777,12 +783,8 @@ function operationsCoachTrialConversionText(row = {}) {
 function operationsCoachCourseMixText(row = {}) {
   const parts = (row.courseMix || [])
     .filter(item => (Number(item.hours) || 0) > 0)
-    .map(item => `${item.type} ${fmt(Number(item.hours) || 0)}`);
+    .map(item => `${item.type} ${operationsCoachHourText(Number(item.hours) || 0)}`);
   return parts.length ? parts.join(' | ') : '-';
-}
-
-function operationsCoachCampusDistributionText(row = {}) {
-  return row.campusDistributionText || row.campus || '-';
 }
 
 function operationsCoachDetailTooltipText(value) {
@@ -803,13 +805,12 @@ function renderOperationsCoachDetailTable(rows = []) {
     <td><span class="operations-coach-muted">${esc(operationsCoachTrialConversionText(row))}</span></td>
     <td>${operationsCoachDetailTooltipText(operationsCoachCourseMixText(row))}</td>
     <td><span class="operations-coach-feedback">${esc(operationsCoachFeedbackText(row))}</span></td>
-    <td>${operationsCoachDetailTooltipText(operationsCoachCampusDistributionText(row))}</td>
-  </tr>`).join('') : '<tr><td colspan="6"><div class="tms-empty-state"><div class="tms-empty-title">暂无教练课时数据</div></div></td></tr>';
+  </tr>`).join('') : '<tr><td colspan="5"><div class="tms-empty-state"><div class="tms-empty-title">暂无教练课时数据</div></div></td></tr>';
   return `<section class="operations-section operations-coach-detail-table">
     ${operationsCoachChartHeader('教练课时详细统计')}
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table">
-      <colgroup><col style="width:12%"><col style="width:14%"><col style="width:10%"><col style="width:22%"><col style="width:10%"><col style="width:32%"></colgroup>
-      <thead><tr><th>教练</th><th>教学课时/人数</th><th>体验课转化</th><th>课程结构（课时）</th><th>课程反馈（课次）</th><th>校区结构（课时）</th></tr></thead>
+      <colgroup><col style="width:14%"><col style="width:16%"><col style="width:12%"><col style="width:42%"><col style="width:16%"></colgroup>
+      <thead><tr><th>教练</th><th>教学课时/人数</th><th>体验课转化</th><th>课程结构（课时）</th><th>课程反馈（课次）</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div></div>
   </section>`;

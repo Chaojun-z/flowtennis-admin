@@ -1259,8 +1259,10 @@ const selectedWeekCoachCompletionMetrics = buildOperationsMetrics({
   students: [{ id: 'trial-done', primaryCoach: 'Siren' }],
   schedule: [
     { id: 'completed-private', coach: 'Siren', studentId: 'stu-private', startTime: '2026-07-29 07:00:00', endTime: '2026-07-29 08:00:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
+    { id: 'completed-special', coach: 'Siren', studentId: 'stu-special', startTime: '2026-07-29 08:00:00', endTime: '2026-07-29 09:15:00', status: '已排课', courseType: '专项课', standardCourseType: '专项课', campus: 'shunyi_mapo' },
     { id: 'completed-trial', coach: 'Siren', studentId: 'trial-done', startTime: '2026-07-27 10:00:00', endTime: '2026-07-27 11:00:00', status: '已排课', courseType: '体验课', campus: 'shunyi_mapo' },
     { id: 'completed-companion', coach: 'Siren', studentId: 'stu-companion', startTime: '2026-07-28 10:00:00', endTime: '2026-07-28 11:00:00', status: '已排课', courseType: '陪打', campus: 'shunyi_mapo' },
+    { id: 'coach-occupancy', coach: 'Siren', studentId: 'coach-occupancy', startTime: '2026-07-29 06:00:00', endTime: '2026-07-29 07:00:00', status: '已排课', courseType: '教练占场', standardCourseType: '教练占场', campus: 'shunyi_mapo' },
     { id: 'later-today', coach: 'Siren', studentId: 'stu-later', startTime: '2026-07-29 20:00:00', endTime: '2026-07-29 21:30:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
     { id: 'future-week', coach: 'Siren', studentId: 'stu-future', startTime: '2026-07-30 10:00:00', endTime: '2026-07-30 12:00:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
     { id: 'cancelled-past', coach: 'Siren', studentId: 'stu-cancelled', startTime: '2026-07-28 12:00:00', endTime: '2026-07-28 13:00:00', status: '已取消', courseType: '私教课', campus: 'shunyi_mapo' }
@@ -1276,17 +1278,19 @@ const selectedWeekCoachCompletionMetrics = buildOperationsMetrics({
   ],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-07-29 09:30:00'),
+  now: new Date('2026-07-29 09:31:00'),
   dateRange: { startDate: '2026-07-27', endDate: '2026-08-02' }
 });
 const selectedWeekSiren = selectedWeekCoachCompletionMetrics.coach.rows.find(row => row.coach === 'Siren 教练');
-assert.strictEqual(selectedWeekSiren?.usedHours, 3, 'coach workload must only include completed effective services in the selected week');
-assert.strictEqual(selectedWeekSiren?.teachingHours, 2, 'coach lesson hours must exclude companion and future or not-yet-ended schedules');
-assert.strictEqual(selectedWeekSiren?.teachingStudentCount, 2, 'coach lesson student count must only use completed non-companion schedules');
-assert.strictEqual(selectedWeekSiren?.feedbackRequired, 2, 'coach feedback denominator must only include completed feedback-required schedules');
+assert.strictEqual(selectedWeekSiren?.usedHours, 4.25, 'coach workload must include completed teaching and companion services while excluding occupancy and without rounding lesson decimals');
+assert.strictEqual(selectedWeekSiren?.teachingHours, 3.25, 'coach lesson hours must include special courses and exclude companion, occupancy, and future or not-yet-ended schedules without rounding lesson decimals');
+assert.strictEqual(selectedWeekSiren?.teachingStudentCount, 3, 'coach lesson student count must only use completed non-companion non-occupancy schedules');
+assert.strictEqual(selectedWeekSiren?.feedbackRequired, 3, 'coach feedback denominator must only include completed feedback-required teaching schedules');
 assert.strictEqual(selectedWeekSiren?.feedbackCompleted, 1, 'coach feedback numerator must only count submitted feedback on completed schedules');
 assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '私教课')?.hours, 1, 'coach private course mix must not include later-today or future schedules');
+assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '专项课')?.hours, 1.25, 'coach course mix must keep special courses as an independent teaching type without rounding lesson decimals');
 assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '陪打')?.hours, 1, 'coach workload course mix should keep completed companion services');
+assert.strictEqual(selectedWeekSiren?.courseMix.some(item => item.type === '占场'), false, 'coach occupancy must not appear in course mix');
 assert.strictEqual(selectedWeekSiren?.trialBase, 1, 'coach trial conversion denominator must only use completed trial lessons');
 assert.strictEqual(selectedWeekSiren?.trialConverted, 1, 'coach trial conversion numerator should use the unified backend attribution source');
 
@@ -1297,6 +1301,7 @@ assert.deepStrictEqual(
 );
 assert.ok(coachDashboardMetrics.coach.revenueParetoRows.find(row => row.coach === 'A教练')?.cumulativeShare > 80, 'coach dashboard should expose pareto contribution rows');
 assert.strictEqual(coachDashboardMetrics.coach.courseMixRows.find(row => row.coach === 'A教练')?.privateHours, 2, 'coach dashboard should expose chart-ready course mix rows');
+assert.strictEqual(selectedWeekCoachCompletionMetrics.coach.courseMixRows.find(row => row.coach === 'Siren 教练')?.specialHours, 1.25, 'coach chart course mix rows should expose special course hours without rounding lesson decimals');
 assert.ok(coachDashboardMetrics.coach.alerts.find(row => row.type === '低利用'), 'coach dashboard should expose diagnostic alert cards');
 
 const coachFallbackMetrics = buildOperationsMetrics({

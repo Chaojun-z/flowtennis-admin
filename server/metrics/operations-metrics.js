@@ -322,6 +322,24 @@ function hoursBetween(start, end) {
   return Math.max(0, round((endMinutes - startMinutes) / 60, 1));
 }
 
+function normalizePreciseHours(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return 0;
+  return Number(number.toPrecision(12));
+}
+
+function preciseHoursBetween(start, end) {
+  const startDate = start ? new Date(start) : null;
+  const endDate = end ? new Date(end) : null;
+  if (startDate && endDate && !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
+    return Math.max(0, normalizePreciseHours((endDate.getTime() - startDate.getTime()) / 3600000));
+  }
+  const startMinutes = parseTimeToMinutes(start);
+  const endMinutes = parseTimeToMinutes(end);
+  if (startMinutes == null || endMinutes == null) return 0;
+  return Math.max(0, normalizePreciseHours((endMinutes - startMinutes) / 60));
+}
+
 function sourceLeadId(row) {
   return String(row?.sourceLeadId || row?.leadId || row?.fromLeadId || '').trim();
 }
@@ -923,6 +941,14 @@ function scheduleDurationHours(row = {}) {
   return hoursBetween(row.startTime || row.start, row.endTime || row.end);
 }
 
+function coachScheduleDurationHours(row = {}) {
+  const explicit = Number(row.durationHours ?? row.hours);
+  if (Number.isFinite(explicit) && explicit > 0) return normalizePreciseHours(explicit);
+  const lessonCount = Number(row.lessonCount);
+  if (lessonCount > 0) return normalizePreciseHours(lessonCount);
+  return preciseHoursBetween(row.startTime || row.start, row.endTime || row.end);
+}
+
 function isCompletedScheduleForOperations(row = {}, now = new Date()) {
   if (effectiveScheduleStatus(row, now) === '已结束') return true;
   return /已完成|completed|done/i.test(String(row.status || row.systemStatus || row.state || ''));
@@ -968,7 +994,7 @@ function scheduleHasFeedbackRecord(row = {}, feedbacks = []) {
 function isCoachFeedbackRequiredSchedule(row = {}) {
   if (!isActiveScheduleForOperations(row)) return false;
   const text = `${row.courseType || ''} ${row.standardCourseType || ''} ${row.experienceType || ''} ${row.packageName || ''} ${row.productName || ''}`.trim();
-  if (/陪打/.test(text)) return false;
+  if (/陪打|占场/.test(text)) return false;
   return !!scheduleCoachName(row);
 }
 
@@ -978,14 +1004,20 @@ function purchaseStudentKey(row = {}) {
 
 function normalizeCoachCourseType(row = {}) {
   const text = `${row.courseType || ''} ${row.standardCourseType || ''} ${row.experienceType || ''} ${row.packageName || ''} ${row.productName || ''}`.trim();
+  if (/占场/.test(text)) return '占场';
   if (/陪打/.test(text)) return '陪打';
   if (/体验/.test(text)) return '体验课';
+  if (/专项/.test(text)) return '专项课';
   if (/小班|班课|训练营|大师/.test(text)) return '小班课';
   return '私教课';
 }
 
 function isCompanionSchedule(row = {}) {
   return normalizeCoachCourseType(row) === '陪打';
+}
+
+function isCoachOccupancySchedule(row = {}) {
+  return normalizeCoachCourseType(row) === '占场';
 }
 
 function coachUtilizationBand(rateValue) {
@@ -1235,6 +1267,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
         { type: '体验课', hours: 0 },
         { type: '私教课', hours: 0 },
         { type: '小班课', hours: 0 },
+        { type: '专项课', hours: 0 },
         { type: '陪打', hours: 0 }
       ]
     }]));
@@ -1262,27 +1295,29 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
         { type: '体验课', hours: 0 },
         { type: '私教课', hours: 0 },
         { type: '小班课', hours: 0 },
+        { type: '专项课', hours: 0 },
         { type: '陪打', hours: 0 }
       ]
     });
     const current = grouped.get(coach);
-    const hours = scheduleDurationHours(row);
+    const hours = coachScheduleDurationHours(row);
     const companion = isCompanionSchedule(row);
-    current.usedHours = round(current.usedHours + hours, 1);
+    if (isCoachOccupancySchedule(row)) return;
+    current.usedHours = normalizePreciseHours(current.usedHours + hours);
     if (!companion) {
-      current.teachingHours = round(current.teachingHours + hours, 1);
+      current.teachingHours = normalizePreciseHours(current.teachingHours + hours);
       scheduleStudentKeys(row).forEach(key => current.teachingStudentKeys.add(key));
     }
     current.lessonCount += 1;
     const mixType = normalizeCoachCourseType(row);
     const mix = current.courseMix.find(item => item.type === mixType);
-    if (mix) mix.hours = round(mix.hours + hours, 1);
+    if (mix) mix.hours = normalizePreciseHours(mix.hours + hours);
     if (isCoachFeedbackRequiredSchedule(row)) {
       current.feedbackRequired += 1;
       if (scheduleHasFeedbackRecord(row, feedbacks)) current.feedbackCompleted += 1;
     }
     const scheduleCampus = campusLabel(row.campus || row.campusName, campusLabels);
-    if (scheduleCampus) current.campusHours.set(scheduleCampus, round((current.campusHours.get(scheduleCampus) || 0) + hours, 1));
+    if (scheduleCampus) current.campusHours.set(scheduleCampus, normalizePreciseHours((current.campusHours.get(scheduleCampus) || 0) + hours));
   });
   (purchases || []).filter(isValidCoursePurchase).forEach(row => {
     const coach = purchaseCoachName(row);
@@ -1308,6 +1343,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
         { type: '体验课', hours: 0 },
         { type: '私教课', hours: 0 },
         { type: '小班课', hours: 0 },
+        { type: '专项课', hours: 0 },
         { type: '陪打', hours: 0 }
       ]
     });
@@ -1559,6 +1595,7 @@ function buildCoachCourseMixRows(rows = []) {
     trialHours: row.courseMix.find(item => item.type === '体验课')?.hours || 0,
     privateHours: row.courseMix.find(item => item.type === '私教课')?.hours || 0,
     smallGroupHours: row.courseMix.find(item => item.type === '小班课')?.hours || 0,
+    specialHours: row.courseMix.find(item => item.type === '专项课')?.hours || 0,
     companionHours: row.courseMix.find(item => item.type === '陪打')?.hours || 0
   }));
 }
@@ -2971,7 +3008,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const pendingRevenue = financeOverviewValues.pendingRevenue;
   const totalLeads = rawLeadConversion.totalLeads;
   const convertedLeads = rawLeadConversion.convertedLeads;
-  const usedCoachHours = round(coachRows.reduce((sum, row) => sum + row.usedHours, 0), 1);
+  const usedCoachHours = normalizePreciseHours(coachRows.reduce((sum, row) => sum + row.usedHours, 0));
   const availableCoachHours = round(coachRows.reduce((sum, row) => sum + row.availableHours, 0), 1);
   const coachRevenue = money(coachRows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0));
   const coachTrialBase = coachRows.reduce((sum, row) => sum + (Number(row.trialBase) || 0), 0);
