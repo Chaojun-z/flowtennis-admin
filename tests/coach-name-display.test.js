@@ -15,6 +15,9 @@ assert.strictEqual(context.coachName('甄朝珺'), '朝珺教练');
 assert.strictEqual(context.coachName('chaojun'), '朝珺教练');
 assert.strictEqual(context.coachName('天昊'), 'Rive 天昊教练');
 assert.strictEqual(context.coachName('rive'), 'Rive 天昊教练');
+assert.strictEqual(context.coachName('RIVE教练'), 'Rive 天昊教练');
+assert.strictEqual(context.coachName('RIVE 教练'), 'Rive 天昊教练');
+assert.strictEqual(context.coachName('River天昊'), 'Rive 天昊教练');
 assert.strictEqual(context.coachName('晓哲'), '晓哲教练');
 
 assert.match(appSource, /function canonicalCoachName\(/, 'frontend should expose one coach display normalizer');

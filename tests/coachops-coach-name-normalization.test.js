@@ -3,7 +3,8 @@ const { buildCoachOpsUnifiedView } = require('../server/read-models/unified-page
 
 const view = buildCoachOpsUnifiedView({
   coaches: [
-    { id: 'coach-siren', name: 'Siren 教练', status: 'active', sortOrder: 20 }
+    { id: 'coach-siren', name: 'Siren 教练', status: 'active', sortOrder: 20 },
+    { id: 'coach-rive', name: 'Rive 天昊教练', status: 'active', sortOrder: 30 }
   ],
   schedule: [
     {
@@ -25,6 +26,16 @@ const view = buildCoachOpsUnifiedView({
       venue: '4号场',
       status: '已排课',
       studentName: '佳琪'
+    },
+    {
+      id: 'sch-rive-alias',
+      startTime: '2026-08-02 18:00',
+      endTime: '2026-08-02 19:00',
+      coach: 'RIVE教练',
+      campus: 'shunyi_mapo',
+      venue: '4号场',
+      status: '已排课',
+      studentName: '测试学员'
     }
   ],
   feedbacks: [],
@@ -33,13 +44,18 @@ const view = buildCoachOpsUnifiedView({
 
 const sirenRows = view.rows.filter(row => row.name === 'Siren 教练');
 const aliasRows = view.rows.filter(row => row.name === 'Siren');
+const riveRows = view.rows.filter(row => row.name === 'Rive 天昊教练');
+const dirtyRiveRows = view.rows.filter(row => row.name === 'RIVE教练');
 
 assert.strictEqual(aliasRows.length, 0, 'Siren alias must not create a separate coach calendar column');
 assert.strictEqual(sirenRows.length, 1, 'Siren alias and standard name must share one coach calendar column');
+assert.strictEqual(dirtyRiveRows.length, 0, 'RIVE教练 alias must not create a separate coach calendar column');
+assert.strictEqual(riveRows.length, 1, 'RIVE教练 must share the standard Rive 天昊 coach calendar column');
 assert.deepStrictEqual(
   sirenRows[0].rows.map(row => row.id).sort(),
   ['sch-siren-alias', 'sch-siren-standard'],
   'coach calendar should keep both schedules under the standard coach name'
 );
+assert.deepStrictEqual(riveRows[0].rows.map(row => row.id), ['sch-rive-alias']);
 
 console.log('coach ops coach name normalization tests passed');

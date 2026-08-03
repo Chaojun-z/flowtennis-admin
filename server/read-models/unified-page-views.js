@@ -162,10 +162,37 @@ function coachNameKey(value) {
     .trim();
 }
 
+const COACH_DISPLAY_NAME_ALIASES = new Map([
+  ['沙琪儿', 'Siren 教练'],
+  ['siren', 'Siren 教练'],
+  ['Siren', 'Siren 教练'],
+  ['朝珺', '朝珺教练'],
+  ['甄朝珺', '朝珺教练'],
+  ['chaojun', '朝珺教练'],
+  ['Rive', 'Rive 天昊教练'],
+  ['rive', 'Rive 天昊教练'],
+  ['RIVE', 'Rive 天昊教练'],
+  ['River', 'Rive 天昊教练'],
+  ['river', 'Rive 天昊教练'],
+  ['天昊', 'Rive 天昊教练'],
+  ['Rive 天昊', 'Rive 天昊教练'],
+  ['Rive天昊', 'Rive 天昊教练'],
+  ['River 天昊', 'Rive 天昊教练'],
+  ['River天昊', 'Rive 天昊教练'],
+  ['Rive 教练', 'Rive 天昊教练'],
+  ['Rive教练', 'Rive 天昊教练'],
+  ['RIVE 教练', 'Rive 天昊教练'],
+  ['RIVE教练', 'Rive 天昊教练'],
+  ['晓哲', '晓哲教练']
+]);
+
 function buildCoachDisplayNameResolver(coaches = []) {
   const map = new Map();
+  COACH_DISPLAY_NAME_ALIASES.forEach((name, alias) => {
+    map.set(coachNameKey(alias), name);
+  });
   (coaches || []).forEach(row => {
-    const name = text(row.name || row.coachName);
+    const name = map.get(coachNameKey(row.name || row.coachName)) || text(row.name || row.coachName);
     const id = text(row.id || row.coachId);
     if (!name) return;
     [name, id, row.alias, row.aliases, row.nickname, row.nickName, row.displayName, row.username]
@@ -180,7 +207,7 @@ function buildCoachDisplayNameResolver(coaches = []) {
 function buildCoachOpsUnifiedView({ coaches = [], schedule = [], feedbacks = [], campuses = [] } = {}) {
   const activeCoaches = (coaches || []).filter(row => text(row.status || 'active') !== 'inactive');
   const coachDisplayName = buildCoachDisplayNameResolver(coaches);
-  const coachNames = new Set(activeCoaches.map(row => text(row.name || row.coachName)).filter(Boolean));
+  const coachNames = new Set(activeCoaches.map(row => coachDisplayName(row.name || row.coachName)).filter(Boolean));
   (schedule || []).forEach(row => {
     const coach = coachDisplayName(row.coach || row.coachName || row.primaryCoach || row.teacher);
     if (coach) coachNames.add(coach);
@@ -208,7 +235,7 @@ function buildCoachOpsUnifiedView({ coaches = [], schedule = [], feedbacks = [],
     const campusNames = [...new Set(mine.map(row => row.campusName).filter(Boolean))];
     return {
       name,
-      sortOrder: Number(activeCoaches.find(row => text(row.name || row.coachName) === name)?.sortOrder) || 9999,
+      sortOrder: Number(activeCoaches.find(row => coachDisplayName(row.name || row.coachName) === name)?.sortOrder) || 9999,
       rows: mine,
       totalLessonUnits: round(mine.reduce((sum, row) => sum + (Number(row.lessonUnits) || 0), 1), 1),
       feedbackCount: completedRows.filter(row => row.hasFeedback).length,

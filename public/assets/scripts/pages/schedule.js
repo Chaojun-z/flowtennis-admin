@@ -2,7 +2,9 @@ function onScheduleFilterChange(){schPage=standardListFirstPage();renderSchedule
 function syncScheduleFilterOptions(){
   const statusValue=document.getElementById('schStatusFilter')?.value||'',coachValue=document.getElementById('schCoachFilter')?.value||'',courseTypeValue=document.getElementById('schCourseTypeFilter')?.value||'',proposalValue=document.getElementById('schProposalFilter')?.value||'',feedbackValue=document.getElementById('schFeedbackFilter')?.value||'';
   const baseRows=schedules.filter(s=>(campus==='all'||sameCampusValue(s.campus,campus))&&globalDateWithinRange(s.startTime));
-  const coachNames=[...new Set([...activeCoachNames(),...schedules.map(s=>coachName(s.coach)).filter(Boolean)])];
+  const activeNames=activeCoachNames();
+  const activeNameSet=new Set(activeNames.map(name=>coachName(name)));
+  const coachNames=[...new Set([...activeNames,...schedules.map(s=>coachName(s.coach)).filter(name=>name&&activeNameSet.has(name))])];
   const linked=withLinkedFilterCounts([
     {key:'courseType',value:courseTypeValue,options:[{value:'',label:'全部',emptyDisplay:'课程类型'},...STANDARD_COURSE_TYPE_OPTIONS],match:(s,value)=>standardCourseTypeFilterValue(s)===value},
     {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],match:(s,value)=>coachName(s.coach)===value},

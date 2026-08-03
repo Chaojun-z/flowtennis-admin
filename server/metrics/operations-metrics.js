@@ -871,8 +871,18 @@ const COACH_NAME_ALIAS_MAP = new Map([
   ['chaojun', '朝珺教练'],
   ['Rive', 'Rive 天昊教练'],
   ['rive', 'Rive 天昊教练'],
+  ['RIVE', 'Rive 天昊教练'],
+  ['River', 'Rive 天昊教练'],
+  ['river', 'Rive 天昊教练'],
   ['天昊', 'Rive 天昊教练'],
   ['Rive 天昊', 'Rive 天昊教练'],
+  ['Rive天昊', 'Rive 天昊教练'],
+  ['River 天昊', 'Rive 天昊教练'],
+  ['River天昊', 'Rive 天昊教练'],
+  ['Rive 教练', 'Rive 天昊教练'],
+  ['Rive教练', 'Rive 天昊教练'],
+  ['RIVE 教练', 'Rive 天昊教练'],
+  ['RIVE教练', 'Rive 天昊教练'],
   ['晓哲', '晓哲教练']
 ]);
 

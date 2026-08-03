@@ -66,16 +66,32 @@ function createCoachRuleHelpers(deps={}){
     const coach=String(name||'').trim();
     const cid=String(coachId||'').trim();
     if(!coach&&!cid)return;
-    const coachRefHit=r=>parseArr(r.coachNames).some(n=>sameCoachName(n,coach))||parseArr(r.coachIds).some(n=>sameCoachName(n,coach)||String(n||'').trim()===cid);
-    const used=
-      (data.classes||[]).some(r=>sameCoachName(r.coach,coach))||
-      (data.schedule||[]).some(r=>sameCoachName(r.coach,coach))||
-      (data.plans||[]).some(r=>sameCoachName(r.coach,coach))||
-      (data.users||[]).some(r=>sameCoachName(r.coachName,coach))||
-      (data.feedbacks||[]).some(r=>sameCoachName(r.coach,coach))||
-      (data.packages||[]).some(coachRefHit)||
-      (data.entitlements||[]).some(coachRefHit);
-    if(used)throw new Error('该教练已有班次、排课、学习计划、账号、反馈、课包或权益关联，不能直接删除');
+    const nameHit=value=>coach&&sameCoachName(value,coach);
+    const idHit=value=>{
+      const raw=String(value||'').trim();
+      return !!raw&&!!cid&&(raw===cid||sameCoachName(raw,cid));
+    };
+    const anyNameHit=(row,fields)=>fields.some(field=>nameHit(row?.[field]));
+    const anyIdHit=(row,fields)=>fields.some(field=>idHit(row?.[field]));
+    const listHit=(row,fields)=>fields.some(field=>parseArr(row?.[field]).some(value=>nameHit(value)||idHit(value)));
+    const refHit=(row,nameFields=[],idFields=[],listFields=[])=>anyNameHit(row,nameFields)||anyIdHit(row,idFields)||listHit(row,listFields);
+    const rowLabel=row=>String(row?.username||row?.name||row?.studentName||row?.id||'未命名记录').trim();
+    const blockers=[];
+    const collect=(label,rows,hit)=>{
+      const samples=(rows||[]).filter(hit).slice(0,3).map(rowLabel);
+      if(samples.length)blockers.push(`${label}：${samples.join('、')}${(rows||[]).filter(hit).length>samples.length?' 等':''}`);
+    };
+    collect('班次教练',data.classes,r=>refHit(r,['coach','coachName'],['coachId']));
+    collect('排课上课教练',data.schedule,r=>refHit(r,['coach','coachName','primaryCoach','teacher'],['coachId']));
+    collect('学习计划教练',data.plans,r=>refHit(r,['coach','coachName'],['coachId']));
+    collect('账号绑定教练',data.users,r=>refHit(r,['coachName'],['coachId']));
+    collect('课后反馈教练',data.feedbacks,r=>refHit(r,['coach','coachName'],['coachId']));
+    collect('线索成交教练',data.leads,r=>refHit(r,['formalCoach'],['formalCoachId','coachId']));
+    collect('学员负责教练',data.students,r=>refHit(r,['primaryCoach','coachName'],['primaryCoachId','coachId']));
+    collect('课包或权益关联',data.packages,r=>refHit(r,['ownerCoach'],[],['coachNames','allowedCoaches','coachIds']));
+    collect('购买记录教练',data.purchases,r=>refHit(r,['ownerCoach'],[],['coachNames','allowedCoaches','coachIds']));
+    collect('课包或权益关联',data.entitlements,r=>refHit(r,['ownerCoach'],[],['coachNames','allowedCoaches','coachIds']));
+    if(blockers.length)throw new Error(`该教练仍被以下教练字段使用，不能直接删除：${blockers.join('；')}`);
   }
 
   return {assertUniqueCoachName,buildCoachRenameUpdates,assertCanDeleteCoachName};

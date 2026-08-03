@@ -56,7 +56,7 @@ assert.throws(
     users: [],
     feedbacks: []
   }),
-  /已有班次、排课、学习计划、账号、反馈、课包或权益关联/,
+  /班次教练：class-1/,
   'referenced coach should not be deletable'
 );
 
@@ -81,7 +81,7 @@ assert.throws(
     packages: [{ id: 'pkg-1', coachNames: ['测试教练'] }],
     entitlements: []
   }),
-  /课包或权益关联/,
+  /课包或权益关联：pkg-1/,
   'coach referenced by package name should not be deletable'
 );
 
@@ -95,8 +95,38 @@ assert.throws(
     packages: [{ id: 'pkg-2', coachIds: ['coach-1'] }],
     entitlements: []
   }, 'coach-1'),
-  /课包或权益关联/,
+  /课包或权益关联：pkg-2/,
   'coach referenced only by package id should not be deletable'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanDeleteCoachName('小鹿', {
+    classes: [],
+    schedule: [{ id: 'sch-student-name', coach: '其他教练', studentName: '小鹿' }],
+    plans: [],
+    users: [],
+    feedbacks: [],
+    students: [{ id: 'stu-xiaolu', name: '小鹿' }],
+    packages: [],
+    purchases: [],
+    entitlements: []
+  }, 'coach-xiaolu'),
+  'student name matching a coach name should not block coach deletion'
+);
+
+assert.throws(
+  () => rules.assertCanDeleteCoachName('小鹿', {
+    classes: [],
+    schedule: [],
+    plans: [],
+    users: [{ id: 'shaobaolu', username: 'shaobaolu', role: 'editor', coachId: 'coach-xiaolu', coachName: '小鹿' }],
+    feedbacks: [],
+    packages: [],
+    purchases: [],
+    entitlements: []
+  }, 'coach-xiaolu'),
+  /账号绑定教练：shaobaolu/,
+  'coach account binding should block deletion with a clear account name'
 );
 
 assert.throws(
