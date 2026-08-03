@@ -5,6 +5,25 @@ const axios = require('axios');
 
 const sync = require('../server/feishu-schedule-sync-routes');
 
+const RealDate = Date;
+async function withFixedDate(iso, fn) {
+  const fixedTime = new RealDate(iso).getTime();
+  class FixedDate extends RealDate {
+    constructor(...args) {
+      super(...(args.length ? args : [fixedTime]));
+    }
+    static now() {
+      return fixedTime;
+    }
+  }
+  global.Date = FixedDate;
+  try {
+    return await fn();
+  } finally {
+    global.Date = RealDate;
+  }
+}
+
 const values = [
   ['时间', null, null, '马坡室内', null, null, null, '晓哲教练', null, null, null],
   ['日期', '星期', '时段', '1号', '2号', '3号', '4号', '课程', '场馆', '场地号', '学员'],
@@ -1407,13 +1426,13 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
     process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED = 'false';
     delete process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK;
 
-    await route({
+    await withFixedDate('2026-08-01T01:00:00.000Z', () => route({
       path: '/cron/feishu-schedule-sync',
       method: 'GET',
       req: { headers: { 'user-agent': 'vercel-cron' } },
       res: {},
       query: new URLSearchParams('dryRun=true')
-    });
+    }));
     assert.strictEqual(jsonPayload.mode, 'sheet', 'regular cron sync should compare the whole Feishu document instead of future rows only');
     assert.strictEqual(jsonPayload.courseCount, 4, 'regular cron sync should include current week and next week rows');
     assert.deepStrictEqual(jsonPayload.sheetIds, ['GrbZdi', 'NextWeek'], 'regular cron sync should not scan old sheets during the non-8am run');
@@ -1441,13 +1460,13 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
       T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
     });
     process.env.FEISHU_SCHEDULE_SYNC_WRITE_ENABLED = 'true';
-    await baselineRoute({
+    await withFixedDate('2026-08-01T00:00:00.000Z', () => baselineRoute({
       path: '/cron/feishu-schedule-sync',
       method: 'GET',
       req: { headers: { 'user-agent': 'vercel-cron' } },
       res: {},
       query: new URLSearchParams('notify=false&scanAllSheets=true')
-    });
+    }));
     assert.strictEqual(jsonPayload.courseCount, 4, 'first all-sheet scan should baseline old sheets without processing them');
     assert.ok(baselineWrites.some(item => item.row.source === 'feishu-sheet-fingerprint' && item.row.sheetId === 'OldWeek'), 'first all-sheet scan should store old sheet fingerprint baseline');
 

@@ -286,6 +286,8 @@ function buildScopedLifecycleSource(data = {}, scope = {}) {
   ));
   const studentIds = new Set(scopedLifecycleRows.map(row => text(row.studentId)).filter(Boolean));
   const leadIds = new Set(scopedLifecycleRows.map(row => text(row.sourceLeadId || row.leadId)).filter(Boolean));
+  const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
+  const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
   const scopedPurchaseIds = new Set((data.purchases || [])
     .filter(row => studentIds.has(text(row.studentId)) && scopeMatchesDate(rowScopeDate(row), scope))
     .map(row => text(row.id)).filter(Boolean));
@@ -295,7 +297,7 @@ function buildScopedLifecycleSource(data = {}, scope = {}) {
     students: (data.students || []).filter(row => studentIds.has(text(row.id || row.studentId))),
     purchases: (data.purchases || []).filter(row => studentIds.has(text(row.studentId)) && scopeMatchesDate(rowScopeDate(row), scope)),
     entitlements: (data.entitlements || []).filter(row => studentIds.has(text(row.studentId)) && (!text(row.purchaseId) || scopedPurchaseIds.has(text(row.purchaseId)))),
-    entitlementLedger: (data.entitlementLedger || []).filter(row => studentIds.has(text(row.studentId)) && scopeMatchesDate(rowScopeDate(row), scope)),
+    entitlementLedger: (data.entitlementLedger || []).filter(row => studentIds.has(entitlementLedgerStudentId(row, entitlementsById, purchasesById)) && scopeMatchesDate(rowScopeDate(row), scope)),
     schedule: (data.schedule || []).filter(row => {
       const ids = parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean);
       return ids.some(id => studentIds.has(id)) && scopeMatchesDate(rowScopeDate(row), scope);
@@ -344,6 +346,12 @@ function teachingPackageDate(row = {}, purchase = {}) {
 
 function teachingPackageName(row = {}, purchase = {}) {
   return text(row.packageName || row.productName || row.name || purchase.packageName || purchase.productName || purchase.name || row.courseType || purchase.courseType || '课包');
+}
+
+function entitlementLedgerStudentId(row = {}, entitlementsById = new Map(), purchasesById = new Map()) {
+  const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
+  const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
+  return text(row.studentId || entitlement.studentId || purchase.studentId);
 }
 
 function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false } = {}) {
@@ -436,7 +444,7 @@ function buildTeachingStudentCompletedLessonMap(data = {}) {
   (data.entitlementLedger || []).forEach(row => {
     const delta = Number(row.lessonDelta) || 0;
     if (delta >= 0 || !activeStatus(row)) return;
-    const studentId = text(row.studentId);
+    const studentId = entitlementLedgerStudentId(row, entitlementsById, purchasesById);
     if (!studentId) return;
     const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
     const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
@@ -510,9 +518,10 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   (data.entitlementLedger || [])
     .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0)
     .forEach(row => {
-      const studentId = text(row.studentId);
       const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
       const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
+      const studentId = entitlementLedgerStudentId(row, entitlementsById, purchasesById);
+      if (!studentId) return;
       const schedule = schedulesById.get(text(row.scheduleId)) || {};
       const trial = courseRowIsTrial(row) || courseRowIsTrial(entitlement) || courseRowIsTrial(purchase) || courseRowIsTrial(schedule);
       if (trial !== includeTrial || courseRowIsCompanion(row) || courseRowIsCompanion(entitlement) || courseRowIsCompanion(purchase) || courseRowIsCompanion(schedule)) return;
@@ -1106,7 +1115,7 @@ function teachingStudentFormalLedgerRows(data = {}, studentId = '') {
   const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
   const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
   return (data.entitlementLedger || [])
-    .filter(row => activeStatus(row) && text(row.studentId) === text(studentId) && (Number(row.lessonDelta) || 0) < 0)
+    .filter(row => activeStatus(row) && entitlementLedgerStudentId(row, entitlementsById, purchasesById) === text(studentId) && (Number(row.lessonDelta) || 0) < 0)
     .filter(row => {
       const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
       const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};

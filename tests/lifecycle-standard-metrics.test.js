@@ -209,6 +209,66 @@ assert.deepStrictEqual(
   ],
   '学员抽屉上课明细必须以当前事实表为准，旧摘要空数组不能覆盖真实上课记录'
 );
+const mixedLedgerStudentIdData = {
+  leads: [],
+  students: [{ id: 'student-mixed-ledger-id', name: 'William（时节）' }],
+  purchases: [{
+    id: 'purchase-mixed-ledger-id',
+    studentId: 'student-mixed-ledger-id',
+    packageName: '青少年1v1 黄金时间10课时',
+    courseType: '私教课',
+    packageLessons: 10,
+    amountPaid: 4500,
+    status: 'active',
+    purchaseDate: '2026-06-03'
+  }],
+  entitlements: [{
+    id: 'ent-mixed-ledger-id',
+    studentId: 'student-mixed-ledger-id',
+    purchaseId: 'purchase-mixed-ledger-id',
+    packageName: '青少年1v1 黄金时间10课时',
+    courseType: '私教课',
+    totalLessons: 10,
+    usedLessons: 10,
+    remainingLessons: 0,
+    status: 'depleted'
+  }],
+  entitlementLedger: Array.from({ length: 10 }, (_, index) => ({
+    id: `ledger-mixed-ledger-id-${index + 1}`,
+    entitlementId: 'ent-mixed-ledger-id',
+    purchaseId: 'purchase-mixed-ledger-id',
+    studentId: index < 7 ? 'student-mixed-ledger-id' : '',
+    lessonDelta: -1,
+    relatedDate: `2026-07-${String(index + 1).padStart(2, '0')}`
+  })),
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  membershipBenefitLedger: []
+};
+const mixedLedgerStudentIdStandard = buildStandardLifecycleMetrics({
+  ...mixedLedgerStudentIdData,
+  customerLifecycleRows: buildCustomerLifecycleRows(mixedLedgerStudentIdData),
+  now: new Date('2026-08-03 00:00:00')
+});
+const mixedLedgerStudentIdRow = mixedLedgerStudentIdStandard.views.historicalStudents.find(row => row.studentId === 'student-mixed-ledger-id');
+assert.strictEqual(
+  mixedLedgerStudentIdRow?.completedLessons,
+  10,
+  '扣课流水缺少 studentId 时，统一读模型必须通过 entitlementId 反推出学员并计入累计上课'
+);
+assert.strictEqual(
+  mixedLedgerStudentIdRow?.detailLessonRecordRows.length,
+  10,
+  '扣课流水缺少 studentId 时，学员抽屉上课记录不能少于课包实际已扣课数量'
+);
+assert.strictEqual(
+  mixedLedgerStudentIdRow?.detailPackageBalanceText,
+  '0/10',
+  '课包已用完时，上课记录数量必须和课包使用进度一致'
+);
 assert.ok(
   standard.views.activeStudents.some(row => row.studentId === 'student-single-pay-active' && row.packageBalanceText === '-'),
   '单次付费活跃学员必须进入在期学员，但课包余额展示为空'
