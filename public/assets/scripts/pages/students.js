@@ -1120,31 +1120,7 @@ function studentLessonRecordHtml(stu){
 }
 function studentLessonRecordRows(stu){
   if(Array.isArray(stu?.detailLessonRecordRows))return stu.detailLessonRecordRows;
-  const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
-  const map=new Map();
-  const ledgerItems=studentConcreteLessonLedgerItems(stu);
-  const ledgerKeys=new Set(ledgerItems.map(({row,schedule})=>studentLessonRecordKey({studentId:stu?.id,row,schedule})));
-  ledgerItems.forEach(({row,schedule})=>{
-    const key=studentLessonRecordMergeKey({studentId:stu?.id,row,schedule});
-    const ent=entMap.get(row.entitlementId)||{};
-    const sortTime=studentEntitlementLedgerTimeText(row,schedule);
-    const existing=map.get(key);
-    if(existing?.type==='ledger'){
-      const preferred=studentLedgerPreferredDisplayEntitlement(existing.ent,ent);
-      map.set(key,{type:'ledger',row:{...(preferred===ent?row:existing.row),lessonDelta:(Number(existing.row.lessonDelta)||0)+(Number(row.lessonDelta)||0)},ent:preferred,sortTime:existing.sortTime||sortTime});
-      return;
-    }
-    map.set(key,{type:'ledger',row,ent,sortTime});
-  });
-  schedules
-    .filter(x=>scheduleHasStudent(x,stu)&&x.startTime)
-    .filter(x=>effectiveScheduleStatus(x)!=='已取消')
-    .filter(schedule=>studentLessonRecordShouldIncludeSchedule(schedule,stu,ledgerKeys,ledgerItems.length>0))
-    .forEach(schedule=>{
-      const key=studentLessonRecordKey({studentId:stu?.id,schedule});
-      if(!map.has(key))map.set(key,{type:'schedule',schedule,sortTime:schedule.startTime});
-    });
-  return [...map.values()].sort((a,b)=>String(b.sortTime||'').localeCompare(String(a.sortTime||'')));
+  return [];
 }
 function studentLedgerPreferredDisplayEntitlement(left={},right={}){
   const leftDate=studentEntitlementPurchaseDate(left,purchases.find(p=>p.id===left.purchaseId)||{});
