@@ -6,6 +6,14 @@ function text(value) {
   return String(value || '').trim();
 }
 
+function hasOwn(row = {}, field = '') {
+  return !!row && Object.prototype.hasOwnProperty.call(row, field);
+}
+
+function ownText(row = {}, field = '') {
+  return hasOwn(row, field) ? text(row[field]) : '';
+}
+
 function campusKey(value) {
   return normalizeCampusValue(text(value));
 }
@@ -312,11 +320,42 @@ function dateTimeText(row = {}, fallback = '') {
   const end = text(row.endTime);
   const date = start.slice(0, 10);
   const startTime = start.slice(11, 16);
-  const endTime = end.slice(11, 16);
+  const inlineRange = !end ? start.match(/\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}\s*[-~至到]\s*(\d{1,2}:\d{2})/) : null;
+  const endTime = end.slice(11, 16) || (inlineRange ? inlineRange[1] : '');
   if (!date) return '';
   if (startTime && endTime) return `${date} ${startTime}-${endTime}`;
   if (startTime) return `${date} ${startTime}`;
   return date;
+}
+
+function ledgerFallbackDateTime(row = {}) {
+  const date = dateOnly(row.relatedDate || row.sourceDate || row.createdAt || row.scheduleTime);
+  if (!date) return text(row.scheduleTime || row.createdAt);
+  const band = text(row.sourceTimeBand || row.timeBand || row.scheduleTime);
+  const match = band.match(/(\d{1,2}:\d{2})\s*[-~至到]\s*(\d{1,2}:\d{2})/);
+  if (match) return `${date} ${match[1]}-${match[2]}`;
+  const single = band.match(/(\d{1,2}:\d{2})/);
+  if (single) return `${date} ${single[1]}`;
+  return date;
+}
+
+function scheduleMatchesLedgerRow(schedule = {}, ledger = {}, studentIds = []) {
+  if (!schedule || !ledger) return false;
+  const ledgerDate = dateOnly(ledger.relatedDate || ledger.sourceDate || ledger.scheduleTime || ledger.createdAt);
+  const scheduleDate = dateOnly(schedule.startTime || schedule.endTime || schedule.createdAt);
+  if (!ledgerDate || !scheduleDate || ledgerDate !== scheduleDate) return false;
+  const scheduleStudentIds = parseArr(schedule.studentIds).concat(text(schedule.studentId)).map(text).filter(Boolean);
+  if (studentIds.length && scheduleStudentIds.length && !studentIds.some(id => scheduleStudentIds.includes(id))) return false;
+  const ledgerCoach = text(ledger.coach || ledger.coachName);
+  const scheduleCoach = text(schedule.coach || schedule.coachName);
+  if (ledgerCoach && scheduleCoach && ledgerCoach !== scheduleCoach) return false;
+  return true;
+}
+
+function findScheduleForLedgerRow(ledger = {}, schedulesById = new Map(), scheduleRows = [], studentIds = []) {
+  const byId = schedulesById.get(text(ledger.scheduleId));
+  if (byId) return byId;
+  return (scheduleRows || []).find(row => scheduleMatchesLedgerRow(row, ledger, studentIds)) || {};
 }
 
 function courseTypeText(row = {}) {
@@ -542,6 +581,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
   const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
   const schedulesById = new Map((data.schedule || []).map(row => [text(row.id), row]));
+  const scheduleRows = data.schedule || [];
   const studentsById = new Map((data.students || []).map(row => [text(row.id || row.studentId), row]));
   const rowsByStudent = new Map();
   const ledgerScheduleStudentKeys = new Set();
@@ -567,7 +607,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       const studentIds = entitlementLedgerStudentIds(row, entitlementsById, purchasesById, schedulesById);
       if (!studentIds.length) return;
       const ownerStudentId = entitlementLedgerOwnerStudentId(row, entitlementsById, purchasesById);
-      const schedule = schedulesById.get(text(row.scheduleId)) || {};
+      const schedule = findScheduleForLedgerRow(row, schedulesById, scheduleRows, studentIds);
       const trial = courseRowIsTrial(row) || courseRowIsTrial(entitlement) || courseRowIsTrial(purchase) || courseRowIsTrial(schedule);
       if (trial !== includeTrial || courseRowIsCompanion(row) || courseRowIsCompanion(entitlement) || courseRowIsCompanion(purchase) || courseRowIsCompanion(schedule)) return;
       const displayStudentIds = [...new Set([...studentIds, ownerStudentId].map(text).filter(Boolean))];
@@ -575,16 +615,17 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
         if (text(row.scheduleId)) ledgerScheduleStudentKeys.add(`${studentId}|${text(row.scheduleId)}`);
         ledgerScheduleFactKeys.add(lessonFactKey(studentId, {
           startTime: schedule.startTime,
-          relatedDate: row.relatedDate,
+          relatedDate: ledgerFallbackDateTime(row) || row.relatedDate,
           scheduleTime: row.scheduleTime,
           createdAt: row.createdAt,
           coach: schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach
         }));
-        const sortTime = text(schedule.startTime || row.relatedDate || row.scheduleTime || row.createdAt);
+        const fallbackTime = ledgerFallbackDateTime(row);
+        const sortTime = text(schedule.startTime || fallbackTime || row.relatedDate || row.scheduleTime || row.createdAt);
         push(studentId, {
           kind: 'ledger',
           sortTime,
-          time: dateTimeText(schedule, row.relatedDate || row.scheduleTime || row.createdAt),
+          time: dateTimeText(schedule, fallbackTime || row.relatedDate || row.scheduleTime || row.createdAt),
           packageName: teachingPackageName(entitlement, purchase),
           lessonRelationText: ledgerRelationText({ currentStudentId: studentId, actualStudentIds: studentIds, ownerStudentId, studentsById }),
           packageOwnerStudentId: ownerStudentId,
@@ -595,7 +636,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           countAsCompletedLesson: studentIds.includes(studentId),
           courseType: courseTypeText(schedule.courseType ? schedule : entitlement),
           campus: text(schedule.campus || row.campus || entitlement.campus),
-          venue: text(schedule.venue || row.venue),
+          venue: text(schedule.venue || row.venue || row.sourceVenue || row.courtName || row.court),
           coach: text(schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach),
           lessonDelta: Number(row.lessonDelta) || 0,
           unit: packageUnitLabel(entitlement),
@@ -1095,8 +1136,8 @@ function rawLeadPoolRowsForLeads(leadPoolRows = [], leads = []) {
 }
 
 function teachingStudentViewRow(row = {}, listFields = {}) {
-  const notes = text(row.notes || row.profileNote);
-  const profileNote = text(row.profileNote || row.notes);
+  const notes = hasOwn(row, 'notes') ? text(row.notes) : text(row.profileNote);
+  const profileNote = text(row.profileNote);
   const searchText = [
     row.searchText,
     row.displayName,
@@ -1170,8 +1211,8 @@ function buildTeachingStudentSearchableRows(viewRows = [], data = {}) {
       campus: text(student.campus || student.campusName || existing.campus),
       owner: text(student.owner || student.followupOwner || existing.owner),
       formalCoach: text(student.primaryCoach || student.coach || student.coachName || existing.primaryCoach || existing.formalCoach),
-      profileNote: text(student.profileNote || student.notes || existing.profileNote || existing.notes),
-      notes: text(student.notes || student.profileNote || existing.notes || existing.profileNote),
+      profileNote: text(student.profileNote || existing.profileNote),
+      notes: hasOwn(student, 'notes') ? text(student.notes) : ownText(existing, 'notes'),
       status: text(student.status || existing.status),
       mergedIntoStudentId: text(student.mergedIntoStudentId || existing.mergedIntoStudentId)
     };

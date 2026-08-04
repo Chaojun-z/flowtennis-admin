@@ -41,7 +41,7 @@ assert.match(source, /function renderEntitlementAuthorizationStudentSuggestions\
 assert.match(source, /function entitlementAuthorizationSaveErrorText\([\s\S]*授权数据表还没准备好，请刷新页面后再试[\s\S]*return '授权保存失败，请稍后重试';/, 'authorization save errors should fall back to readable text');
 assert.match(source, /function getFilteredStudents\(/, 'student page should centralize filtered student list calculation');
 assert.match(fnBody('studentUnifiedViewRows'), /includeSearchIndex[\s\S]*teachingStudentViews\?\.searchableStudents/, 'student keyword search should use the lightweight full student search index instead of switching search tables');
-assert.match(fnBody('studentUnifiedViewRows'), /notes:row\.notes\|\|row\.profileNote\|\|student\.notes\|\|student\.profileNote/, 'student unified rows must preserve notes/profileNote for stable keyword search');
+assert.match(fnBody('studentUnifiedViewRows'), /studentHasNotes[\s\S]*const notes=studentHasNotes\?student\.notes/, 'student unified rows should preserve intentionally empty student notes instead of falling back to system notes');
 assert.match(fnBody('studentSearchText'), /s\?\.searchText[\s\S]*s\?\.notes[\s\S]*s\?\.profileNote/, 'student keyword search must include backend searchText, notes, and profileNote');
 assert.match(fnBody('searchHit'), /compactKeyword=keyword\.replace\(\//, 'global keyword search should build a compact keyword');
 assert.match(fnBody('searchHit'), /text\.replace\(\//, 'global keyword search should compare against compact text');
@@ -354,9 +354,8 @@ assert.match(source, /function ensureStudentDetailDatasets\(/, 'student detail s
 assert.match(source, /ensureStudentDetailData\(id\)/, 'student detail should load heavy detail facts by student id instead of the full purchases aggregate');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggregateHistoricalMonthlyLedgerRows[\s\S]*function classScheduleSummaryHtml/, 'student consume history should show imported lesson rows one by one instead of monthly aggregation');
 assert.doesNotMatch(fnBody('studentCompletedLessonCount'), /historicalImportedLessonUnitsForStudent|studentConcreteLessonLedgerItems|schedules\.filter/, 'student cumulative lessons should only read backend unified completedLessons');
-assert.match(source, /student-consumption-section/, 'student detail should keep a dedicated consumption relation card');
-assert.match(source, /消费与关联/, 'student detail should keep the consumption relation card title');
-assert.match(source, /订场账户[\s\S]*会员状态/, 'student consumption relation card should show readable account and membership summaries');
+assert.doesNotMatch(fnBody('studentDetailBasicTabHtml'), /student-consumption-section|消费与关联/, 'student basic detail should not show the consumption relation card');
+assert.doesNotMatch(fnBody('studentDetailBasicTabHtml'), /关联线索|student-lead-section/, 'student basic detail should not show the linked lead card');
 assert.match(source, /function studentDetailFieldHtml\(/, 'student detail should render short readonly values without form inputs');
 assert.match(source, /function studentDetailFieldHtml\(label,value\)\{[\s\S]*return renderDetailDrawerField\(label,value\)/, 'student detail readonly fields should use the shared detail drawer field helper');
 assert.match(source, /function studentDetailBlockHtml\(/, 'student detail should render long readonly content as information blocks');
@@ -380,7 +379,7 @@ assert.match(css, /\.student-lesson-title\{[^}]*font-size:12px/, 'student lesson
 assert.match(css, /\.student-lesson-charge strong\{[^}]*font-size:12px[^}]*background:transparent/, 'student lesson charge badge should stay compact and unboxed');
 assert.match(source, /function studentDetailBlockHtml\(label,html,options=\{\}\)[\s\S]*options\.hideEmpty&&studentDetailIsEmptyHtml\(html\)/, 'student detail should hide empty long blocks when they add no information');
 assert.match(css, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-block\{[^}]*background:#FBFCFE/, 'student detail long content should use the drawer detail block style');
-assert.match(source, /const leadHtml=studentDetailIsEmptyHtml\(studentLeadSummaryHtml\(s\)\)\?'':studentLeadSummaryHtml\(s\);[\s\S]*const leadAction=studentLeadJumpActionHtml\(s\);[\s\S]*studentDrawerCardHtml\('关联线索',leadHtml,'student-lead-section',leadAction,\{useGrid:false\}\)/, 'student linked lead card should show the summary directly and place the lead action in the title row');
+assert.doesNotMatch(fnBody('studentDetailBasicTabHtml'), /studentLeadSummaryHtml\(s\)|studentLeadJumpActionHtml\(s\)/, 'student basic detail should not render lead summary or lead jump action');
 assert.doesNotMatch(fnBody('studentDetailBasicTabHtml'), /studentDetailBlockHtml\('线索摘要'/, 'student linked lead card should not render a duplicate lead summary label');
 assert.match(source, /function studentDetailSectionHtml\(/, 'student detail should hide whole empty sections');
 assert.doesNotMatch(source, /function studentOpsInfoHtml[\s\S]*最近活跃[\s\S]*function studentConsumptionInfoHtml/, 'student ops detail should remove duplicated recent active field');
@@ -431,8 +430,8 @@ assert.match(source, /DELETE_STUDENT_HISTORY/, 'student delete requests should c
 assert.doesNotMatch(source, /课包消耗记录/, 'student detail should avoid a duplicate package consume record block');
 assert.match(source, /如需调整关联关系，请到「订场\/会员」页面编辑订场用户。/, 'student detail should explain where to adjust linked booking accounts');
 assert.doesNotMatch(source, /function openStudentModal[\s\S]*studentLinkedDetailHtml\(s\)/, 'student edit modal should not embed linked detail summary anymore');
-assert.match(source, /function studentBasicInfoFormHtml[\s\S]*姓名 \*[\s\S]*手机号[\s\S]*负责教练[\s\S]*学员类型[\s\S]*来源[\s\S]*活动范围[\s\S]*所在校区[\s\S]*备注/, 'student edit modal should keep base profile fields and expose primary coach');
-assert.match(fnBody('studentBasicInfoFormHtml'), /来源线索摘要[\s\S]*student-lead-summary-readonly[\s\S]*studentLeadSummaryHtml\(s\)/, 'student edit modal should show linked lead summary as readonly text');
+assert.match(source, /function studentBasicInfoFormHtml[\s\S]*姓名 \*[\s\S]*手机号[\s\S]*负责教练[\s\S]*学员类型[\s\S]*来源[\s\S]*所在校区[\s\S]*备注/, 'student edit modal should keep base profile fields and expose primary coach');
+assert.doesNotMatch(fnBody('studentBasicInfoFormHtml'), /来源线索摘要|student-lead-summary-readonly|studentLeadSummaryHtml\(s\)|活动范围|s_range/, 'student edit modal should not show linked lead summary or activity range');
 assert.doesNotMatch(fnBody('studentBasicInfoFormHtml'), /<label class="tms-form-label">线索来源<\/label><div class="finput tms-form-control tms-readonly-text">/, 'student edit lead summary should not look like an editable input');
 assert.match(fnBody('studentDetailBasicTabHtml'), /const saveActions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted"[\s\S]*取消[\s\S]*保存[\s\S]*<\/div>`/, 'student drawer edit cancel and save should sit together as one action group');
 assert.doesNotMatch(source, /placeholder="13800138000"/, 'phone inputs should not show example numbers that look prefilled');

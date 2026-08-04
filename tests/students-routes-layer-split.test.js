@@ -17,7 +17,8 @@ assert.match(routesSource, /studentReminderLinkM/, 'student routes module should
 assert.match(routesSource, /studentReminderSettingsM/, 'student routes module should own reminder settings route');
 assert.match(routesSource, /studentReminderUnbindM/, 'student routes module should own reminder unbind route');
 assert.match(routesSource, /const sM=path\.match\(\^?/, 'student routes module should own /students/:id handling');
-assert.match(routesSource, /applyStudentIdentityUpdate\(old,r\)/, 'student update should still run identity propagation');
+assert.match(routesSource, /studentIdentityChanged\(old,r\)/, 'student update should only propagate identity when name or phone changes');
+assert.match(routesSource, /then\(\(\)=>applyStudentIdentityUpdate\(old,r\)\)/, 'student identity propagation should not block the main save response');
 assert.match(routesSource, /deleteStudentCascade\(id,\{confirm:body\.confirm,user\}\)/, 'student delete should still use cascade delete helper');
 assert.match(apiSource, /if\(await handleStudentRoutes\(\{path,method,body,user,res\}\)\)return;/, 'api/index.js should call student routes');
 assert.doesNotMatch(apiSource, /if\(path==='\/students'\)/, 'api/index.js should not keep /students route inline');

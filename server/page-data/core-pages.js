@@ -244,7 +244,40 @@ function createCorePageDataRoutes(deps={}){
       if(!studentId)return sendJson(res,{error:'缺少学员 ID'},400);
       const student=await getCachedRow(T_STUDENTS,studentId).catch(()=>null);
       if(!student)return sendJson(res,{error:'学员不存在'},404);
-      const [purchases,packages,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks,studentTeachingSummary]=await Promise.all([
+      const fresh=String(query?.get('fresh')||'').trim()==='1';
+      const studentTeachingSummary=T_STUDENT_TEACHING_SUMMARY ? await getCachedRow(T_STUDENT_TEACHING_SUMMARY,studentId).catch(()=>null) : null;
+      if(!fresh&&studentTeachingSummary&&String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()==='lesson-record-v1'){
+        const customerLifecycleRows=buildCustomerLifecycleRows({students:[student]});
+        const detailStudentView={
+          ...student,
+          ...studentTeachingSummary,
+          id:studentId,
+          studentId,
+          name:student.name||studentTeachingSummary.name||studentTeachingSummary.displayName||'',
+          displayName:student.name||studentTeachingSummary.displayName||studentTeachingSummary.name||'',
+          phone:student.phone||studentTeachingSummary.phone||'',
+          type:student.type||studentTeachingSummary.type||'',
+          source:student.source||studentTeachingSummary.source||'',
+          campus:student.campus||studentTeachingSummary.campus||'',
+          primaryCoach:student.primaryCoach||studentTeachingSummary.primaryCoach||'',
+          notes:Object.prototype.hasOwnProperty.call(student,'notes')?String(student.notes||''):String(studentTeachingSummary.notes||''),
+          profileNote:student.profileNote||studentTeachingSummary.profileNote||''
+        };
+        return sendJson(res,{
+          students:[student],
+          purchases:[],
+          packages:[],
+          entitlements:[],
+          entitlementLedger:[],
+          schedule:[],
+          membershipBenefitLedger:[],
+          feedbacks:[],
+          customerLifecycleRows,
+          teachingStudentViews:{historicalStudents:[detailStudentView],activeStudents:[detailStudentView],courseStudents:[detailStudentView],trialStudents:[],formalStudents:[detailStudentView]},
+          detailStudentView
+        });
+      }
+      const [purchases,packages,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks,loadedStudentTeachingSummary]=await Promise.all([
         cappedScan(T_PURCHASES).catch(()=>[]),
         cappedScan(T_PACKAGES).catch(()=>[]),
         cappedScan(T_ENTITLEMENTS).catch(()=>[]),
@@ -252,7 +285,7 @@ function createCorePageDataRoutes(deps={}){
         T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
         T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
         T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([]),
-        T_STUDENT_TEACHING_SUMMARY ? getCachedRow(T_STUDENT_TEACHING_SUMMARY,studentId).catch(()=>null) : Promise.resolve(null)
+        Promise.resolve(studentTeachingSummary)
       ]);
       const studentPurchases=purchases.filter(row=>String(row.studentId||'')===studentId);
       const studentEntitlements=entitlements.filter(row=>String(row.studentId||'')===studentId);
@@ -282,7 +315,7 @@ function createCorePageDataRoutes(deps={}){
         schedule:schedule.filter(row=>rowHasStudent(row,studentId)),
         membershipBenefitLedger:membershipBenefitLedger.filter(row=>String(row.studentId||'')===studentId),
         feedbacks:feedbacks.filter(row=>rowHasStudent(row,studentId)),
-        studentTeachingSummaries:studentTeachingSummary?[studentTeachingSummary]:[]
+        studentTeachingSummaries:loadedStudentTeachingSummary?[loadedStudentTeachingSummary]:[]
       },user);
       scoped.schedule=await hydrateScheduleRowsByLedgerIds(scoped.schedule,scoped.entitlementLedger);
       const customerLifecycleRows=buildCustomerLifecycleRows({

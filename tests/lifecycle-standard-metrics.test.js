@@ -406,6 +406,28 @@ assert.deepStrictEqual(
   [['2026-08-01 16:00-17:00', 'William弟弟 使用了 William（时节） 的课包', true, false]],
   '课包所有人的上课记录必须能看到谁使用了他的课包，但这条不计入本人累计上课'
 );
+const ledgerScheduleFallbackData = {
+  students: [{ id: 'student-ledger-fallback', name: '流水兜底学员' }],
+  purchases: [{ id: 'purchase-ledger-fallback', studentId: 'student-ledger-fallback', packageName: '成人1v1 10课时', courseType: '私教课', amountPaid: 3800, status: 'active', purchaseDate: '2026-07-01' }],
+  entitlements: [{ id: 'ent-ledger-fallback', studentId: 'student-ledger-fallback', purchaseId: 'purchase-ledger-fallback', packageName: '成人1v1 10课时', courseType: '私教课', totalLessons: 10, remainingLessons: 9, status: 'active' }],
+  entitlementLedger: [{ id: 'ledger-bad-schedule-id', studentId: 'student-ledger-fallback', entitlementId: 'ent-ledger-fallback', purchaseId: 'purchase-ledger-fallback', scheduleId: 'missing-schedule-id', lessonDelta: -1, relatedDate: '2026-07-06', sourceTimeBand: '15:00-16:00', sourceVenue: '3号场', coach: 'Siren' }],
+  schedule: [{ id: 'real-schedule-ledger-fallback', studentId: 'student-ledger-fallback', studentName: '流水兜底学员', courseType: '私教课', startTime: '2026-07-06 15:00:00', endTime: '2026-07-06 16:00:00', status: '已下课', coach: 'Siren', campus: 'shunyi_mapo', venue: '5号场' }],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  membershipBenefitLedger: []
+};
+const ledgerScheduleFallbackStandard = buildStandardLifecycleMetrics({
+  ...ledgerScheduleFallbackData,
+  customerLifecycleRows: buildCustomerLifecycleRows(ledgerScheduleFallbackData),
+  now: new Date('2026-08-03 00:00:00')
+});
+assert.deepStrictEqual(
+  ledgerScheduleFallbackStandard.views.historicalStudents.find(row => row.studentId === 'student-ledger-fallback')?.detailLessonRecordRows.map(row => [row.kind, row.time, row.venue, row.coach]),
+  [['ledger', '2026-07-06 15:00-16:00', '5号场', 'Siren']],
+  '扣课流水 scheduleId 找不到时，后端上课明细必须按同学员同日期同教练匹配排课，补齐时间段和场地号'
+);
 assert.ok(
   standard.views.activeStudents.some(row => row.studentId === 'student-single-pay-active' && row.packageBalanceText === '-'),
   '单次付费活跃学员必须进入在期学员，但课包余额展示为空'

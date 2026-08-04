@@ -33,6 +33,11 @@ function createStudentRoutes(deps={}){
     return rows.map(row=>({row,reason:studentDuplicateReason(input,row)}))
       .find(item=>item.reason&&String(item.row.id||'')!==String(editingId||''))||null;
   }
+  function studentIdentityChanged(oldStudent={},nextStudent={}){
+    if(!oldStudent)return false;
+    return studentUniqueText(oldStudent.name)!==studentUniqueText(nextStudent.name)
+      ||studentUniquePhone(oldStudent.phone)!==studentUniquePhone(nextStudent.phone);
+  }
 
   return async function handleStudentRoutes({path,method,body,user,res}){
     if(path==='/students'){
@@ -108,8 +113,14 @@ function createStudentRoutes(deps={}){
         const duplicate=await findStudentDuplicate(r,id);
         if(duplicate)return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
         await put(T_STUDENTS,id,r);
-        const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};
-        return sendJson(res,{...r,studentUpdates});
+        const studentUpdates={plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[],courts:[],leads:[],leadFollowups:[]};
+        const studentUpdatesPending=old&&studentIdentityChanged(old,r);
+        if(studentUpdatesPending){
+          Promise.resolve()
+            .then(()=>applyStudentIdentityUpdate(old,r))
+            .catch(err=>console.error('[students] identity propagation failed',err));
+        }
+        return sendJson(res,{...r,studentUpdates,studentUpdatesPending});
       }
       if(method==='DELETE'){
         try{
