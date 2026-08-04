@@ -18,7 +18,7 @@ assert.strictEqual(fs.existsSync(matchKeepaliveWorkflowPath), true, '约球 Supa
 assert.match(feishuDailyWorkflow, /cron: '5 12 \* \* \*'/, '飞书排课日报应由 GitHub Actions 定时触发');
 assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-coach-reminders/, '服务号教练课前提醒应由 GitHub Actions 单独触发');
 assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-student-reminders/, '服务号学员课前提醒应由 GitHub Actions 单独触发');
-assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-feedback-reminders/, '服务号课后反馈提醒应由 GitHub Actions 单独触发');
+assert.doesNotMatch(officialRemindersWorkflow, /\/api\/cron\/official-account-feedback-reminders/, '服务号课前提醒 workflow 不应被课后反馈提醒拖慢');
 assert.match(officialDigestsWorkflow, /\/api\/cron\/official-account-daily-digests/, '服务号次日课表应由 GitHub Actions 触发');
 assert.match(feishuCoachDigestsWorkflow, /cron: '0 12 \* \* \*'/, '飞书教练私发次日排课应每天北京时间 20:00 触发');
 assert.match(feishuCoachDigestsWorkflow, /\/api\/cron\/feishu-coach-daily-digests/, '飞书教练私发次日排课应由 GitHub Actions 触发');

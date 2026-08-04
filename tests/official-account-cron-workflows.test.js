@@ -16,7 +16,7 @@ assert.match(remindersWorkflow, /cron:\s*'2,32 \* \* \* \*'/, 'reminders workflo
 assert.match(remindersWorkflow, /fail-fast:\s*false/, 'reminders workflow should let split reminder jobs finish independently');
 assert.match(remindersWorkflow, /official-account-coach-reminders/, 'reminders workflow should call the coach reminder endpoint');
 assert.match(remindersWorkflow, /official-account-student-reminders/, 'reminders workflow should call the student reminder endpoint');
-assert.match(remindersWorkflow, /official-account-feedback-reminders/, 'reminders workflow should call the feedback reminder endpoint');
+assert.doesNotMatch(remindersWorkflow, /official-account-feedback-reminders/, 'reminders workflow should keep heavy feedback reminders out of the high-frequency course reminder path');
 assert.doesNotMatch(remindersWorkflow, /TARGET_URL:\s*https:\/\/www\.flowtennis\.cn\/api\/cron\/official-account-reminders/, 'reminders workflow should not call the combined timeout-prone endpoint');
 assert.match(remindersWorkflow, /User-Agent:\s*vercel-cron/, 'reminders workflow should mimic Vercel cron user agent');
 assert.match(remindersWorkflow, /hour=\$\(date \+%H\)/, 'reminders workflow should check current hour');

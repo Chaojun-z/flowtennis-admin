@@ -20,8 +20,6 @@ jobs:
             url: https://www.flowtennis.cn/api/cron/official-account-coach-reminders
           - name: student-reminders
             url: https://www.flowtennis.cn/api/cron/official-account-student-reminders
-          - name: feedback-reminders
-            url: https://www.flowtennis.cn/api/cron/official-account-feedback-reminders
     env:
       TZ: Asia/Shanghai
       CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
