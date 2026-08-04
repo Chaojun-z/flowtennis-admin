@@ -6,12 +6,8 @@ var COACH_OPS_MONTH_VISIBLE_COACHES=5;
 var coachOpsAutoScrollDayView=false,coachOpsAutoScrollWeekView=false,coachOpsAutoScrollMonthView=false,coachOpsPendingCreateSlot=null;
 function isCoachSchedulePage(){return currentPage==='coachschedule';}
 function isCoachWorkloadPage(){return currentPage==='coachops';}
-function coachOpsDateInput(){
-  return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadDate':'coachOpsDate')||document.getElementById('coachOpsDate')||document.getElementById('coachOpsWorkloadDate');
-}
-function coachOpsPickerEl(){
-  return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadPicker':'coachOpsPicker')||document.getElementById('coachOpsPicker')||document.getElementById('coachOpsWorkloadPicker');
-}
+function coachOpsDateInput(){return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadDate':'coachOpsDate')||document.getElementById('coachOpsDate')||document.getElementById('coachOpsWorkloadDate');}
+function coachOpsPickerEl(){return document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadPicker':'coachOpsPicker')||document.getElementById('coachOpsPicker')||document.getElementById('coachOpsWorkloadPicker');}
 function updateCoachOpsPageChrome(){const legend=document.getElementById('coachOpsLegend');if(legend)legend.innerHTML=coachOpsCourseTypeLegendHtml();}
 function setFinancePanel(panel){
   financePanel=['ledger','revenue','recognized','settlement'].includes(panel)?panel:'ledger';
@@ -40,11 +36,7 @@ function setFinancePanel(panel){
     }
   }
 }
-function renderFinanceCenter(){
-  ensureCoachOpsReportDateControls();
-  syncFinanceLedgerLoadingState();
-  setFinancePanel(financePanel);
-}
+function renderFinanceCenter(){ensureCoachOpsReportDateControls();syncFinanceLedgerLoadingState();setFinancePanel(financePanel);}
 var financePrepaidFilter='all';
 function renderFinanceLedgerPageSizeFilter(){const host=document.getElementById('financeLedgerPageSize');if(!host)return;host.innerHTML=renderPageSizeSelectorHtml('financeLedgerPageSizeValue',financeLedgerPageSize,'setFinanceLedgerPageSize');}
 function setFinanceLedgerPageSize(value){financeLedgerPageSize=standardListPageSize(value,financeLedgerPageSize);financeLedgerPage=standardListFirstPage();renderFinanceLedger();}
@@ -67,13 +59,7 @@ function renderFinanceRecognizedPageSizeFilter(){const host=document.getElementB
 function setFinanceRecognizedPageSize(value){financeRecognizedPageSize=standardListPageSize(value,financeRecognizedPageSize);financeRecognizedPage=standardListFirstPage();renderFinanceConsumeReport();}
 function setFinanceRecognizedPage(page){financeRecognizedPage=standardListPagination(financeRecognizedRows().length,page,financeRecognizedPageSize).page;renderFinanceConsumeReport();}
 function resetFinanceRecognizedPage(){financeRecognizedPage=standardListFirstPage();}
-function setFinancePrepaidFilter(filter){
-  financePrepaidFilter=['all','lesson','stored'].includes(filter)?filter:'all';
-  [['financePrepaidFilterAll','all'],['financePrepaidFilterLesson','lesson'],['financePrepaidFilterStored','stored']].forEach(([id,key])=>{
-    document.getElementById(id)?.classList.toggle('active',financePrepaidFilter===key);
-  });
-  renderFinancePrepaidBalance();
-}
+function setFinancePrepaidFilter(filter){financePrepaidFilter=['all','lesson','stored'].includes(filter)?filter:'all';[['financePrepaidFilterAll','all'],['financePrepaidFilterLesson','lesson'],['financePrepaidFilterStored','stored']].forEach(([id,key])=>{document.getElementById(id)?.classList.toggle('active',financePrepaidFilter===key);});renderFinancePrepaidBalance();}
 function coachOpsLessonText(value){const n=Number(value)||0;return Number.isInteger(n)?String(n):String(Math.round(n*10)/10);}
 function coachOpsLedgerTimeText(row){if(row?.importSource==='系统导入'&&row?.sourceDate&&row?.sourceTimeBand)return `${row.sourceDate} ${row.sourceTimeBand} · 系统导入`;if(row?.importSource==='系统导入'&&row?.sourceMonth)return `${row.sourceMonth} · 系统导入`;return fmtDt(row?.createdAt||row?.relatedDate);}
 function coachOpsWeekdayText(d){return ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]||'';}
