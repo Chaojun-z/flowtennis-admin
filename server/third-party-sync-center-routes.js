@@ -312,7 +312,7 @@ function classifyRecord(record = {}, duplicateKeys = new Set()) {
       const amountBreakdown = extraServiceBreakdown(record, rule.finalType);
       return ruleBasePayload(record, {
         recommendedType: amountBreakdown ? 'auto_import' : 'needs_confirmation',
-        plannedAction: amountBreakdown ? `自动拆分订场费和${rule.serviceType}服务费` : `确认订场费和${rule.serviceType}服务费拆分`,
+        plannedAction: amountBreakdown ? `自动拆分场地费和${rule.serviceType}费` : `确认场地费和${rule.serviceType}费拆分`,
         confidence: amountBreakdown ? 0.86 : 0.6,
         riskReason: amountBreakdown ? '' : `${rule.serviceType}额外服务需确认金额拆分`,
         needsConfirmation: !amountBreakdown,
@@ -536,7 +536,7 @@ function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations
     }
     const amountBreakdown = confirmation?.amountBreakdown || precheck.amountBreakdown || null;
     if (needsExtraServiceBreakdown(finalType) && !amountBreakdown) {
-      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '额外服务缺少订场费和服务费拆分' });
+      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '额外项目缺少场地费和附加项目费拆分' });
       continue;
     }
     if (finalType === '会员余额订场') {
@@ -1657,11 +1657,16 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         batchId: cleanText(body.batchId),
         sourceRecordId: cleanText(body.sourceRecordId),
         finalType: cleanText(body.finalType),
+        processingDecision: cleanText(body.processingDecision),
+        importDestination: cleanText(body.importDestination),
+        revenueTreatment: cleanText(body.revenueTreatment),
+        extraServiceType: cleanText(body.extraServiceType),
         paymentMethod: cleanText(body.paymentMethod),
         amount: Number(body.amount || 0) || 0,
         amountBreakdown,
         bindTargetType: cleanText(body.bindTargetType),
         bindTargetId: cleanText(body.bindTargetId),
+        bindTargetLabel: cleanText(body.bindTargetLabel),
         confirmNote: cleanText(body.confirmNote),
         confirmedBy: user.name || user.id || 'admin',
         confirmedAt: now(),

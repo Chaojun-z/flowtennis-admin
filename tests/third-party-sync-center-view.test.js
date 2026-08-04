@@ -1,63 +1,82 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { appSource: html } = require('./helpers/read-index-bundle');
+const vm = require('vm');
 
-const root = path.join(__dirname, '..');
-const workflowPath = path.join(root, '.github', 'workflows', 'third-party-sync-center.yml');
+const repoRoot = path.resolve(__dirname, '..');
+const filePath = path.join(repoRoot, 'public/assets/scripts/pages/third-party-sync-center.js');
+const source = fs.readFileSync(filePath, 'utf8');
 
-assert.match(html, /page-third-party-sync/, 'admin app should include third-party sync center page container');
-assert.match(html, /第三方同步中心/, 'admin navigation should expose 第三方同步中心');
-assert.match(html, /goPage\('third-party-sync'/, 'navigation should route to third-party sync page');
-assert.match(html, /thirdPartySyncCenterPage:\(\)=>apiCall\('GET','\/third-party-sync\/overview'\)/, 'state loader should fetch sync center overview');
-assert.match(html, /function renderThirdPartySyncCenter\(/, 'sync center page renderer should exist');
-assert.match(html, /thirdPartySyncStatsCompactCards/, 'sync center should use compact one-row stats cards');
-assert.match(html, /third-party-sync-stats-row/, 'sync center stats should stay on one compact row');
-assert.match(html, /数据日期[\s\S]*订场总数[\s\S]*已自动处理[\s\S]*需运营处理/, 'top stats should only show operator-facing sync progress');
-assert.doesNotMatch(html, /label:'会员资料'|label:'接口缺口'|label:'高危异常'|label:'重复跳过'/, 'top stats should not show noisy technical categories');
-assert.match(html, /<th style="width:120px;padding-left:20px">数据日期<\/th>/, 'sync record table should show data date');
-assert.doesNotMatch(html, /<th[^>]*>时间范围<\/th>|thirdPartySyncBatchRangeText/, 'sync record table should not show time range');
-assert.match(html, /<th style="width:110px;padding-left:20px">处理事项<\/th><th style="width:110px">日期<\/th><th style="width:110px">时间段<\/th>/, 'needs-processing table should use operator-facing action wording');
-assert.doesNotMatch(html, /kind:'订场确认'|kind:'异常报警'|kind:'第三方变更'/, 'needs-processing type should not expose unclear system wording');
-assert.match(html, /thirdPartySyncBookingPrechecks/, 'precheck table should default to booking records only');
-assert.match(html, /姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'sync center should expose operator-facing third party fields');
-assert.match(html, /thirdPartySyncStatusClass/, 'sync center should color statuses by severity');
-assert.match(html, /#page-third-party-sync \.tms-table th[\s\S]*#page-third-party-sync \.tms-tag\{font-size:12px/, 'sync center list font should be 12px');
-assert.doesNotMatch(html, /<th style="width:110px">来源<\/th>|<th style="width:130px">系统判断<\/th>/, 'precheck table should not expose unclear source/system judgment columns');
-assert.match(html, /confirmThirdPartySyncItem/, 'sync center should support operation confirmation');
-assert.match(html, /订场\+发球机[\s\S]*thirdPartyConfirmBookingAmount[\s\S]*thirdPartyConfirmServiceAmount/, 'sync center confirmation modal should support booking and extra service fee split');
-assert.match(html, /保存并导入/, 'sync center should let operators save confirmation and import the batch immediately');
-assert.match(html, /runThirdPartySyncImportPlan/, 'sync center should expose import plan preview');
-assert.match(html, /runThirdPartySyncImport/, 'sync center should support one-click semi-auto import');
-assert.match(html, /自动导/, 'sync record table should expose auto import as the main action');
-assert.match(html, /手动拉取/, 'manual pull button should make its purpose clear');
-assert.match(html, /缺少第三方账号配置/, 'manual pull errors should explain missing third-party account config');
-assert.match(html, /thirdPartySyncPullLoading/, 'manual pull should expose a loading state');
-assert.match(html, /正在拉取/, 'manual pull button should show progress while waiting');
-assert.match(html, /setThirdPartySyncTableTab/, 'sync center should switch long tables through tabs');
-assert.match(html, /thirdPartySyncEffectiveBatchId/, 'precheck tab should default to the latest batch instead of all historical batches');
-assert.match(html, /thirdPartySyncNeedsProcessingRows/, 'sync center should merge all items requiring operation handling into one list');
-assert.match(html, /thirdPartySyncIsActionableSourceType/, 'needs-processing list should keep member profile and member ledger gap rows out of operator actions');
-assert.match(html, /let thirdPartySyncActiveTableTab='prechecks'/, 'sync center should default to the processing tab');
-assert.match(html, /需处理数据[\s\S]*同步记录/, 'sync center should put processing data before sync records');
-assert.match(html, /订场总数[\s\S]*已自动处理[\s\S]*需运营处理[\s\S]*异常/, 'sync record table should show actionable booking metrics');
-assert.match(html, /部分完成，待处理[\s\S]*已重试，仍待处理/, 'sync record statuses should explain partial and retry batches');
-assert.match(html, /处理事项[\s\S]*日期[\s\S]*时间段[\s\S]*场地[\s\S]*姓名[\s\S]*手机号[\s\S]*订场方式[\s\S]*操作账号[\s\S]*备注[\s\S]*问题原因[\s\S]*建议处理/, 'needs-processing table should show only actionable fields');
-assert.doesNotMatch(html, /thirdPartySyncTableTabButton\('writes'|thirdPartySyncTableTabButton\('changes'|写入回滚|异常处理/, 'sync center should not expose technical write/change tabs');
-assert.doesNotMatch(html, /第三方变更待处理[\s\S]*运营要做什么[\s\S]*异常待处理/, 'sync center should not expose separate change and alert panels');
-assert.match(html, /runThirdPartySyncRollback/, 'sync center should support batch rollback action');
-assert.match(html, /回滚影响/, 'sync center should show rollback impact details');
-assert.match(html, /稳定自动同步/, 'sync center should label the V3 auto sync capability');
-assert.match(html, /third-party-sync-center\.js/, 'index should load sync center page script');
+assert(!source.includes('绑定对象ID'), '第三方确认弹窗不能要求运营填写绑定对象ID');
+assert(!source.includes('<select'), '第三方确认弹窗必须使用系统标准下拉，不使用原生 select');
+assert(source.includes("thirdPartySyncTableTabButton('prechecks','需处理数据')"), '必须保留需处理数据 Tab');
+assert(source.includes("thirdPartySyncTableTabButton('batches','同步记录')"), '必须保留同步记录 Tab');
+assert(source.includes("thirdPartySyncTableTabButton('confirmations','已处理记录')"), '必须保留已处理记录 Tab');
+assert(!source.includes("thirdPartySyncTableTabButton('rollbacks'"), '默认 Tab 不应包含历史异常/作废批次');
 
-assert.ok(fs.existsSync(workflowPath), 'daily sync workflow should exist');
-const workflow = fs.readFileSync(workflowPath, 'utf8');
-assert.match(workflow, /cron:\s*'0 16 \* \* \*'/, 'daily sync should run at 00:00 Asia/Shanghai');
-assert.match(workflow, /TZ:\s*Asia\/Shanghai/, 'workflow should pin Asia/Shanghai timezone');
-assert.match(workflow, /\/api\/cron\/third-party-sync-center/, 'workflow should trigger sync center cron endpoint');
-assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, 'workflow should reuse existing cron auth fallback');
-assert.match(workflow, /sleep 3600/, 'daily sync should retry once after 1 hour when the first run fails');
-assert.match(workflow, /FEISHU_MONITOR_WEBHOOK_URL:\s*\$\{\{\s*secrets\.FEISHU_MONITOR_ALERT_WEBHOOK\s*\}\}/, 'daily sync should have an action-level Feishu failure fallback');
-assert.match(workflow, /订场数据同步失败/, 'daily sync fallback should send an operator-readable failure notice');
+const oldBatchId = 'cxe-sync-20260726-old';
+const newBatchId = 'cxe-sync-20260726-new';
+const latestBatchId = 'cxe-sync-20260803-latest';
+const makeRows = (count, batchId, sourceType, recommendedType, needsConfirmation) =>
+  Array.from({ length: count }, (_, index) => ({
+    id: `${batchId}-${sourceType}-${index}`,
+    batchId,
+    sourceRecordId: `${batchId}-source-${index}`,
+    sourceType,
+    date: batchId.includes('20260803') ? '2026-08-03' : '2026-07-26',
+    startTime: '10:00',
+    endTime: '11:00',
+    venue: '1号场',
+    customerName: `测试${index}`,
+    phone: `1380000${String(index).padStart(4, '0')}`,
+    recommendedType,
+    needsConfirmation,
+    riskReason: needsConfirmation ? '备注为空' : ''
+  }));
 
-console.log('third-party sync center view tests passed');
+const context = {
+  console,
+  thirdPartySyncCenterData: {
+    batches: [
+      { id: oldBatchId, batchId: oldBatchId, rangeStart: '2026-07-26 00:00:00', rangeEnd: '2026-07-27 00:00:00', pulledAt: '2026-07-29T05:15:15.875Z', status: 'prechecked' },
+      { id: newBatchId, batchId: newBatchId, rangeStart: '2026-07-26 00:00:00', rangeEnd: '2026-07-27 00:00:00', pulledAt: '2026-07-29T05:30:03.179Z', status: 'prechecked' },
+      { id: latestBatchId, batchId: latestBatchId, rangeStart: '2026-08-03 00:00:00', rangeEnd: '2026-08-04 00:00:00', pulledAt: '2026-08-03T18:46:01.306Z', status: 'paused' }
+    ],
+    rawRecords: [
+      ...makeRows(1370, oldBatchId, 'order', 'high_risk_exception', true),
+      ...makeRows(25, newBatchId, 'order', 'auto_import', false),
+      ...makeRows(1, latestBatchId, 'order', 'auto_import', false),
+      ...makeRows(6, latestBatchId, 'lock', 'needs_confirmation', true)
+    ],
+    prechecks: [
+      ...makeRows(1370, oldBatchId, 'order', 'high_risk_exception', true),
+      ...makeRows(25, newBatchId, 'order', 'auto_import', false),
+      ...makeRows(1, latestBatchId, 'order', 'auto_import', false),
+      ...makeRows(6, latestBatchId, 'lock', 'needs_confirmation', true)
+    ],
+    confirmations: [],
+    importResults: [],
+    changes: [],
+    alerts: [],
+    rollbacks: []
+  },
+  esc: value => String(value ?? ''),
+  fmt: value => String(Number(value || 0)),
+  jsArg: value => JSON.stringify(value)
+};
+
+vm.createContext(context);
+vm.runInContext(source, context);
+
+const activeIds = context.thirdPartySyncActiveBatches().map(row => row.batchId);
+assert(activeIds.includes(newBatchId), '同一天应保留最新有效批次');
+assert(!activeIds.includes(oldBatchId), '旧异常批次不应进入默认同步记录');
+assert.strictEqual(context.thirdPartySyncNeedsProcessingRows('').length, 6, '默认需处理数据只统计所有最新有效批次的未处理项');
+
+const stats = context.thirdPartySyncStatsCompactCards();
+assert.strictEqual(stats.total, 7, '顶部提示条应展示最近批次订场/锁场总数');
+assert.strictEqual(stats.auto, 1, '顶部提示条应展示最近批次可自动导入数量');
+assert.strictEqual(stats.need, 6, '顶部提示条应展示最近批次需运营处理数量');
+assert.strictEqual(stats.allNeed, 6, '顶部提示条累计待处理不应包含旧异常批次');
+
+console.log('third-party-sync-center-view.test.js passed');

@@ -5,7 +5,7 @@ function thirdPartySyncData(){
   return thirdPartySyncCenterData||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[],changes:[],alerts:[],rollbacks:[]};
 }
 function thirdPartySyncLatestBatch(){
-  const batches=[...(thirdPartySyncData().batches||[])];
+  const batches=thirdPartySyncActiveBatches();
   return batches.sort((a,b)=>String(b.pulledAt||'').localeCompare(String(a.pulledAt||'')))[0]||null;
 }
 function thirdPartySyncStatusText(status){
@@ -57,6 +57,53 @@ function thirdPartySyncIsActionableSourceType(type){
 function thirdPartySyncRowsForBatch(rows=[],batchId=''){
   return (rows||[]).filter(row=>String(row.batchId||'')===String(batchId||''));
 }
+function thirdPartySyncBatchDateText(row={}){
+  const start=String(row.rangeStart||'').slice(0,10);
+  const end=String(row.rangeEnd||'').slice(0,10);
+  return start||end||String(row.pulledAt||'').slice(0,10)||'-';
+}
+function thirdPartySyncActiveBatches(){
+  const byDate=new Map();
+  (thirdPartySyncData().batches||[]).forEach(row=>{
+    const date=thirdPartySyncBatchDateText(row);
+    const current=byDate.get(date);
+    if(!current||String(row.pulledAt||'').localeCompare(String(current.pulledAt||''))>0)byDate.set(date,row);
+  });
+  return [...byDate.values()];
+}
+function thirdPartySyncActiveBatchIds(){
+  return new Set(thirdPartySyncActiveBatches().map(row=>String(row.batchId||row.id||'')).filter(Boolean));
+}
+function thirdPartySyncScopedBatchIds(batchId=''){
+  if(batchId)return new Set([String(batchId)]);
+  return thirdPartySyncActiveBatchIds();
+}
+function thirdPartySyncSourceKey(batchId='',sourceRecordId=''){
+  return `${String(batchId||'')}|${String(sourceRecordId||'')}`;
+}
+function thirdPartySyncConfirmedSourceKeys(){
+  const map=new Map();
+  (thirdPartySyncData().confirmations||[]).forEach(row=>{
+    const key=thirdPartySyncSourceKey(row.batchId,row.sourceRecordId);
+    const current=map.get(key);
+    if(!current||String(row.confirmedAt||'').localeCompare(String(current.confirmedAt||''))>0)map.set(key,row);
+  });
+  return map;
+}
+function thirdPartySyncImportedSourceKeys(){
+  const ids=new Set();
+  (thirdPartySyncData().importResults||[])
+    .filter(row=>['completed','partial_completed','partial_failed'].includes(String(row.status||'')))
+    .forEach(row=>(row.writtenIds||[]).forEach(item=>{
+      const key=thirdPartySyncSourceKey(row.batchId,item.sourceRecordId);
+      if(item.sourceRecordId)ids.add(key);
+    }));
+  return ids;
+}
+function thirdPartySyncIsUnresolvedSource(row={}){
+  const key=thirdPartySyncSourceKey(row.batchId,row.sourceRecordId);
+  return !thirdPartySyncConfirmedSourceKeys().has(key)&&!thirdPartySyncImportedSourceKeys().has(key);
+}
 function thirdPartySyncBatchCountText(row={}){
   const batchId=row.batchId||row.id||'';
   const data=thirdPartySyncData();
@@ -80,6 +127,9 @@ function thirdPartySyncImportedSourceCount(batchId=''){
       if(id)ids.add(id);
     }));
   return ids.size;
+}
+function thirdPartySyncConfirmedSourceCount(batchId=''){
+  return [...thirdPartySyncConfirmedSourceKeys().values()].filter(row=>String(row.batchId||'')===String(batchId||'')).length;
 }
 function thirdPartySyncLatestImportResult(batchId=''){
   return [...(thirdPartySyncData().importResults||[])]
@@ -106,17 +156,13 @@ function thirdPartySyncBatchMetrics(row={}){
     gapCount:raws.filter(item=>thirdPartySyncIsGapSourceType(item.sourceType)).length,
     autoImportableCount:prechecks.filter(item=>item.recommendedType==='auto_import').length,
     importedCount:thirdPartySyncImportedSourceCount(batchId),
+    confirmedCount:thirdPartySyncConfirmedSourceCount(batchId),
     needProcessCount:needRows.length,
     exceptionCount:alertCount+changeCount
   };
 }
 function thirdPartySyncBatchById(batchId=''){
   return (thirdPartySyncData().batches||[]).find(row=>String(row.batchId||row.id||'')===String(batchId||''))||null;
-}
-function thirdPartySyncBatchDateText(row={}){
-  const start=String(row.rangeStart||'').slice(0,10);
-  const end=String(row.rangeEnd||'').slice(0,10);
-  return start||end||'-';
 }
 function thirdPartySyncBatchDisplayStatus(row={},latestImport=null,metrics={}){
   const status=latestImport?.status||row.status;
@@ -133,22 +179,25 @@ function thirdPartySyncMoneyImpactText(impact={}){
 function thirdPartySyncStatsCompactCards(){
   const latest=thirdPartySyncLatestBatch();
   const metrics=latest?thirdPartySyncBatchMetrics(latest):{};
-  return [
-    {label:'数据日期',value:latest?thirdPartySyncBatchDateText(latest):'-',sub:latest?.pulledAt?String(latest.pulledAt).replace('T',' ').slice(0,16):'暂无同步'},
-    {label:'订场总数',value:Number(metrics.bookingCount||0),sub:'第三方订场/锁场'},
-    {label:'已自动处理',value:Number(metrics.importedCount||0),sub:'已写入系统'},
-    {label:'需运营处理',value:Number(metrics.needProcessCount||0),sub:'确认后可导入'},
-  ];
+  const allNeed=thirdPartySyncNeedsProcessingRows('').length;
+  return {
+    latestTime:latest?.pulledAt?String(latest.pulledAt).replace('T',' ').slice(0,19):'暂无同步',
+    total:Number(metrics.bookingCount||0),
+    auto:Number(metrics.autoImportableCount||0),
+    need:Number(metrics.needProcessCount||0),
+    allNeed
+  };
 }
 function renderThirdPartySyncStats(){
   const host=document.getElementById('thirdPartySyncStats');
   if(!host)return;
-  host.innerHTML=renderStandardDataCards(thirdPartySyncStatsCompactCards());
+  const stats=thirdPartySyncStatsCompactCards();
+  host.innerHTML=`<div class="third-party-sync-notice">最近自动同步时间：${esc(stats.latestTime)}，共 ${esc(stats.total)} 条数据，${esc(stats.auto)} 条可自动导入，${esc(stats.need)} 条需要运营处理，累计需要运营处理 ${esc(stats.allNeed)} 条</div>`;
 }
 function renderThirdPartySyncBatches(){
   const host=document.getElementById('thirdPartySyncBatchTbody');
   if(!host)return;
-  const rows=[...(thirdPartySyncData().batches||[])].sort((a,b)=>String(b.pulledAt||'').localeCompare(String(a.pulledAt||'')));
+  const rows=thirdPartySyncActiveBatches().sort((a,b)=>String(b.pulledAt||'').localeCompare(String(a.pulledAt||'')));
   host.innerHTML=rows.map(row=>{
     const batchId=row.batchId||row.id||'';
     const metrics=thirdPartySyncBatchMetrics(row);
@@ -158,13 +207,14 @@ function renderThirdPartySyncBatches(){
     <td style="padding-left:20px">${renderStandardCellText(thirdPartySyncBatchDateText(row))}</td>
     <td>${renderStandardCellText(metrics.bookingCount)}</td>
     <td>${renderStandardCellText(metrics.importedCount)}</td>
+    <td>${renderStandardCellText(metrics.confirmedCount)}</td>
     <td>${renderStandardCellText(metrics.needProcessCount)}</td>
     <td>${renderStandardCellText(metrics.exceptionCount)}</td>
     <td>${thirdPartySyncStatusTag(displayStatus.status,displayStatus.text)}</td>
     <td>${renderStandardCellText(row.pulledAt?String(row.pulledAt).replace('T',' ').slice(0,16):'-')}</td>
     <td class="tms-sticky-r tms-action-cell" style="width:210px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="filterThirdPartySyncBatch('${esc(batchId)}')">查看需处理</span><span class="tms-action-link" onclick="runThirdPartySyncImport('${esc(batchId)}')">自动导</span></td>
   </tr>`;
-  }).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无同步记录</p></div></td></tr>';
+  }).join('')||'<tr><td colspan="9"><div class="empty"><p>暂无同步记录</p></div></td></tr>';
 }
 let thirdPartySyncBatchFilter='';
 function filterThirdPartySyncBatch(batchId){
@@ -173,13 +223,21 @@ function filterThirdPartySyncBatch(batchId){
   renderThirdPartySyncCenter();
   renderThirdPartySyncPrechecks();
 }
+function clearThirdPartySyncBatchFilter(){
+  thirdPartySyncBatchFilter='';
+  thirdPartySyncActiveTableTab='prechecks';
+  renderThirdPartySyncCenter();
+}
 function thirdPartySyncEffectiveBatchId(){
-  return thirdPartySyncBatchFilter || thirdPartySyncLatestBatch()?.batchId || thirdPartySyncLatestBatch()?.id || '';
+  return thirdPartySyncBatchFilter || '';
 }
 function thirdPartySyncVisiblePrechecks(batchId=thirdPartySyncEffectiveBatchId()){
   const rows=thirdPartySyncData().prechecks||[];
-  const scoped=batchId?rows.filter(row=>String(row.batchId||'')===String(batchId)):rows;
-  return thirdPartySyncBookingPrechecks(scoped).filter(row=>row.needsConfirmation||row.recommendedType==='needs_confirmation'||row.recommendedType==='high_risk_exception');
+  const scopedIds=thirdPartySyncScopedBatchIds(batchId);
+  const scoped=rows.filter(row=>scopedIds.has(String(row.batchId||'')));
+  return thirdPartySyncBookingPrechecks(scoped)
+    .filter(row=>row.needsConfirmation||row.recommendedType==='needs_confirmation'||row.recommendedType==='high_risk_exception')
+    .filter(row=>thirdPartySyncIsUnresolvedSource(row));
 }
 function thirdPartySyncPrecheckForSource(batchId='',sourceRecordId=''){
   return (thirdPartySyncData().prechecks||[]).find(row=>String(row.batchId||'')===String(batchId||'')&&String(row.sourceRecordId||'')===String(sourceRecordId||''))||{};
@@ -340,10 +398,11 @@ function renderThirdPartySyncConfirmations(){
     <td>${renderStandardCellText(row.finalType||'-')}</td>
     <td>${renderStandardCellText(row.paymentMethod||'-')}</td>
     <td>${renderStandardCellText(row.amount?`¥${fmt(row.amount)}`:'-')}</td>
+    <td>${renderStandardCellText(row.bindTargetLabel||'-')}</td>
     <td>${renderStandardCellText(row.confirmedBy||'-')}</td>
     <td>${renderStandardCellText(row.confirmedAt?String(row.confirmedAt).replace('T',' ').slice(0,16):'-')}</td>
     <td>${renderStandardCellText(row.confirmNote||'-')}</td>
-  </tr>`).join('')||'<tr><td colspan="7"><div class="empty"><p>暂无确认记录</p></div></td></tr>';
+  </tr>`).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无确认记录</p></div></td></tr>';
 }
 function renderThirdPartySyncImportResults(){
   const host=document.getElementById('thirdPartySyncImportResultTbody');
@@ -480,42 +539,199 @@ async function runThirdPartySyncRollback(operationId){
     toast('回滚失败：'+e.message,'error');
   }
 }
+function thirdPartySyncConfirmDecisionOptions(){
+  return [{value:'import',label:'导入'},{value:'ignore',label:'不导入'},{value:'boss_confirm',label:'待老板确认'}];
+}
+function thirdPartySyncImportDestinationOptions(){
+  return [{value:'booking',label:'订场记录'},{value:'schedule',label:'排课占场'},{value:'internal',label:'内部占用'},{value:'activity',label:'活动/畅打占场'}];
+}
+function thirdPartySyncRevenueTreatmentOptions(){
+  return [{value:'none',label:'不涉及收入'},{value:'guest_payment',label:'散客收款'},{value:'member_balance',label:'会员余额扣款'},{value:'platform_voucher',label:'平台券码核销'}];
+}
+function thirdPartySyncGuestPaymentOptions(){
+  return [{value:'微信转账',label:'微信转账'},{value:'现金',label:'现金'},{value:'运营代收',label:'运营代收'}];
+}
+function thirdPartySyncPlatformOptions(){
+  return [{value:'大众点评券码',label:'大众点评券码'},{value:'其他平台券码',label:'其他平台券码'}];
+}
+function thirdPartySyncExtraServiceOptions(){
+  return [{value:'none',label:'无'},{value:'companion',label:'陪打'},{value:'ball_machine',label:'发球机'}];
+}
+function thirdPartySyncDropdownValue(id='',fallback=''){
+  return document.getElementById(id)?.value||fallback;
+}
+function thirdPartySyncScheduleLabel(row={}){
+  const date=String(row.date||row.startTime||'').slice(0,10);
+  const start=String(row.startTime||row.startClock||'').match(/(\d{1,2}:\d{2})/)?.[1]||'';
+  const end=String(row.endTime||row.endClock||'').match(/(\d{1,2}:\d{2})/)?.[1]||'';
+  return `排课：${row.studentName||row.student||'-'} / ${row.coach||row.coachName||'-'} / ${date} ${start}${end?`-${end}`:''} / ${row.venue||row.court||'-'}`;
+}
+function thirdPartySyncCourtLabel(row={}){
+  return `订场用户：${row.displayName||row.name||'-'} / ${row.phone||row.mobile||'-'}`;
+}
+function thirdPartySyncMemberLabel(row={}){
+  return `会员：${row.memberName||row.name||row.displayName||'-'} / ${row.phone||row.mobile||row.memberPhone||'-'} / 余额 ¥${fmt(row.balance||row.remainingBalance||0)}`;
+}
+function thirdPartySyncBindCandidates(){
+  const destination=thirdPartySyncDropdownValue('thirdPartyConfirmDestination','booking');
+  const revenue=thirdPartySyncDropdownValue('thirdPartyConfirmRevenue','none');
+  if(revenue==='member_balance'){
+    const accountRows=(membershipAccounts||[]).filter(row=>String(row.status||'active')!=='inactive').map(row=>({
+      type:'membership_account',
+      id:row.id,
+      label:thirdPartySyncMemberLabel(row),
+      search:[row.memberName,row.name,row.displayName,row.phone,row.mobile,row.memberPhone,row.id].join(' ')
+    }));
+    const courtRows=(courts||[]).filter(row=>String(row.status||'active')!=='inactive'&&(row.membershipTier||row.membershipTierLabel||Number(row.balance||0)>0)).map(row=>({
+      type:'court',
+      id:row.id,
+      label:thirdPartySyncCourtLabel(row),
+      search:[row.displayName,row.name,row.phone,row.mobile,row.id].join(' ')
+    }));
+    return [...accountRows,...courtRows];
+  }
+  if(destination==='schedule')return (schedules||[]).filter(row=>String(row.status||'')!=='已取消').map(row=>({
+    type:'schedule',
+    id:row.id,
+    label:thirdPartySyncScheduleLabel(row),
+    search:[row.studentName,row.student,row.coach,row.coachName,row.venue,row.startTime,row.endTime,row.id].join(' ')
+  }));
+  if(destination==='booking')return (courts||[]).filter(row=>String(row.status||'active')!=='inactive').map(row=>({
+    type:'court',
+    id:row.id,
+    label:thirdPartySyncCourtLabel(row),
+    search:[row.displayName,row.name,row.phone,row.mobile,row.id].join(' ')
+  }));
+  return [];
+}
+function renderThirdPartySyncBindSuggestions(keyword=''){
+  const q=String(keyword||'').trim().toLowerCase();
+  if(!q)return '';
+  const rows=thirdPartySyncBindCandidates().filter(row=>String(row.search||row.label||'').toLowerCase().includes(q)).slice(0,8);
+  if(!rows.length)return '<div class="schedule-student-suggest-empty">没有匹配到对象</div>';
+  return `<div class="schedule-student-suggest-list">${rows.map(row=>`<button type="button" onclick="selectThirdPartySyncBindTarget(${jsArg(row.type)},${jsArg(row.id)},${jsArg(row.label)})"><strong>${esc(row.label)}</strong></button>`).join('')}</div>`;
+}
+function updateThirdPartySyncBindSearch(){
+  const input=document.getElementById('thirdPartyConfirmBindSearch');
+  const suggest=document.getElementById('thirdPartyConfirmBindSuggest');
+  if(suggest)suggest.innerHTML=renderThirdPartySyncBindSuggestions(input?.value||'');
+}
+function selectThirdPartySyncBindTarget(type='',id='',label=''){
+  const typeInput=document.getElementById('thirdPartyConfirmBindType');
+  const idInput=document.getElementById('thirdPartyConfirmBindId');
+  const labelInput=document.getElementById('thirdPartyConfirmBindLabel');
+  const search=document.getElementById('thirdPartyConfirmBindSearch');
+  const suggest=document.getElementById('thirdPartyConfirmBindSuggest');
+  if(typeInput)typeInput.value=type;
+  if(idInput)idInput.value=id;
+  if(labelInput)labelInput.value=label;
+  if(search)search.value=label;
+  if(suggest)suggest.innerHTML='';
+}
+function thirdPartySyncConfirmFinalType(){
+  const decision=thirdPartySyncDropdownValue('thirdPartyConfirmDecision','import');
+  if(decision==='ignore')return '忽略不导入';
+  if(decision==='boss_confirm')return '待老板确认';
+  const destination=thirdPartySyncDropdownValue('thirdPartyConfirmDestination','booking');
+  const revenue=thirdPartySyncDropdownValue('thirdPartyConfirmRevenue','none');
+  const extra=thirdPartySyncDropdownValue('thirdPartyConfirmExtra','none');
+  if(destination==='schedule')return '排课占场';
+  if(destination==='internal')return '内部占用';
+  if(destination==='activity')return '畅打活动';
+  if(extra==='companion')return '订场陪打';
+  if(extra==='ball_machine')return '订场+发球机';
+  if(revenue==='member_balance')return '会员余额订场';
+  if(revenue==='platform_voucher')return '大众点评券码订场';
+  return thirdPartySyncDropdownValue('thirdPartyConfirmGuestPay','微信转账')==='现金'?'散客现金订场':'散客微信转账订场';
+}
+function thirdPartySyncConfirmPaymentMethod(){
+  const revenue=thirdPartySyncDropdownValue('thirdPartyConfirmRevenue','none');
+  if(revenue==='none')return '不涉及支付';
+  if(revenue==='member_balance')return '会员余额';
+  if(revenue==='platform_voucher')return thirdPartySyncDropdownValue('thirdPartyConfirmPlatform','大众点评券码');
+  return thirdPartySyncDropdownValue('thirdPartyConfirmGuestPay','微信转账');
+}
+function refreshThirdPartySyncConfirmFields(){
+  const decision=thirdPartySyncDropdownValue('thirdPartyConfirmDecision','import');
+  const destination=thirdPartySyncDropdownValue('thirdPartyConfirmDestination','booking');
+  let revenue=thirdPartySyncDropdownValue('thirdPartyConfirmRevenue','none');
+  const extra=thirdPartySyncDropdownValue('thirdPartyConfirmExtra','none');
+  if(['schedule','internal','activity'].includes(destination)&&revenue!=='none'){
+    revenue='none';
+    setStandardDropdownValue('thirdPartyConfirmRevenue','none','不涉及收入');
+  }
+  const isImport=decision==='import';
+  const splitVisible=isImport&&['companion','ball_machine'].includes(extra);
+  const amountVisible=isImport&&['guest_payment','member_balance','platform_voucher'].includes(revenue);
+  const bindVisible=isImport&&(['booking','schedule'].includes(destination)||revenue==='member_balance');
+  const setVisible=(id,visible)=>{const el=document.getElementById(id);if(el)el.style.display=visible?'':'none';};
+  setVisible('thirdPartyConfirmDestinationItem',isImport);
+  setVisible('thirdPartyConfirmRevenueItem',isImport);
+  setVisible('thirdPartyConfirmGuestPayItem',isImport&&revenue==='guest_payment');
+  setVisible('thirdPartyConfirmPlatformItem',isImport&&revenue==='platform_voucher');
+  setVisible('thirdPartyConfirmExtraItem',isImport&&destination==='booking');
+  setVisible('thirdPartyConfirmAmountItem',amountVisible&&!splitVisible);
+  setVisible('thirdPartyConfirmBookingAmountItem',splitVisible);
+  setVisible('thirdPartyConfirmServiceAmountItem',splitVisible);
+  setVisible('thirdPartyConfirmBindItem',bindVisible);
+  const serviceLabel=document.getElementById('thirdPartyConfirmServiceAmountLabel');
+  if(serviceLabel)serviceLabel.textContent=extra==='ball_machine'?'发球机费':'陪打费';
+  const bindLabel=document.getElementById('thirdPartyConfirmBindLabelText');
+  if(bindLabel)bindLabel.textContent=destination==='schedule'?'搜索绑定排课':revenue==='member_balance'?'搜索绑定会员':'搜索绑定订场用户';
+  ['thirdPartyConfirmBindType','thirdPartyConfirmBindId','thirdPartyConfirmBindLabel'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const bindSearch=document.getElementById('thirdPartyConfirmBindSearch');
+  const bindSuggest=document.getElementById('thirdPartyConfirmBindSuggest');
+  if(bindSearch)bindSearch.value='';
+  if(bindSuggest)bindSuggest.innerHTML='';
+}
 function openThirdPartySyncConfirmModal(batchId,sourceRecordId){
-  const typeOptions=['排课占场','内部占用','会员余额订场','散客微信转账订场','散客现金订场','大众点评券码订场','教练代订场','畅打活动','订场陪打','订场+发球机','忽略不导入','待老板确认'];
-  const payOptions=['不涉及支付','会员余额','微信转账','现金','大众点评券码','其他平台券码','已在活动中收款'];
   const snapshot=thirdPartySyncSourceSnapshot({batchId,sourceRecordId});
   const sourceLine=[snapshot.date,snapshot.time,snapshot.venue,snapshot.customerName,snapshot.phone].filter(Boolean).join(' / ')||sourceRecordId;
   const body=`<div class="tms-section-header" style="margin-top:0;">运营确认</div>
     <div class="tms-audit-note">${renderStandardCellText(sourceLine)}</div>
     <div class="tms-form-row">
-      <div class="tms-form-item"><label class="tms-form-label">最终业务类型 *</label><select class="finput tms-form-control" id="thirdPartyConfirmType">${typeOptions.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}</select></div>
-      <div class="tms-form-item"><label class="tms-form-label">支付方式</label><select class="finput tms-form-control" id="thirdPartyConfirmPay">${payOptions.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}</select></div>
+      <div class="tms-form-item"><label class="tms-form-label">处理结论 *</label>${renderStandardDropdownHtml('thirdPartyConfirmDecision','处理结论',thirdPartySyncConfirmDecisionOptions(),'import',true,'refreshThirdPartySyncConfirmFields')}</div>
+      <div class="tms-form-item" id="thirdPartyConfirmDestinationItem"><label class="tms-form-label">导入类型 *</label>${renderStandardDropdownHtml('thirdPartyConfirmDestination','导入类型',thirdPartySyncImportDestinationOptions(),snapshot.bookingMode==='运营锁场'?'internal':'booking',true,'refreshThirdPartySyncConfirmFields')}</div>
     </div>
-	    <div class="tms-form-row">
-	      <div class="tms-form-item"><label class="tms-form-label">确认金额</label><input class="finput tms-form-control" id="thirdPartyConfirmAmount" type="number" min="0" placeholder="涉及收入时填写"></div>
-	      <div class="tms-form-item"><label class="tms-form-label">绑定对象ID</label><input class="finput tms-form-control" id="thirdPartyConfirmBindId" placeholder="会员、排课或订场用户 ID"></div>
-	    </div>
-	    <div class="tms-form-row">
-	      <div class="tms-form-item"><label class="tms-form-label">订场费</label><input class="finput tms-form-control" id="thirdPartyConfirmBookingAmount" type="number" min="0" placeholder="陪打/发球机拆账时填写"></div>
-	      <div class="tms-form-item"><label class="tms-form-label">服务费</label><input class="finput tms-form-control" id="thirdPartyConfirmServiceAmount" type="number" min="0" placeholder="陪打费或发球机费"></div>
-	    </div>
-	    <div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">确认备注</label><input class="finput tms-form-control" id="thirdPartyConfirmNote" placeholder="填写运营判断依据"></div></div>`;
+    <div class="tms-form-row">
+      <div class="tms-form-item" id="thirdPartyConfirmRevenueItem"><label class="tms-form-label">收入处理 *</label>${renderStandardDropdownHtml('thirdPartyConfirmRevenue','收入处理',thirdPartySyncRevenueTreatmentOptions(),'none',true,'refreshThirdPartySyncConfirmFields')}</div>
+      <div class="tms-form-item" id="thirdPartyConfirmExtraItem"><label class="tms-form-label">附加项目</label>${renderStandardDropdownHtml('thirdPartyConfirmExtra','附加项目',thirdPartySyncExtraServiceOptions(),'none',true,'refreshThirdPartySyncConfirmFields')}</div>
+      <div class="tms-form-item" id="thirdPartyConfirmGuestPayItem"><label class="tms-form-label">收款方式</label>${renderStandardDropdownHtml('thirdPartyConfirmGuestPay','收款方式',thirdPartySyncGuestPaymentOptions(),'微信转账',true)}</div>
+      <div class="tms-form-item" id="thirdPartyConfirmPlatformItem"><label class="tms-form-label">券码平台</label>${renderStandardDropdownHtml('thirdPartyConfirmPlatform','券码平台',thirdPartySyncPlatformOptions(),'大众点评券码',true)}</div>
+    </div>
+    <div class="tms-form-row">
+      <div class="tms-form-item" id="thirdPartyConfirmAmountItem"><label class="tms-form-label">确认金额</label><input class="finput tms-form-control" id="thirdPartyConfirmAmount" type="number" min="0" placeholder="本次应入账金额"></div>
+      <div class="tms-form-item" id="thirdPartyConfirmBookingAmountItem"><label class="tms-form-label">场地费</label><input class="finput tms-form-control" id="thirdPartyConfirmBookingAmount" type="number" min="0" placeholder="场地收入"></div>
+      <div class="tms-form-item" id="thirdPartyConfirmServiceAmountItem"><label class="tms-form-label" id="thirdPartyConfirmServiceAmountLabel">陪打费</label><input class="finput tms-form-control" id="thirdPartyConfirmServiceAmount" type="number" min="0" placeholder="附加项目收入"></div>
+    </div>
+    <div class="tms-form-row">
+      <div class="tms-form-item full-width" id="thirdPartyConfirmBindItem"><label class="tms-form-label" id="thirdPartyConfirmBindLabelText">搜索绑定对象</label><input type="hidden" id="thirdPartyConfirmBindType"><input type="hidden" id="thirdPartyConfirmBindId"><input type="hidden" id="thirdPartyConfirmBindLabel"><input class="finput tms-form-control" id="thirdPartyConfirmBindSearch" placeholder="搜索姓名 / 手机号 / 排课信息" oninput="updateThirdPartySyncBindSearch()" autocomplete="off"><div id="thirdPartyConfirmBindSuggest" class="schedule-student-suggest"></div></div>
+    </div>
+    <div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">确认备注</label><input class="finput tms-form-control" id="thirdPartyConfirmNote" placeholder="填写运营判断依据"></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-default" onclick="confirmThirdPartySyncItem('${esc(batchId)}','${esc(sourceRecordId)}')">保存确认</button><button class="tms-btn tms-btn-primary" onclick="confirmThirdPartySyncItem('${esc(batchId)}','${esc(sourceRecordId)}',{importAfter:true})">保存并导入</button>`;
   openStandardModal({title:'确认第三方异常项',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
+  refreshThirdPartySyncConfirmFields();
 }
 async function confirmThirdPartySyncItem(batchId,sourceRecordId,options={}){
   try{
-    const finalType=document.getElementById('thirdPartyConfirmType')?.value||'';
+    const finalType=thirdPartySyncConfirmFinalType();
     const bookingAmount=Number(document.getElementById('thirdPartyConfirmBookingAmount')?.value||0)||0;
     const serviceAmount=Number(document.getElementById('thirdPartyConfirmServiceAmount')?.value||0)||0;
+    const amount=bookingAmount||serviceAmount?bookingAmount+serviceAmount:(Number(document.getElementById('thirdPartyConfirmAmount')?.value||0)||0);
     await apiCall('POST','/third-party-sync/confirmations',{
       batchId,
       sourceRecordId,
       finalType,
-      paymentMethod:document.getElementById('thirdPartyConfirmPay')?.value||'',
-      amount:Number(document.getElementById('thirdPartyConfirmAmount')?.value||0)||0,
+      processingDecision:thirdPartySyncDropdownValue('thirdPartyConfirmDecision','import'),
+      importDestination:thirdPartySyncDropdownValue('thirdPartyConfirmDestination','booking'),
+      revenueTreatment:thirdPartySyncDropdownValue('thirdPartyConfirmRevenue','none'),
+      extraServiceType:thirdPartySyncDropdownValue('thirdPartyConfirmExtra','none'),
+      paymentMethod:thirdPartySyncConfirmPaymentMethod(),
+      amount,
       amountBreakdown:bookingAmount||serviceAmount?{bookingAmount,serviceAmount,serviceType:finalType==='订场+发球机'?'发球机':finalType==='订场陪打'?'陪打':''}:null,
+      bindTargetType:document.getElementById('thirdPartyConfirmBindType')?.value.trim()||'',
       bindTargetId:document.getElementById('thirdPartyConfirmBindId')?.value.trim()||'',
+      bindTargetLabel:document.getElementById('thirdPartyConfirmBindLabel')?.value.trim()||'',
       confirmNote:document.getElementById('thirdPartyConfirmNote')?.value.trim()||''
     });
     if(options.importAfter){
@@ -532,7 +748,7 @@ async function confirmThirdPartySyncItem(batchId,sourceRecordId,options={}){
   }
 }
 function setThirdPartySyncTableTab(tab){
-  thirdPartySyncActiveTableTab=['batches','prechecks'].includes(tab)?tab:'batches';
+  thirdPartySyncActiveTableTab=['prechecks','batches','confirmations'].includes(tab)?tab:'prechecks';
   renderThirdPartySyncCenter();
 }
 function thirdPartySyncTableTabButton(tab,label){
@@ -547,13 +763,11 @@ function renderThirdPartySyncCenter(){
   const pullButtonHtml=thirdPartySyncPullLoading
     ? '<button class="tms-btn tms-btn-primary" disabled><span class="tms-btn-spinner"></span>正在拉取</button>'
     : '<button class="tms-btn tms-btn-primary" onclick="runThirdPartySyncPull()">手动拉取</button>';
+  const filteredBatch=thirdPartySyncBatchFilter?thirdPartySyncBatchById(thirdPartySyncBatchFilter):null;
+  const filterHtml=filteredBatch?`<span class="tms-tag tms-tag-tier-gold">当前查看：${esc(thirdPartySyncBatchDateText(filteredBatch))}</span><span class="tms-action-link" onclick="clearThirdPartySyncBatchFilter()">查看全部待处理</span>`:'';
   host.innerHTML=`<div class="section-stack">
     <style>
-      #page-third-party-sync .third-party-sync-stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-      #page-third-party-sync .third-party-sync-stats-row .tms-stat-card{min-width:0;padding:10px 12px}
-      #page-third-party-sync .third-party-sync-stats-row .tms-stat-label{font-size:11px;white-space:nowrap}
-      #page-third-party-sync .third-party-sync-stats-row .tms-stat-value{font-size:20px;line-height:1.15;white-space:nowrap}
-      #page-third-party-sync .third-party-sync-stats-row .tms-stat-sub{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      #page-third-party-sync .third-party-sync-notice{border:0.5px solid rgba(217,119,6,.18);background:rgba(255,247,237,.72);border-radius:8px;padding:12px 14px;color:#5C4030;font-size:13px;font-weight:700;line-height:1.5}
       #page-third-party-sync .third-party-sync-table-tabs{display:flex;gap:8px;align-items:center;overflow-x:auto;margin:4px 0 12px}
       #page-third-party-sync .third-party-sync-table-panel{display:none}
       #page-third-party-sync .third-party-sync-table-panel.active{display:block}
@@ -562,17 +776,19 @@ function renderThirdPartySyncCenter(){
       #page-third-party-sync .tms-btn-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:-2px;animation:thirdPartySyncSpin .8s linear infinite}
       @keyframes thirdPartySyncSpin{to{transform:rotate(360deg)}}
     </style>
-    <div class="tms-stats-row third-party-sync-stats-row" id="thirdPartySyncStats" aria-label="稳定自动同步"></div>
+    <div id="thirdPartySyncStats" aria-label="第三方同步待办摘要"></div>
     <div class="tms-toolbar">
-      <div class="tms-filters"></div>
+      <div class="tms-filters">${filterHtml}</div>
       <div class="tms-toolbar-right">${pullButtonHtml}<button class="tms-btn tms-btn-ghost" onclick="loadThirdPartySyncCenter(true)">刷新</button></div>
     </div>
     <div class="third-party-sync-table-tabs" role="tablist" aria-label="第三方同步数据表">
       ${thirdPartySyncTableTabButton('prechecks','需处理数据')}
       ${thirdPartySyncTableTabButton('batches','同步记录')}
+      ${thirdPartySyncTableTabButton('confirmations','已处理记录')}
     </div>
     ${thirdPartySyncTablePanel('prechecks','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">处理事项</th><th style="width:110px">日期</th><th style="width:110px">时间段</th><th style="width:80px">场地</th><th style="width:110px">姓名</th><th style="width:140px">手机号</th><th style="width:120px">订场方式</th><th style="width:120px">操作账号</th><th style="width:200px">备注</th><th style="width:180px">问题原因</th><th style="width:180px">建议处理</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncPrecheckTbody"></tbody></table></div></div>')}
-    ${thirdPartySyncTablePanel('batches','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">数据日期</th><th style="width:90px">订场总数</th><th style="width:100px">已自动处理</th><th style="width:100px">需运营处理</th><th style="width:80px">异常</th><th style="width:140px">状态</th><th style="width:140px">最近同步</th><th class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>')}
+    ${thirdPartySyncTablePanel('batches','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">数据日期</th><th style="width:90px">订场总数</th><th style="width:100px">已自动处理</th><th style="width:100px">运营已处理</th><th style="width:100px">剩余未处理</th><th style="width:80px">异常</th><th style="width:140px">状态</th><th style="width:140px">最近同步</th><th class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="thirdPartySyncBatchTbody"></tbody></table></div></div>')}
+    ${thirdPartySyncTablePanel('confirmations','<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">第三方记录</th><th style="width:130px">处理类型</th><th style="width:120px">支付方式</th><th style="width:100px">金额</th><th style="width:220px">绑定对象</th><th style="width:120px">处理人</th><th style="width:140px">处理时间</th><th style="width:220px">备注</th></tr></thead><tbody id="thirdPartySyncConfirmTbody"></tbody></table></div></div>')}
   </div>`;
   renderThirdPartySyncStats();
   renderThirdPartySyncBatches();
