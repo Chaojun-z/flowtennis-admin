@@ -64,7 +64,8 @@ vm.createContext(context);
 vm.runInContext(source, context, { filename: 'third-party-sync-center.js' });
 
 const rows = vm.runInContext("thirdPartySyncNeedsProcessingRows('batch-1')", context);
-assert.ok(rows.length >= 2, 'runtime should expose change and alert rows as needs-processing rows');
+assert.strictEqual(rows.length, 1, 'runtime should merge change and alert for the same third-party row into one needs-processing row');
+assert.match(rows[0].reason, /备注修改|手机号格式不正确/, 'merged needs-processing row should keep both business reasons');
 assert.ok(!rows.some(row => row.reason === '历史空壳报警'), 'source-less legacy alerts should not pollute operator handling rows');
 for (const row of rows) {
   assert.strictEqual(row.date, '2026-07-29', 'needs-processing row should show booking date, not pull date');

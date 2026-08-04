@@ -262,6 +262,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     ft_courts: [],
     ft_financial_ledger: [],
     ft_schedule: [],
+    ft_coaches: [{ id: 'coach-xiaolu', name: '小鹿', status: 'active' }],
+    ft_students: [{ id: 'student-zhangsan', name: '张三', phone: '13911112222', status: 'active' }],
     ft_membership_accounts: []
   };
   const handler = createThirdPartySyncCenterRoutes({
@@ -284,7 +286,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
       records: [
         { sourceType: 'order', orderNo: 'O1', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' },
         { sourceType: 'order', orderNo: 'NEXTDAY', bookingDate: '2026-07-28', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' },
-        { sourceType: 'lock', thirdPartyId: 'L1', bookingDate: '2026-07-27', venue: '3号场', startTime: '12:00', endTime: '13:00', remark: '私教课 小鹿' },
+        { sourceType: 'lock', thirdPartyId: 'L1', bookingDate: '2026-07-27', venue: '3号场', startTime: '12:00', endTime: '13:00', remark: '小鹿 张三 私教课' },
         { sourceType: 'member', thirdPartyId: 'M1', memberName: '会员资料A', memberPhone: '13900000000' },
         { sourceType: 'order', orderNo: 'OLD1', bookingDate: '2026-05-27', venue: '2号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' }
       ],
@@ -407,7 +409,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(importRes.body.result.verification.schedule.checked, 'schedule verification should be recorded');
   assert.ok(writes.some(row => row.table === 'ft_courts'), 'business import should write courts table');
   assert.ok(writes.some(row => row.table === 'ft_financial_ledger'), 'business import should write finance ledger table');
-  assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课'), 'private lesson locks should create a schedule row when no existing schedule is bound');
+  assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课' && row.row.coach === '小鹿' && row.row.studentName === '张三'), 'private lesson locks may create a schedule only after matching real coach and student');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_results' && row.row.status === 'completed' && row.row.fullDisposition?.ok), 'full import result should be auditable');
 
   scans.ft_third_party_sync_batches.push({ id: 'member-batch', batchId: 'member-batch', status: 'prechecked' });
@@ -478,6 +480,61 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(scheduleImportRes.body.result.status, 'failed', 'mismatched schedule binding should fail');
   assert.ok(scheduleImportRes.body.result.failed.some(row => row.reason.includes('场地不一致')), 'schedule binding should validate venue');
 
+  scans.ft_third_party_sync_batches.push({ id: 'unsafe-schedule-batch', batchId: 'unsafe-schedule-batch', status: 'prechecked' });
+  scans.ft_third_party_sync_prechecks.push({
+    id: 'unsafe-schedule-precheck-1',
+    batchId: 'unsafe-schedule-batch',
+    sourceRecordId: 'UNSAFE-SCHEDULE',
+    sourceType: 'lock',
+    date: '2026-07-31',
+    venue: '3号场',
+    startTime: '18:00',
+    endTime: '19:00',
+    customerName: '马坡运营',
+    operatorAccount: '马坡运营',
+    phone: '13651248523',
+    remark: '马坡运营 私教课',
+    recommendedType: 'auto_import',
+    needsConfirmation: false,
+    suggestedFinalType: '排课占场'
+  });
+  const unsafeScheduleRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'unsafe-schedule-batch' }
+  });
+  assert.strictEqual(unsafeScheduleRes.body.result.status, 'paused', 'unidentified coach/student schedule rows should wait for operator handling instead of failing as a system error');
+  assert.ok(unsafeScheduleRes.body.plan.blocked.some(row => /未识别到真实教练和学员/.test(row.reason)), 'unsafe schedule row should explain the missing real coach/student');
+  assert.ok(!scans.ft_schedule.some(row => row.coach === '马坡运营' || row.studentName === '马坡运营'), 'sync must never create fake Mapo operator schedule rows');
+
+  scans.ft_third_party_sync_batches.push({ id: 'existing-schedule-batch', batchId: 'existing-schedule-batch', status: 'prechecked' });
+  scans.ft_third_party_sync_prechecks.push({
+    id: 'existing-schedule-precheck-1',
+    batchId: 'existing-schedule-batch',
+    sourceRecordId: 'SIREN-SPECIAL',
+    sourceType: 'lock',
+    date: '2026-08-02',
+    venue: '2号场',
+    startTime: '10:00',
+    endTime: '11:00',
+    customerName: '马坡运营',
+    operatorAccount: '马坡运营',
+    remark: 'siren 初阶专项课',
+    recommendedType: 'auto_import',
+    needsConfirmation: false,
+    suggestedFinalType: '排课占场'
+  });
+  scans.ft_coaches.push({ id: 'coach-siren', name: 'siren', status: 'active' });
+  scans.ft_schedule.push({ id: 'schedule-siren-special', date: '2026-08-02', venue: '2号场', startTime: '2026-08-02T10:00:00+08:00', endTime: '2026-08-02T11:00:00+08:00', coach: 'siren', studentName: '小鹿、锤锤呀', status: '已排课' });
+  const existingScheduleRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'existing-schedule-batch' }
+  });
+  assert.strictEqual(existingScheduleRes.body.result.status, 'completed', 'same date time venue and coach should bind the existing schedule');
+  assert.ok(scans.ft_schedule.some(row => row.id === 'schedule-siren-special' && row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'SIREN-SPECIAL')), 'existing siren schedule should receive the third-party import mark');
+  assert.ok(!scans.ft_schedule.some(row => row.id !== 'schedule-siren-special' && row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'SIREN-SPECIAL')), 'existing schedule match should not create a duplicate schedule');
+
   scans.ft_third_party_sync_batches.push({ id: 'extra-service-batch', batchId: 'extra-service-batch', status: 'prechecked', counts: { totalSourceCount: 2 } });
   const extraServicePrecheck = precheckThirdPartyRecords([
     { id: 'EXTRA1', sourceType: 'lock', bookingDate: '2026-07-30', venue: '2号场', startTime: '14:00', endTime: '15:00', customerName: '陪打客人', phone: '13911112222', remark: '订场100 陪打300', amount: 400 },
@@ -537,6 +594,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     ft_courts: [],
     ft_financial_ledger: [],
     ft_schedule: [],
+    ft_coaches: [{ id: 'coach-cron', name: '小鹿', status: 'active' }],
+    ft_students: [{ id: 'student-cron', name: '小明', phone: '13922223333', status: 'active' }],
     ft_membership_accounts: []
   };
   const cronWrites = [];
@@ -565,7 +624,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
       records: [
         { sourceType: 'order', orderNo: 'O8', bookingDate: '2026-07-29', venue: '4号场', startTime: '13:00', endTime: '14:00', amount: 90, payMethod: '微信支付', status: '已完成', customerName: '自动订单' },
         { sourceType: 'order', orderNo: 'O9', bookingDate: '2026-07-29', venue: '5号场', startTime: '15:00', endTime: '16:00', amount: 120, payMethod: '微信支付', status: '已取消', remark: '取消订单' },
-        { sourceType: 'lock', thirdPartyId: 'L9', bookingDate: '2026-07-29', venue: '6号场', startTime: '17:00', endTime: '18:00', remark: '私教课' }
+        { sourceType: 'lock', thirdPartyId: 'L9', bookingDate: '2026-07-29', venue: '6号场', startTime: '17:00', endTime: '18:00', remark: '小鹿 小明 私教课' }
       ],
       gaps: []
     }),
@@ -578,10 +637,10 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     req: { headers: { authorization: 'Bearer secret' } },
     query: new URLSearchParams('lookbackDays=3')
   });
-  assert.strictEqual(cronRes.statusCode, 500, 'cron should fail when actionable third-party cancellation changes need review');
+  assert.strictEqual(cronRes.statusCode, 200, 'cron should not return 500 when auto import succeeds and only business review remains');
   assert.strictEqual(cronRes.body.autoImport.result.status, 'completed', 'cron should auto import stable orders and schedule locks while separately alerting third-party changes');
   assert.ok(cronRes.body.autoImport.result.fullDisposition?.ok, 'source rows should still have a complete import/skip/informational disposition');
-  assert.ok(cronNotifications.some(item => item.type === 'failure' && item.result?.writtenIds?.length > 0), 'cron should notify Feishu group as failure when actionable third-party changes need review');
+  assert.ok(cronNotifications.some(item => item.type === 'needs_attention' && item.result?.writtenIds?.length > 0), 'cron should send a needs-attention business notice when third-party changes need review');
   assert.ok(cronWrites.some(row => row.table === 'ft_courts' && row.row.history?.some(history => history.sourceRecordId === 'O8')), 'cron should write stable high-confidence order');
   assert.ok(cronWrites.some(row => row.table === 'ft_schedule' && row.row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'L9')), 'cron should auto-create schedule occupancy rows for private lesson locks');
   assert.ok(cronWrites.some(row => row.table === 'ft_third_party_sync_changes' && row.row.sourceRecordId === 'O9' && row.row.changeType === 'cancelled'), 'cron should record third-party cancellation changes');
@@ -679,6 +738,60 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(failedCronWrites.some(row => row.table === 'ft_third_party_sync_alerts' && /模拟业务写入失败/.test(row.row.reason)), 'cron import failure should write an alert row');
   assert.ok(failedCronWrites.some(row => row.table === 'ft_third_party_sync_alerts' && row.row.sourceRecordId === 'FAIL1' && row.row.date === '2026-07-29' && row.row.venue === '4号场'), 'failure alert should keep source booking fields for operator handling');
   assert.ok(failedCronNotifications.some(item => item.type === 'failure' && /模拟业务写入失败/.test(item.result?.failed?.[0]?.reason || '')), 'cron import failure should notify Feishu group');
+
+  const notifyFailScans = {
+    ft_third_party_sync_batches: [],
+    ft_third_party_sync_raw_records: [],
+    ft_third_party_sync_prechecks: [],
+    ft_third_party_sync_confirmations: [],
+    ft_third_party_sync_import_results: [],
+    ft_third_party_sync_import_backups: [],
+    ft_third_party_sync_changes: [],
+    ft_third_party_sync_alerts: [],
+    ft_third_party_sync_rollbacks: [],
+    ft_courts: [],
+    ft_financial_ledger: [],
+    ft_schedule: [],
+    ft_coaches: [],
+    ft_students: [],
+    ft_membership_accounts: []
+  };
+  const notifyFailHandler = createThirdPartySyncCenterRoutes({
+    init: async () => {},
+    sendJson: (res, payload, code = 200) => res.status(code).json(payload),
+    getCachedScan: async table => notifyFailScans[table] || [],
+    getCachedRow: async (table, id) => (notifyFailScans[table] || []).find(row => String(row.id) === String(id)) || null,
+    put: async (table, id, row) => {
+      notifyFailScans[table] = [...(notifyFailScans[table] || []).filter(item => String(item.id) !== String(id)), row];
+    },
+    del: async (table, id) => {
+      notifyFailScans[table] = (notifyFailScans[table] || []).filter(item => String(item.id) !== String(id));
+    },
+    mkTable: async () => 'ok',
+    uuidv4: (() => {
+      let n = 0;
+      return () => `notify-fail-uuid-${++n}`;
+    })(),
+    normalizeCourtRecord: row => row,
+    notifyThirdPartySyncResult: async () => {
+      throw new Error('模拟飞书发送失败');
+    },
+    fetchThirdPartyData: async () => ({
+      records: [
+        { sourceType: 'order', orderNo: 'NOTIFY-FAIL1', bookingDate: '2026-07-29', venue: '4号场', startTime: '13:00', endTime: '14:00', amount: 90, payMethod: '微信支付', status: '已完成', customerName: '通知失败订单' }
+      ],
+      gaps: []
+    }),
+    now: () => '2026-07-30T00:00:00+08:00',
+    env: { CRON_SECRET: 'secret' }
+  });
+  const notifyFailRes = await call(notifyFailHandler, {
+    path: '/cron/third-party-sync-center',
+    method: 'GET',
+    req: { headers: { authorization: 'Bearer secret' } }
+  });
+  assert.strictEqual(notifyFailRes.statusCode, 500, 'cron should fail only when the Feishu notification chain itself fails');
+  assert.match(notifyFailRes.body.notification.error, /模拟飞书发送失败/, 'cron response should expose notification failure reason');
 
   console.log('third-party sync center routes tests passed');
 })().catch(err => {

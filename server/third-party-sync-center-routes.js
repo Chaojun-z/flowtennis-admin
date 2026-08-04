@@ -14,6 +14,8 @@ const T_COURTS = 'ft_courts';
 const T_FINANCIAL_LEDGER = 'ft_financial_ledger';
 const T_SCHEDULE = 'ft_schedule';
 const T_MEMBERSHIP_ACCOUNTS = 'ft_membership_accounts';
+const T_COACHES = 'ft_coaches';
+const T_STUDENTS = 'ft_students';
 const THIRD_PARTY_SYNC_TABLES = [
   T_THIRD_PARTY_SYNC_BATCHES,
   T_THIRD_PARTY_SYNC_RAW_RECORDS,
@@ -258,6 +260,24 @@ function lockRuleText(record = {}) {
 
 function isOperatorName(value = '') {
   return /运营|前台|管理员|客服/.test(cleanText(value));
+}
+
+function compactName(value = '') {
+  return cleanText(value).replace(/\s+/g, '').toLowerCase();
+}
+
+function rowName(row = {}) {
+  return cleanText(row.name || row.coachName || row.studentName || row.realName || row.nickname || row.displayName);
+}
+
+function rowIsActive(row = {}) {
+  return !/inactive|disabled|deleted|voided|停用|删除|离职/.test(cleanText(row.status || row.state));
+}
+
+function textHasName(text = '', name = '') {
+  const source = compactName(text);
+  const target = compactName(name);
+  return !!target && source.includes(target);
 }
 
 function isOperatorAssistedBookingLock(record = {}) {
@@ -824,6 +844,80 @@ function scheduleRowMatchesImportItem(schedule = {}, item = {}) {
     && (!item.venue || cleanText(schedule.venue || schedule.court || schedule.courtName) === item.venue);
 }
 
+function scheduleCoachName(schedule = {}) {
+  return cleanText(schedule.coach || schedule.coachName || schedule.teacher || schedule.primaryCoach);
+}
+
+function scheduleMatchText(item = {}) {
+  return [item.remark, item.customerName, item.operatorAccount, item.phone].filter(Boolean).join(' ');
+}
+
+function inferCoachForScheduleImport(item = {}, coaches = [], schedules = []) {
+  const text = scheduleMatchText(item);
+  const operator = compactName(item.operatorAccount);
+  const coach = (coaches || []).find(row => {
+    const name = rowName(row);
+    if (!rowIsActive(row) || !name || isOperatorName(name) || compactName(name) === operator) return false;
+    return textHasName(text, name);
+  });
+  if (coach) return { id: cleanText(coach.id), name: rowName(coach) };
+  return null;
+}
+
+function inferStudentForScheduleImport(item = {}, students = []) {
+  const text = scheduleMatchText(item);
+  const operator = compactName(item.operatorAccount);
+  const phone = normalizeThirdPartyPhone(item.phone);
+  const byPhone = phone ? (students || []).find(row => rowIsActive(row) && normalizeThirdPartyPhone(row.phone || row.mobile || row.userPhone) === phone && compactName(rowName(row)) !== operator) : null;
+  if (byPhone) return { id: cleanText(byPhone.id), name: rowName(byPhone), phone };
+  const byName = (students || []).find(row => {
+    const name = rowName(row);
+    if (!rowIsActive(row) || !name || isOperatorName(name) || compactName(name) === operator) return false;
+    return textHasName(text, name);
+  });
+  return byName ? { id: cleanText(byName.id), name: rowName(byName), phone: normalizeThirdPartyPhone(byName.phone || byName.mobile || byName.userPhone) } : null;
+}
+
+function findScheduleForImportItem(item = {}, schedules = [], coaches = []) {
+  const candidates = (schedules || []).filter(row => scheduleRowMatchesImportItem(row, item));
+  if (!candidates.length) return null;
+  const inferredCoach = inferCoachForScheduleImport(item, coaches, candidates);
+  if (inferredCoach?.name) {
+    const matched = candidates.find(row => compactName(scheduleCoachName(row)) === compactName(inferredCoach.name));
+    if (matched) return matched;
+  }
+  return null;
+}
+
+function scheduleImportBlockReason(item = {}, schedules = [], coaches = [], students = []) {
+  if (item.finalType !== '排课占场') return '';
+  if (cleanText(item.confirmation?.bindTargetId || item.bindTargetId)) return '';
+  if (findScheduleForImportItem(item, schedules, coaches)) return '';
+  const coach = inferCoachForScheduleImport(item, coaches, schedules);
+  const student = inferStudentForScheduleImport(item, students);
+  if (!coach && !student) return '未识别到真实教练和学员，需运营确认';
+  if (!coach) return '未识别到教练管理里的真实教练，需运营确认';
+  if (!student) return '未识别到真实学员，需运营确认';
+  return '';
+}
+
+function applyScheduleSafetyToImportPlan(plan = {}, { schedules = [], coaches = [], students = [] } = {}) {
+  const safePlan = { ...plan, importable: [], blocked: [...(plan.blocked || [])] };
+  for (const item of plan.importable || []) {
+    const reason = scheduleImportBlockReason(item, schedules, coaches, students);
+    if (reason) safePlan.blocked.push({ ...item, reason, needsConfirmation: true });
+    else safePlan.importable.push(item);
+  }
+  safePlan.counts = {
+    ...plan.counts,
+    importable: safePlan.importable.length,
+    blocked: safePlan.blocked.length,
+    skipped: (safePlan.skipped || plan.skipped || []).length,
+    informational: (safePlan.informational || plan.informational || []).length
+  };
+  return safePlan;
+}
+
 function scheduleCourseTypeForImport(item = {}) {
   const text = `${item.remark || ''} ${item.customerName || ''}`;
   if (/体验/.test(text)) return '体验课';
@@ -832,22 +926,24 @@ function scheduleCourseTypeForImport(item = {}) {
   return '私教课';
 }
 
-function buildScheduleForThirdPartyImport(item = {}, trace = {}, now = '', uuidv4 = () => crypto.randomUUID()) {
+function buildScheduleForThirdPartyImport(item = {}, trace = {}, now = '', uuidv4 = () => crypto.randomUUID(), matched = {}) {
   const id = `third-party-schedule-${uuidv4()}`;
   const courseType = scheduleCourseTypeForImport(item);
+  const coach = matched.coach || {};
+  const student = matched.student || {};
   return {
     id,
     date: item.date,
     startTime: `${item.date} ${item.startTime}:00`,
     endTime: `${item.date} ${item.endTime}:00`,
-    studentIds: [],
-    expectedStudentIds: [],
+    studentIds: student.id ? [student.id] : [],
+    expectedStudentIds: student.id ? [student.id] : [],
     absentStudentIds: [],
-    studentName: item.customerName || item.remark || '第三方同步排课',
+    studentName: student.name || item.customerName || item.remark || '第三方同步排课',
     courseType,
     standardCourseType: courseType,
-    coach: item.operatorAccount || '',
-    coachId: '',
+    coach: coach.name || '',
+    coachId: coach.id || '',
     venue: item.venue,
     campus: item.campus || '',
     lessonCount: 0,
@@ -871,10 +967,14 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
   if (item.finalType === '排课占场') {
     const scheduleId = cleanText(item.confirmation?.bindTargetId || item.bindTargetId);
     const table = tables.T_SCHEDULE || T_SCHEDULE;
-    const schedules = await getCachedScan(table).catch(() => []);
+    const [schedules, coaches, students] = await Promise.all([
+      getCachedScan(table).catch(() => []),
+      getCachedScan(tables.T_COACHES || T_COACHES).catch(() => []),
+      getCachedScan(tables.T_STUDENTS || T_STUDENTS).catch(() => [])
+    ]);
     const schedule = scheduleId
       ? await getCachedRow(table, scheduleId).catch(() => null)
-      : schedules.find(row => scheduleRowMatchesImportItem(row, item));
+      : findScheduleForImportItem(item, schedules, coaches);
     if (scheduleId && !schedule) throw new Error('绑定排课不存在');
     if (schedule) {
       assertScheduleMatchesImportItem(schedule, item);
@@ -884,7 +984,10 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
       written.push({ table, id: schedule.id, sourceRecordId: item.sourceRecordId });
       return written;
     }
-    const nextSchedule = buildScheduleForThirdPartyImport(item, trace, now, uuidv4);
+    const coach = inferCoachForScheduleImport(item, coaches, schedules);
+    const student = inferStudentForScheduleImport(item, students);
+    if (!coach || !student) throw new Error(scheduleImportBlockReason(item, schedules, coaches, students) || '未识别到真实教练和学员，需运营确认');
+    const nextSchedule = buildScheduleForThirdPartyImport(item, trace, now, uuidv4, { coach, student });
     await put(table, nextSchedule.id, nextSchedule);
     written.push({ table, id: nextSchedule.id, sourceRecordId: item.sourceRecordId });
     return written;
@@ -1057,8 +1160,8 @@ function importResultFailedCount(result = {}) {
 
 function shouldFailCronForImportResult(result = {}) {
   const status = cleanText(result.status);
-  if (['failed', 'partial_failed', 'partial_completed', 'paused'].includes(status)) return true;
-  if (result.fullDisposition && result.fullDisposition.ok === false) return true;
+  if (['failed', 'partial_failed'].includes(status)) return true;
+  if (Number(result.fullDisposition?.failedCount || 0) > 0) return true;
   return Number(result.plannedCount || 0) > 0 && importResultWriteCount(result) === 0;
 }
 
@@ -1112,7 +1215,7 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
   const planned = Number(result.plannedCount || 0);
   const disposition = result.fullDisposition || {};
   const sourceTotal = Number(disposition.total || batch.counts?.totalSourceCount || result.sourceTotalCount || planned || 0);
-  const prefix = type === 'failure' ? '订场数据需要处理' : '订场数据同步完成';
+  const prefix = type === 'failure' ? '订场数据同步失败' : type === 'needs_attention' ? '订场数据需要处理' : '订场数据同步完成';
   const alertRows = (alerts || []).filter(row => row.reason);
   const memberChangeCount = alertRows.filter(row => normalizeSourceType(row.sourceType) === 'member' || (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue)).length;
   const memberGapCount = alertRows.filter(row => /会员流水批量接口缺口/.test(cleanText(row.reason))).length;
@@ -1330,7 +1433,13 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       throw err;
     }
     const currentPrechecks = prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks: prechecks, now: importedAt });
-    const plan = buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults });
+    let plan = buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults });
+    const [scheduleRows, coachRows, studentRows] = await Promise.all([
+      getCachedScan(tables.T_SCHEDULE || T_SCHEDULE).catch(() => []),
+      getCachedScan(tables.T_COACHES || T_COACHES).catch(() => []),
+      getCachedScan(tables.T_STUDENTS || T_STUDENTS).catch(() => [])
+    ]);
+    plan = applyScheduleSafetyToImportPlan(plan, { schedules: scheduleRows, coaches: coachRows, students: studentRows });
     const operationId = `third-party-sync-import-${uuidv4()}`;
     const trace = buildImportTrace({ batchId, operationId, operator, now: importedAt });
     const financeBefore = await buildCurrentFinanceSnapshot(importedAt);
@@ -1461,15 +1570,16 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         if (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue) return false;
         return true;
       });
-      const failed = shouldFailCronForImportResult(autoImport.result) || actionableAlerts.length > 0;
+      const technicalFailed = shouldFailCronForImportResult(autoImport.result);
+      const needsAttention = actionableAlerts.length > 0 || ['partial_completed', 'paused'].includes(cleanText(autoImport.result.status));
       let notification = null;
       try {
-        notification = await notifyThirdPartySyncResult({ type: failed ? 'failure' : 'success', batch: pulled.batch, result: autoImport.result, alerts, env });
+        notification = await notifyThirdPartySyncResult({ type: technicalFailed ? 'failure' : needsAttention ? 'needs_attention' : 'success', batch: pulled.batch, result: autoImport.result, alerts, env });
       } catch (err) {
         notification = { sent: false, error: err.message || '飞书通知失败' };
       }
       const payload = { ...pulled, autoImport, alerts, notification };
-      if (failed) return sendJson(res, { ...payload, error: '第三方同步导入失败，已生成报警' }, 500);
+      if (technicalFailed || notification?.error) return sendJson(res, { ...payload, error: notification?.error || '第三方同步导入失败，已生成报警' }, 500);
       return sendJson(res, payload);
     }
     if (!path.startsWith('/third-party-sync')) return false;

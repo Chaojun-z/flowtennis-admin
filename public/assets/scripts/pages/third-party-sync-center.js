@@ -242,6 +242,27 @@ function thirdPartySyncProcessingAction(item={}){
   if(!sourceRecordId)return '<span class="tms-cell-sub">查看同步记录</span>';
   return `<span class="tms-action-link" onclick="openThirdPartySyncConfirmModal('${esc(batchId)}','${esc(sourceRecordId)}')">处理</span>`;
 }
+function thirdPartySyncMergeNeedsProcessingRows(rows=[]){
+  const map=new Map();
+  (rows||[]).forEach(item=>{
+    const key=[
+      item.batchId||'',
+      item.sourceRecordId||'',
+      item.date||'',
+      item.time||'',
+      item.venue||'',
+      item.customerName||item.phone||''
+    ].join('|');
+    const existing=map.get(key);
+    if(!existing){map.set(key,{...item});return;}
+    const reasons=[existing.reason,item.reason].map(text=>String(text||'').trim()).filter(Boolean);
+    existing.reason=[...new Set(reasons)].join(' / ');
+    if(/补充|变更/.test(String(item.kind||'')))existing.kind=item.kind;
+    existing.suggestion=existing.suggestion||item.suggestion;
+    existing.action=existing.action||item.action;
+  });
+  return [...map.values()];
+}
 function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchId()){
   const data=thirdPartySyncData();
   const prechecks=thirdPartySyncVisiblePrechecks(batchId).map(row=>{
@@ -269,7 +290,7 @@ function thirdPartySyncNeedsProcessingRows(batchId=thirdPartySyncEffectiveBatchI
       const snapshot=thirdPartySyncSourceSnapshot({row,batchId:row.batchId||batchId,sourceRecordId:row.sourceRecordId});
       return {kind:/金额/.test(String(row.reason||''))?'补充金额':'补充备注',row,...snapshot,reason:row.reason||'-',suggestion:/失败|缺口|格式|等待/.test(String(row.reason||''))?'处理后再导入':'确认后关闭',action:thirdPartySyncProcessingAction(snapshot)};
     }).filter(item=>item.sourceRecordId||item.date||item.time||item.venue||item.customerName||item.phone||item.remark);
-  return [...prechecks,...changes,...alerts];
+  return thirdPartySyncMergeNeedsProcessingRows([...prechecks,...changes,...alerts]);
 }
 function thirdPartySyncBookingPrechecks(rows=[]){
   return (rows||[]).filter(row=>thirdPartySyncIsBookingSourceType(row.sourceType));
