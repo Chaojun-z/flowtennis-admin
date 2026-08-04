@@ -16,7 +16,9 @@ assert.strictEqual(config.crons, undefined, 'Vercel 不配置 Cron，定时任�
 assert.strictEqual(fs.existsSync(matchKeepaliveWorkflowPath), true, '约球 Supabase 保活应由 GitHub Actions 定时触发，不使用 Vercel Cron');
 
 assert.match(feishuDailyWorkflow, /cron: '5 12 \* \* \*'/, '飞书排课日报应由 GitHub Actions 定时触发');
-assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-reminders/, '服务号课前提醒应由 GitHub Actions 触发');
+assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-coach-reminders/, '服务号教练课前提醒应由 GitHub Actions 单独触发');
+assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-student-reminders/, '服务号学员课前提醒应由 GitHub Actions 单独触发');
+assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-feedback-reminders/, '服务号课后反馈提醒应由 GitHub Actions 单独触发');
 assert.match(officialDigestsWorkflow, /\/api\/cron\/official-account-daily-digests/, '服务号次日课表应由 GitHub Actions 触发');
 assert.match(feishuCoachDigestsWorkflow, /cron: '0 12 \* \* \*'/, '飞书教练私发次日排课应每天北京时间 20:00 触发');
 assert.match(feishuCoachDigestsWorkflow, /\/api\/cron\/feishu-coach-daily-digests/, '飞书教练私发次日排课应由 GitHub Actions 触发');
@@ -33,7 +35,10 @@ assert.match(matchKeepaliveWorkflow, /"status":"ok"/, '约球 Supabase 保活应
 assert.match(apiSource, /\/cron\/feishu-daily-report/, 'API 应提供排课日报入口');
 assert.match(apiSource, /FEISHU_DAILY_REPORT_WEBHOOK/, '排课日报接口应读取飞书日报 webhook 环境变量');
 assert.match(apiSource, /\/cron\/official-account-daily-digests/, 'API 应提供服务号次日排课入口');
-assert.match(apiSource, /\/cron\/official-account-reminders/, 'API 应提供服务号课前提醒入口');
+assert.match(apiSource, /\/cron\/official-account-coach-reminders/, 'API 应提供服务号教练课前提醒入口');
+assert.match(apiSource, /\/cron\/official-account-student-reminders/, 'API 应提供服务号学员课前提醒入口');
+assert.match(apiSource, /\/cron\/official-account-feedback-reminders/, 'API 应提供服务号课后反馈提醒入口');
+assert.match(apiSource, /\/cron\/official-account-reminders/, 'API 应保留服务号课前提醒兼容入口');
 assert.match(apiSource, /\/cron\/feishu-coach-daily-digests/, 'API 应提供飞书教练私发次日排课入口');
 assert.match(apiSource, /handleFeishuScheduleSyncRoutes/, 'API 应挂载飞书排课表同步路由');
 assert.match(feishuScheduleSyncSource, /\/cron\/feishu-schedule-sync/, 'API 应提供飞书排课表同步入口');

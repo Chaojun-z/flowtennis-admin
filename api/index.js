@@ -6963,7 +6963,15 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendCourseReminders());
     }
-    if(path==='/cron/official-account-reminders'&&method==='GET'){
+    if(method==='GET'&&path.startsWith('/cron/official-account-')){
+      const run=({
+        '/cron/official-account-coach-reminders':sendOfficialAccountCourseReminders,
+        '/cron/official-account-student-reminders':sendOfficialAccountStudentCourseReminders,
+        '/cron/official-account-feedback-reminders':sendOfficialAccountCoachFeedbackReminders,
+        '/cron/official-account-reminders':sendOfficialAccountReminderJobs,
+        '/cron/official-account-daily-digests':sendOfficialAccountDailyDigests
+      })[path];
+      if(run){
       const ua=String(req.headers['user-agent']||'');
       if(process.env.CRON_SECRET){
         const auth=String(req.headers.authorization||'');
@@ -6972,18 +6980,8 @@ module.exports = async (req, res) => {
         return sendJson(res,{error:'无权限'},403);
       }
       await init();
-      const result=await sendOfficialAccountReminderJobs();return sendJson(res,result,result.success?200:500);
-    }
-    if(path==='/cron/official-account-daily-digests'&&method==='GET'){
-      const ua=String(req.headers['user-agent']||'');
-      if(process.env.CRON_SECRET){
-        const auth=String(req.headers.authorization||'');
-        if(auth!==`Bearer ${process.env.CRON_SECRET}`)return sendJson(res,{error:'无权限'},403);
-      }else if(!/vercel-cron/i.test(ua)){
-        return sendJson(res,{error:'无权限'},403);
+      const result=await run();return sendJson(res,result,result.success?200:500);
       }
-      await init();
-      const result=await sendOfficialAccountDailyDigests();return sendJson(res,result,result.success?200:500);
     }
     if(path==='/cron/feishu-daily-report'&&method==='GET'){
       const ua=String(req.headers['user-agent']||'');

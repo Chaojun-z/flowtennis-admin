@@ -12,13 +12,23 @@ jobs:
   send-official-account-reminders:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: coach-reminders
+            url: https://www.flowtennis.cn/api/cron/official-account-coach-reminders
+          - name: student-reminders
+            url: https://www.flowtennis.cn/api/cron/official-account-student-reminders
+          - name: feedback-reminders
+            url: https://www.flowtennis.cn/api/cron/official-account-feedback-reminders
     env:
       TZ: Asia/Shanghai
       CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
-      TARGET_URL: https://www.flowtennis.cn/api/cron/official-account-reminders
+      TARGET_URL: ${{ matrix.target.url }}
 
     steps:
-      - name: Trigger reminder endpoint
+      - name: Trigger ${{ matrix.target.name }} endpoint
         shell: bash
         run: |
           hour=$(date +%H)
