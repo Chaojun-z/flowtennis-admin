@@ -1,8 +1,7 @@
-const { displayCampusName } = require('../public/assets/scripts/core/campus.js');
 const axios = require('axios');
 const NodeFormData = require('form-data');
 
-const POSTER_FONT_FAMILY='ZCOOL XiaoWei';
+const POSTER_FONT_FAMILY='Noto Sans SC';
 
 function posterFontAttr(){
   return `font-family="${POSTER_FONT_FAMILY}"`;
@@ -10,7 +9,12 @@ function posterFontAttr(){
 
 function posterFontFiles(){
   try{
-    return [require.resolve('@expo-google-fonts/zcool-xiaowei/400Regular/ZCOOLXiaoWei_400Regular.ttf')];
+    return [
+      require.resolve('@expo-google-fonts/noto-sans-sc/400Regular/NotoSansSC_400Regular.ttf'),
+      require.resolve('@expo-google-fonts/noto-sans-sc/500Medium/NotoSansSC_500Medium.ttf'),
+      require.resolve('@expo-google-fonts/noto-sans-sc/600SemiBold/NotoSansSC_600SemiBold.ttf'),
+      require.resolve('@expo-google-fonts/noto-sans-sc/700Bold/NotoSansSC_700Bold.ttf')
+    ];
   }catch{
     return [];
   }
@@ -49,14 +53,12 @@ function posterScheduleDateParts(dateKeyText=''){
   const parts=String(dateKeyText||'').slice(0,10).split('-').map(n=>Number(n));
   const [year,month,day]=parts;
   const weekdaysCn=['周日','周一','周二','周三','周四','周五','周六'];
-  const weekdaysEn=['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
   const date=year&&month&&day?new Date(Date.UTC(year,month-1,day,12)):new Date();
   const weekday=date.getUTCDay();
   return {
     month:month||date.getUTCMonth()+1,
     day:day||date.getUTCDate(),
-    weekdayCn:weekdaysCn[weekday],
-    weekdayEn:weekdaysEn[weekday]
+    weekdayCn:weekdaysCn[weekday]
   };
 }
 
@@ -72,15 +74,24 @@ function posterHoursText(value){
   return Number.isInteger(num)?String(num):String(num);
 }
 
-function posterLessonStudentCount(schedule={}){
-  const explicit=Number(schedule.actualStudentCount||schedule.expectedStudentCount||schedule.studentCount||0);
-  if(explicit>0)return explicit;
-  const ids=parseArr(schedule.studentIds);
-  return Math.max(1,ids.length||0);
+function posterLessonStudentName(schedule={}){
+  return posterShortText(schedule.studentName||parseArr(schedule.studentNames).join('、')||'学员',12);
 }
 
-function posterLessonStudentName(schedule={}){
-  return posterShortText(schedule.studentName||parseArr(schedule.studentNames).join('、')||'学员',10);
+function posterCoachDisplayName(value=''){
+  return posterShortText(String(value||'教练').replace(/教练$/,'').trim()||'教练',5);
+}
+
+function posterCourseTypeClass(type=''){
+  if(String(type).includes('体验'))return {fill:'#FEF7EE',color:'#C8832B'};
+  if(String(type).includes('专项'))return {fill:'#F0F6F8',color:'#3B6B8A'};
+  return {fill:'#F0F5F2',color:'#386A4C'};
+}
+
+function posterCourtText(schedule={}){
+  const raw=String(schedule.venue||schedule.externalVenueName||schedule.externalCourtName||'场地待定').trim();
+  const match=raw.match(/([0-9一二三四五六七八九十]+)\s*号场/);
+  return match?`${match[1]}号场`:posterShortText(raw.replace(/\s+/g,''),5);
 }
 
 function buildCoachDailyDigestPosterSvg(item={}){
@@ -88,51 +99,40 @@ function buildCoachDailyDigestPosterSvg(item={}){
   const dateParts=posterScheduleDateParts(item.digestDate);
   const lessonCount=Number(item.lessonCount||rows.length)||0;
   const totalHours=rows.reduce((sum,row)=>sum+posterLessonHours(row),0);
-  const lessonTop=220;
-  const lessonGap=78;
-  const footerTop=lessonTop+Math.max(lessonCount,1)*lessonGap+10;
-  const height=footerTop+116;
-  const coachName=posterShortText(item.coachName||'教练',5);
+  const lessonTop=157;
+  const lessonGap=67;
+  const height=Math.max(476,lessonTop+Math.max(lessonCount,1)*lessonGap+51);
+  const coachName=posterCoachDisplayName(item.coachName);
   const lessonSvg=rows.map((schedule,index)=>{
     const y=lessonTop+index*lessonGap;
     const start=String(schedule.startTime||'').slice(11,16)||'--:--';
     const end=String(schedule.endTime||'').slice(11,16)||'--:--';
     const type=posterShortText(schedule.courseType||'课程',5);
-    const badgeFill=type.includes('体验')?'#EEF3EF':'none';
-    const campus=displayCampusName(schedule.campus);
-    const venue=schedule.venue||schedule.externalVenueName||schedule.externalCourtName||'场地待定';
-    const details=`${campus||'校区待定'} - ${venue}`;
-    const divider=index<rows.length-1?`<line x1="134" y1="${y+54}" x2="396" y2="${y+54}" stroke="#E0E5E0" stroke-width="0.5"/>`:'';
+    const badge=posterCourseTypeClass(type);
+    const badgeWidth=Math.max(45,type.length*16+14);
+    const badgeX=292;
+    const court=posterCourtText(schedule);
+    const divider=index<rows.length-1?`<line x1="30" y1="${y+43}" x2="390" y2="${y+43}" stroke="#F0F0F0" stroke-width="1"/>`:'';
     return `
       <g>
-        <text x="24" y="${y}" ${posterFontAttr()} font-size="15" font-weight="500" fill="#113A22">${posterXmlText(`${start} - ${end}`)}</text>
-        <text x="134" y="${y}" ${posterFontAttr()} font-size="16" font-weight="500" letter-spacing="1" fill="#113A22">${posterXmlText(posterLessonStudentName(schedule))}</text>
-        <rect x="222" y="${y-15}" width="${Math.max(48,type.length*18)}" height="22" rx="2" fill="${badgeFill}" stroke="#A8BAAF" stroke-width="1"/>
-        <text x="236" y="${y}" ${posterFontAttr()} font-size="10" letter-spacing="1.5" fill="#113A22">${posterXmlText(type)}</text>
-        <text x="134" y="${y+32}" ${posterFontAttr()} font-size="12" letter-spacing="1" fill="#7B9384">${posterXmlText(details)}</text>
-        <text x="286" y="${y+32}" ${posterFontAttr()} font-size="12" fill="#D1DDD5">|</text>
-        <text x="312" y="${y+32}" ${posterFontAttr()} font-size="12" fill="#2D5B3F">${posterXmlText(posterLessonStudentCount(schedule))}</text>
-        <text x="328" y="${y+32}" ${posterFontAttr()} font-size="12" letter-spacing="1" fill="#7B9384">人</text>
+        <text x="30" y="${y}" ${posterFontAttr()} font-size="13" font-weight="500" fill="#444444">${posterXmlText(`${start}-${end}`)}<tspan fill="#999999" font-weight="400"> · ${posterXmlText(posterHoursText(posterLessonHours(schedule)))}h</tspan></text>
+        <text x="139" y="${y}" ${posterFontAttr()} font-size="13" font-weight="600" fill="#111111">${posterXmlText(posterLessonStudentName(schedule))}</text>
+        <rect x="${badgeX}" y="${y-14}" width="${badgeWidth}" height="20" rx="4" fill="${badge.fill}"/>
+        <text x="${badgeX+badgeWidth/2}" y="${y}" text-anchor="middle" ${posterFontAttr()} font-size="11" font-weight="600" fill="${badge.color}">${posterXmlText(type)}</text>
+        <text x="390" y="${y}" text-anchor="end" ${posterFontAttr()} font-size="13" font-weight="400" fill="#999999">${posterXmlText(court)}</text>
         ${divider}
       </g>`;
   }).join('');
-  const emptySvg=rows.length?'':`<text x="24" y="${lessonTop}" ${posterFontAttr()} font-size="15" fill="#7B9384">明日暂无排课</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="${height}" viewBox="0 0 420 ${height}">
-    <rect width="420" height="${height}" fill="#F5F7F5"/>
-    <text x="24" y="56" ${posterFontAttr()} font-size="10" letter-spacing="2" fill="#7B9384">COACH SCHEDULE</text>
-    <text x="24" y="108" ${posterFontAttr()} font-size="48" font-weight="900" letter-spacing="1" fill="#113A22">${posterXmlText(coachName)}</text>
-    <text x="396" y="78" text-anchor="end" ${posterFontAttr()} font-size="30" font-weight="500" fill="#113A22">${posterXmlText(`${dateParts.month} / ${dateParts.day}`)}</text>
-    <text x="396" y="114" text-anchor="end" ${posterFontAttr()} font-size="11" font-weight="500" letter-spacing="2" fill="#7B9384">${posterXmlText(`${dateParts.weekdayCn}  ${dateParts.weekdayEn}`)}</text>
-    <text x="24" y="164" ${posterFontAttr()} font-size="13" letter-spacing="1" fill="#666666">共计</text>
-    <text x="72" y="164" ${posterFontAttr()} font-size="13" font-weight="500" fill="#113A22">${posterXmlText(lessonCount)}</text>
-    <text x="92" y="164" ${posterFontAttr()} font-size="13" letter-spacing="1" fill="#666666">节</text>
-    <text x="120" y="164" ${posterFontAttr()} font-size="13" fill="#CCCCCC">/</text>
-    <text x="144" y="164" ${posterFontAttr()} font-size="13" font-weight="500" fill="#113A22">${posterXmlText(posterHoursText(totalHours))}</text>
-    <text x="166" y="164" ${posterFontAttr()} font-size="13" letter-spacing="1" fill="#666666">课时</text>
-    <line x1="24" y1="188" x2="396" y2="188" stroke="#E0E5E0" stroke-width="0.5"/>
+  const emptySvg=rows.length?'':`<text x="30" y="${lessonTop}" ${posterFontAttr()} font-size="13" font-weight="500" fill="#999999">明日暂无排课</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1170" height="${Math.round(height*1170/420)}" viewBox="0 0 420 ${height}">
+    <rect width="420" height="${height}" fill="#FFFFFF"/>
+    <text x="30" y="82" ${posterFontAttr()} font-size="32" font-weight="700" letter-spacing="2" fill="#111111">${posterXmlText(coachName)}</text>
+    <text x="${42+coachName.length*34}" y="82" ${posterFontAttr()} font-size="13" font-weight="400" fill="#999999">教练</text>
+    <text x="390" y="62" text-anchor="end" ${posterFontAttr()} font-size="24" font-weight="500" fill="#111111">${posterXmlText(`${dateParts.month}/${dateParts.day}`)}<tspan font-size="13" font-weight="400">  ${posterXmlText(dateParts.weekdayCn)}</tspan></text>
+    <text x="390" y="82" text-anchor="end" ${posterFontAttr()} font-size="12" font-weight="400" letter-spacing="1" fill="#999999">${posterXmlText(`共 ${lessonCount} 节 · ${posterHoursText(totalHours)} 课时`)}</text>
+    <line x1="30" y1="105" x2="390" y2="105" stroke="#222222" stroke-width="2"/>
     ${lessonSvg}${emptySvg}
-    <line x1="24" y1="${footerTop}" x2="396" y2="${footerTop}" stroke="#E0E5E0" stroke-width="1"/>
-    <text x="210" y="${footerTop+72}" text-anchor="middle" ${posterFontAttr()} font-size="11" font-weight="500" letter-spacing="3" fill="#113A22" opacity="0.8">网球兄弟 FLOWTENNIS</text>
+    <text x="210" y="${height-37}" text-anchor="middle" ${posterFontAttr()} font-size="12" font-weight="400" letter-spacing="3" fill="#DDDDDD">FLOWTENNIS</text>
   </svg>`;
 }
 

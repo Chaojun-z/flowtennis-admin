@@ -1285,12 +1285,14 @@ assert.deepStrictEqual(
       { id:'poster-2', startTime:'2026-05-20 14:00', endTime:'2026-05-20 15:30', campus:'shunyi_mapo', venue:'2号场', courseType:'体验课', studentName:'Misha', studentIds:['stu-2','stu-3'] }
     ]
   });
-  assert.match(posterSvg, /COACH SCHEDULE/, 'feishu coach poster should keep the Gemini schedule label');
   assert.match(posterSvg, /朝珺/, 'feishu coach poster should render the coach name');
-  assert.match(posterSvg, /5 \/ 20/, 'feishu coach poster should render the digest date');
-  assert.match(posterSvg, /共计/, 'feishu coach poster should render the summary label');
-  assert.match(posterSvg, /网球兄弟 FLOWTENNIS/, 'feishu coach poster should render the brand footer');
+  assert.match(posterSvg, /5\/20/, 'feishu coach poster should render the compact digest date');
+  assert.match(posterSvg, /共 2 节 · 2.5 课时/, 'feishu coach poster should render the summary under the date');
+  assert.match(posterSvg, /FLOWTENNIS/, 'feishu coach poster should render the brand footer');
   assert.match(posterSvg, /Misha/, 'feishu coach poster should render real lesson rows');
+  assert.match(posterSvg, /09:00-10:00/, 'feishu coach poster should render compact time ranges');
+  assert.match(posterSvg, /1号场/, 'feishu coach poster should render short court labels');
+  assert.match(posterSvg, /Noto Sans SC/, 'feishu coach poster should use the bundled Noto Sans SC font');
 }
 
 assert.strictEqual(
