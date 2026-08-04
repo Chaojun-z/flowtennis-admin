@@ -394,7 +394,9 @@ function financeDeferredSource(row = {}) {
   return text(row.debitTarget || row.packageName || row.incomeType || row.sourceProject) || '课包';
 }
 
-function buildFinancePrepaidView(financeRows = []) {
+function buildFinancePrepaidView(financeRows = [], options = {}) {
+  const membershipBalanceRows = Array.isArray(options.membershipBalanceRows) ? options.membershipBalanceRows : [];
+  const shouldUseMembershipBalanceRows = membershipBalanceRows.length > 0;
   const grouped = new Map();
   (financeRows || []).forEach(row => {
     if (row?.differenceReason) return;
@@ -402,6 +404,7 @@ function buildFinancePrepaidView(financeRows = []) {
     if (!amount) return;
     const deferredType = financeDeferredType(row);
     if (!deferredType) return;
+    if (shouldUseMembershipBalanceRows && deferredType === '会员储值待确认') return;
     const customer = text(row.customer || row.studentName) || '—';
     const campusName = text(row.campusName) || '—';
     const source = financeDeferredSource(row);
@@ -410,6 +413,23 @@ function buildFinancePrepaidView(financeRows = []) {
     current.deferredAmount = money(current.deferredAmount + amount);
     current.notes = current.notes || row.sourceDocument || row.notes || '';
     grouped.set(key, current);
+  });
+  membershipBalanceRows.forEach(row => {
+    const amount = Number(row?.deferredAmount) || 0;
+    if (amount <= 0.009) return;
+    const customer = text(row.customer || row.name) || '—';
+    const campusName = text(row.campusName) || '—';
+    const source = text(row.source) || '订场会员储值';
+    const key = ['会员储值待确认', customer, campusName, source].join('|');
+    grouped.set(key, {
+      id: text(row.id) || key,
+      customer,
+      campusName,
+      deferredType: '会员储值待确认',
+      deferredAmount: money(amount),
+      source,
+      notes: text(row.notes)
+    });
   });
   const rows = [...grouped.values()]
     .filter(row => Number(row.deferredAmount) > 0.009)

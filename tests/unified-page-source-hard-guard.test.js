@@ -40,7 +40,7 @@ assert.match(corePages, /coachOpsUnifiedView:buildCoachOpsUnifiedView/, 'coachop
 assert.match(corePages, /purchaseUnifiedView:buildPurchaseUnifiedView/, 'purchases page-data must expose backend unified purchase rows');
 assert.match(corePages, /packageUnifiedView:buildPackageUnifiedView/, 'purchases page-data must expose backend unified package rows');
 assert.match(corePages, /entitlementUnifiedView:buildEntitlementUnifiedView/, 'purchases page-data must expose backend unified entitlement rows');
-assert.match(financeSnapshot, /financePrepaidView:\s*buildFinancePrepaidView\(financeNormalizedRows\)/, 'finance snapshot must expose backend prepaid rows and summary');
+assert.match(financeSnapshot, /financePrepaidView:\s*buildFinancePrepaidView\(financeNormalizedRows,\s*\{\s*membershipBalanceRows:\s*storedValueBalanceRows\s*\}\)/, 'finance snapshot must expose backend prepaid rows and current membership balance summary');
 
 assert.match(state, /let coachOpsUnifiedView=/, 'frontend state should keep backend coach ops unified view');
 assert.match(state, /let purchaseUnifiedView=/, 'frontend state should keep backend purchase unified view');

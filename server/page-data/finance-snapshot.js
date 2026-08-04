@@ -1,7 +1,8 @@
 const { createFinanceUnifiedRowsBuilder } = require('../read-models/finance-unified-rows.js');
 const {
   buildFinanceOverviewDataFromRows,
-  mergeFinanceOverviewDataWithRows
+  mergeFinanceOverviewDataWithRows,
+  financeRowsInScope
 } = require('../read-models/finance-summary.js');
 const { buildFinancePrepaidView } = require('../read-models/unified-page-views.js');
 
@@ -69,14 +70,79 @@ function createFinanceSnapshotHelpers(deps = {}) {
       .sort((a, b) => String(b.month || '').localeCompare(String(a.month || '')) || String(a.coach || '').localeCompare(String(b.coach || ''), 'zh-Hans-CN'));
   }
 
+  function isInactiveMembershipStatus(value) {
+    return ['voided', 'refunded', 'cancelled', 'canceled', 'deleted', 'cleared', 'inactive'].includes(String(value || '').toLowerCase());
+  }
+
+  function hasCachedMoney(row = {}, key) {
+    return row?.[key] !== '' && row?.[key] != null && Number.isFinite(Number(row?.[key]));
+  }
+
+  function membershipBalanceRows({ courts = [], membershipAccounts = [], campuses = [] } = {}) {
+    const activeAccounts = (membershipAccounts || []).filter(account => !isInactiveMembershipStatus(account?.status));
+    if (!activeAccounts.length) return [];
+    const campusName = buildFinanceCampusResolvers(campuses || []);
+    const courtMap = new Map((courts || []).map(court => [String(court?.id || '').trim(), court]));
+    return activeAccounts
+      .map(account => {
+        const court = courtMap.get(String(account?.courtId || '').trim());
+        if (!court || String(court?.status || 'active') === 'inactive' || court?.mergedIntoCourtId || court?.deletedAt) return null;
+        const finance = typeof computeCourtFinance === 'function' ? computeCourtFinance({ ...court, allowNegativeBalance: true }) : {};
+        const balance = hasCachedMoney(court, 'cachedBalance') ? Number(court.cachedBalance) : Number(finance.balance);
+        const amount = roundMoney(balance);
+        if (amount <= 0.009) return null;
+        return {
+          id: `membership-balance-${account.id || court.id}`,
+          customer: court.name || account.name || court.id || '—',
+          campusName: campusName.fromHints(court.campus, court.campusName, court.name, court.notes) || '—',
+          campusCode: String(court.campus || '').trim(),
+          deferredAmount: amount,
+          source: '订场会员储值',
+          notes: '',
+          courtId: court.id,
+          membershipAccountId: account.id
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function isMembershipDeferredFinanceRow(row = {}) {
+    return row.businessTypeLevel1 === '储值' || ['会员储值', '会员订场'].includes(String(row.businessType || ''));
+  }
+
+  function applyMembershipBalanceToOverview(overviewData = {}, financeRows = [], balanceRows = [], scope = {}) {
+    if (!balanceRows.length) return overviewData;
+    const scopedFinanceRows = financeRowsInScope(financeRows, scope);
+    const originalStoredDeferred = roundMoney(scopedFinanceRows
+      .filter(row => !row?.differenceReason && isMembershipDeferredFinanceRow(row))
+      .reduce((sum, row) => sum + (Number(row?.deferredRevenueDelta) || 0), 0));
+    const scopedBalanceRows = balanceRows.filter(row => {
+      const scopeCampus = String(scope?.campusName || scope?.campus || '').trim();
+      if (!scopeCampus || scopeCampus === 'all') return true;
+      return String(row.campusName || '').trim() === scopeCampus || String(row.campusCode || '').trim() === scopeCampus;
+    });
+    const storedValueBalance = roundMoney(scopedBalanceRows.reduce((sum, row) => sum + (Number(row?.deferredAmount) || 0), 0));
+    const all = { ...(overviewData.all || {}) };
+    all.deferred = roundMoney((Number(all.deferred ?? all.pendingRevenue) || 0) - originalStoredDeferred + storedValueBalance);
+    all.storedValueBalance = storedValueBalance;
+    return { ...overviewData, all };
+  }
+
   function buildFinancePageSnapshot(source = {}, scope = {}) {
     const financeNormalizedRows = buildFinanceUnifiedRows(source);
+    const storedValueBalanceRows = membershipBalanceRows(source);
+    const financeOverviewData = applyMembershipBalanceToOverview(
+      buildFinanceOverviewDataFromRows(financeNormalizedRows, scope),
+      financeNormalizedRows,
+      storedValueBalanceRows,
+      scope
+    );
     return {
       generatedAt: new Date().toISOString(),
-      financeOverviewData: buildFinanceOverviewDataFromRows(financeNormalizedRows, scope),
+      financeOverviewData,
       financeNormalizedRows,
       financeSettlementRows: buildFinanceSettlementRows(source),
-      financePrepaidView: buildFinancePrepaidView(financeNormalizedRows)
+      financePrepaidView: buildFinancePrepaidView(financeNormalizedRows, { membershipBalanceRows: storedValueBalanceRows })
     };
   }
 

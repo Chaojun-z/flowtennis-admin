@@ -142,6 +142,75 @@ assert.strictEqual(memberTraceRow.batchId, 'batch-member-only', 'membership fina
 assert.strictEqual(memberTraceRow.cashDelta, 1200, 'membership trace passthrough must not change cash amount');
 assert.strictEqual(memberTraceRow.deferredRevenueDelta, 1200, 'membership trace passthrough must not change deferred amount');
 
+const membershipBalanceSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  courts:[{
+    id:'court-balance-member',
+    name:'余额会员',
+    campus:'shunyi_mapo',
+    cachedBalance:889,
+    history:[{
+      id:'spent-with-split',
+      type:'消费',
+      date:'2026-07-20',
+      occurredDate:'2026-07-20 10:00:00',
+      category:'订场',
+      payMethod:'储值扣款',
+      amount:300
+    }]
+  }],
+  membershipAccounts:[{
+    id:'account-balance-member',
+    courtId:'court-balance-member',
+    status:'active'
+  }],
+  membershipOrders:[{
+    id:'member-order-with-bonus',
+    membershipAccountId:'account-balance-member',
+    courtId:'court-balance-member',
+    courtName:'余额会员',
+    rechargeAmount:1000,
+    bonusAmount:189,
+    purchaseDate:'2026-07-19',
+    payMethod:'微信',
+    status:'active'
+  }]
+});
+
+assert.strictEqual(membershipBalanceSnapshot.financeOverviewData.all.cash, 1000, 'membership recharge cash income should only count paid amount');
+assert.strictEqual(membershipBalanceSnapshot.financeOverviewData.all.recognized, 300, 'stored value consumption should still increase recognized revenue');
+assert.strictEqual(membershipBalanceSnapshot.financeOverviewData.all.deferred, 889, 'finance overview deferred should use the current member balance including bonus');
+assert.strictEqual(membershipBalanceSnapshot.financePrepaidView.summary.storedDeferredAmount, 889, 'prepaid stored value summary should use the current member balance');
+assert.strictEqual(membershipBalanceSnapshot.financePrepaidView.rows.length, 1, 'prepaid view should expose one active member balance row');
+assert.strictEqual(membershipBalanceSnapshot.financePrepaidView.rows[0].deferredAmount, 889, 'prepaid member row should display the current member balance');
+
+const membershipBalanceScopedSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  courts:[{
+    id:'court-balance-member',
+    name:'余额会员',
+    campus:'shunyi_mapo',
+    cachedBalance:889
+  }],
+  membershipAccounts:[{
+    id:'account-balance-member',
+    courtId:'court-balance-member',
+    status:'active'
+  }],
+  membershipOrders:[{
+    id:'member-order-with-bonus',
+    membershipAccountId:'account-balance-member',
+    courtId:'court-balance-member',
+    courtName:'余额会员',
+    rechargeAmount:1000,
+    bonusAmount:189,
+    purchaseDate:'2026-07-19',
+    payMethod:'微信',
+    status:'active'
+  }]
+}, { campus:'shunyi_mapo' });
+assert.strictEqual(membershipBalanceScopedSnapshot.financeOverviewData.all.deferred, 889, 'campus-scoped finance overview should match member balance when scope uses campus code');
+
 const duplicatedMembershipRechargeSnapshot = _test.buildFinancePageSnapshot({
   courts:[{
     id:'court-dup-member',
