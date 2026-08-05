@@ -300,7 +300,9 @@ assert.match(buttonsCss, /\.course-package-showcase-actions \.tms-btn-primary\{[
 assert.match(buttonsCss, /\.course-package-showcase-actions \.tms-btn-primary::before\{[^}]*width:10px[^}]*background:url/, 'package create button should use the standardized plus icon');
 assert.match(pagesCss, /#page-packages \.course-package-showcase \.tms-search-wrapper\{width:300px/, 'package search should use the shared 300px width');
 assert.match(filtersCss, /\.tms-dropdown-display\{[^}]*height:36px[^}]*min-width:0[^}]*width:auto/, 'package filters should inherit the adaptive dropdown width standard');
-assert.match(filtersCss, /\.tms-searchable-dropdown-menu\{[^}]*overflow:hidden[^}]*display:flex[^}]*flex-direction:column/, 'searchable package dropdown menus should keep the search box fixed above the scrolling options');
+assert.doesNotMatch(filtersCss, /(^|\n)\.tms-searchable-dropdown-menu\{[^}]*display:flex/, 'searchable package dropdown menus must stay hidden until the dropdown is open');
+assert.match(filtersCss, /\.tms-searchable-dropdown-menu\{[^}]*overflow:hidden[^}]*flex-direction:column/, 'searchable package dropdown menus should keep the search box fixed above the scrolling options');
+assert.match(filtersCss, /\.tms-dropdown\.open \.tms-searchable-dropdown-menu\{display:flex\}/, 'searchable package dropdown menus should only switch to flex layout in the open state');
 assert.match(filtersCss, /\.tms-searchable-dropdown-menu \.tms-dropdown-options\{[^}]*overflow-y:auto/, 'searchable package dropdown options should scroll independently below the search box');
 assert.doesNotMatch(pagesCss, /#pkg(Type|Coach|Status|TimeBand)FilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package filters should not keep page-level 60px overrides');
 assert.match(pagesCss, /package-board-column\{[^}]*border:1px solid rgba\(255,255,255,\.05\)[^}]*border-radius:12px[^}]*background:rgba\(0,0,0,\.05\)[^}]*padding:12px/, 'package board columns should use the subtle dark slot style');
