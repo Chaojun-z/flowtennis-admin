@@ -40,5 +40,6 @@ assert.match(residualPageDataSource, /if\(path==='\/page-data\/finance'&&method=
 assert.match(corePageDataSource, /if\(path==='\/page-data\/courts'&&method==='GET'\)/, 'api should expose an aggregated courts page endpoint');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/memberships'&&method==='GET'\)/, 'api should expose an aggregated memberships page endpoint');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/workbench'&&method==='GET'\)/, 'api should expose an aggregated workbench page endpoint');
+assert.match(corePageDataSource, /if\(path==='\/page-data\/coach-schedule'&&method==='GET'\)/, 'api should expose a lightweight coach schedule page endpoint');
 
 console.log('page load strategy tests passed');

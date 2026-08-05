@@ -21,6 +21,7 @@ for (const route of [
   '/page-data/purchases',
   '/page-data/courts',
   '/page-data/memberships',
+  '/page-data/coach-schedule',
   '/page-data/workbench'
 ]) {
   assert.match(routesSource, new RegExp(`path==='${route.replace(/\//g, '\\/')}'`), `core page-data module should own ${route}`);

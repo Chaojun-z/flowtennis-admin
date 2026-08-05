@@ -76,8 +76,8 @@ assert.match(
 
 assert.match(
   source,
-  /coachschedule:\['workbenchPage'\]/,
-  'coach schedule calendar should block on the backend unified coach schedule view'
+  /coachschedule:\['coachSchedulePage'\]/,
+  'coach schedule calendar should block on the lightweight calendar read model'
 );
 
 assert.match(
@@ -1672,14 +1672,14 @@ assert.match(
 
 assert.match(
   corePagesSource,
-  /coaches:scoped\.coaches\|\|\[\]/,
-  'workbench page-data should return the current coach list used by schedule coach pickers'
+  /path==='\/page-data\/coach-schedule'[\s\S]*coaches:scoped\.coaches\|\|\[\]/,
+  'coach schedule page-data should return the current coach list used by schedule coach pickers'
 );
 
 assert.match(
   stateSource,
-  /if\(name==='workbenchPage'\)\{[\s\S]*setDatasetValue\('coaches',data\.coaches\|\|\[\]\)/,
-  'loading the coach schedule workbench should hydrate the global coach list'
+  /if\(name==='coachSchedulePage'\)\{[\s\S]*setDatasetValue\('coaches',data\.coaches\|\|\[\]\)/,
+  'loading the coach schedule read model should hydrate the global coach list'
 );
 
 assert.match(

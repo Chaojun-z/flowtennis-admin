@@ -192,7 +192,7 @@ const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
 const DATA_CACHE_TTL_MS=60000;
 const OPERATIONS_PAGE_CACHE_PREFIX='ft_operations_view_cache_';
 const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2';
-const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
+const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','coachSchedulePage','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
 const DATASETS_WITH_REQUEST_KEYS=new Set(['operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
@@ -240,7 +240,7 @@ const PAGE_DATA_REQUIREMENTS={
   leads:['campuses','leads'],
   operations:['operationsPage'],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals','lifecycleMetricsPage'],
-  coachschedule:['workbenchPage'],
+  coachschedule:['coachSchedulePage'],
   coachops:['workbenchPage','operationsPage'],
   finance:[],
   products:['products'],
@@ -271,6 +271,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   packages:[],
   purchases:[],
   schedule:['classes','feedbacks','entitlements','entitlementLedger','financePage'],
+  coachschedule:['entitlements','entitlementLedger'],
   finance:['financePage'],
   courts:['courtsPage'],
   matches:['matchesPage'],
@@ -285,6 +286,7 @@ const STUDENT_PAGE_DEFERRED_REQUIREMENTS=[];
 const STUDENT_DETAIL_REQUIREMENTS=['products'];
 const PERFORMANCE_PAGE_DATA_GUARD={
   students:['classes','schedule','courts'],
+  coachschedule:['entitlements','entitlementLedger'],
   workbench:['workbenchPage']
 };
 function isStudentListPage(pg){
@@ -460,6 +462,7 @@ const DATASET_LOADERS={
   ,operationsPage:()=>loadOperationsPageDataset()
   ,matchesPage:()=>apiCall('GET','/admin/matches')
   ,thirdPartySyncCenterPage:()=>apiCall('GET','/third-party-sync/overview')
+  ,coachSchedulePage:()=>apiCall('GET','/page-data/coach-schedule')
   ,workbenchPage:()=>apiCall('GET','/page-data/workbench')
 };
 const GLOBAL_DATASET_NAMES=Object.keys(DATASET_LOADERS);
@@ -675,7 +678,7 @@ function markLearningDataStale(){
   loadedScheduleDetailIds.clear();
   [
     'schedule','students','purchases','entitlements','entitlementLedger','customerLifecycleRows',
-    'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchaseCreatePage','purchasesPage','workbenchPage',
+    'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchaseCreatePage','purchasesPage','coachSchedulePage','workbenchPage',
     'financePage','operationsPage'
   ].forEach(name=>{
     staleCachedDatasets.add(name);
@@ -830,7 +833,7 @@ function renderPageLoading(pg){
   if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
   if(pg==='coachschedule'){
-    loadedDatasets.delete('workbenchPage');
+    loadedDatasets.delete('coachSchedulePage');
     const grid=document.querySelector('#page-coachschedule .coach-ops-grid-card');
     const timeline=document.getElementById('coachOpsTimeline');
     if(grid)grid.classList.add('is-loading');
@@ -985,6 +988,28 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     if(name==='thirdPartySyncCenterPage'){
       thirdPartySyncCenterData=data||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[]};
       markDatasetLoaded('thirdPartySyncCenterPage',requestKey);
+      return;
+    }
+    if(name==='coachSchedulePage'){
+      setDatasetValue('campuses',data.campuses||[]);
+      setDatasetValue('coaches',data.coaches||[]);
+      setDatasetValue('students',data.students||[]);
+      setDatasetValue('classes',data.classes||[]);
+      setDatasetValue('schedule',data.schedule||[]);
+      setDatasetValue('feedbacks',data.feedbacks||[]);
+      setDatasetValue('coachProposals',data.coachProposals||[]);
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      teachingStudentViews=data.teachingStudentViews||teachingStudentViews;
+      coachOpsUnifiedView=data.coachOpsUnifiedView||{rows:[]};
+      staleCachedDatasets.delete('campuses');
+      staleCachedDatasets.delete('coaches');
+      staleCachedDatasets.delete('students');
+      staleCachedDatasets.delete('classes');
+      staleCachedDatasets.delete('schedule');
+      staleCachedDatasets.delete('feedbacks');
+      staleCachedDatasets.delete('coachProposals');
+      staleCachedDatasets.delete('customerLifecycleRows');
+      markDatasetLoaded('coachSchedulePage',requestKey);
       return;
     }
     if(name==='workbenchPage'){

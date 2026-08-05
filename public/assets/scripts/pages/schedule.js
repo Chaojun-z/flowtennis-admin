@@ -1156,7 +1156,7 @@ async function saveSchedule(){
   if(result?.warnings?.length)toast(result.warnings.join('；'),'warn');
   renderAfterScheduleMutation();
 }
-function refreshCoachOpsWorkbenchAfterScheduleMutation(){if(typeof ensureDatasetsByName!=='function'||(currentPage!=='coachschedule'&&currentPage!=='coachops'&&!loadedDatasets.has('workbenchPage')))return Promise.resolve();return ensureDatasetsByName(['workbenchPage'],{force:true}).then(()=>{if(currentPage==='coachschedule'||currentPage==='coachops')renderCoachOps();}).catch(err=>{console.error('coach schedule refresh failed:',err);toast('排课已保存，日历刷新失败，请手动刷新页面','warn');});}
+function refreshCoachOpsWorkbenchAfterScheduleMutation(){if(typeof ensureDatasetsByName!=='function')return Promise.resolve();const dataset=currentPage==='coachschedule'?'coachSchedulePage':currentPage==='coachops'?'workbenchPage':loadedDatasets.has('coachSchedulePage')?'coachSchedulePage':loadedDatasets.has('workbenchPage')?'workbenchPage':'';if(!dataset)return Promise.resolve();return ensureDatasetsByName([dataset],{force:true}).then(()=>{if(currentPage==='coachschedule'||currentPage==='coachops')renderCoachOps();}).catch(err=>{console.error('coach schedule refresh failed:',err);toast('排课已保存，日历刷新失败，请手动刷新页面','warn');});}
 function renderAfterScheduleMutation(){try{renderSchedule();renderCoachOps();renderMySchedule();refreshCoachOpsWorkbenchAfterScheduleMutation();}catch(err){console.error('schedule post-save render failed:',err);toast('排课已保存，页面刷新异常，请手动刷新页面','warn');}}
 function resetScheduleSaveButton(){
   const btn=document.getElementById('scheduleSaveBtn');

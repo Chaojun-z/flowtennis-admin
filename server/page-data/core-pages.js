@@ -74,6 +74,16 @@ const PURCHASE_CREATE_STUDENT_PROJECTION_FIELDS=[
   'type',
   'status'
 ];
+const COACH_SCHEDULE_STUDENT_PROJECTION_FIELDS=[
+  'name',
+  'phone',
+  'campus',
+  'primaryCoach',
+  'type',
+  'status',
+  'notes',
+  'profileNote'
+];
 
 function createCorePageDataRoutes(deps={}){
   const {
@@ -516,6 +526,51 @@ function createCorePageDataRoutes(deps={}){
         customerLifecycleRows,
         membershipFinanceSummary
       });
+    }
+    if(path==='/page-data/coach-schedule'&&method==='GET'){
+      return timedEndpointMetric('pageData.coachSchedule',async()=>{
+        await init();
+        const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
+        const coachRefs=buildCoachRefs({coaches,users});
+        const scheduleRowsPromise=user.role==='admin'?getScheduleListRows():getCoachScheduleRowsForUser(user,coachRefs);
+        const [campuses,students,classes,schedule,feedbacks,coachProposals]=await Promise.all([
+          listCampusesWithDefaults(),
+          getFastStudentsRead({columns:COACH_SCHEDULE_STUDENT_PROJECTION_FIELDS}).catch(()=>cappedScan(T_STUDENTS)),
+          cappedScan(T_CLASSES),
+          scheduleRowsPromise,
+          cappedScan(T_FEEDBACKS),
+          scanCoachProposals()
+        ]);
+        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,coaches},user,coachRefs);
+        const now=new Date();
+        const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
+        const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
+        const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,[],now);
+        const decoratedClasses=decorateWorkbenchClasses(scoped.classes||[],scoped.schedule||[]);
+        const customerLifecycleRows=buildCustomerLifecycleRows({
+          students:scoped.students,
+          schedule:scoped.schedule,
+          feedbacks:scoped.feedbacks
+        });
+        const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,scoped);
+        return sendJson(res,{
+          campuses:scoped.campuses||[],
+          coaches:scoped.coaches||[],
+          students:decoratedStudents,
+          classes:decoratedClasses,
+          schedule:decoratedSchedule,
+          feedbacks:decoratedFeedbacks,
+          coachProposals:scoped.coachProposals||[],
+          customerLifecycleRows,
+          teachingStudentViews,
+          coachOpsUnifiedView:buildCoachOpsUnifiedView({
+            coaches:scoped.coaches||[],
+            schedule:decoratedSchedule,
+            feedbacks:decoratedFeedbacks,
+            campuses:scoped.campuses||[]
+          })
+        });
+      },{role:user.role||''});
     }
     if(path==='/page-data/workbench'&&method==='GET'){
       return timedEndpointMetric('pageData.workbench',async()=>{
