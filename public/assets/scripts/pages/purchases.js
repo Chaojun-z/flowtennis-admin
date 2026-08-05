@@ -64,7 +64,7 @@ function onPurchaseDateRangeFilterChange(value,event){
 function refreshPurchaseFilters(){
   const packageValue=purchaseSelectedPackageFilter();
   const purchaseRows=purchases.filter(isMeaningfulPurchaseRecord);
-  const packageOptions=withStandardFilterCounts(coursePackageDropdownOptions(packages,{showAllOption:true,allLabel:'全部课包',includeCoach:true}),purchaseRows,(p,value)=>purchaseMatchesPackage(p,value));
+  const packageOptions=withStandardFilterCounts(coursePackageDropdownOptions(packages,{showAllOption:true,allLabel:'全部课包',includeCoach:true,selectedValue:packageValue}),purchaseRows,(p,value)=>purchaseMatchesPackage(p,value));
   const host=document.getElementById('purPackageFilterHost');
   if(host)host.innerHTML=renderCoursePackagePickerDropdownHtml('purPackageFilter','全部课包',packages,packageValue,{showAllOption:true,allLabel:'全部课包',includeCoach:true,isForm:false,onchange:'onPurchaseFilterChange',options:packageOptions});
 }

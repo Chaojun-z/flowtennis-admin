@@ -453,8 +453,9 @@ function packagePurchaseCount(packageId,ownerCoach=''){
 }
 function purchaseMatchesPackage(p,packageId){
   if(!packageId)return true;
-  const purchaseIdsByEntitlement=new Set(entitlements.filter(e=>String(e.packageId||'')===String(packageId)).map(e=>String(e.purchaseId||'')).filter(Boolean));
-  return String(p.packageId||'')===String(packageId)||String(p.originalPackageId||'')===String(packageId)||purchaseIdsByEntitlement.has(String(p.id||''));
+  const packageIds=new Set(coursePackageEquivalentIds(packageId).map(String));
+  const purchaseIdsByEntitlement=new Set(entitlements.filter(e=>packageIds.has(String(e.packageId||''))).map(e=>String(e.purchaseId||'')).filter(Boolean));
+  return packageIds.has(String(p.packageId||''))||packageIds.has(String(p.originalPackageId||''))||purchaseIdsByEntitlement.has(String(p.id||''));
 }
 function packageOpts(sel){
   return '<option value="">— 选择售卖课包 —</option>'+packages.filter(p=>p.status!=='inactive').map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(standardPackageLabel(p,false)||p.name)}${p.status==='inactive'?' · 已停售':''}</option>`).join('');
@@ -478,13 +479,16 @@ function coursePackageTimeBandOrder(p={}){
 }
 function coursePackageBusinessGroup(p={}){
   const courseType=standardCourseTypeFilterValue(p);
+  if(courseType==='专项课')return '专项课';
   if(courseType==='体验课')return '体验课';
+  if(courseType==='小班课')return '小班课';
   const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes])||'其他';
-  if((audience==='青少年'||audience==='成人')&&(courseType==='私教课'||courseType==='小班课'))return `${audience} · ${courseType}`;
+  if(courseType==='私教课'&&audience==='青少年')return '青少年私教课';
+  if(courseType==='私教课'&&audience==='成人')return '成人私教课';
   return '其他';
 }
 function coursePackageBusinessSortValue(p={}){
-  const groupOrder={'青少年 · 私教课':1,'青少年 · 小班课':2,'成人 · 私教课':3,'成人 · 小班课':4,'体验课':5,'其他':9};
+  const groupOrder={'青少年私教课':1,'成人私教课':2,'小班课':3,'体验课':4,'专项课':5,'其他':9};
   return [
     groupOrder[coursePackageBusinessGroup(p)]||9,
     coursePackageClassSizeValue(p),
@@ -509,13 +513,55 @@ function compareCoursePackageBusinessOrder(a={},b={}){
   }
   return String(a.id||'').localeCompare(String(b.id||''));
 }
+function coursePackageBusinessDedupeKey(p={}){
+  const courseType=standardCourseTypeFilterValue(p);
+  const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes])||'';
+  return [
+    coursePackageBusinessGroup(p),
+    courseType,
+    audience,
+    normalizeCourseType(p.courseType||p.type),
+    String(p.courseDisplayName||p.productName||p.packageName||p.name||'').trim(),
+    coursePackageClassSizeValue(p),
+    Number(p.lessons||p.packageLessons||p.totalLessons)||0,
+    String(p.timeBand||p.packageTimeBand||'全天'),
+    Number(p.price)||0,
+    coachName(p.ownerCoach),
+    packageListStatusValue(p)
+  ].join('|');
+}
+function coursePackageEquivalentIds(packageId){
+  const id=String(packageId||'').trim();
+  if(!id)return [];
+  const target=packages.find(p=>String(p.id||'')===id);
+  if(!target)return [id];
+  const key=coursePackageBusinessDedupeKey(target);
+  return packages.filter(p=>coursePackageBusinessDedupeKey(p)===key).map(p=>String(p.id||'')).filter(Boolean);
+}
+function dedupeCoursePackageDropdownRows(rows=[],selectedValue=''){
+  const selectedId=String(selectedValue||'').trim();
+  const selectedRow=selectedId?(rows||[]).find(p=>String(p.id||'')===selectedId):null;
+  const selectedKey=selectedRow?coursePackageBusinessDedupeKey(selectedRow):'';
+  const byKey=new Map();
+  [...(Array.isArray(rows)?rows:[])].sort(compareCoursePackageBusinessOrder).forEach(p=>{
+    const key=coursePackageBusinessDedupeKey(p);
+    if(!key)return;
+    if(selectedKey&&key===selectedKey){
+      if(String(p.id||'')===selectedId)byKey.set(key,p);
+      else if(!byKey.has(key))byKey.set(key,p);
+      return;
+    }
+    if(!byKey.has(key))byKey.set(key,p);
+  });
+  return [...byKey.values()];
+}
 function coursePackageDropdownLabel(p={},includeCoach=true){
   const base=standardPackageLabel(p,true)||p.name||'课包';
   const price=Number(p.price)||0;
   return [base,price?`${price}元`:'',includeCoach?coachName(p.ownerCoach):''].filter(Boolean).join(' · ');
 }
 function coursePackageDropdownOptions(rows=[],config={}){
-  const list=[...(Array.isArray(rows)?rows:[])].sort(compareCoursePackageBusinessOrder).map(p=>{
+  const list=dedupeCoursePackageDropdownRows(rows,config.selectedValue).map(p=>{
     const label=coursePackageDropdownLabel(p,config.includeCoach!==false);
     return {
       value:p.id,
@@ -532,7 +578,7 @@ function renderCoursePackagePickerDropdownHtml(id,label,rows,value='',config={})
     id,
     label,
     value,
-    options:config.options||coursePackageDropdownOptions(rows,config),
+    options:config.options||coursePackageDropdownOptions(rows,{...config,selectedValue:value}),
     isForm:config.isForm!==false,
     onchange:config.onchange||'',
     searchPlaceholder:'搜索课包 / 教练 / 价格 / 课时',

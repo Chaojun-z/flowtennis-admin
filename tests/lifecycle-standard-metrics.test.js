@@ -167,8 +167,8 @@ const teachingSummaryRows = buildStudentTeachingSummaryRows(customerLifecycleRow
 const formalTeachingSummaryRow = teachingSummaryRows.find(row => row.studentId === 'student-real-trial-deal');
 assert.strictEqual(
   formalTeachingSummaryRow?.teachingLessonDetailSourceVersion,
-  'lesson-record-v1',
-  '学员教学摘要必须标记新版上课记录口径，避免列表继续读取旧摘要'
+  'lesson-record-v2',
+  '学员教学摘要必须标记新版过去已发生上课记录口径，避免列表继续读取旧摘要'
 );
 assert.deepStrictEqual(
   formalTeachingSummaryRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
@@ -639,5 +639,68 @@ assert.strictEqual(
   11,
   '在期学员近90天正式课活跃必须只按排课表正式课事实输出'
 );
+
+const futureScheduleData = {
+  students: [{ id: 'student-future-completed', name: '未来已结束误标' }],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [{
+    id: 'schedule-future-completed',
+    studentId: 'student-future-completed',
+    studentName: '未来已结束误标',
+    courseType: '私教课',
+    startTime: '2026-08-09 10:00:00',
+    endTime: '2026-08-09 11:00:00',
+    status: '已结束',
+    settlementType: 'single'
+  }],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  membershipBenefitLedger: []
+};
+const futureScheduleStandard = buildStandardLifecycleMetrics({
+  ...futureScheduleData,
+  customerLifecycleRows: buildCustomerLifecycleRows(futureScheduleData),
+  now: new Date('2026-08-04 00:00:00')
+});
+assert.ok(
+  !futureScheduleStandard.views.historicalStudents.some(row => row.studentId === 'student-future-completed'),
+  '未来排课即使被误标为已结束，也不能进入历史学员或最近上课事实'
+);
+assert.strictEqual(
+  futureScheduleStandard.teachingSummary.historicalFormalAttendedCount,
+  0,
+  '未来排课不能计入已上正式课人数'
+);
+
+const futureSnapshotData = {
+  students: [],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [],
+  teachingStudentSummaryRows: [{
+    id: 'student-future-summary',
+    studentId: 'student-future-summary',
+    displayName: '未来摘要误标',
+    studentStage: 'formal',
+    lastFormalLessonAt: '2026-08-09',
+    detailRecentLessonDate: '2026-08-09',
+    detailLessonRecordRows: [{ kind: 'schedule', time: '2026-08-09 10:00-11:00', lessonDelta: -1 }],
+    completedLessons: 1,
+    teachingLessonDetailSourceVersion: 'lesson-record-v2'
+  }]
+};
+const futureSnapshotViews = buildTeachingStudentViews(
+  buildCustomerLifecycleRows(futureSnapshotData),
+  { ...futureSnapshotData, now: new Date('2026-08-04 00:00:00') }
+);
+const futureSnapshotRow = futureSnapshotViews.formalStudents.find(row => row.studentId === 'student-future-summary');
+assert.strictEqual(futureSnapshotRow?.detailRecentLessonDate, '', '摘要里的未来最近上课日期必须被统一读模型清空');
+assert.deepStrictEqual(futureSnapshotRow?.detailLessonRecordRows, [], '摘要里的未来上课明细不能进入抽屉已上课记录');
+assert.strictEqual(futureSnapshotRow?.completedLessons, 0, '摘要里的未来上课明细不能计入累计已上课');
 
 console.log('lifecycle standard metrics tests passed');

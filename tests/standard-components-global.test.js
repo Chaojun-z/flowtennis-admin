@@ -40,11 +40,15 @@ assert.match(campusSource, /renderStandardCellText\(/, 'a non-court page should 
 assert.match(campusSource, /renderStandardEmptyText\(/, 'a non-court page should use the standard empty helper directly');
 assert.match(standardSource, /document\.documentElement\.dataset\.standardComponents='loaded'/, 'standard bundle should expose a DOM execution marker for smoke tests');
 assert.match(standardSource, /function closeStandardDropdownElement\(el\)\{[\s\S]*classList\.remove\('open'\)[\s\S]*classList\.remove\('open-upward'\)[\s\S]*formItem\.style\.zIndex='1'/, 'dropdown closing should remove open state and release the elevated form layer together');
+assert.match(standardSource, /function closeStandardDropdownElement\(el\)\{[\s\S]*querySelector\('\.tms-dropdown-search-input'\)[\s\S]*search\.blur\(\)/, 'searchable dropdown closing should blur the search input so focus cannot reopen a package picker');
+assert.match(standardSource, /<div class="tms-dropdown-display" onclick="toggleStandardDropdown\('\$\{id\}',event\)"/, 'normal dropdowns should only toggle from the display trigger');
+assert.match(standardSource, /<div class="tms-dropdown-display" onclick="toggleStandardDropdown\('\$\{id\}',event\)">\$\{esc\(displayLabel\)\}<\/div><div class="tms-dropdown-menu tms-searchable-dropdown-menu"/, 'searchable dropdowns should only toggle from the display trigger, not the whole package picker shell');
 assert.match(standardSource, /function renderStandardSearchableDropdownHtml\([\s\S]*tms-searchable-dropdown-menu" onclick="event\.stopPropagation\(\)"/, 'searchable dropdown menu clicks should not bubble back to the trigger and reopen the menu');
 assert.match(
   standardSource,
   /closeStandardDropdownElement\(dropdown\)[\s\S]*changeHandler=dropdown\.dataset\.onchange\|\|''[\s\S]*defer\(\(\)=>\{[\s\S]*try\{window\[changeHandler\]\(value,label\);\}[\s\S]*finally\{[\s\S]*const latest=document\.getElementById\(id\+'_dropdown'\)[\s\S]*closeStandardDropdownElement\(latest\)/,
   'dropdown selection should close the menu before and after deferred onchange logic'
 );
+assert.match(standardSource, /function toggleStandardDropdown\(id,event\)\{[\s\S]*closest\?\.\('\.tms-dropdown-menu'\)[\s\S]*return;/, 'dropdown menu clicks must never toggle the parent picker back open');
 
 console.log('standard components global tests passed');

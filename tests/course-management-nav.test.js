@@ -243,9 +243,16 @@ assert.match(html, /function coursePackageBusinessSortValue\(/, 'course package 
 assert.match(html, /function renderCoursePackagePickerDropdownHtml\(/, 'course package dropdown should have a shared searchable grouped renderer');
 assert.match(fnBody('renderCoursePackagePickerDropdownHtml'), /renderStandardSearchableDropdownHtml[\s\S]*搜索课包 \/ 教练 \/ 价格 \/ 课时/, 'course package picker should be searchable by package, coach, price and lesson count');
 assert.match(fnBody('coursePackageDropdownOptions'), /searchText:\[label,p\.audience/, 'course package search should directly include audience words such as 成人 and 青少年');
+assert.match(fnBody('coursePackageBusinessGroup'), /courseType==='小班课'[\s\S]*return '小班课'/, 'course package picker should group small class packages separately');
+assert.match(fnBody('coursePackageBusinessGroup'), /courseType==='体验课'[\s\S]*return '体验课'/, 'course package picker should group trial packages separately');
+assert.match(fnBody('coursePackageBusinessGroup'), /courseType==='专项课'[\s\S]*return '专项课'/, 'course package picker should group special course packages separately');
+assert.match(fnBody('coursePackageBusinessSortValue'), /'青少年私教课':1,'成人私教课':2,'小班课':3,'体验课':4,'专项课':5,'其他':9/, 'course package picker business order should match the agreed package category order');
+assert.match(html, /function coursePackageBusinessDedupeKey\(/, 'course package picker should expose a business dedupe key');
+assert.match(fnBody('coursePackageDropdownOptions'), /dedupeCoursePackageDropdownRows\(rows,config\.selectedValue\)/, 'course package picker should dedupe duplicate package products before rendering options');
 assert.match(fnBody('openPurchaseModal'), /renderCoursePackagePickerDropdownHtml\('pur_packageId'[\s\S]*includeCoach:true/, 'purchase create package picker should use the searchable grouped package dropdown');
 assert.match(fnBody('openPurchaseEditModal'), /renderCoursePackagePickerDropdownHtml\('pur_edit_packageId'[\s\S]*includeCoach:true/, 'purchase edit package picker should use the searchable grouped package dropdown');
 assert.match(fnBody('refreshPurchaseFilters'), /renderCoursePackagePickerDropdownHtml\('purPackageFilter'[\s\S]*showAllOption:true[\s\S]*includeCoach:true/, 'purchase record package filter should use the searchable grouped package dropdown');
+assert.match(fnBody('refreshPurchaseFilters'), /selectedValue:packageValue/, 'purchase package filter should preserve the selected package id even when duplicate package options are deduped');
 assert.match(fnBody('openPackageMergeModal'), /renderCoursePackagePickerDropdownHtml\('pkg_merge_master'[\s\S]*renderCoursePackagePickerDropdownHtml\('pkg_merge_source'/, 'package merge modal should use the searchable grouped package dropdown for both package selectors');
 assert.match(html, /function purchaseStudentPickerHtml\(/, 'purchase modal should expose a searchable student picker helper');
 assert.match(html, /function selectPurchaseStudent\(/, 'purchase modal should allow selecting a student from search results');
@@ -259,7 +266,7 @@ assert.match(html, /function isMeaningfulPurchaseRecord/, 'purchase list should 
 assert.match(fnBody('getFilteredPurchases'), /isMeaningfulPurchaseRecord\(p\)/, 'purchase filters should skip worthless empty rows before rendering');
 assert.match(html, /function packagePurchaseCount/, 'package card should calculate purchase order count');
 assert.match(readModelSource, /filter\(rowActive\)/, 'package unified view should exclude voided purchases from order count');
-assert.match(fnBody('purchaseMatchesPackage'), /purchaseIdsByEntitlement[\s\S]*String\(p\.packageId\|\|''\)===String\(packageId\)/, 'package order count should use exact package id and entitlement-linked purchases');
+assert.match(fnBody('purchaseMatchesPackage'), /coursePackageEquivalentIds\(packageId\)[\s\S]*purchaseIdsByEntitlement[\s\S]*packageIds\.has\(String\(p\.packageId\|\|''\)\)/, 'package order count should match equivalent duplicate package ids and entitlement-linked purchases');
 assert.doesNotMatch(fnBody('packagePurchaseCount'), /packageName|productName|originalPackageName/, 'package order count should not count by package or product names');
 assert.match(html, /function purchaseMatchesPackage\(/, 'purchase filtering should share the package matching rule used by package order counts');
 assert.match(fnBody('getFilteredPurchases'), /purchaseMatchesPackage\(p,packageId\)/, 'purchase package filter should include the same purchases counted on package cards');
@@ -268,6 +275,7 @@ assert.match(fnBody('getFilteredPurchases'), /activePurchaseDateRange\(\)[\s\S]*
 assert.match(html, /let purPackageFilterValue=''/, 'purchase package filter should keep a page-level value before the dropdown exists');
 assert.match(html, /let purDateRangeFilterValue='全部'/, 'purchase page should keep a top time filter value');
 assert.match(html, /function renderPurchaseTopFilters\([\s\S]*purchaseTopCampus[\s\S]*purchaseTopDate/, 'purchase page should render top campus and time filters');
+assert.match(packageShellConfig, /onclick="goPage\(\\'purchases\\'\)">购买记录/, 'package product toolbar should provide a purchase records entry');
 assert.match(fnBody('buildCampusTabs'), /currentPage==='purchases'[\s\S]*renderPurchaseTopFilters/, 'purchase page should show top campus and time filters');
 assert.match(html, /function selectPurchaseTopCampus\([\s\S]*refreshPurchaseTopFilters\(\)[\s\S]*renderPurchases\(\)/, 'purchase top campus selector should refresh orders');
 assert.match(html, /function onPurchaseDateRangeFilterChange\([\s\S]*purDateRangeFilterValue=value[\s\S]*renderPurchases\(\)/, 'purchase top time selector should refresh orders');

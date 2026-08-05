@@ -37,8 +37,11 @@ function fnBody(source, name){
 assert.doesNotMatch(coreSource, /function openDetailSideDrawer\(/, 'legacy drawer entry should be removed after page migration');
 assert.doesNotMatch(courtsSource, /function setCourtModalFrame\(/, 'legacy court modal entry should be removed after page migration');
 assert.match(fnBody(coreSource, 'openStandardModal'), /ov\.classList\.remove\('schedule-drawer-overlay'\)[\s\S]*ov\.classList\.remove\('student-drawer-overlay'\)/, 'standard modal should clear drawer overlay classes');
+assert.match(fnBody(coreSource, 'openStandardModal'), /closeStandardDropdowns\(\)/, 'standard modal should close any open dropdown before replacing modal content');
 assert.match(fnBody(coreSource, 'openStandardModal'), /modal\.className=`modal modal-court \$\{extraClass\}`\.trim\(\)/, 'standard modal should keep one global modal class rule');
 assert.match(fnBody(coreSource, 'openStandardDetailDrawer'), /modalClass='modal modal-court modal-schedule-drawer'/, 'standard drawer should keep one global drawer class rule');
+assert.match(fnBody(coreSource, 'openStandardDetailDrawer'), /closeStandardDropdowns\(\)/, 'standard drawer should close any open dropdown before replacing drawer content');
+assert.match(fnBody(bootstrapSource, 'closeModal'), /closeStandardDropdowns\(\)/, 'closing a modal should also close dropdown menus left by package pickers');
 assert.match(fnBody(coreSource, 'setStandardActionLoading'), /dataset\.standardLoading/, 'standard action loading should be tracked on the button');
 assert.match(fnBody(coreSource, 'runStandardMutation'), /try[\s\S]*await task\(\)[\s\S]*catch[\s\S]*toast\([\s\S]*return null[\s\S]*finally/, 'standard mutation helper should keep failures open and always clear loading');
 assert.match(fnBody(coreSource, 'runStandardMutation'), /onSuccess[\s\S]*refresh[\s\S]*formatError/, 'standard mutation helper should own success callbacks, refresh callbacks, and page-specific error formatting');

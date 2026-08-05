@@ -191,6 +191,7 @@ function renderStandardModalFormSectionHtml(title,content,{className=''}={}){
 function openStandardModal({title='',titleHtml='',bodyHtml='',actionsHtml='',extraClass='modal-tight',data={}}={}){
   const ov=document.getElementById('overlay');
   if(!ov)return;
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
   ov.classList.remove('schedule-drawer-overlay');
   ov.classList.remove('student-drawer-overlay');
   ov.onclick=null;
@@ -260,6 +261,7 @@ async function runStandardMutation(buttonOrId,task,{loadingText='保存中...',e
 function openStandardDetailDrawer({titleHtml='',bodyHtml='',actionsHtml='',data={},overlayClasses=['schedule-drawer-overlay'],modalClass='modal modal-court modal-schedule-drawer'}={}){
   const ov=document.getElementById('overlay');
   if(!ov)return;
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
   if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
   const classes=Array.isArray(overlayClasses)?overlayClasses.filter(Boolean):[overlayClasses].filter(Boolean);
   const alreadyOpen=ov.classList.contains('open')&&classes.some(cls=>ov.classList.contains(cls));

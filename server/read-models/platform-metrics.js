@@ -2,6 +2,8 @@ const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
 
+const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v2';
+
 function text(value) {
   return String(value || '').trim();
 }
@@ -242,6 +244,18 @@ function scheduleLessonUnits(row = {}) {
 
 function dateOnly(value) {
   return text(value).slice(0, 10);
+}
+
+function teachingBaseDateKey(now = new Date()) {
+  return now instanceof Date
+    ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    : dateOnly(now);
+}
+
+function teachingDateOnOrBeforeNow(value = '', now = new Date()) {
+  const day = dateOnly(value);
+  const base = teachingBaseDateKey(now);
+  return !!day && !!base && day <= base;
 }
 
 function scopeDate(value) {
@@ -601,6 +615,8 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
 
   (data.entitlementLedger || [])
     .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0)
+    .filter(row => !dateOnly(ledgerFallbackDateTime(row) || row.relatedDate || row.scheduleTime || row.createdAt)
+      || teachingDateOnOrBeforeNow(ledgerFallbackDateTime(row) || row.relatedDate || row.scheduleTime || row.createdAt, data.now || new Date()))
     .forEach(row => {
       const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
       const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
@@ -824,6 +840,7 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
 }
 
 function buildTeachingStudentListFieldMap(data = {}, options = {}) {
+  const now = options.now || data.now || new Date();
   const summaryFieldMap = buildTeachingStudentSummaryFieldMap(data);
   const packageFieldMap = buildTeachingStudentPackageFieldMap(data, options);
   const coursePaidByStudent = buildTeachingStudentCoursePaidMap(data);
@@ -834,8 +851,13 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
   [...new Set([...summaryFieldMap.keys(), ...packageFieldMap.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
     const summaryFields = summaryFieldMap.get(studentId) || {};
     const packageFields = packageFieldMap.get(studentId) || {};
-    const summaryLessonRows = data.ignoreTeachingSummaryDetailRows ? [] : (summaryFields.detailLessonRecordRows || []);
-    const summaryRecentLessonDate = data.ignoreTeachingSummaryDetailRows ? '' : summaryFields.detailRecentLessonDate;
+    const rawSummaryLessonRows = data.ignoreTeachingSummaryDetailRows ? [] : (summaryFields.detailLessonRecordRows || []);
+    const summaryLessonRows = rawSummaryLessonRows
+      .filter(row => !dateOnly(row?.time || row?.sortTime || row?.relatedDate || row?.scheduleTime || row?.createdAt)
+        || teachingDateOnOrBeforeNow(row?.time || row?.sortTime || row?.relatedDate || row?.scheduleTime || row?.createdAt, now));
+    const summaryRecentLessonDate = data.ignoreTeachingSummaryDetailRows || !teachingDateOnOrBeforeNow(summaryFields.detailRecentLessonDate, now)
+      ? ''
+      : summaryFields.detailRecentLessonDate;
     const lessonRows = lessonDetailMap.has(studentId) ? (lessonDetailMap.get(studentId) || []) : summaryLessonRows;
     const detailRecentLessonDate = lessonDetailMap.has(studentId)
       ? (lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : '')
@@ -844,7 +866,7 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
     const cumulativeCoursePaidAmount = coursePaidByStudent.has(studentId)
       ? money(coursePaidByStudent.get(studentId) || 0)
       : money(summaryFields.cumulativeCoursePaidAmount || 0);
-    const completedLessons = lessonDetailMap.has(studentId) || summaryLessonRows.length
+    const completedLessons = lessonDetailMap.has(studentId) || rawSummaryLessonRows.length
       ? round(teachingLessonRowsCompletedUnits(lessonRows), 1)
       : round(summaryFields.completedLessons || 0, 1);
     details.set(studentId, {
@@ -1236,13 +1258,11 @@ function teachingScheduleFormal(row = {}) {
 
 function teachingScheduleLessonFact(row = {}, now = new Date()) {
   if (!activeStatus(row) || courseRowIsCompanion(row)) return false;
-  if (teachingScheduleCompleted(row)) return true;
   const status = text(row.status || row.systemStatus);
   if (['待上课', '待确认', '预约', '已预约'].includes(status)) return false;
   const day = dateOnly(row.startTime || row.endTime || row.createdAt);
-  const base = now instanceof Date
-    ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    : dateOnly(now);
+  const base = teachingBaseDateKey(now);
+  if (teachingScheduleCompleted(row)) return !!day && !!base && day <= base;
   if (status === '已排课') return !!day && !!base && day <= base;
   return !!day && !!base && day <= base;
 }
@@ -1294,9 +1314,7 @@ function teachingDaysSince(dateText = '', now = new Date()) {
   const raw = dateOnly(dateText);
   if (!raw) return null;
   const target = Date.parse(`${raw}T00:00:00`);
-  const baseRaw = now instanceof Date
-    ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    : dateOnly(now);
+  const baseRaw = teachingBaseDateKey(now);
   const base = Date.parse(`${baseRaw}T00:00:00`);
   if (!Number.isFinite(target) || !Number.isFinite(base)) return null;
   return Math.floor((base - target) / 86400000);
@@ -1337,7 +1355,8 @@ function hasFreshTeachingLessonFacts(data = {}) {
 }
 
 function teachingStudentSummaryDateFallback(data = {}, row = {}) {
-  return hasFreshTeachingLessonFacts(data) ? '' : text(row.lastFormalLessonAt);
+  const fallback = text(row.lastFormalLessonAt);
+  return hasFreshTeachingLessonFacts(data) || !teachingDateOnOrBeforeNow(fallback, data.now || new Date()) ? '' : fallback;
 }
 
 function teachingStudentHasTrialAttendedFact(data = {}, row = {}, now = new Date()) {
@@ -1725,7 +1744,7 @@ function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOStrin
     lastFormalLessonAt: text(row.lastFormalLessonAt),
     completedLessons: round(row.completedLessons || 0, 1),
     detailLessonRecordRows: Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [],
-    teachingLessonDetailSourceVersion: 'lesson-record-v1',
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
     packageListRows: Array.isArray(row.packageListRows) ? row.packageListRows : [],
     packageListText: text(row.packageListText || '-'),
     packageBalanceRemaining: numberSnapshotValue(row.packageBalanceRemaining),
@@ -2025,6 +2044,7 @@ module.exports = {
   buildLeadPoolRows,
   buildTeachingStudentViews,
   buildStudentTeachingSummaryRows,
+  TEACHING_LESSON_DETAIL_SOURCE_VERSION,
   buildRawLeadConversionMetrics,
   rawLeadPoolRowsForLeads,
   buildStageRows,

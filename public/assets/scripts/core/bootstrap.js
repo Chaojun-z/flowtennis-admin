@@ -244,6 +244,7 @@ async function doDelete(){
 function closeModal(){
   const ov=document.getElementById('overlay');
   if(typeof clearCoachOpsPendingCreateSlot==='function')clearCoachOpsPendingCreateSlot();
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
   ov.classList.remove('open');
   closeGlobalDatePicker();
   if(modalCleanupTimer)clearTimeout(modalCleanupTimer);

@@ -1,5 +1,5 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
-const { buildTeachingStudentViews, buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
+const { buildTeachingStudentViews, buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics, TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
 const {
@@ -170,7 +170,7 @@ function createCorePageDataRoutes(deps={}){
       ]);
       const needsTeachingFacts = fresh
         || !studentTeachingSummaries.length
-        || studentTeachingSummaries.some(row => String(row.teachingLessonDetailSourceVersion||'').trim() !== 'lesson-record-v1');
+        || studentTeachingSummaries.some(row => String(row.teachingLessonDetailSourceVersion||'').trim() !== TEACHING_LESSON_DETAIL_SOURCE_VERSION);
       const [entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
         needsTeachingFacts&&T_ENTITLEMENT_LEDGER ? cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger).catch(()=>[]) : Promise.resolve([]),
         needsTeachingFacts&&T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
@@ -246,7 +246,7 @@ function createCorePageDataRoutes(deps={}){
       if(!student)return sendJson(res,{error:'学员不存在'},404);
       const fresh=String(query?.get('fresh')||'').trim()==='1';
       const studentTeachingSummary=T_STUDENT_TEACHING_SUMMARY ? await getCachedRow(T_STUDENT_TEACHING_SUMMARY,studentId).catch(()=>null) : null;
-      if(!fresh&&studentTeachingSummary&&String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()==='lesson-record-v1'){
+      if(!fresh&&studentTeachingSummary&&String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()===TEACHING_LESSON_DETAIL_SOURCE_VERSION){
         const customerLifecycleRows=buildCustomerLifecycleRows({students:[student]});
         const detailStudentView={
           ...student,
