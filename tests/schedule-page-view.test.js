@@ -439,6 +439,8 @@ assert.match(fnBody('feedbackListTextareaAttrs'), /data-feedback-autoresize="tru
 assert.match(fnBody('openFeedbackModal'), /feedbackListStyleSelect\('fb_list_style'\)/, 'feedback modal should render the feedback typing mode toolbar');
 assert.match(fnBody('openFeedbackModal'), /autoResizeFeedbackTextareas\(document\.getElementById\('mBody'\)\)/, 'feedback modal should resize existing feedback text when opened');
 assert.match(fnBody('openScheduleDetail'), /autoResizeFeedbackTextareas\(\)/, 'schedule detail feedback edit fields should resize existing text when opened');
+assert.match(fnBody('openScheduleDetail'), /ensureScheduleDetailData\(scheduleId\)/, 'opening schedule detail should lazily补单条排课');
+assert.match(fnBody('openScheduleModal'), /ensureScheduleDetailData\(id\)/, 'editing an existing schedule should lazily补单条排课');
 assert.match(fnBody('feedbackListTextareaAttrs'), /onkeydown="handleFeedbackListKeydown\(event\)"/, 'feedback modal textareas should auto continue list markers while typing');
 assert.match(fnBody('openFeedbackPosterModal'), /preserveListMarkers/, 'feedback poster modal should expose a list marker option');
 assert.doesNotMatch(fnBody('openFeedbackPosterModal'), /posterListStyle[\s\S]*自动编号[\s\S]*项目符号[\s\S]*不添加/, 'feedback poster modal should not reformat all lines after coaches already typed the structure');

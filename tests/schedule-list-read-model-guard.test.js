@@ -97,10 +97,22 @@ async function main() {
   assert.strictEqual(view.items[1].statusLabel, '已取消');
   assert.strictEqual(view.summary.totalCount, 2);
   assert.strictEqual(view.summary.cancelledCount, 1);
+  assert.strictEqual(view.items[0].coach, 'coach-1');
+  assert.strictEqual(view.items[0].campus, 'shunyi_mapo');
+  assert.strictEqual(view.items[0].venue, '1 号场');
 
   ['courts', 'entitlementLedger', 'history', 'feedbacks', 'students'].forEach((field) => {
     assert.strictEqual(view.items[1][field], undefined, `默认列表不应返回 ${field} 全量明细`);
   });
+
+  const allView = buildScheduleListViewFromData({
+    schedule: datasets.schedule,
+    students: datasets.students,
+    feedbacks: datasets.feedbacks,
+    coachProposals: datasets.coachProposals,
+    coachRefs: [{ id: 'coach-1', name: '教练甲' }]
+  }, { all: '1' });
+  assert.strictEqual(allView.items.length, 2, 'all=1 应返回完整排课摘要列表');
 
   const getCachedScan = async (tableName) => datasets[tableName] || [];
   const loadView = createScheduleListViewLoader({

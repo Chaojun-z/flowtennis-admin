@@ -206,17 +206,27 @@ function buildScheduleListItem(row = {}, context = {}) {
   const effectiveStatus = effectiveScheduleStatus(row);
   return {
     id: text(row.id),
+    classId: text(row.classId),
     startTime: text(row.startTime),
     endTime: text(row.endTime),
     dateText: scheduleDateText(row.startTime),
     timeText: scheduleTimeText(row.startTime, row.endTime),
     durationText: durationText(row.startTime, row.endTime),
+    coach: text(row.coach),
+    campus: text(row.campus),
+    venue: text(row.venue),
+    locationType: text(row.locationType),
+    externalVenueName: text(row.externalVenueName),
+    externalCourtName: text(row.externalCourtName),
+    externalNotes: text(row.externalNotes),
     campusCode: campusCode(row.campus),
     campusName: campusName(row),
     venueText: normalizeVenue(row.venue) || '-',
     coachName: coachName(row.coach, context.coachRefs),
     studentIds,
+    expectedStudentIds: parseArr(row.expectedStudentIds),
     studentSummary: studentSummary(row, context.studentIndexes),
+    studentName: text(row.studentName),
     courseType: scheduleCourseType(row),
     courseTypeLabel: scheduleCourseTypeLabel(row),
     lessonCount: numberValue(row.lessonCount),
@@ -224,6 +234,7 @@ function buildScheduleListItem(row = {}, context = {}) {
     statusLabel: statusLabel(effectiveStatus),
     effectiveStatus,
     cancelReason: text(row.cancelReason),
+    notes: text(row.notes),
     proposalStatus: proposalStatus(row, context.proposalsByScheduleId),
     feedbackStatus: hasFeedback(row, context.feedbackByScheduleId) ? '已填写' : '未填写',
     repeatText: repeatText(row, context.repeatCounts),
@@ -282,6 +293,17 @@ function buildSummary(items = []) {
 }
 
 function paginate(items = [], options = {}) {
+  if (options.all === true || options.all === '1' || options.page === 'all' || options.pageSize === 'all') {
+    return {
+      items,
+      pagination: {
+        total: items.length,
+        page: 1,
+        pageSize: items.length || 1,
+        pages: 1
+      }
+    };
+  }
   const page = parsePositiveInt(options.page, DEFAULT_PAGE);
   const pageSize = parsePositiveInt(options.pageSize, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
   const total = items.length;

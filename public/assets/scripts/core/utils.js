@@ -312,11 +312,7 @@ function scheduleCourseType(s){
   if(scheduleIsTrial(s))return '体验课';
   return normalizeCourseType(s?.courseType)||'—';
 }
-function scheduleCourseTypeLabel(s){
-  const base=scheduleCourseType(s);
-  if(base==='体验课')return normalizeExperienceType(s?.experienceType||s?.courseType||[s?.packageName,s?.className,s?.notes].filter(Boolean).join(' '));
-  return base;
-}
+function scheduleCourseTypeLabel(s){const label=String(s?.courseTypeLabel||'').trim();if(label)return label;const base=scheduleCourseType(s);if(base==='体验课')return normalizeExperienceType(s?.experienceType||s?.courseType||[s?.packageName,s?.className,s?.notes].filter(Boolean).join(' '));return base;}
 function scheduleClassName(s){
   return s?.className||classes.find(c=>c.id===s?.classId)?.className||'—';
 }
@@ -342,19 +338,7 @@ function scheduleResolveStudentName(id){
   }
   return scheduleLooksLikeStudentId(sid)?'':sid;
 }
-function scheduleStudentSummary(s){
-  const names=parseArr(s?.studentNames);
-  if(names.length)return names.join('、');
-  const ids=parseArr(s?.studentIds);
-  if(ids.length){
-    const resolved=ids.map(id=>scheduleResolveStudentName(id)).filter(Boolean);
-    if(resolved.length)return resolved.join('、');
-  }
-  const raw=String(s?.studentName||'').trim();
-  if(!raw)return '—';
-  if(scheduleLooksLikeStudentId(raw))return scheduleResolveStudentName(raw)||'—';
-  return raw;
-}
+function scheduleStudentSummary(s){const summary=String(s?.studentSummary||'').trim();if(summary)return summary;const names=parseArr(s?.studentNames);if(names.length)return names.join('、');const ids=parseArr(s?.studentIds);if(ids.length){const resolved=ids.map(id=>scheduleResolveStudentName(id)).filter(Boolean);if(resolved.length)return resolved.join('、');}const raw=String(s?.studentName||'').trim();if(!raw)return '—';if(scheduleLooksLikeStudentId(raw))return scheduleResolveStudentName(raw)||'—';return raw;}
 function scheduleParticipantSummary(s){
   const actual=parseArr(s?.studentIds);
   const expected=parseArr(s?.expectedStudentIds);
@@ -371,15 +355,8 @@ function scheduleListStudentSummary(s){
   if(names.length<=1)return names[0]||'—';
   return `${names[0]} 等 ${names.length} 人`;
 }
-function scheduleFeedbackStatusText(s){
-  return hasScheduleFeedback(s)?'已填写':'未填写';
-}
-function scheduleDurationText(s){
-  const mins=scheduleDurMin(s);
-  if(!mins)return '—';
-  if(mins%60===0)return `${mins/60}小时`;
-  return `${mins/60}小时`;
-}
+function scheduleFeedbackStatusText(s){const status=String(s?.feedbackStatus||'').trim();if(status)return status;return hasScheduleFeedback(s)?'已填写':'未填写';}
+function scheduleDurationText(s){const text=String(s?.durationText||'').trim();if(text)return text;const mins=scheduleDurMin(s);if(!mins)return '—';if(mins%60===0)return `${mins/60}小时`;return `${mins/60}小时`;}
 function scheduleHasStudent(s,student){
   if(!s||!student)return false;
   const ids=parseArr(s.studentIds);

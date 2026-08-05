@@ -25,6 +25,7 @@ const loadedPurchaseDetailIds=new Set();
 const loadedStudentDetailIds=new Set();
 const loadedLeadFollowupDetailIds=new Set();
 const loadedCourtAccountDetailIds=new Set();
+const loadedScheduleDetailIds=new Set();
 function financeNormalizedRows(){
   return Array.isArray(financeNormalizedLedgerRows)?financeNormalizedLedgerRows:[];
 }
@@ -441,7 +442,7 @@ const DATASET_LOADERS={
   membershipBenefitLedger:()=>apiCall('GET','/membership-benefit-ledger'),
   membershipAccountEvents:()=>apiCall('GET','/membership-account-events'),
   pricePlans:()=>apiCall('GET','/price-plans'),
-  schedule:()=>apiCall('GET','/schedule'),
+  schedule:()=>apiCall('GET','/page-data/schedule-list-view?all=1'),
   coaches:()=>apiCall('GET','/coaches').catch(()=>apiCall('GET','/page-data/coaches').then(data=>data.coaches||[])),
   classes:()=>Promise.resolve([]),
   campuses:()=>apiCall('GET','/campuses'),
@@ -671,6 +672,7 @@ function markLearningDataStale(){
   loadedStudentDetailIds.clear();
   loadedLeadFollowupDetailIds.clear();
   loadedCourtAccountDetailIds.clear();
+  loadedScheduleDetailIds.clear();
   [
     'schedule','students','purchases','entitlements','entitlementLedger','customerLifecycleRows',
     'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchaseCreatePage','purchasesPage','workbenchPage',
@@ -702,6 +704,22 @@ function setScheduleRowsFromRemote(rows,{persist=true}={}){
   schedules=next;
   loadedDatasets.add('schedule');
   if(persist)persistDatasetCache('schedule',next);
+}
+function hydrateScheduleDetailData(data={}){
+  if(data?.id)mergeDatasetRowsById('schedule',[data]);
+}
+function scheduleDetailDataReady(scheduleId){
+  return loadedScheduleDetailIds.has(String(scheduleId||'').trim());
+}
+async function ensureScheduleDetailData(scheduleId,{force=false}={}){
+  const id=String(scheduleId||'').trim();
+  if(!id)return false;
+  if(!force&&loadedScheduleDetailIds.has(id))return false;
+  const row=await apiCall('GET',`/schedule/${encodeURIComponent(id)}`);
+  if(!row||!row.id)return false;
+  hydrateScheduleDetailData(row);
+  loadedScheduleDetailIds.add(id);
+  return true;
 }
 function hydrateDatasetsFromCache(){
   ensureDatasetCacheVersion();
@@ -929,6 +947,12 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       financeSettlementSummaryRows=Array.isArray(data.financeSettlementRows)?data.financeSettlementRows:[];
       financePrepaidView=data.financePrepaidView||{rows:[],summary:{}};
       markDatasetLoaded('financePage',requestKey);
+      return;
+    }
+    if(name==='schedule'){
+      setDatasetValue('schedule',data.items||data.schedule||data.rows||[]);
+      staleCachedDatasets.delete('schedule');
+      markDatasetLoaded('schedule',requestKey);
       return;
     }
     if(name==='operationsPage'){

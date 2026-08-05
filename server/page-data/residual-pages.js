@@ -115,6 +115,7 @@ function createResidualPageDataRoutes(deps={}){
       const load=()=>loadScheduleListView({
         sampleIds:ids,
         sample,
+        all:query?.get('all')==='1',
         page:query?.get('page')||'',
         pageSize:query?.get('pageSize')||'',
         q:query?.get('q')||'',
