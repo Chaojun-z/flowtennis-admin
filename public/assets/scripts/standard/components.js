@@ -299,6 +299,10 @@ function closeStandardDropdownElement(el){
 function closeStandardDropdowns(){
   document.querySelectorAll('.tms-dropdown.open').forEach(closeStandardDropdownElement);
 }
+function closeStandardDropdownsOnOutsidePointer(event){
+  if(event?.target?.closest?.('.tms-dropdown'))return;
+  closeStandardDropdowns();
+}
 function toggleStandardDropdown(id,event){
   if(event)event.stopPropagation();
   if(event?.target?.closest?.('.tms-dropdown-menu'))return;
@@ -332,6 +336,7 @@ function toggleStandardDropdown(id,event){
 }
 function selectStandardDropdownItem(id,value,label,event){
   if(event){event.preventDefault();event.stopPropagation();}
+  closeStandardDropdowns();
   const dropdown=document.getElementById(id+'_dropdown');
   const input=document.getElementById(id);
   let changeHandler='';
@@ -354,8 +359,7 @@ function selectStandardDropdownItem(id,value,label,event){
         console.error('dropdown change failed',changeHandler,e);
         if(typeof toast==='function')toast('下拉选项处理失败，请刷新后重试','error');
       }finally{
-        const latest=document.getElementById(id+'_dropdown');
-        closeStandardDropdownElement(latest);
+        closeStandardDropdowns();
       }
     });
   }
@@ -726,4 +730,5 @@ Object.assign(window,{
 });
 document.documentElement.dataset.standardComponents='loaded';
 document.addEventListener('click',closeStandardDropdowns);
+document.addEventListener('pointerdown',closeStandardDropdownsOnOutsidePointer,true);
 document.addEventListener('click',closeStandardTopDropdowns);

@@ -46,9 +46,11 @@ assert.match(standardSource, /<div class="tms-dropdown-display" onclick="toggleS
 assert.match(standardSource, /function renderStandardSearchableDropdownHtml\([\s\S]*tms-searchable-dropdown-menu" onclick="event\.stopPropagation\(\)"/, 'searchable dropdown menu clicks should not bubble back to the trigger and reopen the menu');
 assert.match(
   standardSource,
-  /closeStandardDropdownElement\(dropdown\)[\s\S]*changeHandler=dropdown\.dataset\.onchange\|\|''[\s\S]*defer\(\(\)=>\{[\s\S]*try\{window\[changeHandler\]\(value,label\);\}[\s\S]*finally\{[\s\S]*const latest=document\.getElementById\(id\+'_dropdown'\)[\s\S]*closeStandardDropdownElement\(latest\)/,
-  'dropdown selection should close the menu before and after deferred onchange logic'
+  /closeStandardDropdowns\(\)[\s\S]*closeStandardDropdownElement\(dropdown\)[\s\S]*changeHandler=dropdown\.dataset\.onchange\|\|''[\s\S]*defer\(\(\)=>\{[\s\S]*try\{window\[changeHandler\]\(value,label\);\}[\s\S]*finally\{[\s\S]*closeStandardDropdowns\(\)/,
+  'dropdown selection should close all menus before and after deferred onchange logic'
 );
 assert.match(standardSource, /function toggleStandardDropdown\(id,event\)\{[\s\S]*closest\?\.\('\.tms-dropdown-menu'\)[\s\S]*return;/, 'dropdown menu clicks must never toggle the parent picker back open');
+assert.match(standardSource, /function closeStandardDropdownsOnOutsidePointer\([\s\S]*closest\?\.\('\.tms-dropdown'\)[\s\S]*closeStandardDropdowns\(\)/, 'outside pointer capture should close dropdowns even when overlay click handlers stop bubbling');
+assert.match(standardSource, /document\.addEventListener\('pointerdown',closeStandardDropdownsOnOutsidePointer,true\)/, 'standard dropdowns should close from a capture-phase outside pointer listener');
 
 console.log('standard components global tests passed');

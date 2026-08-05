@@ -62,11 +62,13 @@ function onPurchaseDateRangeFilterChange(value,event){
   closeStandardTopDropdowns();
 }
 function refreshPurchaseFilters(){
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
   const packageValue=purchaseSelectedPackageFilter();
   const purchaseRows=purchases.filter(isMeaningfulPurchaseRecord);
   const packageOptions=withStandardFilterCounts(coursePackageDropdownOptions(packages,{showAllOption:true,allLabel:'全部课包',includeCoach:true,selectedValue:packageValue}),purchaseRows,(p,value)=>purchaseMatchesPackage(p,value));
   const host=document.getElementById('purPackageFilterHost');
   if(host)host.innerHTML=renderCoursePackagePickerDropdownHtml('purPackageFilter','全部课包',packages,packageValue,{showAllOption:true,allLabel:'全部课包',includeCoach:true,isForm:false,onchange:'onPurchaseFilterChange',options:packageOptions});
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
 }
 function purchaseDateWithinRange(value,range={}){
   const start=String(range.startDate||'').trim();
@@ -619,12 +621,16 @@ function fillPurchasePackageMeta(){
   purchasePriceOverrideChanged('pur');
 }
 function onPurchasePackageChange(value){
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
   syncPurchasePackageMeta('pur',true);
   purchasePriceOverrideChanged('pur');
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
 }
 function onPurchaseEditPackageChange(){
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
   syncPurchasePackageMeta('pur_edit',true);
   purchasePriceOverrideChanged('pur_edit');
+  if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
 }
 function setPurchaseDetailTab(tab){
   const id=document.getElementById('overlay')?.dataset.purchaseDetailId||'';

@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js');
-const { buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildTeachingStudentViews } = require('../server/read-models/platform-metrics.js');
+const { buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildTeachingStudentViews, teachingSummaryNeedsLessonFacts } = require('../server/read-models/platform-metrics.js');
 const { buildOperationsMetrics } = require('../server/metrics/operations-metrics.js');
 
 const sample = {
@@ -702,5 +702,31 @@ const futureSnapshotRow = futureSnapshotViews.formalStudents.find(row => row.stu
 assert.strictEqual(futureSnapshotRow?.detailRecentLessonDate, '', '摘要里的未来最近上课日期必须被统一读模型清空');
 assert.deepStrictEqual(futureSnapshotRow?.detailLessonRecordRows, [], '摘要里的未来上课明细不能进入抽屉已上课记录');
 assert.strictEqual(futureSnapshotRow?.completedLessons, 0, '摘要里的未来上课明细不能计入累计已上课');
+
+const contradictorySummaryRow = {
+  id: 'student-contradictory-summary',
+  studentId: 'student-contradictory-summary',
+  displayName: '矛盾摘要学员',
+  studentStage: 'formal',
+  detailRecentLessonDate: '2026-06-17',
+  detailLessonRecordRows: [{ kind: 'ledger', time: '2026-06-17 10:00-11:00', lessonDelta: -1 }],
+  completedLessons: 4,
+  activityStatusLabel: '从未正式上课',
+  hasFormalAttended: false,
+  teachingLessonDetailSourceVersion: 'lesson-record-v2'
+};
+assert.strictEqual(
+  teachingSummaryNeedsLessonFacts(contradictorySummaryRow, new Date('2026-08-05 00:00:00')),
+  true,
+  '有最近上课或累计上课但摘要仍写未上课时，列表接口必须判定摘要失效并读取真实上课事实'
+);
+const contradictorySummaryViews = buildTeachingStudentViews(
+  buildCustomerLifecycleRows({ teachingStudentSummaryRows: [contradictorySummaryRow] }),
+  { teachingStudentSummaryRows: [contradictorySummaryRow], now: new Date('2026-08-05 00:00:00') }
+);
+const contradictoryStudentRow = contradictorySummaryViews.formalStudents.find(row => row.studentId === 'student-contradictory-summary');
+assert.strictEqual(contradictoryStudentRow?.detailRecentLessonDate, '2026-06-17', '过去最近上课日期必须保留');
+assert.strictEqual(contradictoryStudentRow?.completedLessons, 4, '累计上课必须保留摘要里的过去已上课事实');
+assert.strictEqual(contradictoryStudentRow?.activityStatusLabel, '31-90天活跃', '有过去正式上课事实的学员不能再显示未上课');
 
 console.log('lifecycle standard metrics tests passed');

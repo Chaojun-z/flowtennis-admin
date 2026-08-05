@@ -866,9 +866,13 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
     const cumulativeCoursePaidAmount = coursePaidByStudent.has(studentId)
       ? money(coursePaidByStudent.get(studentId) || 0)
       : money(summaryFields.cumulativeCoursePaidAmount || 0);
-    const completedLessons = lessonDetailMap.has(studentId) || rawSummaryLessonRows.length
-      ? round(teachingLessonRowsCompletedUnits(lessonRows), 1)
-      : round(summaryFields.completedLessons || 0, 1);
+    const lessonRowCompleted = round(teachingLessonRowsCompletedUnits(lessonRows), 1);
+    const summaryCompleted = round(summaryFields.completedLessons || 0, 1);
+    const completedLessons = lessonDetailMap.has(studentId)
+      ? lessonRowCompleted
+      : rawSummaryLessonRows.length
+        ? (summaryLessonRows.length ? Math.max(lessonRowCompleted, summaryCompleted) : 0)
+        : summaryCompleted;
     details.set(studentId, {
       packageListRows: [],
       packageListText: '-',
@@ -1307,7 +1311,8 @@ function teachingStudentLatestFormalLessonDate(data = {}, studentId = '', fallba
   const now = data.now || new Date();
   const scheduleDates = teachingStudentFormalLessonFactRows(data, studentId, now)
     .map(row => dateOnly(row.startTime || row.endTime || row.createdAt));
-  return scheduleDates.filter(Boolean).sort().pop() || text(fallback);
+  const safeFallback = teachingDateOnOrBeforeNow(fallback, now) ? text(fallback) : '';
+  return scheduleDates.filter(Boolean).sort().pop() || safeFallback;
 }
 
 function teachingDaysSince(dateText = '', now = new Date()) {
@@ -1355,8 +1360,29 @@ function hasFreshTeachingLessonFacts(data = {}) {
 }
 
 function teachingStudentSummaryDateFallback(data = {}, row = {}) {
-  const fallback = text(row.lastFormalLessonAt);
-  return hasFreshTeachingLessonFacts(data) || !teachingDateOnOrBeforeNow(fallback, data.now || new Date()) ? '' : fallback;
+  const now = data.now || new Date();
+  const lessonRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [];
+  const rowLessonDate = lessonRows
+    .map(item => dateOnly(item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt))
+    .filter(value => value && teachingDateOnOrBeforeNow(value, now))
+    .sort()
+    .pop() || '';
+  const fallback = text(row.lastFormalLessonAt || row.detailRecentLessonDate || rowLessonDate);
+  return teachingDateOnOrBeforeNow(fallback, now) ? fallback : '';
+}
+
+function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
+  if (String(row.teachingLessonDetailSourceVersion || '').trim() !== TEACHING_LESSON_DETAIL_SOURCE_VERSION) return true;
+  const lessonRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : parseArr(row.detailLessonRecordRows);
+  const hasPastLessonRow = lessonRows.some(item => {
+    const value = item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt;
+    return !dateOnly(value) || teachingDateOnOrBeforeNow(value, now);
+  });
+  const hasLessonFact = (Number(row.completedLessons) || 0) > 0
+    || teachingDateOnOrBeforeNow(row.detailRecentLessonDate || row.lastFormalLessonAt, now)
+    || hasPastLessonRow;
+  const saysNever = text(row.activityStatusLabel) === '从未正式上课';
+  return hasLessonFact && saysNever;
 }
 
 function teachingStudentHasTrialAttendedFact(data = {}, row = {}, now = new Date()) {
@@ -1671,7 +1697,12 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const coursePurchaseCount = formalStudents.reduce((sum, row) => sum + (Number(row.coursePurchaseCount) || 0), 0);
   const courseRepeatCount = formalStudents.filter(row => row.hasCourseRepeatPurchase).length;
   const formalLessonWithinDays = (row, daysLimit) => {
-    const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId), teachingStudentSummaryDateFallback(data, row)), now);
+    const latest = teachingStudentFormalLessonFactRows(data, text(row.studentId), now)
+      .map(item => dateOnly(item.startTime || item.endTime || item.createdAt))
+      .filter(Boolean)
+      .sort()
+      .pop() || (booleanSnapshotValue(row.hasFormalAttended) === true ? teachingStudentSummaryDateFallback(data, row) : '');
+    const days = teachingDaysSince(latest, now);
     return days !== null && days <= daysLimit;
   };
   const packageBalanceRows = activeStudents.filter(row => (Number(row.packageBalanceRemaining) || 0) > 0);
@@ -2045,6 +2076,7 @@ module.exports = {
   buildTeachingStudentViews,
   buildStudentTeachingSummaryRows,
   TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+  teachingSummaryNeedsLessonFacts,
   buildRawLeadConversionMetrics,
   rawLeadPoolRowsForLeads,
   buildStageRows,

@@ -249,10 +249,12 @@ assert.match(fnBody('coursePackageBusinessGroup'), /courseType==='专项课'[\s\
 assert.match(fnBody('coursePackageBusinessSortValue'), /'青少年私教课':1,'成人私教课':2,'小班课':3,'体验课':4,'专项课':5,'其他':9/, 'course package picker business order should match the agreed package category order');
 assert.match(html, /function coursePackageBusinessDedupeKey\(/, 'course package picker should expose a business dedupe key');
 assert.match(fnBody('coursePackageDropdownOptions'), /dedupeCoursePackageDropdownRows\(rows,config\.selectedValue\)/, 'course package picker should dedupe duplicate package products before rendering options');
+assert.doesNotMatch(fnBody('coursePackageBusinessDedupeKey'), /coachName\(p\.ownerCoach\)|packageListStatusValue\(p\)/, 'course package picker dedupe should treat same course specs as one option instead of splitting by owner coach or status');
 assert.match(fnBody('openPurchaseModal'), /renderCoursePackagePickerDropdownHtml\('pur_packageId'[\s\S]*includeCoach:true/, 'purchase create package picker should use the searchable grouped package dropdown');
 assert.match(fnBody('openPurchaseEditModal'), /renderCoursePackagePickerDropdownHtml\('pur_edit_packageId'[\s\S]*includeCoach:true/, 'purchase edit package picker should use the searchable grouped package dropdown');
 assert.match(fnBody('refreshPurchaseFilters'), /renderCoursePackagePickerDropdownHtml\('purPackageFilter'[\s\S]*showAllOption:true[\s\S]*includeCoach:true/, 'purchase record package filter should use the searchable grouped package dropdown');
 assert.match(fnBody('refreshPurchaseFilters'), /selectedValue:packageValue/, 'purchase package filter should preserve the selected package id even when duplicate package options are deduped');
+assert.match(fnBody('refreshPurchaseFilters'), /closeStandardDropdowns\(\)[\s\S]*host\.innerHTML=renderCoursePackagePickerDropdownHtml[\s\S]*closeStandardDropdowns\(\)/, 'purchase package filter refresh should close stale package dropdowns before and after rerendering');
 assert.match(fnBody('openPackageMergeModal'), /renderCoursePackagePickerDropdownHtml\('pkg_merge_master'[\s\S]*renderCoursePackagePickerDropdownHtml\('pkg_merge_source'/, 'package merge modal should use the searchable grouped package dropdown for both package selectors');
 assert.match(html, /function purchaseStudentPickerHtml\(/, 'purchase modal should expose a searchable student picker helper');
 assert.match(html, /function selectPurchaseStudent\(/, 'purchase modal should allow selecting a student from search results');

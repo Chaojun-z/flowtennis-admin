@@ -525,9 +525,7 @@ function coursePackageBusinessDedupeKey(p={}){
     coursePackageClassSizeValue(p),
     Number(p.lessons||p.packageLessons||p.totalLessons)||0,
     String(p.timeBand||p.packageTimeBand||'全天'),
-    Number(p.price)||0,
-    coachName(p.ownerCoach),
-    packageListStatusValue(p)
+    Number(p.price)||0
   ].join('|');
 }
 function coursePackageEquivalentIds(packageId){
