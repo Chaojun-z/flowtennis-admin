@@ -256,7 +256,11 @@ function createCorePageDataRoutes(deps={}){
       if(!student)return sendJson(res,{error:'学员不存在'},404);
       const fresh=String(query?.get('fresh')||'').trim()==='1';
       const studentTeachingSummary=T_STUDENT_TEACHING_SUMMARY ? await getCachedRow(T_STUDENT_TEACHING_SUMMARY,studentId).catch(()=>null) : null;
-      if(!fresh&&studentTeachingSummary&&String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()===TEACHING_LESSON_DETAIL_SOURCE_VERSION){
+      const canUseStudentTeachingSummary=!fresh
+        && studentTeachingSummary
+        && String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()===TEACHING_LESSON_DETAIL_SOURCE_VERSION
+        && !teachingSummaryNeedsLessonFacts(studentTeachingSummary,new Date());
+      if(canUseStudentTeachingSummary){
         const customerLifecycleRows=buildCustomerLifecycleRows({students:[student]});
         const detailStudentView={
           ...student,

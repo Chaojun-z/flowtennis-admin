@@ -1334,7 +1334,6 @@ function ensureStudentDetailDatasets(id,{block=false}={}){
 function openStudentDetail(id){
   const s=studentUnifiedRecordForId(id);if(!s)return;
   if(studentDetailTabNeedsDatasets()&&ensureStudentDetailDatasets(id,{block:true}))return;
-  if(!studentDetailTabNeedsDatasets())ensureStudentDetailDatasets(id,{block:false});
   if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))editId=null;
   const body=studentDetailActiveTab==='basic'?studentDetailBasicTabHtml(s):studentDetailActiveTab==='orders'?studentDetailOrdersTabHtml(s):studentDetailBenefitsTabHtml(s);
   openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
@@ -1452,13 +1451,12 @@ async function saveStudent(){
   }
   const savedEditId=editId;
   await runStandardMutation(btn,async()=>{
-    if(savedEditId){const res=await apiCall('PUT','/students/'+savedEditId,data);const i=students.findIndex(x=>x.id===savedEditId);if(i>=0)students[i]={...students[i],...data,id:savedEditId};mergeLinkedUpdates(res.studentUpdates||{});}
+    if(savedEditId){const res=await apiCall('PUT','/students/'+savedEditId,data);const i=students.findIndex(x=>x.id===savedEditId);if(i>=0)students[i]={...students[i],...res,id:savedEditId};if(typeof mergeTeachingStudentDetail==='function')mergeTeachingStudentDetail({...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});mergeLinkedUpdates(res.studentUpdates||{});}
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
   },{
     successText:savedEditId?'修改成功 ✓':'添加成功 ✓',
     refresh:async()=>{
       renderStudents();
-      if(savedEditId&&typeof ensureStudentDetailData==='function')ensureStudentDetailData(savedEditId,{force:true}).then(()=>{if(studentDetailDrawerIsOpenFor(savedEditId))openStudentDetail(savedEditId);}).catch(e=>console.error('student detail refresh failed',e));
       if(savedEditId){editId=null;studentDetailEditingSection='';studentDetailEditingStudentId='';openStudentDetail(savedEditId);}
       else closeModal();
     }

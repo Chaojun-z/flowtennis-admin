@@ -21,10 +21,20 @@ assert.match(
   /studentDetailTabNeedsDatasets\(\)&&ensureStudentDetailDatasets\(id,\{block:true\}\)/,
   'student package and benefit tabs should wait for heavy detail datasets'
 );
-assert.match(
+assert.doesNotMatch(
   fnBody('openStudentDetail'),
   /!studentDetailTabNeedsDatasets\(\)\)ensureStudentDetailDatasets\(id,\{block:false\}\)/,
-  'student basic tab should render immediately while detail datasets load in the background'
+  'student basic tab should not start the heavy detail load in the background'
+);
+assert.doesNotMatch(
+  fnBody('saveStudent'),
+  /ensureStudentDetailData\(savedEditId,\{force:true\}\)/,
+  'student basic saves should not force-refresh package and lesson detail facts'
+);
+assert.match(
+  fnBody('saveStudent'),
+  /typeof mergeTeachingStudentDetail==='function'[\s\S]*mergeTeachingStudentDetail\(\{[\s\S]*studentId:savedEditId/,
+  'student basic saves should update the visible drawer row locally'
 );
 
 console.log('student detail loading view tests passed');
