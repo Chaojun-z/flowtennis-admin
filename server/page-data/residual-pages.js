@@ -1,12 +1,15 @@
 const { handleFinancePageData } = require('./finance-page.js');
 const { handleOperationsPageData } = require('./operations-page.js');
 const { createCourtAccountListViewLoader, createCourtAccountListCompareLoader, buildScopedCourtAccountListSummary } = require('./court-account-read-model.js');
+const { createScheduleListViewLoader, createScheduleListCompareLoader } = require('./schedule-list-read-model.js');
 const fixedCourtAcceptanceSamples = require('../../docs/performance-governance/15-样板页固定验收样本.json');
+const fixedScheduleAcceptanceSamples = require('../../docs/prd/source/08-具体需求/01-管理后台/02-教学与排课/07-排课管理固定验收样本.json');
 
 function createResidualPageDataRoutes(deps={}){
   const {
-    init,sendJson,listCampusesWithDefaults,getCachedScan,getFinancePageScheduleRows,
+    init,sendJson,listCampusesWithDefaults,getCachedScan,getFinancePageScheduleRows,getScheduleListRows,
     isProductionRuntime,
+    scanCoachProposals,buildCoachRefs,timedEndpointMetric,
     scanFirstRows,filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
     tables={}
   }=deps;
@@ -33,6 +36,33 @@ function createResidualPageDataRoutes(deps={}){
   const loadCourtAccountListViewCompare=createCourtAccountListCompareLoader({
     loadCourtAccountListView,
     fixedSampleAccounts:fixedCourtAcceptanceSamples
+  });
+  const loadScheduleListView=createScheduleListViewLoader({
+    getScheduleListRows,
+    getCachedScan,
+    scanCoachProposals,
+    buildCoachRefs,
+    fixedScheduleSamples:fixedScheduleAcceptanceSamples,
+    tables:{
+      students:T_STUDENTS,
+      coaches:T_COACHES,
+      users:T_USERS,
+      feedbacks:T_FEEDBACKS
+    }
+  });
+  const loadScheduleListViewCompare=createScheduleListCompareLoader({
+    getScheduleListRows,
+    getCachedScan,
+    scanCoachProposals,
+    buildCoachRefs,
+    fixedScheduleSamples:fixedScheduleAcceptanceSamples,
+    loadScheduleListView,
+    tables:{
+      students:T_STUDENTS,
+      coaches:T_COACHES,
+      users:T_USERS,
+      feedbacks:T_FEEDBACKS
+    }
   });
   const pageDataScopeFromQuery=query=>({
     campus:String(query?.get('campus')||'').trim(),
@@ -76,6 +106,34 @@ function createResidualPageDataRoutes(deps={}){
       const ids=String(query?.get('ids')||'').split(',').map(item=>String(item||'').trim()).filter(Boolean);
       const sample=String(query?.get('sample')||'').trim();
       return sendJson(res,await loadCourtAccountListViewCompare({sampleIds:ids,sample}));
+    }
+    if(path==='/page-data/schedule-list-view'&&method==='GET'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const ids=String(query?.get('ids')||'').split(',').map(item=>String(item||'').trim()).filter(Boolean);
+      const sample=String(query?.get('sample')||'').trim();
+      const load=()=>loadScheduleListView({
+        sampleIds:ids,
+        sample,
+        page:query?.get('page')||'',
+        pageSize:query?.get('pageSize')||'',
+        q:query?.get('q')||'',
+        campus:query?.get('campus')||'',
+        coach:query?.get('coach')||'',
+        courseType:query?.get('courseType')||'',
+        status:query?.get('status')||''
+      });
+      const view=timedEndpointMetric?await timedEndpointMetric('pageData.scheduleListView',load):await load();
+      return sendJson(res,view);
+    }
+    if(path==='/page-data/schedule-list-view-compare'&&method==='GET'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const ids=String(query?.get('ids')||'').split(',').map(item=>String(item||'').trim()).filter(Boolean);
+      const sample=String(query?.get('sample')||'').trim();
+      const load=()=>loadScheduleListViewCompare({sampleIds:ids,sample});
+      const compare=timedEndpointMetric?await timedEndpointMetric('pageData.scheduleListViewCompare',load):await load();
+      return sendJson(res,compare);
     }
     return false;
   };

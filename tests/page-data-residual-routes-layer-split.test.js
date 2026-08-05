@@ -17,7 +17,9 @@ assert.match(apiSource, /if\(await handleResidualPageDataRoutes\(\{path,method,u
 for (const route of [
   '/page-data/finance',
   '/page-data/court-account-list-view',
-  '/page-data/court-account-list-view-compare'
+  '/page-data/court-account-list-view-compare',
+  '/page-data/schedule-list-view',
+  '/page-data/schedule-list-view-compare'
 ]) {
   assert.match(routesSource, new RegExp(`path==='${route.replace(/\//g, '\\/')}'`), `residual page-data module should own ${route}`);
   assert.doesNotMatch(apiSource, new RegExp(`if\\(path==='${route.replace(/\//g, '\\/')}'`), `api/index.js should not keep ${route} inline`);
@@ -26,5 +28,7 @@ for (const route of [
 assert.match(routesSource, /handleFinancePageData/, 'residual page-data module should delegate finance page data without changing finance logic');
 assert.match(routesSource, /loadCourtAccountListView/, 'residual page-data module should own court account list read model route');
 assert.match(routesSource, /loadCourtAccountListViewCompare/, 'residual page-data module should own court account compare read model route');
+assert.match(routesSource, /loadScheduleListView/, 'residual page-data module should own schedule list read model route');
+assert.match(routesSource, /loadScheduleListViewCompare/, 'residual page-data module should own schedule compare read model route');
 
 console.log('residual page-data routes layer split tests passed');

@@ -1,0 +1,22 @@
+[
+  {"id":"19457956-fb91-4f70-a5f6-cb1a8a702111","scenario":"待上课","maskedName":"N***","status":"已排课","courseType":"私教课","date":"2026-08-09","source":"feishu-sheet"},
+  {"id":"432beafa-1396-4a86-b5c9-c29103683c3c","scenario":"已发生但状态仍已排课","maskedName":"秋***","status":"已排课","courseType":"陪打","date":"2026-08-02","source":"feishu-sheet"},
+  {"id":"1e97dd84-c9dd-48da-b81e-5ffc3a24885d","scenario":"已取消","maskedName":"N***","status":"已取消","courseType":"私教课","date":"2026-08-02","source":"feishu-sheet"},
+  {"id":"ed8101d9-0a7a-45cb-8001-acb45b5ed0dc","scenario":"误建删除候选","maskedName":"线***","status":"已取消","courseType":"私教课","date":"2026-05-26","source":"排课表"},
+  {"id":"6cff5109-5c34-473b-a8a6-bf4284111537","scenario":"私教课","maskedName":"晓***","status":"已排课","courseType":"私教课","date":"2026-08-09","source":"feishu-sheet"},
+  {"id":"4ea66e91-7dc2-4551-87ec-e6a6e00ac72b","scenario":"小班课","maskedName":"J***","status":"已排课","courseType":"小班课","date":"2026-08-07","source":"feishu-sheet"},
+  {"id":"83e25f97-55e6-4e5d-bbeb-5de9cd1aaab9","scenario":"体验课","maskedName":"彬***","status":"已排课","courseType":"体验课","date":"2026-08-07","source":"feishu-sheet"},
+  {"id":"9a667f0f-fe66-4a3f-bd8e-8d836c3d41a6","scenario":"陪打","maskedName":"秋***","status":"已排课","courseType":"陪打","date":"2026-08-05","source":"feishu-sheet"},
+  {"id":"third-party-schedule-501e2b07-1a8f-4245-af59-a7d2af339c5b","scenario":"多学员 / 专项","maskedName":"艾***","status":"已排课","courseType":"专项课","date":"2026-08-02","source":"第三方同步排课"},
+  {"id":"cxe-202602-thirdparty-schedule-0cecfbe3ad00a23e","scenario":"第三方历史导入","maskedName":"r***","status":"已排课","courseType":"体验课","date":"2026-02-08","source":"第三方导入"},
+  {"id":"17e32f88-dbff-45fc-a650-e4f88c3662ae","scenario":"有课后反馈","maskedName":"小***","status":"已排课","courseType":"私教课","date":"2026-06-10","source":"教练运营"},
+  {"id":"9b0c8b26-6b5f-4f7a-9966-a60bc152ed22","scenario":"有权益流水","maskedName":"是***","status":"已排课","courseType":"私教课","date":"2026-08-09","source":"feishu-sheet"},
+  {"id":"59504745-a32c-4acb-a9fe-08437611c4e2","scenario":"有场地费","maskedName":"Y***","status":"已排课","courseType":"私教课","date":"2026-08-01","source":"feishu-sheet"},
+  {"id":"c767bc6b-e463-4f5e-ba89-120f9ece3d66","scenario":"关联购买记录","maskedName":"W***","status":"已排课","courseType":"私教课","date":"2026-08-08","source":"排课表"},
+  {"id":"ac7fac3d-e401-45df-b5e7-2ac4ec48bd6f","scenario":"关联线索","maskedName":"小***","status":"已排课","courseType":"体验课","date":"2026-08-05","source":"feishu-sheet"},
+  {"id":"fb9c2469-85a8-4d3d-a8ee-64e29a427395","scenario":"有校区字段","maskedName":"赵***","status":"已排课","courseType":"私教课","date":"2026-08-09","source":"feishu-sheet"},
+  {"id":"570e5a37-df7a-42a1-898c-185ce4a459dd","scenario":"教练端可见候选","maskedName":"魏***","status":"已排课","courseType":"私教课","date":"2026-08-09","source":"feishu-sheet"},
+  {"id":"f275a479-7525-4a67-80b0-c06d8b67fa23","scenario":"飞书同步","maskedName":"小***","status":"已排课","courseType":"私教课","date":"2026-08-08","source":"feishu-sheet"},
+  {"id":"e92593e5-82ad-4bba-b744-83772fe5dfc4","scenario":"历史兼容空字段","maskedName":"孙***","status":"已排课","courseType":"私教课","date":"2026-08-08","source":"feishu-sheet"},
+  {"id":"cxe-20260715-0731-schedule-22d765e0bde5a1cc","scenario":"异常 / 空字段候选","maskedName":"1***","status":"已排课","courseType":"私教课","date":"2026-07-26","source":"第三方同步排课"}
+]
