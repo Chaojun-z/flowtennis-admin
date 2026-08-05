@@ -243,6 +243,8 @@ assert.match(html, /function coursePackageBusinessSortValue\(/, 'course package 
 assert.match(html, /function renderCoursePackagePickerDropdownHtml\(/, 'course package dropdown should have a shared searchable grouped renderer');
 assert.match(fnBody('renderCoursePackagePickerDropdownHtml'), /renderStandardSearchableDropdownHtml[\s\S]*搜索课包 \/ 教练 \/ 价格 \/ 课时/, 'course package picker should be searchable by package, coach, price and lesson count');
 assert.match(fnBody('coursePackageDropdownOptions'), /searchText:\[label,p\.audience/, 'course package search should directly include audience words such as 成人 and 青少年');
+assert.match(html, /function coursePackageBusinessCourseType\([\s\S]*standardCourseTypeFilterValue\(p\)[\s\S]*split\('\/'\)\[0\]\.trim\(\)/, 'course package picker should group by the first-level course type so subtypes like 小班课 / 单次 and 体验课 / 私教体验课 do not fall into other');
+assert.match(fnBody('coursePackageBusinessGroup'), /const courseType=coursePackageBusinessCourseType\(p\)/, 'course package picker should use first-level course type for business grouping');
 assert.match(fnBody('coursePackageBusinessGroup'), /courseType==='小班课'[\s\S]*return '小班课'/, 'course package picker should group small class packages separately');
 assert.match(fnBody('coursePackageBusinessGroup'), /courseType==='体验课'[\s\S]*return '体验课'/, 'course package picker should group trial packages separately');
 assert.match(fnBody('coursePackageBusinessGroup'), /courseType==='专项课'[\s\S]*return '专项课'/, 'course package picker should group special course packages separately');

@@ -477,8 +477,11 @@ function coursePackageTimeBandOrder(p={}){
   if(text.includes('全天'))return 3;
   return 9;
 }
+function coursePackageBusinessCourseType(p={}){
+  return String(standardCourseTypeFilterValue(p)||'').split('/')[0].trim();
+}
 function coursePackageBusinessGroup(p={}){
-  const courseType=standardCourseTypeFilterValue(p);
+  const courseType=coursePackageBusinessCourseType(p);
   if(courseType==='专项课')return '专项课';
   if(courseType==='体验课')return '体验课';
   if(courseType==='小班课')return '小班课';
