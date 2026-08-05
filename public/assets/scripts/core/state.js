@@ -239,7 +239,7 @@ const PAGE_DATA_REQUIREMENTS={
   'trial-students':['campuses','students','coaches','customerCenterPage'],
   leads:['campuses','leads'],
   operations:['operationsPage'],
-  schedule:['campuses','students','courts','schedule','coaches','coachProposals','lifecycleMetricsPage'],
+  schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
   coachschedule:['coachSchedulePage'],
   coachops:['workbenchPage','operationsPage'],
   finance:[],
@@ -270,7 +270,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   leads:['lifecycleMetricsPage'],
   packages:[],
   purchases:[],
-  schedule:['classes','feedbacks','entitlements','entitlementLedger','financePage'],
+  schedule:['classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'],
   coachschedule:['entitlements','entitlementLedger'],
   finance:['financePage'],
   courts:['courtsPage'],
@@ -833,7 +833,6 @@ function renderPageLoading(pg){
   if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
   if(pg==='coachschedule'){
-    loadedDatasets.delete('coachSchedulePage');
     const grid=document.querySelector('#page-coachschedule .coach-ops-grid-card');
     const timeline=document.getElementById('coachOpsTimeline');
     if(grid)grid.classList.add('is-loading');

@@ -79,7 +79,8 @@ function goPage(pg,el,skipRender=false){
     if(topTitle)topTitle.innerHTML=renderTopTitleHtml(pg);
     if(typeof syncAdminMobileNavState==='function')syncAdminMobileNavState();
     if(!skipRender){
-      renderPageLoading(pg);
+      if(typeof pageHasUsableLoadedData==='function'&&pageHasUsableLoadedData(pg))renderPageData(pg);
+      else renderPageLoading(pg);
       deferPageDataLoad(pg,{quiet:true});
     }
   };

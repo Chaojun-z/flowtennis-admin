@@ -20,7 +20,7 @@ assert.match(fnBody('showApp'), /hydrateDatasetsFromCache\(\)/, 'showApp should 
 assert.match(fnBody('showApp'), /buildCampusTabs\(\);[\s\S]*renderAll\(\);/, 'showApp should render cached data immediately before waiting on network');
 assert.match(fnBody('showApp'), /deferPageDataLoad\(currentPage,\{quiet:true\}\)/, 'showApp should boot the current page on the next frame without blocking first paint');
 assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)renderPageData\(pg\)/, 'goPage should not render immediately before page data is ready');
-assert.match(fnBody('goPage'), /if\(!skipRender\)\{[\s\S]*renderPageLoading\(pg\);[\s\S]*deferPageDataLoad\(pg,\{quiet:true\}\);[\s\S]*\}/, 'goPage should show inline loading immediately and defer page data loading out of the click task');
+assert.match(fnBody('goPage'), /if\(!skipRender\)\{[\s\S]*pageHasUsableLoadedData[\s\S]*renderPageData\(pg\)[\s\S]*else renderPageLoading\(pg\);[\s\S]*deferPageDataLoad\(pg,\{quiet:true\}\);[\s\S]*\}/, 'goPage should reuse already loaded page data immediately and only show loading for missing data');
 assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg,\{quiet:true\}\)/, 'goPage should not call page data loading synchronously in the click task');
 assert.match(html, /function deferPageDataLoad\(/, 'state should expose a next-frame page data loader');
 assert.match(fnBody('deferPageDataLoad'), /requestAnimationFrame|setTimeout/, 'deferred page data loading should yield to paint before loading');
