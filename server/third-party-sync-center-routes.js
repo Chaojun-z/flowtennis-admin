@@ -1261,6 +1261,7 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
 
 function buildThirdPartySyncNotificationCard({ type = 'success', batch = {}, result = {}, alerts = [] } = {}) {
   const lines = buildThirdPartySyncNotificationText({ type, batch, result, alerts }).split('\n');
+  const titleLine = lines[0] || '[场小二] 订场数据同步完成';
   const dateLine = lines.find(line => /^数据日期：/.test(line)) || `数据日期：${notificationDateText(batch)}`;
   const detailLines = lines.filter((line, index) => index > 0 && line !== dateLine);
   return {
@@ -1271,7 +1272,7 @@ function buildThirdPartySyncNotificationCard({ type = 'success', batch = {}, res
       template: type === 'failure' ? 'red' : 'green',
       title: {
         tag: 'plain_text',
-        content: '长小二订场数据'
+        content: titleLine
       }
     },
     elements: [
@@ -1297,13 +1298,27 @@ function buildThirdPartySyncNotificationCard({ type = 'success', batch = {}, res
 }
 
 async function defaultNotifyThirdPartySyncResult({ type = 'success', batch = {}, result = {}, alerts = [], env = process.env, client = axios } = {}) {
-  const webhook = cleanText(env.THIRD_PARTY_SYNC_NOTIFY_WEBHOOK || env.FEISHU_THIRD_PARTY_SYNC_WEBHOOK || env.FEISHU_MONITOR_WEBHOOK_URL || env.FEISHU_WEBHOOK_URL);
-  if (!webhook) return { skipped: true };
+  const webhooks = [
+    env.THIRD_PARTY_SYNC_NOTIFY_WEBHOOK,
+    env.FEISHU_THIRD_PARTY_SYNC_WEBHOOK,
+    env.FEISHU_MONITOR_WEBHOOK_URL,
+    env.FEISHU_WEBHOOK_URL
+  ].map(cleanText).filter(Boolean);
+  const uniqueWebhooks = [...new Set(webhooks)];
+  if (!uniqueWebhooks.length) return { skipped: true };
   const card = buildThirdPartySyncNotificationCard({ type, batch, result, alerts });
-  const res = await client.post(webhook, { msg_type: 'interactive', card }, { timeout: 10000 });
-  const code = Number(res.data?.code ?? 0);
-  if (code !== 0) throw new Error(`飞书群通知失败：${res.data?.msg || code}`);
-  return { sent: true, code };
+  const errors = [];
+  for (const webhook of uniqueWebhooks) {
+    try {
+      const res = await client.post(webhook, { msg_type: 'interactive', card }, { timeout: 10000 });
+      const code = Number(res.data?.code ?? 0);
+      if (code === 0) return { sent: true, code };
+      errors.push(res.data?.msg || String(code));
+    } catch (err) {
+      errors.push(err.message || '飞书群通知失败');
+    }
+  }
+  throw new Error(`飞书群通知失败：${errors.filter(Boolean).join('；') || '未知错误'}`);
 }
 
 function createThirdPartySyncCenterRoutes(deps = {}) {
@@ -1579,7 +1594,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         notification = { sent: false, error: err.message || '飞书通知失败' };
       }
       const payload = { ...pulled, autoImport, alerts, notification };
-      if (technicalFailed || notification?.error) return sendJson(res, { ...payload, error: notification?.error || '第三方同步导入失败，已生成报警' }, 500);
+      if (technicalFailed) return sendJson(res, { ...payload, error: '第三方同步导入失败，已生成报警' }, 500);
       return sendJson(res, payload);
     }
     if (!path.startsWith('/third-party-sync')) return false;

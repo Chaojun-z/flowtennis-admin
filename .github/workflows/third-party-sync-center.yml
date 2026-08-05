@@ -39,6 +39,6 @@ jobs:
             business_date="$(TZ=Asia/Shanghai date -d 'yesterday' +%F)"
             curl -fsS -X POST "$FEISHU_MONITOR_WEBHOOK_URL" \
               -H "Content-Type: application/json" \
-              -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"[场小二] 订场数据同步失败\\n数据日期：${business_date}\\n系统已自动重试 1 次仍失败，请打开管理后台第三方同步中心查看需处理数据。\"}}" || true
+              -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"[网球兄弟] [场小二] FlowTennis 订场数据同步失败\\n数据日期：${business_date}\\n系统已自动重试 1 次仍失败，请打开管理后台第三方同步中心查看需处理数据。\"}}" || true
           fi
           exit 1

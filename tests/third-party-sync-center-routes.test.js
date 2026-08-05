@@ -241,12 +241,42 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(notifyRes.sent, true, 'notification should report sent when Feishu accepts the card');
   assert.strictEqual(feishuPosts[0].payload.msg_type, 'interactive', 'notification should send a Feishu card');
   const cardText = JSON.stringify(feishuPosts[0].payload.card);
-  assert.match(cardText, /长小二订场数据/, 'card should use the requested business title');
+  assert.match(cardText, /\[场小二\] 订场数据同步完成/, 'card should include the Feishu bot keyword in the business title');
   assert.match(cardText, /数据日期：2026-07-30/, 'card should highlight the business date');
   assert.match(cardText, /第三方数据：共 61 条/, 'card should show source-total processing result');
   assert.match(cardText, /自动完成：1 条/, 'card should show imported result in operator language');
   assert.match(cardText, /财务入账：1 条流水，合计 ¥1,350/, 'card should show finance result');
   assert.doesNotMatch(cardText, /cxe-sync-technical-id|531449/, 'card should hide technical ids');
+
+  const fallbackPosts = [];
+  const fallbackNotifyRes = await defaultNotifyThirdPartySyncResult({
+    type: 'success',
+    batch: {
+      rangeStart: '2026-07-30 00:00:00',
+      rangeEnd: '2026-07-31 00:00:00',
+      counts: { totalSourceCount: 1 }
+    },
+    result: {
+      plannedCount: 1,
+      fullDisposition: { total: 1, unresolvedCount: 0, ok: true },
+      writtenIds: [{ table: 'ft_courts', sourceRecordId: 'order-a' }],
+      failed: [],
+      skippedIds: []
+    },
+    alerts: [],
+    env: {
+      THIRD_PARTY_SYNC_NOTIFY_WEBHOOK: 'https://example.test/blocked',
+      FEISHU_MONITOR_WEBHOOK_URL: 'https://example.test/monitor'
+    },
+    client: {
+      post: async (url, payload) => {
+        fallbackPosts.push({ url, payload });
+        return url.includes('blocked') ? { data: { code: 19024, msg: 'Key Words Not Found' } } : { data: { code: 0 } };
+      }
+    }
+  });
+  assert.strictEqual(fallbackNotifyRes.sent, true, 'notification should try the fallback webhook when the first Feishu bot rejects keywords');
+  assert.deepStrictEqual(fallbackPosts.map(row => row.url), ['https://example.test/blocked', 'https://example.test/monitor'], 'notification should try configured webhooks in order');
 
   const writes = [];
   const scans = {
@@ -790,8 +820,63 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     method: 'GET',
     req: { headers: { authorization: 'Bearer secret' } }
   });
-  assert.strictEqual(notifyFailRes.statusCode, 500, 'cron should fail only when the Feishu notification chain itself fails');
+  assert.strictEqual(notifyFailRes.statusCode, 200, 'cron should not fail only because the Feishu notification chain fails');
   assert.match(notifyFailRes.body.notification.error, /模拟飞书发送失败/, 'cron response should expose notification failure reason');
+
+  const pausedNotifyFailScans = {
+    ft_third_party_sync_batches: [],
+    ft_third_party_sync_raw_records: [],
+    ft_third_party_sync_prechecks: [],
+    ft_third_party_sync_confirmations: [],
+    ft_third_party_sync_import_results: [],
+    ft_third_party_sync_import_backups: [],
+    ft_third_party_sync_changes: [],
+    ft_third_party_sync_alerts: [],
+    ft_third_party_sync_rollbacks: [],
+    ft_courts: [],
+    ft_financial_ledger: [],
+    ft_schedule: [],
+    ft_coaches: [],
+    ft_students: [],
+    ft_membership_accounts: []
+  };
+  const pausedNotifyFailHandler = createThirdPartySyncCenterRoutes({
+    init: async () => {},
+    sendJson: (res, payload, code = 200) => res.status(code).json(payload),
+    getCachedScan: async table => pausedNotifyFailScans[table] || [],
+    getCachedRow: async (table, id) => (pausedNotifyFailScans[table] || []).find(row => String(row.id) === String(id)) || null,
+    put: async (table, id, row) => {
+      pausedNotifyFailScans[table] = [...(pausedNotifyFailScans[table] || []).filter(item => String(item.id) !== String(id)), row];
+    },
+    del: async (table, id) => {
+      pausedNotifyFailScans[table] = (pausedNotifyFailScans[table] || []).filter(item => String(item.id) !== String(id));
+    },
+    mkTable: async () => 'ok',
+    uuidv4: (() => {
+      let n = 0;
+      return () => `paused-notify-fail-uuid-${++n}`;
+    })(),
+    normalizeCourtRecord: row => row,
+    notifyThirdPartySyncResult: async () => {
+      throw new Error('模拟待处理通知发送失败');
+    },
+    fetchThirdPartyData: async () => ({
+      records: [
+        { sourceType: 'lock', thirdPartyId: 'PAUSED1', bookingDate: '2026-07-29', venue: '1号场', startTime: '06:00', endTime: '22:00', customerName: '马坡运营', operatorAccount: '马坡运营', remark: '' }
+      ],
+      gaps: []
+    }),
+    now: () => '2026-07-30T00:00:00+08:00',
+    env: { CRON_SECRET: 'secret' }
+  });
+  const pausedNotifyFailRes = await call(pausedNotifyFailHandler, {
+    path: '/cron/third-party-sync-center',
+    method: 'GET',
+    req: { headers: { authorization: 'Bearer secret' } }
+  });
+  assert.strictEqual(pausedNotifyFailRes.statusCode, 200, 'cron should not return 500 for paused business-review batches even when Feishu rejects the notice');
+  assert.strictEqual(pausedNotifyFailRes.body.autoImport.result.status, 'paused', 'cron response should expose the business-review paused status');
+  assert.match(pausedNotifyFailRes.body.notification.error, /模拟待处理通知发送失败/, 'paused cron response should keep the notification failure reason');
 
   console.log('third-party sync center routes tests passed');
 })().catch(err => {
