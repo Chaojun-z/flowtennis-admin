@@ -1189,6 +1189,41 @@ const deletePlan = sync.buildDryRunPlan({
 
 assert.strictEqual(deletePlan.summary.pendingDelete, 1, 'delete detection should only create a pending delete action for bound sync rows');
 
+const replacedSourceKeyDeletePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    sourceKey: 'new-venue-key',
+    startTime: '2026-08-06 12:00',
+    endTime: '2026-08-06 13:00',
+    date: '2026-08-06',
+    coachName: '林铭教练',
+    studentNames: ['Deadia'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false },
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    lessonCount: 1,
+    fingerprint: 'new-fingerprint'
+  }],
+  syncRows: [{ id: 'old-venue-sync', sourceKey: 'old-venue-key', scheduleId: 'sch-deadia', status: 'active' }],
+  schedules: [{
+    id: 'sch-deadia',
+    startTime: '2026-08-06 12:00',
+    endTime: '2026-08-06 13:00',
+    coach: '林铭教练',
+    campus: 'shunyi_mapo',
+    venue: '2号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-deadia'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-deadia', name: 'Deadia' }],
+  coaches: [{ id: 'coach-lm', name: '林铭教练' }],
+  users: []
+});
+assert.strictEqual(replacedSourceKeyDeletePlan.summary.bindExisting, 1, 'changed venue should bind the current Feishu row to the existing system schedule');
+assert.strictEqual(replacedSourceKeyDeletePlan.summary.pendingDelete, 0, 'old source key should not trigger delete when the same schedule is represented by a new Feishu row');
+assert.deepStrictEqual(replacedSourceKeyDeletePlan.actions[0].supersededSyncRows.map(row => row.id), ['old-venue-sync'], 'new binding should carry old sync rows for superseding');
+
 const safeHistoryPlan = sync.safeHistoryApplyPlan({
   actions: [
     { type: 'bind_existing', sourceKey: 'bind' },
@@ -1389,6 +1424,30 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
   assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.row.status === 'pending'), 'delete sync should not cancel immediately, only create pending task');
   assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.row.scheduleSnapshot?.studentName === '赵新阳 田秀楠'), 'delete confirmation task should save readable schedule information');
   assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_sync' && item.row.status === 'pending_delete'), 'delete sync should mark relation as pending_delete');
+
+  const supersedeWrites = [];
+  const appliedSupersede = await sync.applySyncPlan({
+    actions: [{
+      type: 'bind_existing',
+      sourceKey: 'new-venue-key',
+      candidate: {
+        sheetId: 'EGRknT',
+        sheetTitle: '8.3-8.9',
+        startTime: '2026-08-06 12:00',
+        endTime: '2026-08-06 13:00',
+        fingerprint: 'new-fingerprint'
+      },
+      schedule: { id: 'sch-deadia' },
+      supersededSyncRows: [{ id: 'old-venue-sync', sourceKey: 'old-venue-key', scheduleId: 'sch-deadia', status: 'active' }]
+    }]
+  }, {
+    put: async (table, id, row) => supersedeWrites.push({ table, id, row }),
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+
+  assert.strictEqual(appliedSupersede[0].type, 'bind_existing', 'new source key should still bind the existing schedule');
+  assert.ok(supersedeWrites.some(item => item.id === 'old-venue-sync' && item.row.status === 'superseded' && item.row.supersededBySourceKey === 'new-venue-key'), 'old sync row for the same schedule should be marked superseded');
 
   const originalAxiosPost = axios.post;
   const originalAxiosGet = axios.get;

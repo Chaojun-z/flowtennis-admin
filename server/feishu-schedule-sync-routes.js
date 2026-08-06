@@ -1035,7 +1035,22 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
   const ignoredByKey=new Map((syncRows||[]).filter(row=>row.status==='ignored').map(row=>[String(row.sourceKey||''),row]));
   const syncByKey=new Map((syncRows||[]).filter(row=>row.status!=='ignored').map(row=>[String(row.sourceKey||''),row]));
   const activeSourceKeys=new Set();
+  const representedScheduleIds=new Set();
   const actions=[];
+  function markRepresentedSchedule(schedule){
+    const id=String(schedule?.id||'');
+    if(id)representedScheduleIds.add(id);
+    for(const extraId of parseMaybeArray(schedule?.scheduleIds))if(extraId)representedScheduleIds.add(String(extraId));
+  }
+  function supersededSyncRowsFor(schedule,sourceKey){
+    const scheduleIds=new Set([String(schedule?.id||''),...parseMaybeArray(schedule?.scheduleIds).map(String)].filter(Boolean));
+    if(!scheduleIds.size)return [];
+    return (syncRows||[]).filter(row=>{
+      if(row.status!=='active')return false;
+      if(String(row.sourceKey||'')===String(sourceKey||''))return false;
+      return scheduleIds.has(String(row.scheduleId||''));
+    });
+  }
   const orderedFeishuCourses=(feishuCourses||[]).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||''))||String(a.sourceKey||'').localeCompare(String(b.sourceKey||'')));
   for(const raw of orderedFeishuCourses){
     if(FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS.has(String(raw.sourceKey||''))){
@@ -1071,41 +1086,49 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
           actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing,reason:'历史排课修改需要运营确认'});
           continue;
         }
+        markRepresentedSchedule(existing);
         actions.push({type:'update_schedule',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing});
       }else{
+        markRepresentedSchedule(existing);
         actions.push({type:'noop',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing});
       }
       continue;
     }
     const exact=exactScheduleMatch(candidate,schedules);
     if(exact){
-      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:exact});
+      markRepresentedSchedule(exact);
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:exact,supersededSyncRows:supersededSyncRowsFor(exact,candidate.sourceKey)});
       continue;
     }
     const contiguous=contiguousScheduleGroupMatch(candidate,schedules);
     if(contiguous){
-      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:contiguous,scheduleIds:contiguous.scheduleIds});
+      markRepresentedSchedule(contiguous);
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:contiguous,scheduleIds:contiguous.scheduleIds,supersededSyncRows:supersededSyncRowsFor(contiguous,candidate.sourceKey)});
       continue;
     }
     const systemVenueMatch=exactScheduleMatch(candidate,schedules,{ignoreVenue:true});
     if(systemVenueMatch){
-      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueMatch,venueSource:'system'});
+      markRepresentedSchedule(systemVenueMatch);
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueMatch,venueSource:'system',supersededSyncRows:supersededSyncRowsFor(systemVenueMatch,candidate.sourceKey)});
       continue;
     }
     const systemVenueGroupMatch=contiguousScheduleGroupMatch(candidate,schedules,{ignoreVenue:true});
     if(systemVenueGroupMatch){
-      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueGroupMatch,scheduleIds:systemVenueGroupMatch.scheduleIds,venueSource:'system'});
+      markRepresentedSchedule(systemVenueGroupMatch);
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueGroupMatch,scheduleIds:systemVenueGroupMatch.scheduleIds,venueSource:'system',supersededSyncRows:supersededSyncRowsFor(systemVenueGroupMatch,candidate.sourceKey)});
       continue;
     }
     if(historicalCourse){
       const sameDayMatch=sameDayUniqueScheduleMatch(candidate,schedules);
       if(sameDayMatch){
-        actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:sameDayMatch,timeSource:'system'});
+        markRepresentedSchedule(sameDayMatch);
+        actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:sameDayMatch,timeSource:'system',supersededSyncRows:supersededSyncRowsFor(sameDayMatch,candidate.sourceKey)});
         continue;
       }
       const systemVenueSameDayMatch=sameDayUniqueScheduleMatch(candidate,schedules,{ignoreVenue:true});
       if(systemVenueSameDayMatch){
-        actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueSameDayMatch,timeSource:'system',venueSource:'system'});
+        markRepresentedSchedule(systemVenueSameDayMatch);
+        actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueSameDayMatch,timeSource:'system',venueSource:'system',supersededSyncRows:supersededSyncRowsFor(systemVenueSameDayMatch,candidate.sourceKey)});
         continue;
       }
     }
@@ -1125,6 +1148,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     if(row.status!=='active')continue;
     const key=String(row.sourceKey||'');
     if(!key||activeSourceKeys.has(key))continue;
+    if(row.scheduleId&&representedScheduleIds.has(String(row.scheduleId)))continue;
     const schedule=(schedules||[]).find(item=>String(item.id||'')===String(row.scheduleId||''))||null;
     actions.push({type:'pending_delete',sourceKey:key,sync:row,schedule});
   }
@@ -1694,6 +1718,9 @@ async function applySyncPlan(plan,ctx={}){
         const scheduleIds=Array.isArray(action.scheduleIds)&&action.scheduleIds.length?action.scheduleIds:[action.schedule.id];
         const row={id:`feishu-sync-${sha256(action.sourceKey).slice(0,24)}`,source:'feishu-sheet',sheetId:action.candidate.sheetId||'',sheetTitle:action.candidate.sheetTitle||'',sourceKey:action.sourceKey,scheduleId:action.schedule.id,scheduleIds,startTime:action.candidate.startTime,endTime:action.candidate.endTime,lastFingerprint:action.candidate.fingerprint,status:'active',createdAt:now,updatedAt:now,lastSyncedAt:now};
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,row.id,row);
+        for(const oldRow of action.supersededSyncRows||[]){
+          await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,oldRow.id,{...oldRow,status:'superseded',supersededBySourceKey:action.sourceKey,supersededByScheduleId:action.schedule.id,supersededAt:now,updatedAt:now});
+        }
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:action.schedule.id,scheduleIds});
       }else if(action.type==='create_schedule'){
         const body=buildScheduleBody(action.candidate);
