@@ -1557,6 +1557,10 @@ function isActiveCourtRecord(court){
   const status=String(court?.status||'active').trim();
   return status!=='inactive'&&status!=='deleted'&&!court?.deletedAt&&!court?.mergedIntoCourtId;
 }
+function isHiddenStudentProfile(student){
+  const status=String(student?.status||'').trim();
+  return ['merged','archived','deleted','inactive'].includes(status)||!!String(student?.mergedIntoStudentId||'').trim()||!!student?.deletedAt||!!student?.archivedAt;
+}
 function resolveStudentIdByText(value){
   const raw=String(value||'').trim();
   if(!raw)return '';

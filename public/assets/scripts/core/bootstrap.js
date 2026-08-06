@@ -120,7 +120,7 @@ function appConfirm(message,{title='请确认',confirmText='确定',danger=false
     ov.classList.add('open');
   });
 }
-function confirmDel(id,name,type){delId=id;delType=type;document.getElementById('confTitle').textContent=type==='court'||type==='lead'?'确认删除/隐藏？':'确认删除？';document.getElementById('confIcon').textContent='!';document.getElementById('confDesc').textContent=type==='court'?'即将处理「'+name+'」。没有财务/会员记录会删除；已有记录会隐藏保留数据。请输入「确认删除」。':type==='lead'?'即将处理线索「'+name+'」。未产生成交或业务关联的线索会删除；已经关联学员、订场用户、会员账户或已成交的线索会作废隐藏，历史数据会保留。请输入「确认删除」。':type==='membership-plan'?'即将删除「'+name+'」。仅草稿/停售且没有购买记录的方案可删除。请输入「确认删除」。':type==='student'?'即将删除学员「'+name+'」及其课包订单、课包余额、扣课记录、单人排课、课后反馈和学员权益记录，并清理订场/线索关联。请输入「确认删除」。':'即将删除「'+name+'」，请输入「确认删除」。';document.getElementById('confOv').classList.add('open');var ci=document.getElementById('confInput');ci.style.display='block';ci.value='';var cb=document.getElementById('confYesBtn');cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';var nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;ci.oninput=function(){if(ci.value.trim()==='确认删除'){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';}else{cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';}};}
+function confirmDel(id,name,type){delId=id;delType=type;document.getElementById('confTitle').textContent=type==='court'||type==='lead'||type==='student'?'确认删除/隐藏？':'确认删除？';document.getElementById('confIcon').textContent='!';document.getElementById('confDesc').textContent=type==='court'?'即将处理「'+name+'」。没有财务/会员记录会删除；已有记录会隐藏保留数据。请输入「确认删除」。':type==='lead'?'即将处理线索「'+name+'」。未产生成交或业务关联的线索会删除；已经关联学员、订场用户、会员账户或已成交的线索会作废隐藏，历史数据会保留。请输入「确认删除」。':type==='membership-plan'?'即将删除「'+name+'」。仅草稿/停售且没有购买记录的方案可删除。请输入「确认删除」。':type==='student'?'即将处理学员「'+name+'」。学员会隐藏归档；课包、上课、权益、财务和其他历史数据都会保留。请输入「确认删除」。':'即将删除「'+name+'」，请输入「确认删除」。';document.getElementById('confOv').classList.add('open');var ci=document.getElementById('confInput');ci.style.display='block';ci.value='';var cb=document.getElementById('confYesBtn');cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';var nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;ci.oninput=function(){if(ci.value.trim()==='确认删除'){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';}else{cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';}};}
 function openBatchCourtDeleteConfirm(ids){
   batchDeleteCourtIds=[...ids];
   delId='__batch__';
@@ -184,6 +184,10 @@ function mergeRowsById(rows,updates){
   return (rows||[]).map(row=>map.get(String(row?.id||''))||row);
 }
 function applyStudentCascadeDeleteResult(studentId,result={}){
+  if(result.archived&&result.student){
+    students=students.map(row=>String(row?.id||'')===String(studentId)?result.student:row);
+    return;
+  }
   const deleted=result.deleted||{};
   const updated=result.updated||{};
   students=removeRowsByIds(students,[studentId]);

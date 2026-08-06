@@ -6606,6 +6606,11 @@ function buildStudentCascadeDeletePlan(studentId,data={},now=new Date().toISOStr
   Object.keys(deletes).forEach(key=>{deletes[key]=[...new Set((deletes[key]||[]).map(value=>String(value||'')).filter(Boolean))];});
   return {deletes,updates};
 }
+function studentCascadeDeletePlanHasHistory(plan={}){const deletes=plan.deletes||{},updates=plan.updates||{};return Object.keys(deletes).some(key=>!['students','studentActiveEntitlementIndex'].includes(key)&&(deletes[key]||[]).length)||Object.keys(updates).some(key=>(updates[key]||[]).length);}
+function buildArchivedStudentRecord(student={},user={},now=new Date().toISOString()){
+  const operator=String(user?.name||user?.id||user?.username||'').trim();
+  return {...student,status:'archived',deletedAt:student.deletedAt||now,archivedAt:student.archivedAt||now,archivedBy:student.archivedBy||operator,updatedAt:now};
+}
 async function deleteStudentCascade(studentId,{confirm='',user={}}={}){
   assertStudentWriteAccess(user);
   const id=String(studentId||'').trim();
@@ -6613,43 +6618,9 @@ async function deleteStudentCascade(studentId,{confirm='',user={}}={}){
   if(confirm!=='DELETE_STUDENT_HISTORY')throw new Error('缺少删除确认');
   const student=await get(T_STUDENTS,id).catch(()=>null);
   if(!student)throw new Error('学员不存在');
-  const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger,membershipBenefitLedger,financialLedger,leads,leadFollowups,students]=await Promise.all([
-    scan(T_CLASSES).catch(()=>[]),
-    scan(T_SCHEDULE).catch(()=>[]),
-    scan(T_PLANS).catch(()=>[]),
-    scan(T_COURTS).catch(()=>[]),
-    scanFeedbacks().catch(()=>[]),
-    scan(T_PURCHASES).catch(()=>[]),
-    scan(T_ENTITLEMENTS).catch(()=>[]),
-    scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
-    scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]),
-    scan(T_FINANCIAL_LEDGER).catch(()=>[]),
-    scan(T_LEADS).catch(()=>[]),
-    scan(T_LEAD_FOLLOWUPS).catch(()=>[]),
-    scan(T_STUDENTS).catch(()=>[])
-  ]);
-  const plan=buildStudentCascadeDeletePlan(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger,membershipBenefitLedger,financialLedger,leads,leadFollowups,students});
-  await Promise.all([
-    ...plan.updates.classes.map(row=>put(T_CLASSES,row.id,row)),
-    ...plan.updates.schedule.map(row=>put(T_SCHEDULE,row.id,row)),
-    ...plan.updates.courts.map(row=>put(T_COURTS,row.id,row)),
-    ...plan.updates.leads.map(row=>put(T_LEADS,row.id,row)),
-    ...plan.updates.leadFollowups.map(row=>put(T_LEAD_FOLLOWUPS,row.id,row))
-  ]);
-  await Promise.all([
-    ...plan.deletes.feedbacks.map(rowId=>del(T_FEEDBACKS,rowId)),
-    ...plan.deletes.entitlementLedger.map(rowId=>del(T_ENTITLEMENT_LEDGER,rowId)),
-    ...plan.deletes.membershipBenefitLedger.map(rowId=>del(T_MEMBERSHIP_BENEFIT_LEDGER,rowId)),
-    ...plan.deletes.financialLedger.map(rowId=>del(T_FINANCIAL_LEDGER,rowId)),
-    ...plan.deletes.plans.map(rowId=>del(T_PLANS,rowId)),
-    ...plan.deletes.schedule.map(rowId=>del(T_SCHEDULE,rowId)),
-    ...plan.deletes.classes.map(rowId=>del(T_CLASSES,rowId)),
-    ...plan.deletes.entitlements.map(rowId=>del(T_ENTITLEMENTS,rowId)),
-    ...plan.deletes.purchases.map(rowId=>del(T_PURCHASES,rowId)),
-    ...plan.deletes.studentActiveEntitlementIndex.map(rowId=>del(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,rowId).catch(()=>null)),
-    del(T_STUDENTS,id)
-  ]);
-  return {success:true,deleted:plan.deletes,updated:plan.updates};
+  const archivedStudent=buildArchivedStudentRecord(student,user);
+  await put(T_STUDENTS,id,archivedStudent);
+  return {success:true,archived:true,student:archivedStudent,deleted:{},updated:{}};
 }
 function assertStudentWriteAccess(user){
   if(user?.role!=='admin')throw new Error('无权限');
@@ -7368,6 +7339,8 @@ module.exports._test={
   assertCanDeleteSchedule,
   assertCanDeleteStudent,
   buildStudentCascadeDeletePlan,
+  studentCascadeDeletePlanHasHistory,
+  buildArchivedStudentRecord,
   assertCanDeleteCourt,
   courtDeleteAction,
   assertCanDeleteCampus,

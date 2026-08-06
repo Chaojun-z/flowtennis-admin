@@ -123,6 +123,7 @@ assert.doesNotMatch(fnBody('renderScheduleVenueField'), /<input class="finput tm
 assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal should render venue through a dedicated host');
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(source, /function updateScheduleCreateHeaderSubtitle\(/, 'schedule create drawer should refresh the header subtitle from current form values');
+assert.match(fnBody('scheduleStudentRosterRows'), /isHiddenStudentProfile\(merged\)/, 'schedule student search should hide archived student profiles from new selections');
 assert.match(fnBody('scheduleDetailCreateHeaderHtml'), /scheduleCreateSubtitle/, 'schedule create header should expose a dynamic subtitle target');
 assert.match(fnBody('handleScheduleCampusChange'), /updateScheduleCreateHeaderSubtitle\(\)/, 'changing campus should refresh the create header subtitle');
 assert.match(fnBody('renderScheduleVenueField'), /handleScheduleVenueChange|updateScheduleCreateHeaderSubtitle/, 'changing venue should refresh the create header subtitle');

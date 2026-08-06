@@ -69,7 +69,7 @@ function studentUnifiedViewRows({includeSearchIndex=false}={}){
     const id=String(row.id||'').trim();
     if(!id||seen.has(id))return false;
     seen.add(id);
-    return String(row.status||'').trim()!=='merged'&&!String(row.mergedIntoStudentId||'').trim();
+    return !isHiddenStudentProfile(row);
   });
 }
 function studentUnifiedRecordForId(id){
@@ -593,7 +593,7 @@ function getStudentBaseList({includeAllRoster=false}={}){
   const viewRows=studentUnifiedViewRows({includeSearchIndex:includeAllRoster});
   const base=viewRows.length?viewRows:students;
   return base.filter(s=>{
-    if(String(s?.status||'').trim()==='merged'||String(s?.mergedIntoStudentId||'').trim())return false;
+    if(isHiddenStudentProfile(s))return false;
     if(!studentMatchesCampusForList(s))return false;
     if(includeAllRoster)return true;
     return studentListViewMode()==='trial'?studentIsHistoricalRosterRow(s):studentIsActiveRosterRow(s);
@@ -732,7 +732,7 @@ function getStudentDuplicateCandidates(input,editingId=''){
   const phone=String(input?.phone||'').replace(/\s+/g,'').trim();
   return students.filter(s=>{
     if(editingId&&s.id===editingId)return false;
-    if(String(s?.status||'').trim()==='merged'||String(s?.mergedIntoStudentId||'').trim())return false;
+    if(isHiddenStudentProfile(s))return false;
     const samePhone=phone&&String(s.phone||'').replace(/\s+/g,'').trim()===phone;
     const sameName=name&&String(s.name||'').trim()===name;
     return samePhone||sameName;
@@ -956,7 +956,7 @@ function openEntitlementAuthorizationModal(entitlementId){
 }
 function entitlementAuthorizationStudentRows(entitlement){
   const ownerId=String(entitlement?.studentId||'');
-  return students.filter(stu=>String(stu.id||'')&&String(stu.id||'')!==ownerId&&String(stu.status||'').trim()!=='merged'&&!String(stu.mergedIntoStudentId||'').trim()).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN'));
+  return students.filter(stu=>String(stu.id||'')&&String(stu.id||'')!==ownerId&&!isHiddenStudentProfile(stu)).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN'));
 }
 function entitlementAuthorizationStudentLabel(stu){
   return [stu?.name,stu?.phone].filter(Boolean).join(' · ')||stu?.id||'';

@@ -67,7 +67,8 @@ assert.match(source, /function setStudentTagCascaderActiveGroup\(/, 'student tag
 assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuTagFilterHost','stuCoachFilterHost'\]/, 'student toolbar should expose type, source, tag cascader, and coach filters in order');
 assert.match(fnBody('renderStudentToolbarFilters'), /match:\(s,value\)=>value==='__unassigned__'\?studentPrimaryCoachText\(s\)==='-':studentPrimaryCoachText\(s\)===value/, 'student coach filter should use the same visible responsible-coach口径 as the list');
 assert.match(source, /function getStudentDuplicateCandidates\(/, 'student save flow should detect possible duplicates before submit');
-assert.match(fnBody('getStudentDuplicateCandidates'), /status\|\|''\)\.trim\(\)==='merged'\|\|String\(s\?\.mergedIntoStudentId/, 'student duplicate warning should ignore merged student profiles');
+assert.match(source, /function isHiddenStudentProfile\([\s\S]*'merged'[\s\S]*'archived'[\s\S]*deletedAt[\s\S]*archivedAt/, 'student hidden profile helper should cover merged, archived, deleted, and inactive profiles');
+assert.match(fnBody('getStudentDuplicateCandidates'), /isHiddenStudentProfile\(s\)/, 'student duplicate warning should ignore hidden student profiles');
 assert.match(source, /发现可能重复的学员：/, 'student save flow should warn operators about possible duplicates');
 assert.match(fnBody('saveStudent'), /await appConfirm\(/, 'student duplicate warning should use the app modal instead of browser confirm');
 assert.doesNotMatch(fnBody('saveStudent'), /confirm\(/, 'student duplicate warning should not use the browser confirm dialog');
@@ -141,7 +142,7 @@ assert.match(fnBody('getStudentBaseList'), /studentListViewMode\(\)==='trial'\?s
 assert.match(fnBody('getStudentBaseList'), /includeAllRoster[\s\S]*return true[\s\S]*studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student search should be able to find students across active and trial rosters');
 assert.match(fnBody('getFilteredStudents'), /getStudentBaseList\(\{includeAllRoster:!!q\.trim\(\)\}\)/, 'student keyword search should broaden the base roster');
 assert.match(fnBody('getStudentBaseList'), /studentUnifiedViewRows\(\{includeSearchIndex:includeAllRoster\}\)/, 'student keyword search should broaden through the stable lightweight search index');
-assert.match(fnBody('getStudentBaseList'), /status\|\|''\)\.trim\(\)==='merged'\|\|String\(s\?\.mergedIntoStudentId/, 'student base list should hide merged student profiles');
+assert.match(fnBody('getStudentBaseList'), /isHiddenStudentProfile\(s\)/, 'student base list should hide merged and archived student profiles');
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 15, 50, and 100 row page sizes');
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');
@@ -423,10 +424,14 @@ assert.match(source, /上课记录/, 'student detail should provide lesson recor
 assert.match(source, /已购课包/, 'student detail should present purchased packages in plain language');
 assert.match(source, /扣课记录/, 'student detail should expose lesson charge history in the student detail');
 assert.match(source, /课包订单/, 'student detail should label package purchase records clearly');
-assert.match(source, /删除学员[\s\S]*confirmDel\('\$\{s\.id\}','\$\{esc\(s\.name\)\}','student'\)/, 'student detail should expose a delete action behind the standard confirmation flow');
+assert.match(source, /confirmDel\('\$\{s\.id\}','\$\{esc\(s\.name\)\}','student'\)[\s\S]*删除学员/, 'student detail should expose a delete action behind the standard confirmation flow');
 assert.match(source, /function studentDeleteCardHtml\(s\)[\s\S]*confirmDel\('\$\{s\.id\}','\$\{esc\(s\.name\)\}','student'\)[\s\S]*studentDrawerCardHtml\('删除学员'[\s\S]*function studentDetailBasicTabHtml\(s\)[\s\S]*studentReminderInfoHtml\(s\)\}\$\{studentDeleteCardHtml\(s\)\}/, 'student detail should show delete student as its own card below service account reminder');
 assert.doesNotMatch(source, /openStudentDrawer\(\{titleHtml:`\$\{studentDetailHeroHtml\(s\)\}\$\{studentDetailTabsHtml\(studentDetailActiveTab\)\}\$\{studentDetailDeleteActionHtml\(s\)\}`/, 'student delete action should not sit in the drawer tab header');
 assert.match(source, /DELETE_STUDENT_HISTORY/, 'student delete requests should carry the backend confirmation marker');
+assert.match(source, /学员会隐藏归档；课包、上课、权益、财务和其他历史数据都会保留/, 'student delete confirmation should explain archive instead of destructive history deletion');
+assert.doesNotMatch(source, /完全空白误录会删除/, 'student delete confirmation should not promise physical deletion from the management page');
+assert.doesNotMatch(source, /及其课包订单、课包余额、扣课记录、单人排课、课后反馈和学员权益记录，并清理订场\/线索关联/, 'student delete confirmation must not promise destructive history deletion');
+assert.match(fnBody('applyStudentCascadeDeleteResult'), /result\.archived&&result\.student[\s\S]*students=students\.map[\s\S]*return/, 'student archived delete result should only update the hidden student profile locally');
 assert.doesNotMatch(source, /课包消耗记录/, 'student detail should avoid a duplicate package consume record block');
 assert.match(source, /如需调整关联关系，请到「订场\/会员」页面编辑订场用户。/, 'student detail should explain where to adjust linked booking accounts');
 assert.doesNotMatch(source, /function openStudentModal[\s\S]*studentLinkedDetailHtml\(s\)/, 'student edit modal should not embed linked detail summary anymore');

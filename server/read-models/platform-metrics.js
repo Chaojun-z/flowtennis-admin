@@ -16,6 +16,14 @@ function ownText(row = {}, field = '') {
   return hasOwn(row, field) ? text(row[field]) : '';
 }
 
+function hiddenStudentProfile(row = {}) {
+  const status = text(row.status);
+  return ['merged', 'archived', 'deleted', 'inactive'].includes(status)
+    || !!text(row.mergedIntoStudentId)
+    || !!text(row.deletedAt)
+    || !!text(row.archivedAt);
+}
+
 function campusKey(value) {
   return normalizeCampusValue(text(value));
 }
@@ -1240,7 +1248,9 @@ function buildTeachingStudentSearchableRows(viewRows = [], data = {}) {
       profileNote: text(student.profileNote || existing.profileNote),
       notes: hasOwn(student, 'notes') ? text(student.notes) : ownText(existing, 'notes'),
       status: text(student.status || existing.status),
-      mergedIntoStudentId: text(student.mergedIntoStudentId || existing.mergedIntoStudentId)
+      mergedIntoStudentId: text(student.mergedIntoStudentId || existing.mergedIntoStudentId),
+      deletedAt: text(student.deletedAt || existing.deletedAt),
+      archivedAt: text(student.archivedAt || existing.archivedAt)
     };
     byStudentId.set(studentId, {
       ...teachingStudentViewRow(source, existing),
@@ -1249,7 +1259,7 @@ function buildTeachingStudentSearchableRows(viewRows = [], data = {}) {
   });
   return [...byStudentId.values()]
     .filter(row => text(row.studentId || row.id))
-    .filter(row => text(row.status) !== 'merged' && !text(row.mergedIntoStudentId));
+    .filter(row => !hiddenStudentProfile(row));
 }
 
 function teachingScheduleCompleted(row = {}) {
@@ -1654,7 +1664,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
 
 function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const studentRows = buildTeachingStudentSourceRows(customerLifecycleRows, data)
-    .filter(row => text(row.status) !== 'merged' && !text(row.mergedIntoStudentId));
+    .filter(row => !hiddenStudentProfile(row));
   const now = data.now || new Date();
   const courseListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: true });
   const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });
