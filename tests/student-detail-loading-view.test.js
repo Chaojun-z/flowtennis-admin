@@ -31,6 +31,16 @@ assert.match(
   /detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/,
   'student detail should not call the per-student endpoint when the list row already has backend detail rows'
 );
+assert.match(
+  source,
+  /const studentDetailLoadPromises=new Map\(\);/,
+  'student detail requests should de-duplicate in-flight loads'
+);
+assert.match(
+  fnBody('ensureStudentDetailData'),
+  /apiCall\('GET',`\/page-data\/student-detail\?id=\$\{encodeURIComponent\(id\)\}\$\{force\?'&fresh=1':''\}`,null,20000\)/,
+  'student detail loads should use the single-student endpoint with a bounded timeout'
+);
 assert.doesNotMatch(
   fnBody('openStudentDetail'),
   /!studentDetailTabNeedsDatasets\(\)\)ensureStudentDetailDatasets\(id,\{block:false\}\)/,

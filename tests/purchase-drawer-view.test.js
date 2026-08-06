@@ -49,6 +49,7 @@ assert.match(openPurchaseCreateLoadingDrawer, /purchaseCreateLoadToken:loadToken
 assert.match(openPurchaseCreateErrorDrawer, /openPurchaseModal\(\$\{jsArg\(studentId\)\}\)[\s\S]*重试/, 'purchase create load failure should keep a retry action in the drawer');
 assert.match(source, /if\(name==='purchaseCreatePage'\)\{[\s\S]*staleCachedDatasets\.delete\('purchaseCreatePage'\)[\s\S]*markDatasetLoaded\('purchaseCreatePage',requestKey\)/, 'purchase create refresh should clear its own stale marker after a successful load');
 assert.match(source, /if\(name==='packageCenterPage'\)\{[\s\S]*staleCachedDatasets\.delete\('packageCenterPage'\)[\s\S]*markDatasetLoaded\('packageCenterPage',requestKey\)/, 'package center refresh should clear its own stale marker so purchase create can reuse it');
+assert.match(source, /function purchaseStudentForId\(studentId=''\)\{[\s\S]*studentUnifiedRecordForId\(id\)[\s\S]*students\.find/, 'purchase create should resolve students from the visible unified student row before falling back to raw students');
 assert.match(ensureFullPurchaseData, /ensurePurchaseDetailData\(id\)/, 'purchase detail should load one purchase detail by id');
 assert.doesNotMatch(openPurchaseDetailModal, /purchasesPage/, 'purchase detail drawer must not load the full purchases aggregate');
 assert.doesNotMatch(openPurchaseEditModal, /purchasesPage/, 'purchase edit drawer must not load the full purchases aggregate');
@@ -83,7 +84,8 @@ assert.match(corePageDataSource, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGE
 assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker should have scoped drawer styling');
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_packageId_dropdown[\s\S]*text-overflow:ellipsis/, 'purchase package dropdown should clip long package names instead of overflowing the input');
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_edit_packageId_dropdown[\s\S]*font-size:10px/, 'purchase edit package dropdown should use smaller text for long package names');
-assert.match(savePurchase, /ensureDatasetsByName\(\['purchaseCreatePage','packageCenterPage','customerCenterPage','lifecycleMetricsPage'\],\{force:true\}\)/, 'purchase save should force-refresh create drawer data, package list data, and customer lifecycle views after creating a purchase');
+assert.match(savePurchase, /Promise\.all\(\[[\s\S]*ensureDatasetsByName\(\['purchaseCreatePage'\],\{force:true\}\)[\s\S]*ensureStudentDetailData\(savedStudentId,\{force:true\}\)/, 'purchase save should refresh create data and the current student detail before closing');
+assert.match(savePurchase, /ensureDatasetsByName\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage'\],\{force:true\}\)\.then/, 'purchase save should refresh slow list and metric models in the background');
 assert.match(savePurchase, /giftLessons:parseFloat\(document\.getElementById\('pur_giftLessons'\)\?\.value\)\|\|0/, 'purchase save should submit gifted lesson count');
 assert.match(savePurchase, /courtBookingGiftCount:parseInt\(document\.getElementById\('pur_courtBookingGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit booking benefit gifts');
 assert.match(savePurchase, /ballMachineGiftCount:parseInt\(document\.getElementById\('pur_ballMachineGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit ball-machine benefit gifts');

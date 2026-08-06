@@ -533,6 +533,13 @@ function purchaseStudentSearchRows(keyword=''){
     return [s.name,s.phone,cn(s.campus),s.primaryCoach].some(v=>String(v||'').toLowerCase().includes(q));
   }).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN')).slice(0,80);
 }
+function purchaseStudentForId(studentId=''){
+  const id=String(studentId||'').trim();
+  if(!id)return null;
+  return (typeof studentUnifiedRecordForId==='function'?studentUnifiedRecordForId(id):null)
+    || students.find(x=>String(x.id||'')===id)
+    || null;
+}
 function purchaseStudentPickerHtml(selectedId='',keyword=''){
   const rows=purchaseStudentSearchRows(keyword);
   if(!rows.length)return '<div style="font-size:12px;color:var(--td);padding:10px 0">没有匹配到学员，请换个关键词。</div>';
@@ -546,7 +553,7 @@ function renderPurchaseStudentPicker(){
 function selectPurchaseStudent(studentId){
   const input=document.getElementById('pur_studentId');
   if(input)input.value=studentId||'';
-  const stu=students.find(s=>s.id===studentId);
+  const stu=purchaseStudentForId(studentId);
   if(stu?.primaryCoach){const primaryCoach=coachName(stu.primaryCoach);setStandardDropdownValue('pur_ownerCoach',primaryCoach,primaryCoach);}
   const search=document.getElementById('pur_studentSearch');
   if(search&&stu)search.value=stu.phone?`${stu.name} · ${stu.phone}`:stu.name;
@@ -557,7 +564,7 @@ function openPurchaseEntryModal(){
   openPurchaseModal();
 }
 function openPurchaseCreateLoadingDrawer(studentId='',message='课包数据加载中...',loadToken=''){
-  const stu=studentId?students.find(x=>String(x.id||'')===String(studentId||'')):null;
+  const stu=studentId?purchaseStudentForId(studentId):null;
   const subtitle=stu?(stu.phone?`${stu.name} · ${stu.phone}`:stu.name):'新增购买记录';
   const body=renderDetailDrawerContent(renderDetailDrawerCard('课包购买',`<div class="empty"><p>${esc(message)}</p></div>`,{useGrid:false}));
   openPurchaseDrawer(
@@ -576,7 +583,7 @@ function openPurchaseCreateErrorDrawer(studentId='',message='课包数据加载�
   );
 }
 function openPurchaseModal(studentId=''){
-  const stu=studentId?students.find(x=>x.id===studentId):null;
+  const stu=studentId?purchaseStudentForId(studentId):null;
   if(studentId&&!stu){toast('学员不存在','error');return;}
   if(!purchaseCreateDatasetReady()){
     const loadToken=nextPurchaseCreateLoadToken();
@@ -897,13 +904,20 @@ async function savePurchase(){
   },{
     successText:'购买成功',
     closeOnSuccess:true,
-    refresh:async()=>{
+    refresh:async(result)=>{
       loadedDatasets.delete('purchasesPage');
-      await ensureDatasetsByName(['purchaseCreatePage','packageCenterPage','customerCenterPage','lifecycleMetricsPage'],{force:true});
-      renderStudents();
-      renderPurchases();
-      renderEntitlements();
-      if(currentPage==='leads')renderLeads();
+      const savedStudentId=String(result?.purchase?.studentId||data.studentId||'').trim();
+      if(savedStudentId&&typeof markStudentDetailDataStale==='function')markStudentDetailDataStale(savedStudentId);
+      await Promise.all([
+        ensureDatasetsByName(['purchaseCreatePage'],{force:true}),
+        savedStudentId&&typeof ensureStudentDetailData==='function'?ensureStudentDetailData(savedStudentId,{force:true}).catch(e=>console.warn('student detail refresh after purchase failed',e)):Promise.resolve()
+      ]);
+      ensureDatasetsByName(['packageCenterPage','customerCenterPage','lifecycleMetricsPage'],{force:true}).then(()=>{
+        renderStudents();
+        renderPurchases();
+        renderEntitlements();
+        if(currentPage==='leads')renderLeads();
+      }).catch(e=>console.warn('purchase background refresh failed',e));
     }
   });
 }

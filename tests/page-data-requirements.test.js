@@ -32,6 +32,7 @@ assert.match(source, /const STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\];/, 'student 
 assert.match(source, /const STUDENT_DETAIL_REQUIREMENTS=\[\];/, 'student detail tabs should not block on extra shared datasets');
 assert.match(studentsSource, /function ensureStudentDetailDatasets\(/, 'student detail should have a lazy detail data loader');
 assert.match(studentsSource, /ensureStudentDetailData\(id\)/, 'student detail should load one student detail record by id when the drawer opens');
+assert.match(source, /function markStudentDetailDataStale\(studentId\)/, 'student detail should support invalidating one student after a package mutation');
 assert.match(source, /function ensurePurchaseDetailData\(purchaseId/, 'purchase detail should have a per-purchase detail loader');
 assert.match(source, /\/page-data\/purchase-detail\?id=/, 'purchase detail loader should call the per-purchase endpoint');
 assert.match(source, /,purchaseCreatePage:\(\)=>apiCall\('GET','\/page-data\/purchase-create',null,20000\)/, 'purchase create drawer should use a lightweight create endpoint with a shorter timeout');

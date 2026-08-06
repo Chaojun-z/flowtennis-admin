@@ -23,6 +23,7 @@ let entitlementUnifiedView={rows:[]};
 let studentLessonRecordExpandedState={};
 const loadedPurchaseDetailIds=new Set();
 const loadedStudentDetailIds=new Set();
+const studentDetailLoadPromises=new Map();
 const loadedLeadFollowupDetailIds=new Set();
 const loadedCourtAccountDetailIds=new Set();
 const loadedScheduleDetailIds=new Set();
@@ -626,10 +627,22 @@ async function ensureStudentDetailData(studentId,{force=false}={}){
   const id=String(studentId||'').trim();
   if(!id)return false;
   if(!force&&loadedStudentDetailIds.has(id))return false;
-  const data=await apiCall('GET',`/page-data/student-detail?id=${encodeURIComponent(id)}${force?'&fresh=1':''}`);
-  hydrateStudentDetailData(data||{});
-  loadedStudentDetailIds.add(id);
-  return true;
+  const key=`${id}:${force?'fresh':'cached'}`;
+  if(studentDetailLoadPromises.has(key))return studentDetailLoadPromises.get(key);
+  const promise=apiCall('GET',`/page-data/student-detail?id=${encodeURIComponent(id)}${force?'&fresh=1':''}`,null,20000)
+    .then(data=>{
+      hydrateStudentDetailData(data||{});
+      loadedStudentDetailIds.add(id);
+      return true;
+    })
+    .finally(()=>studentDetailLoadPromises.delete(key));
+  studentDetailLoadPromises.set(key,promise);
+  return promise;
+}
+function markStudentDetailDataStale(studentId){
+  const id=String(studentId||'').trim();
+  if(!id)return;
+  loadedStudentDetailIds.delete(id);
 }
 function leadFollowupsDetailReady(leadId){
   return loadedLeadFollowupDetailIds.has(String(leadId||'').trim());
@@ -673,6 +686,7 @@ function noteScheduleLocalMutation(){
 function markLearningDataStale(){
   loadedPurchaseDetailIds.clear();
   loadedStudentDetailIds.clear();
+  studentDetailLoadPromises.clear();
   loadedLeadFollowupDetailIds.clear();
   loadedCourtAccountDetailIds.clear();
   loadedScheduleDetailIds.clear();
