@@ -283,7 +283,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   myclasses:['students','classes']
 };
 const STUDENT_PAGE_DEFERRED_REQUIREMENTS=[];
-const STUDENT_DETAIL_REQUIREMENTS=['products'];
+const STUDENT_DETAIL_REQUIREMENTS=[];
 const PERFORMANCE_PAGE_DATA_GUARD={
   students:['classes','schedule','courts'],
   coachschedule:['entitlements','entitlementLedger'],
@@ -451,7 +451,7 @@ const DATASET_LOADERS={
   feedbacks:()=>apiCall('GET','/feedbacks')
   ,coachProposals:()=>apiCall('GET','/coach-proposals')
   ,packageCenterPage:()=>apiCall('GET','/page-data/package-center-list')
-  ,purchaseCreatePage:()=>apiCall('GET','/page-data/purchase-create')
+  ,purchaseCreatePage:()=>apiCall('GET','/page-data/purchase-create',null,20000)
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
   ,customerCenterPage:({fresh=false}={})=>apiCall('GET',customerCenterPageDataUrl({fresh}))
   ,lifecycleMetricsPage:()=>apiCall('GET',lifecycleMetricsPageDataUrl())

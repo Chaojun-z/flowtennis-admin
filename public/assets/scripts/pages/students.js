@@ -1300,7 +1300,14 @@ function studentDetailDatasetsReady(id){
   const names=Array.isArray(STUDENT_DETAIL_REQUIREMENTS)?STUDENT_DETAIL_REQUIREMENTS:[];
   const staticReady=names.every(name=>loadedDatasets.has(name)&&!(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has(name))&&(!(typeof datasetHasCurrentRequestKey==='function')||datasetHasCurrentRequestKey(name)));
   const detailReady=typeof studentDetailDataReady==='function'?studentDetailDataReady(id):false;
-  return staticReady&&detailReady;
+  return staticReady&&(detailReady||studentDetailLocalRowsReady(id,studentDetailActiveTab));
+}
+function studentDetailLocalRowsReady(id,tab=studentDetailActiveTab){
+  const s=studentUnifiedRecordForId(id);
+  if(!s)return false;
+  if(tab==='orders')return Array.isArray(s.detailPackageOrderRows)&&Array.isArray(s.detailLessonRecordRows);
+  if(tab==='benefits')return Array.isArray(s.detailBenefitRows)&&Array.isArray(s.detailBenefitGrantRows)&&Array.isArray(s.detailBenefitConsumeRows);
+  return true;
 }
 function studentDetailTabNeedsDatasets(tab=studentDetailActiveTab){
   return ['orders','benefits'].includes(tab);
@@ -1327,7 +1334,12 @@ function ensureStudentDetailDatasets(id,{block=false}={}){
     if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))openStudentDetail(id);
   }).catch(e=>{
     console.error('student detail data load failed',e);
-    if(block)toast('学员详情加载失败，请刷新后重试','error');
+    if(block&&studentDetailDrawerIsOpenFor(id)){
+      const retry=`<button type="button" class="schedule-detail-action primary" onclick="openStudentDetail('${id}')">重试</button>`;
+      const message='学员详情加载失败，请重试';
+      toast(message,'error');
+      openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:renderDetailDrawerContent(renderDetailDrawerCard('加载失败',`<div class="empty"><p>${esc(message)}</p></div>`,{useGrid:false,actionsHtml:retry})),actionsHtml:'',studentId:s.id});
+    }
   });
   return block;
 }

@@ -899,7 +899,7 @@ async function savePurchase(){
     closeOnSuccess:true,
     refresh:async()=>{
       loadedDatasets.delete('purchasesPage');
-      await ensureDatasetsByName(['packageCenterPage','customerCenterPage','lifecycleMetricsPage'],{force:true});
+      await ensureDatasetsByName(['purchaseCreatePage','packageCenterPage','customerCenterPage','lifecycleMetricsPage'],{force:true});
       renderStudents();
       renderPurchases();
       renderEntitlements();

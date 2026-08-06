@@ -29,12 +29,12 @@ assert.match(source, /coachschedule:\['coachSchedulePage'\]/, 'coach schedule ca
 assert.match(source, /coachops:\['workbenchPage','operationsPage'\]/, 'coach workload should block on the backend unified coach schedule view and operations metrics');
 assert.match(source, /const PAGE_DATA_BACKGROUND_REQUIREMENTS=\{[\s\S]*students:\['classes','schedule','courts'\][\s\S]*'package-students':\['classes','schedule','courts'\][\s\S]*'trial-students':\['classes','schedule','courts'\][\s\S]*leads:\['lifecycleMetricsPage'\][\s\S]*purchases:\[\][\s\S]*schedule:\['classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'\][\s\S]*coachschedule:\['entitlements','entitlementLedger'\][\s\S]*finance:\['financePage'\][\s\S]*courts:\['courtsPage'\][\s\S]*memberships:\[\][\s\S]*workbench:\['workbenchPage'\][\s\S]*postfeedback:\['workbenchPage'\][\s\S]*mystudents:\['campuses','students','classes','schedule','feedbacks','entitlements'\][\s\S]*myclasses:\['students','classes'\]/, 'heavy page datasets should move behind first render, leads followups should load only when a lead drawer asks for them');
 assert.match(source, /const STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\];/, 'student list pages should not automatically pull heavy detail datasets after first paint');
-assert.match(source, /const STUDENT_DETAIL_REQUIREMENTS=\['products'\];/, 'student detail should not lazy-load the full purchases aggregate');
+assert.match(source, /const STUDENT_DETAIL_REQUIREMENTS=\[\];/, 'student detail tabs should not block on extra shared datasets');
 assert.match(studentsSource, /function ensureStudentDetailDatasets\(/, 'student detail should have a lazy detail data loader');
 assert.match(studentsSource, /ensureStudentDetailData\(id\)/, 'student detail should load one student detail record by id when the drawer opens');
 assert.match(source, /function ensurePurchaseDetailData\(purchaseId/, 'purchase detail should have a per-purchase detail loader');
 assert.match(source, /\/page-data\/purchase-detail\?id=/, 'purchase detail loader should call the per-purchase endpoint');
-assert.match(source, /,purchaseCreatePage:\(\)=>apiCall\('GET','\/page-data\/purchase-create'\)/, 'purchase create drawer should use a lightweight create endpoint');
+assert.match(source, /,purchaseCreatePage:\(\)=>apiCall\('GET','\/page-data\/purchase-create',null,20000\)/, 'purchase create drawer should use a lightweight create endpoint with a shorter timeout');
 assert.match(source, /function ensureLeadFollowupsForLead\(leadId/, 'lead drawer should have a per-lead followup loader');
 assert.match(source, /\/leads\/\$\{encodeURIComponent\(id\)\}\/followups/, 'lead followups should load by lead id');
 assert.match(source, /function ensureCourtAccountDetailData\(courtId/, 'court membership drawer should have a per-account detail loader');

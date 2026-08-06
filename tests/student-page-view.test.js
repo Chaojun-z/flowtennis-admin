@@ -350,8 +350,11 @@ assert.match(source, /reason\.match\(\s*\/\^历史导入\\s\*\(\\d\{1,2\}\)月�
 assert.match(source, /dedupeEntitlementLedgerForDisplay/, 'lesson charge history should collapse duplicate ledger rows before display');
 assert.match(source, /function historicalImportedLessonUnitsForStudent\(/, 'student page should expose a historical imported lesson helper');
 assert.match(source, /STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\]/, 'student list should not automatically load heavy detail datasets after first paint');
-assert.match(source, /STUDENT_DETAIL_REQUIREMENTS=\['products'\]/, 'student detail should keep only small static detail dependencies');
+assert.match(source, /STUDENT_DETAIL_REQUIREMENTS=\[\]/, 'student detail should not block on static shared datasets');
 assert.match(source, /function ensureStudentDetailDatasets\(/, 'student detail should own the lazy detail loader');
+assert.match(source, /function studentDetailLocalRowsReady\([\s\S]*detailPackageOrderRows[\s\S]*detailLessonRecordRows[\s\S]*detailBenefitRows/, 'student detail should open from existing lightweight detail rows when they are already available');
+assert.match(fnBody('studentDetailDatasetsReady'), /detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/, 'student detail loader should skip the per-student request when local backend detail rows are ready');
+assert.match(fnBody('ensureStudentDetailDatasets'), /openStudentDetail\('\$\{id\}'\)[\s\S]*重试[\s\S]*renderDetailDrawerCard\('加载失败'/, 'student detail loading failure should render a retry state instead of staying in loading');
 assert.match(source, /ensureStudentDetailData\(id\)/, 'student detail should load heavy detail facts by student id instead of the full purchases aggregate');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggregateHistoricalMonthlyLedgerRows[\s\S]*function classScheduleSummaryHtml/, 'student consume history should show imported lesson rows one by one instead of monthly aggregation');
 assert.doesNotMatch(fnBody('studentCompletedLessonCount'), /historicalImportedLessonUnitsForStudent|studentConcreteLessonLedgerItems|schedules\.filter/, 'student cumulative lessons should only read backend unified completedLessons');

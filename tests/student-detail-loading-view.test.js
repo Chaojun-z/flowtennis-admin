@@ -19,7 +19,17 @@ assert.match(
 assert.match(
   fnBody('openStudentDetail'),
   /studentDetailTabNeedsDatasets\(\)&&ensureStudentDetailDatasets\(id,\{block:true\}\)/,
-  'student package and benefit tabs should wait for heavy detail datasets'
+  'student package and benefit tabs should wait only when the local detail rows are missing'
+);
+assert.match(
+  source,
+  /function studentDetailLocalRowsReady\([\s\S]*detailPackageOrderRows[\s\S]*detailLessonRecordRows[\s\S]*detailBenefitRows/,
+  'student package and benefit tabs should use existing lightweight detail rows before requesting detail data'
+);
+assert.match(
+  fnBody('studentDetailDatasetsReady'),
+  /detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/,
+  'student detail should not call the per-student endpoint when the list row already has backend detail rows'
 );
 assert.doesNotMatch(
   fnBody('openStudentDetail'),
