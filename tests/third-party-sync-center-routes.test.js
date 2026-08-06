@@ -187,6 +187,7 @@ const notificationText = buildThirdPartySyncNotificationText({
   ]
 });
 assert.match(notificationText, /^\[场小二\] 订场数据同步完成/, 'notification title should use the requested operator-facing title');
+assert.match(notificationText, /场馆：网球兄弟 FlowTennis/, 'notification text should include Feishu bot keywords so keyword-checked bots accept it');
 assert.match(notificationText, /数据日期：2026-07-30/, 'notification should show business date');
 assert.doesNotMatch(notificationText, /\[场小二\] 长小二订场数据同步完成/, 'notification title should not include the old duplicated product name');
 assert.match(notificationText, /第三方数据：共 61 条/, 'notification should show the full third-party source count');
@@ -256,6 +257,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(feishuPosts[0].payload.msg_type, 'interactive', 'notification should send a Feishu card');
   const cardText = JSON.stringify(feishuPosts[0].payload.card);
   assert.match(cardText, /\[场小二\] 订场数据同步完成/, 'card should include the Feishu bot keyword in the business title');
+  assert.match(cardText, /网球兄弟 FlowTennis/, 'card should include Feishu bot keywords outside the technical webhook config');
   assert.match(cardText, /数据日期：2026-07-30/, 'card should highlight the business date');
   assert.match(cardText, /第三方数据：共 61 条/, 'card should show source-total processing result');
   assert.match(cardText, /自动完成：1 条/, 'card should show imported result in operator language');

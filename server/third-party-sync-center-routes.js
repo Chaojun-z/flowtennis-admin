@@ -1260,6 +1260,7 @@ function buildThirdPartySyncNotificationText({ type = 'success', batch = {}, res
   const skippedOnlyCount = Math.max(0, Number(disposition.skippedCount || skipped.length) - unresolvedCount);
   const lines = [
     `[场小二] ${prefix}`,
+    '场馆：网球兄弟 FlowTennis',
     `数据日期：${notificationDateText(batch)}`,
     `第三方数据：共 ${sourceTotal} 条`,
     `自动完成：${successBookings} 条`,
