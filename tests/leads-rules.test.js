@@ -128,6 +128,29 @@ const sameNameRows = rules.mergeDuplicateLeadRows([
 assert.strictEqual(sameNameRows.length, 2, 'same wechat name leads should remain separate until manual merge');
 assert.deepStrictEqual(sameNameRows.map(row => row.id).sort(), ['new-lead', 'old-lead']);
 
+const exactDuplicateRows = rules.mergeDuplicateLeadRows([
+  rules.normalizeLeadRecord({
+    displayName: 'ELLAUK',
+    wechatName: 'ELLAUK',
+    leadDate: '2026-08-06',
+    source: '大众点评',
+    demandProduct: '约球',
+    latestConclusion: '咨询约球和订场',
+    rawStatus: '跟进中'
+  }, { id: 'lead-first-save', now: '2026-08-06T10:00:00.000Z' }),
+  rules.normalizeLeadRecord({
+    displayName: 'ELLAUK',
+    wechatName: 'ELLAUK',
+    leadDate: '2026-08-06',
+    source: '大众点评',
+    demandProduct: '约球',
+    latestConclusion: '咨询约球和订场',
+    rawStatus: '跟进中'
+  }, { id: 'lead-second-save', now: '2026-08-06T10:01:00.000Z' })
+]);
+assert.strictEqual(exactDuplicateRows.length, 1, 'exact same lead rows should be collapsed in the lead pool');
+assert.strictEqual(exactDuplicateRows[0].id, 'lead-first-save', 'exact duplicate collapse should keep the first created lead');
+
 const visibleAfterManualMerge = rules.mergeDuplicateLeadRows([
   ...sameNameRows,
   { ...sameNameRows[1], id: 'merged-lead', status: 'merged', mergedIntoLeadId: 'old-lead' }

@@ -1334,7 +1334,11 @@ function openLeadModal(leadId){
 async function refreshLeadRuntime({withStudents=false,withCourts=false}={}){
   const base=['leads','lifecycleMetricsPage'];
   if(withStudents)base.push('students');
-  await ensureDatasetsByName(base,{force:true});
+  try{
+    await ensureDatasetsByName(base,{force:true});
+  }catch(e){
+    console.warn('lead runtime refresh skipped',e);
+  }
   if(withCourts){
     try{
       await ensureDatasetsByName(['courts'],{force:true});
@@ -1350,8 +1354,9 @@ async function saveLead(leadId=''){
   if(!leadPhoneValid(phone)){toast('手机号格式不正确','warn');return;}
   const payload=leadPayloadFromForm();
   await runStandardMutation('leadSaveBtn',async()=>{
-    if(leadId)await apiCall('PUT','/leads/'+leadId,payload);
-    else await apiCall('POST','/leads',{...payload,createInitialFollowup:true});
+    const res=leadId?await apiCall('PUT','/leads/'+leadId,payload):await apiCall('POST','/leads',{...payload,createInitialFollowup:true});
+    if(res?.lead)upsertLeadLocal(res.lead);
+    return res;
   },{
     successText:leadId?'线索已更新 ✓':'线索已创建 ✓',
     closeOnSuccess:true,

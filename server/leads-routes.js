@@ -43,6 +43,39 @@ function createLeadsRoutes(deps={}){
     return (rows||[]).filter(row=>!['merged','voided','deleted'].includes(cleanLeadText(row?.status)));
   }
 
+  function stableLeadCreateHash(value){
+    let hash=2166136261;
+    for(const ch of String(value||'')){
+      hash^=ch.charCodeAt(0);
+      hash=Math.imul(hash,16777619);
+    }
+    return (hash>>>0).toString(36);
+  }
+
+  function leadCreateStableId(lead){
+    if(typeof buildLeadDedupKey!=='function')return '';
+    const key=buildLeadDedupKey(lead);
+    return key?`lead-manual-${stableLeadCreateHash(key)}`:'';
+  }
+
+  function earliestDuplicateLead(lead,rows=[]){
+    if(typeof buildLeadDedupKey!=='function')return null;
+    const key=buildLeadDedupKey(lead);
+    const matches=visibleLeadSourceRows(rows).filter(row=>buildLeadDedupKey(row)===key);
+    return matches.sort((a,b)=>
+      String(a.createdAt||a.leadDate||'').localeCompare(String(b.createdAt||b.leadDate||''))||
+      String(a.id||'').localeCompare(String(b.id||''))
+    )[0]||null;
+  }
+
+  async function findExistingDuplicateLead(lead){
+    if(!lead?.id)return null;
+    const byId=typeof get==='function'?await get(T_LEADS,lead.id).catch(()=>null):null;
+    if(byId&&!['merged','voided','deleted'].includes(cleanLeadText(byId.status)))return byId;
+    const rows=typeof scan==='function'?await scan(T_LEADS).catch(()=>[]):[];
+    return earliestDuplicateLead(lead,rows);
+  }
+
   function hiddenLeadSourceIds(rows=[]){
     return new Set((rows||[])
       .filter(row=>['merged','voided','deleted'].includes(cleanLeadText(row?.status)))
@@ -455,7 +488,11 @@ function createLeadsRoutes(deps={}){
       }
       if(method==='POST'){
         const now=new Date().toISOString();
-        const lead=normalizeLeadRecord({...body,createdAt:now,updatedAt:now},{now});
+        const draft=normalizeLeadRecord({...body,createdAt:now,updatedAt:now},{now});
+        const stableId=cleanLeadText(body.id)?'':leadCreateStableId(draft);
+        const lead=stableId?normalizeLeadRecord({...body,id:stableId,createdAt:now,updatedAt:now},{id:stableId,now}):draft;
+        const existing=await findExistingDuplicateLead(lead);
+        if(existing)return sendJson(res,{lead:existing,followup:null,duplicate:true});
         const materialized=await materializeLeadConversionIdentities(lead,{now});
         if(!materialized.changed)await put(T_LEADS,lead.id,lead);
         const followup=body.createInitialFollowup===false?null:buildLeadInitialFollowup(lead);

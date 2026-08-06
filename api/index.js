@@ -5966,7 +5966,14 @@ function mergeLeadRows(rows=[]){
   return applyLeadOutcomeFields(merged);
 }
 function mergeDuplicateLeadRows(rows=[]){
-  return (rows||[]).filter(row=>!['merged','voided','deleted'].includes(cleanLeadText(row?.status)));
+  const groups=new Map();
+  (rows||[]).filter(row=>!['merged','voided','deleted'].includes(cleanLeadText(row?.status))).forEach(row=>{
+    const key=buildLeadDedupKey(row);
+    const group=groups.get(key)||[];
+    group.push(row);
+    groups.set(key,group);
+  });
+  return [...groups.values()].map(mergeLeadRows).filter(Boolean);
 }
 function leadNameCandidates(lead){
   return [lead.displayName,lead.wechatName].map(cleanLeadText).filter(Boolean);
