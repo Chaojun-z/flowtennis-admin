@@ -27,18 +27,54 @@ jobs:
           if [ -n "${CRON_SECRET:-}" ]; then
             curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
           fi
-          if curl "${curl_args[@]}"; then
+
+          send_fallback_alert() {
+            reason="$1"
+            if [ -n "${FEISHU_MONITOR_WEBHOOK_URL:-}" ]; then
+              business_date="$(TZ=Asia/Shanghai date -d 'yesterday' +%F)"
+              curl -fsS -X POST "$FEISHU_MONITOR_WEBHOOK_URL" \
+                -H "Content-Type: application/json" \
+                -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"[网球兄弟] [场小二] FlowTennis 订场数据同步失败\\n数据日期：${business_date}\\n原因：${reason}\\n请打开管理后台第三方同步中心查看同步记录和需处理数据。\"}}" || true
+            fi
+          }
+
+          run_sync_once() {
+            response_file="$(mktemp)"
+            if ! curl "${curl_args[@]}" -o "$response_file"; then
+              rm -f "$response_file"
+              return 1
+            fi
+            cat "$response_file"
+            node - "$response_file" <<'NODE'
+          const fs = require('fs');
+          const file = process.argv[2];
+          let payload = {};
+          try {
+            payload = JSON.parse(fs.readFileSync(file, 'utf8') || '{}');
+          } catch (err) {
+            console.error('third party sync response is not JSON');
+            process.exit(2);
+          }
+          const notification = payload.notification || {};
+          const sent = notification.sent === true;
+          console.log(`notification sent=${sent} skipped=${notification.skipped === true} error=${notification.error || ''}`);
+          if (!sent) {
+            console.error(`third party sync notification not delivered: ${notification.error || (notification.skipped ? 'webhook missing' : 'unknown')}`);
+            process.exit(3);
+          }
+          NODE
+            local check_status=$?
+            rm -f "$response_file"
+            return "$check_status"
+          }
+
+          if run_sync_once; then
             exit 0
           fi
-          echo "third party sync failed, retrying after 1 hour..."
+          echo "third party sync or notification failed, retrying after 1 hour..."
           sleep 3600
-          if curl "${curl_args[@]}"; then
+          if run_sync_once; then
             exit 0
           fi
-          if [ -n "${FEISHU_MONITOR_WEBHOOK_URL:-}" ]; then
-            business_date="$(TZ=Asia/Shanghai date -d 'yesterday' +%F)"
-            curl -fsS -X POST "$FEISHU_MONITOR_WEBHOOK_URL" \
-              -H "Content-Type: application/json" \
-              -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"[网球兄弟] [场小二] FlowTennis 订场数据同步失败\\n数据日期：${business_date}\\n系统已自动重试 1 次仍失败，请打开管理后台第三方同步中心查看需处理数据。\"}}" || true
-          fi
+          send_fallback_alert "系统已自动重试 1 次仍失败，或飞书业务通知未送达"
           exit 1
