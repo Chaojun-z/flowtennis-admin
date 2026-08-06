@@ -463,6 +463,11 @@ assert.doesNotThrow(
   'small group bootcamp package should be a valid package-only small class product'
 );
 
+assert.doesNotThrow(
+  () => rules.validatePackageInput({ ...smallGroupBootcampPackage, timeBand: '全天' }, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
+  'small group bootcamp package should allow all-day availability'
+);
+
 for(const lessons of [10,20,12]){
   assert.doesNotThrow(
     () => rules.validatePackageInput({ ...smallGroupBootcampPackage, lessons }, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
@@ -494,7 +499,7 @@ assert.doesNotThrow(
 
 for(const smallClassPackage of [
   { ...smallGroupBootcampPackage, smallClassType: 'single', price: 199, lessons: 1, timeBand: '全天', fixedStudentCount: 0 },
-  { ...smallGroupBootcampPackage, smallClassType: 'bootcamp', price: 2888, lessons: 10 },
+  { ...smallGroupBootcampPackage, smallClassType: 'bootcamp', price: 2888, lessons: 10, timeBand: '全天' },
   { ...smallGroupBootcampPackage, smallClassType: 'dropin', price: 999, lessons: 6, timeBand: '全天', fixedStudentCount: 0, freeAbsenceLimit: 0 }
 ]){
   assert.doesNotThrow(

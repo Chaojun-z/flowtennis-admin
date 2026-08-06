@@ -129,6 +129,7 @@ assert.match(fnBody('openPackageModal'), /data-lessons="10"[\s\S]*10\$\{packageU
 assert.doesNotMatch(fnBody('openPackageModal'), /data-lessons="6"[\s\S]*6课时/, 'package modal should not force six lesson packages');
 assert.doesNotMatch(courseSource, /小班单次价格必须是 260 元|训练营价格必须是 1999 元|随到随学价格必须是 1499 元/, 'small group package prices should not be locked to preset amounts');
 assert.doesNotMatch(courseSource, /训练营固定 4 人|随到随学必须是 6 次/, 'small group package rules should not force bootcamp 1v4 or dropin 6-session packages');
+assert.doesNotMatch(courseSource, /训练营必须是黄金时段|训练营只能选黄金时段/, 'small group bootcamp package should not force golden time band');
 assert.match(fnBody('savePackage'), /freeAbsenceLimit[\s\S]*smallClassType==='bootcamp'\?1:0/, 'small group bootcamp package should persist one free absence');
 assert.match(fnBody('packageExperienceTypeLabel'), /p=p\|\|\{\}/, 'package experience label should tolerate creating a package without existing row data');
 assert.match(fnBody('openProductModal'), /p_experienceType/, 'course product modal should expose a second-level selector for experience courses');

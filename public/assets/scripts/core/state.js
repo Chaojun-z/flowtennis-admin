@@ -10,6 +10,7 @@ let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],e
 let thirdPartySyncCenterData={summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[]};
 let customerLifecycleRows=[];
 let teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+const studentDetailViewCache=new Map();
 let standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
@@ -578,12 +579,16 @@ function mergeDatasetRowsById(name,rows=[]){
 }
 function mergeTeachingStudentDetail(row){
   if(!row?.id)return;
+  studentDetailViewCache.set(String(row.id),row);
   const groups=['historicalStudents','activeStudents','courseStudents','trialStudents','formalStudents','trialAttendedStudents','trialAttendedToFormalPurchaseStudents','trialAttendedWithoutFormalStudents','trialPathStudents','trialPathDealStudents','trialPathPendingStudents','directCourseDealStudents'];
   groups.forEach(key=>{
     const list=Array.isArray(teachingStudentViews?.[key])?teachingStudentViews[key]:[];
     const index=list.findIndex(item=>String(item?.id||'')===String(row.id));
     if(index>=0)list[index]={...list[index],...row};
   });
+}
+function studentDetailViewForId(id){
+  return studentDetailViewCache.get(String(id||''))||null;
 }
 function hydratePurchaseDetailData(data={}){
   mergeDatasetRowsById('purchases',data.purchases||[]);
@@ -1121,7 +1126,7 @@ function clearLoadedData(){
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];financePrepaidView={rows:[],summary:{}};membershipFinanceSummary=null;operationsPageData=null;
   coachOpsUnifiedView={rows:[]};purchaseUnifiedView={rows:[]};packageUnifiedView={rows:[]};entitlementUnifiedView={rows:[]};
-  customerLifecycleRows=[];teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
+  customerLifecycleRows=[];teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};studentDetailViewCache.clear();standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   courtAccountListViewRequestKey='';
   packageBoardColumnOrder=[];

@@ -226,9 +226,6 @@ function createPackageRules(deps={}){
       const rule=smallGroupRuleSnapshot(pkg);
       if(!SMALL_CLASS_TYPES.includes(rule.smallClassType))throw new Error('请选择小班课类型');
       if(rule.smallClassType==='single'&&(parseInt(pkg.lessons)||0)!==1)throw new Error('小班单次必须是 1 次');
-      if(rule.smallClassType==='bootcamp'){
-        if(String(pkg.timeBand||'')!=='黄金时段')throw new Error('训练营必须是黄金时段');
-      }
     }
     if(pkg.saleStartDate&&pkg.saleEndDate&&pkg.saleEndDate<pkg.saleStartDate)throw new Error('活动结束时间不能早于活动开始时间');
     if(pkg.usageStartDate&&pkg.usageEndDate&&pkg.usageEndDate<pkg.usageStartDate)throw new Error('可用结束时间不能早于可用开始时间');

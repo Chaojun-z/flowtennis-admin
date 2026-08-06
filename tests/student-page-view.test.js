@@ -37,6 +37,7 @@ assert.match(source, /id="sch_stuSearch"/, 'schedule modal should provide a sear
 assert.match(source, /id="sch_selectedStudentTags"/, 'schedule modal should show selected students as removable tags');
 assert.doesNotMatch(source, /id="sch_stuName"[^>]*placeholder="选班次自动填入"/, 'schedule modal should not use free text student input as the formal selector');
 assert.match(source, /id="ent_auth_student" value=""><input class="finput tms-form-control" id="ent_auth_student_search" placeholder="搜索姓名 \/ 手机号"/, 'authorization modal should start with an empty searchable input');
+assert.match(source, /async function openEntitlementAuthorizationModal\([\s\S]*ensureStudentDetailData\(activeStudentId,\{force:true\}\)[\s\S]*studentDetailPackageRowForEntitlementId/, 'authorization modal should precisely reload one student before falling back to detail rows');
 assert.match(source, /function renderEntitlementAuthorizationStudentSuggestions\([\s\S]*<strong>\$\{esc\(stu\.name\|\|stu\.id\|\|''\)\}<\/strong>[\s\S]*<span>\$\{esc\(entitlementAuthorizationStudentMeta\(stu\)\|\|'-'\)\}<\/span>/, 'authorization modal should render the same searchable suggestion style as schedule selection');
 assert.match(source, /function entitlementAuthorizationSaveErrorText\([\s\S]*授权数据表还没准备好，请刷新页面后再试[\s\S]*return '授权保存失败，请稍后重试';/, 'authorization save errors should fall back to readable text');
 assert.match(source, /function getFilteredStudents\(/, 'student page should centralize filtered student list calculation');
@@ -352,8 +353,8 @@ assert.match(source, /function historicalImportedLessonUnitsForStudent\(/, 'stud
 assert.match(source, /STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\]/, 'student list should not automatically load heavy detail datasets after first paint');
 assert.match(source, /STUDENT_DETAIL_REQUIREMENTS=\[\]/, 'student detail should not block on static shared datasets');
 assert.match(source, /function ensureStudentDetailDatasets\(/, 'student detail should own the lazy detail loader');
-assert.match(source, /function studentDetailLocalRowsReady\([\s\S]*detailPackageOrderRows[\s\S]*detailLessonRecordRows[\s\S]*detailBenefitRows/, 'student detail should open from existing lightweight detail rows when they are already available');
-assert.match(fnBody('studentDetailDatasetsReady'), /detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/, 'student detail loader should skip the per-student request when local backend detail rows are ready');
+assert.match(source, /function studentDetailLocalRowsReady\([\s\S]*if\(tab==='orders'\)return false[\s\S]*detailBenefitRows/, 'student package tab should load precise single-student detail instead of trusting lightweight rows');
+assert.match(fnBody('studentDetailDatasetsReady'), /detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/, 'student detail loader should skip the per-student request only after precise detail is loaded or for safe local tabs');
 assert.match(fnBody('ensureStudentDetailDatasets'), /openStudentDetail\('\$\{id\}'\)[\s\S]*重试[\s\S]*renderDetailDrawerCard\('加载失败'/, 'student detail loading failure should render a retry state instead of staying in loading');
 assert.match(source, /ensureStudentDetailData\(id\)/, 'student detail should load heavy detail facts by student id instead of the full purchases aggregate');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggregateHistoricalMonthlyLedgerRows[\s\S]*function classScheduleSummaryHtml/, 'student consume history should show imported lesson rows one by one instead of monthly aggregation');

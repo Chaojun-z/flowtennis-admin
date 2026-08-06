@@ -23,13 +23,13 @@ assert.match(
 );
 assert.match(
   source,
-  /function studentDetailLocalRowsReady\([\s\S]*detailPackageOrderRows[\s\S]*detailLessonRecordRows[\s\S]*detailBenefitRows/,
-  'student package and benefit tabs should use existing lightweight detail rows before requesting detail data'
+  /function studentDetailLocalRowsReady\([\s\S]*if\(tab==='orders'\)return false[\s\S]*detailBenefitRows/,
+  'student package tab should request precise single-student detail instead of trusting lightweight rows'
 );
 assert.match(
   fnBody('studentDetailDatasetsReady'),
   /detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/,
-  'student detail should not call the per-student endpoint when the list row already has backend detail rows'
+  'student detail should skip the per-student endpoint only after precise detail is loaded or for safe local tabs'
 );
 assert.match(
   source,
@@ -50,6 +50,16 @@ assert.doesNotMatch(
   fnBody('saveStudent'),
   /ensureStudentDetailData\(savedEditId,\{force:true\}\)/,
   'student basic saves should not force-refresh package and lesson detail facts'
+);
+assert.match(
+  source,
+  /const studentDetailViewCache=new Map\(\);/,
+  'student detail hydration should keep precise drawer rows available even when the list row is lightweight'
+);
+assert.match(
+  fnBody('studentUnifiedRecordForId'),
+  /studentDetailViewForId\(sid\)[\s\S]*return detail\?\{\.\.\.\(base\|\|\{\}\),\.\.\.detail\}:base/,
+  'student detail should prefer the precise refreshed row over the lightweight list row'
 );
 assert.match(
   fnBody('saveStudent'),

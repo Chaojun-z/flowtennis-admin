@@ -75,9 +75,11 @@ function studentUnifiedViewRows({includeSearchIndex=false}={}){
 function studentUnifiedRecordForId(id){
   const sid=String(id||'');
   if(!sid)return null;
-  return studentUnifiedViewRows().find(row=>String(row.id||row.studentId||'')===sid)
+  const detail=typeof studentDetailViewForId==='function'?studentDetailViewForId(sid):null;
+  const base=studentUnifiedViewRows().find(row=>String(row.id||row.studentId||'')===sid)
     || students.find(row=>String(row.id||'')===sid)
     || null;
+  return detail?{...(base||{}),...detail}:base;
 }
 function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents();}
 function studentSourceOptions(){
@@ -944,8 +946,22 @@ async function saveStudentBenefit(studentId,mode,benefitCode){
     }
   });
 }
-function openEntitlementAuthorizationModal(entitlementId){
-  const ent=entitlements.find(row=>String(row.id||'')===String(entitlementId||''));
+async function openEntitlementAuthorizationModal(entitlementId){
+  let ent=entitlements.find(row=>String(row.id||'')===String(entitlementId||''));
+  if(!ent){
+    const activeStudentId=String(document.getElementById('overlay')?.dataset.studentDetailId||'').trim();
+    if(activeStudentId&&typeof ensureStudentDetailData==='function'){
+      try{await ensureStudentDetailData(activeStudentId,{force:true});}catch(e){console.error('student detail reload for authorization failed',e);}
+      ent=entitlements.find(row=>String(row.id||'')===String(entitlementId||''));
+    }
+  }
+  if(!ent){
+    const fallback=studentDetailPackageRowForEntitlementId(entitlementId);
+    if(fallback){
+      ent=fallback;
+      if(!entitlements.some(row=>String(row.id||'')===String(entitlementId||'')))entitlements.push(fallback);
+    }
+  }
   if(!ent){toast('课包不存在','warn');return;}
   const owner=students.find(stu=>String(stu.id||'')===String(ent.studentId||''))||{};
   if(!entitlementAuthorizationStudentRows(ent).length){toast('暂无可授权学员','warn');return;}
@@ -953,6 +969,17 @@ function openEntitlementAuthorizationModal(entitlementId){
   const body=`<div class="tms-section-header" style="margin-top:0;">授权信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课包所有人</label><input class="finput tms-form-control" value="${esc(owner.name||ent.studentName||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">被授权学员</label>${studentPicker}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="ent_auth_notes" placeholder="例如：弟弟使用哥哥课包"></textarea></div></div>`;
   const actions=`<button type="button" class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button type="button" class="tms-btn tms-btn-primary" id="entAuthSaveBtn" onclick="saveEntitlementAuthorization(${jsArg(entitlementId)})">保存授权</button>`;
   openStandardModal({title:'授权课包给其他学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight modal-entitlement-auth'});
+}
+function studentDetailPackageRowForEntitlementId(entitlementId){
+  const id=String(entitlementId||'');
+  if(!id)return null;
+  const activeStudentId=String(document.getElementById('overlay')?.dataset.studentDetailId||'').trim();
+  const rows=[studentUnifiedRecordForId(activeStudentId),...studentUnifiedViewRows()].filter(Boolean);
+  for(const stu of rows){
+    const row=(Array.isArray(stu.detailPackageOrderRows)?stu.detailPackageOrderRows:[]).find(item=>String(item?.entitlementId||'')===id);
+    if(row)return {...row,id,studentId:row.studentId||stu.id||stu.studentId||'',studentName:row.studentName||stu.name||''};
+  }
+  return null;
 }
 function entitlementAuthorizationStudentRows(entitlement){
   const ownerId=String(entitlement?.studentId||'');
@@ -1305,7 +1332,7 @@ function studentDetailDatasetsReady(id){
 function studentDetailLocalRowsReady(id,tab=studentDetailActiveTab){
   const s=studentUnifiedRecordForId(id);
   if(!s)return false;
-  if(tab==='orders')return Array.isArray(s.detailPackageOrderRows)&&Array.isArray(s.detailLessonRecordRows);
+  if(tab==='orders')return false;
   if(tab==='benefits')return Array.isArray(s.detailBenefitRows)&&Array.isArray(s.detailBenefitGrantRows)&&Array.isArray(s.detailBenefitConsumeRows);
   return true;
 }
