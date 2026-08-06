@@ -16,6 +16,14 @@ function restoreEditingScheduleEntitlementRowsForRecommendation(entitlements=[],
   return [...rows.values()];
 }
 
+function normalizePurchaseBusinessKey(value){
+  return String(value||'').trim().slice(0,512);
+}
+
+function purchaseBusinessKey(row={}){
+  return normalizePurchaseBusinessKey(row.businessKey||row.sourceBusinessKey||row.idempotencyKey);
+}
+
 function createPurchaseEntitlementRoutes(deps={}){
   const {
     init,sendJson,getCachedScan,getCachedRow,get,scan,put,del,mkTable,filterLoadAllForUser,uuidv4,
@@ -220,6 +228,16 @@ function createPurchaseEntitlementRoutes(deps={}){
         if(!student)return sendJson(res,{error:'学员不存在'},404);
         const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);
         validatePurchaseInputForPackage(pkg,{...body,purchaseDate});
+        const businessKey=normalizePurchaseBusinessKey(body.businessKey||body.sourceBusinessKey||body.idempotencyKey);
+        if(businessKey){
+          const existingRows=await getCachedScan(T_PURCHASES).catch(()=>[]);
+          const existing=(existingRows||[]).find(row=>purchaseBusinessKey(row)===businessKey&&String(row.status||'active')!=='voided');
+          if(existing){
+            const existingEntitlements=(await getCachedScan(T_ENTITLEMENTS).catch(()=>[])).filter(row=>String(row.purchaseId||'')===String(existing.id||''));
+            return sendJson(res,{purchase:existing,entitlement:existingEntitlements[0]||null,entitlements:existingEntitlements,idempotent:true});
+          }
+          body={...body,businessKey,sourceBusinessKey:businessKey};
+        }
         const id=nextUuid();
         const now=new Date().toISOString();
         const operationTrace=buildOperationTrace({operationType:'package-purchase',operator:user.name||body.operator||'',now});

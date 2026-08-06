@@ -1704,7 +1704,11 @@ async function ensureTrialEntitlement(candidate,{entitlements=[],packages=[],pur
     purchaseDate:String(candidate.startTime||'').slice(0,10),
     amountPaid:candidate.course.experienceType==='青少年'?199:239,
     payMethod:'大众点评券码',
-    operator:'飞书同步'
+    operator:'飞书同步',
+    businessKey:['feishu-trial-package',candidate.sourceKey,student.id,pkg.id].map(cleanText).join('|'),
+    sourceBusinessKey:['feishu-trial-package',candidate.sourceKey,student.id,pkg.id].map(cleanText).join('|'),
+    sourceType:'feishu-schedule-sync',
+    sourceKey:candidate.sourceKey||''
   });
   return {entitlement:purchase?.entitlement||null,purchase:purchase?.purchase||null};
 }
