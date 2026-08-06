@@ -887,6 +887,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('entitlements');
       staleCachedDatasets.delete('customerLifecycleRows');
+      staleCachedDatasets.delete('packageCenterPage');
       markDatasetLoaded('packageCenterPage',requestKey);
       return;
     }
@@ -897,6 +898,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('packages');
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('coaches');
+      staleCachedDatasets.delete('purchaseCreatePage');
       markDatasetLoaded('purchaseCreatePage',requestKey);
       return;
     }
@@ -920,6 +922,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('entitlementLedger');
       staleCachedDatasets.delete('membershipBenefitLedger');
       staleCachedDatasets.delete('customerLifecycleRows');
+      staleCachedDatasets.delete('purchasesPage');
       markDatasetLoaded('purchasesPage',requestKey);
       return;
     }
@@ -928,6 +931,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
       staleCachedDatasets.delete('customerLifecycleRows');
+      staleCachedDatasets.delete('customerCenterPage');
       markDatasetLoaded('customerCenterPage',requestKey);
       return;
     }
@@ -936,6 +940,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
       staleCachedDatasets.delete('customerLifecycleRows');
+      staleCachedDatasets.delete('lifecycleMetricsPage');
       markDatasetLoaded('lifecycleMetricsPage',requestKey);
       return;
     }

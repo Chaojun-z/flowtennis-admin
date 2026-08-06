@@ -46,7 +46,7 @@ assert.match(
 
 assert.match(
   indexHtml,
-  /coachops\.js\?v=20260802-course-colors-coachschedule-v1/,
+  /coachops\.js\?v=20260806-coachschedule-date-range-v1/,
   'coach schedule month calendar JS version should force a fresh browser load'
 );
 

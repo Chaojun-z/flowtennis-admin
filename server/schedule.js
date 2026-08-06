@@ -4,13 +4,21 @@ function parseLessonValue(v,fallback=0){
   return Number.isFinite(n)?n:fallback;
 }
 function dateMs(v){if(!v)return NaN;if(v instanceof Date)return v.getTime();return new Date(String(v).replace(' ','T')).getTime();}
+function scheduleBusinessTimeMs(v){
+  if(!v)return NaN;
+  if(v instanceof Date)return v.getTime();
+  const raw=String(v).trim();
+  const match=raw.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(match)return new Date(`${match[1]}T${String(match[2]).padStart(2,'0')}:${match[3]}:${match[4]||'00'}`).getTime();
+  return dateMs(v);
+}
 function normalizeVenue(v){
   const raw=String(v||'').trim();
   const m=raw.match(/([1-4])\s*号场/);
   return m?`${m[1]}号场`:raw;
 }
 function rangesOverlap(aStart,aEnd,bStart,bEnd){
-  const as=dateMs(aStart),ae=dateMs(aEnd),bs=dateMs(bStart),be=dateMs(bEnd);
+  const as=scheduleBusinessTimeMs(aStart),ae=scheduleBusinessTimeMs(aEnd),bs=scheduleBusinessTimeMs(bStart),be=scheduleBusinessTimeMs(bEnd);
   if(!Number.isFinite(as)||!Number.isFinite(ae)||!Number.isFinite(bs)||!Number.isFinite(be))return false;
   return as<be&&bs<ae;
 }
@@ -89,6 +97,7 @@ function validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampus
   if(dateMs(candidate.endTime)<=dateMs(candidate.startTime))throw new Error('下课时间不能早于上课时间');
   for(const rec of schedules||[]){
     if(!rec||rec.id===(excludeId||candidate.id)||!isBillableSchedule(rec))continue;
+    if(String(candidate.startTime).slice(0,10)!==String(rec.startTime||'').slice(0,10))continue;
     if(!rangesOverlap(candidate.startTime,candidate.endTime,rec.startTime,rec.endTime))continue;
     if(candidate.coach&&rec.coach&&candidate.coach===rec.coach)throw new Error(`教练「${candidate.coach}」此时间已有课程`);
     const candidateVenue=normalizeVenue(candidate.venue);

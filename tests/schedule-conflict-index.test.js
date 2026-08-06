@@ -41,6 +41,59 @@ assert.throws(
   /场地「3号场」此时间已被占用/,
   'indexed venue rows should still block overlapping court usage'
 );
+assert.doesNotThrow(
+  () => validateScheduleConflicts(
+    {
+      id: 'sch-today-visible-free',
+      status: '已排课',
+      startTime: '2026-08-06 07:00',
+      endTime: '2026-08-06 08:30',
+      coach: '杨教练',
+      studentIds: ['stu-today'],
+      campus: 'shunyi_mapo',
+      venue: '2号场'
+    },
+    [{
+      id: 'sch-prev-night-iso',
+      status: '已排课',
+      startTime: '2026-08-05T23:00:00.000Z',
+      endTime: '2026-08-06T00:30:00.000Z',
+      coach: '杨教练',
+      studentIds: ['stu-prev'],
+      campus: 'shunyi_mapo',
+      venue: '2号场'
+    }],
+    'sch-today-visible-free'
+  ),
+  'previous business-date ISO schedule must not block a visibly empty selected day'
+);
+assert.throws(
+  () => validateScheduleConflicts(
+    {
+      id: 'sch-same-day-candidate',
+      status: '已排课',
+      startTime: '2026-08-06 16:00',
+      endTime: '2026-08-06 17:30',
+      coach: '杨教练',
+      studentIds: ['stu-new'],
+      campus: 'shunyi_mapo',
+      venue: '1号场'
+    },
+    [{
+      id: 'sch-same-day-iso',
+      status: '已排课',
+      startTime: '2026-08-06T16:00:00.000Z',
+      endTime: '2026-08-06T17:30:00.000Z',
+      coach: '杨教练',
+      studentIds: ['stu-old'],
+      campus: 'shunyi_mapo',
+      venue: '4号场'
+    }],
+    'sch-same-day-candidate'
+  ),
+  /教练「杨教练」此时间已有课程/,
+  'same business-date ISO schedule should still block the same coach and time'
+);
 
 const moved = { ...existing, venue: '1号场' };
 assert.deepStrictEqual(

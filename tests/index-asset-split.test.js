@@ -28,7 +28,7 @@ assert.match(html, /assets\/scripts\/pages\/purchases\.js/, 'index.html should l
 assert.match(html, /assets\/scripts\/pages\/entitlements\.js/, 'index.html should load entitlements page module');
 assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html should load coach-portal page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
-assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260802-course-colors-coachschedule-v1/, 'index.html should version coachops.js after coach calendar time buffer polish');
+assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260806-coachschedule-date-range-v1/, 'index.html should version coachops.js after coach calendar date-range fix');
 assert.match(html, /assets\/scripts\/standard\/charts\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached charts.js after channel quality matrix changes');
 assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached operations.js after channel quality matrix changes');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');

@@ -47,6 +47,8 @@ assert.match(source, /function isPurchaseCreateLoadingActive\(token,studentId=''
 assert.match(openPurchaseCreateLoadingDrawer, /课包数据加载中/, 'purchase create loading drawer should make the click visibly respond');
 assert.match(openPurchaseCreateLoadingDrawer, /purchaseCreateLoadToken:loadToken\|\|''/, 'purchase create loading drawer should stamp the active async load');
 assert.match(openPurchaseCreateErrorDrawer, /openPurchaseModal\(\$\{jsArg\(studentId\)\}\)[\s\S]*重试/, 'purchase create load failure should keep a retry action in the drawer');
+assert.match(source, /if\(name==='purchaseCreatePage'\)\{[\s\S]*staleCachedDatasets\.delete\('purchaseCreatePage'\)[\s\S]*markDatasetLoaded\('purchaseCreatePage',requestKey\)/, 'purchase create refresh should clear its own stale marker after a successful load');
+assert.match(source, /if\(name==='packageCenterPage'\)\{[\s\S]*staleCachedDatasets\.delete\('packageCenterPage'\)[\s\S]*markDatasetLoaded\('packageCenterPage',requestKey\)/, 'package center refresh should clear its own stale marker so purchase create can reuse it');
 assert.match(ensureFullPurchaseData, /ensurePurchaseDetailData\(id\)/, 'purchase detail should load one purchase detail by id');
 assert.doesNotMatch(openPurchaseDetailModal, /purchasesPage/, 'purchase detail drawer must not load the full purchases aggregate');
 assert.doesNotMatch(openPurchaseEditModal, /purchasesPage/, 'purchase edit drawer must not load the full purchases aggregate');

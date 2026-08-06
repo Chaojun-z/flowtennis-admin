@@ -1,11 +1,28 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.join(__dirname, '..');
 const coachopsSource = fs.readFileSync(path.join(root, 'public/assets/scripts/pages/coachops.js'), 'utf8');
 const scheduleSource = fs.readFileSync(path.join(root, 'public/assets/scripts/pages/schedule.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(root, 'public/assets/styles/pages.css'), 'utf8');
+const coachopsRuntime = {
+  localStorage: { getItem: () => '', setItem: () => {}, removeItem: () => {} },
+  console,
+  Date,
+  Number,
+  String,
+  Math,
+  Array,
+  Map,
+  Set,
+  RegExp,
+  dateKey: d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+  sameCampusValue: (a, b) => String(a || '') === String(b || ''),
+  campus: 'all'
+};
+vm.runInNewContext(coachopsSource, coachopsRuntime);
 
 assert.match(
   scheduleSource,
@@ -33,6 +50,17 @@ assert.match(
   /Array\.from\(\{length:opsTotalMin\/30\+1\}/,
   'day view should render half-hour time labels'
 );
+assert.strictEqual(
+  coachopsRuntime.coachOpsScheduleInRange(
+    { id: 'prev-night', date: '2026-08-05', startTime: '2026-08-05T23:00:00.000Z', endTime: '2026-08-06T00:30:00.000Z', startMs: Date.parse('2026-08-05T23:00:00.000Z') },
+    { start: new Date('2026-08-06T00:00:00'), end: new Date('2026-08-07T00:00:00') }
+  ),
+  false,
+  'day calendar must not pull previous business-date ISO schedules into the selected day by startMs'
+);
+const isoMinuteOffsets = coachopsRuntime.coachOpsScheduleMinuteOffsets({ startTime: '2026-08-06T16:00:00.000Z', endTime: '2026-08-06T17:30:00.000Z' }, 7);
+assert.strictEqual(isoMinuteOffsets.startMin, 540, 'day calendar block start should use the displayed business clock instead of timezone-shifted milliseconds');
+assert.strictEqual(isoMinuteOffsets.endMin, 630, 'day calendar block end should use the displayed business clock instead of timezone-shifted milliseconds');
 assert.match(
   pagesCss,
   /coach-ops-day-coach-grid\{[\s\S]*transparent 28px/,

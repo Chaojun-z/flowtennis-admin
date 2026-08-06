@@ -57,5 +57,15 @@ assert.deepStrictEqual(
   'coach calendar should keep both schedules under the standard coach name'
 );
 assert.deepStrictEqual(riveRows[0].rows.map(row => row.id), ['sch-rive-alias']);
+assert.strictEqual(
+  Object.prototype.hasOwnProperty.call(sirenRows[0].rows[0], 'startMs'),
+  false,
+  'coach calendar read model must not expose timezone-shifted startMs'
+);
+assert.strictEqual(
+  Object.prototype.hasOwnProperty.call(sirenRows[0].rows[0], 'endMs'),
+  false,
+  'coach calendar read model must not expose timezone-shifted endMs'
+);
 
 console.log('coach ops coach name normalization tests passed');

@@ -35,7 +35,8 @@ function monthKey(value) {
 }
 
 function localDate(value) {
-  const parsed = new Date(text(value).replace(' ', 'T'));
+  const raw = text(value);
+  const parsed = new Date(`${raw.slice(0, 10)}T00:00:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -221,8 +222,6 @@ function buildCoachOpsUnifiedView({ coaches = [], schedule = [], feedbacks = [],
       coachDisplayName: coachDisplayName(row.coach || row.coachName || row.primaryCoach || row.teacher) || '未分配',
       date: dateKey(row.startTime),
       month: monthKey(row.startTime),
-      startMs: Date.parse(text(row.startTime).replace(' ', 'T')),
-      endMs: Date.parse(text(row.endTime).replace(' ', 'T')),
       lessonUnits: lessonUnits(row),
       courseType: courseTypeText(row),
       campusName: row.locationType === 'external' ? text(row.externalVenueName || '外部场馆') : scheduleCampusText(row, campuses),

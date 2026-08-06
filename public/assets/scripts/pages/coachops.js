@@ -294,7 +294,10 @@ function coachOpsCampusMatchesSchedule(s){
   if(campus==='all')return true;
   return sameCampusValue(s?.campus,campus);
 }
-function coachOpsScheduleInRange(s,range){const start=Number(s?.startMs);return Number.isFinite(start)?start>=range.start.getTime()&&start<range.end.getTime():inRange(s.startTime,range.start,range.end);}
+function coachOpsScheduleDateKey(s){return String(s?.date||s?.startTime||'').slice(0,10);}
+function coachOpsScheduleInRange(s,range){const key=coachOpsScheduleDateKey(s);return !!key&&key>=dateKey(range.start)&&key<dateKey(range.end);}
+function coachOpsScheduleClockMinutes(value){const match=String(value||'').trim().match(/(?:^|[T\s])(\d{1,2}):(\d{2})/);if(!match)return NaN;const h=Number(match[1]),m=Number(match[2]);return Number.isFinite(h)&&Number.isFinite(m)?h*60+m:NaN;}
+function coachOpsScheduleMinuteOffsets(s,opsStartH){const start=coachOpsScheduleClockMinutes(s?.startTime);let end=coachOpsScheduleClockMinutes(s?.endTime);if(!Number.isFinite(start))return {startMin:0,endMin:60};if(!Number.isFinite(end)||end<=start)end=start+60;return {startMin:start-opsStartH*60,endMin:end-opsStartH*60};}
 function renderCoachOpsTopFilters(){
   const campusSource=typeof accessibleCampusRows==='function'?accessibleCampusRows():(Array.isArray(campuses)?campuses:[]);
   const campusOpts=[{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
@@ -497,10 +500,8 @@ function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalM
         const height=Math.max(18,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_WEEK_HOUR_HEIGHT);
         return `<span class="coach-ops-create-preview" style="top:${top}px;height:${height}px"></span>`;
       })():'';
-      const blocks=row.rangeRows.filter(s=>String(s.startTime||'').slice(0,10)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
-        const startMin=(dateMs(s.startTime)-base.getTime())/60000;
-        const endMs=Number.isFinite(dateMs(s.endTime))?dateMs(s.endTime):dateMs(s.startTime)+60*60000;
-        const endMin=(endMs-base.getTime())/60000;
+      const blocks=row.rangeRows.filter(s=>coachOpsScheduleDateKey(s)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
+        const {startMin,endMin}=coachOpsScheduleMinuteOffsets(s,opsStartH);
         const top=bufferH+Math.max(0,startMin/60*COACH_OPS_WEEK_HOUR_HEIGHT);
         const height=Math.max(28,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_WEEK_HOUR_HEIGHT-4);
         const durationText=coachOpsDurationBadgeText(s);
@@ -599,7 +600,7 @@ function coachOpsRows(){
     .filter(row=>!coachOpsSelectedCoach||coachOpsRowDisplayName(row)===coachName(coachOpsSelectedCoach))
     .map(row=>{
       const rangeRows=(row.rows||[]).filter(s=>coachOpsCampusMatchesSchedule(s)&&coachOpsScheduleInRange(s,range));
-      const rangeRowsByDate=new Map();rangeRows.forEach(s=>{const key=String(s.startTime||'').slice(0,10),list=rangeRowsByDate.get(key)||[];list.push(s);rangeRowsByDate.set(key,list);});
+      const rangeRowsByDate=new Map();rangeRows.forEach(s=>{const key=coachOpsScheduleDateKey(s),list=rangeRowsByDate.get(key)||[];list.push(s);rangeRowsByDate.set(key,list);});
       const summary=coachOpsSummaryForRange(row,range);
       return {
         ...row,
@@ -790,9 +791,7 @@ function renderCoachOps(){if(currentPage!=='coachschedule'&&currentPage!=='coach
           return `<span class="coach-ops-create-preview" style="top:${top}px;height:${height}px"></span>`;
         })():'';
         const blocks=row.rangeRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
-          const startMin=(dateMs(s.startTime)-base.getTime())/60000;
-          const endMs=Number.isFinite(dateMs(s.endTime))?dateMs(s.endTime):dateMs(s.startTime)+60*60000;
-          const endMin=(endMs-base.getTime())/60000;
+          const {startMin,endMin}=coachOpsScheduleMinuteOffsets(s,opsStartH);
           const top=bufferH+Math.max(0,startMin/60*COACH_OPS_DAY_HOUR_HEIGHT);
           const height=Math.max(34,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_DAY_HOUR_HEIGHT-4);
           return `<div class="coach-ops-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="top:${top+2}px;height:${height}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time"><span class="coach-ops-card-dot"></span>${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="coach-ops-student">${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
