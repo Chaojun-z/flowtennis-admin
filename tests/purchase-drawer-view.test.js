@@ -28,6 +28,8 @@ const openPurchaseVoidModal = fnBody('openPurchaseVoidModal');
 const openManualEntitlementAdjustModal = fnBody('openManualEntitlementAdjustModal');
 const ensureFullPurchaseData = fnBody('ensureFullPurchaseData');
 const savePurchase = fnBody('savePurchase');
+const savePurchaseEdit = fnBody('savePurchaseEdit');
+const voidPurchase = fnBody('voidPurchase');
 
 assert.match(renderPurchases, /openPurchaseDetailModal\('\$\{p\.id\}'\)">查看/, 'purchase list should keep a view action');
 assert.match(renderPurchases, /openPurchaseVoidModal\('\$\{p\.id\}'\)">作废/, 'purchase list should keep a void action');
@@ -86,6 +88,12 @@ assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_packageId_dropdown[\s\S]*
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_edit_packageId_dropdown[\s\S]*font-size:10px/, 'purchase edit package dropdown should use smaller text for long package names');
 assert.match(savePurchase, /Promise\.all\(\[[\s\S]*ensureDatasetsByName\(\['purchaseCreatePage'\],\{force:true\}\)[\s\S]*ensureStudentDetailData\(savedStudentId,\{force:true\}\)/, 'purchase save should refresh create data and the current student detail before closing');
 assert.match(savePurchase, /ensureDatasetsByName\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage'\],\{force:true\}\)\.then/, 'purchase save should refresh slow list and metric models in the background');
+assert.match(savePurchaseEdit, /refreshStudentDetailDataAfterMutation\(savedStudentId\)/, 'purchase edit should synchronously refresh only the edited student detail');
+assert.doesNotMatch(savePurchaseEdit, /await ensureDatasetsByName\(\['packageCenterPage','customerCenterPage'\],\{force:true\}\)/, 'purchase edit should not wait for slow global read models');
+assert.match(savePurchaseEdit, /refreshReadModelsInBackground\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'\]/, 'purchase edit should refresh global read models in the background');
+assert.match(voidPurchase, /refreshStudentDetailDataAfterMutation\(savedStudentId\)/, 'purchase void should synchronously refresh only the affected student detail');
+assert.doesNotMatch(voidPurchase, /await ensureDatasetsByName\(\['packageCenterPage','customerCenterPage'\],\{force:true\}\)/, 'purchase void should not wait for slow global read models');
+assert.match(voidPurchase, /refreshReadModelsInBackground\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'\]/, 'purchase void should refresh global read models in the background');
 assert.match(savePurchase, /giftLessons:parseFloat\(document\.getElementById\('pur_giftLessons'\)\?\.value\)\|\|0/, 'purchase save should submit gifted lesson count');
 assert.match(savePurchase, /courtBookingGiftCount:parseInt\(document\.getElementById\('pur_courtBookingGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit booking benefit gifts');
 assert.match(savePurchase, /ballMachineGiftCount:parseInt\(document\.getElementById\('pur_ballMachineGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit ball-machine benefit gifts');

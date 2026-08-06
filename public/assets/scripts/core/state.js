@@ -649,6 +649,28 @@ function markStudentDetailDataStale(studentId){
   if(!id)return;
   loadedStudentDetailIds.delete(id);
 }
+const STUDENT_DRAWER_MUTATION_READ_MODELS=['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'];
+function markReadModelsStale(names=STUDENT_DRAWER_MUTATION_READ_MODELS){
+  (Array.isArray(names)?names:[]).filter(Boolean).forEach(name=>{
+    staleCachedDatasets.add(name);
+    loadedDatasets.delete(name);
+    loadedDatasetRequestKeys.delete(name);
+  });
+}
+function refreshReadModelsInBackground(names=STUDENT_DRAWER_MUTATION_READ_MODELS,label='read model refresh',after){
+  const targets=(Array.isArray(names)?names:[]).filter(Boolean);
+  if(!targets.length)return;
+  markReadModelsStale(targets);
+  ensureDatasetsByName(targets,{force:true}).then(()=>{
+    if(typeof after==='function')after();
+  }).catch(e=>console.warn(label,e));
+}
+async function refreshStudentDetailDataAfterMutation(studentId){
+  const id=String(studentId||'').trim();
+  if(!id)return false;
+  markStudentDetailDataStale(id);
+  return ensureStudentDetailData(id,{force:true});
+}
 function leadFollowupsDetailReady(leadId){
   return loadedLeadFollowupDetailIds.has(String(leadId||'').trim());
 }

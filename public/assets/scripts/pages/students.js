@@ -937,19 +937,26 @@ async function saveStudentBenefit(studentId,mode,benefitCode){
     const r=await apiCall('POST','/membership-benefit-ledger',data);
     const rows=Array.isArray(r?.records)?r.records:[r];
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
+    if(typeof markReadModelsStale==='function')markReadModelsStale();
   },{
     successText:'学员权益已保存',
     refresh:async()=>{
-      await ensureDatasetsByName(['lifecycleMetricsPage'],{force:true});
+      if(typeof refreshStudentDetailDataAfterMutation==='function')await refreshStudentDetailDataAfterMutation(studentId);
       renderStudents();
+      studentDetailActiveTab='benefits';
       openStudentDetail(studentId);
+      if(typeof refreshReadModelsInBackground==='function'){
+        refreshReadModelsInBackground(['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'],'student benefit background refresh',()=>{
+          renderStudents();
+        });
+      }
     }
   });
 }
 async function openEntitlementAuthorizationModal(entitlementId){
+  const activeStudentId=String(document.getElementById('overlay')?.dataset.studentDetailId||'').trim();
   let ent=entitlements.find(row=>String(row.id||'')===String(entitlementId||''));
   if(!ent){
-    const activeStudentId=String(document.getElementById('overlay')?.dataset.studentDetailId||'').trim();
     if(activeStudentId&&typeof ensureStudentDetailData==='function'){
       try{await ensureStudentDetailData(activeStudentId,{force:true});}catch(e){console.error('student detail reload for authorization failed',e);}
       ent=entitlements.find(row=>String(row.id||'')===String(entitlementId||''));
@@ -968,7 +975,7 @@ async function openEntitlementAuthorizationModal(entitlementId){
   const studentPicker=`<input type="hidden" id="ent_auth_student" value=""><input class="finput tms-form-control" id="ent_auth_student_search" placeholder="搜索姓名 / 手机号" oninput="updateEntitlementAuthorizationStudentSearch(${jsArg(entitlementId)})" autocomplete="off"><div id="ent_auth_student_suggest" class="schedule-student-suggest"></div>`;
   const body=`<div class="tms-section-header" style="margin-top:0;">授权信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课包所有人</label><input class="finput tms-form-control" value="${esc(owner.name||ent.studentName||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">被授权学员</label>${studentPicker}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="ent_auth_notes" placeholder="例如：弟弟使用哥哥课包"></textarea></div></div>`;
   const actions=`<button type="button" class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button type="button" class="tms-btn tms-btn-primary" id="entAuthSaveBtn" onclick="saveEntitlementAuthorization(${jsArg(entitlementId)})">保存授权</button>`;
-  openStandardModal({title:'授权课包给其他学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight modal-entitlement-auth'});
+  openStandardModal({title:'授权课包给其他学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight modal-entitlement-auth',data:{studentDetailId:activeStudentId||ent.studentId||''}});
 }
 function studentDetailPackageRowForEntitlementId(entitlementId){
   const id=String(entitlementId||'');
@@ -1016,12 +1023,25 @@ function selectEntitlementAuthorizationStudent(studentId){
   if(suggest)suggest.innerHTML='';
 }
 async function saveEntitlementAuthorization(entitlementId){
+  const currentStudentId=String(document.getElementById('overlay')?.dataset.studentDetailId||entitlements.find(row=>String(row.id||'')===String(entitlementId||''))?.studentId||'').trim();
   const authorizedStudentId=document.getElementById('ent_auth_student')?.value||'';
   if(!authorizedStudentId){toast('请先搜索并选择被授权学员','warn');return;}
   const notes=document.getElementById('ent_auth_notes')?.value.trim()||'';
-  const result=await runStandardMutation('entAuthSaveBtn',()=>apiCall('POST','/entitlement-authorizations',{entitlementId,authorizedStudentId,notes}),{loadingText:'保存中...',formatError:entitlementAuthorizationSaveErrorText});
+  const result=await runStandardMutation('entAuthSaveBtn',async()=>{
+    const saved=await apiCall('POST','/entitlement-authorizations',{entitlementId,authorizedStudentId,notes});
+    if(typeof markReadModelsStale==='function')markReadModelsStale(['packageCenterPage','customerCenterPage','purchasesPage']);
+    return saved;
+  },{loadingText:'保存中...',formatError:entitlementAuthorizationSaveErrorText});
   if(!result)return;
+  if(currentStudentId&&typeof refreshStudentDetailDataAfterMutation==='function')await refreshStudentDetailDataAfterMutation(currentStudentId);
   closeModal();
+  if(currentStudentId){
+    studentDetailActiveTab='orders';
+    openStudentDetail(currentStudentId);
+  }
+  if(typeof refreshReadModelsInBackground==='function'){
+    refreshReadModelsInBackground(['packageCenterPage','customerCenterPage','purchasesPage'],'entitlement authorization background refresh');
+  }
   toast('授权已保存','success');
 }
 function entitlementAuthorizationSaveErrorText(error){

@@ -33,6 +33,9 @@ assert.match(source, /const STUDENT_DETAIL_REQUIREMENTS=\[\];/, 'student detail 
 assert.match(studentsSource, /function ensureStudentDetailDatasets\(/, 'student detail should have a lazy detail data loader');
 assert.match(studentsSource, /ensureStudentDetailData\(id\)/, 'student detail should load one student detail record by id when the drawer opens');
 assert.match(source, /function markStudentDetailDataStale\(studentId\)/, 'student detail should support invalidating one student after a package mutation');
+assert.match(source, /function markReadModelsStale\(names=STUDENT_DRAWER_MUTATION_READ_MODELS\)/, 'student drawer mutations should be able to stale global read models without clearing detail caches');
+assert.match(source, /function refreshReadModelsInBackground\(names=STUDENT_DRAWER_MUTATION_READ_MODELS[\s\S]*ensureDatasetsByName\(targets,\{force:true\}\)\.then/, 'student drawer mutations should refresh global read models in the background');
+assert.match(source, /async function refreshStudentDetailDataAfterMutation\(studentId\)[\s\S]*markStudentDetailDataStale\(id\)[\s\S]*ensureStudentDetailData\(id,\{force:true\}\)/, 'student drawer mutations should refresh only one student detail synchronously');
 assert.match(source, /function ensurePurchaseDetailData\(purchaseId/, 'purchase detail should have a per-purchase detail loader');
 assert.match(source, /\/page-data\/purchase-detail\?id=/, 'purchase detail loader should call the per-purchase endpoint');
 assert.match(source, /,purchaseCreatePage:\(\)=>apiCall\('GET','\/page-data\/purchase-create',null,20000\)/, 'purchase create drawer should use a lightweight create endpoint with a shorter timeout');

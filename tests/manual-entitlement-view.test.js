@@ -81,8 +81,20 @@ assert.match(
 
 assert.match(
   fnBody('saveManualEntitlementAdjust'),
-  /loadedDatasets\.delete\('financePage'\)/,
-  'manual lesson adjustment should invalidate finance snapshot data'
+  /markReadModelsStale\(\)/,
+  'manual lesson adjustment should mark global read models stale without clearing student detail data'
+);
+
+assert.match(
+  fnBody('saveManualEntitlementAdjust'),
+  /refreshStudentDetailDataAfterMutation\(savedStudentId\)/,
+  'manual lesson adjustment should refresh the affected student detail from the backend'
+);
+
+assert.match(
+  fnBody('saveManualEntitlementAdjust'),
+  /refreshReadModelsInBackground\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'\]/,
+  'manual lesson adjustment should refresh global read models in the background'
 );
 
 assert.match(

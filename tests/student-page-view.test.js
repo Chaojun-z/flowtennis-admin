@@ -38,8 +38,11 @@ assert.match(source, /id="sch_selectedStudentTags"/, 'schedule modal should show
 assert.doesNotMatch(source, /id="sch_stuName"[^>]*placeholder="选班次自动填入"/, 'schedule modal should not use free text student input as the formal selector');
 assert.match(source, /id="ent_auth_student" value=""><input class="finput tms-form-control" id="ent_auth_student_search" placeholder="搜索姓名 \/ 手机号"/, 'authorization modal should start with an empty searchable input');
 assert.match(source, /async function openEntitlementAuthorizationModal\([\s\S]*ensureStudentDetailData\(activeStudentId,\{force:true\}\)[\s\S]*studentDetailPackageRowForEntitlementId/, 'authorization modal should precisely reload one student before falling back to detail rows');
+assert.match(fnBody('openEntitlementAuthorizationModal'), /data:\{studentDetailId:activeStudentId\|\|ent\.studentId\|\|''\}/, 'authorization modal should preserve the current student id for post-save refresh');
 assert.match(source, /function renderEntitlementAuthorizationStudentSuggestions\([\s\S]*<strong>\$\{esc\(stu\.name\|\|stu\.id\|\|''\)\}<\/strong>[\s\S]*<span>\$\{esc\(entitlementAuthorizationStudentMeta\(stu\)\|\|'-'\)\}<\/span>/, 'authorization modal should render the same searchable suggestion style as schedule selection');
 assert.match(source, /function entitlementAuthorizationSaveErrorText\([\s\S]*授权数据表还没准备好，请刷新页面后再试[\s\S]*return '授权保存失败，请稍后重试';/, 'authorization save errors should fall back to readable text');
+assert.match(fnBody('saveEntitlementAuthorization'), /refreshStudentDetailDataAfterMutation\(currentStudentId\)[\s\S]*studentDetailActiveTab='orders'[\s\S]*openStudentDetail\(currentStudentId\)/, 'authorization save should refresh and reopen the current student package detail');
+assert.match(fnBody('saveEntitlementAuthorization'), /refreshReadModelsInBackground\(\['packageCenterPage','customerCenterPage','purchasesPage'\]/, 'authorization save should refresh global package read models in the background');
 assert.match(source, /function getFilteredStudents\(/, 'student page should centralize filtered student list calculation');
 assert.match(fnBody('studentUnifiedViewRows'), /includeSearchIndex[\s\S]*teachingStudentViews\?\.searchableStudents/, 'student keyword search should use the lightweight full student search index instead of switching search tables');
 assert.match(fnBody('studentUnifiedViewRows'), /studentHasNotes[\s\S]*const notes=studentHasNotes\?student\.notes/, 'student unified rows should preserve intentionally empty student notes instead of falling back to system notes');
@@ -114,6 +117,9 @@ assert.match(fnBody('studentEntitlementSummaryHtml'), /detailPackageOrderRows/, 
 assert.match(fnBody('studentLessonRecordRows'), /detailLessonRecordRows/, 'student lesson detail should render from backend unified student detail rows');
 assert.match(fnBody('studentBenefitRows'), /detailBenefitRows/, 'student benefit summary should render from backend unified student detail rows');
 assert.match(fnBody('studentBenefitLedgerRows'), /detailBenefitGrantRows|detailBenefitConsumeRows/, 'student benefit ledger detail should render from backend unified student detail rows');
+assert.match(fnBody('saveStudentBenefit'), /refreshStudentDetailDataAfterMutation\(studentId\)[\s\S]*studentDetailActiveTab='benefits'[\s\S]*openStudentDetail\(studentId\)/, 'student benefit save should refresh the current student detail before reopening benefits');
+assert.doesNotMatch(fnBody('saveStudentBenefit'), /await ensureDatasetsByName\(\['lifecycleMetricsPage'\],\{force:true\}\)/, 'student benefit save should not wait for lifecycle metrics');
+assert.match(fnBody('saveStudentBenefit'), /refreshReadModelsInBackground\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'\]/, 'student benefit save should refresh global read models in the background');
 assert.match(source, /function studentStatusMeta\(/, 'student list should compute business status labels');
 assert.match(source, /上课中[\s\S]*待转化[\s\S]*沉默30天[\s\S]*仅订场[\s\S]*无班次/, 'student status labels should cover the agreed business states');
 assert.match(source, /function studentNoteSummary\(/, 'student list should compute compact ops-style note summary');

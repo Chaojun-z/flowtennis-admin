@@ -750,21 +750,31 @@ async function saveManualEntitlementAdjust(entitlementId, action){
     const data={action,count,relatedDate,reason};
     const result=await apiCall('POST',`/entitlements/${entitlementId}/manual-adjust`,data);
     patchManualEntitlementAdjustResult(result);
-    if(typeof markLearningDataStale==='function')markLearningDataStale();
-    loadedDatasets.delete('financePage');
+    if(typeof markReadModelsStale==='function')markReadModelsStale();
     return result;
   },{
     successText:'已保存',
-    refresh:(result={})=>{
-    if(source==='student'&&studentId){
-      studentDetailActiveTab='orders';
-      openStudentDetail(studentId);
-    }else{
-      openPurchaseDetailModal(result.entitlement?.purchaseId||entitlements.find(e=>e.id===entitlementId)?.purchaseId||'','balance');
-    }
-    renderStudents();
-    renderEntitlements();
-    if(currentPage==='purchases')renderPurchases();
+    refresh:async(result={})=>{
+      const savedStudentId=String(result?.entitlement?.studentId||studentId||'').trim();
+      if(savedStudentId&&typeof refreshStudentDetailDataAfterMutation==='function'){
+        await refreshStudentDetailDataAfterMutation(savedStudentId);
+      }
+      if(source==='student'&&savedStudentId){
+        studentDetailActiveTab='orders';
+        openStudentDetail(savedStudentId);
+      }else{
+        openPurchaseDetailModal(result.entitlement?.purchaseId||entitlements.find(e=>e.id===entitlementId)?.purchaseId||'','balance');
+      }
+      renderStudents();
+      renderEntitlements();
+      if(currentPage==='purchases')renderPurchases();
+      if(typeof refreshReadModelsInBackground==='function'){
+        refreshReadModelsInBackground(['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'],'manual entitlement background refresh',()=>{
+          renderStudents();
+          renderEntitlements();
+          if(currentPage==='purchases')renderPurchases();
+        });
+      }
     }
   });
 }
@@ -801,6 +811,7 @@ function fillPurchaseEditPackageMeta(){
 }
 async function savePurchaseEdit(id){
   const btn=document.getElementById('purchaseEditSaveBtn');
+  const oldPurchase=purchases.find(x=>x.id===id)||{};
   const data={studentId:document.getElementById('pur_edit_studentId')?.value||'',packageId:document.getElementById('pur_edit_packageId')?.value||'',ownerCoach:document.getElementById('pur_edit_ownerCoach')?.value||'',allowedCoaches:[...document.querySelectorAll('.pur-edit-allowed-coach-cb:checked')].map(cb=>cb.value),purchaseDate:document.getElementById('pur_edit_purchaseDate')?.value||'',amountPaid:parseFloat(document.getElementById('pur_edit_amountPaid')?.value)||0,overrideReason:document.getElementById('pur_edit_overrideReason')?.value.trim()||'',payMethod:document.getElementById('pur_edit_payMethod')?.value||'',notes:document.getElementById('pur_edit_notes')?.value.trim()||''};
   const systemAmount=Number(document.getElementById('pur_edit_systemAmount')?.value)||0;
   if(systemAmount!==Number(data.amountPaid||0)&&!data.overrideReason){toast('请填写改价原因','warn');if(btn){btn.disabled=false;btn.textContent='保存';}return;}
@@ -816,16 +827,26 @@ async function savePurchaseEdit(id){
         if(i>=0)entitlements[i]=next;
       });
     }
-    if(typeof markLearningDataStale==='function')markLearningDataStale();
+    if(typeof markReadModelsStale==='function')markReadModelsStale();
+    return {studentId:String(res?.purchase?.studentId||data.studentId||oldPurchase.studentId||'').trim()};
   },{
     successText:'购买记录已更新',
     closeOnSuccess:true,
-    refresh:async()=>{
-      loadedDatasets.delete('purchasesPage');
-      await ensureDatasetsByName(['packageCenterPage','customerCenterPage'],{force:true});
+    refresh:async(result={})=>{
+      const savedStudentId=String(result?.studentId||'').trim();
+      if(savedStudentId&&typeof refreshStudentDetailDataAfterMutation==='function'){
+        await refreshStudentDetailDataAfterMutation(savedStudentId);
+      }
       renderStudents();
       renderPurchases();
       renderEntitlements();
+      if(typeof refreshReadModelsInBackground==='function'){
+        refreshReadModelsInBackground(['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'],'purchase edit background refresh',()=>{
+          renderStudents();
+          renderPurchases();
+          renderEntitlements();
+        });
+      }
     }
   });
 }
@@ -866,23 +887,34 @@ function openPurchaseVoidModal(id){
 async function voidPurchase(id){
   const reason=document.getElementById('pur_void_reason')?.value.trim()||'';
   if(!reason){toast('请填写作废原因','warn');return;}
+  const oldPurchase=purchases.find(x=>x.id===id)||{};
   await runStandardMutation(document.querySelector('.btn-save'),async()=>{
     const result=await apiCall('DELETE','/purchases/'+id,{reason});
     patchPurchaseVoidResult(id,reason);
     const rows=Array.isArray(result?.benefitLedgerRows)?result.benefitLedgerRows:[];
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
-    if(typeof markLearningDataStale==='function')markLearningDataStale();
+    if(typeof markReadModelsStale==='function')markReadModelsStale();
+    return {studentId:String(result?.purchase?.studentId||oldPurchase.studentId||'').trim()};
   },{
     loadingText:'作废中…',
     errorPrefix:'作废失败',
     successText:'购买记录已作废',
     closeOnSuccess:true,
-    refresh:async()=>{
-      loadedDatasets.delete('purchasesPage');
-      await ensureDatasetsByName(['packageCenterPage','customerCenterPage'],{force:true});
+    refresh:async(result={})=>{
+      const savedStudentId=String(result?.studentId||'').trim();
+      if(savedStudentId&&typeof refreshStudentDetailDataAfterMutation==='function'){
+        await refreshStudentDetailDataAfterMutation(savedStudentId);
+      }
       renderStudents();
       renderPurchases();
       renderEntitlements();
+      if(typeof refreshReadModelsInBackground==='function'){
+        refreshReadModelsInBackground(['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'],'purchase void background refresh',()=>{
+          renderStudents();
+          renderPurchases();
+          renderEntitlements();
+        });
+      }
     }
   });
 }
