@@ -548,25 +548,15 @@ function createCorePageDataRoutes(deps={}){
         const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,coaches},user,coachRefs);
         const now=new Date();
         const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
-        const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
         const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,[],now);
-        const decoratedClasses=decorateWorkbenchClasses(scoped.classes||[],scoped.schedule||[]);
-        const customerLifecycleRows=buildCustomerLifecycleRows({
-          students:scoped.students,
-          schedule:scoped.schedule,
-          feedbacks:scoped.feedbacks
-        });
-        const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,scoped);
         return sendJson(res,{
           campuses:scoped.campuses||[],
           coaches:scoped.coaches||[],
-          students:decoratedStudents,
-          classes:decoratedClasses,
+          students:scoped.students||[],
+          classes:scoped.classes||[],
           schedule:decoratedSchedule,
           feedbacks:decoratedFeedbacks,
           coachProposals:scoped.coachProposals||[],
-          customerLifecycleRows,
-          teachingStudentViews,
           coachOpsUnifiedView:buildCoachOpsUnifiedView({
             coaches:scoped.coaches||[],
             schedule:decoratedSchedule,

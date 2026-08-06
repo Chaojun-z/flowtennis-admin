@@ -221,6 +221,8 @@ function buildCoachOpsUnifiedView({ coaches = [], schedule = [], feedbacks = [],
       coachDisplayName: coachDisplayName(row.coach || row.coachName || row.primaryCoach || row.teacher) || '未分配',
       date: dateKey(row.startTime),
       month: monthKey(row.startTime),
+      startMs: Date.parse(text(row.startTime).replace(' ', 'T')),
+      endMs: Date.parse(text(row.endTime).replace(' ', 'T')),
       lessonUnits: lessonUnits(row),
       courseType: courseTypeText(row),
       campusName: row.locationType === 'external' ? text(row.externalVenueName || '外部场馆') : scheduleCampusText(row, campuses),
@@ -229,8 +231,15 @@ function buildCoachOpsUnifiedView({ coaches = [], schedule = [], feedbacks = [],
       effectiveStatus: effectiveScheduleStatus(row)
     }));
 
+  const rowsByCoach = new Map();
+  sourceRows.forEach(row => {
+    const list = rowsByCoach.get(row.coachDisplayName) || [];
+    list.push(row);
+    rowsByCoach.set(row.coachDisplayName, list);
+  });
+
   const rows = [...coachNames].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN')).map(name => {
-    const mine = sourceRows.filter(row => row.coachDisplayName === name);
+    const mine = rowsByCoach.get(name) || [];
     const completedRows = mine.filter(row => row.effectiveStatus === '已结束');
     const campusNames = [...new Set(mine.map(row => row.campusName).filter(Boolean))];
     return {

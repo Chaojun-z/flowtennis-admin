@@ -512,6 +512,12 @@ assert.match(
   'coach ops schedule cards should count actual studentIds instead of stale summary text'
 );
 
+assert.match(
+  coachOpsSource,
+  /function coachOpsStudentNameById\([\s\S]*coachOpsStudentNameIndex=new Map/,
+  'coach ops schedule cards should resolve student names from an indexed lookup instead of scanning all students per card'
+);
+
 assert.doesNotMatch(
   coachOpsSource,
   /fromNames=\[[\s\S]*scheduleListStudentSummary\(s\)[\s\S]*s\?\.studentName[\s\S]*const names=\[\.\.\.new Set\(\[\.\.\.fromIds,\.\.\.fromNames\]\)\]/,

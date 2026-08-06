@@ -269,8 +269,10 @@ function coachOpsLooksLikeTechnicalStudentValue(value){
   const text=String(value||'').trim();
   return !text||text==='—'||/(seed-student|import-student|manual-student|private_lesson_csv_import|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.test(text);
 }
+var coachOpsStudentNameIndexSource=null,coachOpsStudentNameIndex=new Map();
+function coachOpsStudentNameById(id){if(coachOpsStudentNameIndexSource!==students){coachOpsStudentNameIndexSource=students;coachOpsStudentNameIndex=new Map((students||[]).map(st=>[String(st?.id||''),String(st?.name||'').trim()]).filter(([sid,name])=>sid&&name));}return coachOpsStudentNameIndex.get(String(id||''))||'';}
 function coachOpsScheduleStudentTitle(s){
-  const fromIds=parseArr(s?.studentIds).map(id=>students.find(st=>st.id===id)?.name||'').filter(name=>!coachOpsLooksLikeTechnicalStudentValue(name));
+  const fromIds=parseArr(s?.studentIds).map(id=>coachOpsStudentNameById(id)).filter(name=>!coachOpsLooksLikeTechnicalStudentValue(name));
   if(fromIds.length>1)return `${fromIds[0]} 等 ${fromIds.length} 人`;
   if(fromIds.length)return fromIds[0];
   const fromNames=[...parseArr(s?.studentNames),scheduleStudentSummary(s),s?.studentName]
@@ -292,6 +294,7 @@ function coachOpsCampusMatchesSchedule(s){
   if(campus==='all')return true;
   return sameCampusValue(s?.campus,campus);
 }
+function coachOpsScheduleInRange(s,range){const start=Number(s?.startMs);return Number.isFinite(start)?start>=range.start.getTime()&&start<range.end.getTime():inRange(s.startTime,range.start,range.end);}
 function renderCoachOpsTopFilters(){
   const campusSource=typeof accessibleCampusRows==='function'?accessibleCampusRows():(Array.isArray(campuses)?campuses:[]);
   const campusOpts=[{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
@@ -595,11 +598,13 @@ function coachOpsRows(){
   return (coachOpsUnifiedView?.rows||[])
     .filter(row=>!coachOpsSelectedCoach||coachOpsRowDisplayName(row)===coachName(coachOpsSelectedCoach))
     .map(row=>{
-      const rangeRows=(row.rows||[]).filter(s=>coachOpsCampusMatchesSchedule(s)&&inRange(s.startTime,range.start,range.end));
+      const rangeRows=(row.rows||[]).filter(s=>coachOpsCampusMatchesSchedule(s)&&coachOpsScheduleInRange(s,range));
+      const rangeRowsByDate=new Map();rangeRows.forEach(s=>{const key=String(s.startTime||'').slice(0,10),list=rangeRowsByDate.get(key)||[];list.push(s);rangeRowsByDate.set(key,list);});
       const summary=coachOpsSummaryForRange(row,range);
       return {
         ...row,
         rangeRows,
+        rangeRowsByDate,
         mainCampus:summary.mainCampus||row.mainCampus||'',
         totalLessonUnits:Number(summary.totalLessonUnits)||0,
         feedback:Number(summary.feedbackCount)||0,
@@ -812,7 +817,7 @@ function renderCoachOps(){if(currentPage!=='coachschedule'&&currentPage!=='coach
       for(let d=new Date(gridStart);d<gridEnd;d=addDays(d,1))days.push(new Date(d));
       const cells=days.map(d=>{
         const ds=dateKey(d);
-        const dayRows=r.rangeRows.filter(s=>s.startTime.slice(0,10)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
+        const dayRows=[...(r.rangeRowsByDate?.get(ds)||[])].sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
         const lessonCount=lessonUnitsText(sumScheduleLessonUnits(dayRows));
         const visibleRows=mode==='week'?dayRows:dayRows.slice(0,3);
         const hiddenCount=mode==='month'?Math.max(0,dayRows.length-visibleRows.length):0;
