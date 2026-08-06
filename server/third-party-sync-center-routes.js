@@ -28,7 +28,7 @@ const THIRD_PARTY_SYNC_TABLES = [
   T_THIRD_PARTY_SYNC_ROLLBACKS
 ];
 const THIRD_PARTY_LOCK_RULES = Object.freeze([
-  { id: 'internal-occupancy', pattern: /清洗|打扫|维修|领导|内部使用/, finalType: '内部占用', businessCategory: '内部占用', processLayer: 'occupancy', paymentMethod: '不涉及支付' },
+  { id: 'internal-occupancy', pattern: /清洗|打扫|维修|维护|施工|领导|内部使用/, finalType: '内部占用', businessCategory: '内部占用', processLayer: 'occupancy', paymentMethod: '不涉及支付' },
   { id: 'coach-booking-xiaozhe', pattern: /晓哲|小哲/, requirePattern: /定场|订场/, finalType: '教练代订场', businessCategory: '教练代订场', processLayer: 'booking_finance', paymentMethod: '微信转账' },
   { id: 'ball-machine', pattern: /发球机/, finalType: '订场+发球机', businessCategory: '订场+发球机', processLayer: 'booking_extra_service', serviceType: '发球机' },
   { id: 'companion', pattern: /陪打/, finalType: '订场陪打', businessCategory: '订场陪打', processLayer: 'booking_extra_service', serviceType: '陪打' },
@@ -258,6 +258,19 @@ function lockRuleText(record = {}) {
   return [remarkOf(record), customerNameOf(record), operatorAccountOf(record)].filter(Boolean).join(' ');
 }
 
+function timeMinutes(value = '') {
+  const m = cleanText(value).match(/(\d{1,2}):(\d{2})/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 0;
+}
+
+function isRepairInternalWindow(record = {}) {
+  const date = bookingDateOf(record);
+  if (date === '2026-08-03' || date === '2026-08-04') return true;
+  if (date !== '2026-08-05') return false;
+  const end = timeMinutes(endTimeOf(record));
+  return end > 0 && end <= 12 * 60;
+}
+
 function isOperatorName(value = '') {
   return /运营|前台|管理员|客服/.test(cleanText(value));
 }
@@ -304,12 +317,26 @@ function classifyRecord(record = {}, duplicateKeys = new Set()) {
   const remark = remarkOf(record);
   if (sourceType === 'lock') {
     const ruleText = lockRuleText(record);
+    if (isRepairInternalWindow(record)) return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '按场地维修自动标记内部占用', confidence: 0.95, riskReason: '', needsConfirmation: false, businessCategory: '内部占用', processLayer: 'occupancy', suggestedFinalType: '内部占用', paymentMethod: '不涉及支付' });
     const rule = THIRD_PARTY_LOCK_RULES.find(item => item.pattern.test(item.id === 'coach-booking-xiaozhe' ? ruleText : remark) && (!item.requirePattern || item.requirePattern.test(ruleText)));
     if (rule?.id === 'internal-occupancy') return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '自动标记内部占场', confidence: 0.9, riskReason: '', needsConfirmation: false, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
     if (rule?.id === 'schedule-occupancy') return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '自动匹配已有排课，匹配不到则创建第三方同步排课', confidence: 0.85, riskReason: '', needsConfirmation: false, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
     if (rule?.id === 'changda') return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: amountOf(record) > 0 ? '自动写畅打占场和活动收入' : '自动写畅打占场', confidence: 0.82, riskReason: '', needsConfirmation: false, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
     if (rule?.id === 'ball-machine' || rule?.id === 'companion') {
       const amountBreakdown = extraServiceBreakdown(record, rule.finalType);
+      if (rule.id === 'ball-machine' && !amountBreakdown && /订场|定场/.test(ruleText) && amountOf(record) > 0) {
+        return ruleBasePayload(record, {
+          recommendedType: 'auto_import',
+          plannedAction: '按订场导入，发球机免费赠送',
+          confidence: 0.82,
+          riskReason: '',
+          needsConfirmation: false,
+          businessCategory: '运营代订场',
+          processLayer: 'booking_finance',
+          suggestedFinalType: '散客微信转账订场',
+          paymentMethod: '微信转账'
+        });
+      }
       return ruleBasePayload(record, {
         recommendedType: amountBreakdown ? 'auto_import' : 'needs_confirmation',
         plannedAction: amountBreakdown ? `自动拆分场地费和${rule.serviceType}费` : `确认场地费和${rule.serviceType}费拆分`,
@@ -338,6 +365,7 @@ function classifyRecord(record = {}, duplicateKeys = new Set()) {
       });
     }
     if (rule?.id === 'voucher-booking') return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '确认券码来源和结算金额', confidence: 0.65, riskReason: '第三方券码结算金额需确认', needsConfirmation: true, businessCategory: rule.businessCategory, processLayer: rule.processLayer, suggestedFinalType: rule.finalType, paymentMethod: rule.paymentMethod });
+    if (/订场|定场/.test(ruleText) && amountOf(record) > 0) return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '按第三方金额自动导入订场', confidence: 0.82, riskReason: '', needsConfirmation: false, businessCategory: '运营代订场', processLayer: 'booking_finance', suggestedFinalType: '散客微信转账订场', paymentMethod: '微信转账' });
     if (isOperatorAssistedBookingLock(record)) return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '按运营代订场写入订场用户，不自动补财务金额', confidence: 0.78, riskReason: '', needsConfirmation: false, businessCategory: '运营代订场', processLayer: 'booking', suggestedFinalType: '运营代订场', paymentMethod: amountOf(record) > 0 ? '微信转账' : '不涉及支付' });
     return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '运营确认锁场类型', confidence: 0.45, riskReason: remark ? '锁场需确认业务归属' : '备注为空', needsConfirmation: true, businessCategory: '运营锁场待确认', processLayer: 'booking' });
   }
@@ -358,7 +386,7 @@ function financeImpactFor(record = {}, classification = {}) {
   if (!['auto_import', 'needs_confirmation'].includes(classification.recommendedType)) return { cashDelta: 0, recognizedRevenueDelta: 0, deferredRevenueDelta: 0 };
   const amount = amountOf(record);
   const payMethod = cleanText(record.payMethod || record.paymentMethod);
-  if (classification.plannedAction === '标记内部占用') return { cashDelta: 0, recognizedRevenueDelta: 0, deferredRevenueDelta: 0 };
+  if (classification.suggestedFinalType === '内部占用' || classification.businessCategory === '内部占用') return { cashDelta: 0, recognizedRevenueDelta: 0, deferredRevenueDelta: 0 };
   if (/余额|储值卡/.test(payMethod)) return { cashDelta: 0, recognizedRevenueDelta: amount, deferredRevenueDelta: -amount };
   return { cashDelta: amount, recognizedRevenueDelta: amount, deferredRevenueDelta: 0 };
 }
@@ -572,11 +600,13 @@ function prechecksFromRawRecordsForBatch({ batchId = '', rawRecords = [], fallba
   return precheckThirdPartyRecords(scopedRaw.map(rawRecordToSourceRecord), { batchId, now }).items;
 }
 
-function replacePrechecksForBatch(prechecks = [], batchId = '', refreshed = []) {
-  if (!batchId || !refreshed.length) return prechecks;
+function refreshPrechecksFromRawRecords({ rawRecords = [], fallbackPrechecks = [], now = new Date().toISOString() } = {}) {
+  const batchIds = [...new Set((rawRecords || []).map(row => cleanText(row.batchId)).filter(Boolean))];
+  if (!batchIds.length) return fallbackPrechecks || [];
+  const batchSet = new Set(batchIds);
   return [
-    ...(prechecks || []).filter(row => String(row.batchId || '') !== String(batchId)),
-    ...refreshed
+    ...(fallbackPrechecks || []).filter(row => !batchSet.has(cleanText(row.batchId))),
+    ...batchIds.flatMap(batchId => prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks, now }))
   ];
 }
 
@@ -1612,12 +1642,13 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         getCachedScan(T_THIRD_PARTY_SYNC_ALERTS).catch(() => []),
         getCachedScan(T_THIRD_PARTY_SYNC_ROLLBACKS).catch(() => [])
       ]);
+      const refreshedPrechecks = refreshPrechecksFromRawRecords({ rawRecords, fallbackPrechecks: prechecks, now: now() });
       const latestBatch = [...batches].sort((a, b) => String(b.pulledAt || '').localeCompare(String(a.pulledAt || '')))[0] || null;
       const latestBatchId = cleanText(latestBatch?.batchId || latestBatch?.id);
       const currentRawRecords = latestBatchId ? rawRecords.filter(row => String(row.batchId || '') === latestBatchId) : rawRecords;
       const currentPrechecks = latestBatchId
-        ? prechecksFromRawRecordsForBatch({ batchId: latestBatchId, rawRecords, fallbackPrechecks: prechecks, now: now() })
-        : prechecks;
+        ? refreshedPrechecks.filter(row => String(row.batchId || '') === latestBatchId)
+        : refreshedPrechecks;
       const currentImportResults = latestBatchId ? importResults.filter(row => String(row.batchId || '') === latestBatchId) : importResults;
       const currentChanges = latestBatchId ? changes.filter(row => String(row.batchId || '') === latestBatchId) : changes;
       const currentPlan = latestBatchId ? buildThirdPartyImportPlan({ batchId: latestBatchId, prechecks: currentPrechecks, confirmations, importResults }) : null;
@@ -1648,7 +1679,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         openAlertCount: currentAlerts.filter(row => row.status !== 'closed').length,
         rollbackCount: currentRollbacks.length
       };
-      const responsePrechecks = latestBatchId ? replacePrechecksForBatch(prechecks, latestBatchId, currentPrechecks) : prechecks;
+      const responsePrechecks = refreshedPrechecks;
       const responseAlerts = latestBatchId ? [
         ...alerts.filter(row => String(row.batchId || '') !== latestBatchId),
         ...currentAlerts
