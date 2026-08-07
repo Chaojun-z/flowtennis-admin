@@ -872,7 +872,7 @@ function openPurchaseVoidModal(id){
   ].join('');
   const actions=blocked
     ?`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openPurchaseDetailModal('${p.id}')">返回</button></div>`
-    :`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openPurchaseDetailModal('${p.id}')">取消</button><button type="button" class="schedule-detail-action primary btn-save" onclick="voidPurchase('${p.id}')">确认作废</button></div>`;
+    :`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openPurchaseDetailModal('${p.id}')">取消</button><button type="button" class="schedule-detail-action primary btn-save" id="purchaseVoidBtn" onclick="voidPurchase('${p.id}')">确认作废</button></div>`;
   const reasonForm=blocked?'':`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">作废原因</label><textarea class="finput tms-form-control" id="pur_void_reason" placeholder="例如：录错学员、重复购买、实际未付款"></textarea></div></div>`;
   const body=renderDetailDrawerContent([
     renderDetailDrawerCard('作废确认',summary),
@@ -888,7 +888,7 @@ async function voidPurchase(id){
   const reason=document.getElementById('pur_void_reason')?.value.trim()||'';
   if(!reason){toast('请填写作废原因','warn');return;}
   const oldPurchase=purchases.find(x=>x.id===id)||{};
-  await runStandardMutation(document.querySelector('.btn-save'),async()=>{
+  await runStandardMutation('purchaseVoidBtn',async()=>{
     const result=await apiCall('DELETE','/purchases/'+id,{reason});
     patchPurchaseVoidResult(id,reason);
     const rows=Array.isArray(result?.benefitLedgerRows)?result.benefitLedgerRows:[];

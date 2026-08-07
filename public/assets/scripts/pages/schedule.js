@@ -519,9 +519,30 @@ function toggleScheduleSettlementFields(){
   refreshSchedulePaymentFields();
 }
 // schedule modal field ids: id="sch_date" id="sch_startTime" id="sch_endTime" id="sch_cancelReason" id="sch_scheduleSource"
+function openScheduleLoadingDrawer(scheduleId='',message='排课详情加载中...'){
+  const s=scheduleId?schedules.find(x=>x.id===scheduleId):null;
+  const headerHtml=s?scheduleDetailHeaderHtml(s,scheduleStudentSummary(s)):scheduleDetailCreateHeaderHtml({});
+  openStandardDetailDrawer({
+    titleHtml:`${headerHtml}${scheduleDetailTabsHtml('info',{create:!scheduleId})}`,
+    bodyHtml:`<div class="schedule-detail-content"><div class="empty"><p>${esc(message)}</p></div></div>`,
+    actionsHtml:'',
+    data:{scheduleDetailId:scheduleId||''},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer'
+  });
+}
 function openScheduleModal(id,seed={}){
   (async()=>{
-    if(id)try{if(typeof ensureScheduleDetailData==='function')await ensureScheduleDetailData(id);if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['entitlements','entitlementLedger'],{force:false});}catch(e){}
+    if(id){
+      openScheduleLoadingDrawer(id,'排课编辑加载中...');
+      try{
+        if(typeof ensureScheduleDetailData==='function')await ensureScheduleDetailData(id);
+        if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['entitlements','entitlementLedger'],{force:false});
+      }catch(e){
+        console.warn('schedule edit preload failed:',e);
+        toast('排课编辑数据加载失败，请重试','error');
+      }
+    }
     editId=id;
     const s=id?schedules.find(x=>x.id===id):(seed||null);
     if(id&&!s){toast('排课不存在','warn');return;}
@@ -2009,7 +2030,14 @@ function scheduleDetailLateHtml(s){
 }
 function openScheduleDetail(scheduleId){
   (async()=>{
-    try{if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['students','coachProposals','feedbacks','entitlements','entitlementLedger'],{force:false});if(typeof ensureScheduleDetailData==='function')await ensureScheduleDetailData(scheduleId);}catch(e){}
+    openScheduleLoadingDrawer(scheduleId,'排课详情加载中...');
+    try{
+      if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['students','coachProposals','feedbacks','entitlements','entitlementLedger'],{force:false});
+      if(typeof ensureScheduleDetailData==='function')await ensureScheduleDetailData(scheduleId);
+    }catch(e){
+      console.warn('schedule detail preload failed:',e);
+      toast('排课详情加载失败，请重试','error');
+    }
     const s=schedules.find(x=>x.id===scheduleId);if(!s){toast('排课不存在','warn');return;}
     const isCoachDetail=isCoachPortalUser();
     const canCancelSchedule=effectiveScheduleStatus(s)!=='已取消';

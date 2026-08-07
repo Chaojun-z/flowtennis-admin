@@ -98,6 +98,11 @@ assert.doesNotMatch(source, /function leadConversionActionPanelHtml\(/, 'lead co
 assert.doesNotMatch(fnBody('leadDetailConversionTabHtml'), /成交操作|关联操作|leadConversionActionPanelHtml/, 'conversion tab should remove the separate conversion action card');
 assert.match(source, /function leadLinkedAccountFieldHtml\(/, 'lead conversion summary should render linked account rows with inline text actions');
 assert.match(fnBody('leadInlineActionHtml'), /lead-inline-link-action/, 'linked account actions should use inline text link styling');
+assert.match(fnBody('leadInlineActionHtml'), /id\?`id="\$\{esc\(id\)\}"`:''/, 'inline lead actions should support stable ids for mutation loading states');
+assert.match(fnBody('leadLinkedAccountFieldHtml'), /leadUnlinkStudentBtn[\s\S]*leadUnlinkCourtBtn/, 'lead unlink actions should render stable button ids');
+assert.match(fnBody('unlinkLeadStudent'), /runStandardMutation\('leadUnlinkStudentBtn'/, 'unlinking a linked student should use a stable mutation target');
+assert.match(fnBody('unlinkLeadCourt'), /runStandardMutation\('leadUnlinkCourtBtn'/, 'unlinking a linked court account should use a stable mutation target');
+assert.doesNotMatch(source, /runStandardMutation\('',/, 'lead mutations should not pass an empty action target');
 assert.match(fnBody('leadLinkedAccountFieldHtml'), /关联[\s\S]*修改[\s\S]*删除/, 'linked student and court actions should expose link, edit, and delete text actions');
 assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /<button[^>]*class="schedule-detail-action primary"/, 'linked account row should not use framed primary buttons');
 assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /未关联/, 'unlinked accounts should only show the inline link text');

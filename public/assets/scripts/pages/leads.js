@@ -1113,8 +1113,8 @@ function openLeadCompanionSchedule(leadId){
   if(typeof openScheduleModal!=='function'){toast('排课模块尚未加载','warn');return;}
   openScheduleModal('',leadCompanionScheduleSeed(lead));
 }
-function leadInlineActionHtml(text,onclick,tone=''){
-  return `<span class="lead-inline-link-action ${tone}" onclick="${onclick}">${esc(text)}</span>`;
+function leadInlineActionHtml(text,onclick,tone='',id=''){
+  return `<span class="lead-inline-link-action ${tone}" ${id?`id="${esc(id)}"`:''} onclick="${onclick}">${esc(text)}</span>`;
 }
 function leadLinkedAccountFieldHtml(lead,type){
   const isStudent=type==='student';
@@ -1122,7 +1122,7 @@ function leadLinkedAccountFieldHtml(lead,type){
   const label=isStudent?'关联学员':'关联订场用户';
   const value=linked?(isStudent?linkedStudentName(lead):linkedCourtName(lead)):'';
   const linkAction=leadInlineActionHtml(linked?'修改':'关联',isStudent?`openLeadLinkStudentModal('${lead.id}')`:`openLeadLinkCourtModal('${lead.id}')`);
-  const deleteAction=linked?leadInlineActionHtml('删除',isStudent?`unlinkLeadStudent('${lead.id}')`:`unlinkLeadCourt('${lead.id}')`,'danger'):'';
+  const deleteAction=linked?leadInlineActionHtml('删除',isStudent?`unlinkLeadStudent('${lead.id}')`:`unlinkLeadCourt('${lead.id}')`,'danger',isStudent?'leadUnlinkStudentBtn':'leadUnlinkCourtBtn'):'';
   const valueHtml=linked?`<span>${esc(value)}</span>`:'';
   return `<div class="schedule-detail-field"><div class="schedule-detail-label">${esc(label)}</div><div class="schedule-detail-value lead-linked-account-value">${valueHtml}<span class="lead-inline-actions">${linkAction}${deleteAction}</span></div></div>`;
 }
@@ -1368,7 +1368,7 @@ async function saveLead(leadId=''){
 }
 async function unlinkLeadStudent(leadId){
   if(!await appConfirm('确认解除关联学员？学员档案不会删除。',{title:'解除关联',confirmText:'解除关联'}))return;
-  await runStandardMutation('',async()=>{
+  await runStandardMutation('leadUnlinkStudentBtn',async()=>{
     await apiCall('POST',`/leads/${leadId}/unlink-student`,{});
   },{
     loadingText:'解除中…',
@@ -1383,7 +1383,7 @@ async function unlinkLeadStudent(leadId){
 }
 async function unlinkLeadCourt(leadId){
   if(!await appConfirm('确认解除关联订场用户？订场用户不会删除。',{title:'解除关联',confirmText:'解除关联'}))return;
-  await runStandardMutation('',async()=>{
+  await runStandardMutation('leadUnlinkCourtBtn',async()=>{
     await apiCall('POST',`/leads/${leadId}/unlink-court`,{});
   },{
     loadingText:'解除中…',

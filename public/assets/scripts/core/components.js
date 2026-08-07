@@ -241,6 +241,11 @@ function setStandardActionLoading(buttonOrId,loading=true,loadingText='保存中
 }
 async function runStandardMutation(buttonOrId,task,{loadingText='保存中...',errorPrefix='保存失败',successText='',closeOnSuccess=false,onSuccess=null,refresh=null,formatError=null}={}){
   const btn=typeof buttonOrId==='string'?document.getElementById(buttonOrId):buttonOrId;
+  if(btn?.dataset.standardLoading==='1')return null;
+  if(!btn&&buttonOrId){
+    console.warn('standard mutation button missing:',buttonOrId);
+    if(typeof toast==='function')toast('操作已开始，请稍候','warn');
+  }
   setStandardActionLoading(btn,true,loadingText);
   try{
     const result=await task();

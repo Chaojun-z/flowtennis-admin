@@ -50,7 +50,7 @@ assert.match(components, /goPage\('leads',this\)[\s\S]*线索池/, 'components.j
 assert.match(components, /function renderTopbarShell\(/, 'components.js should render the shared topbar');
 assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=/, 'index.html should version schedule.js to avoid stale modal behavior');
-assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=20260730-schedule-stored-value-member-v1/, 'index.html should bust stale cached schedule.js after edit entitlement recommendation fixes');
+assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=20260807-button-stability-v1/, 'index.html should bust stale cached schedule.js after button stability fixes');
 
 assert.doesNotMatch(html, /<style>[\s\S]*<\/style>/, 'index.html should no longer keep inline style blocks');
 assert.doesNotMatch(html, /<script>[\s\S]*<\/script>/, 'index.html should no longer keep one giant inline script block');

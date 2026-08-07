@@ -87,6 +87,8 @@ assert.match(fnBody(bootstrapSource, 'closeModal'), /closeStandardDropdowns\(\)/
 assert.match(fnBody(coreSource, 'setStandardActionLoading'), /dataset\.standardLoading/, 'standard action loading should be tracked on the button');
 assert.match(fnBody(coreSource, 'runStandardMutation'), /try[\s\S]*await task\(\)[\s\S]*catch[\s\S]*toast\([\s\S]*return null[\s\S]*finally/, 'standard mutation helper should keep failures open and always clear loading');
 assert.match(fnBody(coreSource, 'runStandardMutation'), /onSuccess[\s\S]*refresh[\s\S]*formatError/, 'standard mutation helper should own success callbacks, refresh callbacks, and page-specific error formatting');
+assert.match(fnBody(coreSource, 'runStandardMutation'), /btn\?\.dataset\.standardLoading==='1'\)return null/, 'standard mutation helper should ignore duplicate clicks while an action is already running');
+assert.match(fnBody(coreSource, 'runStandardMutation'), /standard mutation button missing[\s\S]*操作已开始，请稍候/, 'missing action buttons should leave visible diagnostics instead of failing silently');
 assert.doesNotMatch(fnBody(bootstrapSource, 'toast'), /innerHTML[\s\S]*msg/, 'toast should render message as text, not HTML');
 assert.match(fnBody(bootstrapSource, 'toast'), /textContent=String\(msg\?\?''\)/, 'toast should put untrusted messages into textContent');
 assert.match(bootstrapSource, /function safeConfirmHtml\(/, 'appConfirm html mode should use one sanitizer entry');

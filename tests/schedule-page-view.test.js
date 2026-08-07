@@ -10,7 +10,7 @@ const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'pa
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
 assert.match(indexHtml, /state\.js\?v=20260806-(purchase-stale-cache|student-detail-cache)-v1/, 'state script version should force a fresh browser load for cache recovery');
-assert.match(indexHtml, /schedule\.js\?v=20260730-schedule-stored-value-member-v1/, 'schedule script version should force a fresh browser load after stored-value member matching fixes');
+assert.match(indexHtml, /schedule\.js\?v=20260807-button-stability-v1/, 'schedule script version should force a fresh browser load after button stability fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps an old broken schedule script');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
@@ -66,6 +66,9 @@ assert.match(fnBody('refreshSchEntitlementOptions'), /setScheduleEntitlementDrop
 assert.match(source, /function resetScheduleSaveButton\(/, 'schedule save should use a helper to restore the save button safely');
 assert.match(fnBody('saveSchedule'), /runStandardMutation\('scheduleSaveBtn'/, 'schedule save should restore the save button through the global mutation helper');
 assert.doesNotMatch(fnBody('saveSchedule'), /catch\(e\)\{toast\('保存失败：'\+e\.message,'error'\);btn\.disabled=false;btn\.textContent='保存';\}/, 'schedule save failure should not assume the save button exists');
+assert.match(source, /function openScheduleLoadingDrawer\(/, 'schedule slow open flows should share an immediate loading drawer');
+assert.match(fnBody('openScheduleModal'), /openScheduleLoadingDrawer\(id,'排课编辑加载中\.\.\.'\)[\s\S]*ensureScheduleDetailData\(id\)/, 'editing a schedule should show loading feedback before waiting for detail data');
+assert.match(fnBody('openScheduleDetail'), /openScheduleLoadingDrawer\(scheduleId,'排课详情加载中\.\.\.'\)[\s\S]*ensureScheduleDetailData\(scheduleId\)/, 'opening schedule detail should show loading feedback before waiting for detail data');
 assert.match(source, /function renderAfterScheduleMutation\(\)/, 'schedule save should render follow-up views through a safe helper');
 assert.match(fnBody('renderAfterScheduleMutation'), /try\{renderSchedule\(\);renderCoachOps\(\);renderMySchedule\(\);refreshCoachOpsWorkbenchAfterScheduleMutation\(\);\}catch\(err\)/, 'post-save render failures should not be reported as save failures');
 assert.doesNotMatch(fnBody('saveSchedule'), /renderSchedule\(\);renderCoachOps\(\);renderMySchedule\(\);[\s\S]*catch\(e\)\{toast\('保存失败：'/, 'successful API saves should not be caught as failed saves when rendering fails');

@@ -94,6 +94,9 @@ assert.match(savePurchaseEdit, /refreshReadModelsInBackground\(\['packageCenterP
 assert.match(voidPurchase, /refreshStudentDetailDataAfterMutation\(savedStudentId\)/, 'purchase void should synchronously refresh only the affected student detail');
 assert.doesNotMatch(voidPurchase, /await ensureDatasetsByName\(\['packageCenterPage','customerCenterPage'\],\{force:true\}\)/, 'purchase void should not wait for slow global read models');
 assert.match(voidPurchase, /refreshReadModelsInBackground\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'\]/, 'purchase void should refresh global read models in the background');
+assert.match(openPurchaseVoidModal, /id="purchaseVoidBtn"/, 'purchase void should render a stable save button id');
+assert.match(voidPurchase, /runStandardMutation\('purchaseVoidBtn'/, 'purchase void should use the stable save button id for loading and duplicate-click guards');
+assert.doesNotMatch(voidPurchase, /document\.querySelector\('\.btn-save'\)/, 'purchase void should not depend on the legacy btn-save class selector');
 assert.match(savePurchase, /giftLessons:parseFloat\(document\.getElementById\('pur_giftLessons'\)\?\.value\)\|\|0/, 'purchase save should submit gifted lesson count');
 assert.match(savePurchase, /courtBookingGiftCount:parseInt\(document\.getElementById\('pur_courtBookingGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit booking benefit gifts');
 assert.match(savePurchase, /ballMachineGiftCount:parseInt\(document\.getElementById\('pur_ballMachineGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit ball-machine benefit gifts');
