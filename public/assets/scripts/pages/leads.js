@@ -968,14 +968,20 @@ function cancelLeadDrawerEdit(leadId){
 }
 async function saveLeadBasicFromDrawer(leadId){
   await runStandardMutation('leadDrawerSaveBtn',async()=>{
-    await apiCall('PUT','/leads/'+leadId,leadPayloadFromForm());
+    const res=await apiCall('PUT','/leads/'+leadId,leadPayloadFromForm());
+    const lead=res?.lead||res;
+    if(lead?.id)upsertLeadLocal(lead);
+    return res;
   },{
     successText:'线索已更新 ✓',
-    refresh:async()=>{
-    await refreshLeadRuntime();
-    renderLeads();
-    leadDetailEditingSection='';
-    openLeadDetail(leadId);
+    onSuccess:()=>{
+      renderLeads();
+      leadDetailEditingSection='';
+      openLeadDetail(leadId);
+      refreshLeadRuntimeInBackground({},()=>{
+        renderLeads();
+        reopenLeadDetailIfStillOpen(leadId);
+      });
     }
   });
 }
@@ -1037,17 +1043,23 @@ function leadFollowupPayloadFromForm(){
 }
 async function saveLeadFollowupFromDrawer(leadId,followupId=''){
   await runStandardMutation('leadFollowupDrawerSaveBtn',async()=>{
-    if(followupId)await apiCall('PUT',`/lead-followups/${followupId}`,leadFollowupPayloadFromForm());
-    else await apiCall('POST',`/leads/${leadId}/followups`,leadFollowupPayloadFromForm());
+    const res=followupId
+      ? await apiCall('PUT',`/lead-followups/${followupId}`,leadFollowupPayloadFromForm())
+      : await apiCall('POST',`/leads/${leadId}/followups`,leadFollowupPayloadFromForm());
+    if(res?.followup)upsertLeadFollowupLocal(res.followup);
+    if(res?.lead)upsertLeadLocal(res.lead);
+    return res;
   },{
     successText:'跟进已保存 ✓',
-    refresh:async()=>{
-    if(typeof ensureLeadFollowupsForLead==='function')await ensureLeadFollowupsForLead(leadId,{force:true});
-    await refreshLeadRuntime();
-    renderLeads();
-    leadDetailEditingSection='';
-    leadDetailEditingFollowupId='';
-    openLeadDetail(leadId);
+    onSuccess:()=>{
+      renderLeads();
+      leadDetailEditingSection='';
+      leadDetailEditingFollowupId='';
+      openLeadDetail(leadId);
+      if(typeof ensureLeadFollowupsForLead==='function'){
+        ensureLeadFollowupsForLead(leadId,{force:true}).then(()=>reopenLeadDetailIfStillOpen(leadId,'followups')).catch(e=>console.warn('lead followups background refresh skipped',e));
+      }
+      refreshLeadRuntimeInBackground({},renderLeads);
     }
   });
 }
@@ -1347,6 +1359,15 @@ async function refreshLeadRuntime({withStudents=false,withCourts=false}={}){
     }
   }
 }
+function refreshLeadRuntimeInBackground(options={},after=null){
+  refreshLeadRuntime(options).then(()=>{
+    if(typeof after==='function')after();
+  }).catch(e=>console.warn('lead runtime background refresh skipped',e));
+}
+function reopenLeadDetailIfStillOpen(leadId,tab=''){
+  const currentId=document.getElementById('overlay')?.dataset.leadDetailId||'';
+  if(currentId===String(leadId)&&(!tab||leadDetailActiveTab===tab))openLeadDetail(leadId);
+}
 async function saveLead(leadId=''){
   const wechatName=document.getElementById('lead_wechatName')?.value?.trim?.()||'';
   const phone=document.getElementById('lead_phone')?.value?.trim?.()||'';
@@ -1356,13 +1377,14 @@ async function saveLead(leadId=''){
   await runStandardMutation('leadSaveBtn',async()=>{
     const res=leadId?await apiCall('PUT','/leads/'+leadId,payload):await apiCall('POST','/leads',{...payload,createInitialFollowup:true});
     if(res?.lead)upsertLeadLocal(res.lead);
+    if(res?.followup)upsertLeadFollowupLocal(res.followup);
     return res;
   },{
     successText:leadId?'线索已更新 ✓':'线索已创建 ✓',
     closeOnSuccess:true,
-    refresh:async()=>{
-      await refreshLeadRuntime();
+    onSuccess:()=>{
       renderLeads();
+      refreshLeadRuntimeInBackground({},renderLeads);
     }
   });
 }
@@ -1409,15 +1431,22 @@ function openLeadFollowupModal(leadId,followupId=''){
 async function saveLeadFollowup(leadId,followupId=''){
   const payload=leadFollowupPayloadFromForm();
   await runStandardMutation('leadFollowupSaveBtn',async()=>{
-    if(followupId)await apiCall('PUT',`/lead-followups/${followupId}`,payload);
-    else await apiCall('POST',`/leads/${leadId}/followups`,payload);
+    const res=followupId
+      ? await apiCall('PUT',`/lead-followups/${followupId}`,payload)
+      : await apiCall('POST',`/leads/${leadId}/followups`,payload);
+    if(res?.followup)upsertLeadFollowupLocal(res.followup);
+    if(res?.lead)upsertLeadLocal(res.lead);
+    return res;
   },{
     successText:'跟进已保存 ✓',
-    refresh:async()=>{
-    closeModal();
-    await refreshLeadRuntime();
-    renderLeads();
-    openLeadDetail(leadId);
+    onSuccess:()=>{
+      closeModal();
+      renderLeads();
+      openLeadDetail(leadId);
+      if(typeof ensureLeadFollowupsForLead==='function'){
+        ensureLeadFollowupsForLead(leadId,{force:true}).then(()=>reopenLeadDetailIfStillOpen(leadId,'followups')).catch(e=>console.warn('lead followups background refresh skipped',e));
+      }
+      refreshLeadRuntimeInBackground({},renderLeads);
     }
   });
 }
@@ -1558,16 +1587,19 @@ async function runLeadMerge(){
   if(!await appConfirm('确认合并？重复线索会隐藏，副学员档案会并入保留学员，相关课包、排课、购买、会员等记录会迁移到保留学员。',{title:'确认合并线索',confirmText:'确认合并'}))return;
   await runStandardMutation('leadMergeConfirmBtn',async()=>{
     try{
-      await apiCall('POST','/leads/merge',payload);
+      const res=await apiCall('POST','/leads/merge',payload);
+      if(res?.primaryLead)upsertLeadLocal(res.primaryLead);
+      (res?.duplicateLeads||[]).forEach(row=>upsertLeadLocal(row));
+      return res;
     }catch(e){
       throw new Error(leadMergeFriendlyError(e));
     }
   },{
     successText:'线索已合并 ✓',
     closeOnSuccess:true,
-    refresh:async()=>{
-      await refreshLeadRuntime({withStudents:true,withCourts:true});
+    onSuccess:()=>{
       renderLeads();
+      refreshLeadRuntimeInBackground({withStudents:true,withCourts:true},renderLeads);
     }
   });
 }
@@ -1654,15 +1686,21 @@ async function convertLeadToStudent(leadId){
   if(lead.studentId){toast('该线索已关联学员','warn');return;}
   if(!await appConfirm(`确认把「${leadDisplayName(lead)}」转为学员？`,{title:'转为学员',confirmText:'确认转化'}))return;
   await runStandardMutation('leadConvertStudentBtn',async()=>{
-    await apiCall('POST',`/leads/${leadId}/convert-student`,{});
+    const res=await apiCall('POST',`/leads/${leadId}/convert-student`,{});
+    if(res?.lead)upsertLeadLocal(res.lead);
+    if(res?.student)upsertLeadStudentLocal(res.student);
+    return res;
   },{
     loadingText:'转化中...',
     errorPrefix:'转化失败',
     successText:'已转为学员 ✓',
-    refresh:async()=>{
-      await refreshLeadRuntime({withStudents:true});
+    onSuccess:()=>{
       renderLeads();
       openLeadDetail(leadId);
+      refreshLeadRuntimeInBackground({withStudents:true},()=>{
+        renderLeads();
+        reopenLeadDetailIfStillOpen(leadId);
+      });
     }
   });
 }
@@ -1679,6 +1717,20 @@ function upsertLeadLocal(lead){
   if(!id)return;
   const next={...lead,id};
   leads=leads.some(item=>String(item?.id||'')===id)?leads.map(item=>String(item?.id||'')===id?{...item,...next}:item):[next,...leads];
+}
+function upsertLeadFollowupLocal(followup){
+  const id=String(followup?.id||'').trim();
+  if(!id)return;
+  const next={...followup,id};
+  leadFollowups=leadFollowups.some(item=>String(item?.id||'')===id)?leadFollowups.map(item=>String(item?.id||'')===id?{...item,...next}:item):[next,...leadFollowups];
+  if(followup?.leadId&&typeof loadedLeadFollowupDetailIds!=='undefined')loadedLeadFollowupDetailIds.add(String(followup.leadId));
+}
+function upsertLeadCourtLocal(court){
+  const id=String(court?.id||court?.courtId||'').trim();
+  if(!id)return '';
+  const next={...court,id};
+  courts=courts.some(item=>String(item?.id||'')===id)?courts.map((item)=>String(item?.id||'')===id?{...item,...next}:item):[next,...courts];
+  return id;
 }
 async function convertLeadToStudentAndPurchase(leadId){
   const lead=leadById(leadId);
@@ -1705,15 +1757,21 @@ async function convertLeadToCourt(leadId){
   if(lead.courtId){toast('该线索已关联订场用户','warn');return;}
   if(!await appConfirm(`确认把「${leadDisplayName(lead)}」转为订场用户？`,{title:'转为订场用户',confirmText:'确认转化'}))return;
   await runStandardMutation('leadConvertCourtBtn',async()=>{
-    await apiCall('POST',`/leads/${leadId}/convert-court`,{});
+    const res=await apiCall('POST',`/leads/${leadId}/convert-court`,{});
+    if(res?.lead)upsertLeadLocal(res.lead);
+    if(res?.court)upsertLeadCourtLocal(res.court);
+    return res;
   },{
     loadingText:'转化中...',
     errorPrefix:'转化失败',
     successText:'已转为订场用户 ✓',
-    refresh:async()=>{
-      await refreshLeadRuntime({withCourts:true});
+    onSuccess:()=>{
       renderLeads();
       openLeadDetail(leadId);
+      refreshLeadRuntimeInBackground({withCourts:true},()=>{
+        renderLeads();
+        reopenLeadDetailIfStillOpen(leadId);
+      });
     }
   });
 }
