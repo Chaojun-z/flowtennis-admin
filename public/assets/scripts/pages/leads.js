@@ -1085,7 +1085,7 @@ function leadCompanionScheduleActionHtml(lead){
 }
 function leadCourtConversionActionHtml(lead){
   if(!/订场/.test(leadDealTypeText(lead))||lead?.courtId)return '';
-  return `<div class="schedule-detail-field"><div class="schedule-detail-label">订场用户档案</div><div class="schedule-detail-value lead-linked-account-value"><span>已成交订场但未创建订场用户档案</span><span class="lead-inline-actions">${leadInlineActionHtml('创建订场用户档案',`convertLeadToCourt('${lead.id}')`)}</span></div></div>`;
+  return `<div class="schedule-detail-field"><div class="schedule-detail-label">订场用户档案</div><div class="schedule-detail-value lead-linked-account-value"><span>已成交订场但未创建订场用户档案</span><span class="lead-inline-actions">${leadInlineActionHtml('创建订场用户档案',`convertLeadToCourt('${lead.id}')`,'','leadConvertCourtBtn')}</span></div></div>`;
 }
 function leadMembershipConversionActionHtml(lead){
   if(!/订场会员/.test(leadDealTypeText(lead))||lead?.membershipAccountId)return '';
@@ -1167,10 +1167,10 @@ function leadFormalCoachText(lead){
 function leadPurchasePackageActionHtml(lead){
   if(!lead?.studentId){
     if(leadStageText(lead)==='已成交'&&/课程/.test(leadDealTypeText(lead))){
-      return `<div class="schedule-detail-field"><div class="schedule-detail-label">学员档案</div><div class="schedule-detail-value lead-linked-account-value"><span>已成交课程但未创建学员档案</span><span class="lead-inline-actions">${leadInlineActionHtml('创建学员档案并购买课包',`convertLeadToStudentAndPurchase('${lead.id}')`)}</span></div></div>`;
+      return `<div class="schedule-detail-field"><div class="schedule-detail-label">学员档案</div><div class="schedule-detail-value lead-linked-account-value"><span>已成交课程但未创建学员档案</span><span class="lead-inline-actions">${leadInlineActionHtml('创建学员档案并购买课包',`convertLeadToStudentAndPurchase('${lead.id}')`,'','leadConvertStudentPurchaseBtn')}</span></div></div>`;
     }
     if(leadStageText(lead)==='已约体验'||leadStageText(lead)==='已体验待成交'){
-      return `<div class="schedule-detail-field"><div class="schedule-detail-label">体验学员档案</div><div class="schedule-detail-value lead-linked-account-value"><span>需要先创建学员档案才能买体验课包和排课</span><span class="lead-inline-actions">${leadInlineActionHtml('创建体验学员档案并购买体验课包',`convertLeadToStudentAndPurchase('${lead.id}')`)}</span></div></div>`;
+      return `<div class="schedule-detail-field"><div class="schedule-detail-label">体验学员档案</div><div class="schedule-detail-value lead-linked-account-value"><span>需要先创建学员档案才能买体验课包和排课</span><span class="lead-inline-actions">${leadInlineActionHtml('创建体验学员档案并购买体验课包',`convertLeadToStudentAndPurchase('${lead.id}')`,'','leadConvertStudentPurchaseBtn')}</span></div></div>`;
     }
     return '';
   }
@@ -1528,21 +1528,28 @@ function openLeadMergeModal(primaryLeadId=''){
 async function previewLeadMerge(){
   const payload=leadMergePayload();
   if(!payload.primaryLeadId||!payload.mergeLeadIds.length||payload.primaryLeadId===payload.mergeLeadIds[0]){toast('请选择两条不同线索','warn');return;}
-  try{
-    const preview=await apiCall('POST','/leads/merge-preview',payload);
+  const preview=await runStandardMutation('leadMergePreviewBtn',async()=>{
+    try{
+      return await apiCall('POST','/leads/merge-preview',payload);
+    }catch(e){
+      const btn=document.getElementById('leadMergeConfirmBtn');
+      if(btn)btn.disabled=true;
+      leadMergeState.preview=null;
+      const host=document.getElementById('leadMergePreviewResult');
+      if(host)host.innerHTML=leadMergePreviewHtml({blocked:true,error:e});
+      throw new Error('当前不能合并，请查看预览说明。');
+    }
+  },{
+    loadingText:'预览中...',
+    errorPrefix:'预览失败'
+  });
+  if(preview){
     leadMergeState.preview=preview;
     const host=document.getElementById('leadMergePreviewResult');
     if(host)host.innerHTML=leadMergePreviewHtml(preview);
     const btn=document.getElementById('leadMergeConfirmBtn');
     if(btn)btn.disabled=false;
     toast('预览已生成 ✓','success');
-  }catch(e){
-    const btn=document.getElementById('leadMergeConfirmBtn');
-    if(btn)btn.disabled=true;
-    leadMergeState.preview=null;
-    const host=document.getElementById('leadMergePreviewResult');
-    if(host)host.innerHTML=leadMergePreviewHtml({blocked:true,error:e});
-    toast('当前不能合并，请查看预览说明。','error');
   }
 }
 async function runLeadMerge(){
@@ -1646,15 +1653,18 @@ async function convertLeadToStudent(leadId){
   if(!lead)return;
   if(lead.studentId){toast('该线索已关联学员','warn');return;}
   if(!await appConfirm(`确认把「${leadDisplayName(lead)}」转为学员？`,{title:'转为学员',confirmText:'确认转化'}))return;
-  try{
+  await runStandardMutation('leadConvertStudentBtn',async()=>{
     await apiCall('POST',`/leads/${leadId}/convert-student`,{});
-    await refreshLeadRuntime({withStudents:true});
-    renderLeads();
-    openLeadDetail(leadId);
-    toast('已转为学员 ✓','success');
-  }catch(e){
-    toast('转化失败：'+e.message,'error');
-  }
+  },{
+    loadingText:'转化中...',
+    errorPrefix:'转化失败',
+    successText:'已转为学员 ✓',
+    refresh:async()=>{
+      await refreshLeadRuntime({withStudents:true});
+      renderLeads();
+      openLeadDetail(leadId);
+    }
+  });
 }
 function upsertLeadStudentLocal(student){
   const id=String(student?.id||student?.studentId||'').trim();
@@ -1675,33 +1685,37 @@ async function convertLeadToStudentAndPurchase(leadId){
   if(!lead)return;
   if(lead.studentId){await openLeadPurchasePackage(leadId);return;}
   if(!await appConfirm(`确认给「${leadDisplayName(lead)}」创建学员档案并继续购买课包？`,{title:'创建学员档案',confirmText:'创建并购买'}))return;
-  try{
+  await runStandardMutation('leadConvertStudentPurchaseBtn',async()=>{
     const res=await apiCall('POST',`/leads/${leadId}/convert-student`,{});
     if(res?.lead)upsertLeadLocal(res.lead);
     let studentId=upsertLeadStudentLocal(res?.student)||res?.student?.id||leadById(leadId)?.studentId||'';
     studentId=upsertLeadStudentLocal(res?.student)||studentId||leadById(leadId)?.studentId||'';
     renderLeads();
-    if(!studentId){toast('学员档案创建失败','error');return;}
+    if(!studentId)throw new Error('学员档案创建失败');
     openPurchaseModal(studentId);
     refreshLeadRuntime({withStudents:true}).then(()=>renderLeads()).catch(e=>console.warn('lead runtime refresh skipped after student conversion',e));
-  }catch(e){
-    toast('创建学员失败：'+e.message,'error');
-  }
+  },{
+    loadingText:'创建中...',
+    errorPrefix:'创建学员失败'
+  });
 }
 async function convertLeadToCourt(leadId){
   const lead=leadById(leadId);
   if(!lead)return;
   if(lead.courtId){toast('该线索已关联订场用户','warn');return;}
   if(!await appConfirm(`确认把「${leadDisplayName(lead)}」转为订场用户？`,{title:'转为订场用户',confirmText:'确认转化'}))return;
-  try{
+  await runStandardMutation('leadConvertCourtBtn',async()=>{
     await apiCall('POST',`/leads/${leadId}/convert-court`,{});
-    await refreshLeadRuntime({withCourts:true});
-    renderLeads();
-    openLeadDetail(leadId);
-    toast('已转为订场用户 ✓','success');
-  }catch(e){
-    toast('转化失败：'+e.message,'error');
-  }
+  },{
+    loadingText:'转化中...',
+    errorPrefix:'转化失败',
+    successText:'已转为订场用户 ✓',
+    refresh:async()=>{
+      await refreshLeadRuntime({withCourts:true});
+      renderLeads();
+      openLeadDetail(leadId);
+    }
+  });
 }
 function openLeadMembershipNextStep(leadId){
   const lead=leadById(leadId);

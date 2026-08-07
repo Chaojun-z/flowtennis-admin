@@ -112,6 +112,8 @@ assert.match(fnBody('leadConversionSummaryHtml'), /leadLinkedAccountFieldHtml\(l
 assert.match(fnBody('leadConversionSummaryHtml'), /leadCourtConversionActionHtml\(lead\)[\s\S]*leadLinkedAccountFieldHtml\(lead,'court'\)[\s\S]*leadMembershipConversionActionHtml\(lead\)/, 'booking deals should expose create-court and membership next-step entries around the linked court row');
 assert.match(source, /function leadCourtConversionActionHtml\(lead\)/, 'conversion summary should expose a create court account entry for converted booking leads');
 assert.match(fnBody('leadCourtConversionActionHtml'), /订场[\s\S]*lead\?\.courtId[\s\S]*创建订场用户档案[\s\S]*convertLeadToCourt\('\$\{lead\.id\}'\)/, 'converted booking leads without a court record should show create-court-account action');
+assert.match(fnBody('leadCourtConversionActionHtml'), /leadConvertCourtBtn/, 'create court account action should expose a stable mutation id');
+assert.match(fnBody('convertLeadToCourt'), /runStandardMutation\('leadConvertCourtBtn'[\s\S]*loadingText:'转化中\.\.\.'/, 'create court account conversion should show loading and prevent duplicate clicks');
 assert.match(source, /function leadMembershipConversionActionHtml\(lead\)/, 'conversion summary should expose a membership next-step entry for converted membership leads');
 assert.match(fnBody('leadMembershipConversionActionHtml'), /订场会员[\s\S]*lead\?\.membershipAccountId[\s\S]*会员账户[\s\S]*openLeadMembershipNextStep\('\$\{lead\.id\}'\)/, 'converted membership leads without a membership account should show a next-step action without auto-writing finance');
 assert.match(fnBody('leadLinkedAccountFieldHtml'), /linkedStudentName\(lead\)[\s\S]*linkedCourtName\(lead\)/, 'linked account helper should render names instead of raw ids');
@@ -124,12 +126,16 @@ assert.match(fnBody('leadPurchasePackageActionHtml'), /已关联学员但未买�
 assert.match(fnBody('leadPurchasePackageActionHtml'), /已购课包[\s\S]*leadFormalPackageText\(lead\)/, 'linked students with formal packages should keep a package info row after purchase');
 assert.match(fnBody('leadPurchasePackageActionHtml'), /!lead\?\.studentId[\s\S]*leadStageText\(lead\)==='已成交'[\s\S]*创建学员档案并购买课包[\s\S]*convertLeadToStudentAndPurchase\('\$\{lead\.id\}'\)/, 'converted course leads without a student record should show a create-student-and-purchase entry');
 assert.match(fnBody('leadPurchasePackageActionHtml'), /已约体验[\s\S]*已体验待成交[\s\S]*创建体验学员档案并购买体验课包[\s\S]*convertLeadToStudentAndPurchase/, 'trial-stage leads without a student record should expose a create-trial-student-and-purchase entry');
+assert.match(fnBody('leadPurchasePackageActionHtml'), /leadConvertStudentPurchaseBtn/, 'create student and purchase action should expose a stable mutation id');
 assert.match(source, /async function convertLeadToStudentAndPurchase\(leadId\)/, 'conversion tab should create a student record and continue into the purchase drawer for new students');
+assert.match(fnBody('convertLeadToStudentAndPurchase'), /runStandardMutation\('leadConvertStudentPurchaseBtn'[\s\S]*loadingText:'创建中\.\.\.'/, 'create-student-and-purchase should show loading and prevent duplicate clicks');
+assert.match(fnBody('convertLeadToStudent'), /runStandardMutation\('leadConvertStudentBtn'[\s\S]*loadingText:'转化中\.\.\.'/, 'legacy direct lead-to-student conversion should also use the mutation helper');
 assert.match(source, /function upsertLeadStudentLocal\(/, 'created students should be inserted into the local student list before opening the purchase drawer');
 assert.match(fnBody('convertLeadToStudentAndPurchase'), /upsertLeadStudentLocal\(res\?\.student\)[\s\S]*openPurchaseModal\(studentId\)/, 'create-student-and-purchase should not wait for a later refresh before the purchase drawer can find the student');
 assert.match(source, /function leadFormalCoachText\(lead\)/, 'lead conversion summary should derive deal coach from lifecycle or purchase owner coach');
 assert.doesNotMatch(fnBody('openLeadPurchasePackage'), /purchasesPage/, 'lead purchase entry must not lazy-load the full purchases aggregate');
 assert.match(fnBody('openLeadPurchasePackage'), /openPurchaseModal\(lead\.studentId\)/, 'lead purchase entry should open the existing purchase drawer with the linked student id');
+assert.match(fnBody('previewLeadMerge'), /runStandardMutation\('leadMergePreviewBtn'[\s\S]*loadingText:'预览中\.\.\.'/, 'lead merge preview should show loading and prevent duplicate clicks');
 assert.match(source, /function leadLinkSearchRows\(mode,keyword=''\)/, 'lead link forms should expose searchable linked account rows');
 assert.match(source, /function leadLinkPickerHtml\(lead,mode,selectedId='',keyword=''\)/, 'lead link forms should render a searchable picker instead of a long plain dropdown');
 assert.match(fnBody('leadConversionLinkFormHtml'), /lead_link_search[\s\S]*placeholder="搜索姓名 \/ 手机号 \/ 校区"[\s\S]*oninput="renderLeadLinkPicker\(/, 'link student and court forms should support keyword search');
