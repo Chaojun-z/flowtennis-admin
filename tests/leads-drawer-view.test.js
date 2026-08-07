@@ -1,8 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const { appSource } = require('./helpers/read-index-bundle');
 const source = `${appSource}\n${fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/leads.js'), 'utf8')}`;
+const dateControlsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/date-controls.js'), 'utf8');
+const leadsOnlySource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/leads.js'), 'utf8');
+const courtsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/courts.js'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
 
 function fnBody(name){
@@ -14,6 +18,62 @@ function fnBody(name){
   const next = candidates.length ? Math.min(...candidates) : -1;
   return source.slice(start, next === -1 ? source.length : next);
 }
+
+function htmlEsc(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function runLeadCreateDrawerWithoutCourts(){
+  const context = {
+    console,
+    window: {},
+    leads: [],
+    leadFollowups: [],
+    campuses: [],
+    campus: 'all',
+    currentUser: null,
+    document: {
+      getElementById: () => null,
+      createElement: () => ({ textContent: '', innerHTML: '' })
+    },
+    today: () => '2026-08-07',
+    esc: htmlEsc,
+    activeCoachNames: () => [],
+    campusDisplayName: value => String(value || ''),
+    renderStandardDropdownHtml: (id) => `<input type="hidden" id="${id}">`,
+    renderDetailDrawerHero: ({ title }) => `<div class="hero">${htmlEsc(title)}</div>`,
+    renderDetailDrawerTabs: () => '<div class="tabs">基础信息</div>',
+    renderDetailDrawerContent: html => `<div class="content">${html}</div>`,
+    renderDetailDrawerFormCard: (title, content, actions) => `<section>${htmlEsc(title)}${content}${actions}</section>`,
+    openStandardDetailDrawer: payload => { context.drawerPayload = payload; },
+    FlowTennisBusinessTaxonomy: {
+      optionList: () => [],
+      values: () => [],
+      normalizeLeadSource: value => String(value || ''),
+      normalizeLeadCustomerType: value => String(value || ''),
+      normalizeLeadDemandProduct: value => String(value || '')
+    }
+  };
+  vm.createContext(context);
+  vm.runInContext(dateControlsSource, context, { filename: 'date-controls.js' });
+  vm.runInContext(leadsOnlySource, context, { filename: 'leads.js' });
+  assert.strictEqual(typeof context.openLeadCreateDrawer, 'function', 'lead create drawer entry should be available without courts.js');
+  context.openLeadCreateDrawer();
+  assert.ok(context.drawerPayload, 'lead create drawer should call the standard drawer opener');
+  assert.match(context.drawerPayload.titleHtml, /新增线索/, 'lead create drawer should render the create title');
+  assert.match(context.drawerPayload.bodyHtml, /id="lead_wechatName"/, 'lead create drawer should render the name field');
+  assert.match(context.drawerPayload.bodyHtml, /id="lead_leadDate_btn"/, 'lead create drawer should render the shared date button');
+}
+
+assert.match(dateControlsSource, /function courtDateButtonHtml\(/, 'shared date control should live in the core layer');
+assert.doesNotMatch(courtsSource, /function courtDateButtonHtml\(/, 'courts page should not own the shared date control');
+runLeadCreateDrawerWithoutCourts();
 
 assert.match(source, /let leadDetailActiveTab='basic'/, 'lead drawer should keep active tab state');
 assert.match(source, /function leadDetailTabsHtml\(/, 'lead detail should expose drawer tabs');

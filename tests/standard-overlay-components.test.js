@@ -17,6 +17,48 @@ function fnBody(source, name){
   return source.slice(start, next === -1 ? source.length : next);
 }
 
+function assertCoreOnclickHandlersExist(){
+  const definitions = new Set();
+  for (const match of appSource.matchAll(/\b(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) definitions.add(match[1]);
+  for (const match of appSource.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/g)) definitions.add(match[1]);
+  const builtins = new Set([
+    'event',
+    'this',
+    'document',
+    'window',
+    'Math',
+    'Number',
+    'String',
+    'Array',
+    'Object',
+    'Date',
+    'JSON',
+    'parseInt',
+    'parseFloat',
+    'if',
+    'getElementById',
+    'querySelector',
+    'querySelectorAll',
+    'stopPropagation',
+    'preventDefault',
+    'min',
+    'max'
+  ]);
+  const allowedLegacy = new Set(['openClassScheduleList', 'openClassStudentList']);
+  const handlers = [...appSource.matchAll(/on(?:click|change|input|keydown|mouseenter|wheel|touchmove)=["']([^"']+)["']/g)].map(match => match[1]);
+  const calls = new Set();
+  handlers.forEach(handler => {
+    for (const match of handler.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) {
+      const name = match[1];
+      if (!builtins.has(name)) calls.add(name);
+    }
+  });
+  const missing = [...calls].filter(name => !definitions.has(name) && !allowedLegacy.has(name)).sort();
+  assert.deepStrictEqual(missing, [], `core onclick handlers should resolve to global functions: ${missing.join(', ')}`);
+}
+
+assertCoreOnclickHandlersExist();
+
 [
   'openStandardModal',
   'renderStandardModalActionsHtml',

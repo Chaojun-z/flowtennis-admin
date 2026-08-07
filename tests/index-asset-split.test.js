@@ -13,6 +13,12 @@ assert.match(html, /assets\/styles\/pages\.css\?v=20260802-course-colors-coachsc
 assert.match(html, /assets\/scripts\/core\/constants\.js/, 'index.html should load constants.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js/, 'index.html should load utils.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js\?v=20260802-course-colors-coachschedule-v1/, 'index.html should bust stale cached utils.js after coach operations split changes');
+assert.match(html, /assets\/scripts\/core\/date-controls\.js\?v=20260807-shared-date-controls-v1/, 'index.html should load shared date controls with a cache-busting version');
+assert.ok(
+  html.indexOf('assets/scripts/core/date-controls.js') > html.indexOf('assets/scripts/core/utils.js') &&
+    html.indexOf('assets/scripts/core/date-controls.js') < html.indexOf('assets/scripts/pages/leads.js'),
+  'shared date controls should load after utils.js and before leads.js'
+);
 assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api.js');
 assert.match(html, /assets\/scripts\/core\/state\.js/, 'index.html should load state.js');
 assert.match(html, /assets\/scripts\/core\/shell\.js/, 'index.html should load shell.js');
@@ -32,7 +38,7 @@ assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260806-coachschedu
 assert.match(html, /assets\/scripts\/standard\/charts\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached charts.js after channel quality matrix changes');
 assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached operations.js after channel quality matrix changes');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
-assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=/, 'index.html should bust stale cached courts.js when court filters change');
+assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260807-shared-date-controls-v1/, 'index.html should bust stale cached courts.js when shared date controls move out');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
 assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260612-student-delete-card-v1/, 'index.html should bust stale cached students.js after student delete card updates');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');
