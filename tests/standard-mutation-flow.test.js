@@ -29,6 +29,7 @@ function fnBody(source, name){
   'saveCourtFinanceRecord',
   'saveLead',
   'saveLeadFollowup',
+  'runLeadImportCommit',
   'saveSchedule',
   'confirmScheduleCancel',
   'saveCoachProposal',

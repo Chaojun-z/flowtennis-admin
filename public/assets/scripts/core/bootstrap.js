@@ -242,6 +242,11 @@ async function doDelete(){
       toast(result?.purchaseVoid?'已作废':(currentDelType==='lead'&&result?.archived?'已作废隐藏':(result?.archived?'已隐藏':'已删除')),result?.archived?'warn':'error');
     },
     refresh:(result={})=>{
+      if(currentDelType==='lead'){
+        if(typeof renderLeads==='function')renderLeads();
+        if(typeof refreshLeadRuntimeInBackground==='function')refreshLeadRuntimeInBackground({},()=>{if(typeof renderLeads==='function')renderLeads();});
+        return;
+      }
       if(!result?.purchaseVoid)renderAll();
     }
   });

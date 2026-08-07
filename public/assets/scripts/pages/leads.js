@@ -1393,16 +1393,18 @@ async function saveLead(leadId=''){
 async function unlinkLeadStudent(leadId){
   if(!await appConfirm('确认解除关联学员？学员档案不会删除。',{title:'解除关联',confirmText:'解除关联'}))return;
   await runStandardMutation('leadUnlinkStudentBtn',async()=>{
-    await apiCall('POST',`/leads/${leadId}/unlink-student`,{});
+    const res=await apiCall('POST',`/leads/${leadId}/unlink-student`,{});
+    if(res?.lead)upsertLeadLocal(res.lead);
+    if(res?.student)upsertLeadStudentLocal(res.student);
+    return res;
   },{
     loadingText:'解除中…',
     errorPrefix:'解除失败',
     successText:'关联学员已解除 ✓',
-    refresh:async()=>{
-      await refreshLeadRuntime({withStudents:true,waitForMetrics:false});
+    onSuccess:()=>{
       renderLeads();
       openLeadDetail(leadId);
-      refreshLeadRuntimeInBackground({},()=>{
+      refreshLeadRuntimeInBackground({withStudents:true},()=>{
         renderLeads();
         reopenLeadDetailIfStillOpen(leadId);
       });
@@ -1412,16 +1414,18 @@ async function unlinkLeadStudent(leadId){
 async function unlinkLeadCourt(leadId){
   if(!await appConfirm('确认解除关联订场用户？订场用户不会删除。',{title:'解除关联',confirmText:'解除关联'}))return;
   await runStandardMutation('leadUnlinkCourtBtn',async()=>{
-    await apiCall('POST',`/leads/${leadId}/unlink-court`,{});
+    const res=await apiCall('POST',`/leads/${leadId}/unlink-court`,{});
+    if(res?.lead)upsertLeadLocal(res.lead);
+    if(res?.court)upsertLeadCourtLocal(res.court);
+    return res;
   },{
     loadingText:'解除中…',
     errorPrefix:'解除失败',
     successText:'关联订场用户已解除 ✓',
-    refresh:async()=>{
-      await refreshLeadRuntime({withCourts:true,waitForMetrics:false});
+    onSuccess:()=>{
       renderLeads();
       openLeadDetail(leadId);
-      refreshLeadRuntimeInBackground({},()=>{
+      refreshLeadRuntimeInBackground({withCourts:true},()=>{
         renderLeads();
         reopenLeadDetailIfStillOpen(leadId);
       });
@@ -1676,20 +1680,19 @@ async function rerunLeadImportPreview(){
 async function runLeadImportCommit(){
   if(!leadImportState.summary?.totalRows){toast('请先完成导入预览','warn');return;}
   if(!await appConfirm(`确认导入 ${leadImportState.summary.totalRows||0} 条线索？`,{title:'确认导入线索',confirmText:'确认导入'}))return;
-  const btn=document.getElementById('leadImportCommitBtn');
-  if(btn){btn.disabled=true;btn.textContent='导入中…';}
-  try{
+  await runStandardMutation('leadImportCommitBtn',async()=>{
     const batchKey=[leadImportState.fileName,leadImportState.fileSize,leadImportState.fileModified].join(':');
-    const res=await apiCall('POST','/leads/import-commit',{batchKey,rows:leadImportState.previewRows});
-    closeModal();
-    await refreshLeadRuntime({withStudents:true,withCourts:true,waitForMetrics:false});
+    return apiCall('POST','/leads/import-commit',{batchKey,rows:leadImportState.previewRows});
+  },{
+    loadingText:'导入中…',
+    errorPrefix:'导入失败',
+    closeOnSuccess:true,
+    onSuccess:(res={})=>{
     renderLeads();
-    refreshLeadRuntimeInBackground({},renderLeads);
     toast(`导入完成：线索 ${res.leadCount||0} 条，跟进 ${res.followupCount||0} 条`,'success');
-  }catch(e){
-    toast('导入失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='确认导入';}
-  }
+      refreshLeadRuntimeInBackground({withStudents:true,withCourts:true},renderLeads);
+    }
+  });
 }
 async function convertLeadToStudent(leadId){
   const lead=leadById(leadId);
@@ -1810,17 +1813,19 @@ async function saveLeadLinkStudent(leadId){
   const studentId=document.getElementById('lead_link_student_id')?.value||'';
   if(!studentId){toast('请选择学员','warn');return;}
   await runStandardMutation('leadLinkStudentBtn',async()=>{
-    await apiCall('POST',`/leads/${leadId}/link-student`,{studentId});
+    const res=await apiCall('POST',`/leads/${leadId}/link-student`,{studentId});
+    if(res?.lead)upsertLeadLocal(res.lead);
+    if(res?.student)upsertLeadStudentLocal(res.student);
+    return res;
   },{
     loadingText:'关联中…',
     errorPrefix:'关联失败',
     successText:'学员关联已保存 ✓',
-    refresh:async()=>{
-      await refreshLeadRuntime({withStudents:true,waitForMetrics:false});
+    onSuccess:()=>{
       renderLeads();
       leadDetailConversionMode='';
       openLeadDetail(leadId);
-      refreshLeadRuntimeInBackground({},()=>{
+      refreshLeadRuntimeInBackground({withStudents:true},()=>{
         renderLeads();
         reopenLeadDetailIfStillOpen(leadId);
       });
@@ -1842,17 +1847,19 @@ async function saveLeadLinkCourt(leadId){
   const courtId=document.getElementById('lead_link_court_id')?.value||'';
   if(!courtId){toast('请选择订场用户','warn');return;}
   await runStandardMutation('leadLinkCourtBtn',async()=>{
-    await apiCall('POST',`/leads/${leadId}/link-court`,{courtId});
+    const res=await apiCall('POST',`/leads/${leadId}/link-court`,{courtId});
+    if(res?.lead)upsertLeadLocal(res.lead);
+    if(res?.court)upsertLeadCourtLocal(res.court);
+    return res;
   },{
     loadingText:'关联中…',
     errorPrefix:'关联失败',
     successText:'订场关联已保存 ✓',
-    refresh:async()=>{
-      await refreshLeadRuntime({withCourts:true,waitForMetrics:false});
+    onSuccess:()=>{
       renderLeads();
       leadDetailConversionMode='';
       openLeadDetail(leadId);
-      refreshLeadRuntimeInBackground({},()=>{
+      refreshLeadRuntimeInBackground({withCourts:true},()=>{
         renderLeads();
         reopenLeadDetailIfStillOpen(leadId);
       });
