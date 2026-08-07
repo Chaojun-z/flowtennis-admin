@@ -102,6 +102,8 @@ assert.match(fnBody('leadInlineActionHtml'), /id\?`id="\$\{esc\(id\)\}"`:''/, 'i
 assert.match(fnBody('leadLinkedAccountFieldHtml'), /leadUnlinkStudentBtn[\s\S]*leadUnlinkCourtBtn/, 'lead unlink actions should render stable button ids');
 assert.match(fnBody('unlinkLeadStudent'), /runStandardMutation\('leadUnlinkStudentBtn'/, 'unlinking a linked student should use a stable mutation target');
 assert.match(fnBody('unlinkLeadCourt'), /runStandardMutation\('leadUnlinkCourtBtn'/, 'unlinking a linked court account should use a stable mutation target');
+assert.match(fnBody('unlinkLeadStudent'), /refreshLeadRuntime\(\{withStudents:true,waitForMetrics:false\}\)/, 'unlinking a student should refresh local lead/student rows without waiting for lifecycle metrics');
+assert.match(fnBody('unlinkLeadCourt'), /refreshLeadRuntime\(\{withCourts:true,waitForMetrics:false\}\)/, 'unlinking a court account should refresh local lead/court rows without waiting for lifecycle metrics');
 assert.doesNotMatch(source, /runStandardMutation\('',/, 'lead mutations should not pass an empty action target');
 assert.match(fnBody('leadLinkedAccountFieldHtml'), /关联[\s\S]*修改[\s\S]*删除/, 'linked student and court actions should expose link, edit, and delete text actions');
 assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /<button[^>]*class="schedule-detail-action primary"/, 'linked account row should not use framed primary buttons');
@@ -142,6 +144,8 @@ assert.match(fnBody('leadConversionLinkFormHtml'), /lead_link_search[\s\S]*place
 assert.doesNotMatch(fnBody('leadConversionLinkFormHtml'), /renderStandardDropdownHtml\(id/, 'link student and court forms should not use the non-searchable standard dropdown');
 assert.match(fnBody('openLeadLinkStudentModal'), /startLeadConversionDrawerMode\(leadId,'link-student'\)/, 'link student should stay in the lead drawer');
 assert.match(fnBody('openLeadLinkCourtModal'), /startLeadConversionDrawerMode\(leadId,'link-court'\)/, 'link court should stay in the lead drawer');
+assert.match(fnBody('saveLeadLinkStudent'), /refreshLeadRuntime\(\{withStudents:true,waitForMetrics:false\}\)/, 'saving a linked student should not wait for lifecycle metrics before releasing the button');
+assert.match(fnBody('saveLeadLinkCourt'), /refreshLeadRuntime\(\{withCourts:true,waitForMetrics:false\}\)/, 'saving a linked court account should not wait for lifecycle metrics before releasing the button');
 assert.match(source, /function openLeadDetailFromList\(/, 'lead list view action should reset to basic tab');
 assert.match(source, /function openLeadFollowupFromList\(/, 'lead list follow-up action should open drawer edit form');
 assert.match(fnBody('renderLeads'), /openLeadDetailFromList\('\$\{lead\.id\}'\)[\s\S]*openLeadFollowupFromList\('\$\{lead\.id\}'\)/, 'lead list should show view and follow-up actions');

@@ -1343,8 +1343,10 @@ function openLeadModal(leadId){
   leadDetailConversionMode='';
   openLeadDetail(leadId);
 }
-async function refreshLeadRuntime({withStudents=false,withCourts=false}={}){
-  const base=['leads','lifecycleMetricsPage'];
+async function refreshLeadRuntime({withStudents=false,withCourts=false,waitForMetrics=true}={}){
+  const base=['leads'];
+  if(waitForMetrics)base.push('lifecycleMetricsPage');
+  else if(typeof markReadModelsStale==='function')markReadModelsStale(['lifecycleMetricsPage']);
   if(withStudents)base.push('students');
   try{
     await ensureDatasetsByName(base,{force:true});
@@ -1360,7 +1362,7 @@ async function refreshLeadRuntime({withStudents=false,withCourts=false}={}){
   }
 }
 function refreshLeadRuntimeInBackground(options={},after=null){
-  refreshLeadRuntime(options).then(()=>{
+  refreshLeadRuntime({...options,waitForMetrics:true}).then(()=>{
     if(typeof after==='function')after();
   }).catch(e=>console.warn('lead runtime background refresh skipped',e));
 }
@@ -1397,9 +1399,13 @@ async function unlinkLeadStudent(leadId){
     errorPrefix:'解除失败',
     successText:'关联学员已解除 ✓',
     refresh:async()=>{
-      await refreshLeadRuntime({withStudents:true});
+      await refreshLeadRuntime({withStudents:true,waitForMetrics:false});
       renderLeads();
       openLeadDetail(leadId);
+      refreshLeadRuntimeInBackground({},()=>{
+        renderLeads();
+        reopenLeadDetailIfStillOpen(leadId);
+      });
     }
   });
 }
@@ -1412,9 +1418,13 @@ async function unlinkLeadCourt(leadId){
     errorPrefix:'解除失败',
     successText:'关联订场用户已解除 ✓',
     refresh:async()=>{
-      await refreshLeadRuntime({withCourts:true});
+      await refreshLeadRuntime({withCourts:true,waitForMetrics:false});
       renderLeads();
       openLeadDetail(leadId);
+      refreshLeadRuntimeInBackground({},()=>{
+        renderLeads();
+        reopenLeadDetailIfStillOpen(leadId);
+      });
     }
   });
 }
@@ -1672,8 +1682,9 @@ async function runLeadImportCommit(){
     const batchKey=[leadImportState.fileName,leadImportState.fileSize,leadImportState.fileModified].join(':');
     const res=await apiCall('POST','/leads/import-commit',{batchKey,rows:leadImportState.previewRows});
     closeModal();
-    await refreshLeadRuntime({withStudents:true,withCourts:true});
+    await refreshLeadRuntime({withStudents:true,withCourts:true,waitForMetrics:false});
     renderLeads();
+    refreshLeadRuntimeInBackground({},renderLeads);
     toast(`导入完成：线索 ${res.leadCount||0} 条，跟进 ${res.followupCount||0} 条`,'success');
   }catch(e){
     toast('导入失败：'+e.message,'error');
@@ -1805,10 +1816,14 @@ async function saveLeadLinkStudent(leadId){
     errorPrefix:'关联失败',
     successText:'学员关联已保存 ✓',
     refresh:async()=>{
-    await refreshLeadRuntime({withStudents:true});
-    renderLeads();
-    leadDetailConversionMode='';
-    openLeadDetail(leadId);
+      await refreshLeadRuntime({withStudents:true,waitForMetrics:false});
+      renderLeads();
+      leadDetailConversionMode='';
+      openLeadDetail(leadId);
+      refreshLeadRuntimeInBackground({},()=>{
+        renderLeads();
+        reopenLeadDetailIfStillOpen(leadId);
+      });
     }
   });
 }
@@ -1833,10 +1848,14 @@ async function saveLeadLinkCourt(leadId){
     errorPrefix:'关联失败',
     successText:'订场关联已保存 ✓',
     refresh:async()=>{
-    await refreshLeadRuntime({withCourts:true});
-    renderLeads();
-    leadDetailConversionMode='';
-    openLeadDetail(leadId);
+      await refreshLeadRuntime({withCourts:true,waitForMetrics:false});
+      renderLeads();
+      leadDetailConversionMode='';
+      openLeadDetail(leadId);
+      refreshLeadRuntimeInBackground({},()=>{
+        renderLeads();
+        reopenLeadDetailIfStillOpen(leadId);
+      });
     }
   });
 }

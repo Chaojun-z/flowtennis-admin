@@ -28,7 +28,7 @@ function assertBackgroundRefresh(name){
 }
 
 assert.match(leadsSource, /function refreshLeadRuntimeInBackground\(/, 'lead page should expose a background refresh helper');
-assert.match(fnBody('refreshLeadRuntimeInBackground'), /refreshLeadRuntime\(options\)\.then/, 'background helper should not be awaited by callers');
+assert.match(fnBody('refreshLeadRuntimeInBackground'), /refreshLeadRuntime\(\{\.\.\.options,waitForMetrics:true\}\)\.then/, 'background helper should not be awaited by callers');
 assert.match(leadsSource, /function reopenLeadDetailIfStillOpen\(/, 'lead page should only reopen the same detail drawer after background refresh');
 
 assertBackgroundRefresh('saveLead');
