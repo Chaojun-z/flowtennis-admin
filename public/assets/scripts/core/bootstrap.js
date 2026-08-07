@@ -227,7 +227,7 @@ async function doDelete(){
     else if(currentDelType==='product')products=products.filter(u=>u.id!==currentDelId);
     else if(currentDelType==='package')packages=packages.filter(u=>u.id!==currentDelId);
     else if(currentDelType==='purchase'){await loadPageDataAndRender(currentPage,{quiet:true,force:true});return {...result,purchaseVoid:true};}
-    else if(currentDelType==='schedule'){schedules=schedules.filter(u=>u.id!==currentDelId);mergeScheduleSaveResult(result,null);setDatasetValue('schedule',schedules);}
+    else if(currentDelType==='schedule'){schedules=schedules.filter(u=>u.id!==currentDelId);mergeScheduleSaveResult(result,null);if(typeof noteScheduleLocalMutation==='function')noteScheduleLocalMutation();setDatasetValue('schedule',schedules);}
     else if(currentDelType==='coach')coaches=coaches.filter(u=>u.id!==currentDelId);
     else if(currentDelType==='campus'){campuses=campuses.filter(u=>u.id!==currentDelId);CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=campusDisplayName(x.name||x.code||x.id);});buildCampusTabs();}
     else if(currentDelType==='membership-plan')membershipPlans=membershipPlans.filter(u=>u.id!==currentDelId);
@@ -256,6 +256,11 @@ async function doDelete(){
             else if(typeof renderStudents==='function')renderStudents();
           });
         }
+        return;
+      }
+      if(currentDelType==='schedule'){
+        if(typeof renderAfterScheduleMutation==='function')renderAfterScheduleMutation();
+        else{if(typeof renderSchedule==='function')renderSchedule();if(typeof renderCoachOps==='function')renderCoachOps();if(typeof renderMySchedule==='function')renderMySchedule();}
         return;
       }
       if(!result?.purchaseVoid)renderAll();

@@ -15,8 +15,14 @@ const doDeleteBody = fnBody('doDelete');
 
 assert.match(
   doDeleteBody,
-  /else if\(delType==='schedule'\)\{schedules=schedules\.filter\(u=>u\.id!==delId\);[\s\S]*setDatasetValue\('schedule',schedules\)/,
+  /else if\(currentDelType==='schedule'\)\{schedules=schedules\.filter\(u=>u\.id!==currentDelId\);[\s\S]*noteScheduleLocalMutation\(\)[\s\S]*setDatasetValue\('schedule',schedules\)/,
   'schedule delete should sync the updated schedule dataset cache immediately after removing the row'
+);
+
+assert.match(
+  doDeleteBody,
+  /if\(currentDelType==='schedule'\)\{[\s\S]*renderAfterScheduleMutation\(\)[\s\S]*return;\s*\}\s*if\(!result\?\.purchaseVoid\)renderAll\(\);/,
+  'schedule delete should rerender schedule views and return before the full app render path'
 );
 
 console.log('schedule delete cache tests passed');

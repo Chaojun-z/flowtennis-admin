@@ -23,7 +23,7 @@ assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api
 assert.match(html, /assets\/scripts\/core\/state\.js/, 'index.html should load state.js');
 assert.match(html, /assets\/scripts\/core\/shell\.js/, 'index.html should load shell.js');
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js/, 'index.html should load bootstrap.js');
-assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260807-student-speed-feedback-v1/, 'index.html should bust stale cached bootstrap.js after student delete speed feedback fixes');
+assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260807-schedule-speed-feedback-v1/, 'index.html should bust stale cached bootstrap.js after schedule delete speed feedback fixes');
 assert.match(html, /assets\/scripts\/pages\/admin-users\.js/, 'index.html should load admin-users page module');
 assert.match(html, /assets\/scripts\/pages\/coaches\.js/, 'index.html should load coaches page module');
 assert.match(html, /assets\/scripts\/pages\/campusmgr\.js/, 'index.html should load campusmgr page module');
