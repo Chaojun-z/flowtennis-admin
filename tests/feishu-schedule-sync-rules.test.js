@@ -627,9 +627,88 @@ const pastBoundModifiedPlan = sync.buildDryRunPlan({
   entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
   nowKey: '2026-07-21 00:00'
 });
-assert.strictEqual(pastBoundModifiedPlan.summary.update, 0, 'bound historical schedules should not be auto-updated after the class time');
-assert.strictEqual(pastBoundModifiedPlan.summary.notifyError, 1, 'bound historical schedule changes should be sent for operations confirmation');
-assert.match(pastBoundModifiedPlan.actions[0].reason, /历史排课修改需要运营确认：时间：系统「12:00-13:30」，飞书「13:00-14:30」/, 'historical update blocker should explain the exact changed field');
+assert.strictEqual(pastBoundModifiedPlan.summary.update, 1, 'bound historical time changes should auto-update when venue, coach and student have no conflicts');
+assert.strictEqual(pastBoundModifiedPlan.summary.notifyError, 0, 'safe historical time changes should not ask operations to confirm');
+assert.deepStrictEqual(pastBoundModifiedPlan.actions[0].diffs.map(item => item.field), ['time'], 'safe historical time update should keep exact diffs for audit');
+
+const pastBoundTimeConflictPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'past-bound-time-conflict-key',
+    fingerprint: 'new-time-conflict-fingerprint',
+    startTime: '2026-07-20 13:00',
+    endTime: '2026-07-20 14:30',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [{ id: 'sync-past-time-conflict', sourceKey: 'past-bound-time-conflict-key', scheduleId: 'sch-past-time-conflict', lastFingerprint: 'old-fingerprint', status: 'active' }],
+  schedules: [
+    {
+      id: 'sch-past-time-conflict',
+      startTime: '2026-07-20 12:00',
+      endTime: '2026-07-20 13:30',
+      coach: '晓哲',
+      campus: 'shunyi_mapo',
+      venue: '3号场',
+      courseType: '私教课',
+      experienceType: '',
+      studentIds: ['stu-1'],
+      status: '已排课'
+    },
+    {
+      id: 'sch-target-time-conflict',
+      startTime: '2026-07-20 13:00',
+      endTime: '2026-07-20 14:30',
+      coach: '其他教练',
+      campus: 'shunyi_mapo',
+      venue: '3号场',
+      courseType: '私教课',
+      experienceType: '',
+      studentIds: ['stu-other'],
+      status: '已排课'
+    }
+  ],
+  students: [{ id: 'stu-1', name: 'W.Jing' }, { id: 'stu-other', name: '其他学员' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
+  nowKey: '2026-07-21 00:00'
+});
+assert.strictEqual(pastBoundTimeConflictPlan.summary.update, 0, 'historical time changes should not auto-update into an occupied court');
+assert.strictEqual(pastBoundTimeConflictPlan.summary.notifyError, 1, 'conflicting historical time changes should ask operations to confirm');
+assert.match(pastBoundTimeConflictPlan.actions[0].reason, /目标时间或场地已有排课/, 'time conflict should be visible in the operator notification');
+
+const pastBoundCoachOnlyPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'past-bound-coach-only-key',
+    fingerprint: 'new-coach-fingerprint',
+    coachName: 'Siren',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [{ id: 'sync-past-coach-only', sourceKey: 'past-bound-coach-only-key', scheduleId: 'sch-past-coach-only', lastFingerprint: 'old-fingerprint', status: 'active' }],
+  schedules: [{
+    id: 'sch-past-coach-only',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coach: '晓哲',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-1'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }, { id: 'coach-siren', name: 'Siren' }],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
+  nowKey: '2026-07-21 00:00'
+});
+assert.strictEqual(pastBoundCoachOnlyPlan.summary.update, 1, 'bound historical coach changes should auto-update when the new coach has no conflict');
+assert.deepStrictEqual(pastBoundCoachOnlyPlan.actions[0].diffs.map(item => item.field), ['coach'], 'coach-only auto update should keep exact diffs for audit');
 
 const pastBoundFingerprintOnlyPlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -740,7 +819,7 @@ const pastBoundVenueConflictPlan = sync.buildDryRunPlan({
   nowKey: '2026-07-21 00:00'
 });
 assert.strictEqual(pastBoundVenueConflictPlan.summary.update, 0, 'historical venue changes should not auto-update into an occupied court');
-assert.match(pastBoundVenueConflictPlan.actions[0].reason, /目标场地已有排课/, 'venue conflict should be visible in the operator notification');
+assert.match(pastBoundVenueConflictPlan.actions[0].reason, /目标时间或场地已有排课/, 'venue conflict should be visible in the operator notification');
 
 const systemVenuePlan = sync.buildDryRunPlan({
   feishuCourses: courses.slice(0, 1),
@@ -1506,6 +1585,65 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
 
   assert.strictEqual(updateCalled, false, 'high-risk course type change should not auto-update schedule');
   assert.strictEqual(appliedUpdate[0].type, 'notify_error', 'high-risk update should be converted into operator notification');
+
+  const updateTaskWrites = [];
+  const appliedPendingUpdate = await sync.applySyncPlan({
+    actions: [{
+      type: 'notify_error',
+      sourceKey: 'pending-update-key',
+      confirmableUpdate: true,
+      reason: '历史排课修改需要运营确认：时间：系统「15:00-16:00」，飞书「14:00-15:00」',
+      sync: { id: 'sync-pending-update', sourceKey: 'pending-update-key', scheduleId: 'sch-pending-update', lastFingerprint: 'old', status: 'active' },
+      schedule: {
+        id: 'sch-pending-update',
+        startTime: '2026-08-05 15:00',
+        endTime: '2026-08-05 16:00',
+        studentName: '张佳良 老二',
+        courseType: '私教课',
+        coach: 'Siren',
+        venue: '4号场'
+      },
+      candidate: {
+        sourceKey: 'pending-update-key',
+        sheetId: 'EGRknT',
+        sheetTitle: '8.3-8.9',
+        startTime: '2026-08-05 14:00',
+        endTime: '2026-08-05 15:00',
+        fingerprint: 'new-update-fingerprint',
+        studentNames: ['张佳良 老二'],
+        studentText: '张佳良 老二（8）',
+        coachName: 'Siren',
+        resolvedCoach: { id: 'coach-siren', name: 'Siren' },
+        campus: 'shunyi_mapo',
+        venue: '3号场',
+        venueText: '马坡室内',
+        courtText: '3号',
+        lessonCount: 1,
+        courseText: '青少年私教【正式】',
+        course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false },
+        resolvedStudents: [{ id: 'stu-zjl2', name: '张佳良 老二' }],
+        scheduleStudents: [{ id: 'stu-zjl2', name: '张佳良 老二' }]
+      }
+    }]
+  }, {
+    put: async (table, id, row) => updateTaskWrites.push({ table, id, row }),
+    uuidv4: () => 'uuid-update',
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.strictEqual(appliedPendingUpdate[0].type, 'pending_update', 'confirmable historical update should create a pending confirmation task');
+  assert.match(appliedPendingUpdate[0].confirmUrl, /\/api\/feishu-schedule-sync\/confirm-update\?taskId=/, 'pending update should include a mobile confirmation link');
+  assert.ok(updateTaskWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.row.type === 'update_confirm' && item.row.status === 'pending'), 'pending update task should be stored for mobile confirmation');
+
+  const pendingUpdateCard = sync.buildNotificationCard({
+    at: '2026-08-07T10:00:00.000Z',
+    sheetTitle: '8.3-8.9 当前周',
+    plan: { summary: { total: 1, noop: 0, bindExisting: 0, create: 0, createTrial: 0, update: 0, pendingDelete: 0, notifyError: 0 }, actions: [] },
+    applied: appliedPendingUpdate
+  });
+  const cardJson = JSON.stringify(pendingUpdateCard);
+  assert.match(cardJson, /确认按飞书修改/, 'pending update card should expose an operation button in Feishu');
+  assert.match(cardJson, /confirm-update/, 'pending update button should point to the update confirmation endpoint');
 
   const deleteWrites = [];
   const appliedDelete = await sync.applySyncPlan({

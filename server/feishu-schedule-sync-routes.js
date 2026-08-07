@@ -662,13 +662,30 @@ function venueConflictForCandidate(candidate={},existing={},schedules=[]){
   })||null;
 }
 
+function historicalUpdateConflict(candidate={},existing={},ctx={}){
+  const fields=scheduleCandidateFields(candidate);
+  const studentIds=new Set((fields.studentIds||[]).map(String).filter(Boolean));
+  return (ctx.schedules||[]).find(row=>{
+    if(!activeSchedule(row))return false;
+    if(String(row.id||'')===String(existing.id||''))return false;
+    if(!scheduleTimeOverlaps(fields,row))return false;
+    const sameVenue=normalizeCampusKey(row.campus)===normalizeCampusKey(fields.campus)&&String(row.venue||'')===String(fields.venue||'');
+    if(sameVenue)return true;
+    const sameCoach=normalizeNameKey(row.coach||row.coachName)===normalizeNameKey(fields.coach);
+    if(sameCoach)return true;
+    const rowStudentIds=parseMaybeArray(row.studentIds).map(String);
+    return rowStudentIds.some(id=>studentIds.has(id));
+  })||null;
+}
+
 function historicalChangeDecision(existing={},candidate={},ctx={}){
   const diffs=historicalScheduleDiffs(existing,candidate,ctx);
   if(!diffs.length)return {type:'refresh',diffs};
-  const venueOnly=diffs.length===1&&diffs[0].field==='venue';
-  if(venueOnly){
-    const conflict=venueConflictForCandidate(candidate,existing,ctx.schedules);
-    if(conflict)return {type:'notify',diffs,extraReason:`目标场地已有排课：${formatScheduleBrief(conflict)}`};
+  const safeFields=new Set(['time','venue','coach']);
+  const safeChange=diffs.every(item=>safeFields.has(item.field));
+  if(safeChange){
+    const conflict=historicalUpdateConflict(candidate,existing,ctx);
+    if(conflict)return {type:'notify',diffs,extraReason:`目标时间或场地已有排课：${formatScheduleBrief(conflict)}`};
     return {type:'update',diffs};
   }
   return {type:'notify',diffs};
@@ -1172,6 +1189,9 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       const existing=(schedules||[]).find(row=>String(row.id||'')===String(sync.scheduleId));
       if(!existing){
         actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,reason:'同步记录绑定的系统排课不存在'});
+      }else if(sync.status==='pending_update'&&sync.pendingFingerprint===candidate.fingerprint){
+        markRepresentedSchedule(existing);
+        actions.push({type:'noop',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing});
       }else if(sync.lastFingerprint!==candidate.fingerprint){
         if(historicalCourse){
           const decision=historicalChangeDecision(existing,candidate,ctx);
@@ -1186,7 +1206,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
             continue;
           }
           const detail=formatHistoricalDiffs(decision.diffs);
-          actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing,diffs:decision.diffs,reason:['历史排课修改需要运营确认',detail,decision.extraReason].map(cleanText).filter(Boolean).join('：')});
+          actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing,diffs:decision.diffs,confirmableUpdate:true,reason:['历史排课修改需要运营确认',detail,decision.extraReason].map(cleanText).filter(Boolean).join('：')});
           continue;
         }
         markRepresentedSchedule(existing);
@@ -1603,6 +1623,14 @@ function formatDeleteCardLine(item={},action=null){
   return `系统排课 ${item.scheduleId||action?.sync?.scheduleId||''}`;
 }
 
+function formatUpdateCardLine(item={},action=null){
+  const snapshot=item.scheduleSnapshot||action?.scheduleSnapshot||scheduleSnapshot(action?.schedule);
+  const candidateLine=action?.candidate?formatCandidateCardLine(action.candidate):'';
+  const before=snapshot?formatDeleteCardLine({scheduleSnapshot:snapshot}):'';
+  if(before&&candidateLine)return `系统：${before}\n飞书：${candidateLine}`;
+  return before||candidateLine||`系统排课 ${item.scheduleId||action?.sync?.scheduleId||''}`;
+}
+
 function operatorActionText(reason=''){
   const text=cleanText(reason);
   if(/课时编号|系统课包进度/.test(text)){
@@ -1631,6 +1659,7 @@ function buildNotificationCard(result={}){
   const actionMap=actionBySourceKey(result);
   const successItems=applied.filter(item=>!['error','pending_delete','refresh_sync'].includes(item.type));
   const pendingDeletes=applied.filter(item=>item.type==='pending_delete');
+  const pendingUpdates=applied.filter(item=>item.type==='pending_update');
   const appliedErrors=applied.filter(item=>item.type==='error');
   const notifyErrors=(result.plan?.actions||[]).filter(action=>action.type==='notify_error');
   const needItems=[
@@ -1642,7 +1671,7 @@ function buildNotificationCard(result={}){
     : Number(s[type==='bind_existing'?'bindExisting':type==='create_schedule'?'create':type==='create_trial_schedule'?'createTrial':type==='update_schedule'?'update':type==='pending_delete'?'pendingDelete':type]||0);
   const resultLine=[
     `自动完成：新增 ${count('create_schedule')}｜体验课 ${count('create_trial_schedule')}｜修改 ${count('update_schedule')}｜绑定 ${count('bind_existing')}｜删除待确认 ${count('pending_delete')}`,
-    `需要处理：${needItems.length+pendingDeletes.length} 条`
+    `需要处理：${needItems.length+pendingDeletes.length+pendingUpdates.length} 条`
   ].join('\n');
   const elements=[
     {
@@ -1672,6 +1701,22 @@ function buildNotificationCard(result={}){
     });
     if(needItems.length>8)needLines.push(`还有 ${needItems.length-8} 条未展示，请先处理上方事项。`);
     elements.push({tag:'div',text:{tag:'lark_md',content:`**需要确认**\n${needLines.join('\n\n')}`}});
+  }
+  for(const item of pendingUpdates.slice(0,5)){
+    const action=actionMap.get(item.sourceKey);
+    elements.push({tag:'hr'});
+    elements.push({tag:'div',text:{tag:'lark_md',content:[
+      '**修改确认**',
+      formatUpdateCardLine(item,action),
+      item.reason?`原因：${cleanText(item.reason)}`:'原因：历史排课信息和飞书表不一致'
+    ].filter(Boolean).join('\n')}});
+    elements.push({tag:'action',actions:[{
+      tag:'button',
+      text:{tag:'plain_text',content:'确认按飞书修改'},
+      type:'primary',
+      url:item.confirmUrl
+    }]});
+    elements.push({tag:'note',elements:[{tag:'plain_text',content:'暂不处理：不用点击，系统会保留当前排课'}]});
   }
   for(const item of pendingDeletes.slice(0,5)){
     const action=actionMap.get(item.sourceKey);
@@ -1861,6 +1906,14 @@ async function applySyncPlan(plan,ctx={}){
         const schedule=result?.schedule;
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,lastFingerprint:action.candidate.fingerprint,status:'active',updatedAt:now,lastSyncedAt:now});
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:schedule?.id||action.schedule.id});
+      }else if(action.type==='notify_error'&&action.confirmableUpdate&&action.sync?.id&&action.schedule?.id){
+        const publicBase=cleanText(process.env.FEISHU_SCHEDULE_PUBLIC_BASE_URL||process.env.STUDENT_REMINDER_PUBLIC_BASE_URL||'https://www.flowtennis.cn').replace(/\/+$/,'');
+        const snapshot=scheduleSnapshot(action.schedule);
+        const task={id:`feishu-update-${sha256(`${action.sourceKey}|${now}`).slice(0,24)}`,type:'update_confirm',sourceKey:action.sourceKey,syncId:action.sync.id,scheduleId:action.schedule.id,scheduleSnapshot:snapshot,reason:action.reason||'',status:'pending',createdAt:now,updatedAt:now,expiresAt:new Date(Date.now()+48*3600000).toISOString(),confirmToken:sha256(`${ctx.uuidv4()}|${action.sourceKey}|${now}`),updateBody:buildScheduleBody(action.candidate),nextFingerprint:action.candidate.fingerprint};
+        task.confirmUrl=`${publicBase}/api/feishu-schedule-sync/confirm-update?taskId=${encodeURIComponent(task.id)}&token=${encodeURIComponent(task.confirmToken)}`;
+        await ctx.put(ctx.T_FEISHU_SCHEDULE_TASKS,task.id,task);
+        await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,status:'pending_update',pendingUpdateTaskId:task.id,pendingFingerprint:action.candidate.fingerprint,updatedAt:now});
+        applied.push({type:'pending_update',sourceKey:action.sourceKey,taskId:task.id,scheduleId:task.scheduleId,scheduleSnapshot:snapshot,reason:task.reason,confirmUrl:task.confirmUrl});
       }else if(action.type==='pending_delete'){
         const publicBase=cleanText(process.env.FEISHU_SCHEDULE_PUBLIC_BASE_URL||process.env.STUDENT_REMINDER_PUBLIC_BASE_URL||'https://www.flowtennis.cn').replace(/\/+$/,'');
         const snapshot=scheduleSnapshot(action.schedule);
@@ -2036,6 +2089,49 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const endDate=validDateKey(query.get('endDate'));
       const includeHistorical=query.get('history')==='true'||!!startDate||!!endDate;
       return sendJson(res,await runSync({dryRun,startDate,endDate,includeHistorical,historyApplyMode:cleanText(query.get('historyApply')),historyTrialMode:cleanText(query.get('historyTrial')),notifyDryRun:query.get('notify')==='true',suppressNotification:query.get('notify')==='false'||query.get('silent')==='true',scanAllSheets:query.get('scanAllSheets')==='true'}));
+    }
+    if(path==='/feishu-schedule-sync/confirm-update'&&method==='GET'){
+      const taskId=cleanText(query.get('taskId'));
+      const token=cleanText(query.get('token'));
+      await init();
+      await ensureFeishuSyncTables();
+      const tasks=await getCachedScan(T_FEISHU_SCHEDULE_TASKS).catch(()=>[]);
+      const task=(tasks||[]).find(row=>String(row.id)===taskId&&String(row.confirmToken)===token&&row.type==='update_confirm');
+      if(!task)return sendPlainText(res,'确认链接无效或已过期',404);
+      const before=formatUpdateCardLine({scheduleSnapshot:task.scheduleSnapshot,scheduleId:task.scheduleId});
+      const after=formatScheduleBrief(task.updateBody||{});
+      const statusText=task.status==='pending'?'待确认':task.status==='confirmed'?'已修改':'已处理';
+      const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>确认修改排课</title><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:24px;line-height:1.6;background:#f7f7f5;color:#1f2933"><main style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px"><h2 style="margin:0 0 12px">确认按飞书修改排课</h2><p style="margin:0 0 12px;color:#4b5563">请核对下面信息，确认后系统会按飞书表覆盖这节排课。</p><div style="padding:12px;background:#f9fafb;border-radius:8px;margin-bottom:12px"><strong>系统当前：</strong><br>${escapeHtml(before||'系统已有排课')}</div><div style="padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:16px"><strong>飞书修改为：</strong><br>${escapeHtml(after||'飞书排课')}</div><p>当前状态：${escapeHtml(statusText)}</p><form method="post" action="/api/feishu-schedule-sync/confirm-update?taskId=${encodeURIComponent(task.id)}&token=${encodeURIComponent(task.confirmToken)}"><button style="height:44px;padding:0 18px;border:0;border-radius:6px;background:#2563eb;color:#fff;font-size:16px">确认按飞书修改</button></form><p style="font-size:13px;color:#6b7280">不想处理就直接关闭页面，系统会保留当前排课。</p></main></body>`;
+      res.setHeader('Content-Type','text/html; charset=utf-8');
+      return res.status(200).send(html);
+    }
+    if(path==='/feishu-schedule-sync/confirm-update'&&method==='POST'){
+      const taskId=cleanText(query.get('taskId'));
+      const token=cleanText(query.get('token'));
+      await init();
+      await ensureFeishuSyncTables();
+      const tasks=await getCachedScan(T_FEISHU_SCHEDULE_TASKS,{fresh:true}).catch(()=>[]);
+      const task=(tasks||[]).find(row=>String(row.id)===taskId&&String(row.confirmToken)===token&&row.type==='update_confirm');
+      if(!task)return sendJson(res,{error:'确认链接无效或已过期'},404);
+      if(task.status!=='pending')return sendJson(res,{error:'该确认任务已处理'},409);
+      if(task.expiresAt&&new Date(task.expiresAt).getTime()<Date.now())return sendJson(res,{error:'确认链接已过期'},410);
+      const result=await updateSchedule(task.scheduleId,task.updateBody||{});
+      const now=new Date().toISOString();
+      const nextTask={...task,status:'confirmed',confirmedAt:now,updatedAt:now,resultScheduleId:task.scheduleId};
+      await put(T_FEISHU_SCHEDULE_TASKS,task.id,nextTask);
+      const syncRows=await getCachedScan(T_FEISHU_SCHEDULE_SYNC,{fresh:true}).catch(()=>[]);
+      const syncRow=(syncRows||[]).find(row=>String(row.id||'')===String(task.syncId||''));
+      if(syncRow){
+        await put(T_FEISHU_SCHEDULE_SYNC,syncRow.id,{...syncRow,status:'active',lastFingerprint:task.nextFingerprint||syncRow.lastFingerprint,pendingUpdateTaskId:'',pendingFingerprint:'',updatedAt:now,lastSyncedAt:now});
+      }
+      await sendFeishuWebhook(process.env.FEISHU_SCHEDULE_NOTIFY_WEBHOOK,[
+        '【网球兄弟】排课修改已确认',
+        formatScheduleBrief(task.updateBody||{}),
+        '结果：系统排课已按飞书修改'
+      ].filter(Boolean).join('\n')).catch(()=>null);
+      const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>排课已修改</title><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:24px;line-height:1.6;background:#f7f7f5;color:#1f2933"><main style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px"><h2 style="margin:0 0 12px;color:#166534">排课已修改</h2><p style="margin:0 0 12px;color:#4b5563">系统已经按飞书表更新这节排课。</p><div style="padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:16px">${escapeHtml(formatScheduleBrief(result?.schedule||task.updateBody||{})||'系统排课')}</div><p style="font-size:13px;color:#6b7280">你可以关闭这个页面，飞书群里也会收到确认结果。</p></main></body>`;
+      res.setHeader('Content-Type','text/html; charset=utf-8');
+      return res.status(200).send(html);
     }
     if(path==='/feishu-schedule-sync/confirm-delete'&&method==='GET'){
       const taskId=cleanText(query.get('taskId'));
