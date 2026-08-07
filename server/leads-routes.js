@@ -22,18 +22,6 @@ function createLeadsRoutes(deps={}){
     return values.some(v=>String(v||'').toLowerCase().includes(keyword));
   }
 
-  function leadCsvValues(value){
-    return cleanLeadText(value).split(',').map(item=>cleanLeadText(item)).filter(Boolean);
-  }
-
-  function leadRowFieldText(row,...fields){
-    for(const field of fields){
-      const value=cleanLeadText(row?.[field]);
-      if(value)return value;
-    }
-    return '';
-  }
-
   function parseLeadPaging(query){
     const enabled=query?.get('paged')==='1'||query?.get('page')||query?.get('pageSize');
     if(!enabled)return null;
@@ -475,12 +463,9 @@ function createLeadsRoutes(deps={}){
         const q=cleanLeadText(query.get('q')).toLowerCase();
         const rows=await readVisibleLeadRows({expandLifecycleSearch:!!q});
         const source=cleanLeadText(query.get('source'));
-        const consultType=cleanLeadText(query.get('consultType')||query.get('demandProduct'));
-        const customerType=cleanLeadText(query.get('customerType'));
-        const ownerValues=leadCsvValues(query.get('owner'));
-        const systemStatus=cleanLeadText(query.get('systemStatus')||query.get('leadStage'));
-        const dealType=cleanLeadText(query.get('dealType'));
-        const campusValue=cleanLeadText(query.get('campus')||query.get('campusName'));
+        const consultType=cleanLeadText(query.get('consultType'));
+        const owner=cleanLeadText(query.get('owner'));
+        const systemStatus=cleanLeadText(query.get('systemStatus'));
         const waiting=cleanLeadText(query.get('waiting'));
         const dateFrom=cleanLeadText(query.get('dateFrom'));
         const dateTo=cleanLeadText(query.get('dateTo'));
@@ -489,13 +474,10 @@ function createLeadsRoutes(deps={}){
         const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
         const filtered=visibleRows.filter(row=>{
           if(q&&!leadSearchHit(q,row.displayName,row.wechatName,row.name,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.leadStage,row.studentStage,row.courtStage,row.membershipStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
-          if(source&&leadRowFieldText(row,'source')!==source)return false;
-          if(customerType&&leadRowFieldText(row,'customerType','consultType','demandProduct','profileNote')!==customerType)return false;
-          if(consultType&&leadRowFieldText(row,'demandProduct','consultType')!==consultType)return false;
-          if(ownerValues.length&&!ownerValues.includes(leadRowFieldText(row,'owner')))return false;
-          if(systemStatus&&leadRowFieldText(row,'leadStage','systemStatus','rawStatus')!==systemStatus)return false;
-          if(dealType&&leadRowFieldText(row,'dealType','conversionType')!==dealType)return false;
-          if(campusValue&&leadRowFieldText(row,'campus','campusId','campusName')!==campusValue)return false;
+          if(source&&row.source!==source)return false;
+          if(consultType&&row.consultType!==consultType)return false;
+          if(owner&&row.owner!==owner)return false;
+          if(systemStatus&&row.systemStatus!==systemStatus)return false;
           if(dateFrom&&String(row.leadDate||'')<dateFrom)return false;
           if(dateTo&&String(row.leadDate||'')>dateTo)return false;
           if(waiting==='today'&&String(row.nextFollowupAt||'').slice(0,10)!==todayStr)return false;
@@ -578,15 +560,6 @@ function createLeadsRoutes(deps={}){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await ensureLeadTablesForRequest();
       const leadId=leadIdM[1];
-      if(method==='GET'){
-        await init();
-        const lead=await get(T_LEADS,leadId).catch(()=>null);
-        if(!lead)return sendJson(res,{error:'线索不存在'},404);
-        const snapshot=await applyPersistedLeadSnapshot(lead);
-        const scoped=filterLoadAllForUser({leads:[snapshot]},user).leads||[];
-        if(!scoped.length)return sendJson(res,{error:'线索不存在'},404);
-        return sendJson(res,scoped[0]);
-      }
       if(method==='PUT'){
         await init();
         const old=await get(T_LEADS,leadId).catch(()=>null);

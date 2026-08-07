@@ -7,13 +7,6 @@ const studentsSource = fs.readFileSync(path.join(__dirname, '../public/assets/sc
 const corePagesSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 
-function fnBodyFrom(sourceText, name) {
-  const start = sourceText.indexOf(`function ${name}(`);
-  assert.notStrictEqual(start, -1, `${name} should exist`);
-  const next = sourceText.indexOf('\nfunction ', start + 1);
-  return sourceText.slice(start, next === -1 ? sourceText.length : next);
-}
-
 assert.match(source, /students:\['campuses','students','coaches'\]/, 'students page should only block on the datasets needed to paint the list and coach filter immediately');
 assert.match(source, /leads:\['campuses','leads'\]/, 'leads page should only block on the data needed for first paint');
 assert.match(source, /'package-students':\['campuses','students','coaches','customerCenterPage'\]/, 'formal student page should use coaches and the customer center list read model before first render');
@@ -61,7 +54,7 @@ assert.doesNotMatch(source, /membershipsPage:\(\)=>apiCall\('GET','\/page-data\/
 assert.match(source, /,courtAccountListViewPage:\(\{fresh=false\}=\{\}\)=>apiCall\('GET',courtAccountListViewPageDataUrl\(\{fresh\}\)\)/, 'membership pages should use the scoped unified court account read model endpoint');
 assert.match(source, /,workbenchPage:\(\)=>apiCall\('GET','\/page-data\/workbench'\)/, 'coach workbench should use a dedicated aggregated endpoint');
 assert.match(source, /,coachSchedulePage:\(\)=>apiCall\('GET','\/page-data\/coach-schedule'\)/, 'coach schedule calendar should use a dedicated lightweight endpoint');
-assert.match(source, /leads:\(\)=>apiCall\('GET',leadListPageDataUrl\(\)\)/, 'leads page should load its primary list dataset from the server-paged /leads endpoint');
+assert.match(source, /leads:\(\)=>apiCall\('GET','\/leads'\)/, 'leads page should load its primary list dataset from /leads');
 assert.match(source, /leadFollowups:\(\)=>apiCall\('GET','\/lead-followups'\)/, 'leads page should load follow-up detail data separately');
 assert.match(source, /Promise\.allSettled\(immediateNames\.map/, 'background loading should fetch the current background batch in parallel');
 assert.match(source, /if\(isStudentListPage\(pg\)&&STUDENT_PAGE_DEFERRED_REQUIREMENTS\.length\)\{[\s\S]*setTimeout\(\(\)=>\{[\s\S]*ensureDatasetsByName\(STUDENT_PAGE_DEFERRED_REQUIREMENTS,\{force\}\)/, 'student list background loader should stay guarded when deferred requirements are enabled');
@@ -96,7 +89,7 @@ assert.match(source, /const datasetLoadPromises=new Map\(\);/, 'state should de-
 assert.match(source, /datasetLoadPromises\.has\(requestKey\)/, 'dataset loading should reuse in-flight requests');
 assert.match(source, /DATASET_LOADERS\[name\]\(\{fresh:force\}\)/, 'forced dataset refreshes should pass fresh=true to loaders that bypass stale page-data summaries');
 assert.match(source, /function markLearningDataStale\(\)\{[\s\S]*'customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchaseCreatePage','purchasesPage','coachSchedulePage','workbenchPage'[\s\S]*financeOverviewData=null;[\s\S]*financePrepaidView=\{rows:\[\],summary:\{\}\};/, 'schedule and package mutations should invalidate student, package, lifecycle, coach schedule, workbench, and finance read-model caches together');
-assert.match(source, /const DATASETS_WITH_REQUEST_KEYS=new Set\(\['leads','operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage'\]\);/, 'scoped page-data datasets should be keyed by their current request url');
+assert.match(source, /const DATASETS_WITH_REQUEST_KEYS=new Set\(\['operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage'\]\);/, 'scoped page-data datasets should be keyed by their current request url');
 assert.match(source, /function pageDataScopeQuery\(\{dateRange='global'\}=\{\}\)/, 'scoped page-data requests should share the global campus and date filter query builder');
 assert.match(source, /function datasetHasCurrentRequestKey\(name\)/, 'loaded scoped datasets should be invalidated when the top filter query changes');
 assert.match(source, /if\(DATASETS_WITH_REQUEST_KEYS\.has\(name\)&&requestKey!==datasetRequestKey\(name\)\)return;/, 'stale scoped summary responses must not overwrite the latest top-filter metrics');
@@ -147,7 +140,7 @@ assert.match(corePagesSource, /const canUseStudentTeachingSummary=!fresh[\s\S]*t
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*ignoreTeachingSummaryDetailRows:true/, 'student drawer detail rows must come from per-student fact reads, not stale teaching summary detail snapshots');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*studentScheduleIds[\s\S]*studentScheduleIds\.has\(String\(row\.scheduleId\|\|''\)\)/, 'student drawer should load ledger rows linked by scheduleId so authorized package usage appears for the actual student');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*relatedEntitlementIds[\s\S]*scopedEntitlements[\s\S]*relatedPurchaseIds[\s\S]*scopedPurchases[\s\S]*relatedStudents/, 'student drawer should include the package owner records needed to render authorized package usage names');
-assert.doesNotMatch(fnBodyFrom(studentsSource, 'ensureStudentDetailDatasets'), /purchasesPage/, 'student detail must not load the full purchases aggregate');
+assert.doesNotMatch(studentsSource, /ensureDatasetsByName\(STUDENT_DETAIL_REQUIREMENTS\)[\s\S]*purchasesPage/, 'student detail must not load the full purchases aggregate');
 assert.match(apiSource, /T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary'/, 'api should declare the student teaching summary read model table');
 assert.match(apiSource, /queueStudentTeachingSummaryRefresh\(t,meta\)/, 'source table writes should queue student teaching summary refreshes outside the first-screen read path');
 

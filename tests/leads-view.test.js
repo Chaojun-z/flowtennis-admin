@@ -108,7 +108,7 @@ assert.match(fnBody('leadConvertedYesNo'), /leadStageText\(lead\)==='已成交'/
 assert.doesNotMatch(fnBody('leadConvertedYesNo'), /leadDealTypeText\(lead\)/, 'deal type alone should not mark a lead as converted');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
-assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*reloadLeadsForCurrentPage\(\)/, 'leads search should reset pagination and reload the current server page');
+assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'leads search should reset pagination through the standard list flow before rendering');
 assert.match(leadsSource, /function cycleLeadSort\([\s\S]*leadSortDir='asc'[\s\S]*leadSortDir='desc'[\s\S]*leadSortKey='';leadSortDir='';/, 'leads sortable headers should cycle asc, desc, and no sort');
 assert.match(leadsSource, /function updateLeadSortHeaders\(/, 'leads page should update sortable header state');
 assert.match(leadsSource, /function getSortedLeads\(/, 'leads page should sort after filtering and before pagination');
@@ -130,7 +130,7 @@ assert.match(leadsSource, /const LEAD_FIXED_OWNER_NAMES=\['Mira','吴敌','陈�
 assert.match(fnBody('leadOwnerOptionNames'), /LEAD_FIXED_OWNER_NAMES[\s\S]*activeCoachNames\(\)/, 'lead owner options should be fixed owners plus active coaches');
 assert.doesNotMatch(fnBody('leadOwnerOptionNames'), /leadRows\(\)/, 'lead owner options should not derive selectable owners from row data');
 assert.match(fnBody('renderLeadToolbarFilters'), /leadOwnerFilterHtml\(leadOwnerOptions\(\),ownerValues\)/, 'lead owner filter should use the same owner options as the drawers');
-assert.match(leadsSource, /function toggleLeadOwnerFilter\([\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*reloadLeadsForCurrentPage\(\)/, 'checking lead owners should reload the server-paged list');
+assert.match(leadsSource, /function toggleLeadOwnerFilter\([\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'checking lead owners should refresh the list');
 assert.match(fnBody('getFilteredLeads'), /const ownerValues=leadOwnerFilterValues\(\)[\s\S]*if\(ownerValues\.length&&!ownerValues\.includes\(leadOwnerText\(lead\)\)\)return false;/, 'lead filtering should support normalized multiple checked owners');
 assert.match(leadsSource, /function leadPriorityOptions\(\)[\s\S]*\['P0','P1','P2','P3','P4'\]/, 'lead page should expose P0-P4 follow-up priority options');
 assert.match(leadsSource, /function leadPriorityText\(lead\)[\s\S]*lead\?\.followupPriority/, 'lead page should read follow-up priority from the lead record');
