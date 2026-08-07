@@ -1514,10 +1514,16 @@ async function saveStudent(){
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
   },{
     successText:savedEditId?'修改成功 ✓':'添加成功 ✓',
-    refresh:async()=>{
+    refresh:()=>{
       renderStudents();
       if(savedEditId){editId=null;studentDetailEditingSection='';studentDetailEditingStudentId='';openStudentDetail(savedEditId);}
       else closeModal();
+      if(typeof refreshReadModelsInBackground==='function'){
+        refreshReadModelsInBackground(['customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage'],'student save background refresh',()=>{
+          renderStudents();
+          if(savedEditId&&studentDetailDrawerIsOpenFor(savedEditId))openStudentDetail(savedEditId);
+        });
+      }
     }
   });
 }

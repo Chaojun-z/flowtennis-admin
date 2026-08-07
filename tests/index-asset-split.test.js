@@ -23,7 +23,7 @@ assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api
 assert.match(html, /assets\/scripts\/core\/state\.js/, 'index.html should load state.js');
 assert.match(html, /assets\/scripts\/core\/shell\.js/, 'index.html should load shell.js');
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js/, 'index.html should load bootstrap.js');
-assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260807-lead-remaining-actions-v1/, 'index.html should bust stale cached bootstrap.js after lead delete speed feedback fixes');
+assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260807-student-speed-feedback-v1/, 'index.html should bust stale cached bootstrap.js after student delete speed feedback fixes');
 assert.match(html, /assets\/scripts\/pages\/admin-users\.js/, 'index.html should load admin-users page module');
 assert.match(html, /assets\/scripts\/pages\/coaches\.js/, 'index.html should load coaches page module');
 assert.match(html, /assets\/scripts\/pages\/campusmgr\.js/, 'index.html should load campusmgr page module');
@@ -42,7 +42,7 @@ assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260701-channel-q
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260807-shared-date-controls-v1/, 'index.html should bust stale cached courts.js when shared date controls move out');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
-assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260807-student-detail-cache-v2/, 'index.html should bust stale cached students.js after student detail cache updates');
+assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260807-student-speed-feedback-v1/, 'index.html should bust stale cached students.js after student speed feedback fixes');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');
 assert.match(html, /id="sidebarHost"/, 'index.html should keep the shared sidebar mount host');
 assert.match(html, /id="topbarHost"/, 'index.html should keep the shared topbar mount host');

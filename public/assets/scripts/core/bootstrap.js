@@ -247,6 +247,17 @@ async function doDelete(){
         if(typeof refreshLeadRuntimeInBackground==='function')refreshLeadRuntimeInBackground({},()=>{if(typeof renderLeads==='function')renderLeads();});
         return;
       }
+      if(currentDelType==='student'){
+        if(typeof renderStudentsIfVisible==='function')renderStudentsIfVisible();
+        else if(typeof renderStudents==='function')renderStudents();
+        if(typeof refreshReadModelsInBackground==='function'){
+          refreshReadModelsInBackground(['customerCenterPage','lifecycleMetricsPage','packageCenterPage','financePage','purchasesPage'],'student delete background refresh',()=>{
+            if(typeof renderStudentsIfVisible==='function')renderStudentsIfVisible();
+            else if(typeof renderStudents==='function')renderStudents();
+          });
+        }
+        return;
+      }
       if(!result?.purchaseVoid)renderAll();
     }
   });
