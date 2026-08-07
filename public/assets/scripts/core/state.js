@@ -350,12 +350,30 @@ function customerCenterPageDataUrl({fresh=false}={}){
 function financePageDataUrl(){
   return scopedPageDataUrl('/page-data/finance');
 }
+function courtAccountListViewQueryParams(){
+  if(currentPage==='memberships'){
+    return {
+      page:membershipPage,
+      pageSize:membershipPageSize,
+      q:document.getElementById('membershipSearch')?.value||'',
+      accountType:'会员账户',
+      membershipTier:membershipTierFilterValue
+    };
+  }
+  return {
+    page:courtPage,
+    pageSize:courtPageSize,
+    q:document.getElementById('courtSearch')?.value||'',
+    owner:courtOwnerFilterValue,
+    accountType:courtAccountTypeFilterValue
+  };
+}
 function courtAccountListViewPageDataUrl({fresh=false}={}){
-  const url=scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'});
+  const url=appendPageDataQuery(scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'}),courtAccountListViewQueryParams());
   return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
 }
 function courtAccountDetailPageDataUrl(courtId,{fresh=false}={}){
-  const url=appendPageDataQuery(scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'}),{ids:courtId});
+  const url=appendPageDataQuery('/page-data/court-account-list-view',{ids:courtId});
   return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
 }
 function operationsPageDatasetRequestKey(){
@@ -907,7 +925,7 @@ function renderPageLoading(pg){
   if(pg==='coaches')renderTableBodyLoading('coachTbody',7,'教练数据加载中...');
   if(pg==='courts')renderCourtPageLoading();
   if(pg==='matches')renderTableBodyLoading('matchTbody',9,'约球数据加载中...');
-  if(pg==='memberships')renderBlockLoading('membershipTabBody','会员数据加载中...');
+  if(pg==='memberships')renderTableBodyLoading('membershipTbody',11,'会员数据加载中...');
   if(pg==='mystudents')renderBlockLoading('myStudentsBody','学员数据加载中...');
   if(pg==='myclasses')renderBlockLoading('myClassesBody','班次数据加载中...');
 }
@@ -1329,7 +1347,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     if(pg==='leads')renderLeadTableError(String(e.message||e));
     if(pg==='schedule')renderScheduleTableError(String(e.message||e));
     if(pg==='courts')renderCourtTableError(String(e.message||e));
-    if(pg==='memberships')renderBlockLoading('membershipTabBody','会员统一读模型加载失败，请稍后重试');
+    if(pg==='memberships')renderTableBodyLoading('membershipTbody',11,'会员统一读模型加载失败，请稍后重试');
     toast('加载失败：'+e.message,'error');
   }finally{
     if(!quiet&&loading)loading.classList.remove('show');
@@ -1405,6 +1423,7 @@ async function loadCourtReadModelGuardData({force=false,allowStaleOnError=false}
   if(courtAccountListViewData&&!force&&courtAccountListViewRequestKey===requestKey)return;
   try{
     const view=await DATASET_LOADERS.courtAccountListViewPage({fresh:force});
+    if(requestKey!==datasetRequestKey('courtAccountListViewPage'))return;
     courtAccountListViewData=view||null;
     courtAccountListViewRequestKey=requestKey;
     if(force)loadedCourtAccountDetailIds.clear();

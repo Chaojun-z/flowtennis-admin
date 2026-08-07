@@ -27,7 +27,7 @@ assert.match(courtsSource, /catch\(e=>\{[\s\S]*renderCourtTableError\(String\(e\
 assert.doesNotMatch(courtsSource, /if\(shouldUseCourtReadModelByDefault\(\)&&courtAccountListViewData\)/, '订场用户页不得再用读模型存在与否决定是否回旧链');
 assert.match(courtsSource, /window\.__courtAccountListViewCompare=/, '前端应暴露最新 compare 输出供内部验证');
 assert.match(courtsSource, /const filters=courtAccountListViewData\?\.filters\|\|\{\};/, '隐藏读模型路径应直接消费后端 filters');
-assert.match(courtsSource, /let list=getCurrentCourtAccountRows\(\);[\s\S]*const summary=FlowTennisPlatformDataStandards\.currentCourtAccountSummary\(list\);[\s\S]*renderCourtStatsCards\(summary\);/, '订场用户顶部必须按当前筛选后的统一读模型行汇总');
+assert.match(courtsSource, /let list=getCurrentCourtAccountRows\(\);[\s\S]*const summary=courtAccountListViewData\?\.summary\|\|FlowTennisPlatformDataStandards\.currentCourtAccountSummary\(list\);[\s\S]*renderCourtStatsCards\(summary\);/, '订场用户顶部必须使用后端统一读模型返回的筛选后汇总');
 assert.doesNotMatch(courtsSource, /const scopedSummary=summarizeCourtAccountListItems\(list\);|list\.map\(courtFinanceLocal\)|list\.map\(courtBookingSummary\)/, '订场用户顶部不得再前端本地汇总');
 assert.doesNotMatch(courtsSource, /function renderCourts\([\s\S]*const finBase=list\.map\(courtFinanceLocal\)/, '订场用户页不得保留旧链顶部计算');
 assert.doesNotMatch(courtsSource, /function exportCourtCSV\([\s\S]*courtFinanceLocal\(u\)/, '订场用户导出不得再用前端旧财务算法');

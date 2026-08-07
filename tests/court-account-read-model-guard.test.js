@@ -164,6 +164,22 @@ async function main() {
   assert.strictEqual(pagedView.pagination.total, 1, '读模型分页应返回筛选后的总数');
   assert.strictEqual(pagedView.pagination.pageSize, 1, '读模型分页应返回当前 pageSize');
 
+  const firstPage = await loadView({ page: 1, pageSize: 1 });
+  const secondPage = await loadView({ page: 2, pageSize: 1 });
+  assert.strictEqual(firstPage.items.length, 1, '第一页应返回一条订场用户');
+  assert.strictEqual(secondPage.items.length, 1, '第二页应返回一条订场用户');
+  assert.notStrictEqual(firstPage.items[0].id, secondPage.items[0].id, '翻页不应重复同一条订场用户');
+  assert.deepStrictEqual(
+    [firstPage.items[0].id, secondPage.items[0].id].sort(),
+    view.items.map((item) => item.id).sort(),
+    '翻页后前两页数据应连续不丢'
+  );
+
+  const membershipTierView = await loadView({ page: 1, pageSize: 15, accountType: '会员账户', membershipTier: '金卡' });
+  assert.strictEqual(membershipTierView.items.length, 1, '读模型应支持会员类型筛选');
+  assert.strictEqual(membershipTierView.items[0].id, 'court-1', '会员类型筛选应返回匹配会员');
+  assert.strictEqual(membershipTierView.pagination.total, 1, '会员类型筛选应进入分页总数');
+
   const compare = await loadCompare({ sampleIds: ['court-1'] });
   assert.deepStrictEqual(Object.keys(compare), ['meta', 'summaryDiffs', 'items'], 'compare 输出应返回 meta/summaryDiffs/items');
   assert.strictEqual(compare.items.length, 1, 'compare 应支持按样本 ID 过滤');

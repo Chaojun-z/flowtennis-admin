@@ -638,9 +638,11 @@ function buildScopedCourtAccountListSummary(view = {}, scope = {}) {
 function buildFilters({ items = [], campuses = [] }) {
   const owners = [...new Set(items.map((item) => String(item?.owner || '').trim()).filter(Boolean))].sort();
   const accountTypes = [...new Set(items.map((item) => String(item?.accountType || '').trim()).filter(Boolean))].sort();
+  const membershipTiers = [...new Set(items.map((item) => String(item?.membershipTierLabel || '').trim()).filter((value) => value && value !== '-'))].sort();
   return {
     owners,
     accountTypes,
+    membershipTiers,
     campuses: campuses.map((campus) => ({
       code: campus?.code || campus?.id || '',
       name: campus?.name || campus?.code || campus?.id || ''
@@ -684,11 +686,25 @@ function filterCourtAccountItems(items = [], options = {}) {
   const q = String(options.q || '').trim();
   const owner = String(options.owner || '').trim();
   const accountType = String(options.accountType || '').trim();
+  const membershipTier = String(options.membershipTier || '').trim();
   return (items || []).filter(item => {
     if (owner && String(item.owner || '').trim() !== owner) return false;
     if (accountType && String(item.accountType || '').trim() !== accountType) return false;
+    if (membershipTier && String(item.membershipTierLabel || '').trim() !== membershipTier) return false;
     return textSearchHit(q, item.displayName, item.phone, item.campusName, item.owner, item.depositAttitude, item.notesSummary, item.balance, item.totalDeposit, item.totalSpent, item.totalReceived, item.linkedStudentSummary, item.membershipTierLabel, item.membershipStatus);
   });
+}
+
+function applyCourtAccountScope(items = [], options = {}) {
+  const start = scopeDateKey(options.startDate);
+  const end = scopeDateKey(options.endDate);
+  const hasDateScope = !!(start || end);
+  const hasCampusScope = !!String(options.campus || options.campusCode || '').trim();
+  if (!hasDateScope && !hasCampusScope) return items;
+  return (items || [])
+    .filter(item => courtItemMatchesScope(item, options))
+    .map(item => scopedCourtItem(item, options))
+    .filter(item => hasDateScope ? (Number(item.bookingCount) || 0) > 0 : true);
 }
 
 function buildCourtChainMetricsFromItems(items = []) {
@@ -732,7 +748,7 @@ function buildCourtAccountListViewFromData(source = {}, options = {}) {
   const detailItems = activeCourts
     .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
     .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));
-  const filteredDetailItems = filterCourtAccountItems(detailItems, options);
+  const filteredDetailItems = applyCourtAccountScope(filterCourtAccountItems(detailItems, options), options);
   const paging = buildListPage(filteredDetailItems, options);
   const detailPageItems = paging ? paging.rows : filteredDetailItems;
   const items = (includeDetails ? detailPageItems : detailPageItems.map(courtAccountLightListItem));
@@ -789,7 +805,7 @@ function createCourtAccountListViewLoader(deps) {
       membershipPlans,
       membershipBenefitLedger,
       membershipAccountEvents
-    }, { sampleIds, sample: options.sample, useLegacy, includeDetails: options.includeDetails === true, page: options.page, pageSize: options.pageSize, q: options.q, owner: options.owner, accountType: options.accountType });
+    }, { sampleIds, sample: options.sample, useLegacy, includeDetails: options.includeDetails === true, page: options.page, pageSize: options.pageSize, q: options.q, owner: options.owner, accountType: options.accountType, membershipTier: options.membershipTier, campus: options.campus, startDate: options.startDate, endDate: options.endDate });
   };
 }
 
