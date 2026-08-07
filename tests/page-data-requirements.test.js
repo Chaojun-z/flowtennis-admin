@@ -7,6 +7,13 @@ const studentsSource = fs.readFileSync(path.join(__dirname, '../public/assets/sc
 const corePagesSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 
+function fnBodyFrom(sourceText, name) {
+  const start = sourceText.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist`);
+  const next = sourceText.indexOf('\nfunction ', start + 1);
+  return sourceText.slice(start, next === -1 ? sourceText.length : next);
+}
+
 assert.match(source, /students:\['campuses','students','coaches'\]/, 'students page should only block on the datasets needed to paint the list and coach filter immediately');
 assert.match(source, /leads:\['campuses','leads'\]/, 'leads page should only block on the data needed for first paint');
 assert.match(source, /'package-students':\['campuses','students','coaches','customerCenterPage'\]/, 'formal student page should use coaches and the customer center list read model before first render');
@@ -140,7 +147,7 @@ assert.match(corePagesSource, /const canUseStudentTeachingSummary=!fresh[\s\S]*t
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*ignoreTeachingSummaryDetailRows:true/, 'student drawer detail rows must come from per-student fact reads, not stale teaching summary detail snapshots');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*studentScheduleIds[\s\S]*studentScheduleIds\.has\(String\(row\.scheduleId\|\|''\)\)/, 'student drawer should load ledger rows linked by scheduleId so authorized package usage appears for the actual student');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*relatedEntitlementIds[\s\S]*scopedEntitlements[\s\S]*relatedPurchaseIds[\s\S]*scopedPurchases[\s\S]*relatedStudents/, 'student drawer should include the package owner records needed to render authorized package usage names');
-assert.doesNotMatch(studentsSource, /ensureDatasetsByName\(STUDENT_DETAIL_REQUIREMENTS\)[\s\S]*purchasesPage/, 'student detail must not load the full purchases aggregate');
+assert.doesNotMatch(fnBodyFrom(studentsSource, 'ensureStudentDetailDatasets'), /purchasesPage/, 'student detail must not load the full purchases aggregate');
 assert.match(apiSource, /T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary'/, 'api should declare the student teaching summary read model table');
 assert.match(apiSource, /queueStudentTeachingSummaryRefresh\(t,meta\)/, 'source table writes should queue student teaching summary refreshes outside the first-screen read path');
 
