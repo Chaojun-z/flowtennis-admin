@@ -82,6 +82,6 @@ assert.match(doDeleteBody, /currentDelType==='lead'[\s\S]*renderLeads\(\)[\s\S]*
 assert.match(doDeleteBody, /if\(currentDelType==='lead'\)\{[\s\S]*return;\s*\}\s*if\(!result\?\.purchaseVoid\)renderAll\(\);/, 'lead delete should return before the full app render path');
 
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260807-schedule-speed-feedback-v1/, 'index should bump the bootstrap script asset version');
-assert.match(html, /assets\/scripts\/pages\/leads\.js\?v=20260807-lead-remaining-actions-v1/, 'index should bump the lead script asset version');
+assert.match(html, /assets\/scripts\/pages\/leads\.js\?v=20260807-leads-server-pagination-v1/, 'index should bump the lead script asset version');
 
 console.log('leads speed feedback tests passed');

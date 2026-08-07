@@ -134,7 +134,7 @@ assert.match(source,/financeTransactionAmountHtml/,'ledger should render transac
 assert.match(source,/row\.differenceReason[\s\S]*return false/,'finance ledger should hide difference rows from the main transaction table');
 assert.doesNotMatch(source,/全部交易类型[\s\S]{0,3000}差异/,'finance transaction type filter should not expose difference as a business type');
 assert.doesNotMatch(source,/总流水笔数/,'ledger summary should not keep total flow count card');
-assert.doesNotMatch(source,/实收 \/ 已入账|课包收入 \/ 已核销|会员收入 \/ 已入账|总收入（实收）|总已入账|总未入账|课程总收入 \/ 已入账|订场收入 \/ 已入账|全部动作|来源单据|未入账/,'ledger summary should not keep the old mixed top-card labels or old ledger columns');
+assert.doesNotMatch(ledgerPanel,/实收 \/ 已入账|课包收入 \/ 已核销|会员收入 \/ 已入账|总收入（实收）|总已入账|总未入账|课程总收入 \/ 已入账|订场收入 \/ 已入账|全部动作|来源单据|未入账/,'ledger summary should not keep the old mixed top-card labels or old ledger columns');
 assert.match(source,/function financeStandardOverviewMetrics\(/,'finance page should centralize standard backend finance summary usage');
 assert.match(functionSource(source,'renderFinanceOverview'),/const metrics=financeStandardOverviewMetrics\(\)/,'overview cards should read the backend standard finance summary');
 assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/financeCurrentMetrics\(financeLedgerRows\(\)\)|reduce\(/,'overview cards must not calculate from currently filtered frontend ledger rows');
