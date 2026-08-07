@@ -6,7 +6,7 @@ const courtsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scri
 
 assert.match(
   courtsSource,
-  /会员储值'[\s\S]*valueHtml:`<span>\$\{rows\.length\}<\/span><span class="tms-stat-divider">｜<\/span><span>\$\{totalRechargeCount\}<\/span>`/,
+  /会员储值'[\s\S]*valueHtml:`<span>\$\{Number\(financeSummary\.memberCount\)\|\|0\}<\/span><span class="tms-stat-divider">｜<\/span><span>\$\{Number\(financeSummary\.rechargeCount\)\|\|0\}<\/span>`/,
   '会员管理数据块的两个数值之间应显示竖线分隔'
 );
 
