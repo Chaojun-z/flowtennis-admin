@@ -602,6 +602,8 @@ const pastBoundModifiedPlan = sync.buildDryRunPlan({
     ...courses[0],
     sourceKey: 'past-bound-key',
     fingerprint: 'new-fingerprint',
+    startTime: '2026-07-20 13:00',
+    endTime: '2026-07-20 14:30',
     coachName: '晓哲',
     studentNames: ['W.Jing'],
     course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
@@ -627,7 +629,118 @@ const pastBoundModifiedPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(pastBoundModifiedPlan.summary.update, 0, 'bound historical schedules should not be auto-updated after the class time');
 assert.strictEqual(pastBoundModifiedPlan.summary.notifyError, 1, 'bound historical schedule changes should be sent for operations confirmation');
-assert.match(pastBoundModifiedPlan.actions[0].reason, /历史排课修改需要运营确认/, 'historical update blocker should be explicit');
+assert.match(pastBoundModifiedPlan.actions[0].reason, /历史排课修改需要运营确认：时间：系统「12:00-13:30」，飞书「13:00-14:30」/, 'historical update blocker should explain the exact changed field');
+
+const pastBoundFingerprintOnlyPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'past-bound-fingerprint-only-key',
+    fingerprint: 'new-format-only-fingerprint',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [{ id: 'sync-past-format-only', sourceKey: 'past-bound-fingerprint-only-key', scheduleId: 'sch-past-format-only', lastFingerprint: 'old-fingerprint', status: 'active' }],
+  schedules: [{
+    id: 'sch-past-format-only',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coach: '晓哲',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-1'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
+  nowKey: '2026-07-21 00:00'
+});
+assert.strictEqual(pastBoundFingerprintOnlyPlan.summary.notifyError, 0, 'historical rows with only fingerprint/text changes should not ask operations to confirm');
+assert.strictEqual(pastBoundFingerprintOnlyPlan.actions[0].type, 'refresh_sync', 'historical rows with no material field change should only refresh the sync marker');
+
+const pastBoundVenueOnlyPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'past-bound-venue-only-key',
+    fingerprint: 'new-venue-fingerprint',
+    venue: '4号场',
+    courtText: '4号',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [{ id: 'sync-past-venue-only', sourceKey: 'past-bound-venue-only-key', scheduleId: 'sch-past-venue-only', lastFingerprint: 'old-fingerprint', status: 'active' }],
+  schedules: [{
+    id: 'sch-past-venue-only',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coach: '晓哲',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-1'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
+  nowKey: '2026-07-21 00:00'
+});
+assert.strictEqual(pastBoundVenueOnlyPlan.summary.update, 1, 'historical venue-only changes should auto-update when there is no court conflict');
+assert.deepStrictEqual(pastBoundVenueOnlyPlan.actions[0].diffs.map(item => item.field), ['venue'], 'venue-only auto update should keep the exact diff for audit');
+
+const pastBoundVenueConflictPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'past-bound-venue-conflict-key',
+    fingerprint: 'new-venue-conflict-fingerprint',
+    venue: '4号场',
+    courtText: '4号',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [{ id: 'sync-past-venue-conflict', sourceKey: 'past-bound-venue-conflict-key', scheduleId: 'sch-past-venue-conflict', lastFingerprint: 'old-fingerprint', status: 'active' }],
+  schedules: [
+    {
+      id: 'sch-past-venue-conflict',
+      startTime: '2026-07-20 12:00',
+      endTime: '2026-07-20 13:30',
+      coach: '晓哲',
+      campus: 'shunyi_mapo',
+      venue: '3号场',
+      courseType: '私教课',
+      experienceType: '',
+      studentIds: ['stu-1'],
+      status: '已排课'
+    },
+    {
+      id: 'sch-other-on-target-court',
+      startTime: '2026-07-20 12:00',
+      endTime: '2026-07-20 13:30',
+      coach: '其他教练',
+      campus: 'shunyi_mapo',
+      venue: '4号场',
+      courseType: '私教课',
+      experienceType: '',
+      studentIds: ['stu-other'],
+      status: '已排课'
+    }
+  ],
+  students: [{ id: 'stu-1', name: 'W.Jing' }, { id: 'stu-other', name: '其他学员' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: [],
+  entitlements: [{ id: 'ent-1', studentId: 'stu-1', courseType: '私教课', totalLessons: 20, usedLessons: 10, remainingLessons: 10, status: 'active' }],
+  nowKey: '2026-07-21 00:00'
+});
+assert.strictEqual(pastBoundVenueConflictPlan.summary.update, 0, 'historical venue changes should not auto-update into an occupied court');
+assert.match(pastBoundVenueConflictPlan.actions[0].reason, /目标场地已有排课/, 'venue conflict should be visible in the operator notification');
 
 const systemVenuePlan = sync.buildDryRunPlan({
   feishuCourses: courses.slice(0, 1),
