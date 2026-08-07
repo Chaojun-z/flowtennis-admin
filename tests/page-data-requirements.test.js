@@ -31,7 +31,7 @@ assert.match(source, /const PAGE_DATA_BACKGROUND_REQUIREMENTS=\{[\s\S]*students:
 assert.match(source, /const STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\];/, 'student list pages should not automatically pull heavy detail datasets after first paint');
 assert.match(source, /const STUDENT_DETAIL_REQUIREMENTS=\[\];/, 'student detail tabs should not block on extra shared datasets');
 assert.match(studentsSource, /function ensureStudentDetailDatasets\(/, 'student detail should have a lazy detail data loader');
-assert.match(studentsSource, /ensureStudentDetailData\(id\)/, 'student detail should load one student detail record by id when the drawer opens');
+assert.match(studentsSource, /ensureStudentDetailData\(id,\{force:studentDetailTabNeedsDatasets\(studentDetailActiveTab\)\}\)/, 'student detail should load one student detail record by id when the drawer opens');
 assert.match(source, /function markStudentDetailDataStale\(studentId\)/, 'student detail should support invalidating one student after a package mutation');
 assert.match(source, /function markReadModelsStale\(names=STUDENT_DRAWER_MUTATION_READ_MODELS\)/, 'student drawer mutations should be able to stale global read models without clearing detail caches');
 assert.match(source, /function refreshReadModelsInBackground\(names=STUDENT_DRAWER_MUTATION_READ_MODELS[\s\S]*ensureDatasetsByName\(targets,\{force:true\}\)\.then/, 'student drawer mutations should refresh global read models in the background');

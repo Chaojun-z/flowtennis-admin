@@ -625,8 +625,17 @@ function hydrateStudentDetailData(data={}){
     if(typeof renderStudentsIfVisible==='function')renderStudentsIfVisible();
   }
 }
-function studentDetailDataReady(studentId){
-  return loadedStudentDetailIds.has(String(studentId||'').trim());
+function studentDetailHasRowsForTab(studentId,tab=''){
+  const detail=studentDetailViewForId(studentId);
+  if(!detail)return false;
+  if(tab==='orders')return Array.isArray(detail.detailPackageOrderRows)&&Array.isArray(detail.detailLessonRecordRows);
+  if(tab==='benefits')return Array.isArray(detail.detailBenefitRows)&&Array.isArray(detail.detailBenefitGrantRows)&&Array.isArray(detail.detailBenefitConsumeRows);
+  return true;
+}
+function studentDetailDataReady(studentId,tab=''){
+  const id=String(studentId||'').trim();
+  if(!loadedStudentDetailIds.has(id))return false;
+  return studentDetailHasRowsForTab(id,tab);
 }
 async function ensureStudentDetailData(studentId,{force=false}={}){
   const id=String(studentId||'').trim();

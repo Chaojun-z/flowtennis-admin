@@ -86,8 +86,9 @@ assert.match(corePageDataSource, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGE
 assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker should have scoped drawer styling');
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_packageId_dropdown[\s\S]*text-overflow:ellipsis/, 'purchase package dropdown should clip long package names instead of overflowing the input');
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_edit_packageId_dropdown[\s\S]*font-size:10px/, 'purchase edit package dropdown should use smaller text for long package names');
-assert.match(savePurchase, /Promise\.all\(\[[\s\S]*ensureDatasetsByName\(\['purchaseCreatePage'\],\{force:true\}\)[\s\S]*ensureStudentDetailData\(savedStudentId,\{force:true\}\)/, 'purchase save should refresh create data and the current student detail before closing');
-assert.match(savePurchase, /ensureDatasetsByName\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage'\],\{force:true\}\)\.then/, 'purchase save should refresh slow list and metric models in the background');
+assert.match(savePurchase, /ensureStudentDetailData\(savedStudentId,\{force:true\}\)/, 'purchase save should synchronously refresh only the current student detail');
+assert.doesNotMatch(savePurchase, /await Promise\.all\(\[[\s\S]*purchaseCreatePage[\s\S]*packageCenterPage[\s\S]*customerCenterPage[\s\S]*lifecycleMetricsPage/, 'purchase save should not wait for create data or slow global read models');
+assert.match(savePurchase, /ensureDatasetsByName\(\['purchaseCreatePage','packageCenterPage','customerCenterPage','lifecycleMetricsPage'\],\{force:true\}\)\.then/, 'purchase save should refresh create data and slow list models in the background');
 assert.match(savePurchaseEdit, /refreshStudentDetailDataAfterMutation\(savedStudentId\)/, 'purchase edit should synchronously refresh only the edited student detail');
 assert.doesNotMatch(savePurchaseEdit, /await ensureDatasetsByName\(\['packageCenterPage','customerCenterPage'\],\{force:true\}\)/, 'purchase edit should not wait for slow global read models');
 assert.match(savePurchaseEdit, /refreshReadModelsInBackground\(\['packageCenterPage','customerCenterPage','lifecycleMetricsPage','financePage','purchasesPage'\]/, 'purchase edit should refresh global read models in the background');

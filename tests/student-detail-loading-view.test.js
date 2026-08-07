@@ -28,8 +28,13 @@ assert.match(
 );
 assert.match(
   fnBody('studentDetailDatasetsReady'),
-  /detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/,
+  /studentDetailDataReady\(id,studentDetailActiveTab\)[\s\S]*detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/,
   'student detail should skip the per-student endpoint only after precise detail is loaded or for safe local tabs'
+);
+assert.match(
+  source,
+  /function studentDetailHasRowsForTab\(studentId,tab=''\)\{[\s\S]*if\(tab==='orders'\)return Array\.isArray\(detail\.detailPackageOrderRows\)&&Array\.isArray\(detail\.detailLessonRecordRows\)/,
+  'student package tab should not treat summary-only cache as ready'
 );
 assert.match(
   source,
@@ -40,6 +45,21 @@ assert.match(
   fnBody('ensureStudentDetailData'),
   /apiCall\('GET',`\/page-data\/student-detail\?id=\$\{encodeURIComponent\(id\)\}\$\{force\?'&fresh=1':''\}`,null,20000\)/,
   'student detail loads should use the single-student endpoint with a bounded timeout'
+);
+assert.doesNotMatch(
+  fnBody('ensureStudentDetailData'),
+  /load-all/,
+  'student detail should not use the full load-all endpoint'
+);
+assert.doesNotMatch(
+  fnBody('ensureStudentDetailDatasets'),
+  /load-all/,
+  'student detail drawer loader should not use the full load-all endpoint'
+);
+assert.match(
+  fnBody('ensureStudentDetailDatasets'),
+  /ensureStudentDetailData\(id,\{force:studentDetailTabNeedsDatasets\(studentDetailActiveTab\)\}\)/,
+  'student package and lesson tabs should force a fresh single-student detail request'
 );
 assert.doesNotMatch(
   fnBody('openStudentDetail'),

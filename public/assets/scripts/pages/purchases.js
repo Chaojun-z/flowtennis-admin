@@ -938,13 +938,15 @@ async function savePurchase(){
     closeOnSuccess:true,
     refresh:async(result)=>{
       loadedDatasets.delete('purchasesPage');
+      loadedDatasets.delete('purchaseCreatePage');
       const savedStudentId=String(result?.purchase?.studentId||data.studentId||'').trim();
       if(savedStudentId&&typeof markStudentDetailDataStale==='function')markStudentDetailDataStale(savedStudentId);
-      await Promise.all([
-        ensureDatasetsByName(['purchaseCreatePage'],{force:true}),
-        savedStudentId&&typeof ensureStudentDetailData==='function'?ensureStudentDetailData(savedStudentId,{force:true}).catch(e=>console.warn('student detail refresh after purchase failed',e)):Promise.resolve()
-      ]);
-      ensureDatasetsByName(['packageCenterPage','customerCenterPage','lifecycleMetricsPage'],{force:true}).then(()=>{
+      if(savedStudentId&&typeof ensureStudentDetailData==='function')await ensureStudentDetailData(savedStudentId,{force:true}).catch(e=>console.warn('student detail refresh after purchase failed',e));
+      renderStudents();
+      renderPurchases();
+      renderEntitlements();
+      if(currentPage==='leads')renderLeads();
+      ensureDatasetsByName(['purchaseCreatePage','packageCenterPage','customerCenterPage','lifecycleMetricsPage'],{force:true}).then(()=>{
         renderStudents();
         renderPurchases();
         renderEntitlements();

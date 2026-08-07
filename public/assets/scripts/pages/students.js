@@ -1346,7 +1346,7 @@ function studentLeadJumpActionHtml(s){
 function studentDetailDatasetsReady(id){
   const names=Array.isArray(STUDENT_DETAIL_REQUIREMENTS)?STUDENT_DETAIL_REQUIREMENTS:[];
   const staticReady=names.every(name=>loadedDatasets.has(name)&&!(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has(name))&&(!(typeof datasetHasCurrentRequestKey==='function')||datasetHasCurrentRequestKey(name)));
-  const detailReady=typeof studentDetailDataReady==='function'?studentDetailDataReady(id):false;
+  const detailReady=typeof studentDetailDataReady==='function'?studentDetailDataReady(id,studentDetailActiveTab):false;
   return staticReady&&(detailReady||studentDetailLocalRowsReady(id,studentDetailActiveTab));
 }
 function studentDetailLocalRowsReady(id,tab=studentDetailActiveTab){
@@ -1375,7 +1375,7 @@ function ensureStudentDetailDatasets(id,{block=false}={}){
   }
   const tasks=[];
   if(Array.isArray(STUDENT_DETAIL_REQUIREMENTS)&&STUDENT_DETAIL_REQUIREMENTS.length)tasks.push(ensureDatasetsByName(STUDENT_DETAIL_REQUIREMENTS));
-  if(typeof ensureStudentDetailData==='function')tasks.push(ensureStudentDetailData(id));
+  if(typeof ensureStudentDetailData==='function')tasks.push(ensureStudentDetailData(id,{force:studentDetailTabNeedsDatasets(studentDetailActiveTab)}));
   Promise.all(tasks).then(()=>{
     if(studentDetailRequestSeq!==requestSeq||!studentDetailDrawerIsOpenFor(id)||!studentDetailPageStillValid())return;
     if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))openStudentDetail(id);

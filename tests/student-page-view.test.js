@@ -360,9 +360,9 @@ assert.match(source, /STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\]/, 'student list sh
 assert.match(source, /STUDENT_DETAIL_REQUIREMENTS=\[\]/, 'student detail should not block on static shared datasets');
 assert.match(source, /function ensureStudentDetailDatasets\(/, 'student detail should own the lazy detail loader');
 assert.match(source, /function studentDetailLocalRowsReady\([\s\S]*if\(tab==='orders'\)return false[\s\S]*detailBenefitRows/, 'student package tab should load precise single-student detail instead of trusting lightweight rows');
-assert.match(fnBody('studentDetailDatasetsReady'), /detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/, 'student detail loader should skip the per-student request only after precise detail is loaded or for safe local tabs');
+assert.match(fnBody('studentDetailDatasetsReady'), /studentDetailDataReady\(id,studentDetailActiveTab\)[\s\S]*detailReady\|\|studentDetailLocalRowsReady\(id,studentDetailActiveTab\)/, 'student detail loader should skip the per-student request only after precise detail is loaded or for safe local tabs');
 assert.match(fnBody('ensureStudentDetailDatasets'), /openStudentDetail\('\$\{id\}'\)[\s\S]*重试[\s\S]*renderDetailDrawerCard\('加载失败'/, 'student detail loading failure should render a retry state instead of staying in loading');
-assert.match(source, /ensureStudentDetailData\(id\)/, 'student detail should load heavy detail facts by student id instead of the full purchases aggregate');
+assert.match(source, /ensureStudentDetailData\(id,\{force:studentDetailTabNeedsDatasets\(studentDetailActiveTab\)\}\)/, 'student detail should load heavy detail facts by student id instead of the full purchases aggregate');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggregateHistoricalMonthlyLedgerRows[\s\S]*function classScheduleSummaryHtml/, 'student consume history should show imported lesson rows one by one instead of monthly aggregation');
 assert.doesNotMatch(fnBody('studentCompletedLessonCount'), /historicalImportedLessonUnitsForStudent|studentConcreteLessonLedgerItems|schedules\.filter/, 'student cumulative lessons should only read backend unified completedLessons');
 assert.doesNotMatch(fnBody('studentDetailBasicTabHtml'), /student-consumption-section|消费与关联/, 'student basic detail should not show the consumption relation card');

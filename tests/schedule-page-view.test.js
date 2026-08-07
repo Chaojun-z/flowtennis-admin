@@ -9,7 +9,7 @@ const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'pa
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
-assert.match(indexHtml, /state\.js\?v=20260806-(purchase-stale-cache|student-detail-cache)-v1/, 'state script version should force a fresh browser load for cache recovery');
+assert.match(indexHtml, /state\.js\?v=20260807-student-detail-cache-v2/, 'state script version should force a fresh browser load for student detail cache recovery');
 assert.match(indexHtml, /schedule\.js\?v=20260807-button-stability-v1/, 'schedule script version should force a fresh browser load after button stability fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps an old broken schedule script');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
