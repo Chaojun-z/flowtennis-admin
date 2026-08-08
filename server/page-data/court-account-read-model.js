@@ -1,6 +1,7 @@
 const MATCH_COURT_FINANCE_ACCOUNT_ID = 'match-court-finance';
 const DEFAULT_SAMPLE_SIZE = 10;
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
+const { enrichCourtBookingStructure } = require('../booking-structure-parser.js');
 const { normalizeCampusValue, displayCampusName, buildCampusNameMap } = require('../../public/assets/scripts/core/campus.js');
 
 function money(value) {
@@ -28,7 +29,7 @@ function parseArr(value) {
 }
 
 function normalizeCourtHistory(history) {
-  return parseArr(history).map((row) => ({
+  return parseArr(history).map((row) => enrichCourtBookingStructure({
     ...row,
     amount: Math.abs(Number(row?.amount) || 0),
     bonusAmount: Number(row?.bonusAmount) || 0,

@@ -67,6 +67,14 @@ assert.strictEqual(
   '13800000000',
   'third-party phone with 86 country code should be normalized before import'
 );
+const parsedStructPrecheck = precheckThirdPartyRecords([
+  { sourceType: 'order', orderNo: 'STRUCT1', remark: '2026-08-05；室内2；12:00-13:00', amount: 140, payMethod: '微信支付', status: '已完成', customerName: '蓝星灿', phone: '15210833095' }
+], { batchId: 'struct-batch', now: '2026-08-06T00:00:00+08:00' }).items[0];
+assert.strictEqual(parsedStructPrecheck.date, '2026-08-05', 'third-party sync should recover booking date from remark text');
+assert.strictEqual(parsedStructPrecheck.startTime, '12:00', 'third-party sync should recover start time from remark text');
+assert.strictEqual(parsedStructPrecheck.endTime, '13:00', 'third-party sync should recover end time from remark text');
+assert.strictEqual(parsedStructPrecheck.venue, '2号场', 'third-party sync should recover venue from indoor-court remark text');
+assert.strictEqual(parsedStructPrecheck.recommendedType, 'auto_import', 'recoverable structure fields should not become manual confirmation');
 
 const historicalRulePrecheck = precheckThirdPartyRecords([
   { id: 'coach-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '1号场', startTime: '12:00', endTime: '13:00', customerName: '晓哲', remark: '晓哲 定场', amount: 176 },

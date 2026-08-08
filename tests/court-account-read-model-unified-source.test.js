@@ -12,7 +12,8 @@ async function main() {
       owner: '旧跟进人',
       history: [
         { id: 'h1', type: '消费', category: '订场', payMethod: '储值卡', amount: 120, date: '2026-06-01', startTime: '09:00', endTime: '10:00', venue: '1号场', note: '会员订场' },
-        { id: 'h2', type: '消费', category: '订场', payMethod: '现场收款', amount: 80, date: '2026-06-02', startTime: '10:00', endTime: '11:00', venue: '2号场', note: '散客补差' }
+        { id: 'h2', type: '消费', category: '订场', payMethod: '现场收款', amount: 80, date: '2026-06-02', startTime: '10:00', endTime: '11:00', venue: '2号场', note: '散客补差' },
+        { id: 'h3', type: '消费', category: '订场', payMethod: '现场收款', amount: 90, note: '2026-06-03；室内3；11:00-12:00；历史导入备注' }
       ],
       cachedBalance: 1376,
       cachedTotalDeposit: 1000,
@@ -113,7 +114,12 @@ async function main() {
   assert.strictEqual(detailItem.benefitRows[0].remaining, 2);
   assert.strictEqual(detailItem.ledgerRows.length, 1);
   assert.strictEqual(detailItem.ledgerRows[0].action, 'consume');
-  assert.strictEqual(detailItem.bookingRows.length, 2);
+  assert.strictEqual(detailItem.bookingRows.length, 3);
+  const repairedBooking = detailItem.bookingRows.find(row => row.id === 'h3');
+  assert.strictEqual(repairedBooking.bookingDate, '2026-06-03', '历史订场记录应从备注恢复订场日期');
+  assert.strictEqual(repairedBooking.startTime, '11:00', '历史订场记录应从备注恢复开始时间');
+  assert.strictEqual(repairedBooking.endTime, '12:00', '历史订场记录应从备注恢复结束时间');
+  assert.strictEqual(repairedBooking.venue, '3号场', '历史订场记录应从备注恢复场地');
 }
 
 main().then(() => {

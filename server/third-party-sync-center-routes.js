@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const axios = require('axios');
+const { parseBookingStructureFromText, enrichCourtBookingStructure, missingCourtBookingStructure } = require('./booking-structure-parser.js');
 
 const T_THIRD_PARTY_SYNC_BATCHES = 'ft_third_party_sync_batches';
 const T_THIRD_PARTY_SYNC_RAW_RECORDS = 'ft_third_party_sync_raw_records';
@@ -125,7 +126,7 @@ function orderInfoRegions(record = {}) {
 }
 
 function bookingDateOf(record = {}) {
-  return cleanText(orderInfoDate(record) || record.usageDate || record.bookingDate || record.useDate || record.date || record.startDate || '').slice(0, 10);
+  return cleanText(orderInfoDate(record) || record.usageDate || record.bookingDate || record.useDate || record.date || record.startDate || parsedBookingStructureOf(record).date || '').slice(0, 10);
 }
 
 function venueOf(record = {}) {
@@ -133,7 +134,7 @@ function venueOf(record = {}) {
   const periodPlace = periodInfoItems(record).map(item => item?.priceBasicsInfo?.placeName || item?.placeName || item?.courtName).find(Boolean);
   const spacePlace = record.space && typeof record.space === 'object' ? record.space.placeName || record.space.courtName : '';
   const raw = cleanText(record.venue || record.court || record.courtName || orderPlace || periodPlace || spacePlace || record.spaceName || record.placeName);
-  if (!raw) return '';
+  if (!raw) return parsedBookingStructureOf(record).venue || '';
   if (/^\d+$/.test(raw)) return `${raw}号场`;
   if (/^\d+号$/.test(raw)) return `${raw}场`;
   if (/室内\s*(\d+)/.test(raw)) return raw.replace(/.*室内\s*(\d+).*/, '$1号场');
@@ -147,7 +148,7 @@ function startTimeOf(record = {}) {
   if (periods.length) return periods.map(value => value.match(/(\d{1,2}:\d{2})/)?.[1]?.padStart(5, '0')).filter(Boolean).sort()[0] || '';
   const value = cleanText(record.startTime || record.startClock || record.beginTime || '');
   const m = value.match(/(\d{1,2}:\d{2})/);
-  return m ? m[1].padStart(5, '0') : '';
+  return m ? m[1].padStart(5, '0') : parsedBookingStructureOf(record).startTime;
 }
 
 function endTimeOf(record = {}) {
@@ -157,7 +158,7 @@ function endTimeOf(record = {}) {
   if (periods.length) return periods.map(value => value.match(/(\d{1,2}:\d{2})/)?.[1]?.padStart(5, '0')).filter(Boolean).sort().slice(-1)[0] || '';
   const value = cleanText(record.endTime || record.endClock || record.finishTime || '');
   const m = value.match(/(\d{1,2}:\d{2})/);
-  return m ? m[1].padStart(5, '0') : '';
+  return m ? m[1].padStart(5, '0') : parsedBookingStructureOf(record).endTime;
 }
 
 function customerNameOf(record = {}) {
@@ -177,6 +178,19 @@ function phoneOf(record = {}) {
 function remarkOf(record = {}) {
   const orderRemark = orderInfoItems(record).map(item => item.remark || item.userRemark || item.note || item.description).find(Boolean);
   return cleanText(record.remark || record.userRemark || record.note || record.description || record.memo || record.reason || record.occupyReason || record.lockReason || orderRemark);
+}
+
+function parsedBookingStructureOf(record = {}) {
+  return parseBookingStructureFromText([
+    remarkOf(record),
+    record.time,
+    record.timeRegion,
+    record.period,
+    record.sourceTimeBand,
+    record.sourceVenue,
+    record.spaceName,
+    record.placeName
+  ].map(cleanText).filter(Boolean).join('；'));
 }
 
 function bookingModeOf(record = {}) {
@@ -793,7 +807,7 @@ function buildCourtHistoryForImport(item = {}, trace = {}, now = '') {
   const isActivity = item.finalType === '畅打活动';
   const isExtraService = needsExtraServiceBreakdown(item.finalType);
   const bookingAmount = isExtraService ? Number(item.amountBreakdown?.bookingAmount || 0) : Number(item.amount || 0) || 0;
-  return {
+  const historyRow = enrichCourtBookingStructure({
     id: `third-party-sync-${item.sourceRecordId}`,
     date: item.date,
     occurredDate: item.date,
@@ -811,7 +825,9 @@ function buildCourtHistoryForImport(item = {}, trace = {}, now = '') {
     sourceType: item.sourceType,
     importedAt: now,
     ...trace
-  };
+  });
+  if (missingCourtBookingStructure(historyRow)) throw new Error('订场结构化字段不完整：缺日期/时间/场地');
+  return historyRow;
 }
 
 function buildOneFinancialLedgerForImport(item = {}, trace = {}, now = '', overrides = {}) {
