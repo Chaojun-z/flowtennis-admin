@@ -55,6 +55,8 @@ assert.strictEqual(sync.parseStudentCell('晨曦、朋友（2）').lessonIndex, 
 assert.deepStrictEqual(sync.parseStudentCell('德德（使用小林课包 2）').names, ['小林'], 'shared package note should schedule the package owner');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').lessonIndex, 2, 'shared package note should keep the package lesson index');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageNote, '德德使用小林课包 2', 'shared package note should be preserved for schedule notes');
+assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageAttendeeName, '德德', 'shared package note should keep the actual learner');
+assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageOwnerName, '小林', 'shared package note should keep the package owner');
 assert.deepStrictEqual(sync.parseStudentCell('王老板、王老板孩子').names, ['王老板'], 'Wang boss family course should use one canonical student record');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:00' }, '2026-07-20 12:01'), false, 'courses already started before baseline should be ignored');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:30' }, '2026-07-20 12:01'), true, 'future courses after baseline should be sync candidates');
@@ -494,6 +496,28 @@ const specialEntitlementSelectionPlan = sync.buildDryRunPlan({
 assert.strictEqual(specialEntitlementSelectionPlan.summary.create, 1, 'beginner special course should become schedulable when each student has matching special entitlement');
 assert.deepStrictEqual(sync.buildScheduleBody(specialEntitlementSelectionPlan.actions[0].candidate).entitlementIds, ['ent-wang-beginner', 'ent-ace-beginner', 'ent-li-beginner'], 'special course schedule should use matching topic entitlements only');
 
+const beginnerSpecialAutoPurchasePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...beginnerSpecialCourses[0],
+    sourceKey: 'beginner-special-auto-purchase-key',
+    studentNames: ['Jerry', 'Zoe'],
+    studentText: 'Jerry、Zoe'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-jerry', name: 'Jerry' },
+    { id: 'stu-zoe', name: 'Zoe' }
+  ],
+  coaches: [{ id: 'coach-yang', name: '杨教练' }],
+  users: [],
+  packages: [{ id: 'pkg-beginner-special', name: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元', courseType: '专项课', specialTopic: '初阶专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', price: 199 }],
+  nowKey: '2026-08-08 00:00'
+});
+assert.strictEqual(beginnerSpecialAutoPurchasePlan.summary.create, 1, 'beginner special course should auto-create when matching single-use package can be bought');
+assert.strictEqual(beginnerSpecialAutoPurchasePlan.actions[0].candidate.requiresPackagePurchase, true, 'beginner special course without entitlements should mark package purchase before scheduling');
+assert.deepStrictEqual(beginnerSpecialAutoPurchasePlan.actions[0].candidate.scheduleStudents.map(row=>row.name), ['Jerry', 'Zoe'], 'auto-purchased special course should keep all students in the schedule');
+
 const ignoredSourcePlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...beginnerSpecialCourses[0],
@@ -555,6 +579,46 @@ const legacyCampusExistingPlan = sync.buildDryRunPlan({
   users: []
 });
 assert.strictEqual(legacyCampusExistingPlan.summary.bindExisting, 1, 'legacy mabao campus schedules should still bind to shunyi_mapo Feishu rows');
+
+const blankCampusExistingPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'blank-campus-existing-key',
+    startTime: '2026-08-05 14:00',
+    endTime: '2026-08-05 16:00',
+    date: '2026-08-05',
+    campus: 'shunyi_mapo',
+    venue: '2号场',
+    coachName: '杨',
+    studentNames: ['小鹿'],
+    studentText: '小鹿',
+    lessonCount: 2,
+    durationMinutes: 120,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{
+    id: 'third-party-xiaolu',
+    startTime: '2026-08-05 14:00:00',
+    endTime: '2026-08-05 16:00:00',
+    coach: '杨教练',
+    coachId: 'coach-yang',
+    campus: '',
+    venue: '2号场',
+    courseType: '私教课',
+    studentIds: ['stu-xiaolu'],
+    studentName: '小鹿',
+    status: '已排课',
+    scheduleSource: '第三方同步排课',
+    lessonCount: 0
+  }],
+  students: [{ id: 'stu-xiaolu', name: '小鹿' }],
+  coaches: [{ id: 'coach-yang', name: '杨教练' }],
+  users: [],
+  nowKey: '2026-08-08 00:00'
+});
+assert.strictEqual(blankCampusExistingPlan.summary.bindExisting, 1, 'historical existing schedule with blank campus should bind when time coach venue and student are unique');
+assert.strictEqual(blankCampusExistingPlan.actions[0].backfillExistingFields, true, 'blank campus existing schedule should be marked for field backfill');
 
 const pastUnboundPlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -1114,6 +1178,33 @@ assert.strictEqual(sharedPackagePlan.summary.create, 1, '德德 using 小林 pac
 assert.deepStrictEqual(sharedPackagePlan.actions[0].candidate.resolvedStudents.map(row=>row.name), ['小林'], 'shared package schedule should use the package owner as the system student');
 assert.match(sync.buildScheduleBody(sharedPackagePlan.actions[0].candidate).notes, /德德使用小林课包 2/, 'shared package schedule should keep the attendee note');
 
+const authorizedSharedPackagePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'authorized-shared-package-key',
+    coachName: '刘润扬',
+    studentText: '达达（使用十一课包 2）',
+    studentNames: ['十一'],
+    lessonIndex: 2,
+    sharedPackageNote: '达达使用十一课包 2',
+    sharedPackageAttendeeName: '达达',
+    sharedPackageOwnerName: '十一',
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-shiyi', name: '十一', primaryCoach: '刘润扬教练' },
+    { id: 'stu-dada', name: '达达', primaryCoach: '刘润扬教练' }
+  ],
+  coaches: [{ id: 'coach-liu', name: '刘润扬教练' }],
+  users: [],
+  entitlements: [{ id: 'ent-shiyi', studentId: 'stu-shiyi', studentName: '十一', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+});
+assert.strictEqual(authorizedSharedPackagePlan.summary.create, 1, 'shared package should be schedulable after resolving owner and actual learner');
+assert.deepStrictEqual(authorizedSharedPackagePlan.actions[0].candidate.scheduleStudents.map(row=>row.name), ['达达'], 'shared package schedule should be created for the actual learner');
+assert.deepStrictEqual(sync.buildScheduleBody(authorizedSharedPackagePlan.actions[0].candidate).entitlementIds, ['ent-shiyi'], 'shared package schedule should consume the owner package');
+
 const annotatedAliasPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -1550,6 +1641,45 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
   assert.strictEqual(purchasedBodies[0].packageId, 'pkg-trial-adult', 'trial package lookup should accept active 239 adult trial packages without exact name matching');
   assert.strictEqual(purchasedBodies[0].payMethod, '大众点评券码', 'trial package purchase should use Dianping coupon write-off payment method');
   assert.strictEqual(appliedNewTrial[0].scheduleId, 'sch-new-trial', 'new trial student flow should still create the schedule');
+
+  const specialPurchaseBodies = [];
+  let specialCreatedBody = null;
+  await sync.applySyncPlan({
+    actions: [beginnerSpecialAutoPurchasePlan.actions[0]]
+  }, {
+    put: async () => {},
+    uuidv4: () => 'uuid-special',
+    purchasePackage: async (body) => {
+      specialPurchaseBodies.push(body);
+      return { purchase: { id: `pur-${body.studentId}`, packageName: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元' }, entitlement: { id: `ent-${body.studentId}`, studentId: body.studentId, courseType: '专项课', specialTopic: '初阶专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', remainingLessons: 1, status: 'active' } };
+    },
+    createSchedule: async (body) => { specialCreatedBody = body; return { schedule: { id: 'sch-special' } }; },
+    entitlements: [],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.deepStrictEqual(specialPurchaseBodies.map(row => row.studentId), ['stu-jerry', 'stu-zoe'], 'special course sync should buy one package for each missing student');
+  assert.strictEqual(specialPurchaseBodies[0].amountPaid, 199, 'beginner special package should use the confirmed 199 amount');
+  assert.deepStrictEqual(specialCreatedBody.entitlementIds.sort(), ['ent-stu-jerry', 'ent-stu-zoe'].sort(), 'special course schedule should consume purchased entitlements');
+
+  const authWrites = [];
+  let sharedCreatedBody = null;
+  await sync.applySyncPlan({
+    actions: [authorizedSharedPackagePlan.actions[0]]
+  }, {
+    put: async (table, id, row) => authWrites.push({ table, id, row }),
+    mkTable: async () => {},
+    uuidv4: () => 'uuid-shared',
+    createSchedule: async (body) => { sharedCreatedBody = body; return { schedule: { id: 'sch-shared' } }; },
+    authorizations: [],
+    T_ENTITLEMENT_AUTHORIZATIONS: 'ft_entitlement_authorizations',
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.ok(authWrites.some(item => item.table === 'ft_entitlement_authorizations' && item.row.ownerStudentId === 'stu-shiyi' && item.row.authorizedStudentId === 'stu-dada'), 'shared package sync should create entitlement authorization before scheduling');
+  assert.deepStrictEqual(sharedCreatedBody.studentIds, ['stu-dada'], 'shared package schedule should use the actual learner as student');
+  assert.deepStrictEqual(sharedCreatedBody.entitlementIds, ['ent-shiyi'], 'shared package schedule should consume package owner entitlement');
+  assert.strictEqual(sharedCreatedBody.packageOwnerStudentId, 'stu-shiyi', 'shared package schedule should keep owner metadata for ledger display');
 
   const ambiguousTrial = await sync.applySyncPlan({
     actions: [{ type: 'create_trial_schedule', sourceKey: 'multi-trial-key', candidate: { ...newTrialCandidate, studentNames: ['麦迪', '朋友'] } }]
