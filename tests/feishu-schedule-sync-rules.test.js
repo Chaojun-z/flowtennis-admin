@@ -1372,6 +1372,25 @@ assert.strictEqual(tangguoCompanionCorrection[0].course.courseType, '陪打', 'c
 assert.strictEqual(tangguoCompanionCorrection[0].course.payMethod, '储值卡', 'Tangguo companion correction should use stored value payment');
 assert.strictEqual(sync.buildScheduleBody({ ...tangguoCompanionCorrection[0], resolvedCoach: { name: '杨教练' }, scheduleStudents: [{ id: 'stu-tangguo', name: '唐果' }] }).paidAmount, 400, 'Tangguo companion correction should use confirmed 400 yuan amount');
 
+const tangguoBossAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...companionCourses[0],
+    sourceKey: 'tangguo-boss-alias-key',
+    coachName: '岳克舟教练',
+    studentNames: ['唐总'],
+    course: { ok: true, courseType: '陪打', experienceType: '', audience: '', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-tangguo', name: '唐果', primaryCoach: '岳克舟教练' }],
+  coaches: [],
+  users: [],
+  entitlements: []
+});
+assert.strictEqual(tangguoBossAliasPlan.summary.create, 1, '唐总 should resolve to 唐果 and create companion schedule automatically');
+assert.strictEqual(tangguoBossAliasPlan.summary.notifyError, 0, '唐总 alias should not require operations confirmation');
+assert.strictEqual(tangguoBossAliasPlan.actions[0].candidate.resolvedStudents[0].name, '唐果', '唐总 alias should bind to Tangguo student profile');
+
 const lessonIndexMismatchPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],

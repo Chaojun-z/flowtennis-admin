@@ -107,7 +107,8 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
   [normalizeStudentNameKey('william弟弟')]: 'william',
   [normalizeStudentNameKey('willliam弟弟')]: 'william',
   [normalizeStudentNameKey('小萌')]: '孙小萌',
-  [normalizeStudentNameKey('黄晴 吕瑜')]: '吕瑜 黄晴'
+  [normalizeStudentNameKey('黄晴 吕瑜')]: '吕瑜 黄晴',
+  [normalizeStudentNameKey('唐总')]: '唐果'
 });
 
 const FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS = new Set([
