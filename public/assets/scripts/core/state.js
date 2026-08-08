@@ -21,10 +21,13 @@ let coachOpsUnifiedView={rows:[]};
 let purchaseUnifiedView={rows:[]};
 let packageUnifiedView={rows:[]};
 let entitlementUnifiedView={rows:[]};
+let leadListPageData={rows:[],total:0,page:1,pageSize:15,pages:1,summary:null};
 let studentLessonRecordExpandedState={};
 const loadedPurchaseDetailIds=new Set();
 const loadedStudentDetailIds=new Set();
 const studentDetailLoadPromises=new Map();
+const loadedLeadDetailIds=new Set();
+const leadDetailLoadPromises=new Map();
 const loadedLeadFollowupDetailIds=new Set();
 const loadedCourtAccountDetailIds=new Set();
 const loadedScheduleDetailIds=new Set();
@@ -197,7 +200,7 @@ const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','coachSchedulePage','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
-const DATASETS_WITH_REQUEST_KEYS=new Set(['operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
+const DATASETS_WITH_REQUEST_KEYS=new Set(['leads','operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
 let operationsPageRequestSeq=0;
 let operationsPageBackgroundRefreshSeq=0;
 let courtAccountListViewRequestKey='';
@@ -269,7 +272,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
   'package-students':['classes','schedule','courts'],
   'trial-students':['classes','schedule','courts'],
-  leads:['lifecycleMetricsPage'],
+  leads:[],
   packages:[],
   purchases:[],
   schedule:['classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'],
@@ -339,6 +342,35 @@ function appendPageDataQuery(url,params={}){
   const suffix=extra.toString();
   if(!suffix)return url;
   return `${url}${url.includes('?')?'&':'?'}${suffix}`;
+}
+function leadListQueryParams(){
+  const leadRange=typeof getLeadDateFilterRange==='function'?getLeadDateFilterRange():{};
+  const globalRange=typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{};
+  const ownerValue=typeof leadOwnerFilterValues==='function'?leadOwnerFilterValues().join(','):(document.getElementById('leadOwnerFilter')?.value||'');
+  const campusValue=String(campus||'').trim();
+  return {
+    paged:1,
+    page:leadPage,
+    pageSize:leadPageSize,
+    q:document.getElementById('leadSearch')?.value||'',
+    source:document.getElementById('leadSourceFilter')?.value||'',
+    customerType:document.getElementById('leadCustomerTypeFilter')?.value||'',
+    demandProduct:document.getElementById('leadConsultFilter')?.value||'',
+    leadStage:document.getElementById('leadStageFilter')?.value||'',
+    dealType:document.getElementById('leadDealTypeFilter')?.value||'',
+    owner:ownerValue,
+    campus:campusValue&&campusValue!=='all'?campusValue:'',
+    campusName:campusValue&&campusValue!=='all'?currentScopeCampusName():'',
+    dateFrom:leadRange?.start||'',
+    dateTo:leadRange?.end||'',
+    startDate:globalRange?.startDate||'',
+    endDate:globalRange?.endDate||'',
+    sortKey:leadSortKey,
+    sortDir:leadSortDir
+  };
+}
+function leadListPageDataUrl(){
+  return appendPageDataQuery('/leads',leadListQueryParams());
 }
 function lifecycleMetricsPageDataUrl(){
   return scopedPageDataUrl('/page-data/lifecycle-metrics');
@@ -422,6 +454,7 @@ function hydrateOperationsPageFromClientCache(){
   return true;
 }
 function datasetRequestKey(name){
+  if(name==='leads')return 'leads:'+leadListPageDataUrl();
   if(name==='operationsPage')return operationsPageDatasetRequestKey();
   if(name==='customerCenterPage')return 'customerCenterPage:'+customerCenterPageDataUrl();
   if(name==='lifecycleMetricsPage')return 'lifecycleMetricsPage:'+lifecycleMetricsPageDataUrl();
@@ -448,7 +481,7 @@ function loadOperationsPageDataset(){
   return apiCall('GET',url).then(data=>({...data,__operationsRequestKey:requestKey}));
 }
 const DATASET_LOADERS={
-  leads:()=>apiCall('GET','/leads'),
+  leads:()=>apiCall('GET',leadListPageDataUrl()),
   leadFollowups:()=>apiCall('GET','/lead-followups'),
   courts:()=>apiCall('GET','/courts'),
   students:()=>apiCall('GET','/students'),
@@ -537,12 +570,24 @@ function isDatasetCacheFresh(name,entry,now=Date.now()){
   return now-savedAt<=DATA_CACHE_TTL_MS;
 }
 function setDatasetValue(name,data,{persist=true}={}){
-  const rows=Array.isArray(data)?data:[];
+  const rows=Array.isArray(data)?data:(Array.isArray(data?.rows)?data.rows:[]);
   if(name==='schedule'){
     setScheduleRowsFromRemote(rows,{persist});
     return;
   }
-  if(name==='leads')leads=rows;
+  if(name==='leads'){
+    leads=rows;
+    leadListPageData=Array.isArray(data)
+      ? {rows,total:rows.length,page:1,pageSize:rows.length||leadPageSize,pages:1,summary:null}
+      : {
+        rows,
+        total:Number(data?.total)||rows.length,
+        page:Number(data?.page)||leadPage||1,
+        pageSize:Number(data?.pageSize)||leadPageSize,
+        pages:Number(data?.pages)||1,
+        summary:data?.summary||null
+      };
+  }
   if(name==='leadFollowups')leadFollowups=rows;
   if(name==='courts')courts=rows;
   if(name==='students')students=rows;
@@ -700,6 +745,36 @@ async function refreshStudentDetailDataAfterMutation(studentId){
 }
 function leadFollowupsDetailReady(leadId){
   return loadedLeadFollowupDetailIds.has(String(leadId||'').trim());
+}
+function leadDetailReady(leadId){
+  return loadedLeadDetailIds.has(String(leadId||'').trim());
+}
+function mergeLeadDetailRow(lead){
+  const id=String(lead?.id||lead?.sourceLeadId||lead?.leadId||'').trim();
+  if(!id)return null;
+  const next={...lead,id};
+  const mergeRows=rows=>{
+    const list=Array.isArray(rows)?rows:[];
+    return list.some(item=>String(item?.id||item?.sourceLeadId||'')===id)
+      ? list.map(item=>String(item?.id||item?.sourceLeadId||'')===id?{...item,...next}:item)
+      : [next,...list];
+  };
+  leads=mergeRows(leads);
+  if(leadListPageData&&Array.isArray(leadListPageData.rows))leadListPageData={...leadListPageData,rows:mergeRows(leadListPageData.rows)};
+  return next;
+}
+async function ensureLeadDetailForLead(leadId,{force=false}={}){
+  const id=String(leadId||'').trim();
+  if(!id)return null;
+  if(!force&&loadedLeadDetailIds.has(id))return leadById(id)||null;
+  if(leadDetailLoadPromises.has(id))return leadDetailLoadPromises.get(id);
+  const promise=apiCall('GET',`/leads/${encodeURIComponent(id)}`).then(lead=>{
+    const next=mergeLeadDetailRow(lead);
+    if(next?.id)loadedLeadDetailIds.add(id);
+    return next;
+  }).finally(()=>leadDetailLoadPromises.delete(id));
+  leadDetailLoadPromises.set(id,promise);
+  return promise;
 }
 async function ensureLeadFollowupsForLead(leadId,{force=false}={}){
   const id=String(leadId||'').trim();
@@ -860,6 +935,7 @@ function renderStudentTableError(message){
   if(el)el.innerHTML=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender(currentPage,{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderLeadTableLoading(){
+  if(typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
   renderTableSkeletonLoading('leadTbody',15,'线索数据加载中...');
 }
 function renderLeadTableError(message){
@@ -1366,7 +1442,7 @@ function renderScopedSummaryPage(pg){
 }
 function refreshScopedTopSummaryForCurrentPage(){
   const pg=currentPage;
-  const names=pg==='leads'?['lifecycleMetricsPage']:(isStudentListPage(pg)?['customerCenterPage']:(pg==='finance'?['financePage']:[]));
+  const names=pg==='leads'?['leads']:(isStudentListPage(pg)?['customerCenterPage']:(pg==='finance'?['financePage']:[]));
   if(names.length){
     ensureDatasetsByName(names,{force:true}).then(()=>{
       if(currentPage!==pg)return;

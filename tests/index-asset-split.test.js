@@ -28,7 +28,7 @@ assert.match(html, /assets\/scripts\/pages\/admin-users\.js/, 'index.html should
 assert.match(html, /assets\/scripts\/pages\/coaches\.js/, 'index.html should load coaches page module');
 assert.match(html, /assets\/scripts\/pages\/campusmgr\.js/, 'index.html should load campusmgr page module');
 assert.match(html, /assets\/scripts\/pages\/leads\.js/, 'index.html should load leads page module');
-assert.match(html, /assets\/scripts\/pages\/leads\.js\?v=20260807-lead-remaining-actions-v1/, 'index.html should bust stale cached leads.js after lead remaining action speed feedback fixes');
+assert.match(html, /assets\/scripts\/pages\/leads\.js\?v=20260808-leads-stats-skeleton-v1/, 'index.html should bust stale cached leads.js after safe lead pagination changes');
 assert.doesNotMatch(html, /assets\/scripts\/pages\/classes\.js|assets\/scripts\/pages\/plans\.js/, 'index.html should not load deprecated classes or plans page modules');
 assert.match(html, /assets\/scripts\/pages\/products\.js/, 'index.html should load products page module');
 assert.match(html, /assets\/scripts\/pages\/packages\.js/, 'index.html should load packages page module');

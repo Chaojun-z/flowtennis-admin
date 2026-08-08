@@ -1,6 +1,7 @@
 const { readLeadSourceRows } = require('./lead-source-read-model.js');
 const { buildCustomerLifecycleRows } = require('./read-models/customer-lifecycle.js');
 const { buildLeadPoolRows } = require('./read-models/platform-metrics.js');
+const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
 function createLeadsRoutes(deps={}){
   const {
@@ -15,6 +16,63 @@ function createLeadsRoutes(deps={}){
     T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS,T_ENTITLEMENT_LEDGER,
     T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_FINANCIAL_LEDGER,T_PLANS,T_CLASSES,T_FEEDBACKS
   }=deps;
+  const LEAD_LIST_CACHE_TTL_MS=30000;
+  const LEAD_LIST_CACHE_MAX_ENTRIES=120;
+  const leadSourceRowsCache={expiresAt:0,rows:null};
+  const leadPagedResponseCache=new Map();
+
+  function cloneLeadCachePayload(value){
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function clearLeadListCaches(){
+    leadSourceRowsCache.expiresAt=0;
+    leadSourceRowsCache.rows=null;
+    leadPagedResponseCache.clear();
+  }
+
+  function trimLeadPagedResponseCache(){
+    while(leadPagedResponseCache.size>LEAD_LIST_CACHE_MAX_ENTRIES){
+      const firstKey=leadPagedResponseCache.keys().next().value;
+      if(!firstKey)break;
+      leadPagedResponseCache.delete(firstKey);
+    }
+  }
+
+  function leadListQueryCachePart(query){
+    return [...(query||new URLSearchParams()).entries()]
+      .map(([key,value])=>[cleanLeadText(key),cleanLeadText(value)])
+      .sort((a,b)=>a[0].localeCompare(b[0])||a[1].localeCompare(b[1]));
+  }
+
+  function leadListUserCachePart(user={}){
+    const campusIds=Array.isArray(user.campusIds)?user.campusIds:[];
+    return {
+      role:cleanLeadText(user.role),
+      name:cleanLeadText(user.name||user.username||user.id),
+      dataScope:cleanLeadText(user.dataScope),
+      campus:cleanLeadText(user.campus),
+      campusIds:campusIds.map(cleanLeadText).sort()
+    };
+  }
+
+  function leadPagedResponseCacheKey(query,user){
+    return JSON.stringify({query:leadListQueryCachePart(query),user:leadListUserCachePart(user)});
+  }
+
+  function readLeadPagedResponseCache(key,now=Date.now()){
+    const cached=leadPagedResponseCache.get(key);
+    if(!cached||cached.expiresAt<=now){
+      if(cached)leadPagedResponseCache.delete(key);
+      return null;
+    }
+    return cloneLeadCachePayload(cached.payload);
+  }
+
+  function writeLeadPagedResponseCache(key,payload,now=Date.now()){
+    leadPagedResponseCache.set(key,{expiresAt:now+LEAD_LIST_CACHE_TTL_MS,payload:cloneLeadCachePayload(payload)});
+    trimLeadPagedResponseCache();
+  }
 
   function leadSearchHit(q,...values){
     if(!q)return true;
@@ -37,6 +95,115 @@ function createLeadsRoutes(deps={}){
     const page=Math.min(paging.page,pages);
     const start=(page-1)*paging.pageSize;
     return {rows:rows.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages};
+  }
+
+  function leadCsvValues(value){
+    return cleanLeadText(value).split(',').map(item=>cleanLeadText(item)).filter(Boolean);
+  }
+
+  function leadRowFieldText(row,...fields){
+    for(const field of fields){
+      const value=cleanLeadText(row?.[field]);
+      if(value)return value;
+    }
+    return '';
+  }
+
+  function leadDateMs(value){
+    const raw=cleanLeadText(value).replace(' ','T');
+    const parsed=Date.parse(raw);
+    return Number.isFinite(parsed)?parsed:0;
+  }
+
+  function leadDateOnly(value){
+    const text=cleanLeadText(value);
+    const match=text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if(match)return `${match[1]}-${String(match[2]).padStart(2,'0')}-${String(match[3]).padStart(2,'0')}`;
+    return text.slice(0,10);
+  }
+
+  function leadSortMetric(row,key){
+    if(key==='leadDate')return leadDateMs(row?.leadDate||row?.createdAt);
+    if(key==='trialLessonAt')return leadDateMs(row?.trialAtRaw||row?.trialLessonAt||row?.trialAt);
+    if(key==='lastFollowupAt')return leadDateMs(row?.lastFollowupAt);
+    if(key==='formalSignupAt')return leadDateMs(row?.courseFirstPurchaseAt||row?.formalSignupAt||row?.enrollAtRaw||row?.enrollAt);
+    if(key==='followupCount')return Number(row?.followupCount)||0;
+    return 0;
+  }
+
+  function sortLeadListRows(rows=[],query){
+    const sortKey=cleanLeadText(query?.get('sortKey'));
+    const sortDir=cleanLeadText(query?.get('sortDir'))==='asc'?'asc':'desc';
+    if(sortKey){
+      const dir=sortDir==='asc'?1:-1;
+      return [...rows].sort((a,b)=>{
+        const av=leadSortMetric(a,sortKey),bv=leadSortMetric(b,sortKey);
+        const emptyA=!av,emptyB=!bv;
+        if(emptyA&&emptyB)return cleanLeadText(b.updatedAt||b.createdAt||b.id).localeCompare(cleanLeadText(a.updatedAt||a.createdAt||a.id));
+        if(emptyA)return 1;
+        if(emptyB)return -1;
+        return (av-bv)*dir||cleanLeadText(b.updatedAt||b.createdAt||b.id).localeCompare(cleanLeadText(a.updatedAt||a.createdAt||a.id));
+      });
+    }
+    return [...rows].sort((a,b)=>{
+      const leadDateDiff=leadDateMs(b?.leadDate||b?.createdAt)-leadDateMs(a?.leadDate||a?.createdAt);
+      if(leadDateDiff!==0)return leadDateDiff;
+      const followupDiff=leadDateMs(b?.lastFollowupAt)-leadDateMs(a?.lastFollowupAt);
+      if(followupDiff!==0)return followupDiff;
+      return cleanLeadText(b?.updatedAt||b?.createdAt||b?.id).localeCompare(cleanLeadText(a?.updatedAt||a?.createdAt||a?.id));
+    });
+  }
+
+  function leadCampusMatches(row,value,name=''){
+    const expected=normalizeCampusValue(value||name);
+    if(!expected)return true;
+    return [row?.campus,row?.campusCode,row?.campusName].some(item=>normalizeCampusValue(item)===expected);
+  }
+
+  function leadGlobalDateValue(row){
+    return leadDateOnly(row?.leadDate||row?.createdAt||row?.updatedAt||row?.lastFollowupAt);
+  }
+
+  function leadSummaryBool(value){
+    if(value===true)return true;
+    const text=cleanLeadText(value).toLowerCase();
+    return ['true','1','yes','是','已'].includes(text);
+  }
+
+  function leadSummaryRate(value,total){
+    if(!total)return '0%';
+    const percent=(Number(value)||0)*100/(Number(total)||0);
+    return `${Number.isInteger(percent)?percent:percent.toFixed(1)}%`;
+  }
+
+  function leadSummaryTrialAttended(row={}){
+    if(leadSummaryBool(row.hasTrialAttended))return true;
+    if(cleanLeadText(row.trialAttendedAt))return true;
+    return ['体验课完成','已体验待转化','已体验待成交'].includes(leadRowFieldText(row,'leadStage','systemStatus','rawStatus'));
+  }
+
+  function leadSummaryCourseConverted(row={}){
+    return leadSummaryBool(row.hasCourseConversion)||leadSummaryBool(row.isCourseConverted)||!!cleanLeadText(row.studentId);
+  }
+
+  function buildLeadListSummary(rows=[]){
+    const list=Array.isArray(rows)?rows:[];
+    const total=list.length;
+    const historicalStudents=list.filter(row=>leadSummaryBool(row.isHistoricalStudentRoster)||leadSummaryTrialAttended(row)||leadSummaryCourseConverted(row)).length;
+    const activeStudents=list.filter(row=>leadSummaryBool(row.isActiveStudentRoster)).length;
+    const trialAttended=list.filter(leadSummaryTrialAttended).length;
+    const trialAttendedToFormalPurchase=list.filter(row=>leadSummaryBool(row.hasTrialToCourseConversion)||(leadSummaryTrialAttended(row)&&leadSummaryCourseConverted(row))).length;
+    return {
+      total,
+      historicalStudents,
+      historicalStudentRate:leadSummaryRate(historicalStudents,total),
+      activeStudents,
+      activeStudentRate:leadSummaryRate(activeStudents,historicalStudents),
+      trialAttended,
+      trialAttendedRate:leadSummaryRate(trialAttended,total),
+      trialAttendedToFormalPurchase,
+      trialAttendedToFormalPurchaseRate:leadSummaryRate(trialAttendedToFormalPurchase,trialAttended)
+    };
   }
 
   function visibleLeadSourceRows(rows=[]){
@@ -438,6 +605,16 @@ function createLeadsRoutes(deps={}){
     return readLeadPoolRows({lifecycleScope:expandLifecycleSearch?'all':'course'});
   }
 
+  async function readFastVisibleLeadRows(){
+    const now=Date.now();
+    if(Array.isArray(leadSourceRowsCache.rows)&&leadSourceRowsCache.expiresAt>now)return leadSourceRowsCache.rows;
+    const rows=await readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS});
+    const visibleRows=mergeDuplicateLeadRows(visibleLeadSourceRows(rows));
+    leadSourceRowsCache.rows=visibleRows;
+    leadSourceRowsCache.expiresAt=now+LEAD_LIST_CACHE_TTL_MS;
+    return visibleRows;
+  }
+
   async function ensureLeadTablesForRequest(){
     if(typeof isProductionRuntime==='function'&&isProductionRuntime())return;
     if(typeof ensureLeadTables==='function')await ensureLeadTables();
@@ -461,30 +638,49 @@ function createLeadsRoutes(deps={}){
       await ensureLeadTablesForRequest();
       if(method==='GET'){
         const q=cleanLeadText(query.get('q')).toLowerCase();
-        const rows=await readVisibleLeadRows({expandLifecycleSearch:!!q});
+        const paging=parseLeadPaging(query);
+        const responseCacheKey=paging?leadPagedResponseCacheKey(query,user):'';
+        const cachedResponse=responseCacheKey?readLeadPagedResponseCache(responseCacheKey):null;
+        if(cachedResponse)return sendJson(res,cachedResponse);
+        const rows=paging?await readFastVisibleLeadRows():await readVisibleLeadRows({expandLifecycleSearch:!!q});
         const source=cleanLeadText(query.get('source'));
-        const consultType=cleanLeadText(query.get('consultType'));
-        const owner=cleanLeadText(query.get('owner'));
-        const systemStatus=cleanLeadText(query.get('systemStatus'));
+        const customerType=cleanLeadText(query.get('customerType'));
+        const consultType=cleanLeadText(query.get('consultType')||query.get('demandProduct'));
+        const ownerValues=leadCsvValues(query.get('owner'));
+        const systemStatus=cleanLeadText(query.get('systemStatus')||query.get('leadStage'));
+        const dealType=cleanLeadText(query.get('dealType'));
+        const campusValue=cleanLeadText(query.get('campus'));
+        const campusName=cleanLeadText(query.get('campusName'));
         const waiting=cleanLeadText(query.get('waiting'));
         const dateFrom=cleanLeadText(query.get('dateFrom'));
         const dateTo=cleanLeadText(query.get('dateTo'));
-        const paging=parseLeadPaging(query);
+        const startDate=cleanLeadText(query.get('startDate'));
+        const endDate=cleanLeadText(query.get('endDate'));
         const todayStr=new Date().toISOString().slice(0,10);
         const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
         const filtered=visibleRows.filter(row=>{
-          if(q&&!leadSearchHit(q,row.displayName,row.wechatName,row.name,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.leadStage,row.studentStage,row.courtStage,row.membershipStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
-          if(source&&row.source!==source)return false;
-          if(consultType&&row.consultType!==consultType)return false;
-          if(owner&&row.owner!==owner)return false;
-          if(systemStatus&&row.systemStatus!==systemStatus)return false;
-          if(dateFrom&&String(row.leadDate||'')<dateFrom)return false;
-          if(dateTo&&String(row.leadDate||'')>dateTo)return false;
+          if(q&&!leadSearchHit(q,row.displayName,row.wechatName,row.name,row.phone,row.source,row.customerType,row.demandProduct,row.consultType,row.intentLevel,row.owner,row.profileNote,row.rawStatus,row.systemStatus,row.leadStage,row.studentStage,row.courtStage,row.membershipStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
+          if(source&&leadRowFieldText(row,'source')!==source)return false;
+          if(customerType&&leadRowFieldText(row,'customerType','consultType','demandProduct','profileNote')!==customerType)return false;
+          if(consultType&&leadRowFieldText(row,'demandProduct','consultType')!==consultType)return false;
+          if(ownerValues.length&&!ownerValues.includes(leadRowFieldText(row,'owner')))return false;
+          if(systemStatus&&leadRowFieldText(row,'leadStage','systemStatus','rawStatus')!==systemStatus)return false;
+          if(dealType&&leadRowFieldText(row,'dealType','conversionType')!==dealType)return false;
+          if((campusValue||campusName)&&!leadCampusMatches(row,campusValue,campusName))return false;
+          const leadDateValue=leadDateOnly(row.leadDate);
+          if(dateFrom&&leadDateValue<dateFrom)return false;
+          if(dateTo&&leadDateValue>dateTo)return false;
+          if(startDate&&leadGlobalDateValue(row)<startDate)return false;
+          if(endDate&&leadGlobalDateValue(row)>endDate)return false;
           if(waiting==='today'&&String(row.nextFollowupAt||'').slice(0,10)!==todayStr)return false;
           if(waiting==='overdue'&&String(row.nextFollowupAt||'').slice(0,10)>=todayStr)return false;
           return true;
-        }).sort((a,b)=>String(b.leadDate||b.createdAt||'').localeCompare(String(a.leadDate||a.createdAt||'')));
-        return sendJson(res,paging?buildLeadListPage(filtered,paging):filtered);
+        });
+        const sorted=sortLeadListRows(filtered,query);
+        const summary=buildLeadListSummary(filtered);
+        const payload=paging?{...buildLeadListPage(sorted,paging),summary}:sorted;
+        if(responseCacheKey)writeLeadPagedResponseCache(responseCacheKey,payload);
+        return sendJson(res,payload);
       }
       if(method==='POST'){
         const now=new Date().toISOString();
@@ -497,6 +693,7 @@ function createLeadsRoutes(deps={}){
         if(!materialized.changed)await put(T_LEADS,lead.id,lead);
         const followup=body.createInitialFollowup===false?null:buildLeadInitialFollowup(lead);
         if(followup)await put(T_LEAD_FOLLOWUPS,followup.id,followup);
+        clearLeadListCaches();
         return sendJson(res,{lead:materialized.lead,followup});
       }
     }
@@ -550,6 +747,7 @@ function createLeadsRoutes(deps={}){
         for(const row of plan.studentProfileMerge?.referenceUpdates?.plans||[])await put(T_PLANS,row.id,row);
         for(const row of plan.studentProfileMerge?.referenceUpdates?.classes||[])await put(T_CLASSES,row.id,row);
         for(const row of plan.studentProfileMerge?.referenceUpdates?.feedbacks||[])await put(T_FEEDBACKS,row.id,row);
+        clearLeadListCaches();
         return sendJson(res,leadMergeSummary(plan));
       }catch(error){
         return sendJson(res,{error:error.message||'线索合并失败'},error.statusCode||400);
@@ -560,6 +758,15 @@ function createLeadsRoutes(deps={}){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await ensureLeadTablesForRequest();
       const leadId=leadIdM[1];
+      if(method==='GET'){
+        await init();
+        const raw=await get(T_LEADS,leadId).catch(()=>null);
+        if(!raw)return sendJson(res,{error:'线索不存在'},404);
+        const snapshot=await applyPersistedLeadSnapshot(raw);
+        const scopedRaw=filterLoadAllForUser({leads:[snapshot]},user).leads||[];
+        if(!scopedRaw.length)return sendJson(res,{error:'线索不存在'},404);
+        return sendJson(res,scopedRaw[0]);
+      }
       if(method==='PUT'){
         await init();
         const old=await get(T_LEADS,leadId).catch(()=>null);
@@ -569,6 +776,7 @@ function createLeadsRoutes(deps={}){
         const next=await applyPersistedLeadSnapshot(normalized);
         const materialized=await materializeLeadConversionIdentities(next,{now});
         if(!materialized.changed)await put(T_LEADS,leadId,next);
+        clearLeadListCaches();
         return sendJson(res,materialized.lead);
       }
       if(method==='DELETE'){
@@ -585,10 +793,12 @@ function createLeadsRoutes(deps={}){
             del(T_LEADS,leadId),
             ...followups.map(row=>del(T_LEAD_FOLLOWUPS,row.id))
           ]);
+          clearLeadListCaches();
           return sendJson(res,{success:true,deleted:true,archived:false,followupIds:followups.map(row=>row.id)});
         }
         const next={...lead,status:'voided',voidedAt:lead.voidedAt||now,voidedBy:user.name||'',voidReason:cleanLeadText(body?.reason)||'线索删除时自动作废，历史业务数据保留',updatedAt:now};
         await put(T_LEADS,leadId,next);
+        clearLeadListCaches();
         return sendJson(res,{success:true,deleted:false,archived:true,lead:next});
       }
     }
@@ -611,6 +821,7 @@ function createLeadsRoutes(deps={}){
         const nextLead=applyLeadFollowupsSnapshot(lead,rows);
         const materialized=await materializeLeadConversionIdentities(nextLead,{now});
         if(!materialized.changed)await put(T_LEADS,leadId,nextLead);
+        clearLeadListCaches();
         return sendJson(res,{followup,lead:materialized.lead});
       }
     }
@@ -635,6 +846,7 @@ function createLeadsRoutes(deps={}){
         const nextLead=applyLeadFollowupSnapshot(lead,followup);
         const materialized=await materializeLeadConversionIdentities(nextLead,{now});
         if(!materialized.changed)await put(T_LEADS,leadId,nextLead);
+        clearLeadListCaches();
         return sendJson(res,{followup,lead:materialized.lead});
       }
     }
@@ -687,6 +899,7 @@ function createLeadsRoutes(deps={}){
         summary:{...leadImportPreviewSummary(previewRows),importableRows:rowsToCreate.length}
       };
       await put(T_LEAD_IMPORT_BATCHES,batchKey,result);
+      clearLeadListCaches();
       return sendJson(res,result);
     }
     const leadConvertStudentM=path.match(/^\/leads\/([^/]+)\/convert-student$/);
@@ -702,6 +915,7 @@ function createLeadsRoutes(deps={}){
         let student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
         if(student)student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
         const materialized=await materializeLeadConversionIdentities(lead,{now,studentId:lead.studentId});
+        clearLeadListCaches();
         return sendJson(res,{lead:materialized.lead,student,created:false});
       }
       let student=body.studentId?await get(T_STUDENTS,body.studentId).catch(()=>null):null;
@@ -718,6 +932,7 @@ function createLeadsRoutes(deps={}){
       const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,membershipAccountId:lead.membershipAccountId||'',updatedAt:now,createdAt:lead.createdAt},{id:lead.id,now});
       const materialized=await materializeLeadConversionIdentities(nextLead,{now,studentId:student.id});
       if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      clearLeadListCaches();
       return sendJson(res,{lead:materialized.lead,student,created:!body.studentId});
     }
     const leadConvertCourtM=path.match(/^\/leads\/([^/]+)\/convert-court$/);
@@ -733,6 +948,7 @@ function createLeadsRoutes(deps={}){
         let court=await get(T_COURTS,lead.courtId).catch(()=>null);
         if(court)court=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
         const materialized=await materializeLeadConversionIdentities(lead,{now,courtId:lead.courtId});
+        clearLeadListCaches();
         return sendJson(res,{lead:materialized.lead,court,created:false});
       }
       let court=body.courtId?await get(T_COURTS,body.courtId).catch(()=>null):null;
@@ -750,6 +966,7 @@ function createLeadsRoutes(deps={}){
       const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,updatedAt:now,createdAt:lead.createdAt},{id:lead.id,now});
       const materialized=await materializeLeadConversionIdentities(nextLead,{now,courtId:court.id});
       if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      clearLeadListCaches();
       return sendJson(res,{lead:materialized.lead,court,created:!body.courtId});
     }
     const leadLinkStudentM=path.match(/^\/leads\/([^/]+)\/link-student$/);
@@ -766,6 +983,7 @@ function createLeadsRoutes(deps={}){
       const nextLead=normalizeLeadRecord({...lead,studentId:linkedStudent.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now});
       const materialized=await materializeLeadConversionIdentities(nextLead,{now,studentId:linkedStudent.id});
       if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      clearLeadListCaches();
       return sendJson(res,{lead:materialized.lead,student:linkedStudent});
     }
     const leadLinkCourtM=path.match(/^\/leads\/([^/]+)\/link-court$/);
@@ -783,6 +1001,7 @@ function createLeadsRoutes(deps={}){
       const nextLead=normalizeLeadRecord({...lead,courtId:linkedCourt.id,membershipAccountId:membershipAccount?.id||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now});
       const materialized=await materializeLeadConversionIdentities(nextLead,{now,courtId:linkedCourt.id});
       if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      clearLeadListCaches();
       return sendJson(res,{lead:materialized.lead,court:linkedCourt,membershipAccount:materialized.membershipAccount||membershipAccount});
     }
     const leadUnlinkStudentM=path.match(/^\/leads\/([^/]+)\/unlink-student$/);
@@ -801,6 +1020,7 @@ function createLeadsRoutes(deps={}){
         nextStudent={...student,sourceLeadId:'',leadId:'',fromLeadId:'',updatedAt:now};
         await put(T_STUDENTS,nextStudent.id,nextStudent);
       }
+      clearLeadListCaches();
       return sendJson(res,{lead:nextLead,student:nextStudent});
     }
     const leadUnlinkCourtM=path.match(/^\/leads\/([^/]+)\/unlink-court$/);
@@ -819,6 +1039,7 @@ function createLeadsRoutes(deps={}){
         nextCourt={...court,sourceLeadId:'',leadId:'',fromLeadId:'',updatedAt:now};
         await put(T_COURTS,nextCourt.id,nextCourt);
       }
+      clearLeadListCaches();
       return sendJson(res,{lead:nextLead,court:nextCourt});
     }
     return false;

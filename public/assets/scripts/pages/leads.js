@@ -3,6 +3,7 @@ let leadImportState={fileName:'',fileSize:0,fileModified:0,csvText:'',previewRow
 let leadMergeState={primaryLeadId:'',selectedDuplicateId:'',search:'',preview:null};
 let leadDatePreset='all',leadDateCustomStart='',leadDateCustomEnd='';
 let leadDetailActiveTab='basic',leadDetailEditingSection='',leadDetailEditingFollowupId='',leadDetailConversionMode='';
+let leadListReloadSeq=0,leadListReloading=false;
 function leadRawRows(){
   return Array.isArray(leads)?leads:[];
 }
@@ -571,14 +572,14 @@ function setLeadDatePreset(preset){
     leadDateCustomEnd='';
   }
   leadPage=standardListFirstPage();
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function setLeadCustomDateRange(){
   leadDatePreset='custom';
   leadDateCustomStart=document.getElementById('leadDateFrom')?.value||'';
   leadDateCustomEnd=document.getElementById('leadDateTo')?.value||'';
   leadPage=standardListFirstPage();
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function leadSortDateValue(value,lead={}){
   const raw=String(value||'').trim().replace(' 00:00:00','').replace('00:00:00','').replace('//','/');
@@ -619,7 +620,7 @@ function cycleLeadSort(key){
   else if(leadSortDir==='asc')leadSortDir='desc';
   else {leadSortKey='';leadSortDir='';}
   leadPage=standardListFirstPage();
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function updateLeadSortHeaders(){
   document.querySelectorAll('#page-leads [data-lead-sort]').forEach(btn=>{
@@ -649,7 +650,7 @@ function leadOwnerFilterHtml(options=[],selectedValues=[]){
 }
 function toggleLeadOwnerFilter(){
   leadPage=standardListFirstPage();
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function getFilteredLeads(){
   const q=(document.getElementById('leadSearch')?.value||'').trim().toLowerCase();
@@ -758,8 +759,9 @@ function leadCurrentListRateText(value,total){
   if(value==null)return '';
   return FlowTennisPlatformDataStandards.rateText(Number(value)||0,Number(total)||0);
 }
-function leadStatsValueHtml(value){
-  return value==null?'<span class="tms-stat-loading">加载中</span>':value;
+function renderLeadStatsLoading(){
+  const host=document.getElementById('leadStatsRow');
+  if(host&&typeof renderStandardSkeletonKpiCards==='function')host.innerHTML=renderStandardSkeletonKpiCards(5);
 }
 function leadTrialDoneByStatus(lead){
   return [lead?.rawStatus,lead?.systemStatus,lead?.leadStage].some(value=>['体验课完成','已体验待转化','已体验待成交'].includes(String(value||'').trim()));
@@ -791,23 +793,30 @@ function leadTrialCourseConverted(lead){
   if(Object.prototype.hasOwnProperty.call(lead||{},'hasTrialToCourseConversion'))return lead?.hasTrialToCourseConversion===true;
   return leadTrialDone(lead)&&leadCourseConverted(lead);
 }
+function leadServerSummaryData(){
+  const summary=typeof leadListPageData==='object'&&leadListPageData?leadListPageData.summary:null;
+  if(!summary||summary.total==null)return null;
+  return summary;
+}
 function leadStatsData(list){
+  const serverSummary=leadServerSummaryData();
+  if(serverSummary)return serverSummary;
   if(!leadLifecycleMetricsReady())return leadStatsLoadingData();
   return FlowTennisPlatformDataStandards.currentLeadSummary(list, leadStandardMetrics());
 }
 function renderLeadStats(list){
   const stats=leadStatsData(list);
-  if(stats.total==null&&typeof renderStandardSkeletonKpiCards==='function'){
-    const host=document.getElementById('leadStatsRow');
-    if(host)host.innerHTML=renderStandardSkeletonKpiCards(5);
+  const statValues=['total','historicalStudents','activeStudents','trialAttended','trialAttendedToFormalPurchase'];
+  if(statValues.some(key=>stats[key]==null)){
+    renderLeadStatsLoading();
     return;
   }
   const cardData=[
-    {label:'线索数',valueHtml:stats.total==null?leadStatsValueHtml(stats.total):`${stats.total}<span>条</span>`},
-    {label:'历史学员',valueHtml:leadStatsValueHtml(stats.historicalStudents),percent:stats.historicalStudentRate,sub:'历史学员 / 线索数'},
-    {label:'在期学员',valueHtml:leadStatsValueHtml(stats.activeStudents),percent:stats.activeStudentRate,sub:'在期学员 / 历史学员'},
-    {label:'上过体验课',valueHtml:leadStatsValueHtml(stats.trialAttended),percent:stats.trialAttendedRate,sub:'上过体验课 / 线索数'},
-    {label:'体验后买正式课',valueHtml:leadStatsValueHtml(stats.trialAttendedToFormalPurchase),percent:stats.trialAttendedToFormalPurchaseRate,sub:'体验后买正式课 / 上过体验课'}
+    {label:'线索数',valueHtml:`${stats.total}<span>条</span>`},
+    {label:'历史学员',valueHtml:stats.historicalStudents,percent:stats.historicalStudentRate,sub:'历史学员 / 线索数'},
+    {label:'在期学员',valueHtml:stats.activeStudents,percent:stats.activeStudentRate,sub:'在期学员 / 历史学员'},
+    {label:'上过体验课',valueHtml:stats.trialAttended,percent:stats.trialAttendedRate,sub:'上过体验课 / 线索数'},
+    {label:'体验后买正式课',valueHtml:stats.trialAttendedToFormalPurchase,percent:stats.trialAttendedToFormalPurchaseRate,sub:'体验后买正式课 / 上过体验课'}
   ];
   const host=document.getElementById('leadStatsRow');
   if(host)host.innerHTML=renderStandardDataCards(cardData);
@@ -901,6 +910,17 @@ function loadLeadFollowupDetailThenOpen(leadId){
     toast('跟进记录加载失败，请刷新后重试','error');
   });
   return true;
+}
+function refreshLeadDetailFromServer(leadId){
+  if(typeof ensureLeadDetailForLead!=='function')return;
+  if(typeof leadDetailReady==='function'&&leadDetailReady(leadId))return;
+  ensureLeadDetailForLead(leadId).then(()=>{
+    const currentId=document.getElementById('overlay')?.dataset.leadDetailId||'';
+    if(currentId===String(leadId))openLeadDetail(leadId);
+  }).catch(e=>{
+    console.warn('lead detail load failed',e);
+    if(typeof toast==='function')toast('线索详情加载失败，已显示当前列表数据','warn');
+  });
 }
 function leadDetailFieldHtml(label,value){
   return renderDetailDrawerField(label,value);
@@ -1297,6 +1317,7 @@ function openLeadDetail(leadId){
   const lead=leadById(leadId);
   if(!lead)return;
   if(leadFollowupDetailNeedsLoad(leadId)&&loadLeadFollowupDetailThenOpen(leadId))return;
+  refreshLeadDetailFromServer(leadId);
   const body=leadDetailActiveTab==='basic'?leadDetailBasicTabHtml(lead):leadDetailActiveTab==='followups'?leadDetailFollowupsTabHtml(lead):leadDetailConversionTabHtml(lead);
   openStandardDetailDrawer({
     titleHtml:`${leadDetailHeroHtml(lead)}${leadDetailTabsHtml(leadDetailActiveTab)}`,
@@ -1927,24 +1948,60 @@ function renderLeadPagerControls(total,pages){
   if(!btns)return;
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(leadPage,pages,'setLeadPage');
 }
+function leadCurrentServerPageData(){
+  if(typeof leadListPageData!=='object'||!leadListPageData||!Array.isArray(leadListPageData.rows))return null;
+  return {
+    total:Number(leadListPageData.total)||0,
+    page:Number(leadListPageData.page)||leadPage||1,
+    pageSize:Number(leadListPageData.pageSize)||leadPageSize,
+    pages:Number(leadListPageData.pages)||1
+  };
+}
+async function reloadLeadsForCurrentPage({showLoading=true}={}){
+  const seq=++leadListReloadSeq;
+  leadListReloading=true;
+  if(showLoading){
+    renderLeadStatsLoading();
+    if(typeof renderLeadTableLoading==='function')renderLeadTableLoading();
+  }
+  try{
+    if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['leads'],{force:true});
+    if(seq===leadListReloadSeq)renderLeads();
+    return true;
+  }catch(e){
+    if(seq===leadListReloadSeq){
+      const message=e?.message||'线索加载失败，请稍后重试';
+      if(typeof renderLeadTableError==='function')renderLeadTableError(message);
+      else if(typeof toast==='function')toast(message,'error');
+    }
+    return false;
+  }finally{
+    if(seq===leadListReloadSeq)leadListReloading=false;
+  }
+}
 function setLeadPage(value){
-  const total=getFilteredLeads().length;
+  const total=leadCurrentServerPageData()?.total??getFilteredLeads().length;
   leadPage=standardListPagination(total,value,leadPageSize).page;
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function jumpLeadPage(value){
-  const total=getFilteredLeads().length;
+  const total=leadCurrentServerPageData()?.total??getFilteredLeads().length;
   leadPage=standardListPagination(total,value,leadPageSize).page;
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function renderLeads(){
+  if(!leadListReloading&&typeof datasetHasCurrentRequestKey==='function'&&!datasetHasCurrentRequestKey('leads')&&typeof ensureDatasetsByName==='function'){
+    reloadLeadsForCurrentPage();
+    return;
+  }
   renderLeadDateScopeControls();
   renderLeadToolbarFilters();
   updateLeadSortHeaders();
   const list=getSortedLeads(getFilteredLeads());
   renderLeadStats(list);
   const isMobileList=document.body.classList.contains('admin-mobile');
-  const pageState=isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,leadPage,leadPageSize);
+  const serverPage=leadCurrentServerPageData();
+  const pageState=isMobileList?{total:serverPage?.total??list.length,pages:1,slice:list,page:1}:(serverPage?{total:serverPage.total,pages:serverPage.pages,slice:list,page:serverPage.page}:standardListSlice(list,leadPage,leadPageSize));
   leadPage=pageState.page;
   const {total,pages,slice}=pageState;
   const tbody=document.getElementById('leadTbody');
@@ -1960,11 +2017,11 @@ function renderLeads(){
 }
 function applyLeadSearch(){
   leadPage=standardListFirstPage();
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function onLeadFilterChange(){
   leadPage=standardListFirstPage();
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function resetLeadFilters(){
   const ids=['leadSearch','leadSourceFilter','leadCustomerTypeFilter','leadConsultFilter','leadStageFilter','leadOwnerFilter'];
@@ -1973,10 +2030,10 @@ function resetLeadFilters(){
   leadDateCustomStart='';
   leadDateCustomEnd='';
   leadPage=standardListFirstPage();
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }
 function setLeadPageSize(value){
   leadPageSize=standardListPageSize(value,leadPageSize);
   leadPage=standardListFirstPage();
-  renderLeads();
+  reloadLeadsForCurrentPage();
 }

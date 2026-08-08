@@ -83,6 +83,10 @@ assert.match(leadsSource, /\['merged','voided','deleted'\]\.includes\(String\(ro
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
 assert.match(leadsSource, /线索数[\s\S]*历史学员[\s\S]*在期学员[\s\S]*上过体验课[\s\S]*体验后买正式课/, 'lead stats should expose schedule-fact student metrics from the unified backend model');
 assert.match(leadsSource, /历史学员 \/ 线索数[\s\S]*在期学员 \/ 历史学员[\s\S]*上过体验课 \/ 线索数[\s\S]*体验后买正式课 \/ 上过体验课/, 'lead stats should explain the unified historical, active, and trial-attended formulas');
+assert.match(leadsSource, /function renderLeadStatsLoading\([\s\S]*renderStandardSkeletonKpiCards\(5\)/, 'lead stats loading should use skeleton KPI cards');
+assert.match(fnBody('renderLeadStats'), /statValues\.some\(key=>stats\[key\]==null\)[\s\S]*renderLeadStatsLoading\(\)/, 'lead stats should render skeletons when any top card is still missing');
+assert.match(fnBody('reloadLeadsForCurrentPage'), /if\(showLoading\)\{[\s\S]*renderLeadStatsLoading\(\)[\s\S]*renderLeadTableLoading\(\)/, 'lead reload should put top stats and table into loading together');
+assert.doesNotMatch(leadsSource, /tms-stat-loading|<span class="tms-stat-loading">加载中<\/span>/, 'lead top stats should not render text loading');
 assert.match(fnBody('leadStatsData'), /FlowTennisPlatformDataStandards\.currentLeadSummary\(list, leadStandardMetrics\(\)\)/, 'lead count card should delegate to the shared lead summary standard');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('validLeads'\)/, 'lead count card must not use lifecycle validLeads when list/filter totals use lead rows');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('courseChainStudents'\)|leadStandardMetricValue\('formalStudents'\)/, 'lead stats must not use old normal/formal student metrics for the top student cards');
@@ -108,7 +112,7 @@ assert.match(fnBody('leadConvertedYesNo'), /leadStageText\(lead\)==='已成交'/
 assert.doesNotMatch(fnBody('leadConvertedYesNo'), /leadDealTypeText\(lead\)/, 'deal type alone should not mark a lead as converted');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
-assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'leads search should reset pagination through the standard list flow before rendering');
+assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*reloadLeadsForCurrentPage\(\)/, 'leads search should reset pagination and reload the current server page');
 assert.match(leadsSource, /function cycleLeadSort\([\s\S]*leadSortDir='asc'[\s\S]*leadSortDir='desc'[\s\S]*leadSortKey='';leadSortDir='';/, 'leads sortable headers should cycle asc, desc, and no sort');
 assert.match(leadsSource, /function updateLeadSortHeaders\(/, 'leads page should update sortable header state');
 assert.match(leadsSource, /function getSortedLeads\(/, 'leads page should sort after filtering and before pagination');
@@ -130,7 +134,7 @@ assert.match(leadsSource, /const LEAD_FIXED_OWNER_NAMES=\['Mira','吴敌','陈�
 assert.match(fnBody('leadOwnerOptionNames'), /LEAD_FIXED_OWNER_NAMES[\s\S]*activeCoachNames\(\)/, 'lead owner options should be fixed owners plus active coaches');
 assert.doesNotMatch(fnBody('leadOwnerOptionNames'), /leadRows\(\)/, 'lead owner options should not derive selectable owners from row data');
 assert.match(fnBody('renderLeadToolbarFilters'), /leadOwnerFilterHtml\(leadOwnerOptions\(\),ownerValues\)/, 'lead owner filter should use the same owner options as the drawers');
-assert.match(leadsSource, /function toggleLeadOwnerFilter\([\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'checking lead owners should refresh the list');
+assert.match(leadsSource, /function toggleLeadOwnerFilter\([\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*reloadLeadsForCurrentPage\(\)/, 'checking lead owners should reload the server-paged list');
 assert.match(fnBody('getFilteredLeads'), /const ownerValues=leadOwnerFilterValues\(\)[\s\S]*if\(ownerValues\.length&&!ownerValues\.includes\(leadOwnerText\(lead\)\)\)return false;/, 'lead filtering should support normalized multiple checked owners');
 assert.match(leadsSource, /function leadPriorityOptions\(\)[\s\S]*\['P0','P1','P2','P3','P4'\]/, 'lead page should expose P0-P4 follow-up priority options');
 assert.match(leadsSource, /function leadPriorityText\(lead\)[\s\S]*lead\?\.followupPriority/, 'lead page should read follow-up priority from the lead record');
@@ -242,7 +246,8 @@ assert.match(fnBody('leadPayloadFromForm'), /followupPriority:document\.getEleme
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'level'[\s\S]*\]/, 'lead list API projection should include level');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'followupPriority'[\s\S]*\]/, 'lead list API projection should include follow-up priority');
 assert.match(leadsRoutesSource, /function parseLeadPaging\(query\)/, 'lead list API should expose server-side paging');
-assert.match(leadsRoutesSource, /return sendJson\(res,paging\?buildLeadListPage\(filtered,paging\):filtered\)/, 'lead list API should keep old array responses and return paged metadata when requested');
+assert.match(leadsRoutesSource, /const summary=buildLeadListSummary\(filtered\);[\s\S]*const payload=paging\?\{\.\.\.buildLeadListPage\(sorted,paging\),summary\}:sorted;[\s\S]*writeLeadPagedResponseCache\(responseCacheKey,payload\);[\s\S]*return sendJson\(res,payload\)/, 'lead list API should sort and summarize before caching and returning paged metadata');
+assert.match(leadsRoutesSource, /function buildLeadListSummary\(rows=\[\]\)[\s\S]*historicalStudents[\s\S]*activeStudents[\s\S]*trialAttended[\s\S]*trialAttendedToFormalPurchase/, 'lead paged API should return all top stat fields without waiting for lifecycle metrics');
 assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',15,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
 assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',15/, 'leads loading state should pass all visible columns to the skeleton helper');
@@ -250,7 +255,7 @@ assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspa
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.doesNotMatch(stateSource, /leads:\['campuses','leads','purchasesPage'\]/, 'leads page should not block on the full purchases aggregate for standard course-chain stats');
-assert.match(stateSource, /leads:\['lifecycleMetricsPage'\]/, 'leads page should load standard course-chain stats from the lightweight lifecycle metrics endpoint without all followups');
+assert.match(stateSource, /leads:\[\]/, 'leads page should not background-load lifecycle metrics before the first paged list is usable');
 assert.match(fnBody('leadTeachingSummaryValue'), /leadLifecycleMetricsReady\(\)/, 'lead top student cards should not render zero while scoped backend metrics are still refreshing');
 assert.match(fnBody('refreshLeadRuntime'), /const base=\['leads'\][\s\S]*if\(waitForMetrics\)base\.push\('lifecycleMetricsPage'\)/, 'lead mutations should allow local lead rows to refresh without waiting for lifecycle metrics');
 assert.match(fnBody('refreshLeadRuntimeInBackground'), /refreshLeadRuntime\(\{\.\.\.options,waitForMetrics:true\}\)/, 'lead lifecycle metrics should still refresh through the background path after lead mutations');
