@@ -978,6 +978,28 @@ function confirmedDirectPrivatePayment(candidate={}){
       confirmedPaymentNote:'胡之超课时费300元/小时；场地费由三方订场会员储值流水处理，排课同步不重复扣款'
     };
   }
+  if(has('董凡轩')){
+    return {
+      settlementType:'direct',
+      payMethod:'微信',
+      paidAmount:Math.round(Number(candidate.lessonCount||0)*300*100)/100,
+      fieldFeeAmount:ownMapoFieldFeeAmount(candidate),
+      fieldFeePayMethod:'微信',
+      fieldFeeReason:'单次付费场地费',
+      confirmedPaymentNote:'董凡轩单次付费：课时费300元/小时，场地费按马坡标准'
+    };
+  }
+  if(has('陈沐白')){
+    return {
+      settlementType:'direct',
+      payMethod:'微信',
+      paidAmount:Math.round(Number(candidate.lessonCount||0)*400*100)/100,
+      fieldFeeAmount:ownMapoFieldFeeAmount(candidate),
+      fieldFeePayMethod:'微信',
+      fieldFeeReason:'单次付费场地费',
+      confirmedPaymentNote:'陈沐白单次付费：课时费400元/小时，场地费按马坡标准'
+    };
+  }
   return null;
 }
 
@@ -1072,9 +1094,12 @@ function entitlementLessonIndexMatches(row={},candidate={},schedules=[]){
   const expected=entitlementExpectedLessonIndexAt(row,candidate,schedules);
   if(expected===null)return false;
   if(expected===index)return true;
+  const count=candidateEntitlementLessonCount(candidate);
+  if(count>1&&index>=expected&&index<=expected+count-1)return true;
   const total=Number(row.totalLessons);
   if(Number.isFinite(total)&&total>=20&&total%10===0&&expected>10){
-    return ((expected-1)%10)+1===index;
+    const cycleExpected=((expected-1)%10)+1;
+    return cycleExpected===index||(count>1&&index>=cycleExpected&&index<=cycleExpected+count-1);
   }
   return false;
 }
@@ -1220,6 +1245,7 @@ function canAutoCreateHistoricalCourse(candidate={}){
   if(candidate.requiresPackagePurchase)return true;
   if(candidate.confirmedPayment)return true;
   if(candidate.sharedPackageAuthorization)return true;
+  if(Array.isArray(candidate.selectedEntitlements)&&candidate.selectedEntitlements.length>0)return true;
   return false;
 }
 
@@ -1370,6 +1396,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     if(!key||activeSourceKeys.has(key))continue;
     if(row.scheduleId&&representedScheduleIds.has(String(row.scheduleId)))continue;
     const schedule=(schedules||[]).find(item=>String(item.id||'')===String(row.scheduleId||''))||null;
+    if(schedule&&!activeSchedule(schedule))continue;
     actions.push({type:'pending_delete',sourceKey:key,sync:row,schedule});
   }
   return summarizePlan(actions);
@@ -1424,7 +1451,7 @@ function buildScheduleBody(candidate,extra={}){
     status:'已排课',
     settlementType:isCompanion||isConfirmedDirect?'direct':'package',
     payMethod:isConfirmedDirect?(confirmedPayment.payMethod||'待确认'):(isCompanion?(candidate.course.payMethod||'待确认'):''),
-    paidAmount:isConfirmedDirect?Number(confirmedPayment.paidAmount||0):(isCompanion?Number(candidate.course.paidAmount||100):0),
+    paidAmount:isConfirmedDirect?Number(confirmedPayment.paidAmount||0):(isCompanion?(candidate.course.paidAmount!==undefined&&candidate.course.paidAmount!==null&&candidate.course.paidAmount!==''?Number(candidate.course.paidAmount):Math.round(Number(candidate.lessonCount||0)*200*100)/100):0),
     entitlementId,
     entitlementIds,
     authorizationId:sharedAuth.authorizationId||'',
