@@ -290,7 +290,9 @@ assert.doesNotMatch(fnBody('studentPackageStatusText'), /studentFormalPurchaseRo
 assert.match(fnBody('studentPaymentModeText'), /paymentModeLabel/, 'payment mode label must come from backend unified teaching view');
 assert.doesNotMatch(fnBody('studentPaymentModeText'), /studentFormalLessonRows|studentDirectFormalLessonRows|settlementType|paymentType|payType|schedules/, 'frontend must not infer payment mode from schedule payment fields');
 assert.match(fnBody('studentActivityStatusText'), /activityStatusLabel/, 'activity status label must come from backend unified teaching view');
-assert.doesNotMatch(fnBody('studentActivityStatusText'), /studentFormalLastLessonDate|studentDaysSince|studentFormalLessonRows|schedules/, 'frontend must not recalculate activity status from schedules');
+assert.match(fnBody('studentActivityStatusText'), /未\.\*上课\|从未|未\.\*上课\|从未[\s\S]*studentCompletedLessonCount/, 'frontend should guard stale test summaries that say no lesson while unified rows still contain completed lessons');
+assert.doesNotMatch(fnBody('studentActivityStatusText'), /studentFormalLastLessonDate|studentFormalLessonRows|schedules/, 'frontend must not recalculate activity status from schedules');
+assert.match(fnBody('studentLastLessonDate'), /studentDateOnOrBeforeNow/, 'student latest lesson display should ignore future cached lesson dates');
 assert.match(fnBody('studentLessonVolumeText'), /lessonVolumeLabel/, 'lesson volume label must come from backend unified teaching view');
 assert.doesNotMatch(fnBody('studentLessonVolumeText'), /studentFormalLessonCountValue|studentFormalLessonRows|schedules/, 'frontend must not recalculate lesson volume from schedules');
 assert.match(source, /function studentCumulativeCoursePaidText\([\s\S]*cumulativeCoursePaidText/, 'student cumulative course paid text must come from backend unified teaching view');

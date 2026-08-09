@@ -32,6 +32,6 @@ assert.match(doDeleteBody, /if\(currentDelType==='student'\)\{[\s\S]*renderStude
 assert.match(doDeleteBody, /if\(currentDelType==='student'\)\{[\s\S]*return;\s*\}\s*if\(!result\?\.purchaseVoid\)renderAll\(\);/, 'student delete should return before the full app render path');
 
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260807-schedule-speed-feedback-v1/, 'index should bust stale cached bootstrap.js after schedule speed feedback fixes');
-assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260807-student-speed-feedback-v1/, 'index should bust stale cached students.js after student speed feedback fixes');
+assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260809-student-lesson-fact-guard-v1/, 'index should bust stale cached students.js after student lesson fact guard fixes');
 
 console.log('student speed feedback tests passed');

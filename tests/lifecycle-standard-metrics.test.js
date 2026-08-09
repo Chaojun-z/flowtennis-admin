@@ -675,6 +675,24 @@ assert.strictEqual(
   0,
   '未来排课不能计入已上正式课人数'
 );
+const sameDayFutureScheduleData = {
+  ...futureScheduleData,
+  schedule: [{
+    ...futureScheduleData.schedule[0],
+    id: 'schedule-same-day-future',
+    startTime: '2026-08-09 18:00:00',
+    endTime: '2026-08-09 19:00:00'
+  }]
+};
+const sameDayFutureScheduleStandard = buildStandardLifecycleMetrics({
+  ...sameDayFutureScheduleData,
+  customerLifecycleRows: buildCustomerLifecycleRows(sameDayFutureScheduleData),
+  now: new Date('2026-08-09 11:10:00')
+});
+assert.ok(
+  !sameDayFutureScheduleStandard.views.historicalStudents.some(row => row.studentId === 'student-future-completed'),
+  '当天当前时间之后的排课不能进入最近上课事实'
+);
 
 const futureSnapshotData = {
   students: [],
@@ -699,6 +717,11 @@ const futureSnapshotViews = buildTeachingStudentViews(
   { ...futureSnapshotData, now: new Date('2026-08-04 00:00:00') }
 );
 const futureSnapshotRow = futureSnapshotViews.formalStudents.find(row => row.studentId === 'student-future-summary');
+assert.strictEqual(
+  teachingSummaryNeedsLessonFacts(futureSnapshotData.teachingStudentSummaryRows[0], new Date('2026-08-04 00:00:00')),
+  true,
+  '摘要里的未来最近上课日期必须触发回源事实表'
+);
 assert.strictEqual(futureSnapshotRow?.detailRecentLessonDate, '', '摘要里的未来最近上课日期必须被统一读模型清空');
 assert.deepStrictEqual(futureSnapshotRow?.detailLessonRecordRows, [], '摘要里的未来上课明细不能进入抽屉已上课记录');
 assert.strictEqual(futureSnapshotRow?.completedLessons, 0, '摘要里的未来上课明细不能计入累计已上课');
@@ -711,7 +734,7 @@ const contradictorySummaryRow = {
   detailRecentLessonDate: '2026-06-17',
   detailLessonRecordRows: [{ kind: 'ledger', time: '2026-06-17 10:00-11:00', lessonDelta: -1 }],
   completedLessons: 4,
-  activityStatusLabel: '从未正式上课',
+  activityStatusLabel: '未上课',
   hasFormalAttended: false,
   teachingLessonDetailSourceVersion: 'lesson-record-v2'
 };

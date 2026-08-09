@@ -42,7 +42,7 @@ assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260701-channel-q
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260807-shared-date-controls-v1/, 'index.html should bust stale cached courts.js when shared date controls move out');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
-assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260807-student-speed-feedback-v1/, 'index.html should bust stale cached students.js after student speed feedback fixes');
+assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260809-student-lesson-fact-guard-v1/, 'index.html should bust stale cached students.js after student lesson fact guard fixes');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');
 assert.match(html, /id="sidebarHost"/, 'index.html should keep the shared sidebar mount host');
 assert.match(html, /id="topbarHost"/, 'index.html should keep the shared topbar mount host');

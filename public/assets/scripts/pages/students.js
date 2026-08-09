@@ -3,10 +3,14 @@ let studentDetailActiveTab='basic';
 let studentDetailEditingSection='';
 let studentDetailEditingStudentId='';
 let studentDetailRequestSeq=0;
+let studentDetailPrewarmSeq=0;
+let studentDetailPrewarmKey='';
 let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
 let studentSortMode='';
+const STUDENT_DETAIL_PREWARM_CONCURRENCY=4;
+const STUDENT_DETAIL_PREWARM_MAX_ROWS=20;
 const STUDENT_DEAL_PATH_LABELS=['体验转化','直接成交','老客续费'];
 function studentListViewMode(){
   return currentPage==='trial-students'?'trial':'package';
@@ -253,8 +257,31 @@ function studentDaysSince(dateText){
   const todayTime=Date.parse(`${today()}T00:00:00`);
   return Math.floor((todayTime-time)/86400000);
 }
+function studentDateOnOrBeforeNow(value){
+  const raw=String(value||'').trim();
+  const day=raw.slice(0,10);
+  if(!day)return false;
+  if(day>today())return false;
+  const timeText=raw.match(/\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}/)?.[0];
+  if(!timeText)return true;
+  const time=Date.parse(timeText.replace(' ','T'));
+  return !Number.isFinite(time)||time<=Date.now();
+}
+function studentActivityStatusFromDate(dateText){
+  const days=studentDaysSince(dateText);
+  if(days===null)return '';
+  if(days<=30)return '近30天活跃';
+  if(days<=90)return '31-90天活跃';
+  if(days<=180)return '91-180天沉默';
+  return '180天以上沉睡';
+}
 function studentActivityStatusText(stu){
-  return String(stu?.activityStatusLabel||'-').trim()||'-';
+  const label=String(stu?.activityStatusLabel||'-').trim()||'-';
+  const safeRecent=studentLastLessonDate(stu);
+  if(/未.*上课|从未/.test(label)&&(safeRecent||studentCompletedLessonCount(stu)>0)){
+    return studentActivityStatusFromDate(safeRecent)||'180天以上沉睡';
+  }
+  return label;
 }
 function studentFormalLessonCountValue(stu){
   const explicit=Number(stu?.formalLessonCount);
@@ -359,9 +386,10 @@ function renderStudentToolbarFilters(){
 }
 function studentLastLessonDate(stu){
   const explicit=String(stu?.detailRecentLessonDate||'').slice(0,10);
-  if(explicit)return explicit;
-  const row=Array.isArray(stu?.detailLessonRecordRows)?stu.detailLessonRecordRows[0]:null;
-  return String(row?.time||row?.sortTime||'').slice(0,10);
+  if(explicit&&studentDateOnOrBeforeNow(stu?.detailRecentLessonDate))return explicit;
+  const rows=Array.isArray(stu?.detailLessonRecordRows)?stu.detailLessonRecordRows:[];
+  const row=rows.find(item=>studentDateOnOrBeforeNow(item?.time||item?.sortTime||item?.relatedDate||item?.scheduleTime||item?.createdAt));
+  return String(row?.time||row?.sortTime||row?.relatedDate||row?.scheduleTime||row?.createdAt||'').slice(0,10);
 }
 function studentRecentLessonText(stu){
   const date=studentLastLessonDate(stu);
@@ -582,6 +610,53 @@ function jumpStudentPage(value){
   const total=getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
   renderStudents();
+}
+function studentListPrewarmParams(){
+  const range=typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{};
+  return {
+    page:currentPage,
+    pageNo:stuPage,
+    pageSize:stuPageSize,
+    search:document.getElementById('stuSearch')?.value||'',
+    type:document.getElementById('stuTypeFilter')?.value||'',
+    source:document.getElementById('stuSourceFilter')?.value||'',
+    coach:document.getElementById('stuCoachFilter')?.value||'',
+    tags:studentTagFilterState,
+    sortKey:stuSortKey,
+    sortDir:stuSortDir,
+    campus:String(campus||''),
+    startDate:range?.startDate||'',
+    endDate:range?.endDate||''
+  };
+}
+function studentDetailPrewarmCacheKey(rows){
+  const ids=(Array.isArray(rows)?rows:[]).map(row=>String(row?.id||row?.studentId||'').trim()).filter(Boolean);
+  return JSON.stringify({...studentListPrewarmParams(),ids});
+}
+function studentDetailPrewarmReady(id){
+  if(typeof studentDetailDataReady!=='function')return false;
+  return studentDetailDataReady(id,'orders')&&studentDetailDataReady(id,'benefits');
+}
+function prewarmStudentDetailsForRows(rows){
+  if(!studentDetailPageStillValid()||typeof ensureStudentDetailData!=='function')return;
+  const currentRows=(Array.isArray(rows)?rows:[]).slice(0,STUDENT_DETAIL_PREWARM_MAX_ROWS);
+  const key=studentDetailPrewarmCacheKey(currentRows);
+  if(!currentRows.length||key===studentDetailPrewarmKey)return;
+  studentDetailPrewarmKey=key;
+  const seq=++studentDetailPrewarmSeq;
+  const ids=[...new Set(currentRows.map(row=>String(row?.id||row?.studentId||'').trim()).filter(Boolean))]
+    .filter(id=>!studentDetailPrewarmReady(id));
+  if(!ids.length)return;
+  let index=0;
+  const worker=async()=>{
+    while(index<ids.length&&seq===studentDetailPrewarmSeq&&studentDetailPageStillValid()){
+      const id=ids[index++];
+      try{await ensureStudentDetailData(id,{silent:true});}
+      catch(e){console.warn('student detail prewarm failed',id,e);}
+    }
+  };
+  const workers=Array.from({length:Math.min(STUDENT_DETAIL_PREWARM_CONCURRENCY,ids.length)},worker);
+  Promise.allSettled(workers);
 }
 function studentCampusValuesForList(stu){
   const values=[stu?.campus,stu?.campusId,stu?.campusName,...parseArr(stu?.campusIds)];
@@ -1147,6 +1222,7 @@ function renderStudents(options={}){
     return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStudentLabelTag(studentActivityStatusText(s))}</td><td>${renderStudentLabelTag(studentPaymentModeText(s))}</td><td>${renderStudentLabelTag(studentPackageStatusText(s))}</td><td>${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentRecentLessonText(s),false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(studentCumulativeCoursePaidText(s),false)}</td><td>${renderStudentLabelTag(studentLifecycleStatusText(s))}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:90px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
   renderStudentMobileCards(slice);
+  prewarmStudentDetailsForRows(slice);
 }
 function studentFeedbackHistoryHtml(s){
   const rows=feedbacks.filter(f=>{

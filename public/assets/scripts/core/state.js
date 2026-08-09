@@ -673,7 +673,7 @@ async function ensurePurchaseDetailData(purchaseId,{force=false}={}){
   loadedPurchaseDetailIds.add(id);
   return true;
 }
-function hydrateStudentDetailData(data={}){
+function hydrateStudentDetailData(data={},options={}){
   mergeDatasetRowsById('students',data.students||[]);
   mergeDatasetRowsById('purchases',data.purchases||[]);
   mergeDatasetRowsById('packages',data.packages||[]);
@@ -685,7 +685,7 @@ function hydrateStudentDetailData(data={}){
   if(Array.isArray(data.customerLifecycleRows))mergeDatasetRowsById('customerLifecycleRows',data.customerLifecycleRows);
   if(data.detailStudentView){
     mergeTeachingStudentDetail(data.detailStudentView);
-    if(typeof renderStudentsIfVisible==='function')renderStudentsIfVisible();
+    if(!options.silent&&typeof renderStudentsIfVisible==='function')renderStudentsIfVisible();
   }
 }
 function studentDetailHasRowsForTab(studentId,tab=''){
@@ -700,15 +700,19 @@ function studentDetailDataReady(studentId,tab=''){
   if(!loadedStudentDetailIds.has(id))return false;
   return studentDetailHasRowsForTab(id,tab);
 }
-async function ensureStudentDetailData(studentId,{force=false}={}){
+function studentDetailCacheKey(studentId,{force=false}={}){
+  const id=String(studentId||'').trim();
+  return `${id}:${force?'fresh':'cached'}`;
+}
+async function ensureStudentDetailData(studentId,{force=false,silent=false}={}){
   const id=String(studentId||'').trim();
   if(!id)return false;
   if(!force&&loadedStudentDetailIds.has(id))return false;
-  const key=`${id}:${force?'fresh':'cached'}`;
+  const key=studentDetailCacheKey(id,{force});
   if(studentDetailLoadPromises.has(key))return studentDetailLoadPromises.get(key);
   const promise=apiCall('GET',`/page-data/student-detail?id=${encodeURIComponent(id)}${force?'&fresh=1':''}`,null,20000)
     .then(data=>{
-      hydrateStudentDetailData(data||{});
+      hydrateStudentDetailData(data||{},{silent});
       loadedStudentDetailIds.add(id);
       return true;
     })

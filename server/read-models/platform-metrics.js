@@ -266,6 +266,16 @@ function teachingDateOnOrBeforeNow(value = '', now = new Date()) {
   return !!day && !!base && day <= base;
 }
 
+function teachingDateTimeOnOrBeforeNow(value = '', now = new Date()) {
+  const raw = text(value);
+  if (!raw) return false;
+  if (!/\d{1,2}:\d{2}/.test(raw)) return teachingDateOnOrBeforeNow(raw, now);
+  const target = Date.parse(raw.replace(' ', 'T'));
+  const base = now instanceof Date ? now.getTime() : Date.parse(text(now).replace(' ', 'T'));
+  if (!Number.isFinite(target) || !Number.isFinite(base)) return teachingDateOnOrBeforeNow(raw, now);
+  return target <= base;
+}
+
 function scopeDate(value) {
   return text(value).replace(/\//g, '-').replace(/\./g, '-').slice(0, 10);
 }
@@ -1274,11 +1284,13 @@ function teachingScheduleLessonFact(row = {}, now = new Date()) {
   if (!activeStatus(row) || courseRowIsCompanion(row)) return false;
   const status = text(row.status || row.systemStatus);
   if (['待上课', '待确认', '预约', '已预约'].includes(status)) return false;
-  const day = dateOnly(row.startTime || row.endTime || row.createdAt);
+  const timeValue = row.startTime || row.endTime || row.createdAt;
+  const day = dateOnly(timeValue);
   const base = teachingBaseDateKey(now);
-  if (teachingScheduleCompleted(row)) return !!day && !!base && day <= base;
-  if (status === '已排课') return !!day && !!base && day <= base;
-  return !!day && !!base && day <= base;
+  const happened = !!day && !!base && teachingDateTimeOnOrBeforeNow(timeValue, now);
+  if (teachingScheduleCompleted(row)) return happened;
+  if (status === '已排课') return happened;
+  return happened;
 }
 
 function teachingScheduleStudentIds(row = {}) {
@@ -1384,6 +1396,13 @@ function teachingStudentSummaryDateFallback(data = {}, row = {}) {
 function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
   if (String(row.teachingLessonDetailSourceVersion || '').trim() !== TEACHING_LESSON_DETAIL_SOURCE_VERSION) return true;
   const lessonRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : parseArr(row.detailLessonRecordRows);
+  const hasFutureRecentLesson = !!dateOnly(row.detailRecentLessonDate || row.lastFormalLessonAt)
+    && !teachingDateOnOrBeforeNow(row.detailRecentLessonDate || row.lastFormalLessonAt, now);
+  const hasFutureLessonRow = lessonRows.some(item => {
+    const value = item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt;
+    return !!dateOnly(value) && !teachingDateOnOrBeforeNow(value, now);
+  });
+  if (hasFutureRecentLesson || hasFutureLessonRow) return true;
   const hasPastLessonRow = lessonRows.some(item => {
     const value = item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt;
     return !dateOnly(value) || teachingDateOnOrBeforeNow(value, now);
@@ -1391,7 +1410,7 @@ function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
   const hasLessonFact = (Number(row.completedLessons) || 0) > 0
     || teachingDateOnOrBeforeNow(row.detailRecentLessonDate || row.lastFormalLessonAt, now)
     || hasPastLessonRow;
-  const saysNever = text(row.activityStatusLabel) === '从未正式上课';
+  const saysNever = /未.*上课|从未/.test(text(row.activityStatusLabel));
   return hasLessonFact && saysNever;
 }
 
