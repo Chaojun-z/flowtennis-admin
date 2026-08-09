@@ -672,6 +672,47 @@ function parsePositiveInt(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function normalizedSortDir(value) {
+  return String(value || '').toLowerCase() === 'asc' ? 'asc' : 'desc';
+}
+
+function sortValue(item = {}, key = '') {
+  const rawKey = String(key || '').trim();
+  const field = rawKey === 'spentAmount' ? 'totalSpent' : rawKey === 'validUntil' ? 'membershipValidUntil' : rawKey;
+  if (['balance', 'totalSpent', 'totalDeposit', 'totalReceived', 'memberBookingCount', 'bookingCount', 'bookingAmount', 'bookingHours', 'memberBookingAmount', 'guestBookingCount', 'guestBookingAmount', 'membershipRechargeCount', 'membershipRenewalCount'].includes(field)) {
+    return { empty: false, value: Number(item?.[field]) || 0, type: 'number' };
+  }
+  if (['lastBookingDate', 'firstOpenDate', 'membershipValidUntil', 'recentFollowUpDate', 'nextFollowUpDate', 'updatedAt', 'createdAt'].includes(field)) {
+    const value = courtText(item?.[field]);
+    return { empty: !value || value === '-' || value === '—', value, type: 'string' };
+  }
+  if (['displayName', 'phone', 'campusName', 'owner', 'depositAttitude', 'membershipTierLabel', 'membershipStatus'].includes(field)) {
+    const value = courtText(item?.[field]).toLowerCase();
+    return { empty: !value || value === '-' || value === '—', value, type: 'string' };
+  }
+  const value = courtText(item?.updatedAt || item?.createdAt);
+  return { empty: !value, value, type: 'string' };
+}
+
+function compareSortValues(a, b, key, dir) {
+  const av = sortValue(a, key);
+  const bv = sortValue(b, key);
+  if (av.empty !== bv.empty) return av.empty ? 1 : -1;
+  let result = 0;
+  if (av.type === 'number' || bv.type === 'number') result = av.value - bv.value;
+  else result = String(av.value || '').localeCompare(String(bv.value || ''), 'zh-CN');
+  if (result !== 0) return dir === 'asc' ? result : -result;
+  const updated = String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || ''));
+  if (updated !== 0) return updated;
+  return String(a?.id || '').localeCompare(String(b?.id || ''));
+}
+
+function sortCourtAccountItems(items = [], options = {}) {
+  const sortKey = courtText(options.sortKey) || 'updatedAt';
+  const sortDir = normalizedSortDir(options.sortDir);
+  return [...(items || [])].sort((a, b) => compareSortValues(a, b, sortKey, sortDir));
+}
+
 function buildListPage(rows = [], options = {}) {
   if (!options.page && !options.pageSize) return null;
   const pageSize = Math.max(1, Math.min(parsePositiveInt(options.pageSize, 15), 100));
@@ -747,14 +788,14 @@ function buildCourtAccountListViewFromData(source = {}, options = {}) {
     .filter((row) => !sampleIds.length || sampleIds.includes(String(row?.id || '').trim()));
   const ctx = { campuses, campusMap, students, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents };
   const detailItems = activeCourts
-    .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
-    .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));
+    .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)));
   const filteredDetailItems = applyCourtAccountScope(filterCourtAccountItems(detailItems, options), options);
-  const paging = buildListPage(filteredDetailItems, options);
-  const detailPageItems = paging ? paging.rows : filteredDetailItems;
+  const sortedDetailItems = sortCourtAccountItems(filteredDetailItems, options);
+  const paging = buildListPage(sortedDetailItems, options);
+  const detailPageItems = paging ? paging.rows : sortedDetailItems;
   const items = (includeDetails ? detailPageItems : detailPageItems.map(courtAccountLightListItem));
-  const summary = buildSummary(filteredDetailItems);
-  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: filteredDetailItems });
+  const summary = buildSummary(sortedDetailItems);
+  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: sortedDetailItems });
   return {
     summary,
     filters: buildFilters({ items: detailItems, campuses }),
@@ -784,17 +825,27 @@ function createCourtAccountListViewLoader(deps) {
     const sampleIds = resolveSampleIds({ sampleIds: options.sampleIds, sample: options.sample, fixedSampleAccounts });
     const useLegacy = options.useLegacy === true;
     const scanOptions = options.forceFresh ? { fresh: true } : {};
-    const scanRows = (table) => getCachedScan(table, scanOptions).catch(() => []);
+    const scanRows = async (table, label, rowOptions = {}) => {
+      if (!table) return [];
+      const rowScanOptions = Object.keys(rowOptions).length ? { ...scanOptions, ...rowOptions } : scanOptions;
+      try {
+        return await getCachedScan(table, rowScanOptions);
+      } catch (err) {
+        const error = new Error(`订场会员列表读取失败：${label || table}`);
+        error.cause = err;
+        throw error;
+      }
+    };
     const [campuses, students, courts, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents] = await Promise.all([
       listCampusesWithDefaults(),
-      scanRows(tables.students),
-      scanRows(tables.courts),
-      scanRows(tables.leads),
-      scanRows(tables.membershipAccounts),
-      scanRows(tables.membershipOrders),
-      scanRows(tables.membershipPlans),
-      scanRows(tables.membershipBenefitLedger),
-      scanRows(tables.membershipAccountEvents)
+      scanRows(tables.students, '学员表'),
+      scanRows(tables.courts, '订场用户表', { pageLimit: 100 }),
+      scanRows(tables.leads, '线索跟进人表'),
+      scanRows(tables.membershipAccounts, '会员账户表'),
+      scanRows(tables.membershipOrders, '会员订单表'),
+      scanRows(tables.membershipPlans, '会员方案表'),
+      scanRows(tables.membershipBenefitLedger, '会员权益流水表'),
+      scanRows(tables.membershipAccountEvents, '会员账户事件表')
     ]);
     return buildCourtAccountListViewFromData({
       campuses,
@@ -806,7 +857,7 @@ function createCourtAccountListViewLoader(deps) {
       membershipPlans,
       membershipBenefitLedger,
       membershipAccountEvents
-    }, { sampleIds, sample: options.sample, useLegacy, includeDetails: options.includeDetails === true, page: options.page, pageSize: options.pageSize, q: options.q, owner: options.owner, accountType: options.accountType, membershipTier: options.membershipTier, campus: options.campus, startDate: options.startDate, endDate: options.endDate });
+    }, { sampleIds, sample: options.sample, useLegacy, includeDetails: options.includeDetails === true, page: options.page, pageSize: options.pageSize, q: options.q, owner: options.owner, accountType: options.accountType, membershipTier: options.membershipTier, campus: options.campus, startDate: options.startDate, endDate: options.endDate, sortKey: options.sortKey, sortDir: options.sortDir });
   };
 }
 

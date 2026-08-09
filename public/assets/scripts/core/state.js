@@ -204,6 +204,7 @@ const DATASETS_WITH_REQUEST_KEYS=new Set(['leads','operationsPage','customerCent
 let operationsPageRequestSeq=0;
 let operationsPageBackgroundRefreshSeq=0;
 let courtAccountListViewRequestKey='';
+const courtAccountListViewLoadPromises=new Map();
 function resolveClientRuntimeStage(){
   const host=String(window.location.hostname||'').trim().toLowerCase();
   if(!host||host==='localhost'||host==='127.0.0.1')return 'local';
@@ -389,7 +390,9 @@ function courtAccountListViewQueryParams(){
       pageSize:membershipPageSize,
       q:document.getElementById('membershipSearch')?.value||'',
       accountType:'会员账户',
-      membershipTier:membershipTierFilterValue
+      membershipTier:membershipTierFilterValue,
+      sortKey:membershipSortKey,
+      sortDir:membershipSortDir
     };
   }
   return {
@@ -397,7 +400,9 @@ function courtAccountListViewQueryParams(){
     pageSize:courtPageSize,
     q:document.getElementById('courtSearch')?.value||'',
     owner:courtOwnerFilterValue,
-    accountType:courtAccountTypeFilterValue
+    accountType:courtAccountTypeFilterValue,
+    sortKey:courtSortKey,
+    sortDir:courtSortDir
   };
 }
 function courtAccountListViewPageDataUrl({fresh=false}={}){
@@ -1501,6 +1506,9 @@ async function loadCourtReadModelGuardData({force=false,allowStaleOnError=false}
   }
   const requestKey=datasetRequestKey('courtAccountListViewPage');
   if(courtAccountListViewData&&!force&&courtAccountListViewRequestKey===requestKey)return;
+  const loadKey=`${requestKey}|${force?'fresh':'cached'}`;
+  if(courtAccountListViewLoadPromises.has(loadKey))return courtAccountListViewLoadPromises.get(loadKey);
+  const promise=(async()=>{
   try{
     const view=await DATASET_LOADERS.courtAccountListViewPage({fresh:force});
     if(requestKey!==datasetRequestKey('courtAccountListViewPage'))return;
@@ -1515,6 +1523,9 @@ async function loadCourtReadModelGuardData({force=false,allowStaleOnError=false}
     }
     throw err;
   }
+  })().finally(()=>courtAccountListViewLoadPromises.delete(loadKey));
+  courtAccountListViewLoadPromises.set(loadKey,promise);
+  return promise;
 }
 function courtAccountListViewDataIsCurrent(){
   return !!courtAccountListViewData&&courtAccountListViewRequestKey===datasetRequestKey('courtAccountListViewPage');

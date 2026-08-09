@@ -90,7 +90,9 @@ function createResidualPageDataRoutes(deps={}){
         membershipTier:query?.get('membershipTier')||'',
         campus:query?.get('campus')||'',
         startDate:query?.get('startDate')||'',
-        endDate:query?.get('endDate')||''
+        endDate:query?.get('endDate')||'',
+        sortKey:query?.get('sortKey')||'',
+        sortDir:query?.get('sortDir')||''
       });
       return sendJson(res,view);
     }

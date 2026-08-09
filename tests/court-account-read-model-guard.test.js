@@ -180,6 +180,106 @@ async function main() {
   assert.strictEqual(membershipTierView.items[0].id, 'court-1', '会员类型筛选应返回匹配会员');
   assert.strictEqual(membershipTierView.pagination.total, 1, '会员类型筛选应进入分页总数');
 
+  const sortDatasets = {
+    campuses: [{ code: 'shunyi_mapo', name: '马坡' }],
+    students: [],
+    leads: [
+      { id: 'lead-sort-new', courtId: 'court-old-updated-new-booking', owner: '跟进人甲' },
+      { id: 'lead-sort-old', courtId: 'court-new-updated-old-booking', owner: '跟进人甲' },
+      { id: 'lead-search-a', courtId: 'court-search-a', owner: '跟进人乙' },
+      { id: 'lead-search-b', courtId: 'court-search-b', owner: '跟进人乙' }
+    ],
+    courts: [{
+      id: 'court-old-updated-new-booking',
+      name: '最新订场用户',
+      campus: 'shunyi_mapo',
+      updatedAt: '2026-01-01 10:00:00',
+      history: [{ type: '消费', amount: 100, payMethod: '微信', category: '订场', date: '2026-08-03', startTime: '10:00', endTime: '11:00', venue: '1号场' }]
+    }, {
+      id: 'court-new-updated-old-booking',
+      name: '旧订场用户',
+      campus: 'shunyi_mapo',
+      updatedAt: '2026-08-05 10:00:00',
+      history: [{ type: '消费', amount: 100, payMethod: '微信', category: '订场', date: '2026-01-01', startTime: '10:00', endTime: '11:00', venue: '1号场' }]
+    }, {
+      id: 'court-search-a',
+      name: '搜索目标甲',
+      campus: 'shunyi_mapo',
+      updatedAt: '2026-08-04 10:00:00',
+      history: [{ type: '消费', amount: 100, payMethod: '微信', category: '订场', date: '2026-08-02', startTime: '10:00', endTime: '11:00', venue: '1号场' }]
+    }, {
+      id: 'court-search-b',
+      name: '搜索目标乙',
+      campus: 'shunyi_mapo',
+      updatedAt: '2026-08-03 10:00:00',
+      history: [{ type: '消费', amount: 100, payMethod: '微信', category: '订场', date: '2026-08-01', startTime: '10:00', endTime: '11:00', venue: '1号场' }]
+    }],
+    membershipAccounts: [],
+    membershipOrders: [],
+    membershipPlans: [],
+    membershipBenefitLedger: [],
+    membershipAccountEvents: []
+  };
+  const loadSortView = createCourtAccountListViewLoader({
+    listCampusesWithDefaults: async () => sortDatasets.campuses,
+    getCachedScan: async (tableName) => sortDatasets[tableName] || [],
+    tables
+  });
+  const latestFirst = await loadSortView({ page: 1, pageSize: 1, sortKey: 'lastBookingDate', sortDir: 'desc' });
+  assert.strictEqual(latestFirst.items[0].id, 'court-old-updated-new-booking', '新旧数据混合时，首屏应按完整结果的最近订场排序显示最新订场用户');
+  assert.strictEqual(latestFirst.pagination.total, 4, '排序分页 total 应来自完整排序前结果，不是当前页数量');
+  const searchPaged = await loadSortView({ page: 1, pageSize: 1, q: '搜索目标', sortKey: 'lastBookingDate', sortDir: 'desc' });
+  assert.strictEqual(searchPaged.items.length, 1, '搜索分页当前页只返回 pageSize 条');
+  assert.strictEqual(searchPaged.pagination.total, 2, '搜索后的 total 应是完整搜索结果总数，不是当前页数量');
+  const ownerPaged = await loadSortView({ page: 1, pageSize: 1, owner: '跟进人乙', sortKey: 'lastBookingDate', sortDir: 'desc' });
+  assert.strictEqual(ownerPaged.items.length, 1, '筛选分页当前页只返回 pageSize 条');
+  assert.strictEqual(ownerPaged.pagination.total, 2, '筛选后的 total 应是完整筛选结果总数，不是当前页数量');
+  const datePaged = await loadSortView({ page: 1, pageSize: 1, startDate: '2026-08-01', endDate: '2026-08-31', sortKey: 'lastBookingDate', sortDir: 'desc' });
+  assert.strictEqual(datePaged.pagination.total, 3, '日期筛选后的 total 应是完整日期结果总数，不是当前页数量');
+  const sortedPages = await Promise.all([1, 2, 3, 4].map(page => loadSortView({ page, pageSize: 1, sortKey: 'lastBookingDate', sortDir: 'desc' })));
+  assert.deepStrictEqual(sortedPages.map(view => view.items[0].id), ['court-old-updated-new-booking', 'court-search-a', 'court-search-b', 'court-new-updated-old-booking'], '翻页应按后端完整排序连续返回，不丢、不重、不乱序');
+  const sortDetailView = await loadSortView({ sampleIds: ['court-old-updated-new-booking'], includeDetails: true, sortKey: 'lastBookingDate', sortDir: 'desc' });
+  assert.strictEqual(sortDetailView.items.length, 1, '详情读模型仍应支持按单个用户 ID 回源');
+  assert.ok(Array.isArray(sortDetailView.items[0].bookingRows) && sortDetailView.items[0].bookingRows.length === 1, '详情抽屉仍应拿完整订场历史');
+
+  const membershipSortDatasets = {
+    ...sortDatasets,
+    courts: [
+      { id: 'member-old', name: '老会员', campus: 'shunyi_mapo', updatedAt: '2026-08-05 10:00:00', history: [] },
+      { id: 'member-new', name: '新会员', campus: 'shunyi_mapo', updatedAt: '2026-01-01 10:00:00', history: [] }
+    ],
+    membershipAccounts: [
+      { id: 'account-old', courtId: 'member-old', status: 'active' },
+      { id: 'account-new', courtId: 'member-new', status: 'active' }
+    ],
+    membershipOrders: [
+      { id: 'order-old', courtId: 'member-old', membershipAccountId: 'account-old', status: 'paid', rechargeAmount: 1000, purchaseDate: '2026-01-01' },
+      { id: 'order-new', courtId: 'member-new', membershipAccountId: 'account-new', status: 'paid', rechargeAmount: 1000, purchaseDate: '2026-08-01' }
+    ]
+  };
+  const loadMembershipSortView = createCourtAccountListViewLoader({
+    listCampusesWithDefaults: async () => membershipSortDatasets.campuses,
+    getCachedScan: async (tableName) => membershipSortDatasets[tableName] || [],
+    tables
+  });
+  const membershipFirst = await loadMembershipSortView({ page: 1, pageSize: 1, accountType: '会员账户', sortKey: 'firstOpenDate', sortDir: 'desc' });
+  assert.strictEqual(membershipFirst.items[0].id, 'member-new', '会员管理首屏应按完整会员结果的首次开卡时间排序，不被旧更新时间误导');
+  assert.strictEqual(membershipFirst.pagination.total, 2, '会员管理排序分页 total 应来自完整会员筛选结果');
+
+  const failingLoadView = createCourtAccountListViewLoader({
+    listCampusesWithDefaults: async () => [],
+    getCachedScan: async (tableName) => {
+      if (tableName === 'courts') throw new Error('storage timeout');
+      return [];
+    },
+    tables
+  });
+  await assert.rejects(
+    () => failingLoadView({ page: 1, pageSize: 15, sortKey: 'lastBookingDate', sortDir: 'desc' }),
+    /订场会员列表读取失败：订场用户表/,
+    '订场用户核心表读取失败时不能返回 total=0 的假空数据'
+  );
+
   const compare = await loadCompare({ sampleIds: ['court-1'] });
   assert.deepStrictEqual(Object.keys(compare), ['meta', 'summaryDiffs', 'items'], 'compare 输出应返回 meta/summaryDiffs/items');
   assert.strictEqual(compare.items.length, 1, 'compare 应支持按样本 ID 过滤');

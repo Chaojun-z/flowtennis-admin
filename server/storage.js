@@ -16,6 +16,7 @@ function createStorageServices({
   } = tableStoreConfig;
 
   const hotScanCache = new Map();
+  const hotScanLoadPromises = new Map();
   const hotGetCache = new Map();
   let tsClient;
   const STORAGE_OPERATION_TIMEOUT_MS = Math.max(1000, parseInt(process.env.STORAGE_OPERATION_TIMEOUT_MS || '10000', 10) || 10000);
@@ -124,9 +125,12 @@ function createStorageServices({
     const prefix=`${t}:`;
     for(const key of hotScanCache.keys())if(key.startsWith(prefix))hotScanCache.delete(key);
   }
-  function hotScanCacheKey(t,columns){
+  function normalizeScanPageLimit(value){
+    return Math.max(50,Math.min(parseInt(value,10)||500,500));
+  }
+  function hotScanCacheKey(t,columns,pageLimit){
     const projection=Array.isArray(columns)&&columns.length?columns.map(String).join('\u0001'):'*';
-    return `${t}:${projection}`;
+    return `${t}:${projection}:${normalizeScanPageLimit(pageLimit)}`;
   }
   function normalizeProjectionColumns(columns){
     if(!Array.isArray(columns))return [];
@@ -143,15 +147,20 @@ function createStorageServices({
   async function getCachedScan(t,options={}){
     const cfg=hotScanTables.get(t);
     const columns=normalizeProjectionColumns(options?.columns);
+    const pageLimit=normalizeScanPageLimit(options?.pageLimit);
     const fresh=options?.fresh===true||options?.forceFresh===true;
     if(!cfg)return scan(t,{columns});
     const now=Date.now();
-    const cacheKey=hotScanCacheKey(t,columns);
+    const cacheKey=hotScanCacheKey(t,columns,pageLimit);
     const cached=hotScanCache.get(cacheKey);
     if(cached&&!fresh&&cached.expiresAt>now)return cloneCacheValue(cached.rows);
-    const rows=await scan(t,{columns});
-    hotScanCache.set(cacheKey,{rows:cloneCacheValue(rows),expiresAt:now+cfg.ttlMs});
-    return rows;
+    if(!fresh&&hotScanLoadPromises.has(cacheKey))return cloneCacheValue(await hotScanLoadPromises.get(cacheKey));
+    const loadPromise=scan(t,{columns,pageLimit}).then(rows=>{
+      hotScanCache.set(cacheKey,{rows:cloneCacheValue(rows),expiresAt:Date.now()+cfg.ttlMs});
+      return rows;
+    }).finally(()=>hotScanLoadPromises.delete(cacheKey));
+    if(!fresh)hotScanLoadPromises.set(cacheKey,loadPromise);
+    return cloneCacheValue(await loadPromise);
   }
   function productionReadTruncatedError(t,limit){
     const err=new Error(`生产读取被截断：${t} 超过 ${limit} 条，请改专用读模型或提高读取上限`);
@@ -210,6 +219,7 @@ function createStorageServices({
       const rows=[];
       const columns=normalizeProjectionColumns(options?.columns);
       const columnsToGet=columns.length?columns:undefined;
+      const pageLimit=normalizeScanPageLimit(options?.pageLimit);
       function f(sk){
         runStorageOperation('getRangePage',{table:t},(opRes,opRej)=>{
           const request={
@@ -218,7 +228,7 @@ function createStorageServices({
             inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],
             exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],
             maxVersions:1,
-            limit:500
+            limit:pageLimit
           };
           if(columnsToGet)request.columnsToGet=columnsToGet;
           gc().getRange(request,(e,d)=>{

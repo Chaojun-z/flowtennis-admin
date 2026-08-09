@@ -535,7 +535,7 @@ function renderMemberships(){
   if(!courtAccountListViewData||(typeof courtAccountListViewDataIsCurrent==='function'&&!courtAccountListViewDataIsCurrent())){
     renderTableBodyLoading('membershipTbody',11,'会员数据加载中...');
     if(typeof loadCourtReadModelGuardData==='function'){
-      loadCourtReadModelGuardData({force:true}).then(()=>{
+      loadCourtReadModelGuardData({force:false}).then(()=>{
         if(currentPage==='memberships')renderMemberships();
       }).catch(e=>{
         if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
@@ -1208,7 +1208,7 @@ function renderCourts(){
   if(!courtAccountListViewData||(typeof courtAccountListViewDataIsCurrent==='function'&&!courtAccountListViewDataIsCurrent())){
     renderCourtPageLoading();
     if(typeof loadCourtReadModelGuardData==='function'){
-      loadCourtReadModelGuardData({force:true}).then(()=>{
+      loadCourtReadModelGuardData({force:false}).then(()=>{
         if(currentPage==='courts')renderCourts();
       }).catch(e=>{
         if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}

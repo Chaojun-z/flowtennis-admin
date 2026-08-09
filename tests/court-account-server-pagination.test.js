@@ -19,12 +19,15 @@ const listQueryBody = fnBody(stateSource, 'courtAccountListViewQueryParams');
 const detailUrlBody = fnBody(stateSource, 'courtAccountDetailPageDataUrl');
 const datasetKeyBody = fnBody(stateSource, 'datasetRequestKey');
 const renderCourtBody = fnBody(courtsSource, 'renderCourtAccountListView');
+const renderCourtsBody = fnBody(courtsSource, 'renderCourts');
 const renderMembershipBody = fnBody(courtsSource, 'renderMemberships');
+const loadGuardBody = fnBody(stateSource, 'loadCourtReadModelGuardData');
 
 assert.match(listUrlBody, /appendPageDataQuery\(scopedPageDataUrl\('\/page-data\/court-account-list-view',\{dateRange:'court'\}\),courtAccountListViewQueryParams\(\)\)/, '首屏列表请求应带后端分页和筛选参数');
-assert.match(listQueryBody, /page:courtPage[\s\S]*pageSize:courtPageSize[\s\S]*q:document\.getElementById\('courtSearch'\)\?\.value\|\|''[\s\S]*owner:courtOwnerFilterValue[\s\S]*accountType:courtAccountTypeFilterValue/, '订场用户页应把 page/pageSize/搜索/筛选传给后端');
-assert.match(listQueryBody, /currentPage==='memberships'[\s\S]*page:membershipPage[\s\S]*pageSize:membershipPageSize[\s\S]*q:document\.getElementById\('membershipSearch'\)\?\.value\|\|''[\s\S]*accountType:'会员账户'[\s\S]*membershipTier:membershipTierFilterValue/, '会员管理页应把 page/pageSize/搜索/会员类型传给后端');
+assert.match(listQueryBody, /page:courtPage[\s\S]*pageSize:courtPageSize[\s\S]*q:document\.getElementById\('courtSearch'\)\?\.value\|\|''[\s\S]*owner:courtOwnerFilterValue[\s\S]*accountType:courtAccountTypeFilterValue[\s\S]*sortKey:courtSortKey[\s\S]*sortDir:courtSortDir/, '订场用户页应把 page/pageSize/搜索/筛选/排序传给后端');
+assert.match(listQueryBody, /currentPage==='memberships'[\s\S]*page:membershipPage[\s\S]*pageSize:membershipPageSize[\s\S]*q:document\.getElementById\('membershipSearch'\)\?\.value\|\|''[\s\S]*accountType:'会员账户'[\s\S]*membershipTier:membershipTierFilterValue[\s\S]*sortKey:membershipSortKey[\s\S]*sortDir:membershipSortDir/, '会员管理页应把 page/pageSize/搜索/会员类型/排序传给后端');
 assert.match(datasetKeyBody, /courtAccountListViewPageDataUrl\(\)/, '分页和筛选参数应进入缓存 key');
+assert.match(datasetKeyBody, /courtAccountListViewPageDataUrl\(\)/, '排序参数应随列表 URL 一起进入缓存 key');
 
 assert.match(detailUrlBody, /ids:courtId/, '详情应继续通过 ids 按需加载完整订场用户数据');
 assert.doesNotMatch(detailUrlBody, /page:|pageSize:|courtAccountListViewQueryParams/, '详情请求不应被列表分页参数裁剪');
@@ -34,10 +37,14 @@ assert.match(renderCourtBody, /const slice=sortedList;/, '订场用户列表不�
 assert.doesNotMatch(renderCourtBody, /sortedList\.slice\(\(courtPage-1\)\*courtPageSize/, '订场用户列表不应继续本地分页');
 assert.match(renderMembershipBody, /const slice=sortedRows;/, '会员管理列表不应再首屏全量后本地 slice 分页');
 assert.doesNotMatch(renderMembershipBody, /sortedRows\.slice\(\(membershipPage-1\)\*membershipPageSize/, '会员管理列表不应继续本地分页');
+assert.doesNotMatch(renderCourtsBody, /loadCourtReadModelGuardData\(\{force:true\}\)/, '订场用户渲染兜底不应绕过后端热缓存重复强刷');
+assert.doesNotMatch(renderMembershipBody, /loadCourtReadModelGuardData\(\{force:true\}\)/, '会员管理渲染兜底不应绕过后端热缓存重复强刷');
+assert.match(loadGuardBody, /courtAccountListViewLoadPromises\.has\(loadKey\)/, '订场用户和会员管理列表请求应按完整缓存 key 去重');
 
-assert.match(residualSource, /page:query\?\.get\('page'\)\|\|''[\s\S]*pageSize:query\?\.get\('pageSize'\)\|\|''[\s\S]*q:query\?\.get\('q'\)\|\|''[\s\S]*owner:query\?\.get\('owner'\)\|\|''[\s\S]*accountType:query\?\.get\('accountType'\)\|\|''[\s\S]*membershipTier:query\?\.get\('membershipTier'\)\|\|''/, '后端路由应接收分页、搜索和筛选参数');
+assert.match(residualSource, /page:query\?\.get\('page'\)\|\|''[\s\S]*pageSize:query\?\.get\('pageSize'\)\|\|''[\s\S]*q:query\?\.get\('q'\)\|\|''[\s\S]*owner:query\?\.get\('owner'\)\|\|''[\s\S]*accountType:query\?\.get\('accountType'\)\|\|''[\s\S]*membershipTier:query\?\.get\('membershipTier'\)\|\|''[\s\S]*sortKey:query\?\.get\('sortKey'\)\|\|''[\s\S]*sortDir:query\?\.get\('sortDir'\)\|\|''/, '后端路由应接收分页、搜索、筛选和排序参数');
 assert.match(readModelSource, /function applyCourtAccountScope/, '读模型应在后端处理校区和日期范围');
 assert.match(readModelSource, /membershipTier[\s\S]*membershipTierLabel/, '读模型应支持会员类型筛选');
+assert.match(readModelSource, /scanRows\(tables\.courts, '订场用户表', \{ pageLimit: 100 \}\)/, '订场用户首屏读取 ft_courts 应降低单页 history 拉取量，避免超时后假空数据');
 
 const guardedSources = [listUrlBody, detailUrlBody, renderCourtBody, renderMembershipBody].join('\n');
 assert.doesNotMatch(guardedSources, /\/load-all/, '订场用户和会员管理首屏链路不应调用 /load-all');

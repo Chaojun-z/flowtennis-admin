@@ -34,6 +34,8 @@ assert.match(storageSource, /function invalidateHotScanCache\(t\)/, 'api should 
 assert.match(storageSource, /const prefix=`\$\{t\}:`;[\s\S]*hotScanCache\.keys\(\)[\s\S]*key\.startsWith\(prefix\)[\s\S]*hotScanCache\.delete\(key\)/, 'hot table invalidation should remove all projection cache entries for the table');
 assert.match(storageSource, /function invalidateHotGetCache\(t,id\)/, 'api should expose row cache invalidation');
 assert.match(storageSource, /if\(hotScanTables\.has\(t\)\)invalidateHotScanCache\(t\);/, 'writes should invalidate hot table cache');
+assert.match(storageSource, /const hotScanLoadPromises = new Map\(\);/, 'hot table cache should dedupe in-flight scans');
+assert.match(storageSource, /hotScanLoadPromises\.has\(cacheKey\)/, 'concurrent hot table reads should reuse the same in-flight scan');
 assert.match(storageSource, /if\(hotGetTables\.has\(t\)\)invalidateHotGetCache\(t,id\);/, 'writes should invalidate hot row cache');
 assert.match(apiSource, /async function getFastStudentsRead\(options=\{\}\)\{[\s\S]*getCachedScan\(T_STUDENTS,options\)[\s\S]*withTimeout\(readPromise,FT_STUDENTS_FAST_TIMEOUT_MS,fallback\)/, 'students fast read helper should wrap cached scan with timeout fallback');
 assert.match(studentRoutesSource, /if\(path==='\/students'\)\{[\s\S]*if\(method==='GET'\)\{[\s\S]*const rows=await getFastStudentsRead\(\);/, 'students list should use fast cached scan fallback');
