@@ -1,13 +1,15 @@
 const { handleFinancePageData } = require('./finance-page.js');
 const { handleOperationsPageData } = require('./operations-page.js');
 const { createCourtAccountListViewLoader, createCourtAccountListCompareLoader } = require('./court-account-read-model.js');
+const { COURT_ACCOUNT_LIST_INDEX_NOT_READY_CODE } = require('./court-account-list-index.js');
+const { createCourtAccountListSnapshotLoader } = require('./court-account-list-snapshot.js');
 const { createScheduleListViewLoader, createScheduleListCompareLoader } = require('./schedule-list-read-model.js');
 const fixedCourtAcceptanceSamples = require('../../docs/performance-governance/15-样板页固定验收样本.json');
 const fixedScheduleAcceptanceSamples = require('../../docs/prd/source/08-具体需求/01-管理后台/02-教学与排课/07-排课管理固定验收样本.json');
 
 function createResidualPageDataRoutes(deps={}){
   const {
-    init,sendJson,listCampusesWithDefaults,getCachedScan,getFinancePageScheduleRows,getScheduleListRows,
+    init,sendJson,listCampusesWithDefaults,getCachedScan,getCachedRow,getFinancePageScheduleRows,getScheduleListRows,
     isProductionRuntime,
     scanCoachProposals,buildCoachRefs,timedEndpointMetric,
     scanFirstRows,filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
@@ -16,11 +18,12 @@ function createResidualPageDataRoutes(deps={}){
   const {
     T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,
     T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_USERS,
-    T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS
+    T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT
   }=tables;
   const loadCourtAccountListView=createCourtAccountListViewLoader({
     listCampusesWithDefaults,
     getCachedScan,
+    getCachedRow,
     fixedSampleAccounts:fixedCourtAcceptanceSamples,
     tables:{
       students:T_STUDENTS,
@@ -36,6 +39,10 @@ function createResidualPageDataRoutes(deps={}){
   const loadCourtAccountListViewCompare=createCourtAccountListCompareLoader({
     loadCourtAccountListView,
     fixedSampleAccounts:fixedCourtAcceptanceSamples
+  });
+  const loadCourtAccountListSnapshot=createCourtAccountListSnapshotLoader({
+    getCachedRow,
+    tables:{courtAccountListSnapshot:T_COURT_ACCOUNT_LIST_SNAPSHOT}
   });
   const loadScheduleListView=createScheduleListViewLoader({
     getScheduleListRows,
@@ -77,7 +84,7 @@ function createResidualPageDataRoutes(deps={}){
       const ids=String(query?.get('ids')||'').split(',').map(item=>String(item||'').trim()).filter(Boolean);
       const sample=String(query?.get('sample')||'').trim();
       const forceFresh=query?.get('fresh')==='1'||query?.get('forceFresh')==='1';
-      const view=await loadCourtAccountListView({
+      const params={
         sampleIds:ids,
         sample,
         forceFresh,
@@ -93,7 +100,20 @@ function createResidualPageDataRoutes(deps={}){
         endDate:query?.get('endDate')||'',
         sortKey:query?.get('sortKey')||'',
         sortDir:query?.get('sortDir')||''
-      });
+      };
+      let view=null;
+      if(!ids.length&&T_COURT_ACCOUNT_LIST_SNAPSHOT){
+        try{
+          view=await loadCourtAccountListSnapshot(params);
+        }catch(err){
+          if(err?.code===COURT_ACCOUNT_LIST_INDEX_NOT_READY_CODE){
+            return sendJson(res,{error:err.message||'订场会员列表快照未初始化',code:err.code},err.statusCode||503);
+          }
+          console.warn('[court-account-list-snapshot] failed:',err?.message||err);
+          return sendJson(res,{error:err.message||'订场会员列表快照读取失败',code:err.code||'COURT_ACCOUNT_LIST_SNAPSHOT_ERROR'},err.statusCode||500);
+        }
+      }
+      if(!view)view=await loadCourtAccountListView(params);
       return sendJson(res,view);
     }
     if(path==='/page-data/court-account-list-view-compare'&&method==='GET'){

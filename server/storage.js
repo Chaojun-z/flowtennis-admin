@@ -126,7 +126,7 @@ function createStorageServices({
     for(const key of hotScanCache.keys())if(key.startsWith(prefix))hotScanCache.delete(key);
   }
   function normalizeScanPageLimit(value){
-    return Math.max(50,Math.min(parseInt(value,10)||500,500));
+    return Math.max(1,Math.min(parseInt(value,10)||500,500));
   }
   function hotScanCacheKey(t,columns,pageLimit){
     const projection=Array.isArray(columns)&&columns.length?columns.map(String).join('\u0001'):'*';

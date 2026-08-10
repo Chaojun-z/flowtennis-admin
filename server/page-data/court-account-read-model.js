@@ -1,6 +1,5 @@
 const MATCH_COURT_FINANCE_ACCOUNT_ID = 'match-court-finance';
 const DEFAULT_SAMPLE_SIZE = 10;
-const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 const { enrichCourtBookingStructure } = require('../booking-structure-parser.js');
 const { normalizeCampusValue, displayCampusName, buildCampusNameMap } = require('../../public/assets/scripts/core/campus.js');
 
@@ -555,6 +554,51 @@ function courtAccountLightListItem(item = {}) {
   return light;
 }
 
+function isActiveMembershipItem(item = {}) {
+  const status = courtText(item?.membershipStatusCode);
+  return item?.accountType === '会员账户' || (status && !['voided', 'cleared', 'inactive'].includes(status));
+}
+
+function membershipFinanceStatsFromCourtAccountItem(item = {}) {
+  if (!isActiveMembershipItem(item)) return null;
+  const rechargeRows = Array.isArray(item.rechargeRows) ? item.rechargeRows : [];
+  const paidAmount = money(rechargeRows.length
+    ? rechargeRows.reduce((sum, row) => sum + money(row?.paidAmount ?? row?.rechargeAmount ?? row?.finalAmount ?? row?.amount), 0)
+    : item.totalDeposit);
+  const bonusAmount = money(rechargeRows.length
+    ? rechargeRows.reduce((sum, row) => sum + money(row?.bonusAmount), 0)
+    : (item.totalBonus || item.bonusAmount));
+  const pendingAmount = money(item.balance);
+  const consumableAmount = paidAmount + bonusAmount > 0 ? money(paidAmount + bonusAmount) : pendingAmount;
+  return {
+    memberCount: 1,
+    rechargeCount: rechargeRows.length || (Number(item.membershipRechargeCount) || 0),
+    paidAmount,
+    bonusAmount,
+    consumableAmount,
+    pendingAmount
+  };
+}
+
+function buildMembershipFinanceSummaryFromCourtAccountItems(items = []) {
+  const statsRows = (items || [])
+    .map((item) => item?.membershipFinanceStats || membershipFinanceStatsFromCourtAccountItem(item))
+    .filter(Boolean);
+  const paidAmount = money(statsRows.reduce((sum, row) => sum + money(row.paidAmount), 0));
+  const bonusAmount = money(statsRows.reduce((sum, row) => sum + money(row.bonusAmount), 0));
+  const consumableAmount = money(statsRows.reduce((sum, row) => sum + money(row.consumableAmount), 0));
+  const pendingAmount = money(statsRows.reduce((sum, row) => sum + money(row.pendingAmount), 0));
+  return {
+    memberCount: statsRows.reduce((sum, row) => sum + (Number(row.memberCount) || 0), 0),
+    rechargeCount: statsRows.reduce((sum, row) => sum + (Number(row.rechargeCount) || 0), 0),
+    paidAmount,
+    bonusAmount,
+    consumableAmount,
+    consumedAmount: money(Math.max(0, consumableAmount - pendingAmount)),
+    pendingAmount
+  };
+}
+
 function buildSummary(items = []) {
   const memberItems = items.filter((item) => item?.membershipStatusCode && !['voided', 'cleared'].includes(item.membershipStatusCode));
   return {
@@ -795,7 +839,7 @@ function buildCourtAccountListViewFromData(source = {}, options = {}) {
   const detailPageItems = paging ? paging.rows : sortedDetailItems;
   const items = (includeDetails ? detailPageItems : detailPageItems.map(courtAccountLightListItem));
   const summary = buildSummary(sortedDetailItems);
-  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders, courtAccountItems: sortedDetailItems });
+  summary.membershipFinanceSummary = buildMembershipFinanceSummaryFromCourtAccountItems(sortedDetailItems);
   return {
     summary,
     filters: buildFilters({ items: detailItems, campuses }),
@@ -817,6 +861,7 @@ function createCourtAccountListViewLoader(deps) {
   const {
     listCampusesWithDefaults,
     getCachedScan,
+    getCachedRow,
     tables,
     fixedSampleAccounts = []
   } = deps;
@@ -836,10 +881,21 @@ function createCourtAccountListViewLoader(deps) {
         throw error;
       }
     };
+    const loadCourtRows = async () => {
+      if (sampleIds.length && typeof getCachedRow === 'function') {
+        const rows = await Promise.all(sampleIds.map((id) => getCachedRow(tables.courts, id).catch((err) => {
+          const error = new Error(`订场会员详情读取失败：${id}`);
+          error.cause = err;
+          throw error;
+        })));
+        return rows.filter(Boolean);
+      }
+      return scanRows(tables.courts, '订场用户表', { pageLimit: 100 });
+    };
     const [campuses, students, courts, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents] = await Promise.all([
       listCampusesWithDefaults(),
       scanRows(tables.students, '学员表'),
-      scanRows(tables.courts, '订场用户表', { pageLimit: 100 }),
+      loadCourtRows(),
       scanRows(tables.leads, '线索跟进人表'),
       scanRows(tables.membershipAccounts, '会员账户表'),
       scanRows(tables.membershipOrders, '会员订单表'),
@@ -946,10 +1002,18 @@ module.exports = {
   computeBookingSummary,
   buildCourtAccountListViewFromData,
   buildScopedCourtAccountListSummary,
+  buildFilters,
+  buildListPage,
+  buildSummary,
+  buildMembershipFinanceSummaryFromCourtAccountItems,
+  membershipFinanceStatsFromCourtAccountItem,
   buildCourtChainMetricsFromItems,
   createCourtAccountListCompareLoader,
   createCourtAccountListViewLoader,
   courtHistoryBusinessDate,
+  courtAccountLightListItem,
+  filterCourtAccountItems,
   isCourtBookingHistoryRow,
-  normalizeCourtHistory
+  normalizeCourtHistory,
+  sortCourtAccountItems
 };
