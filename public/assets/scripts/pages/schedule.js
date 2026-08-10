@@ -1,6 +1,16 @@
-function onScheduleFilterChange(){schPage=standardListFirstPage();renderSchedule();}
+var scheduleListReloadSeq=0,scheduleListReloading=false;
+function onScheduleFilterChange(){schPage=standardListFirstPage();reloadSchedulesForCurrentPage();}
 function syncScheduleFilterOptions(){
   const statusValue=document.getElementById('schStatusFilter')?.value||'',coachValue=document.getElementById('schCoachFilter')?.value||'',courseTypeValue=document.getElementById('schCourseTypeFilter')?.value||'',proposalValue=document.getElementById('schProposalFilter')?.value||'',feedbackValue=document.getElementById('schFeedbackFilter')?.value||'';
+  const serverFilters=typeof scheduleListPageData==='object'&&scheduleListPageData?scheduleListPageData.filters:null;
+  if(serverFilters){
+    const coachOptions=(serverFilters.coaches||[]).map(name=>({value:name,label:name}));
+    [['schCourseTypeFilterHost','schCourseTypeFilter','课程类型',[{value:'',label:'全部',emptyDisplay:'课程类型'},...STANDARD_COURSE_TYPE_OPTIONS],courseTypeValue],['schCoachFilterHost','schCoachFilter','教练',[{value:'',label:'全部',emptyDisplay:'教练'},...coachOptions],coachValue],['schProposalFilterHost','schProposalFilter','课前教案',[{value:'',label:'全部',emptyDisplay:'课前教案'},{value:'missing',label:'未填写'},{value:'filled',label:'已填写'}],proposalValue],['schFeedbackFilterHost','schFeedbackFilter','课后反馈',[{value:'',label:'全部',emptyDisplay:'课后反馈'},{value:'missing',label:'未填写'},{value:'filled',label:'已填写'}],feedbackValue],['schStatusFilterHost','schStatusFilter','状态',[{value:'',label:'全部',emptyDisplay:'状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}],statusValue]].forEach(([hostId,id,label,options,value])=>{
+      const host=document.getElementById(hostId);
+      if(host)host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onScheduleFilterChange');
+    });
+    return;
+  }
   const baseRows=schedules.filter(s=>(campus==='all'||sameCampusValue(s.campus,campus))&&globalDateWithinRange(s.startTime));
   const activeNames=activeCoachNames();
   const activeNameSet=new Set(activeNames.map(name=>coachName(name)));
@@ -62,15 +72,43 @@ function renderSchedulePagerControls(total,pages){
   if(!btns)return;
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(schPage,pages,'setSchedulePage');
 }
+function scheduleCurrentServerPageData(){
+  if(typeof scheduleListPageData!=='object'||!scheduleListPageData||!Array.isArray(scheduleListPageData.rows))return null;
+  return {
+    total:Number(scheduleListPageData.total)||0,
+    page:Number(scheduleListPageData.page)||schPage||1,
+    pageSize:Number(scheduleListPageData.pageSize)||schPageSize,
+    pages:Number(scheduleListPageData.pages)||1
+  };
+}
+async function reloadSchedulesForCurrentPage({showLoading=true}={}){
+  const seq=++scheduleListReloadSeq;
+  scheduleListReloading=true;
+  if(showLoading&&typeof renderScheduleTableLoading==='function')renderScheduleTableLoading();
+  try{
+    if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['schedule'],{force:true});
+    if(seq===scheduleListReloadSeq)renderSchedule();
+    return true;
+  }catch(e){
+    if(seq===scheduleListReloadSeq){
+      const message=e?.message||'排课加载失败，请稍后重试';
+      if(typeof renderScheduleTableError==='function')renderScheduleTableError(message);
+      else if(typeof toast==='function')toast(message,'error');
+    }
+    return false;
+  }finally{
+    if(seq===scheduleListReloadSeq)scheduleListReloading=false;
+  }
+}
 function setSchedulePage(value){
-  const total=getFilteredSchedules().length;
+  const total=scheduleCurrentServerPageData()?.total??getFilteredSchedules().length;
   schPage=standardListPagination(total,value,schPageSize).page;
-  renderSchedule();
+  reloadSchedulesForCurrentPage();
 }
 function setSchedulePageSize(value){
   schPageSize=standardListPageSize(value,schPageSize);
   schPage=standardListFirstPage();
-  renderSchedule();
+  reloadSchedulesForCurrentPage();
 }
 function getFilteredSchedules(){
   const q=(document.getElementById('schSearch')?.value||'').toLowerCase();
@@ -96,9 +134,9 @@ function getFilteredSchedules(){
   }).map(s=>({...s,_effectiveStatus:effectiveScheduleStatus(s,now)}));
 }
 function jumpSchedulePage(value){
-  const total=getFilteredSchedules().length;
+  const total=scheduleCurrentServerPageData()?.total??getFilteredSchedules().length;
   schPage=standardListPagination(total,value,schPageSize).page;
-  renderSchedule();
+  reloadSchedulesForCurrentPage();
 }
 function scheduleHasActiveSearchOrFilter(){return !!((document.getElementById('schSearch')?.value||'').trim()||document.getElementById('schStatusFilter')?.value||document.getElementById('schCoachFilter')?.value||document.getElementById('schCourseTypeFilter')?.value||document.getElementById('schProposalFilter')?.value||document.getElementById('schFeedbackFilter')?.value);}
 function scheduleEmptyStateHtml(){
@@ -109,9 +147,14 @@ function scheduleEmptyStateHtml(){
 }
 function renderScheduleMobileCards(list){const host=document.getElementById('scheduleMobileCards');if(!host)return;if(!list.length){const filtered=scheduleHasActiveSearchOrFilter();host.innerHTML=`<div class="tms-empty-state"><div class="tms-empty-title">${filtered?'没有匹配的排课':'暂无排课'}</div><div class="tms-empty-desc">${filtered?'调整搜索或筛选后再试':'点击右下角添加排课开始安排课程'}</div></div>`;return;}host.innerHTML=list.map(s=>{const status=s._effectiveStatus||effectiveScheduleStatus(s),isCancelled=status==='已取消',dateText=String(s.startTime||'').slice(0,10)||'—',timeText=s.startTime?`${s.startTime.slice(11,16)}-${(s.endTime||'').slice(11,16)}`:'—';return `<article class="admin-h5-list-card admin-h5-schedule-card"><div class="admin-h5-card-head"><div><strong>${esc(scheduleListStudentSummary(s))}</strong><span>${esc(`${dateText} ${timeText}`)}</span></div><span class="tms-tag ${scheduleStatusTagClass(status)}">${esc(scheduleStatusLabel(status))}</span></div><div class="admin-h5-card-tags"><span class="tms-tag schedule-course-type-tag ${productTypeTagClass(scheduleCourseType(s))}">${esc(scheduleCourseTypeLabel(s))}</span><span class="tms-tag">${esc(coachName(s.coach)||'-')}</span></div><div class="admin-h5-card-grid"><span><b>校区/场地</b>${esc(scheduleLocationText(s))}</span><span><b>时长</b>${esc(scheduleDurationText(s))}</span><span><b>课前教案</b>${esc(scheduleProposalStatusText(s))}</span><span><b>课后反馈</b>${esc(scheduleFeedbackStatusText(s))}</span><span><b>重复</b>${esc(scheduleRepeatDisplayText(s))}</span><span><b>状态</b>${esc(scheduleStatusLabel(status))}</span></div><p>${esc(isCancelled&&s.cancelReason?s.cancelReason:(s.notes||'暂无备注'))}</p><div class="admin-h5-card-actions"><button type="button" onclick="openScheduleDetail('${s.id}')">查看</button>${isCancelled?`<button type="button" onclick="confirmDel('${s.id}','误建排课','schedule')">删除</button>`:`<button type="button" onclick="openCancelScheduleModal('${s.id}')">取消</button>`}</div></article>`;}).join('');}
 function renderSchedule(){
+  if(!scheduleListReloading&&typeof datasetHasCurrentRequestKey==='function'&&!datasetHasCurrentRequestKey('schedule')&&typeof ensureDatasetsByName==='function'){
+    reloadSchedulesForCurrentPage();
+    return;
+  }
   syncScheduleFilterOptions();
-  let list=getFilteredSchedules().sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0));
-  const isMobileList=document.body.classList.contains('admin-mobile'),pageState=isMobileList?{total:list.length,pages:1,page:1,slice:list}:standardListSlice(list,schPage,schPageSize);
+  const serverPage=scheduleCurrentServerPageData();
+  let list=serverPage?schedules:getFilteredSchedules().sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0));
+  const isMobileList=document.body.classList.contains('admin-mobile'),pageState=serverPage?{total:serverPage.total,pages:isMobileList?1:serverPage.pages,page:serverPage.page,slice:list}:isMobileList?{total:list.length,pages:1,page:1,slice:list}:standardListSlice(list,schPage,schPageSize);
   schPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-schedule .tms-pagination');

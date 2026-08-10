@@ -22,6 +22,7 @@ let purchaseUnifiedView={rows:[]};
 let packageUnifiedView={rows:[]};
 let entitlementUnifiedView={rows:[]};
 let leadListPageData={rows:[],total:0,page:1,pageSize:15,pages:1,summary:null};
+let scheduleListPageData={rows:[],total:0,page:1,pageSize:15,pages:1,summary:null,filters:null};
 let studentLessonRecordExpandedState={};
 const loadedPurchaseDetailIds=new Set();
 const loadedStudentDetailIds=new Set();
@@ -200,7 +201,7 @@ const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','coachSchedulePage','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
-const DATASETS_WITH_REQUEST_KEYS=new Set(['leads','operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
+const DATASETS_WITH_REQUEST_KEYS=new Set(['leads','schedule','operationsPage','customerCenterPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
 let operationsPageRequestSeq=0;
 let operationsPageBackgroundRefreshSeq=0;
 let courtAccountListViewRequestKey='';
@@ -373,6 +374,28 @@ function leadListQueryParams(){
 function leadListPageDataUrl(){
   return appendPageDataQuery('/leads',leadListQueryParams());
 }
+function scheduleListQueryParams(){
+  if(currentPage!=='schedule')return {all:1};
+  const range=typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{startDate:globalDateRangeStart,endDate:globalDateRangeEnd};
+  const campusValue=String(campus||'').trim();
+  return {
+    page:schPage,
+    pageSize:schPageSize,
+    q:document.getElementById('schSearch')?.value||'',
+    campus:campusValue&&campusValue!=='all'?campusValue:'',
+    coach:document.getElementById('schCoachFilter')?.value||'',
+    courseType:document.getElementById('schCourseTypeFilter')?.value||'',
+    status:document.getElementById('schStatusFilter')?.value||'',
+    proposal:document.getElementById('schProposalFilter')?.value||'',
+    feedback:document.getElementById('schFeedbackFilter')?.value||'',
+    startDate:range?.startDate||'',
+    endDate:range?.endDate||''
+  };
+}
+function scheduleListPageDataUrl({fresh=false}={}){
+  const url=appendPageDataQuery('/page-data/schedule-list-view',scheduleListQueryParams());
+  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
+}
 function lifecycleMetricsPageDataUrl(){
   return scopedPageDataUrl('/page-data/lifecycle-metrics');
 }
@@ -460,6 +483,7 @@ function hydrateOperationsPageFromClientCache(){
 }
 function datasetRequestKey(name){
   if(name==='leads')return 'leads:'+leadListPageDataUrl();
+  if(name==='schedule')return 'schedule:'+scheduleListPageDataUrl();
   if(name==='operationsPage')return operationsPageDatasetRequestKey();
   if(name==='customerCenterPage')return 'customerCenterPage:'+customerCenterPageDataUrl();
   if(name==='lifecycleMetricsPage')return 'lifecycleMetricsPage:'+lifecycleMetricsPageDataUrl();
@@ -502,7 +526,7 @@ const DATASET_LOADERS={
   membershipBenefitLedger:()=>apiCall('GET','/membership-benefit-ledger'),
   membershipAccountEvents:()=>apiCall('GET','/membership-account-events'),
   pricePlans:()=>apiCall('GET','/price-plans'),
-  schedule:()=>apiCall('GET','/page-data/schedule-list-view?all=1'),
+  schedule:({fresh=false}={})=>apiCall('GET',scheduleListPageDataUrl({fresh})),
   coaches:()=>apiCall('GET','/coaches').catch(()=>apiCall('GET','/page-data/coaches').then(data=>data.coaches||[])),
   classes:()=>Promise.resolve([]),
   campuses:()=>apiCall('GET','/campuses'),
@@ -575,9 +599,21 @@ function isDatasetCacheFresh(name,entry,now=Date.now()){
   return now-savedAt<=DATA_CACHE_TTL_MS;
 }
 function setDatasetValue(name,data,{persist=true}={}){
-  const rows=Array.isArray(data)?data:(Array.isArray(data?.rows)?data.rows:[]);
+  const rows=Array.isArray(data)?data:(name==='schedule'&&Array.isArray(data?.items)?data.items:(Array.isArray(data?.rows)?data.rows:[]));
   if(name==='schedule'){
-    setScheduleRowsFromRemote(rows,{persist});
+    const pagination=data?.pagination||{};
+    setScheduleRowsFromRemote(rows,{persist,paged:!!data?.pagination});
+    scheduleListPageData=Array.isArray(data)
+      ? {rows,total:rows.length,page:1,pageSize:rows.length||schPageSize,pages:1,summary:null,filters:null}
+      : {
+        rows,
+        total:Number(pagination.total)||rows.length,
+        page:Number(pagination.page)||schPage||1,
+        pageSize:Number(pagination.pageSize)||schPageSize,
+        pages:Number(pagination.pages)||1,
+        summary:data?.summary||null,
+        filters:data?.filters||null
+      };
     return;
   }
   if(name==='leads'){
@@ -848,10 +884,10 @@ function markLearningDataStale(){
   financeSettlementSummaryRows=[];
   financePrepaidView={rows:[],summary:{}};
 }
-function setScheduleRowsFromRemote(rows,{persist=true}={}){
+function setScheduleRowsFromRemote(rows,{persist=true,paged=false}={}){
   const next=Array.isArray(rows)?rows:[];
   const justSaved=Date.now()-scheduleLocalMutationAt<30000;
-  if(justSaved&&schedules.length&&next.length<schedules.length){
+  if(!paged&&justSaved&&schedules.length&&next.length<schedules.length){
     loadedDatasets.add('schedule');
     if(persist)persistDatasetCache('schedule',schedules);
     return;

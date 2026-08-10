@@ -4,6 +4,7 @@ const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+const stateSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core', 'state.js'), 'utf8');
 const scheduleSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'schedule.js'), 'utf8');
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 
@@ -15,6 +16,11 @@ assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDUL
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
 assert.match(source, /await recoverMissingPageRenderer\(pg\);[\s\S]*renderLoadedCurrentPage\(pg\)/, 'page data loader should reload a missing page renderer before rendering');
+assert.match(stateSource, /function scheduleListPageDataUrl\(/, 'schedule page should build a scoped list URL for server-side pagination');
+assert.match(stateSource, /schedule:\(\{fresh=false\}=\{\}\)=>apiCall\('GET',scheduleListPageDataUrl\(\{fresh\}\)\)/, 'schedule page should load the server-paged schedule list endpoint');
+assert.doesNotMatch(stateSource, /schedule:\(\)=>apiCall\('GET','\/page-data\/schedule-list-view\?all=1'\)/, 'schedule page first-screen loader should not use the old all=1 request');
+assert.match(scheduleSource, /function scheduleCurrentServerPageData\(/, 'schedule page should read pagination metadata from the server response');
+assert.match(fnBody('renderSchedule'), /const serverPage=scheduleCurrentServerPageData\(\)[\s\S]*total:serverPage\.total[\s\S]*slice:list/, 'schedule table should render the server-returned page and server total');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);
@@ -240,7 +246,7 @@ assert.match(fnBody('scheduleStatusLabel'), /已结束[\s\S]*已下课/, 'schedu
 assert.match(fnBody('renderSchedule'), /scheduleStatusLabel/, 'schedule list should render user-facing status text');
 assert.match(source, /function scheduleRepeatDisplayText\(/, 'schedule list should define a repeat display helper');
 assert.match(fnBody('renderSchedule'), /scheduleRepeatDisplayText\(s\)/, 'schedule rows should render a user-facing repeat value');
-assert.match(source, /function onScheduleFilterChange\(\)\{schPage=standardListFirstPage\(\);renderSchedule\(\);\}/, 'schedule filters should reset pagination through the standard list flow before rendering');
+assert.match(source, /function onScheduleFilterChange\(\)\{schPage=standardListFirstPage\(\);reloadSchedulesForCurrentPage\(\);\}/, 'schedule filters should reset pagination and reload the server-filtered list');
 assert.match(source, /syncScheduleFilterOptions[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'courseType'[\s\S]*key:'coach'[\s\S]*key:'proposal'[\s\S]*key:'feedback'[\s\S]*key:'status'/, 'schedule toolbar filters should use linked count labels in the requested order');
 assert.match(source, /schCourseTypeFilterHost[\s\S]*schCoachFilterHost[\s\S]*schProposalFilterHost[\s\S]*schFeedbackFilterHost[\s\S]*schStatusFilterHost/, 'schedule toolbar should order filters as course type, coach, lesson plan, feedback, status');
 assert.match(source, /function renderSchedulePagerControls\(/, 'schedule page should use the standard compact pager controls');

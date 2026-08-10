@@ -138,7 +138,11 @@ function createResidualPageDataRoutes(deps={}){
         campus:query?.get('campus')||'',
         coach:query?.get('coach')||'',
         courseType:query?.get('courseType')||'',
-        status:query?.get('status')||''
+        status:query?.get('status')||'',
+        proposal:query?.get('proposal')||'',
+        feedback:query?.get('feedback')||'',
+        startDate:query?.get('startDate')||query?.get('dateFrom')||'',
+        endDate:query?.get('endDate')||query?.get('dateTo')||''
       });
       const view=timedEndpointMetric?await timedEndpointMetric('pageData.scheduleListView',load):await load();
       return sendJson(res,view);

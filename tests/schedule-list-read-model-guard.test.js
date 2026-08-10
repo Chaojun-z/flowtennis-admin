@@ -134,6 +134,37 @@ async function main() {
   assert.strictEqual(pagedView.items.length, 1, '读模型应支持服务端分页和搜索');
   assert.strictEqual(pagedView.pagination.total, 1, '读模型分页应返回筛选后的总数');
 
+  const mixedRows = [
+    { id: 'old-schedule', startTime: '2026-07-01 09:00', endTime: '2026-07-01 10:00', studentName: '旧课', courseType: '私教课', coach: '教练甲', campus: 'shunyi_mapo', venue: '1号场', status: '已排课', notes: '普通备注' },
+    { id: 'new-private', startTime: '2026-08-12 09:00', endTime: '2026-08-12 10:00', studentName: '新私教', courseType: '私教课', coach: '教练甲', campus: 'shunyi_mapo', venue: '1号场', status: '已排课', notes: '关键备注' },
+    { id: 'new-small-filled', startTime: '2026-08-11 09:00', endTime: '2026-08-11 10:00', studentName: '新小班有教案', courseType: '小班课', coach: '教练乙', campus: 'chaoyang_shilibao', venue: '2号场', status: '已结束' },
+    { id: 'new-small-missing', startTime: '2026-08-10 09:00', endTime: '2026-08-10 10:00', studentName: '新小班缺教案', courseType: '小班课', coach: '教练乙', campus: 'shunyi_mapo', venue: '3号场', status: '已取消', cancelReason: '天气' },
+    { id: 'future-schedule', startTime: '2026-09-01 09:00', endTime: '2026-09-01 10:00', studentName: '未来课', courseType: '专项课', coach: '教练丙', campus: 'shunyi_mapo', venue: '4号场', status: '已排课' }
+  ];
+  const mixedBase = { schedule: mixedRows, students: [{ id: 'stu-phone', name: '手机号学员', phone: '13900001111' }], feedbacks: [{ id: 'fb-new', scheduleId: 'new-small-filled' }], coachProposals: [{ id: 'proposal-new', scheduleId: 'new-small-filled' }], coachRefs: [] };
+  const firstPage = buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 2 });
+  assert.deepStrictEqual(firstPage.items.map(row => row.id), ['future-schedule', 'new-private'], '新旧排课混合时首屏应按上课时间倒序显示最新排课');
+
+  const augustPage = buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, startDate: '2026-08-01', endDate: '2026-08-31' });
+  assert.strictEqual(augustPage.pagination.total, 3, '日期筛选 total 应来自完整筛选结果，不是当前页数量');
+
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, coach: '教练乙' }).pagination.total, 2, '教练筛选 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, campus: 'shunyi_mapo' }).pagination.total, 4, '校区筛选 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, courseType: '小班课 / 单次' }).pagination.total, 2, '课程类型筛选 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, status: '已取消' }).pagination.total, 1, '状态筛选 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, proposal: 'filled' }).pagination.total, 1, '课前教案已填写筛选 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, proposal: 'missing' }).pagination.total, 1, '课前教案未填写筛选 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, feedback: 'filled' }).pagination.total, 1, '课后反馈已填写筛选 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, feedback: 'missing' }).pagination.total, 4, '课后反馈未填写筛选 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, q: '关键备注' }).pagination.total, 1, '搜索 total 应正确');
+  assert.strictEqual(buildScheduleListViewFromData({ ...mixedBase, schedule: [{ ...mixedRows[1], studentIds: ['stu-phone'], studentName: '' }] }, { page: 1, pageSize: 1, q: '13900001111' }).pagination.total, 1, '手机号搜索 total 应正确');
+
+  const stablePage1 = buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 2 });
+  const stablePage2 = buildScheduleListViewFromData(mixedBase, { page: 2, pageSize: 2 });
+  const stableIds = [...stablePage1.items, ...stablePage2.items].map(row => row.id);
+  assert.deepStrictEqual(stableIds, ['future-schedule', 'new-private', 'new-small-filled', 'new-small-missing'], '翻页应保持倒序且不丢不重');
+  assert.strictEqual(new Set(stableIds).size, stableIds.length, '翻页不应重复返回同一条排课');
+
   const loadCompare = createScheduleListCompareLoader({
     getScheduleListRows: async () => datasets.schedule,
     getCachedScan,

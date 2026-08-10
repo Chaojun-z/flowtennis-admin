@@ -32,7 +32,8 @@ assert.doesNotMatch(corePageDataSource, /\/page-data\/plans/, 'api should not ex
 assert.match(corePageDataSource, /if\(path==='\/page-data\/package-center-list'&&method==='GET'\)/, 'api should expose a lightweight package center list endpoint');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/customer-center-list'&&method==='GET'\)/, 'api should expose a lightweight customer center list endpoint');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/purchases'&&method==='GET'\)/, 'api should expose an aggregated purchases page endpoint');
-assert.match(html, /schedule-list-view\?all=1/, 'schedule page should load the lightweight schedule list read model instead of the full schedule table');
+assert.match(html, /scheduleListPageDataUrl\(\{fresh\}\)/, 'schedule page should load the server-paged schedule list read model');
+assert.doesNotMatch(html, /schedule:\(\)=>apiCall\('GET','\/page-data\/schedule-list-view\?all=1'\)/, 'schedule page first-screen loader should not request all schedule rows');
 assert.match(html, /function ensureScheduleDetailData\(scheduleId/, 'schedule detail should have a per-schedule detail loader');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/lifecycle-metrics'&&method==='GET'\)/, 'api should expose a lightweight lifecycle metrics endpoint');
 assert.match(corePageDataSource, /\/page-data\/lifecycle-metrics[\s\S]*customerLifecycleRows[\s\S]*teachingStudentViews[\s\S]*standardLifecycleMetrics/, 'lifecycle metrics endpoint should return lifecycle rows, teaching views, and standard metrics');

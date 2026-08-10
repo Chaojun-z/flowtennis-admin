@@ -1,5 +1,6 @@
 const { effectiveScheduleStatus, normalizeVenue } = require('../schedule.js');
 const { normalizeCampusValue, displayCampusName } = require('../../public/assets/scripts/core/campus.js');
+const FlowTennisBusinessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 50;
@@ -97,6 +98,14 @@ function scheduleCourseTypeLabel(row = {}) {
   return base;
 }
 
+function standardCourseTypeValue(row = {}) {
+  const direct = text(row.standardCourseType);
+  if ((FlowTennisBusinessTaxonomy.STANDARD_COURSE_TYPE_OPTIONS || []).some((opt) => opt.value === direct)) return direct;
+  const normalized = FlowTennisBusinessTaxonomy.normalizeCourseType(row);
+  if (normalized?.level1) return normalized.level2 ? `${normalized.level1} / ${normalized.level2}` : normalized.level1;
+  return scheduleCourseTypeLabel(row);
+}
+
 function statusLabel(status) {
   return {
     '已排课': '待上课',
@@ -126,6 +135,15 @@ function buildStudentIndexes(students = []) {
 function resolveStudentName(id, studentIndexes) {
   const student = studentIndexes.byId.get(text(id));
   return text(student?.name || student?.studentName);
+}
+
+function studentSearchText(row = {}, studentIndexes = buildStudentIndexes()) {
+  const ids = uniqueIds([...parseArr(row.studentIds), row.studentId]);
+  const resolved = ids
+    .map((id) => studentIndexes.byId.get(text(id)))
+    .filter(Boolean)
+    .flatMap((student) => [student.name, student.studentName, student.phone, student.mobile, student.wechatName]);
+  return [row.studentName, ...parseArr(row.studentNames), ...resolved].map(text).filter(Boolean).join(' ');
 }
 
 function studentSummary(row = {}, studentIndexes = buildStudentIndexes()) {
@@ -227,8 +245,12 @@ function buildScheduleListItem(row = {}, context = {}) {
     expectedStudentIds: parseArr(row.expectedStudentIds),
     studentSummary: studentSummary(row, context.studentIndexes),
     studentName: text(row.studentName),
+    studentSearchText: studentSearchText(row, context.studentIndexes),
     courseType: scheduleCourseType(row),
     courseTypeLabel: scheduleCourseTypeLabel(row),
+    standardCourseType: standardCourseTypeValue(row),
+    className: text(row.className),
+    productName: text(row.productName),
     lessonCount: numberValue(row.lessonCount),
     status: text(row.status || '已排课'),
     statusLabel: statusLabel(effectiveStatus),
@@ -257,15 +279,30 @@ function filterItems(items = [], options = {}) {
   const campus = text(options.campus);
   const courseType = text(options.courseType);
   const status = text(options.status);
+  const proposal = text(options.proposal);
+  const feedback = text(options.feedback);
+  const startDate = text(options.startDate || options.dateFrom);
+  const endDate = text(options.endDate || options.dateTo);
   return items.filter((item) => {
     if (q) {
-      const haystack = [item.studentSummary, item.coachName, item.campusName, item.venueText, item.courseTypeLabel, item.scheduleSource].join(' ').toLowerCase();
+      const haystack = [item.studentSearchText, item.studentName, item.studentSummary, item.coachName, item.campusName, item.venueText, item.externalVenueName, item.externalCourtName, item.externalNotes, item.courseTypeLabel, item.standardCourseType, item.className, item.productName, item.effectiveStatus, item.statusLabel, item.notes, item.cancelReason, item.scheduleSource, item.startTime, item.endTime].join(' ').toLowerCase();
       if (!haystack.includes(q)) return false;
     }
+    const day = text(item.startTime).slice(0, 10);
+    if (startDate && day && day < startDate) return false;
+    if (endDate && day && day > endDate) return false;
     if (coach && item.coachName !== coach) return false;
     if (campus && campus !== 'all' && item.campusCode !== campus && item.campusName !== campus) return false;
-    if (courseType && item.courseType !== courseType && item.courseTypeLabel !== courseType) return false;
+    if (courseType && item.courseType !== courseType && item.courseTypeLabel !== courseType && item.standardCourseType !== courseType) return false;
     if (status && item.effectiveStatus !== status && item.status !== status) return false;
+    if (proposal) {
+      const value = item.proposalStatus === '已填写' ? 'filled' : (item.proposalStatus === '未填写' ? 'missing' : 'none');
+      if (value !== proposal) return false;
+    }
+    if (feedback) {
+      const value = item.feedbackStatus === '已填写' ? 'filled' : 'missing';
+      if (value !== feedback) return false;
+    }
     return true;
   });
 }
@@ -275,7 +312,7 @@ function buildFilters(items = []) {
   return {
     campuses: unique(items.map((item) => item.campusName)),
     coaches: unique(items.map((item) => item.coachName)),
-    courseTypes: unique(items.map((item) => item.courseTypeLabel)),
+    courseTypes: unique(items.map((item) => item.standardCourseType || item.courseTypeLabel)),
     statuses: unique(items.map((item) => item.effectiveStatus))
   };
 }
@@ -325,13 +362,12 @@ function buildScheduleListViewFromData(data = {}, options = {}) {
   const repeatCounts = buildRepeatCounts(scheduleRows);
   const context = { studentIndexes, feedbackByScheduleId, proposalsByScheduleId, repeatCounts, coachRefs: data.coachRefs || [] };
   const rows = sampleIds.length ? scheduleRows.filter((row) => sampleIds.includes(text(row.id))) : scheduleRows;
-  const allItems = rows
-    .map((row) => buildScheduleListItem(row, context))
-    .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')));
+  const allItems = rows.map((row) => buildScheduleListItem(row, context));
   const filtered = filterItems(allItems, options);
-  const { items, pagination } = paginate(filtered, options);
+  const sorted = filtered.sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')));
+  const { items, pagination } = paginate(sorted, options);
   return {
-    summary: buildSummary(filtered),
+    summary: buildSummary(sorted),
     filters: buildFilters(allItems),
     items,
     pagination,
