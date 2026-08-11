@@ -252,9 +252,10 @@ assert.deepStrictEqual(
   staleEmptyLessonSummaryRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
   [
     ['ledger', '2026-06-12', '小班课', -6],
-    ['ledger', '2026-06-10', '私教课', -2]
+    ['ledger', '2026-06-10', '私教课', -2],
+    ['schedule', '2026-06-07 10:00', '体验课', -1]
   ],
-  '学员抽屉上课明细必须以当前事实表为准，旧摘要空数组不能覆盖真实上课记录'
+  '学员抽屉上课明细必须以当前事实表为准，并同时展示正式课和体验课记录'
 );
 assert.strictEqual(
   staleEmptyLessonSummaryRow?.completedLessons,

@@ -33,8 +33,9 @@ function makeRes() {
 
 function createHarness(seedRows) {
   const rows = { ...seedRows };
-  const calls = { leadScans: 0, puts: 0, dels: 0 };
+  const calls = { leadScans: 0, puts: 0, dels: 0, tableScans: {} };
   const scanRows = async table => {
+    calls.tableScans[table] = (calls.tableScans[table] || 0) + 1;
     if (table === 'ft_leads') calls.leadScans += 1;
     return clone(rows[table]);
   };
@@ -135,12 +136,21 @@ async function main() {
   assert.match(queryBody, /q:document\.getElementById\('leadSearch'\)\?\.value\|\|''[\s\S]*source:document\.getElementById\('leadSourceFilter'\)\?\.value\|\|''[\s\S]*customerType:document\.getElementById\('leadCustomerTypeFilter'\)\?\.value\|\|''[\s\S]*demandProduct:document\.getElementById\('leadConsultFilter'\)\?\.value\|\|''[\s\S]*leadStage:document\.getElementById\('leadStageFilter'\)\?\.value\|\|''[\s\S]*dealType:document\.getElementById\('leadDealTypeFilter'\)\?\.value\|\|''[\s\S]*owner:ownerValue[\s\S]*campus:/, '搜索和筛选参数应进入后端请求');
   assert.match(queryBody, /sortKey:leadSortKey[\s\S]*sortDir:leadSortDir/, '排序参数应进入后端请求，避免当前页内排序');
   assert.match(requestKeyBody, /if\(name==='leads'\)return 'leads:'\+leadListPageDataUrl\(\)/, '线索池缓存 key 应包含分页、筛选和排序参数');
-  assert.match(routesSource, /const LEAD_LIST_CACHE_TTL_MS=30000/, '后端线索分页缓存应使用短 TTL，避免长期旧数据');
+  assert.match(fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8'), /const skipLocalStoredAuthUser=process\.env\.DISABLE_HOT_SCAN_PREWARM==='true'&&!isProductionRuntime\(\);[\s\S]*const storedAuthUser=skipLocalStoredAuthUser\?null:await getCachedRow\(T_USERS,user\.id\)\.catch\(\(\)=>null\)/, '本地预览不能被账号表冷读卡住首屏接口');
+  assert.match(routesSource, /const LEAD_LIST_CACHE_TTL_MS=process\.env\.DISABLE_HOT_SCAN_PREWARM==='true'\?300000:30000/, '后端线索分页缓存线上应使用短 TTL，本地预览可延长避免冷读超时');
+  assert.match(routesSource, /function isLocalPreviewFastMode\(\)[\s\S]*process\.env\.DISABLE_HOT_SCAN_PREWARM==='true'[\s\S]*!isProductionRuntime\(\)/, '本地预览快速模式只能在非生产环境启用');
+  assert.match(routesSource, /isLocalPreviewFastMode\(\)&&typeof getCachedScan==='function'[\s\S]*getCachedScan\(T_LEADS,\{columns:LEAD_LIST_PROJECTION_FIELDS,pageLimit:100\}\)/, '本地预览线索主表应使用小页轻字段完整读取，避免大页冷读超时');
+  assert.match(routesSource, /typeof scanFirstRows==='function'[\s\S]*readLeadSourceRows\(\{isProductionRuntime:\(\)=>true,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS\}\)/, '生产线索主表应优先走轻字段投影读取，避免首屏读取完整详情');
+  assert.match(routesSource, /if\(isLocalPreviewFastMode\(\)\)return \[\]/, '本地预览线索列表不应被跟进记录冷读拖到超时');
+  assert.doesNotMatch(routesSource, /readLeadOptionalRows\(T_STUDENTS|getCachedScan\(T_PURCHASES|getCachedScan\(T_ENTITLEMENTS|getCachedScan\(T_ENTITLEMENT_LEDGER|getCachedScan\(T_SCHEDULE/, '线索池首屏列表接口不能读取学员、课包、权益、流水、排课事实表');
   assert.match(routesSource, /function leadPagedResponseCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query\)[\s\S]*leadListUserCachePart\(user\)/, '后端分页缓存 key 应包含完整查询条件和用户范围');
-  assert.match(routesSource, /function clearLeadListCaches\(\)[\s\S]*leadSourceRowsCache\.rows=null[\s\S]*leadPagedResponseCache\.clear\(\)/, '线索写操作后应能清理原始行缓存和分页响应缓存');
-  assert.match(routesSource, /if\(dateFrom&&leadDateValue<dateFrom\)return false;[\s\S]*const sorted=sortLeadListRows\(filtered,query\);[\s\S]*const summary=buildLeadListSummary\(filtered\);[\s\S]*buildLeadListPage\(sorted,paging\)/, '后端必须先完整筛选和统计，再分页截取当前页');
+  assert.match(routesSource, /function leadFilteredResultCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query,\{includePaging:false\}\)[\s\S]*leadListUserCachePart\(user\)/, '后端翻页应复用同一筛选排序统计结果，不能每页重新全量计算');
+  assert.match(routesSource, /function clearLeadListCaches\(\)[\s\S]*leadSourceRowsCache\.rows=null[\s\S]*leadPagedResponseCache\.clear\(\)[\s\S]*leadFilteredResultCache\.clear\(\)/, '线索写操作后应能清理原始行缓存、分页响应缓存和筛选结果缓存');
+  assert.match(routesSource, /if\(path==='\/leads'\)\{[\s\S]*if\(!\(method==='GET'&&isLocalPreviewFastMode\(\)\)\)await init\(\);[\s\S]*if\(method!=='GET'\)await ensureLeadTablesForRequest\(\);[\s\S]*if\(method==='GET'\)/, '本地预览线索池只读首屏不应等待初始化和建表检查，写操作仍保留安全检查');
+  assert.match(routesSource, /if\(dateFrom&&leadDateValue<dateFrom\)return false;[\s\S]*cachedResult=\{sorted:sortLeadListRows\(filtered,query\),summary:buildLeadListSummary\(filtered\)\};[\s\S]*buildLeadListPage\(cachedResult\.sorted,paging\)/, '后端必须先完整筛选和列表统计，再分页截取当前页');
   assert.match(setDatasetBody, /if\(name==='leads'\)\{[\s\S]*leadListPageData=[\s\S]*summary:data\?\.summary\|\|null/, '线索池应保存后端分页元信息和统计');
-  assert.match(statsBody, /leadServerSummaryData\(\)[\s\S]*if\(serverSummary\)return serverSummary/, '线索池顶部统计应优先使用后端筛选后总量，不能用当前页 15 条');
+  assert.match(statsBody, /const total=serverSummary\?\.total\?\?null[\s\S]*leadCustomerCenterSummaryData\(\)/, '线索池顶部只能从 /api/leads 取筛选后线索总数，学员类指标必须走客户中心统一 summary');
+  assert.doesNotMatch(statsBody, /serverSummary\?\.historicalStudents|serverSummary\?\.activeStudents|serverSummary\?\.trialAttended|serverSummary\?\.trialAttendedToFormalPurchase/, '线索池顶部学员类指标不能使用 /api/leads 轻量粗算值');
   assert.match(renderBody, /serverPage\?[\s\S]*total:serverPage\.total[\s\S]*slice:list[\s\S]*standardListSlice/, '线索池列表不应继续只靠本地全量分页');
   assert.match(detailBody, /apiCall\('GET',`\/leads\/\$\{encodeURIComponent\(id\)\}`\)/, '线索详情应按 leadId 回源读取单条完整数据');
   assert.match(openDetailBody, /refreshLeadDetailFromServer\(leadId\)/, '打开线索详情应触发单条详情后台回源');
@@ -253,6 +263,42 @@ async function main() {
   const detail2 = await requestPath(handle, '/leads/aug-4');
   assert.strictEqual(detail2.statusCode, 200, '详情接口应能按 id 返回单条线索');
   assert.strictEqual(detail2.body.id, 'aug-4', '详情接口不应返回分页列表');
+
+  const previousPreviewFlag = process.env.DISABLE_HOT_SCAN_PREWARM;
+  process.env.DISABLE_HOT_SCAN_PREWARM = 'true';
+  try {
+    const localHarness = createHarness({
+      ft_leads: [{
+        id: 'local-new',
+        displayName: '本地预览线索',
+        leadDate: '2026-08-11',
+        createdAt: '2026-08-11 10:00:00',
+        campus: 'shunyi_mapo'
+      }],
+      ft_lead_followups: [{ id: 'fu-local', leadId: 'local-new', followupAt: '2026-08-11' }],
+      ft_students: [{ id: 'stu-local', sourceLeadId: 'local-new' }],
+      ft_courts: [{ id: 'court-local', sourceLeadId: 'local-new' }],
+      ft_membership_accounts: [{ id: 'member-local', sourceLeadId: 'local-new' }],
+      ft_purchases: [{ id: 'purchase-local', studentId: 'stu-local' }],
+      ft_entitlements: [{ id: 'entitlement-local', studentId: 'stu-local' }],
+      ft_schedule: [{ id: 'schedule-local', studentId: 'stu-local' }],
+      ft_membership_orders: [],
+      ft_entitlement_ledger: [],
+      ft_membership_benefit_ledger: [],
+      ft_membership_account_events: [],
+      ft_financial_ledger: [],
+      ft_plans: [],
+      ft_classes: [],
+      ft_feedbacks: []
+    });
+    const localPage = await request(localHarness.handle, 'paged=1&page=1&pageSize=15');
+    assert.strictEqual(localPage.statusCode, 200, '本地预览快速模式下线索列表也必须返回成功');
+    assert.strictEqual(localPage.body.total, 1, '本地预览快速模式不能因为跳过附加表而丢失线索主表数据');
+    assert.deepStrictEqual(localHarness.calls.tableScans, { ft_leads: 1 }, '本地预览快速模式只读线索主表，不触发事实表冷读');
+  } finally {
+    if (previousPreviewFlag === undefined) delete process.env.DISABLE_HOT_SCAN_PREWARM;
+    else process.env.DISABLE_HOT_SCAN_PREWARM = previousPreviewFlag;
+  }
 
   console.log('leads safe server pagination tests passed');
 }

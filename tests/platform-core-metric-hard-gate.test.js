@@ -27,7 +27,7 @@ function assertNoLocalCoreMetric(rel, functionName, patterns) {
 
 assertNoLocalCoreMetric('public/assets/scripts/pages/leads.js', 'leadStatsData', [
   [/FlowTennisPlatformDataStandards\.leadFunnelStats/, '线索池顶部核心指标不得再使用前端兜底漏斗算法'],
-  [/\bteachingSummary\b/, '线索池顶部不得绕过统一标准指标读取 teachingStudentViews 重新拼数'],
+  [/FlowTennisPlatformDataStandards\.currentLeadSummary/, '线索池顶部不得按当前页/当前列表重新拼学员指标'],
   [/leadStandardMetricValue\('validLeads'\)/, '线索池线索数不得再和列表/筛选使用不同的 validLeads 口径'],
   [/leadStandardMetricValue\('courseChainStudents'\)/, '线索池顶部不得继续把普通学员作为历史学员展示'],
   [/leadStandardMetricValue\('formalStudents'\)/, '线索池顶部不得继续把正式学员作为在期学员展示'],

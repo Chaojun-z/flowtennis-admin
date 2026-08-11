@@ -44,10 +44,23 @@ assert.deepStrictEqual(
     trialAttended: null,
     trialAttendedToFormalPurchase: null
   },
-  '线索池统一生命周期统计未就绪时，顶部五张卡必须整体等待，不能用列表字段兜底显示假数字或 0'
+  '线索池后端 summary 未就绪时，顶部五张卡必须整体等待，不能用列表字段兜底显示假数字或 0'
 );
 
 context.datasetHasCurrentRequestKey = () => true;
+context.leadListPageData = {
+  summary: {
+    total: 10,
+    historicalStudents: 315,
+    historicalStudentRate: '3150%',
+    activeStudents: 0,
+    activeStudentRate: '0%',
+    trialAttended: 11,
+    trialAttendedRate: '110%',
+    trialAttendedToFormalPurchase: 4,
+    trialAttendedToFormalPurchaseRate: '36.4%'
+  }
+};
 context.standardLifecycleMetrics = {
   teachingSummary: {
     historicalStudentCount: 5,
@@ -72,7 +85,14 @@ context.standardLifecycleMetrics = {
     trialAttendedToFormalPurchase: [{ id: 'lead-1' }]
   }
 };
-context.teachingStudentViews = { summary: {} };
+context.teachingStudentViews = {
+  summary: {
+    historicalStudentCount: 5,
+    activeStudentCount: 3,
+    trialAttendedStudentCount: 2,
+    trialAttendedToFormalPurchaseCount: 1
+  }
+};
 
 const stats = context.leadStatsData([
   { id: 'lead-1' },
@@ -92,15 +112,15 @@ assert.deepStrictEqual(
     trialAttendedToFormalPurchase: stats.trialAttendedToFormalPurchase
   },
   {
-    total: 4,
-    historicalStudents: 2,
+    total: 10,
+    historicalStudents: 5,
     historicalStudentRate: '50%',
-    activeStudents: 1,
-    activeStudentRate: '50%',
+    activeStudents: 3,
+    activeStudentRate: '60%',
     trialAttended: 2,
     trialAttendedToFormalPurchase: 1
   },
-  '线索池顶部必须用当前筛选后的线索集合匹配后端统一 views，不能退回全局 teachingSummary'
+  '线索池顶部学员指标必须使用客户中心统一 summary，不能使用 /api/leads 的轻量粗算学员数'
 );
 
 console.log('leads runtime standard metrics tests passed');

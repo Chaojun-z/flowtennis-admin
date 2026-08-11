@@ -9,11 +9,37 @@ let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
 let studentSortMode='';
-const STUDENT_DETAIL_PREWARM_CONCURRENCY=4;
-const STUDENT_DETAIL_PREWARM_MAX_ROWS=20;
+const STUDENT_DETAIL_PREWARM_CONCURRENCY=2;
+const STUDENT_DETAIL_PREWARM_MAX_ROWS=10;
 const STUDENT_DEAL_PATH_LABELS=['体验转化','直接成交','老客续费'];
+let studentListPageStateByMode={package:{page:1,pageSize:15},trial:{page:1,pageSize:15}};
 function studentListViewMode(){
   return currentPage==='trial-students'?'trial':'package';
+}
+function studentListPageStateKey(){
+  return studentListViewMode()==='trial'?'trial':'package';
+}
+function syncStudentPageGlobalsFromMode(){
+  const key=studentListPageStateKey();
+  const state=studentListPageStateByMode[key]||{page:1,pageSize:15};
+  stuPage=state.page||standardListFirstPage();
+  stuPageSize=standardListPageSize(state.pageSize||15,15);
+}
+function persistStudentPageGlobalsToMode(){
+  const key=studentListPageStateKey();
+  studentListPageStateByMode[key]={page:stuPage,pageSize:stuPageSize};
+}
+function resetCurrentStudentListPage(){
+  syncStudentPageGlobalsFromMode();
+  stuPage=standardListFirstPage();
+  persistStudentPageGlobalsToMode();
+}
+function resetAllStudentListPages(){
+  studentListPageStateByMode={
+    package:{...(studentListPageStateByMode.package||{}),page:standardListFirstPage()},
+    trial:{...(studentListPageStateByMode.trial||{}),page:standardListFirstPage()}
+  };
+  syncStudentPageGlobalsFromMode();
 }
 function studentPackageRecordIsTrial(row={}){
   const lifecycle=studentLifecycleRow(row)||{};
@@ -85,7 +111,7 @@ function studentUnifiedRecordForId(id){
     || null;
   return detail?{...(base||{}),...detail}:base;
 }
-function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents();}
+function onStudentFilterChange(){resetCurrentStudentListPage();renderStudents();}
 function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
 }
@@ -179,7 +205,7 @@ function refreshStudentTagGroupedFilter(){
   refreshStandardGroupedFilterPanel(studentTagGroupedFilterConfig(baseRows));
 }
 function onStudentTagFilterChange(){
-  stuPage=standardListFirstPage();
+  resetCurrentStudentListPage();
   renderStudents({skipToolbar:true});
   refreshStudentTagGroupedFilter();
 }
@@ -548,7 +574,7 @@ function cycleStudentSort(key){
   if(stuSortKey!==key){stuSortKey=key;stuSortDir='asc';}
   else if(stuSortDir==='asc')stuSortDir='desc';
   else {stuSortKey='';stuSortDir='';}
-  stuPage=standardListFirstPage();
+  resetCurrentStudentListPage();
   renderStudents();
 }
 function updateStudentSortHeaders(){
@@ -597,18 +623,24 @@ function renderStudentPagerControls(total,pages){
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(stuPage,pages,'setStudentPage');
 }
 function setStudentPage(value){
+  syncStudentPageGlobalsFromMode();
   const total=getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
+  persistStudentPageGlobalsToMode();
   renderStudents();
 }
 function setStudentPageSize(value){
+  syncStudentPageGlobalsFromMode();
   stuPageSize=standardListPageSize(value,stuPageSize);
   stuPage=standardListFirstPage();
+  persistStudentPageGlobalsToMode();
   renderStudents();
 }
 function jumpStudentPage(value){
+  syncStudentPageGlobalsFromMode();
   const total=getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
+  persistStudentPageGlobalsToMode();
   renderStudents();
 }
 function studentListPrewarmParams(){
@@ -1198,6 +1230,7 @@ function renderStudentMobileCards(list){
   }).join('');
 }
 function renderStudents(options={}){
+  syncStudentPageGlobalsFromMode();
   if(!options.skipToolbar)renderStudentToolbarFilters();
   ensureStudentDefaultSort();
   renderStudentTableHeaders();
@@ -1211,6 +1244,7 @@ function renderStudents(options={}){
   const isMobileList=document.body.classList.contains('admin-mobile');
   const pageState=isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,stuPage,stuPageSize);
   stuPage=pageState.page;
+  persistStudentPageGlobalsToMode();
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-students .tms-pagination');
   if(pager)pager.style.display=total?'flex':'none';

@@ -247,10 +247,13 @@ function leadDateOnly(value,lead={}){
   return `${parts.year}-${String(parts.month).padStart(2,'0')}-${String(parts.day).padStart(2,'0')}`;
 }
 function leadDateInputValue(lead){
-  return leadDateOnly(lead?.leadDate,lead)||today();
+  return leadDateOnly(leadBusinessDateValue(lead),lead)||today();
+}
+function leadBusinessDateValue(lead={}){
+  return lead?.leadDate||lead?.leadEnteredAt||lead?.firstTouchAt||lead?.trialAtRaw||lead?.trialBookedAt||lead?.trialAttendedAt||lead?.courseFirstPurchaseAt||lead?.conversionAt||lead?.enrollAtRaw||lead?.formalSignupAt||lead?.createdAt||lead?.updatedAt||lead?.lastFollowupAt;
 }
 function leadDateDisplayText(lead){
-  return leadDateOnly(lead?.leadDate,lead)||'-';
+  return leadDateOnly(leadBusinessDateValue(lead),lead)||'-';
 }
 function leadTimeRangeText(value,lead={}){
   const raw=String(value||'').trim();
@@ -538,14 +541,14 @@ function leadInDateRange(lead,range){
   const start=String(range?.start||'');
   const end=String(range?.end||'');
   if(!start&&!end)return true;
-  const date=leadDateOnly(lead?.leadDate,lead);
+  const date=leadDateOnly(leadBusinessDateValue(lead),lead);
   if(!date)return false;
   if(start&&date<start)return false;
   if(end&&date>end)return false;
   return true;
 }
 function leadGlobalDateValue(lead){
-  return leadDateOnly(lead?.leadDate,lead)||lead?.createdAt||lead?.updatedAt||lead?.lastFollowupAt;
+  return leadDateOnly(leadBusinessDateValue(lead),lead)||lead?.createdAt||lead?.updatedAt||lead?.lastFollowupAt;
 }
 function renderLeadDateScopeControls(){
   document.querySelectorAll('#leadDateScopeBar [data-lead-date-preset]').forEach(btn=>{
@@ -593,7 +596,7 @@ function leadSortDateValue(value,lead={}){
   return Number.isFinite(parsed)?parsed:0;
 }
 function leadSortValue(lead,key){
-  if(key==='leadDate')return leadSortDateValue(lead?.leadDate,lead);
+  if(key==='leadDate')return leadSortDateValue(leadBusinessDateValue(lead),lead);
   if(key==='trialLessonAt')return leadSortDateValue(lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt,lead);
   if(key==='lastFollowupAt')return leadSortDateValue(lead?.lastFollowupAt,lead);
   if(key==='formalSignupAt')return leadSortDateValue(leadPurchaseSignupDate(lead)||lead?.enrollAtRaw||lead?.formalSignupAt||lead?.enrollAt,lead);
@@ -798,11 +801,32 @@ function leadServerSummaryData(){
   if(!summary||summary.total==null)return null;
   return summary;
 }
+function leadCustomerCenterSummaryData(){
+  if(typeof datasetHasCurrentRequestKey==='function'&&!datasetHasCurrentRequestKey('customerCenterPage'))return null;
+  const summary=teachingStudentViews?.summary;
+  if(!summary||typeof summary!=='object')return null;
+  return summary;
+}
 function leadStatsData(list){
   const serverSummary=leadServerSummaryData();
-  if(serverSummary)return serverSummary;
-  if(!leadLifecycleMetricsReady())return leadStatsLoadingData();
-  return FlowTennisPlatformDataStandards.currentLeadSummary(list, leadStandardMetrics());
+  const total=serverSummary?.total??null;
+  const customerSummary=leadCustomerCenterSummaryData();
+  if(!customerSummary)return {...leadStatsLoadingData(),total};
+  const historicalStudents=Number(customerSummary.historicalStudentCount);
+  const activeStudents=Number(customerSummary.activeStudentCount);
+  const trialAttended=Number(customerSummary.trialAttendedStudentCount);
+  const trialAttendedToFormalPurchase=Number(customerSummary.trialAttendedToFormalPurchaseCount);
+  return {
+    total,
+    historicalStudents:Number.isFinite(historicalStudents)?historicalStudents:null,
+    historicalStudentRate:Number.isFinite(historicalStudents)?leadCurrentListRateText(historicalStudents,total):'',
+    activeStudents:Number.isFinite(activeStudents)?activeStudents:null,
+    activeStudentRate:Number.isFinite(activeStudents)&&Number.isFinite(historicalStudents)?leadCurrentListRateText(activeStudents,historicalStudents):'',
+    trialAttended:Number.isFinite(trialAttended)?trialAttended:null,
+    trialAttendedRate:Number.isFinite(trialAttended)?leadCurrentListRateText(trialAttended,total):'',
+    trialAttendedToFormalPurchase:Number.isFinite(trialAttendedToFormalPurchase)?trialAttendedToFormalPurchase:null,
+    trialAttendedToFormalPurchaseRate:Number.isFinite(trialAttendedToFormalPurchase)&&Number.isFinite(trialAttended)?leadCurrentListRateText(trialAttendedToFormalPurchase,trialAttended):''
+  };
 }
 function renderLeadStats(list){
   const stats=leadStatsData(list);
@@ -1957,12 +1981,13 @@ function leadCurrentServerPageData(){
     pages:Number(leadListPageData.pages)||1
   };
 }
-async function reloadLeadsForCurrentPage({showLoading=true}={}){
+async function reloadLeadsForCurrentPage({showLoading=true,refreshStats=true}={}){
   const seq=++leadListReloadSeq;
   leadListReloading=true;
   if(showLoading){
-    renderLeadStatsLoading();
-    if(typeof renderLeadTableLoading==='function')renderLeadTableLoading();
+    if(refreshStats)renderLeadStatsLoading();
+    if(refreshStats&&typeof renderLeadTableLoading==='function')renderLeadTableLoading();
+    else if(typeof renderTableSkeletonLoading==='function')renderTableSkeletonLoading('leadTbody',15,'线索数据加载中...');
   }
   try{
     if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['leads'],{force:true});
@@ -1982,12 +2007,12 @@ async function reloadLeadsForCurrentPage({showLoading=true}={}){
 function setLeadPage(value){
   const total=leadCurrentServerPageData()?.total??getFilteredLeads().length;
   leadPage=standardListPagination(total,value,leadPageSize).page;
-  reloadLeadsForCurrentPage();
+  reloadLeadsForCurrentPage({refreshStats:false});
 }
 function jumpLeadPage(value){
   const total=leadCurrentServerPageData()?.total??getFilteredLeads().length;
   leadPage=standardListPagination(total,value,leadPageSize).page;
-  reloadLeadsForCurrentPage();
+  reloadLeadsForCurrentPage({refreshStats:false});
 }
 function renderLeads(){
   if(!leadListReloading&&typeof datasetHasCurrentRequestKey==='function'&&!datasetHasCurrentRequestKey('leads')&&typeof ensureDatasetsByName==='function'){
@@ -2035,5 +2060,5 @@ function resetLeadFilters(){
 function setLeadPageSize(value){
   leadPageSize=standardListPageSize(value,leadPageSize);
   leadPage=standardListFirstPage();
-  reloadLeadsForCurrentPage();
+  reloadLeadsForCurrentPage({refreshStats:false});
 }

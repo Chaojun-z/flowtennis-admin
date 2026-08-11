@@ -58,13 +58,13 @@ const packageJson = JSON.parse(read('package.json'));
 
 assert.match(
   functionBody(leadsSource, 'leadStatsData'),
-  /FlowTennisPlatformDataStandards\.currentLeadSummary\(list,\s*leadStandardMetrics\(\)\)/,
-  '线索池顶部必须基于当前筛选后的列表和统一生命周期视图汇总'
+  /leadServerSummaryData\(\)[\s\S]*leadCustomerCenterSummaryData\(\)[\s\S]*historicalStudentCount[\s\S]*activeStudentCount[\s\S]*trialAttendedStudentCount[\s\S]*trialAttendedToFormalPurchaseCount/,
+  '线索池顶部必须使用 /api/leads 的线索总数 + customer-center-list 的统一学员 summary'
 );
 assert.doesNotMatch(
   functionBody(leadsSource, 'leadStatsData'),
-  /leadTeachingSummaryValue\(/,
-  '线索池顶部不得继续读取全局 teachingSummary 作为当前筛选结果'
+  /FlowTennisPlatformDataStandards\.currentLeadSummary|leadTeachingSummaryValue\(|leadStandardMetricValue\(/,
+  '线索池顶部不得在页面内另算一套学员指标'
 );
 
 assert.match(

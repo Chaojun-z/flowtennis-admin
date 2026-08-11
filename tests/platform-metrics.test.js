@@ -110,6 +110,21 @@ const lostAfterTrialPlatform = buildPlatformMetrics({
 const lostAfterTrialLead = lostAfterTrialPlatform.leadPoolRows.find(row => row.id === 'lead-lost-after-trial');
 assert.strictEqual(lostAfterTrialLead?.leadStage, '已流失', 'manual current lead stage should not be overridden by old trial booking facts');
 
+const missingLeadDatePlatform = buildPlatformMetrics({
+  leads: [
+    { id: 'lead-missing-date', displayName: '缺失线索时间', createdAt: '2026-08-01 09:00:00' }
+  ],
+  students: [],
+  purchases: [],
+  entitlements: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: []
+});
+const missingLeadDateRow = missingLeadDatePlatform.leadPoolRows.find(row => row.id === 'lead-missing-date');
+assert.strictEqual(missingLeadDateRow?.leadDate, '2026-08-01 09:00:00', 'lead pool should fill blank lead time from the earliest known business timestamp');
+
 assert.strictEqual(platform.customerLifecycleRows.length, 3, 'lifecycle should contain existing leads, student-only customers and court/member customers');
 assert.strictEqual(platform.leadPoolRows.length, 3, 'lead pool should expose every lifecycle customer identity');
 assert.ok(platform.leadPoolRows.find(row => row.id === 'student:student-2' && row.displayName === '无原始线索学员'), 'student without ft_leads should still be searchable in the lead pool');
@@ -178,6 +193,110 @@ assert.deepStrictEqual(
   [['当前10课时', 5, 10, '正常'], ['历史10课时', 0, 10, '已用完']],
   'student detail package orders should include depleted historical purchases and entitlements'
 );
+
+const trialPackagePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-trial-package', name: '体验课学员' }],
+  purchases: [
+    { id: 'purchase-trial-239', studentId: 'student-trial-package', packageName: '私教课体验课包', courseType: '体验课', packageLessons: 1, amountPaid: 239, status: 'active', purchaseDate: '2026-08-01' }
+  ],
+  entitlements: [
+    { id: 'ent-trial-239', studentId: 'student-trial-package', purchaseId: 'purchase-trial-239', packageName: '私教课体验课包', courseType: '体验课', totalLessons: 1, remainingLessons: 0, usedLessons: 1, status: 'active' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-trial-239', studentId: 'student-trial-package', entitlementId: 'ent-trial-239', purchaseId: 'purchase-trial-239', scheduleId: 'schedule-trial-239', lessonDelta: -1, relatedDate: '2026-08-02', reason: '体验课核销' }
+  ],
+  schedule: [
+    { id: 'schedule-trial-239', studentId: 'student-trial-package', startTime: '2026-08-02 10:00:00', endTime: '2026-08-02 11:00:00', status: '已结束', courseType: '体验课', coach: '王教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const trialPackageStudent = trialPackagePlatform.teachingStudentViews.courseStudents.find(row => row.studentId === 'student-trial-package');
+assert.ok(trialPackageStudent, 'trial package student should enter the course student view');
+assert.deepStrictEqual(
+  trialPackageStudent.detailPackageOrderRows.map(row => [row.packageName, row.purchaseDate, row.remainingLessons, row.totalLessons, row.paidAmount]),
+  [['私教课体验课包', '2026-08-01', 0, 1, 239]],
+  'student drawer package orders should include trial package purchases'
+);
+assert.deepStrictEqual(
+  trialPackageStudent.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType]),
+  [['ledger', '2026-08-02 10:00-11:00', '体验课']],
+  'student drawer lesson records should include trial package consumption'
+);
+
+const textOnlyPackagePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-text-only-package', name: '无权益课包文字' }],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-text-only-package', studentId: 'student-text-only-package', startTime: '2026-08-01 10:00:00', endTime: '2026-08-01 11:00:00', status: '已结束', courseType: '私教课', settlementType: '课包扣减', paidAmount: 3720, lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const textOnlyPackageStudent = textOnlyPackagePlatform.teachingStudentViews.historicalStudents.find(row => row.studentId === 'student-text-only-package');
+assert.ok(textOnlyPackageStudent, 'text-only package schedule student should enter the historical view through lesson facts');
+assert.strictEqual(textOnlyPackageStudent.packageStatusLabel, '未买过课包', 'package status should stay unpaid when no purchase or entitlement exists');
+assert.strictEqual(textOnlyPackageStudent.paymentModeLabel, '单次付费学员', 'payment mode must not use schedule text alone as package fact');
+
+const futureSchedulePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-future-schedule', name: '未来排课学员' }],
+  purchases: [
+    { id: 'purchase-future-package', studentId: 'student-future-schedule', packageName: '正式课包', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-08-01' }
+  ],
+  entitlements: [
+    { id: 'ent-future-package', studentId: 'student-future-schedule', purchaseId: 'purchase-future-package', packageName: '正式课包', courseType: '私教课', totalLessons: 10, remainingLessons: 10, status: 'active' }
+  ],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-future-package', studentId: 'student-future-schedule', startTime: '2026-08-17 10:00:00', endTime: '2026-08-17 11:00:00', status: '已排课', courseType: '私教课', settlementType: '课包扣减', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const futureScheduleStudent = futureSchedulePlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-future-schedule');
+assert.ok(futureScheduleStudent, 'future scheduled package student should enter formal student view from the package fact');
+assert.strictEqual(futureScheduleStudent.detailRecentLessonDate, '', 'future schedules must not be shown as the recent lesson');
+assert.deepStrictEqual(futureScheduleStudent.detailLessonRecordRows, [], 'future schedules must not enter completed lesson records');
+
+const sharedPackagePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [
+    { id: 'student-package-owner', name: '哥哥' },
+    { id: 'student-package-user', name: '弟弟' }
+  ],
+  purchases: [
+    { id: 'purchase-owner-package', studentId: 'student-package-owner', packageName: '共享正式课包', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-07-01' }
+  ],
+  entitlements: [
+    { id: 'ent-owner-package', studentId: 'student-package-owner', purchaseId: 'purchase-owner-package', packageName: '共享正式课包', courseType: '私教课', totalLessons: 10, remainingLessons: 9, usedLessons: 1, status: 'active' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-shared-package', studentId: 'student-package-user', entitlementId: 'ent-owner-package', purchaseId: 'purchase-owner-package', scheduleId: 'schedule-shared-package', lessonDelta: -1, relatedDate: '2026-08-03', reason: '授权使用' }
+  ],
+  schedule: [
+    { id: 'schedule-shared-package', studentId: 'student-package-user', startTime: '2026-08-03 10:00:00', endTime: '2026-08-03 11:00:00', status: '已结束', courseType: '私教课', coach: '王教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const sharedPackageUser = sharedPackagePlatform.teachingStudentViews.historicalStudents.find(row => row.studentId === 'student-package-user');
+assert.ok(sharedPackageUser, 'shared package user should enter the historical view through ledger facts');
+assert.strictEqual(sharedPackageUser.packageStatusLabel, '使用他人课包', 'student using another student package should not be shown as never having package context');
+assert.strictEqual(sharedPackageUser.paymentModeLabel, '课包学员', 'shared package consumption should count as package payment mode');
+assert.match(sharedPackageUser.detailLessonRecordRows[0]?.lessonRelationText || '', /使用 哥哥 的课包/, 'shared package lesson record should show the package owner relation');
 
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00:00:00') });
 

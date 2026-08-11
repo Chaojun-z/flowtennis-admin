@@ -15,6 +15,7 @@ const renderStudents = fnBody('renderStudents');
 const prewarmParams = fnBody('studentListPrewarmParams');
 const prewarmRows = fnBody('prewarmStudentDetailsForRows');
 const ensureDetail = fnBody('ensureStudentDetailData');
+const mergeTeachingDetail = fnBody('mergeTeachingStudentDetail');
 
 assert.match(
   source,
@@ -67,6 +68,11 @@ assert.match(
   prewarmRows,
   /ensureStudentDetailData\(id,\{silent:true\}\)/,
   '预热必须走现有单学员详情接口，并且静默写入详情缓存'
+);
+assert.doesNotMatch(
+  mergeTeachingDetail,
+  /teachingStudentViews\[key\]|historicalStudents|activeStudents|summary/,
+  '单学员详情只能进入详情缓存，不能改写全局学员列表和顶部统计'
 );
 assert.match(
   ensureDetail,

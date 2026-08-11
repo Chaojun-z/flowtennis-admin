@@ -77,8 +77,8 @@ assert.doesNotMatch(
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/leads.js',
   name: 'leadStatsData',
-  required: [/FlowTennisPlatformDataStandards\.currentLeadSummary\(list,\s*leadStandardMetrics\(\)\)/],
-  forbidden: [/leadStandardMetricValue\('trialPathStudents'\)/, /leadStandardMetricValue\('trialPathDeals'\)/, /leadStandardMetricValue\('trialPathPending'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/]
+  required: [/leadServerSummaryData\(\)/, /leadCustomerCenterSummaryData\(\)/, /historicalStudentCount/, /activeStudentCount/],
+  forbidden: [/FlowTennisPlatformDataStandards\.currentLeadSummary/, /leadStandardMetricValue\('trialPathStudents'\)/, /leadStandardMetricValue\('trialPathDeals'\)/, /leadStandardMetricValue\('trialPathPending'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/]
 });
 
 [
@@ -268,7 +268,7 @@ assertFunctionGuard({
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/leads.js',
   name: 'leadStatsData',
-  required: [/FlowTennisPlatformDataStandards\.currentLeadSummary\(list,\s*leadStandardMetrics\(\)\)/],
+  required: [/leadServerSummaryData\(\)/, /leadCustomerCenterSummaryData\(\)/, /historicalStudentCount/, /activeStudentCount/],
   forbidden: [/leadStandardMetricValue\('historicalStudents'\)/, /leadStandardMetricValue\('activeStudents'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/, /FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/, /base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
 });
 

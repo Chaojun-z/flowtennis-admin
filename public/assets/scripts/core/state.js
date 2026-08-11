@@ -274,7 +274,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
   'package-students':['classes','schedule','courts'],
   'trial-students':['classes','schedule','courts'],
-  leads:[],
+  leads:['customerCenterPage'],
   packages:[],
   purchases:[],
   schedule:['classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'],
@@ -684,12 +684,6 @@ function mergeDatasetRowsById(name,rows=[]){
 function mergeTeachingStudentDetail(row){
   if(!row?.id)return;
   studentDetailViewCache.set(String(row.id),row);
-  const groups=['historicalStudents','activeStudents','courseStudents','trialStudents','formalStudents','trialAttendedStudents','trialAttendedToFormalPurchaseStudents','trialAttendedWithoutFormalStudents','trialPathStudents','trialPathDealStudents','trialPathPendingStudents','directCourseDealStudents'];
-  groups.forEach(key=>{
-    const list=Array.isArray(teachingStudentViews?.[key])?teachingStudentViews[key]:[];
-    const index=list.findIndex(item=>String(item?.id||'')===String(row.id));
-    if(index>=0)list[index]={...list[index],...row};
-  });
 }
 function studentDetailViewForId(id){
   return studentDetailViewCache.get(String(id||''))||null;
@@ -980,7 +974,6 @@ function renderStudentTableError(message){
   if(el)el.innerHTML=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender(currentPage,{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderLeadTableLoading(){
-  if(typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
   renderTableSkeletonLoading('leadTbody',15,'线索数据加载中...');
 }
 function renderLeadTableError(message){

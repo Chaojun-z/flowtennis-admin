@@ -861,14 +861,18 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
   const now = options.now || data.now || new Date();
   const summaryFieldMap = buildTeachingStudentSummaryFieldMap(data);
   const packageFieldMap = buildTeachingStudentPackageFieldMap(data, options);
+  const includeTrialDetails = options.includeTrial || options.includeTrialDetails !== false;
+  const trialPackageFieldMap = options.includeTrial || !includeTrialDetails ? new Map() : buildTeachingStudentPackageFieldMap(data, { ...options, includeTrial: true });
   const coursePaidByStudent = buildTeachingStudentCoursePaidMap(data);
   const lessonDetailMap = buildTeachingStudentLessonDetailMap(data, options);
+  const trialLessonDetailMap = options.includeTrial || !includeTrialDetails ? new Map() : buildTeachingStudentLessonDetailMap(data, { ...options, includeTrial: true });
   const benefitDetailMap = buildTeachingStudentBenefitDetailMap(data);
   const feedbackMap = buildTeachingStudentRecentFeedbackMap(data);
   const details = new Map();
-  [...new Set([...summaryFieldMap.keys(), ...packageFieldMap.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
+  [...new Set([...summaryFieldMap.keys(), ...packageFieldMap.keys(), ...trialPackageFieldMap.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...trialLessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
     const summaryFields = summaryFieldMap.get(studentId) || {};
     const packageFields = packageFieldMap.get(studentId) || {};
+    const trialPackageFields = trialPackageFieldMap.get(studentId) || {};
     const rawSummaryLessonRows = data.ignoreTeachingSummaryDetailRows ? [] : (summaryFields.detailLessonRecordRows || []);
     const summaryLessonRows = rawSummaryLessonRows
       .filter(row => !dateOnly(row?.time || row?.sortTime || row?.relatedDate || row?.scheduleTime || row?.createdAt)
@@ -877,6 +881,13 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       ? ''
       : summaryFields.detailRecentLessonDate;
     const lessonRows = lessonDetailMap.has(studentId) ? (lessonDetailMap.get(studentId) || []) : summaryLessonRows;
+    const trialLessonRows = (trialLessonDetailMap.get(studentId) || []).map(row => ({
+      ...row,
+      countAsCompletedLesson: false
+    }));
+    const detailLessonRows = options.includeTrial
+      ? lessonRows
+      : [...lessonRows, ...trialLessonRows].sort((a, b) => text(b.sortTime || b.time).localeCompare(text(a.sortTime || a.time)));
     const detailRecentLessonDate = lessonDetailMap.has(studentId)
       ? (lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : '')
       : text(summaryRecentLessonDate || (lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : ''));
@@ -914,11 +925,14 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       cumulativeCoursePaidText: moneyText(cumulativeCoursePaidAmount),
       ...summaryFields,
       ...packageFields,
-      detailPackageOrderRows: Array.isArray(packageFields.detailPackageOrderRows)
-        ? packageFields.detailPackageOrderRows
-        : (Array.isArray(summaryFields.detailPackageOrderRows) ? summaryFields.detailPackageOrderRows : []),
+      detailPackageOrderRows: [
+        ...(Array.isArray(packageFields.detailPackageOrderRows)
+          ? packageFields.detailPackageOrderRows
+          : (Array.isArray(summaryFields.detailPackageOrderRows) ? summaryFields.detailPackageOrderRows : [])),
+        ...(includeTrialDetails && Array.isArray(trialPackageFields.detailPackageOrderRows) ? trialPackageFields.detailPackageOrderRows : [])
+      ],
       ...benefitFields,
-      detailLessonRecordRows: lessonRows,
+      detailLessonRecordRows: detailLessonRows,
       detailRecentLessonDate,
       completedLessons
     });
@@ -926,8 +940,36 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
   return details;
 }
 
+function earliestBusinessDateText(...values) {
+  return values
+    .map(value => text(value))
+    .filter(Boolean)
+    .map(value => {
+      const parsed = Date.parse(value.replace(' ', 'T'));
+      return { value, parsed: Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY };
+    })
+    .sort((a, b) => a.parsed - b.parsed)[0]?.value || '';
+}
+
 function leadBusinessDate(row = {}, lead = {}) {
-  return text(row.firstTouchAt || row.leadDate || row.leadEnteredAt || row.trialAtRaw || row.courseFirstPurchaseAt || row.conversionAt || lead.leadDate);
+  const explicitLeadDate = text(row.leadDate || lead.leadDate || row.leadEnteredAt);
+  if (explicitLeadDate) return explicitLeadDate;
+  return earliestBusinessDateText(
+    row.firstTouchAt,
+    row.trialAtRaw,
+    row.trialBookedAt,
+    row.trialAttendedAt,
+    row.courseFirstPurchaseAt,
+    row.conversionAt,
+    lead.firstTouchAt,
+    lead.trialAtRaw,
+    lead.trialBookedAt,
+    lead.trialAttendedAt,
+    lead.courseFirstPurchaseAt,
+    lead.conversionAt,
+    lead.createdAt,
+    lead.updatedAt
+  );
 }
 
 function visibleLeadProfileNote(lead = {}) {
@@ -1124,7 +1166,7 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       id,
       sourceLeadId: id,
       source,
-      leadDate: orphanMaterialized ? '' : text(lead.leadDate),
+      leadDate: leadBusinessDate({}, lead),
       dealType: orphanMaterialized ? '' : text(lead.dealType || lead.conversionType),
       conversionType: orphanMaterialized ? '' : text(lead.conversionType || lead.dealType),
       leadStage: orphanMaterialized ? '跟进中' : lifecycleLeadStage({}, lead),
@@ -1385,6 +1427,7 @@ function teachingStudentSummaryDateFallback(data = {}, row = {}) {
   const now = data.now || new Date();
   const lessonRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [];
   const rowLessonDate = lessonRows
+    .filter(item => item?.countAsCompletedLesson !== false && !courseRowIsTrial(item))
     .map(item => dateOnly(item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt))
     .filter(value => value && teachingDateOnOrBeforeNow(value, now))
     .sort()
@@ -1436,7 +1479,19 @@ function teachingStudentHasFormalPackage(row = {}) {
     || (Number(row.packageBalanceTotal) || 0) > 0;
 }
 
+function teachingPaymentHasPackageFact(row = {}) {
+  const entitlementIds = parseArr(row.entitlementIds).map(text).filter(Boolean);
+  return !!(
+    text(row.entitlementId || row.courseEntitlementId || row.packageEntitlementId) ||
+    entitlementIds.length ||
+    text(row.packageOwnerStudentId || row.packageOwnerName) ||
+    row.kind === 'ledger'
+  );
+}
+
 function teachingPaymentIsPackage(row = {}) {
+  const hasPackageFact = teachingPaymentHasPackageFact(row);
+  if (!hasPackageFact) return false;
   const value = text([
     row.settlementType,
     row.paymentType,
@@ -1445,7 +1500,10 @@ function teachingPaymentIsPackage(row = {}) {
     row.paymentMethod,
     row.paymentChannel
   ].filter(Boolean).join(' ')).toLowerCase();
-  return /package|课包|扣课|划扣|核销/.test(value);
+  return row.kind === 'ledger'
+    || text(row.entitlementId || row.courseEntitlementId || row.packageEntitlementId)
+    || parseArr(row.entitlementIds).map(text).filter(Boolean).length > 0
+    || /package|课包|扣课|划扣|核销/.test(value);
 }
 
 function teachingPaymentIsDirect(row = {}) {
@@ -1466,13 +1524,18 @@ function teachingPaymentIsDirect(row = {}) {
 
 function teachingStudentDirectFormalLessonRows(data = {}, studentId = '', now = new Date(), studentRow = {}) {
   const rows = teachingStudentFormalLessonFactRows(data, studentId, now);
-  const hasPackage = teachingStudentHasFormalPackage(studentRow) || rows.some(teachingPaymentIsPackage);
+  const detailRows = Array.isArray(studentRow.detailLessonRecordRows) ? studentRow.detailLessonRecordRows : [];
+  const hasPackage = teachingStudentHasFormalPackage(studentRow) || rows.some(teachingPaymentIsPackage) || detailRows.some(teachingPaymentIsPackage);
   return rows.filter(row => teachingPaymentIsDirect(row) || (!hasPackage && !teachingPaymentIsPackage(row)));
 }
 
 function teachingStudentPackageStatusLabel(row = {}) {
   const remaining = Number(row.packageBalanceRemaining) || 0;
-  if (!teachingStudentHasFormalPackage(row)) return '未买过课包';
+  if (!teachingStudentHasFormalPackage(row)) {
+    const lessonRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [];
+    if (lessonRows.some(item => text(item.packageOwnerStudentId) && text(item.packageOwnerStudentId) !== text(row.studentId))) return '使用他人课包';
+    return '未买过课包';
+  }
   if (remaining > 0 && remaining <= 2) return '课包即将耗尽';
   if (remaining > 0) return '课包有余额';
   return '课包已用完';
@@ -1492,7 +1555,8 @@ function teachingStudentPaymentModeLabel(data = {}, row = {}, now = new Date()) 
   if (!hasFreshTeachingLessonFacts(data) && text(row.paymentModeLabel)) return text(row.paymentModeLabel);
   const studentId = text(row.studentId);
   const formalLessonRows = teachingStudentFormalLessonFactRows(data, studentId, now);
-  const hasPackage = teachingStudentHasFormalPackage(row) || formalLessonRows.some(teachingPaymentIsPackage);
+  const detailRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [];
+  const hasPackage = teachingStudentHasFormalPackage(row) || formalLessonRows.some(teachingPaymentIsPackage) || detailRows.some(teachingPaymentIsPackage);
   const hasDirect = teachingStudentDirectFormalLessonRows(data, studentId, now, row).length > 0;
   if (hasPackage && hasDirect) return '课包+单次付费';
   if (hasDirect) return '单次付费学员';
@@ -1686,7 +1750,7 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
     .filter(row => !hiddenStudentProfile(row));
   const now = data.now || new Date();
   const courseListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: true });
-  const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });
+  const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false, includeTrialDetails: data.includeTrialDetailsInFormalView !== false });
   const courseViewRow = row => teachingStudentViewRow(row, courseListFieldMap.get(text(row.studentId)) || {});
   const formalViewRow = row => teachingStudentViewRow(row, formalListFieldMap.get(text(row.studentId)) || {});
   const hasTrialAttended = row => teachingStudentHasTrialAttendedFact(data, row, now);
@@ -1837,7 +1901,7 @@ function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOStrin
 function buildStudentTeachingSummaryRows(customerLifecycleRows = [], data = {}) {
   const now = data.now || new Date();
   const updatedAt = now instanceof Date ? now.toISOString() : text(now) || new Date().toISOString();
-  const views = buildTeachingStudentViews(customerLifecycleRows, { ...data, teachingStudentSummaryRows: [] });
+  const views = buildTeachingStudentViews(customerLifecycleRows, { ...data, teachingStudentSummaryRows: [], includeTrialDetailsInFormalView: false });
   return (views.historicalStudents || [])
     .map(row => teachingStudentSummarySnapshotRow({
       ...row,

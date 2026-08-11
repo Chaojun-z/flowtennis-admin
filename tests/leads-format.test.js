@@ -8,6 +8,9 @@ const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pa
 const context = {
   console,
   purchases: [],
+  customerCenterPageReady() {
+    return true;
+  },
   daysAgoText(date) {
     if (date === '2026-05-08') return '2026-05-08 · 16天前';
     if (date === '2026-03-18') return '2026-03-18 · 67天前';
@@ -43,6 +46,19 @@ assert.strictEqual(
   '2026-05-10'
 );
 
+context.leadListPageData = {
+  summary: {
+    total: 5,
+    historicalStudents: 3,
+    historicalStudentRate: '60%',
+    activeStudents: 2,
+    activeStudentRate: '66.7%',
+    trialAttended: 4,
+    trialAttendedRate: '80%',
+    trialAttendedToFormalPurchase: 1,
+    trialAttendedToFormalPurchaseRate: '25%'
+  }
+};
 context.standardLifecycleMetrics = {
   teachingSummary: {
     historicalStudentCount: 3,
@@ -76,6 +92,14 @@ context.standardLifecycleMetrics = {
     trialAttendedToFormalPurchase: [
       { sourceLeadId: 'lead-4' }
     ]
+  }
+};
+context.teachingStudentViews = {
+  summary: {
+    historicalStudentCount: 3,
+    activeStudentCount: 2,
+    trialAttendedStudentCount: 4,
+    trialAttendedToFormalPurchaseCount: 1
   }
 };
 assert.deepStrictEqual(

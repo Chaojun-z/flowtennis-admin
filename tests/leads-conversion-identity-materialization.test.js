@@ -152,8 +152,10 @@ async function main() {
   const listRes = makeRes();
   await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: listRes, query: new URLSearchParams() });
   assert.strictEqual(listRes.statusCode, 200, 'historical lead list should load');
+  const displayedHistoryLead = listRes.body.find((row) => row.id === 'lead-history');
+  assertIdentity(displayedHistoryLead, { student: false, court: false, membership: false }, 'historical lazy GET display must not materialize identities');
   const historyLead = rows.ft_leads.find((row) => row.id === 'lead-history');
-  assertIdentity(historyLead, { student: true, court: true, membership: true }, 'historical lazy repair');
+  assertIdentity(historyLead, { student: false, court: false, membership: false }, 'historical lazy GET must not persist repair');
 
   console.log('leads conversion identity materialization tests passed');
 }

@@ -50,7 +50,9 @@ assert.match(fnBody('studentSearchText'), /s\?\.searchText[\s\S]*s\?\.notes[\s\S
 assert.match(fnBody('searchHit'), /compactKeyword=keyword\.replace\(\//, 'global keyword search should build a compact keyword');
 assert.match(fnBody('searchHit'), /text\.replace\(\//, 'global keyword search should compare against compact text');
 assert.match(fnBody('searchHit'), /includes\(compactKeyword\)/, 'global keyword search should ignore spaces between names');
-assert.match(source, /function onStudentFilterChange\(\)\{stuPage=standardListFirstPage\(\);renderStudents\(\);\}/, 'student filters should reset pagination through the standard list flow');
+assert.match(source, /function onStudentFilterChange\(\)\{resetCurrentStudentListPage\(\);renderStudents\(\);\}/, 'student filters should reset the current student page pagination through the standard list flow');
+assert.match(source, /let studentListPageStateByMode=\{package:\{page:1,pageSize:15\},trial:\{page:1,pageSize:15\}\}/, 'active and historical student pages should keep independent pagination state');
+assert.match(fnBody('setStudentPageSize'), /syncStudentPageGlobalsFromMode\(\)[\s\S]*stuPageSize=standardListPageSize\(value,stuPageSize\)[\s\S]*persistStudentPageGlobalsToMode\(\)/, 'changing page size on one student page should not leak into the other student page');
 assert.match(source, /search:\{id:'stuSearch',oninput:'onStudentFilterChange\(\)'/, 'student search should reset pagination before rendering');
 assert.match(source, /function renderStudentToolbarFilters\(/, 'student filters should render through the booking-style dropdown helper');
 assert.match(source, /stuTypeFilterHost[\s\S]*onStudentFilterChange/, 'student type filter should reset pagination before rendering');
@@ -108,7 +110,7 @@ assert.match(fnBody('openStudentDetail'), /studentUnifiedRecordForId\(id\)/, 'st
 assert.match(fnBody('openStudentModal'), /studentUnifiedRecordForId\(id\)/, 'student edit default values should use the unified student view row instead of raw students');
 assert.match(source, /let studentDetailRequestSeq=0/, 'student detail async loading should track the latest request');
 assert.match(fnBody('ensureStudentDetailDatasets'), /const requestSeq=\+\+studentDetailRequestSeq[\s\S]*studentDetailRequestSeq!==requestSeq[\s\S]*studentDetailDrawerIsOpenFor\(id\)[\s\S]*studentDetailPageStillValid\(\)/, 'student detail async loading should not reopen after the drawer is closed or the page changes');
-assert.match(fnBody('hydrateStudentDetailData'), /mergeTeachingStudentDetail\(data\.detailStudentView\)[\s\S]*renderStudentsIfVisible\(\)/, 'student detail hydration should refresh the visible list so cumulative lessons match the drawer immediately');
+assert.doesNotMatch(fnBody('mergeTeachingStudentDetail'), /teachingStudentViews\[key\]|historicalStudents|activeStudents|summary/, 'student detail hydration must not mutate global student list stats');
 assert.doesNotMatch(fnBody('studentLastLessonDate'), /schedules\.filter/, 'student recent lesson must come from backend unified detail rows, not frontend schedule scanning');
 assert.doesNotMatch(fnBody('studentCompletedLessonCount'), /studentCompletedLessonUnits/, 'student cumulative lesson count must come from backend unified completedLessons, not frontend schedule or ledger scanning');
 assert.doesNotMatch(fnBody('studentCampusValuesForList'), /entitlements\.filter|purchases\.filter|packages\.filter|schedules\.filter/, 'student campus filter should read the unified student row campus fields instead of scanning raw business tables');

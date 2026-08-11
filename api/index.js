@@ -442,6 +442,7 @@ async function scanCoachProposals(){
   }
 }
 async function prewarmHotScanCache(){
+  if(process.env.DISABLE_HOT_SCAN_PREWARM==='true')return;
   await Promise.all([...HOT_SCAN_TABLES.keys()].map(t=>getCachedScan(t)));
 }
 const bootstrapRuntime=createBootstrapRuntime({
@@ -5732,6 +5733,38 @@ function deriveLeadDealType(input={}){
 }
 function deriveLeadConversionType(input={}){return deriveLeadDealType(input);}
 function applyLeadOutcomeFields(next){next.leadStage=deriveLeadSystemStatus(next);next.systemStatus=next.leadStage;next.dealType=deriveLeadDealType(next);next.conversionType=next.dealType;return next;}
+function earliestLeadBusinessDate(...values){
+  return values
+    .map(value=>cleanLeadText(value))
+    .filter(Boolean)
+    .map(value=>{
+      const parsed=Date.parse(String(value).replace(' ','T'));
+      return {value,parsed:Number.isFinite(parsed)?parsed:Number.POSITIVE_INFINITY};
+    })
+    .sort((a,b)=>a.parsed-b.parsed)[0]?.value||'';
+}
+
+function normalizeLeadBusinessDate(input={},now=''){
+  const explicit=cleanLeadText(input.leadDate??input['线索时间']);
+  if(explicit)return explicit;
+  return earliestLeadBusinessDate(
+    input.firstTouchAt,
+    input.leadEnteredAt,
+    input.trialAtRaw,
+    input.trialLessonAt,
+    input.trialAt,
+    input['体验课时间'],
+    input.courseFirstPurchaseAt,
+    input.conversionAt,
+    input.enrollAtRaw,
+    input.enrollAt,
+    input.formalSignupAt,
+    input['正式课报名时间'],
+    input.createdAt,
+    now
+  );
+}
+
 function normalizeLeadRecord(input={},opts={}){
   const now=opts.now||new Date().toISOString();
   const id=input.id||opts.id||uuidv4();
@@ -5744,7 +5777,7 @@ function normalizeLeadRecord(input={},opts={}){
   const customerType=businessTaxonomy.normalizeLeadCustomerType(customerTypeInput),demandProduct=businessTaxonomy.normalizeLeadDemandProduct(demandProductInput);
   const next={
     id,
-    leadDate:cleanLeadText(input.leadDate??input['线索时间']),
+    leadDate:normalizeLeadBusinessDate(input,now),
     displayName:cleanLeadText(input.displayName??phoneMeta.wechatName??phoneMeta.phone??phoneMeta.raw),
     phone:assertPhone(input.phone??phoneMeta.phone),
     wechatName:cleanLeadText(input.wechatName??phoneMeta.wechatName),
@@ -7009,7 +7042,8 @@ module.exports = async (req, res) => {
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
     if(user.type==='match_user')return sendJson(res,{error:'无管理端权限'},403);
     const authTimingStartedAt=Date.now();
-    const storedAuthUser=await getCachedRow(T_USERS,user.id).catch(()=>null);
+    const skipLocalStoredAuthUser=process.env.DISABLE_HOT_SCAN_PREWARM==='true'&&!isProductionRuntime();
+    const storedAuthUser=skipLocalStoredAuthUser?null:await getCachedRow(T_USERS,user.id).catch(()=>null);
     if(process.env.DEBUG_COURT_SNAPSHOT_TIMING==='true')console.log(`[court-snapshot-debug] auth-user ${Date.now()-authTimingStartedAt}ms`);
     user=mergeStoredAuthUser(user,storedAuthUser);
     try{assertAuthUserActive(user);}catch(e){return sendJson(res,{error:e.message},403);}

@@ -85,9 +85,13 @@ assert.match(leadsSource, /线索数[\s\S]*历史学员[\s\S]*在期学员[\s\S]
 assert.match(leadsSource, /历史学员 \/ 线索数[\s\S]*在期学员 \/ 历史学员[\s\S]*上过体验课 \/ 线索数[\s\S]*体验后买正式课 \/ 上过体验课/, 'lead stats should explain the unified historical, active, and trial-attended formulas');
 assert.match(leadsSource, /function renderLeadStatsLoading\([\s\S]*renderStandardSkeletonKpiCards\(5\)/, 'lead stats loading should use skeleton KPI cards');
 assert.match(fnBody('renderLeadStats'), /statValues\.some\(key=>stats\[key\]==null\)[\s\S]*renderLeadStatsLoading\(\)/, 'lead stats should render skeletons when any top card is still missing');
-assert.match(fnBody('reloadLeadsForCurrentPage'), /if\(showLoading\)\{[\s\S]*renderLeadStatsLoading\(\)[\s\S]*renderLeadTableLoading\(\)/, 'lead reload should put top stats and table into loading together');
+assert.match(fnBody('reloadLeadsForCurrentPage'), /if\(showLoading\)\{[\s\S]*if\(refreshStats\)renderLeadStatsLoading\(\)[\s\S]*if\(refreshStats&&typeof renderLeadTableLoading==='function'\)renderLeadTableLoading\(\)[\s\S]*renderTableSkeletonLoading\('leadTbody',15,'线索数据加载中\.\.\.'\)/, 'lead reload should support keeping top stats stable during page-only reloads');
 assert.doesNotMatch(leadsSource, /tms-stat-loading|<span class="tms-stat-loading">加载中<\/span>/, 'lead top stats should not render text loading');
-assert.match(fnBody('leadStatsData'), /FlowTennisPlatformDataStandards\.currentLeadSummary\(list, leadStandardMetrics\(\)\)/, 'lead count card should delegate to the shared lead summary standard');
+assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should only wait for the paged lead list and campus filter before first paint');
+assert.doesNotMatch(stateSource, /leads:\['campuses','leads','customerCenterPage'\]/, 'leads page should not block first paint on customer center data');
+assert.match(stateSource, /leads:\['customerCenterPage'\]/, 'leads page should refresh the customer center summary in the background for the student metric cards');
+assert.match(fnBody('leadStatsData'), /leadServerSummaryData\(\)[\s\S]*leadCustomerCenterSummaryData\(\)[\s\S]*historicalStudentCount[\s\S]*activeStudentCount[\s\S]*trialAttendedStudentCount[\s\S]*trialAttendedToFormalPurchaseCount/, 'lead student stats should come from the customer center summary');
+assert.doesNotMatch(fnBody('leadStatsData'), /serverSummary\?\.historicalStudents|serverSummary\?\.activeStudents|serverSummary\?\.trialAttended|serverSummary\?\.trialAttendedToFormalPurchase/, 'lead student cards must not use /api/leads lightweight guessed student counts');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('validLeads'\)/, 'lead count card must not use lifecycle validLeads when list/filter totals use lead rows');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('courseChainStudents'\)|leadStandardMetricValue\('formalStudents'\)/, 'lead stats must not use old normal/formal student metrics for the top student cards');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('trialPathStudents'\)|leadStandardMetricValue\('trialPathDeals'\)|leadStandardMetricValue\('trialPathPending'\)/, 'lead stats must not use old trial-path metrics for top cards');
@@ -112,6 +116,8 @@ assert.match(fnBody('leadConvertedYesNo'), /leadStageText\(lead\)==='已成交'/
 assert.doesNotMatch(fnBody('leadConvertedYesNo'), /leadDealTypeText\(lead\)/, 'deal type alone should not mark a lead as converted');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
+assert.match(fnBody('setLeadPage'), /reloadLeadsForCurrentPage\(\{refreshStats:false\}\)/, 'lead page navigation should not blank the top stats');
+assert.match(fnBody('setLeadPageSize'), /reloadLeadsForCurrentPage\(\{refreshStats:false\}\)/, 'lead page size changes should not blank the top stats');
 assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*reloadLeadsForCurrentPage\(\)/, 'leads search should reset pagination and reload the current server page');
 assert.match(leadsSource, /function cycleLeadSort\([\s\S]*leadSortDir='asc'[\s\S]*leadSortDir='desc'[\s\S]*leadSortKey='';leadSortDir='';/, 'leads sortable headers should cycle asc, desc, and no sort');
 assert.match(leadsSource, /function updateLeadSortHeaders\(/, 'leads page should update sortable header state');
@@ -161,7 +167,8 @@ assert.match(leadDetailSource, /leadDetailActiveTab==='basic'[\s\S]*leadDetailBa
 assert.match(leadDetailSource, /modal-lead-drawer/, 'lead detail should use the scoped lead drawer class');
 assert.match(leadsSource, /function leadBasicInfoReadonlyHtml\(lead\)[\s\S]*leadDetailFieldHtml\('姓名',leadWechatText\(lead\)\)[\s\S]*leadDetailFieldHtml\('电话',lead\?\.phone\|\|'-'\)[\s\S]*leadDetailFieldHtml\('水平',leadLevelText\(lead\)\)[\s\S]*leadDetailFieldHtml\('线索时间',leadDateDisplayText\(lead\)\)[\s\S]*leadDetailFieldHtml\('来源',leadSourceText\(lead\)\|\|'-'\)[\s\S]*leadDetailFieldHtml\('所属校区',leadCampusText\(lead\)\)[\s\S]*leadDetailFieldHtml\('类型',leadCustomerTypeText\(lead\)\|\|'-'\)[\s\S]*leadDetailFieldHtml\('需求产品',leadDemandProductText\(lead\)\|\|'-'\)[\s\S]*leadDetailFieldHtml\('意向等级',lead\?\.intentLevel\|\|'-'\)[\s\S]*leadDetailFieldHtml\('跟进优先级',leadPriorityText\(lead\)\)[\s\S]*leadDetailFieldHtml\('跟进人',leadOwnerText\(lead\)\)[\s\S]*leadDetailBlockHtml\('基本信息',esc\(leadProfileText\(lead\)\),\{hideEmpty:true\}\)/, 'lead detail basic tab should keep the current basic fields and normalize labels');
 assert.match(leadsSource, /function leadDateDisplayText\(lead\)/, 'lead detail should expose a standard lead date display helper');
-assert.match(fnBody('leadDateDisplayText'), /return leadDateOnly\(lead\?\.leadDate,lead\)\|\|'-';/, 'lead list and detail should show lead time as date only');
+assert.match(leadsSource, /function leadBusinessDateValue\(lead=\{\}\)/, 'lead date should have a business-time fallback helper');
+assert.match(fnBody('leadDateDisplayText'), /return leadDateOnly\(leadBusinessDateValue\(lead\),lead\)\|\|'-';/, 'lead list and detail should show lead time as date only with business-time fallback');
 assert.doesNotMatch(fnBody('leadDateDisplayText'), /\$\{date\} \$\{String\(time\[1\]\)/, 'lead list and detail should not append hour and minute to lead time');
 assert.match(fnBody('leadBasicInfoReadonlyHtml'), /leadDetailFieldHtml\('线索时间',leadDateDisplayText\(lead\)\)/, 'lead detail basic tab should format lead time instead of showing raw ISO values');
 assert.doesNotMatch(fnBody('leadBasicInfoReadonlyHtml'), /leadDetailFieldHtml\('线索时间',lead\?\.leadDate\|\|'-'\)/, 'lead detail basic tab should not render raw leadDate');
@@ -246,7 +253,7 @@ assert.match(fnBody('leadPayloadFromForm'), /followupPriority:document\.getEleme
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'level'[\s\S]*\]/, 'lead list API projection should include level');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'followupPriority'[\s\S]*\]/, 'lead list API projection should include follow-up priority');
 assert.match(leadsRoutesSource, /function parseLeadPaging\(query\)/, 'lead list API should expose server-side paging');
-assert.match(leadsRoutesSource, /const summary=buildLeadListSummary\(filtered\);[\s\S]*const payload=paging\?\{\.\.\.buildLeadListPage\(sorted,paging\),summary\}:sorted;[\s\S]*writeLeadPagedResponseCache\(responseCacheKey,payload\);[\s\S]*return sendJson\(res,payload\)/, 'lead list API should sort and summarize before caching and returning paged metadata');
+assert.match(leadsRoutesSource, /cachedResult=\{sorted:sortLeadListRows\(filtered,query\),summary:buildLeadListSummary\(filtered\)\};[\s\S]*const payload=paging\?\{\.\.\.buildLeadListPage\(cachedResult\.sorted,paging\),summary:cachedResult\.summary\}:cachedResult\.sorted;[\s\S]*writeLeadPagedResponseCache\(responseCacheKey,payload\);[\s\S]*return sendJson\(res,payload\)/, 'lead list API should sort and summarize before caching and returning paged metadata');
 assert.match(leadsRoutesSource, /function buildLeadListSummary\(rows=\[\]\)[\s\S]*historicalStudents[\s\S]*activeStudents[\s\S]*trialAttended[\s\S]*trialAttendedToFormalPurchase/, 'lead paged API should return all top stat fields without waiting for lifecycle metrics');
 assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',15,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
@@ -255,7 +262,8 @@ assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspa
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.doesNotMatch(stateSource, /leads:\['campuses','leads','purchasesPage'\]/, 'leads page should not block on the full purchases aggregate for standard course-chain stats');
-assert.match(stateSource, /leads:\[\]/, 'leads page should not background-load lifecycle metrics before the first paged list is usable');
+assert.match(stateSource, /leads:\['customerCenterPage'\]/, 'leads page should background-load only the customer center summary for top student cards');
+assert.doesNotMatch(stateSource, /leads:\['lifecycleMetricsPage'\]/, 'leads page should not background-load lifecycle metrics before the first paged list is usable');
 assert.match(fnBody('leadTeachingSummaryValue'), /leadLifecycleMetricsReady\(\)/, 'lead top student cards should not render zero while scoped backend metrics are still refreshing');
 assert.match(fnBody('refreshLeadRuntime'), /const base=\['leads'\][\s\S]*if\(waitForMetrics\)base\.push\('lifecycleMetricsPage'\)/, 'lead mutations should allow local lead rows to refresh without waiting for lifecycle metrics');
 assert.match(fnBody('refreshLeadRuntimeInBackground'), /refreshLeadRuntime\(\{\.\.\.options,waitForMetrics:true\}\)/, 'lead lifecycle metrics should still refresh through the background path after lead mutations');

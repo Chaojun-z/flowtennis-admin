@@ -689,7 +689,7 @@ function selectGlobalTopCampus(value,event){
   closeStandardTopDropdowns();
 }
 function renderCurrentGlobalFilterPage(){
-  stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();financeLedgerPage=standardListFirstPage();financeRevenuePage=standardListFirstPage();financeRecognizedPage=standardListFirstPage();adminUserPage=standardListFirstPage();
+  if(typeof resetAllStudentListPages==='function')resetAllStudentListPages();else stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();financeLedgerPage=standardListFirstPage();financeRevenuePage=standardListFirstPage();financeRecognizedPage=standardListFirstPage();adminUserPage=standardListFirstPage();
   if(typeof refreshScopedTopSummaryForCurrentPage==='function'&&refreshScopedTopSummaryForCurrentPage())return;
   if(currentPage==='students')renderStudents();
   else if(typeof isStudentListPage==='function'&&isStudentListPage(currentPage))renderStudents();
