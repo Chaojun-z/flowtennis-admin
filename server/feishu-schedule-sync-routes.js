@@ -585,8 +585,18 @@ function courseInDateRange(course,startDate='',endDate=''){
   return !!date;
 }
 
+function courseInAnyDateRange(course,ranges=[]){
+  const cleanRanges=(ranges||[]).filter(range=>range?.start&&range?.end);
+  if(!cleanRanges.length)return false;
+  return cleanRanges.some(range=>courseInDateRange(course,range.start,range.end));
+}
+
 function activeSchedule(row){
   return row&&String(row.status||'已排课')!=='已取消';
+}
+
+function feishuSourceSchedule(row={}){
+  return cleanText(row.scheduleSource)==='feishu-sheet'||/飞书排课表同步/.test(cleanText(row.notes));
 }
 
 function sameTime(a,b){
@@ -1250,7 +1260,7 @@ function canAutoCreateHistoricalCourse(candidate={}){
   return false;
 }
 
-function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],coaches=[],users=[],entitlements=[],packages=[],recommendEntitlements=null,nowKey=''}={}){
+function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],coaches=[],users=[],entitlements=[],packages=[],recommendEntitlements=null,nowKey='',scannedDateRanges=[]}={}){
   const ctx={students,coaches,users,schedules,entitlements:(entitlements||[]).map(row=>({...row})),packages,recommendEntitlements};
   const ignoredByKey=new Map((syncRows||[]).filter(row=>row.status==='ignored').map(row=>[String(row.sourceKey||''),row]));
   const syncByKey=new Map((syncRows||[]).filter(row=>row.status!=='ignored').map(row=>[String(row.sourceKey||''),row]));
@@ -1399,6 +1409,26 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     const schedule=(schedules||[]).find(item=>String(item.id||'')===String(row.scheduleId||''))||null;
     if(schedule&&!activeSchedule(schedule))continue;
     actions.push({type:'pending_delete',sourceKey:key,sync:row,schedule});
+  }
+  const syncScheduleIds=new Set((syncRows||[]).filter(row=>['active','pending_delete','pending_update'].includes(row.status)).map(row=>String(row.scheduleId||'')).filter(Boolean));
+  for(const schedule of schedules||[]){
+    const scheduleId=String(schedule?.id||'');
+    if(!scheduleId||syncScheduleIds.has(scheduleId)||representedScheduleIds.has(scheduleId))continue;
+    if(!activeSchedule(schedule)||!feishuSourceSchedule(schedule))continue;
+    if(!courseInAnyDateRange(schedule,scannedDateRanges))continue;
+    const sourceKey=`orphan-feishu-schedule|${scheduleId}`;
+    actions.push({
+      type:'pending_delete',
+      sourceKey,
+      sync:{
+        id:`feishu-sync-orphan-${sha256(sourceKey).slice(0,24)}`,
+        source:'feishu-sheet',
+        sourceKey,
+        scheduleId,
+        status:'active'
+      },
+      schedule
+    });
   }
   return summarizePlan(actions);
 }
@@ -2256,6 +2286,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       sheetIds:selectedSheets.map(sheet=>cleanText(sheet.sheet_id)).filter(Boolean),
       sheetId:selectedSheets.map(sheet=>cleanText(sheet.sheet_id)).filter(Boolean).join(','),
       sheetTitle:buildSheetScopeLabel(selectedSheets,changedSheetIds),
+      sheets:selectedSheets,
       fingerprintUpdates,
       changedSheetIds:[...changedSheetIds],
       baselineOnlySheetIds:[...baselineOnlySheetIds],
@@ -2286,6 +2317,9 @@ function createFeishuScheduleSyncRoutes(deps={}){
     const selectedCourses=rangeMode
       ? feishuCourses.filter(course=>courseInDateRange(course,startDate,endDate))
       : feishuCourses;
+    const scannedDateRanges=rangeMode
+      ? [{start:startDate||'0000-01-01',end:endDate||'9999-12-31'}]
+      : (feishuSheet.sheets||[]).map(sheet=>sheetTitleDateRange(sheet.title||'',nowKey.slice(0,10))).filter(Boolean);
     const selectedScheduleIds=new Set((schedules||[]).filter(row=>rangeMode?courseInDateRange(row,startDate,endDate):true).map(row=>String(row.id||'')).filter(Boolean));
     const sheetIds=new Set((feishuSheet.sheetIds||[]).map(String).filter(Boolean));
     const sheetId=cleanText(feishuSheet.sheetId||process.env.FEISHU_SCHEDULE_SHEET_ID||process.env.FEISHU_SCHEDULE_DEFAULT_SHEET_ID);
@@ -2296,7 +2330,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       if(!rangeMode)return true;
       return !row.scheduleId||selectedScheduleIds.has(String(row.scheduleId||''));
     });
-    const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,packages,recommendEntitlements,nowKey});
+    const plan=buildDryRunPlan({feishuCourses:selectedCourses,syncRows:rangeMode?[]:scopedSyncRows,schedules,students,coaches,users,entitlements,packages,recommendEntitlements,nowKey,scannedDateRanges});
     const result={ok:true,dryRun,mode:rangeMode?'date_range':'sheet',sheetId,sheetIds:[...sheetIds],sheetTitle:feishuSheet.sheetTitle||sheetId,startDate,endDate,at:now,courseCount:selectedCourses.length,totalCourseCount:feishuCourses.length,scannedSheetCount:feishuSheet.scannedSheetCount||0,changedSheetIds:feishuSheet.changedSheetIds||[],baselineOnlySheetIds:feishuSheet.baselineOnlySheetIds||[],ignoredPastCount:0,plan};
     if(!dryRun){
       const applyPlan=rangeMode?safeHistoryApplyPlan(plan,{includeTrial:historyTrialMode==='confirmed'}):plan;

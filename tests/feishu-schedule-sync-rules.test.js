@@ -692,6 +692,96 @@ const blankCampusExistingPlan = sync.buildDryRunPlan({
 assert.strictEqual(blankCampusExistingPlan.summary.bindExisting, 1, 'historical existing schedule with blank campus should bind when time coach venue and student are unique');
 assert.strictEqual(blankCampusExistingPlan.actions[0].backfillExistingFields, true, 'blank campus existing schedule should be marked for field backfill');
 
+const orphanFeishuSchedulePlan = sync.buildDryRunPlan({
+  feishuCourses: [],
+  syncRows: [],
+  schedules: [{
+    id: 'orphan-feishu-schedule',
+    startTime: '2026-08-12 14:00:00',
+    endTime: '2026-08-12 16:00:00',
+    coach: '朝珺教练',
+    campus: 'shunyi_mapo',
+    venue: '1号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-xiaolu'],
+    studentName: '小鹿',
+    status: '已排课',
+    scheduleSource: 'feishu-sheet',
+    notes: '飞书排课表同步 8.10-8.16 R12C4'
+  }],
+  students: [{ id: 'stu-xiaolu', name: '小鹿' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  nowKey: '2026-08-12 12:00',
+  scannedDateRanges: [{ start: '2026-08-10', end: '2026-08-16' }]
+});
+assert.strictEqual(orphanFeishuSchedulePlan.summary.pendingDelete, 1, 'Feishu-created schedules without sync rows should still ask delete confirmation when missing from the scanned sheet');
+assert.strictEqual(orphanFeishuSchedulePlan.actions[0].schedule.id, 'orphan-feishu-schedule', 'orphan Feishu schedule should be attached to the pending delete action');
+
+const orphanWithoutSheetScopePlan = sync.buildDryRunPlan({
+  feishuCourses: [],
+  syncRows: [],
+  schedules: [orphanFeishuSchedulePlan.actions[0].schedule],
+  students: [{ id: 'stu-xiaolu', name: '小鹿' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  nowKey: '2026-08-12 12:00'
+});
+assert.strictEqual(orphanWithoutSheetScopePlan.summary.pendingDelete, 0, 'orphan deletion detection should require an explicit scanned sheet date range');
+
+const changedFeishuSourceSchedulePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'changed-feishu-row-key',
+    startTime: '2026-08-12 16:00',
+    endTime: '2026-08-12 18:00',
+    date: '2026-08-12',
+    coachName: '朝珺',
+    campus: 'shunyi_mapo',
+    venue: '2号场',
+    studentNames: ['小鹿'],
+    studentText: '小鹿',
+    lessonCount: 2,
+    durationMinutes: 120,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{
+    id: 'changed-feishu-schedule',
+    startTime: '2026-08-12 16:00:00',
+    endTime: '2026-08-12 18:00:00',
+    coach: '朝珺教练',
+    campus: 'shunyi_mapo',
+    venue: '2号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-xiaolu'],
+    studentName: '小鹿',
+    status: '已排课',
+    scheduleSource: 'feishu-sheet',
+    notes: '飞书排课表同步 8.10-8.16 R12C5'
+  }],
+  students: [{ id: 'stu-xiaolu', name: '小鹿' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  nowKey: '2026-08-12 12:00',
+  scannedDateRanges: [{ start: '2026-08-10', end: '2026-08-16' }]
+});
+assert.strictEqual(changedFeishuSourceSchedulePlan.summary.bindExisting, 1, 'changed Feishu rows should bind the existing Feishu-source schedule');
+assert.strictEqual(changedFeishuSourceSchedulePlan.summary.pendingDelete, 0, 'changed Feishu rows should not also report the same schedule as deleted');
+
+const orphanPendingDeletePlan = sync.buildDryRunPlan({
+  feishuCourses: [],
+  syncRows: [{ id: 'sync-orphan-pending', sourceKey: 'old-orphan-key', scheduleId: 'orphan-feishu-schedule', status: 'pending_delete' }],
+  schedules: orphanFeishuSchedulePlan.actions[0].schedule ? [orphanFeishuSchedulePlan.actions[0].schedule] : [],
+  students: [{ id: 'stu-xiaolu', name: '小鹿' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  nowKey: '2026-08-12 12:00'
+});
+assert.strictEqual(orphanPendingDeletePlan.summary.pendingDelete, 0, 'orphan schedules already awaiting delete confirmation should not be reported again');
+
 const pastUnboundPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
