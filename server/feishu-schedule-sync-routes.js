@@ -177,6 +177,20 @@ function studentNameKeys(value){
   return [...keys];
 }
 
+function studentNameKeysForLooseMatch(values=[]){
+  return (values||[])
+    .flatMap(value=>studentNameKeys(value))
+    .map(normalizeStudentNameKey)
+    .filter(Boolean);
+}
+
+function looseStudentNameMatches(leftValues=[],rightValues=[]){
+  const left=studentNameKeysForLooseMatch(leftValues);
+  const right=studentNameKeysForLooseMatch(rightValues);
+  if(!left.length||!right.length)return false;
+  return left.some(a=>right.some(b=>a===b||a.includes(b)||b.includes(a)));
+}
+
 function excelSerialToDate(value){
   const n=Number(value);
   if(!Number.isFinite(n))return '';
@@ -685,6 +699,23 @@ function scheduleTimeOverlaps(a={},b={}){
   const bEnd=scheduleMinutes(b.endTime);
   if(aStart===null||aEnd===null||bStart===null||bEnd===null)return sameTime(a,b);
   return aStart<bEnd&&bStart<aEnd;
+}
+
+function rawFeishuRowMayRepresentSchedule(raw={},schedule={},ctx={}){
+  if(!raw?.startTime||!schedule?.startTime)return false;
+  if(String(raw.startTime||'').slice(0,10)!==String(schedule.startTime||'').slice(0,10))return false;
+  if(!scheduleTimeOverlaps(raw,schedule))return false;
+  const rawCoach=normalizeNameKey(standardCoachName(raw.coachName||raw.resolvedCoach?.name));
+  const scheduleCoach=normalizeNameKey(standardCoachName(schedule.coach||schedule.coachName));
+  if(rawCoach&&scheduleCoach&&rawCoach!==scheduleCoach)return false;
+  const scheduleStudentText=scheduleStudentDisplay(schedule,ctx.students);
+  const scheduleStudentNames=parseMaybeArray(schedule.studentIds)
+    .map(id=>(ctx.students||[]).find(student=>String(student.id||'')===String(id))?.name)
+    .filter(Boolean);
+  return looseStudentNameMatches(
+    [raw.studentText,...(raw.studentNames||[]),...(raw.resolvedStudents||[]).map(student=>student.name)],
+    [scheduleStudentText,...scheduleStudentNames]
+  );
 }
 
 function venueConflictForCandidate(candidate={},existing={},schedules=[]){
@@ -1433,6 +1464,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     if(!scheduleId||syncScheduleIds.has(scheduleId)||representedScheduleIds.has(scheduleId))continue;
     if(!activeSchedule(schedule)||!feishuSourceSchedule(schedule))continue;
     if(!courseInAnyDateRange(schedule,scannedDateRanges))continue;
+    if((feishuCourses||[]).some(raw=>rawFeishuRowMayRepresentSchedule(raw,schedule,ctx)))continue;
     const sourceKey=`orphan-feishu-schedule|${scheduleId}`;
     actions.push({
       type:'pending_delete',

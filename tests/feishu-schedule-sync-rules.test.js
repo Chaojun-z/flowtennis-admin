@@ -771,6 +771,45 @@ const changedFeishuSourceSchedulePlan = sync.buildDryRunPlan({
 assert.strictEqual(changedFeishuSourceSchedulePlan.summary.bindExisting, 1, 'changed Feishu rows should bind the existing Feishu-source schedule');
 assert.strictEqual(changedFeishuSourceSchedulePlan.summary.pendingDelete, 0, 'changed Feishu rows should not also report the same schedule as deleted');
 
+const erroredExistingFeishuRowPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'errored-existing-feishu-row-key',
+    startTime: '2026-07-21 19:00',
+    endTime: '2026-07-21 20:00',
+    date: '2026-07-21',
+    coachName: 'RIVE',
+    campus: 'shunyi_mapo',
+    venue: '2号场',
+    studentNames: ['熊'],
+    studentText: '熊（7）',
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{
+    id: 'errored-existing-feishu-schedule',
+    startTime: '2026-07-21 19:00:00',
+    endTime: '2026-07-21 20:00:00',
+    coach: 'RIVE',
+    campus: 'shunyi_mapo',
+    venue: '2号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: [],
+    studentName: '熊',
+    status: '已排课',
+    scheduleSource: 'feishu-sheet',
+    notes: '飞书排课表同步 7.20-7.26 R22C4'
+  }],
+  students: [],
+  coaches: [{ id: 'coach-rive', name: 'RIVE' }],
+  users: [],
+  nowKey: '2026-08-12 12:00',
+  scannedDateRanges: [{ start: '2026-07-20', end: '2026-07-26' }]
+});
+assert.strictEqual(erroredExistingFeishuRowPlan.summary.notifyError, 1, 'Feishu rows that still exist may still report their own sync error');
+assert.strictEqual(erroredExistingFeishuRowPlan.summary.pendingDelete, 0, 'existing Feishu rows that fail resolution must not be treated as deleted orphan schedules');
+
 const orphanPendingDeletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
   syncRows: [{ id: 'sync-orphan-pending', sourceKey: 'old-orphan-key', scheduleId: 'orphan-feishu-schedule', status: 'pending_delete' }],
