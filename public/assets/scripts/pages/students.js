@@ -126,7 +126,7 @@ function studentSourceText(s){
   return FlowTennisBusinessTaxonomy.normalizeLeadSource(s?.source);
 }
 const STUDENT_PACKAGE_STATUS_OPTIONS=['未买过课包','课包有余额','课包即将耗尽','课包已用完'];
-const STUDENT_PAYMENT_MODE_OPTIONS=['课包学员','单次付费学员','课包+单次付费'];
+const STUDENT_PAYMENT_MODE_OPTIONS=['课包学员','单次付费学员','课包+单次付费','体验课'];
 const STUDENT_ACTIVITY_STATUS_OPTIONS=['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'];
 const STUDENT_LESSON_VOLUME_OPTIONS=['历史课时30+','历史课时50+','历史课时100+'];
 const STUDENT_LIFECYCLE_STATUS_OPTIONS=['课包活跃中','课包待续费','已转单次付费','稳定单次付费','有余额未活跃'];
@@ -330,6 +330,7 @@ function studentLabelDisplayText(value){
     '课包学员':'课包',
     '单次付费学员':'单次',
     '课包+单次付费':'课包+单次',
+    '体验课':'体验课',
     '近30天活跃':'近30天',
     '31-90天活跃':'31~90天',
     '91-180天沉默':'91~180天',
@@ -355,6 +356,7 @@ function studentLabelTagClass(value){
     '课包学员':'tms-tag-business-stage-new',
     '单次付费学员':'tms-tag-course-partner',
     '课包+单次付费':'tms-tag-business-type-adult',
+    '体验课':'tms-tag-business-stage-new',
     '近30天活跃':'tms-tag-business-stage-won',
     '31-90天活跃':'tms-tag-business-stage-new',
     '91-180天沉默':'tms-tag-tier-gold',

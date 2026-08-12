@@ -25,6 +25,8 @@ assert.match(bootstrapSource, /console\.log\(`\[api-init\] ensureDefaultCampuses
 assert.match(bootstrapSource, /console\.log\(`\[api-init\] bootstrapShunyiMapoFinanceSeed done \$\{Date\.now\(\)-stepStartedAt\}ms \(total \$\{Date\.now\(\)-startedAt\}ms\)`\);/, 'init should log the finance seed step duration');
 assert.doesNotMatch(apiSource, /if\(path==='\/load-all'&&method==='GET'\)\{[\s\S]*await maybeRepairImportedLedgerDuplicates\(\);/s, 'load-all should not trigger imported ledger repair from the request path');
 assert.match(bootstrapSource, /console\.log\(`\[api-init\] prewarmHotScanCache dispatched \$\{Date\.now\(\)-stepStartedAt\}ms \(total \$\{Date\.now\(\)-startedAt\}ms\)`\);/, 'init should log when cache prewarm is dispatched');
+assert.match(apiSource, /async function prewarmStudentTeachingSummaryCache\(\)\{[\s\S]*getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)[\s\S]*\}/, 'customer center first screen should prewarm only the student teaching summary read model');
+assert.match(apiSource, /prewarmStudentTeachingSummaryCache\(\);/, 'student teaching summary cache should be warmed without enabling full hot scan prewarm');
 assert.doesNotMatch(stateSource, /load-all/, 'front-end page loading should not fall back to the heavy load-all endpoint');
 assert.match(stateSource, /const PERFORMANCE_PAGE_DATA_GUARD=\{[\s\S]*students:\['classes','schedule','courts'\][\s\S]*coachschedule:\['entitlements','entitlementLedger'\][\s\S]*workbench:\['workbenchPage'\][\s\S]*\};/, 'page data performance guard should lock the current students and coach schedule loading strategy');
 assert.match(stateSource, /function assertPageDataPerformanceGuard\(\)/, 'state should expose a local guard against page-loading regressions');

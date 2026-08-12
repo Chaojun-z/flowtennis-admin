@@ -320,6 +320,7 @@ const wechatAccessTokenCache = wechatAccessTokenCacheByApp;
 const feishuTenantAccessTokenCacheByApp = new Map();
 let matchSqlPool;
 let queueStudentTeachingSummaryRefresh=()=>{};
+let customerCenterFactCacheVersion=0;
 const {
   gc,
   isTransientStorageError,
@@ -352,7 +353,7 @@ const {
   hotGetTables:HOT_GET_TABLES,
   productionPageReadLimits:PRODUCTION_PAGE_READ_LIMITS,
   isProductionRuntime,
-  onTableWrite(t,meta){if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;if(OPERATIONS_SOURCE_TABLES.has(t)){invalidateOperationsSourceCache();invalidateOperationsPageDataCache();}queueStudentTeachingSummaryRefresh(t,meta);}
+  onTableWrite(t,meta){if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;if(OPERATIONS_SOURCE_TABLES.has(t)){invalidateOperationsSourceCache();invalidateOperationsPageDataCache();}if([T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY].includes(t))customerCenterFactCacheVersion++;queueStudentTeachingSummaryRefresh(t,meta);}
 });
 queueStudentTeachingSummaryRefresh=createStudentTeachingSummaryCache({
   tables:{T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY},
@@ -445,6 +446,14 @@ async function prewarmHotScanCache(){
   if(process.env.DISABLE_HOT_SCAN_PREWARM==='true')return;
   await Promise.all([...HOT_SCAN_TABLES.keys()].map(t=>getCachedScan(t)));
 }
+async function prewarmStudentTeachingSummaryCache(){
+  if(!T_STUDENT_TEACHING_SUMMARY)return [];
+  return getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(err=>{
+    console.warn('[api-timing] prewarm student teaching summary failed',err?.message||err);
+    return [];
+  });
+}
+prewarmStudentTeachingSummaryCache();
 const bootstrapRuntime=createBootstrapRuntime({
   env:process.env,
   bcrypt,
@@ -737,7 +746,7 @@ const handleCorePageDataRoutes=createCorePageDataRoutes({
   decorateWorkbenchScheduleRows,decorateWorkbenchClasses,buildWorkbenchStats,projectScheduleListRow,
   normalizeMembershipPlanViewRecord,normalizeMembershipOrderViewRecord,DEFAULT_CAMPUSES,
   PRODUCTION_PAGE_READ_LIMITS,COURTS_PAGE_STUDENT_PROJECTION_FIELDS,COURTS_PAGE_COURT_PROJECTION_FIELDS,
-  put,del,mkTable,
+  put,del,mkTable,getCustomerCenterFactCacheVersion:()=>customerCenterFactCacheVersion,
   tables:{T_COACHES,T_CAMPUSES,T_STUDENTS,T_CLASSES,T_PLANS,T_PRODUCTS,T_SCHEDULE,T_COURTS,
     T_ENTITLEMENTS,T_PURCHASES,T_PACKAGES,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ACCOUNTS,
     T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,

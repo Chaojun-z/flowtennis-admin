@@ -66,6 +66,112 @@ function buildListPage(rows=[],paging=null){
   return {rows:list.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages};
 }
 
+function summaryRowHasTrialLesson(row={}){
+  return parseSnapshotArray(row.detailLessonRecordRows).some(item=>/体验/.test(String([
+    item.courseType,
+    item.standardCourseType,
+    item.packageName,
+    item.productName,
+    item.className,
+    item.courseName
+  ].filter(Boolean).join(' '))));
+}
+
+function summaryRowHasConsumedTrialPackage(row={}){
+  return parseSnapshotArray(row.detailPackageOrderRows).concat(parseSnapshotArray(row.packageListRows)).some(item=>{
+    const label=String([
+      item.courseType,
+      item.standardCourseType,
+      item.packageName,
+      item.productName
+    ].filter(Boolean).join(' '));
+    if(!/体验/.test(label))return false;
+    const total=Number(item.totalLessons)||0;
+    const used=Number(item.usedLessons)||0;
+    const remaining=Number(item.remainingLessons);
+    return used>0 || (total>0 && Number.isFinite(remaining) && remaining<=0) || /已用完|已核销|已消课/.test(String(item.statusText||item.status||''));
+  });
+}
+
+function buildCustomerCenterSummaryLifecycleRows(summaryRows=[]){
+  return (Array.isArray(summaryRows)?summaryRows:[]).map(row=>{
+    const studentId=String(row.studentId||row.id||'').trim();
+    if(!studentId)return null;
+    const hasTrialAttended=row.hasTrialAttended===true||String(row.hasTrialAttended).toLowerCase()==='true'||summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row);
+    return {
+      customerKey:`teaching-summary:${studentId}`,
+      sourceLeadId:String(row.sourceLeadId||'').trim(),
+      leadId:'',
+      studentId,
+      displayName:String(row.displayName||row.name||studentId).trim(),
+      phone:String(row.phone||'').trim(),
+      source:String(row.source||'').trim(),
+      campus:String(row.campus||'').trim(),
+      owner:String(row.primaryCoach||'').trim(),
+      customerType:String(row.type||'').trim(),
+      demandProduct:'',
+      trialAtRaw:'',
+      trialBookedAt:'',
+      trialAttendedAt:'',
+      courseFirstPurchaseAt:String(row.packagePurchaseDate||'').trim(),
+      conversionAt:String(row.packagePurchaseDate||'').trim(),
+      formalCoach:String(row.primaryCoach||'').trim(),
+      profileNote:String(row.profileNote||row.notes||'').trim(),
+      notes:String(row.notes||row.profileNote||'').trim(),
+      studentStage:String(row.studentStage||'student').trim(),
+      courseDealPath:String(row.courseDealPath||'').trim(),
+      trialStatus:String(row.trialStatus||'').trim(),
+      coursePurchaseCount:Number(row.coursePurchaseCount)||0,
+      hasCourseRepeatPurchase:String(row.courseDealPath||'').trim()==='老客续费',
+      hasTrialToCourseConversion:String(row.courseDealPath||'').trim()==='体验转化',
+      courtStage:'none',
+      membershipStatus:'',
+      hasTrialExperience:hasTrialAttended,
+      hasTeachingSummarySnapshot:true,
+      hasTrialAttended,
+      hasFormalAttended:row.hasFormalAttended===true||String(row.hasFormalAttended).toLowerCase()==='true',
+      hasScheduleRecord:true,
+      hasCourseStudentEntry:true,
+      hasFreeCourseFollowup:true,
+      leadDate:String(row.packagePurchaseDate||row.lastFormalLessonAt||row.summaryUpdatedAt||'').trim(),
+      createdAt:String(row.summaryUpdatedAt||row.updatedAt||'').trim(),
+      hasCourseConversion:String(row.studentStage||'').trim()==='formal',
+      hasBookingConversion:false,
+      hasMembershipConversion:false
+    };
+  }).filter(Boolean);
+}
+
+function buildCustomerCenterListPayload({summaryRows=[],query}={}){
+  const customerLifecycleRows=buildCustomerCenterSummaryLifecycleRows(summaryRows);
+  const teachingData={teachingStudentSummaryRows:summaryRows};
+  return buildCustomerCenterPagePayload({customerLifecycleRows,teachingData,query});
+}
+
+function buildCustomerCenterListPage(teachingStudentViews={}, query){
+  const paging=parseListPaging(query);
+  const view=String(query?.get('view')||'').trim();
+  const q=String(query?.get('q')||'').trim();
+  const studentRows=Array.isArray(teachingStudentViews[view])?teachingStudentViews[view]:[];
+  const searchableRows=q&&Array.isArray(teachingStudentViews.searchableStudents)?teachingStudentViews.searchableStudents:studentRows;
+  return paging&&view?{view,...buildListPage(searchableRows.filter(row=>textSearchHit(q,row.searchText,row.name,row.phone,row.type,row.source,row.sourceText,row.paymentModeText,row.packageStatusText,row.activityStatusText,row.lifecycleStatusText,row.campus,row.primaryCoach,row.notes,row.profileNote)),paging)}:null;
+}
+
+function buildCustomerCenterPagePayload({customerLifecycleRows=[],teachingData={},query,prebuiltTeachingStudentViews=null,prebuiltStandardLifecycleMetrics=null}={}){
+  const metricScope=pageDataScopeFromQuery(query);
+  const teachingStudentViews=prebuiltTeachingStudentViews||buildTeachingStudentViews(customerLifecycleRows,teachingData);
+  const standardLifecycleMetrics=prebuiltStandardLifecycleMetrics || (hasPageDataScope(metricScope)
+    ? buildScopedStandardLifecycleMetrics({...teachingData,customerLifecycleRows},metricScope)
+    : buildStandardLifecycleMetrics({...teachingData,customerLifecycleRows}));
+  const listPage=buildCustomerCenterListPage(teachingStudentViews,query);
+  return {
+    customerLifecycleRows,
+    teachingStudentViews,
+    standardLifecycleMetrics,
+    listPage
+  };
+}
+
 const PURCHASE_CREATE_STUDENT_PROJECTION_FIELDS=[
   'name',
   'phone',
@@ -93,7 +199,7 @@ function createCorePageDataRoutes(deps={}){
     decorateWorkbenchScheduleRows,decorateWorkbenchClasses,buildWorkbenchStats,projectScheduleListRow,
     normalizeMembershipPlanViewRecord,normalizeMembershipOrderViewRecord,DEFAULT_CAMPUSES,
     PRODUCTION_PAGE_READ_LIMITS,COURTS_PAGE_STUDENT_PROJECTION_FIELDS,COURTS_PAGE_COURT_PROJECTION_FIELDS,
-    put,del,mkTable,
+    put,del,mkTable,getCustomerCenterFactCacheVersion=()=>0,
     tables={}
   }=deps;
   const {
@@ -111,6 +217,69 @@ function createCorePageDataRoutes(deps={}){
       .filter(Boolean)
       .map(row=>projectScheduleListRow(row));
     return [...(scheduleRows||[]),...extraRows.filter(row=>row&&row.id&&!existingIds.has(String(row.id)))];
+  }
+  const customerCenterFactModelCache=new Map();
+  const customerCenterFactModelLoads=new Map();
+  const CUSTOMER_CENTER_FACT_MODEL_TTL_MS=60000;
+  function customerCenterFactModelUserKey(user={}){
+    return JSON.stringify({
+      role:String(user.role||''),
+      id:String(user.id||user.username||user.name||''),
+      dataScope:String(user.dataScope||''),
+      campus:String(user.campus||''),
+      campusIds:Array.isArray(user.campusIds)?user.campusIds.map(String).sort():[]
+    });
+  }
+  function readCustomerCenterFactModelCache(user={}){
+    const key=customerCenterFactModelUserKey(user);
+    const cached=customerCenterFactModelCache.get(key);
+    if(!cached||cached.expiresAt<=Date.now()||cached.version!==getCustomerCenterFactCacheVersion()){
+      if(cached)customerCenterFactModelCache.delete(key);
+      return null;
+    }
+    return cached.model;
+  }
+  async function loadCustomerCenterFactModel(user={}, {force=false,includeLessonFacts=false}={}){
+    const key=customerCenterFactModelUserKey(user);
+    if(!force){
+      const cached=readCustomerCenterFactModelCache(user);
+      if(cached)return cached;
+    }
+    if(customerCenterFactModelLoads.has(key))return customerCenterFactModelLoads.get(key);
+    const version=getCustomerCenterFactCacheVersion();
+    const promise=(async()=>{
+      const [leads,students,purchases,entitlements,studentTeachingSummaries]=await Promise.all([
+        T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
+        cappedScan(T_STUDENTS),
+        cappedScan(T_PURCHASES),
+        cappedScan(T_ENTITLEMENTS),
+        T_STUDENT_TEACHING_SUMMARY ? getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]) : Promise.resolve([])
+      ]);
+      const needsTeachingFacts = includeLessonFacts || !studentTeachingSummaries.length;
+      const [entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
+        needsTeachingFacts&&T_ENTITLEMENT_LEDGER ? cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger).catch(()=>[]) : Promise.resolve([]),
+        needsTeachingFacts&&T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
+        needsTeachingFacts&&T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
+        needsTeachingFacts&&T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
+      ]);
+      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,studentTeachingSummaries,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
+      const customerLifecycleRows=buildCustomerLifecycleRows({
+        leads:scoped.leads,
+        students:scoped.students,
+        purchases:scoped.purchases,
+        entitlements:scoped.entitlements,
+        schedule:scoped.schedule,
+        feedbacks:scoped.feedbacks
+      });
+      const teachingData={...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries};
+      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,teachingData);
+      const standardLifecycleMetrics=buildStandardLifecycleMetrics({...teachingData,customerLifecycleRows});
+      const model={scoped,customerLifecycleRows,teachingStudentViews,standardLifecycleMetrics};
+      customerCenterFactModelCache.set(key,{version,model,expiresAt:Date.now()+CUSTOMER_CENTER_FACT_MODEL_TTL_MS});
+      return model;
+    })().finally(()=>customerCenterFactModelLoads.delete(key));
+    customerCenterFactModelLoads.set(key,promise);
+    return promise;
   }
 
   return async function handleCorePageDataRoutes({path,method,user,res,query}){
@@ -171,48 +340,37 @@ function createCorePageDataRoutes(deps={}){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
       const fresh=query?.get('fresh')==='1'||query?.get('forceFresh')==='1';
-      const [leads,students,purchases,entitlements,studentTeachingSummaries]=await Promise.all([
-        T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
-        cappedScan(T_STUDENTS),
-        cappedScan(T_PURCHASES),
-        cappedScan(T_ENTITLEMENTS),
-        fresh ? Promise.resolve([]) : (T_STUDENT_TEACHING_SUMMARY ? getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]) : Promise.resolve([]))
-      ]);
-      const needsTeachingFacts = fresh
-        || !studentTeachingSummaries.length
-        || studentTeachingSummaries.some(row => teachingSummaryNeedsLessonFacts(row, new Date()));
-      const [entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
-        needsTeachingFacts&&T_ENTITLEMENT_LEDGER ? cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger).catch(()=>[]) : Promise.resolve([]),
-        needsTeachingFacts&&T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
-        needsTeachingFacts&&T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
-        needsTeachingFacts&&T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
-      ]);
-      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,studentTeachingSummaries,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
-      const customerLifecycleRows=buildCustomerLifecycleRows({
-        leads:scoped.leads,
-        students:scoped.students,
-        purchases:scoped.purchases,
-        entitlements:scoped.entitlements,
-        schedule:scoped.schedule,
-        feedbacks:scoped.feedbacks
-      });
+      if(!fresh){
+        const cachedFactModel=readCustomerCenterFactModelCache(user);
+        if(cachedFactModel){
+          const teachingData={...cachedFactModel.scoped,teachingStudentSummaryRows:cachedFactModel.scoped.studentTeachingSummaries};
+          return sendJson(res,buildCustomerCenterPagePayload({
+            customerLifecycleRows:cachedFactModel.customerLifecycleRows,
+            teachingData,
+            query,
+            prebuiltTeachingStudentViews:cachedFactModel.teachingStudentViews,
+            prebuiltStandardLifecycleMetrics:cachedFactModel.standardLifecycleMetrics
+          }));
+        }
+      }
+      if(!fresh&&T_STUDENT_TEACHING_SUMMARY){
+        const studentTeachingSummaries=await getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]);
+        if(studentTeachingSummaries.length){
+          const scoped=filterLoadAllForUser({studentTeachingSummaries},user);
+          loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:true}).catch(err=>console.warn('[customer-center-list] fact model background refresh failed',err?.message||err));
+          return sendJson(res,buildCustomerCenterListPayload({summaryRows:scoped.studentTeachingSummaries,query}));
+        }
+      }
+      const {scoped,customerLifecycleRows}=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:fresh});
       const teachingData={...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries};
-      const metricScope=pageDataScopeFromQuery(query);
-      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,teachingData);
-      const paging=parseListPaging(query);
-      const view=String(query?.get('view')||'').trim();
-      const q=String(query?.get('q')||'').trim();
-      const studentRows=Array.isArray(teachingStudentViews[view])?teachingStudentViews[view]:[];
-      const searchableRows=q&&Array.isArray(teachingStudentViews.searchableStudents)?teachingStudentViews.searchableStudents:studentRows;
-      const listPage=paging&&view?{view,...buildListPage(searchableRows.filter(row=>textSearchHit(q,row.searchText,row.name,row.phone,row.type,row.source,row.sourceText,row.paymentModeText,row.packageStatusText,row.activityStatusText,row.lifecycleStatusText,row.campus,row.primaryCoach,row.notes,row.profileNote)),paging)}:null;
-      return sendJson(res,{
+      const cachedFactModel=readCustomerCenterFactModelCache(user);
+      return sendJson(res,buildCustomerCenterPagePayload({
         customerLifecycleRows,
-        teachingStudentViews,
-        standardLifecycleMetrics:hasPageDataScope(metricScope)
-          ? buildScopedStandardLifecycleMetrics({...teachingData,customerLifecycleRows},metricScope)
-          : buildStandardLifecycleMetrics({...teachingData,customerLifecycleRows}),
-        listPage
-      });
+        teachingData,
+        query,
+        prebuiltTeachingStudentViews:cachedFactModel?.teachingStudentViews,
+        prebuiltStandardLifecycleMetrics:cachedFactModel?.standardLifecycleMetrics
+      }));
     }
     if(path==='/page-data/purchase-detail'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

@@ -123,14 +123,35 @@ const coachScheduleRouteSource = corePagesSource.slice(
 assert.match(coachScheduleRouteSource, /getFastStudentsRead\(\{columns:COACH_SCHEDULE_STUDENT_PROJECTION_FIELDS\}\)/, 'coach schedule endpoint should use a projected fast student read');
 assert.match(coachScheduleRouteSource, /scheduleRowsPromise[\s\S]*cappedScan\(T_FEEDBACKS\)[\s\S]*scanCoachProposals\(\)/, 'coach schedule endpoint should read only calendar facts needed for first paint');
 assert.doesNotMatch(coachScheduleRouteSource, /T_PURCHASES|T_ENTITLEMENTS|T_ENTITLEMENT_LEDGER|buildStandardLifecycleMetrics|buildWorkbenchStats|buildCustomerLifecycleRows|buildTeachingStudentViews|decorateWorkbenchStudents|decorateWorkbenchClasses/, 'coach schedule endpoint must not scan or calculate heavy package, lifecycle, student summary, or workbench-only facts');
+const customerCenterStart = corePagesSource.indexOf("path==='/page-data/customer-center-list'&&method==='GET'");
+const customerCenterEnd = corePagesSource.indexOf("path==='/page-data/purchase-detail'&&method==='GET'");
+const customerCenterRouteSource = corePagesSource.slice(customerCenterStart, customerCenterEnd);
+assert.match(customerCenterRouteSource, /if\(!fresh&&T_STUDENT_TEACHING_SUMMARY\)\{[\s\S]*getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)[\s\S]*return sendJson\(res,buildCustomerCenterListPayload/, 'customer center normal first screen should return from the student teaching summary read model before reading source fact tables');
+assert.match(customerCenterRouteSource, /readCustomerCenterFactModelCache\(user\)[\s\S]*return sendJson\(res,buildCustomerCenterPagePayload/, 'customer center normal first screen should reuse the fact-calibrated model once it has been built');
+assert.match(customerCenterRouteSource, /prebuiltTeachingStudentViews:cachedFactModel\.teachingStudentViews[\s\S]*prebuiltStandardLifecycleMetrics:cachedFactModel\.standardLifecycleMetrics/, 'customer center cached fact reads should reuse prebuilt unified views and metrics instead of rebuilding them on every request');
+assert.match(customerCenterRouteSource, /loadCustomerCenterFactModel\(user,\{force:true,includeLessonFacts:true\}\)\.catch/, 'customer center summary fast path should refresh the full fact-calibrated model in the background');
+assert.match(corePagesSource, /function buildCustomerCenterSummaryLifecycleRows\(summaryRows=\[\]\)\{[\s\S]*const hasTrialAttended=row\.hasTrialAttended===true[\s\S]*summaryRowHasTrialLesson\(row\)[\s\S]*hasTeachingSummarySnapshot:true[\s\S]*hasTrialAttended,[\s\S]*hasFormalAttended:row\.hasFormalAttended===true/, 'customer center summary fast path must preserve and infer trial/formal attended flags so trial-to-formal metrics stay correct');
+assert.match(corePagesSource, /function summaryRowHasTrialLesson\(row=\{\}\)\{[\s\S]*parseSnapshotArray\(row\.detailLessonRecordRows\)[\s\S]*\/体验\//, 'customer center summary fast path should infer trial attendance from existing summary lesson rows without scanning source fact tables');
+assert.match(corePagesSource, /function summaryRowHasConsumedTrialPackage\(row=\{\}\)\{[\s\S]*detailPackageOrderRows[\s\S]*packageListRows[\s\S]*\/体验\/[\s\S]*used>0[\s\S]*remaining<=0[\s\S]*已用完\|已核销\|已消课/, 'customer center summary fast path should infer trial attendance from consumed trial orders without counting merely booked trial packages');
+const customerCenterSummaryFastPath = customerCenterRouteSource.slice(
+  customerCenterRouteSource.indexOf('if(!fresh&&T_STUDENT_TEACHING_SUMMARY)'),
+  customerCenterRouteSource.indexOf('const [leads,students,purchases,entitlements,studentTeachingSummaries]')
+);
+assert.doesNotMatch(customerCenterSummaryFastPath, /cappedScan\(T_STUDENTS\)|cappedScan\(T_PURCHASES\)|cappedScan\(T_ENTITLEMENTS\)|cappedScan\(T_LEADS\)/, 'customer center normal first screen must not cold-read students, purchases, entitlements, or leads before the summary fast path');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_PURCHASES\)[\s\S]*cappedScan\(T_ENTITLEMENTS\)/, 'customer center list endpoint should read the lightweight customer and course facts');
-assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*const listPage=paging&&view\?\{view,\.\.\.buildListPage/, 'customer center list endpoint should expose server-side paged student views');
-assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*searchableRows=q&&Array\.isArray\(teachingStudentViews\.searchableStudents\)\?teachingStudentViews\.searchableStudents:studentRows/, 'customer center paged search should use the stable lightweight full student search index');
+assert.match(corePagesSource, /function buildCustomerCenterPagePayload\([\s\S]*const listPage=buildCustomerCenterListPage\(teachingStudentViews,query\)/, 'customer center list endpoint should expose server-side paged student views through the shared payload builder');
+assert.match(corePagesSource, /function buildCustomerCenterListPage\(teachingStudentViews=\{\}, query\)[\s\S]*return paging&&view\?\{view,\.\.\.buildListPage/, 'customer center cached views should still apply server-side search before pagination');
+assert.match(corePagesSource, /function buildCustomerCenterListPage\(teachingStudentViews=\{\}, query\)[\s\S]*searchableRows=q&&Array\.isArray\(teachingStudentViews\.searchableStudents\)\?teachingStudentViews\.searchableStudents:studentRows/, 'customer center paged search should use the stable lightweight full student search index');
 assert.match(corePagesSource, /textSearchHit\(q,row\.searchText[\s\S]*row\.notes,row\.profileNote/, 'customer center paged search should include backend searchText, notes, and profileNote');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'customer center list endpoint should read precomputed student teaching summary rows for schedule facts');
 assert.match(corePagesSource, /const fresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';/, 'customer center list endpoint should accept an explicit fresh flag');
-assert.match(corePagesSource, /fresh \? Promise\.resolve\(\[\]\) : \(T_STUDENT_TEACHING_SUMMARY \? getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'fresh customer center reads should bypass the precomputed student teaching summary');
-assert.match(corePagesSource, /const needsTeachingFacts = fresh[\s\S]*teachingSummaryNeedsLessonFacts\(row, new Date\(\)\)/, 'customer center list endpoint should fall back to live lesson facts when teaching summaries are old or internally contradictory');
+assert.match(customerCenterRouteSource, /const fresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';[\s\S]*if\(!fresh&&T_STUDENT_TEACHING_SUMMARY\)/, 'fresh customer center reads should bypass the summary-only fast response path');
+assert.match(corePagesSource, /const needsTeachingFacts = includeLessonFacts \|\| !studentTeachingSummaries\.length/, 'fresh customer center reads and background calibration should include full lesson facts');
+assert.doesNotMatch(
+  customerCenterRouteSource,
+  /studentTeachingSummaries\.some\(row => teachingSummaryNeedsLessonFacts\(row, new Date\(\)\)\)/,
+  'customer center list first screen must not scan live lesson facts because one summary row is contradictory'
+);
 assert.match(corePagesSource, /needsTeachingFacts&&T_ENTITLEMENT_LEDGER \? cappedScan\(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS\.entitlementLedger\)/, 'fresh or legacy-summary customer center reads should include live lesson ledger rows');
 assert.match(corePagesSource, /needsTeachingFacts&&T_SCHEDULE \? cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)/, 'fresh or legacy-summary customer center reads should include live schedule rows');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryRows/, 'customer center should expose an explicit admin-only rebuild path for the student teaching summary read model');
@@ -151,5 +172,8 @@ assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='G
 assert.doesNotMatch(fnBodyFrom(studentsSource, 'ensureStudentDetailDatasets'), /purchasesPage/, 'student detail must not load the full purchases aggregate');
 assert.match(apiSource, /T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary'/, 'api should declare the student teaching summary read model table');
 assert.match(apiSource, /queueStudentTeachingSummaryRefresh\(t,meta\)/, 'source table writes should queue student teaching summary refreshes outside the first-screen read path');
+assert.match(apiSource, /let customerCenterFactCacheVersion=0;/, 'api should keep a version marker for customer center fact cache invalidation');
+assert.match(apiSource, /if\(\[T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY\]\.includes\(t\)\)customerCenterFactCacheVersion\+\+/, 'customer center fact cache must be invalidated on every related source-table write');
+assert.match(apiSource, /getCustomerCenterFactCacheVersion:\(\)=>customerCenterFactCacheVersion/, 'customer center page-data route should receive the fact cache version reader');
 
 console.log('page data requirements tests passed');

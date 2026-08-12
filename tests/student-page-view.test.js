@@ -63,6 +63,7 @@ assert.match(source, /stuTagFilterHost[\s\S]*renderStudentTagCascader/, 'student
 assert.doesNotMatch(source, /stuPackageStatusFilterHost|stuPaymentModeFilterHost|stuActivityStatusFilterHost|stuLessonVolumeFilterHost|stuLifecycleStatusFilterHost/, 'student individual tag filter hosts should be replaced by the cascader host');
 assert.match(source, /stuCoachFilterHost[\s\S]*onStudentFilterChange/, 'student primary coach filter should reset pagination before rendering');
 assert.match(source, /const STUDENT_TAG_FILTER_GROUPS=\[[\s\S]*key:'packageStatus'[\s\S]*key:'paymentMode'[\s\S]*key:'activityStatus'[\s\S]*key:'lessonVolume'[\s\S]*key:'lifecycleStatus'/, 'student tag cascader should group package, payment, activity, lesson volume, and lifecycle labels');
+assert.match(source, /const STUDENT_PAYMENT_MODE_OPTIONS=\['课包学员','单次付费学员','课包\+单次付费','体验课'\]/, 'student payment mode filter should include trial lessons after the backend labels them as 体验课');
 assert.match(source, /function renderStudentTagCascader\(/, 'student tag cascader renderer should exist');
 assert.match(source, /function toggleStudentTagFilter\(/, 'student tag cascader should support multi-select toggling');
 assert.match(source, /function clearStudentTagFilters\(/, 'student tag cascader should support clearing all selected tags');
@@ -274,7 +275,7 @@ assert.doesNotMatch(source, /<th>关联账户<\/th>/, 'student table should repl
 assert.match(source, /const STUDENT_PACKAGE_STATUS_OPTIONS=\['未买过课包','课包有余额','课包即将耗尽','课包已用完'\]/, 'student package status options should match the agreed labels');
 assert.doesNotMatch(fnBody('studentHasFormalPackage'), /studentHasNonTrialPackage|studentLifecycleStage/, 'package status should not treat single-pay formal students as package students');
 assert.match(fnBody('studentHasFormalPackage'), /coursePurchaseCount/, 'package status should still recognize students who bought packages that are now used up');
-assert.match(source, /const STUDENT_PAYMENT_MODE_OPTIONS=\['课包学员','单次付费学员','课包\+单次付费'\]/, 'student payment mode options should match the agreed labels');
+assert.match(source, /const STUDENT_PAYMENT_MODE_OPTIONS=\['课包学员','单次付费学员','课包\+单次付费','体验课'\]/, 'student payment mode options should match the agreed labels');
 assert.match(source, /const STUDENT_ACTIVITY_STATUS_OPTIONS=\['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'\]/, 'student activity status options should match the agreed labels');
 assert.match(source, /const STUDENT_LESSON_VOLUME_OPTIONS=\['历史课时30\+','历史课时50\+','历史课时100\+'\]/, 'student lesson volume options should match the agreed labels');
 assert.match(source, /const STUDENT_LIFECYCLE_STATUS_OPTIONS=\['课包活跃中','课包待续费','已转单次付费','稳定单次付费','有余额未活跃'\]/, 'student lifecycle status options should match the global student tag standard');

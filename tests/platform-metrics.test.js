@@ -216,6 +216,8 @@ const trialPackagePlatform = buildPlatformMetrics({
 });
 const trialPackageStudent = trialPackagePlatform.teachingStudentViews.courseStudents.find(row => row.studentId === 'student-trial-package');
 assert.ok(trialPackageStudent, 'trial package student should enter the course student view');
+assert.strictEqual(trialPackageStudent.paymentModeLabel, '体验课', 'trial course purchases should show as trial lessons, not formal package students');
+assert.strictEqual(trialPackageStudent.packageStatusLabel, '未买过课包', 'formal package status should ignore trial lessons');
 assert.deepStrictEqual(
   trialPackageStudent.detailPackageOrderRows.map(row => [row.packageName, row.purchaseDate, row.remainingLessons, row.totalLessons, row.paidAmount]),
   [['私教课体验课包', '2026-08-01', 0, 1, 239]],
@@ -225,6 +227,130 @@ assert.deepStrictEqual(
   trialPackageStudent.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType]),
   [['ledger', '2026-08-02 10:00-11:00', '体验课']],
   'student drawer lesson records should include trial package consumption'
+);
+
+const directTrialLessonPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-direct-trial', name: '单次体验课学员' }],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-direct-trial-239', studentId: 'student-direct-trial', startTime: '2026-08-02 10:00:00', endTime: '2026-08-02 11:00:00', status: '已结束', courseType: '体验课', paidAmount: 239, settlementType: 'single', coach: '王教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const directTrialLessonStudent = directTrialLessonPlatform.teachingStudentViews.courseStudents.find(row => row.studentId === 'student-direct-trial');
+assert.ok(directTrialLessonStudent, 'direct-paid trial lesson student should enter course student view');
+assert.strictEqual(directTrialLessonStudent.paymentModeLabel, '单次付费学员', 'direct paid trial lessons should show as single payment');
+assert.strictEqual(directTrialLessonStudent.packageStatusLabel, '未买过课包', 'direct paid trial lessons should not create formal package status');
+assert.strictEqual(directTrialLessonStudent.cumulativeCoursePaidAmount, 239, 'direct paid trial amount should stay in cumulative course paid amount');
+assert.deepStrictEqual(
+  directTrialLessonStudent.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType]),
+  [['schedule', '2026-08-02 10:00-11:00', '体验课']],
+  'student drawer lesson records should include direct paid trial lessons'
+);
+
+const freeTrialLessonPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-free-trial', name: '免费体验课学员' }],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-free-trial', studentId: 'student-free-trial', startTime: '2026-08-02 10:00:00', endTime: '2026-08-02 11:00:00', status: '已结束', courseType: '体验课', coach: '王教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const freeTrialLessonStudent = freeTrialLessonPlatform.teachingStudentViews.courseStudents.find(row => row.studentId === 'student-free-trial');
+assert.ok(freeTrialLessonStudent, 'free trial lesson student should enter course student view');
+assert.strictEqual(freeTrialLessonStudent.paymentModeLabel, '-', 'trial lessons without payment source should keep payment mode blank');
+assert.strictEqual(freeTrialLessonStudent.packageStatusLabel, '未买过课包', 'free trial lessons should not create formal package status');
+
+const staleTrialSummaryPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [],
+  studentTeachingSummaries: [{
+    id: 'student-stale-trial-summary',
+    studentId: 'student-stale-trial-summary',
+    displayName: '旧摘要体验课',
+    studentStage: 'trial',
+    paymentModeLabel: '课包学员',
+    packageStatusLabel: '未买过课包',
+    activityStatusLabel: '从未正式上课',
+    detailPackageOrderRows: [{ packageName: '私教课体验课', courseType: '体验课', paidAmount: 239, totalLessons: 1, remainingLessons: 0 }],
+    detailLessonRecordRows: [{ kind: 'ledger', time: '2026-08-02 10:00-11:00', courseType: '体验课', lessonDelta: -1 }],
+    completedLessons: 0,
+    hasTrialAttended: true,
+    hasFormalAttended: false,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: false,
+    teachingLessonDetailSourceVersion: 'lesson-record-v2'
+  }],
+  now: new Date('2026-08-10 00:00:00')
+});
+const staleTrialSummaryStudent = staleTrialSummaryPlatform.teachingStudentViews.courseStudents.find(row => row.studentId === 'student-stale-trial-summary');
+assert.ok(staleTrialSummaryStudent, 'summary fast path should keep trial students visible from the read model');
+assert.strictEqual(staleTrialSummaryStudent.paymentModeLabel, '体验课', 'summary fast path must not keep stale formal package payment labels for trial-only rows');
+assert.strictEqual(staleTrialSummaryStudent.packageStatusLabel, '未买过课包', 'summary fast path should keep formal package status separate from trial lessons');
+assert.ok(!staleTrialSummaryPlatform.teachingStudentViews.activeStudents.some(row => row.studentId === 'student-stale-trial-summary'), 'trial-only stale summaries must not enter active formal student roster');
+
+const consumedTrialSummaryPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [],
+  studentTeachingSummaries: [{
+    id: 'student-consumed-trial-summary',
+    studentId: 'student-consumed-trial-summary',
+    displayName: '已核销体验课摘要',
+    studentStage: 'trial',
+    hasTrialAttended: false,
+    detailPackageOrderRows: [{ packageName: '私教体验课', totalLessons: 1, remainingLessons: 0, usedLessons: 1, statusText: '已用完' }],
+    teachingLessonDetailSourceVersion: 'lesson-record-v2'
+  }],
+  now: new Date('2026-08-10 00:00:00')
+});
+assert.strictEqual(
+  consumedTrialSummaryPlatform.teachingStudentViews.summary.trialAttendedStudentCount,
+  1,
+  'summary fast path should count consumed trial orders as attended trials even when stale hasTrialAttended is false'
+);
+
+const trialWordInReasonSummaryPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [],
+  studentTeachingSummaries: [{
+    id: 'student-trial-word-reason-summary',
+    studentId: 'student-trial-word-reason-summary',
+    displayName: '备注体验字样',
+    studentStage: 'formal',
+    hasTrialAttended: false,
+    detailLessonRecordRows: [{ courseType: '小班课', packageName: '小班课', reason: '备注里提到体验课，不代表这是体验课' }],
+    teachingLessonDetailSourceVersion: 'lesson-record-v2'
+  }],
+  now: new Date('2026-08-10 00:00:00')
+});
+assert.strictEqual(
+  trialWordInReasonSummaryPlatform.teachingStudentViews.summary.trialAttendedStudentCount,
+  0,
+  'summary fast path must not count a formal lesson as trial just because the note mentions trial'
 );
 
 const textOnlyPackagePlatform = buildPlatformMetrics({
