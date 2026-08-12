@@ -86,7 +86,7 @@ function parseStudentCell(value){
   if(shared)return shared;
   const lessonIndex=parseLessonIndex(raw);
   const withoutIndex=raw.replace(/[（(]\s*\d+\s*[）)]/g,'').trim();
-  const names=normalizeFeishuStudentNames(withoutIndex.split(/[、,，/]+/).map(cleanText).filter(Boolean));
+  const names=normalizeFeishuStudentNames(splitFeishuStudentNames(withoutIndex));
   return {raw,names,lessonIndex};
 }
 
@@ -114,6 +114,14 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
 const FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS = new Set([
   'GrbZdi|2026-07-25|16:00|17:30|杨|🐰🐰🐰🐰🐰、🌞艾薇、朋友|零基础训练营体验课|马坡室内|1号'
 ]);
+
+function splitFeishuStudentNames(value){
+  const text=cleanText(value);
+  if(!text)return [];
+  const key=normalizeStudentNameKey(text);
+  if(key===normalizeStudentNameKey('misha黄总'))return ['misha','黄总'];
+  return text.split(/[、,，/]+/).map(cleanText).filter(Boolean);
+}
 
 function parseSharedPackageStudentCell(raw){
   const match=cleanText(raw).match(/^(.+?)[（(]\s*使用\s*(.+?)\s*课包\s*(\d+)?\s*[）)]$/);
@@ -1070,6 +1078,43 @@ function attachSharedPackageStudent(candidate,ctx={}){
   };
 }
 
+function confirmedMishaHuangPair(candidate={}){
+  if(candidate.course?.isTrial)return false;
+  if(candidate.course?.courseType!=='私教课')return false;
+  const keys=(candidate.resolvedStudents||[]).map(row=>normalizeStudentNameKey(row.name||row.studentName||row.id));
+  return keys.includes(normalizeStudentNameKey('misha'))&&keys.includes(normalizeStudentNameKey('黄总'));
+}
+
+function scheduleUsesAnyEntitlement(schedule={},entitlementIds=[]){
+  const ids=new Set((entitlementIds||[]).map(String).filter(Boolean));
+  if(!ids.size)return false;
+  const scheduleIds=parseMaybeArray(schedule.entitlementIds).map(String);
+  const primary=String(schedule.entitlementId||'');
+  return ids.has(primary)||scheduleIds.some(id=>ids.has(id));
+}
+
+function selectMishaHuangPairEntitlement(candidate={},ctx={}){
+  const students=candidate.resolvedStudents||[];
+  const misha=students.find(row=>normalizeStudentNameKey(row.name||row.studentName)===normalizeStudentNameKey('misha'));
+  const huang=students.find(row=>normalizeStudentNameKey(row.name||row.studentName)===normalizeStudentNameKey('黄总'));
+  if(!misha?.id||!huang?.id)return null;
+  const rows=[misha,huang].map(student=>({
+    student,
+    entitlement:selectEntitlementForStudent(student,{...candidate,lessonIndex:null},ctx.entitlements,ctx.recommendEntitlements,ctx.schedules)
+  })).filter(item=>item.entitlement?.id);
+  if(!rows.length)return null;
+  const pairIds=rows.map(item=>item.entitlement.id);
+  const previousPairCount=(ctx.schedules||[]).filter(schedule=>{
+    if(!activeSchedule(schedule))return false;
+    if(String(schedule.startTime||'')>=String(candidate.startTime||''))return false;
+    const studentIds=parseMaybeArray(schedule.studentIds).map(String);
+    if(!(studentIds.includes(String(misha.id))&&studentIds.includes(String(huang.id))))return false;
+    return scheduleUsesAnyEntitlement(schedule,pairIds);
+  }).length;
+  const preferredStudent=previousPairCount%2===0?misha:huang;
+  return rows.find(item=>String(item.student.id)===String(preferredStudent.id))||rows[0];
+}
+
 function hasSelectableEntitlement(student,candidate,entitlements=[],recommendEntitlements,schedules=[]){
   return !!selectEntitlementForStudent(student,candidate,entitlements,recommendEntitlements,schedules);
 }
@@ -1243,6 +1288,27 @@ function attachSchedulableStudents(candidate,ctx={}){
   if(candidate.course.courseType==='陪打')return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
   const shared=attachSharedPackageStudent(candidate,ctx);
   if(shared)return shared;
+  if(confirmedMishaHuangPair(candidate)){
+    const selected=selectMishaHuangPairEntitlement(candidate,ctx);
+    if(!selected)return {...candidate,scheduleStudents:[],errors:[...candidate.errors,'misha 黄总没有可自动扣课的可用课包']};
+    const owner=selected.student;
+    const usedBy=(candidate.resolvedStudents||[]).find(row=>String(row.id||'')!==String(owner.id||''))||owner;
+    return {
+      ...candidate,
+      scheduleStudents:candidate.resolvedStudents.slice(),
+      selectedEntitlements:[selected.entitlement],
+      sharedPackageAuthorization:{
+        entitlementId:selected.entitlement.id||'',
+        purchaseId:selected.entitlement.purchaseId||'',
+        packageName:selected.entitlement.packageName||'',
+        ownerStudentId:owner.id||'',
+        ownerStudentName:owner.name||'',
+        authorizedStudentId:usedBy.id||'',
+        authorizedStudentName:usedBy.name||''
+      },
+      sharedPackageNote:`misha 黄总1v2轮流扣课包：本次使用${owner.name||owner.id}课包`
+    };
+  }
   const confirmedPayment=confirmedDirectPrivatePayment(candidate);
   if(confirmedPayment)return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1),confirmedPayment};
   const selectedEntitlements=[];

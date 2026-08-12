@@ -407,6 +407,49 @@ assert.deepStrictEqual(
   [['2026-08-01 16:00-17:00', 'William弟弟 使用了 William（时节） 的课包', true, false]],
   '课包所有人的上课记录必须能看到谁使用了他的课包，但这条不计入本人累计上课'
 );
+const coAttendedSharedPackageData = {
+  students: [
+    { id: 'student-misha', name: 'misha' },
+    { id: 'student-huang', name: '黄总' }
+  ],
+  purchases: [{ id: 'purchase-misha', studentId: 'student-misha', studentName: 'misha', packageName: '成人1v1 黄金10课时', courseType: '私教课', amountPaid: 6000, status: 'active', purchaseDate: '2026-01-06' }],
+  entitlements: [{ id: 'ent-misha', studentId: 'student-misha', studentName: 'misha', purchaseId: 'purchase-misha', packageName: '成人1v1 黄金10课时', courseType: '私教课', totalLessons: 12, remainingLessons: 4, status: 'active' }],
+  entitlementLedger: [{
+    id: 'ledger-huang-uses-misha-package',
+    entitlementId: 'ent-misha',
+    purchaseId: 'purchase-misha',
+    scheduleId: 'schedule-misha-huang',
+    lessonDelta: -1,
+    relatedDate: '2026-03-25',
+    packageOwnerStudentId: 'student-misha',
+    packageOwnerStudentName: 'misha',
+    usedByStudentId: 'student-huang',
+    usedByStudentName: '黄总'
+  }],
+  schedule: [{ id: 'schedule-misha-huang', studentIds: ['student-misha', 'student-huang'], studentName: 'misha、黄总', courseType: '私教课', startTime: '2026-03-25 12:00:00', endTime: '2026-03-25 13:00:00', status: '已下课', coach: '朝珺教练', campus: 'shunyi_mapo', venue: '2号场' }],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  membershipBenefitLedger: []
+};
+const coAttendedSharedPackageStandard = buildStandardLifecycleMetrics({
+  ...coAttendedSharedPackageData,
+  customerLifecycleRows: buildCustomerLifecycleRows(coAttendedSharedPackageData),
+  now: new Date('2026-03-26 00:00:00')
+});
+const coAttendedMishaRow = coAttendedSharedPackageStandard.views.historicalStudents.find(row => row.studentId === 'student-misha');
+const coAttendedHuangRow = coAttendedSharedPackageStandard.views.historicalStudents.find(row => row.studentId === 'student-huang');
+assert.deepStrictEqual(
+  coAttendedHuangRow?.detailLessonRecordRows.map(row => [row.time, row.lessonRelationText, row.countAsCompletedLesson]),
+  [['2026-03-25 12:00-13:00', '使用 misha 的课包', true]],
+  '两人共同上课但只扣 misha 课包时，黄总上课记录必须显示使用 misha 的课包'
+);
+assert.deepStrictEqual(
+  coAttendedMishaRow?.detailLessonRecordRows.map(row => [row.time, row.lessonRelationText, row.countAsCompletedLesson]),
+  [['2026-03-25 12:00-13:00', '', true]],
+  '两人共同上课且扣本人课包时，misha 本人的上课记录仍计入本人累计上课'
+);
 const ledgerScheduleFallbackData = {
   students: [{ id: 'student-ledger-fallback', name: '流水兜底学员' }],
   purchases: [{ id: 'purchase-ledger-fallback', studentId: 'student-ledger-fallback', packageName: '成人1v1 10课时', courseType: '私教课', amountPaid: 3800, status: 'active', purchaseDate: '2026-07-01' }],

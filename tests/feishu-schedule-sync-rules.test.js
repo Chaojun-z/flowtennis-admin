@@ -57,6 +57,7 @@ assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').les
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageNote, '德德使用小林课包 2', 'shared package note should be preserved for schedule notes');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageAttendeeName, '德德', 'shared package note should keep the actual learner');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageOwnerName, '小林', 'shared package note should keep the package owner');
+assert.deepStrictEqual(sync.parseStudentCell('misha 黄总（2）').names, ['misha', '黄总'], 'confirmed Misha and Huang pair should be parsed as two students');
 assert.deepStrictEqual(sync.parseStudentCell('王老板、王老板孩子').names, ['王老板'], 'Wang boss family course should use one canonical student record');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:00' }, '2026-07-20 12:01'), false, 'courses already started before baseline should be ignored');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:30' }, '2026-07-20 12:01'), true, 'future courses after baseline should be sync candidates');
@@ -1404,6 +1405,40 @@ const authorizedSharedPackagePlan = sync.buildDryRunPlan({
 assert.strictEqual(authorizedSharedPackagePlan.summary.create, 1, 'shared package should be schedulable after resolving owner and actual learner');
 assert.deepStrictEqual(authorizedSharedPackagePlan.actions[0].candidate.scheduleStudents.map(row=>row.name), ['达达'], 'shared package schedule should be created for the actual learner');
 assert.deepStrictEqual(sync.buildScheduleBody(authorizedSharedPackagePlan.actions[0].candidate).entitlementIds, ['ent-shiyi'], 'shared package schedule should consume the owner package');
+
+const mishaHuangPairPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'misha-huang-pair-key',
+    startTime: '2026-07-29 12:00',
+    endTime: '2026-07-29 13:00',
+    coachName: '朝珺',
+    studentText: 'misha 黄总（2）',
+    studentNames: ['misha', '黄总'],
+    lessonIndex: 2,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [
+    { id: 'sch-prev-misha', startTime: '2026-07-08 12:00', endTime: '2026-07-08 13:00', studentIds: ['stu-misha','stu-huang'], studentName: 'misha、黄总', coach: '朝珺教练', courseType: '私教课', entitlementId: 'ent-misha', entitlementIds: ['ent-misha'], status: '已排课' }
+  ],
+  students: [
+    { id: 'stu-misha', name: 'misha', primaryCoach: '朝珺教练' },
+    { id: 'stu-huang', name: '黄总', primaryCoach: '朝珺教练' }
+  ],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  entitlements: [
+    { id: 'ent-misha', studentId: 'stu-misha', studentName: 'misha', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' },
+    { id: 'ent-huang', studentId: 'stu-huang', studentName: '黄总', courseType: '私教课', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }
+  ]
+});
+assert.strictEqual(mishaHuangPairPlan.summary.create, 1, 'confirmed Misha and Huang pair should create without manual confirmation');
+assert.deepStrictEqual(mishaHuangPairPlan.actions[0].candidate.scheduleStudents.map(row=>row.name), ['misha', '黄总'], 'Misha and Huang pair schedule should show both students');
+const mishaHuangPairBody = sync.buildScheduleBody(mishaHuangPairPlan.actions[0].candidate);
+assert.deepStrictEqual(mishaHuangPairBody.entitlementIds, ['ent-huang'], 'second confirmed pair lesson should rotate to Huang package');
+assert.strictEqual(mishaHuangPairBody.packageOwnerStudentId, 'stu-huang', 'pair schedule should keep package owner metadata');
+assert.strictEqual(mishaHuangPairBody.usedByStudentId, 'stu-misha', 'pair schedule should let the non-owner show authorized package usage');
 
 const annotatedAliasPlan = sync.buildDryRunPlan({
   feishuCourses: [{

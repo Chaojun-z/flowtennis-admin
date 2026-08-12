@@ -429,8 +429,12 @@ function entitlementLedgerOwnerStudentId(row = {}, entitlementsById = new Map(),
 function entitlementLedgerStudentIds(row = {}, entitlementsById = new Map(), purchasesById = new Map(), schedulesById = new Map()) {
   const schedule = schedulesById.get(text(row.scheduleId)) || {};
   const scheduleIds = teachingScheduleStudentIds(schedule);
-  if (scheduleIds.length === 1) return scheduleIds;
   const explicitIds = teachingScheduleStudentIds(row);
+  const relationIds = [row.packageOwnerStudentId, row.ownerStudentId, row.usedByStudentId, row.authorizedStudentId].map(text).filter(Boolean);
+  if (relationIds.length) {
+    return [...new Set([...scheduleIds, ...explicitIds, ...relationIds].filter(Boolean))];
+  }
+  if (scheduleIds.length === 1) return scheduleIds;
   if (explicitIds.length) return explicitIds;
   const ownerId = entitlementLedgerOwnerStudentId(row, entitlementsById, purchasesById);
   return ownerId ? [ownerId] : [];
@@ -448,9 +452,11 @@ function studentDisplayNameById(studentId = '', studentsById = new Map()) {
 function ledgerRelationText({ currentStudentId = '', actualStudentIds = [], ownerStudentId = '', studentsById = new Map() } = {}) {
   const currentId = text(currentStudentId);
   const ownerId = text(ownerStudentId);
-  if (!currentId || !ownerId || actualStudentIds.includes(ownerId)) return '';
+  if (!currentId || !ownerId) return '';
   const ownerName = studentDisplayNameById(ownerId, studentsById) || '课包所有人';
   const actualNames = actualStudentIds.map(id => studentDisplayNameById(id, studentsById)).filter(Boolean);
+  if (actualStudentIds.includes(ownerId) && currentId !== ownerId && actualStudentIds.includes(currentId)) return `使用 ${ownerName} 的课包`;
+  if (actualStudentIds.includes(ownerId)) return '';
   if (currentId === ownerId) return `${actualNames.join('、') || '其他学员'} 使用了 ${ownerName} 的课包`;
   if (actualStudentIds.includes(currentId)) return `使用 ${ownerName} 的课包`;
   return '';
