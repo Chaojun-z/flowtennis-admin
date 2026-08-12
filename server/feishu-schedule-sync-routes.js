@@ -1091,7 +1091,24 @@ function futureScheduleConsumptionForEntitlement(row={},candidate={},schedules=[
   }).reduce((sum,schedule)=>sum+scheduleLessonCount(schedule),0);
 }
 
+function consumedScheduleLessonsBefore(row={},candidate={},schedules=[]){
+  const entitlementId=String(row.id||'');
+  const candidateStart=String(candidate.startTime||'');
+  if(!entitlementId||!candidateStart)return null;
+  const matched=(schedules||[]).filter(schedule=>{
+    if(!activeSchedule(schedule))return false;
+    if(String(schedule.startTime||'')>=candidateStart)return false;
+    const ids=parseMaybeArray(schedule.entitlementIds).map(String);
+    const primary=String(schedule.entitlementId||'');
+    return primary===entitlementId||ids.includes(entitlementId);
+  });
+  if(!matched.length)return null;
+  return matched.reduce((sum,schedule)=>sum+scheduleLessonCount(schedule),0);
+}
+
 function entitlementExpectedLessonIndexAt(row={},candidate={},schedules=[]){
+  const consumedBefore=consumedScheduleLessonsBefore(row,candidate,schedules);
+  if(consumedBefore!==null)return Math.floor(consumedBefore)+1;
   const expectedNow=entitlementExpectedLessonIndex(row);
   if(expectedNow===null)return null;
   const futureConsumed=futureScheduleConsumptionForEntitlement(row,candidate,schedules);

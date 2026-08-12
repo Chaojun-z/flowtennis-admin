@@ -1598,6 +1598,59 @@ const historicalEarlierLessonAfterLaterImportedPlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(historicalEarlierLessonAfterLaterImportedPlan.summary.create, 1, 'later imported schedules should not make an earlier Feishu lesson look like a lesson-index mismatch');
 
+const historicalBoundEarlierLessonShouldUsePastProgressPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'historical-bound-earlier-progress-key',
+    startTime: '2026-07-20 10:00',
+    endTime: '2026-07-20 11:00',
+    coachName: '岳克舟教练',
+    studentNames: ['李先生'],
+    studentText: '李先生（2）',
+    lessonIndex: 2,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [
+    {
+      id: 'sch-li-lesson-1',
+      startTime: '2026-07-19 10:00',
+      endTime: '2026-07-19 11:00',
+      coach: '岳克舟教练',
+      campus: 'shunyi_mapo',
+      venue: '2号场',
+      courseType: '私教课',
+      experienceType: '',
+      studentIds: ['stu-li'],
+      entitlementId: 'ent-li',
+      entitlementIds: ['ent-li'],
+      lessonCount: 1,
+      status: '已排课'
+    },
+    {
+      id: 'sch-li-later',
+      startTime: '2026-08-12 10:00',
+      endTime: '2026-08-12 11:00',
+      coach: '岳克舟教练',
+      campus: 'shunyi_mapo',
+      venue: '2号场',
+      courseType: '私教课',
+      experienceType: '',
+      studentIds: ['stu-li'],
+      entitlementId: 'ent-li',
+      entitlementIds: ['ent-li'],
+      lessonCount: 1,
+      status: '已排课'
+    }
+  ],
+  students: [{ id: 'stu-li', name: '李先生（李俊泽）', primaryCoach: '岳克舟教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-li', studentId: 'stu-li', courseType: '私教课', totalLessons: 10, usedLessons: 8, remainingLessons: 2, status: 'active' }]
+});
+assert.strictEqual(historicalBoundEarlierLessonShouldUsePastProgressPlan.summary.create, 1, 'historical lesson index checks should use package progress at the class time, not the latest remaining balance');
+assert.strictEqual(historicalBoundEarlierLessonShouldUsePastProgressPlan.summary.notifyError, 0, 'earlier historical lessons should not be blocked by lessons consumed after that date');
+
 const outOfOrderLessonIndexPlan = sync.buildDryRunPlan({
   feishuCourses: [
     {
