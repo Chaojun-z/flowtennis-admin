@@ -1652,6 +1652,126 @@ assert.strictEqual(tangguoBossAliasPlan.summary.create, 1, '唐总 should resolv
 assert.strictEqual(tangguoBossAliasPlan.summary.notifyError, 0, '唐总 alias should not require operations confirmation');
 assert.strictEqual(tangguoBossAliasPlan.actions[0].candidate.resolvedStudents[0].name, '唐果', '唐总 alias should bind to Tangguo student profile');
 
+const confirmedMaggieAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'maggie-alias-key',
+    coachName: '朝珺',
+    studentNames: ['很伟大'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-maggie', name: '很玮大Maggie', primaryCoach: '朝珺教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-maggie', studentId: 'stu-maggie', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+});
+assert.strictEqual(confirmedMaggieAliasPlan.summary.create, 1, '很伟大 should resolve to 很玮大Maggie automatically');
+assert.strictEqual(confirmedMaggieAliasPlan.summary.notifyError, 0, 'confirmed Maggie alias should not require operations confirmation');
+
+const confirmedCompanionLeadPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...companionCourses[0],
+    sourceKey: 'confirmed-companion-lead-key',
+    coachName: '岳克舟教练',
+    studentNames: ['沈萍'],
+    studentText: '沈萍',
+    course: { ok: true, courseType: '陪打', experienceType: '', audience: '', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [],
+  users: [],
+  entitlements: []
+});
+assert.strictEqual(confirmedCompanionLeadPlan.summary.create, 1, 'confirmed companion customers should be schedulable through lead conversion');
+assert.strictEqual(confirmedCompanionLeadPlan.summary.notifyError, 0, 'confirmed companion customers should not require operations confirmation');
+assert.strictEqual(confirmedCompanionLeadPlan.actions[0].candidate.requiresCompanionLeadConversion, true, 'companion lead conversion should be marked for apply stage');
+
+const confirmedFreeXiaochenPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'confirmed-free-xiaochen-key',
+    startTime: '2026-08-02 16:00',
+    endTime: '2026-08-02 18:30',
+    coachName: '朝珺',
+    studentNames: ['小晨团课'],
+    studentText: '小晨团课',
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [],
+  users: [],
+  entitlements: []
+});
+assert.strictEqual(confirmedFreeXiaochenPlan.summary.notifyError, 0, 'confirmed free Xiaochen group should not require operations confirmation');
+assert.strictEqual(confirmedFreeXiaochenPlan.actions[0].sync.reason, '已确认免费赠送/异常天气跳过，不导入', 'confirmed free Xiaochen group should be ignored with a business reason');
+
+const williamBrotherExistingPackagePlan = sync.buildDryRunPlan({
+  feishuCourses: [
+    {
+      ...courses[0],
+      sourceKey: 'william-brother-existing-key',
+      startTime: '2026-08-01 16:00',
+      endTime: '2026-08-01 17:00',
+      coachName: '林铭',
+      studentText: 'william（9）',
+      studentNames: ['william'],
+      lessonIndex: 9,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false },
+      campus: 'shunyi_mapo',
+      venue: '4号场',
+      lessonCount: 1,
+      fingerprint: 'william-brother-existing-fingerprint'
+    },
+    {
+      ...courses[0],
+      sourceKey: 'william-next-key',
+      startTime: '2026-08-23 16:00',
+      endTime: '2026-08-23 17:00',
+      coachName: 'Siren',
+      studentText: 'william（10）',
+      studentNames: ['william'],
+      lessonIndex: 10,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false },
+      campus: 'shunyi_mapo',
+      venue: '3号场',
+      lessonCount: 1,
+      fingerprint: 'william-next-fingerprint'
+    }
+  ],
+  syncRows: [],
+  schedules: [{
+    id: 'sch-brother',
+    startTime: '2026-08-01 16:00',
+    endTime: '2026-08-01 17:00',
+    coach: '林铭教练',
+    campus: 'shunyi_mapo',
+    venue: '4号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentName: 'William弟弟',
+    studentIds: ['stu-brother'],
+    entitlementId: 'ent-william',
+    entitlementIds: ['ent-william'],
+    status: '已排课'
+  }],
+  students: [
+    { id: 'stu-william', name: 'William（时节）', primaryCoach: 'Siren 教练' },
+    { id: 'stu-brother', name: 'William弟弟', primaryCoach: '林铭教练' }
+  ],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-william', studentId: 'stu-william', studentName: 'William（时节）', courseType: '私教课', totalLessons: 10, usedLessons: 9, remainingLessons: 1, status: 'active' }]
+});
+assert.strictEqual(williamBrotherExistingPackagePlan.summary.bindExisting, 1, 'Feishu William row should bind existing William brother schedule when it already consumes William package');
+assert.strictEqual(williamBrotherExistingPackagePlan.summary.create, 1, 'William 8/23 should still consume the final remaining lesson');
+assert.strictEqual(williamBrotherExistingPackagePlan.summary.notifyError, 0, 'William package sharing should not consume the last lesson twice');
+
 const lessonIndexMismatchPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],

@@ -108,8 +108,15 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
   [normalizeStudentNameKey('willliam弟弟')]: 'william',
   [normalizeStudentNameKey('小萌')]: '孙小萌',
   [normalizeStudentNameKey('黄晴 吕瑜')]: '吕瑜 黄晴',
-  [normalizeStudentNameKey('唐总')]: '唐果'
+  [normalizeStudentNameKey('唐总')]: '唐果',
+  [normalizeStudentNameKey('很伟大')]: '很玮大Maggie',
+  [normalizeStudentNameKey('william')]: 'William（时节）'
 });
+
+const FEISHU_CONFIRMED_COMPANION_LEAD_NAMES = new Set([
+  normalizeStudentNameKey('Jack zhao'),
+  normalizeStudentNameKey('沈萍')
+]);
 
 const FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS = new Set([
   'GrbZdi|2026-07-25|16:00|17:30|杨|🐰🐰🐰🐰🐰、🌞艾薇、朋友|零基础训练营体验课|马坡室内|1号'
@@ -347,6 +354,9 @@ function confirmedVirtualStudent(rawName=''){
   const key=normalizeStudentNameKey(resolveFeishuStudentAlias(rawName));
   if(key===normalizeStudentNameKey('理想团课')){
     return {id:'student-ideal-group-enterprise',name:'理想团课',campus:'shunyi_mapo'};
+  }
+  if(FEISHU_CONFIRMED_COMPANION_LEAD_NAMES.has(key)){
+    return {id:`feishu-companion-lead-${sha256(key).slice(0,24)}`,name:cleanText(rawName),campus:'shunyi_mapo',virtualCompanionLead:true};
   }
   return null;
 }
@@ -811,6 +821,29 @@ function exactScheduleMatch(candidate,schedules=[],options={}){
   })||null;
 }
 
+function entitlementBackedScheduleMatch(candidate,schedules=[],ctx={},options={}){
+  const fields=scheduleCandidateFields(candidate);
+  const candidateStudentIds=new Set(fields.studentIds.map(String));
+  const candidateEntitlementIds=new Set((candidate.resolvedStudents||[])
+    .flatMap(student=>(ctx.entitlements||[])
+      .filter(entitlement=>String(entitlement.studentId||'')===String(student.id||'')&&specialCourseEntitlementMatches(entitlement,candidate))
+      .map(entitlement=>String(entitlement.id||'')))
+    .filter(Boolean));
+  if(!candidateEntitlementIds.size)return null;
+  return (schedules||[]).find(row=>{
+    if(!activeSchedule(row)||!sameTime(fields,row))return false;
+    if(normalizeNameKey(row.coach)!==normalizeNameKey(fields.coach))return false;
+    if(!campusKeysMatch(row.campus,fields.campus,options))return false;
+    if(!options.ignoreVenue&&String(row.venue||'')!==String(fields.venue||''))return false;
+    if(String(row.courseType||'')!==String(fields.courseType||''))return false;
+    if(String(row.experienceType||'')!==String(fields.experienceType||''))return false;
+    const scheduleEntitlementIds=[row.entitlementId,...parseMaybeArray(row.entitlementIds)].map(String).filter(Boolean);
+    if(!scheduleEntitlementIds.some(id=>candidateEntitlementIds.has(id)))return false;
+    const scheduleStudentIds=parseMaybeArray(row.studentIds).map(String);
+    return !scheduleStudentIds.some(id=>candidateStudentIds.has(id));
+  })||null;
+}
+
 function scheduleMinutes(value){
   const text=cleanText(value);
   const m=text.match(/\d{4}-\d{2}-\d{2}\s+(\d{1,2}):(\d{2})/);
@@ -992,6 +1025,11 @@ function confirmedEmptyRecruitingCourse(raw={}){
   if((raw.studentNames||[]).length>0||cleanText(raw.studentText))return false;
   const text=cleanText(raw.courseText||raw.course?.raw||raw.course?.specialTopic||raw.course?.courseDisplayName);
   return /初阶训练课|初阶专项课|零基础训练营|发接发|专项/.test(text);
+}
+
+function confirmedIgnoredGiftCourse(raw={}){
+  const keys=candidateStudentNameKeys(raw);
+  return keys.includes(normalizeStudentNameKey('小晨团课'));
 }
 
 function emptyFutureTemplateCourse(raw={}){
@@ -1317,7 +1355,11 @@ function lessonIndexMismatchDetails(candidate,ctx={}){
 function attachSchedulableStudents(candidate,ctx={}){
   if(candidate.errors.length)return candidate;
   if(candidate.course.isTrial)return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
-  if(candidate.course.courseType==='陪打')return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
+  if(candidate.course.courseType==='陪打'){
+    const first=candidate.resolvedStudents[0];
+    if(first?.virtualCompanionLead)return {...candidate,scheduleStudents:[first],requiresCompanionLeadConversion:true};
+    return {...candidate,scheduleStudents:candidate.resolvedStudents.slice(0,1)};
+  }
   const shared=attachSharedPackageStudent(candidate,ctx);
   if(shared)return shared;
   if(confirmedMishaHuangPair(candidate)){
@@ -1506,6 +1548,11 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:ignored});
       continue;
     }
+    if(confirmedIgnoredGiftCourse(raw)){
+      activeSourceKeys.add(raw.sourceKey);
+      actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:{status:'ignored',sourceKey:raw.sourceKey,reason:'已确认免费赠送/异常天气跳过，不导入'}});
+      continue;
+    }
     if(confirmedEmptyRecruitingCourse(raw)||emptyFutureTemplateCourse(raw)){
       activeSourceKeys.add(raw.sourceKey);
       actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:{status:'ignored',sourceKey:raw.sourceKey,reason:'空学员模板/招募课暂不导入'}});
@@ -1557,6 +1604,12 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:exact,supersededSyncRows:supersededSyncRowsFor(exact,candidate.sourceKey)});
       continue;
     }
+    const entitlementBacked=entitlementBackedScheduleMatch(candidate,planningSchedules,ctx);
+    if(entitlementBacked){
+      markRepresentedSchedule(entitlementBacked);
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:entitlementBacked,entitlementBackedMatch:true,supersededSyncRows:supersededSyncRowsFor(entitlementBacked,candidate.sourceKey)});
+      continue;
+    }
     const contiguous=contiguousScheduleGroupMatch(candidate,planningSchedules);
     if(contiguous){
       markRepresentedSchedule(contiguous);
@@ -1567,6 +1620,12 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     if(systemVenueMatch){
       markRepresentedSchedule(systemVenueMatch);
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueMatch,venueSource:'system',supersededSyncRows:supersededSyncRowsFor(systemVenueMatch,candidate.sourceKey)});
+      continue;
+    }
+    const systemVenueEntitlementBacked=entitlementBackedScheduleMatch(candidate,planningSchedules,ctx,{ignoreVenue:true});
+    if(systemVenueEntitlementBacked){
+      markRepresentedSchedule(systemVenueEntitlementBacked);
+      actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueEntitlementBacked,venueSource:'system',entitlementBackedMatch:true,supersededSyncRows:supersededSyncRowsFor(systemVenueEntitlementBacked,candidate.sourceKey)});
       continue;
     }
     const systemVenueGroupMatch=contiguousScheduleGroupMatch(candidate,planningSchedules,{ignoreVenue:true});
@@ -2209,6 +2268,44 @@ function buildTrialLeadBody(candidate={}){
   };
 }
 
+function buildCompanionLeadBody(candidate={}){
+  const name=cleanText(candidate.studentNames?.[0]||candidate.studentText);
+  return {
+    displayName:name,
+    wechatName:name,
+    phone:'',
+    source:'飞书排课表',
+    campus:candidate.campus||'',
+    customerType:'陪打',
+    demandProduct:'订场+陪打',
+    consultType:'订场+陪打',
+    rawStatus:'已转化',
+    convertedProducts:['订场','陪打'],
+    profileNote:'飞书排课同步：陪打客户，按已确认规则转化为订场+陪打用户',
+    createInitialFollowup:true
+  };
+}
+
+async function resolveCompanionLeadStudent(candidate,{leads=[],convertLeadToStudent,createLead}={}){
+  const current=(candidate.scheduleStudents||candidate.resolvedStudents||[]).find(row=>!row.virtualCompanionLead);
+  if(current?.id)return {student:current,lead:null};
+  const name=cleanText(candidate.studentNames?.[0]||candidate.studentText);
+  const matches=findLeadMatches(leads,name);
+  if(matches.length>1)throw new Error(`陪打找到多个相似线索，需要运营确认：${name}`);
+  let lead=matches[0]||null;
+  if(!lead){
+    if(typeof createLead!=='function')throw new Error(`陪打找不到历史学员或唯一线索：${name}`);
+    const created=await createLead(buildCompanionLeadBody(candidate));
+    lead=created?.lead;
+    if(!lead?.id)throw new Error('陪打线索创建失败');
+  }
+  if(typeof convertLeadToStudent!=='function')throw new Error('线索转学员处理器不可用');
+  const result=await convertLeadToStudent(lead.id);
+  const student=result?.student;
+  if(!student?.id)throw new Error('陪打线索转学员失败');
+  return {student,lead};
+}
+
 async function resolveTrialStudent(candidate,{leads=[],convertLeadToStudent,createLead}={}){
   if(candidate.resolvedStudents.length)return {student:candidate.resolvedStudents[0],lead:null};
   const matches=findLeadMatches(leads,candidate.studentNames[0]);
@@ -2362,8 +2459,12 @@ async function applySyncPlan(plan,ctx={}){
           const special=await ensureSpecialCourseEntitlements(candidate,ctx);
           candidate={...candidate,selectedEntitlements:special.selectedEntitlements};
         }
+        if(candidate.requiresCompanionLeadConversion){
+          const companion=await resolveCompanionLeadStudent(candidate,ctx);
+          candidate={...candidate,scheduleStudents:[companion.student],resolvedStudents:[companion.student],sourceLeadId:companion.lead?.id||'',sourceLeadName:companion.lead?.name||companion.lead?.leadName||companion.lead?.displayName||''};
+        }
         candidate=await ensureSharedPackageAuthorization(candidate,ctx);
-        const body=buildScheduleBody(candidate);
+        const body=buildScheduleBody(candidate,{sourceLeadId:candidate.sourceLeadId||'',sourceLeadName:candidate.sourceLeadName||''});
         const result=await ctx.createSchedule(body);
         const schedule=result?.schedule;
         if(!schedule?.id)throw new Error('系统排课创建失败');
