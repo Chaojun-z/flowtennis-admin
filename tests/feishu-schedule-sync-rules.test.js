@@ -822,6 +822,36 @@ const orphanPendingDeletePlan = sync.buildDryRunPlan({
 });
 assert.strictEqual(orphanPendingDeletePlan.summary.pendingDelete, 0, 'orphan schedules already awaiting delete confirmation should not be reported again');
 
+const pendingDeleteScheduleIgnoredForLessonProgressPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'william-next-lesson-key',
+    startTime: '2026-08-23 16:00',
+    endTime: '2026-08-23 17:00',
+    date: '2026-08-23',
+    coachName: 'Siren',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    studentNames: ['William'],
+    studentText: 'William（10）',
+    lessonIndex: 10,
+    lessonCount: 1,
+    fingerprint: 'william-next-lesson-fingerprint',
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+  }],
+  syncRows: [{ id: 'sync-deleted-william', sourceKey: 'deleted-william-key', scheduleId: 'sch-william-deleted', status: 'pending_delete' }],
+  schedules: [
+    { id: 'sch-william-1', startTime: '2026-08-01 16:00', endTime: '2026-08-01 17:00', coach: 'Siren 教练', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', experienceType: '', studentIds: ['stu-william'], entitlementId: 'ent-william', entitlementIds: ['ent-william'], lessonCount: 9, status: '已排课' },
+    { id: 'sch-william-deleted', startTime: '2026-08-16 16:00', endTime: '2026-08-16 17:00', coach: 'Siren 教练', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', experienceType: '', studentIds: ['stu-william'], entitlementId: 'ent-william', entitlementIds: ['ent-william'], lessonCount: 1, status: '已排课' }
+  ],
+  students: [{ id: 'stu-william', name: 'William（时节）', primaryCoach: 'Siren 教练' }],
+  coaches: [{ id: 'coach-siren', name: 'Siren 教练' }],
+  users: [],
+  entitlements: [{ id: 'ent-william', studentId: 'stu-william', courseType: '私教课', totalLessons: 10, usedLessons: 10, remainingLessons: 0, status: 'active' }]
+});
+assert.strictEqual(pendingDeleteScheduleIgnoredForLessonProgressPlan.summary.create, 1, 'pending-delete Feishu schedules should not consume lesson progress for the next Feishu lesson');
+assert.strictEqual(pendingDeleteScheduleIgnoredForLessonProgressPlan.summary.notifyError, 0, 'pending-delete schedules should not create false lesson-index mismatch');
+
 const pastUnboundPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -1536,6 +1566,73 @@ assert.strictEqual(tangguoCompanionCorrection[0].course.courseType, '陪打', 'c
 assert.strictEqual(tangguoCompanionCorrection[0].course.payMethod, '储值卡', 'Tangguo companion correction should use stored value payment');
 assert.strictEqual(sync.buildScheduleBody({ ...tangguoCompanionCorrection[0], resolvedCoach: { name: '杨教练' }, scheduleStudents: [{ id: 'stu-tangguo', name: '唐果' }] }).paidAmount, 400, 'Tangguo companion correction should use confirmed 400 yuan amount');
 
+
+const idealGroupPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'ideal-group-key',
+    coachName: '杨教练',
+    studentNames: ['理想团课'],
+    studentText: '理想团课',
+    lessonIndex: 1,
+    course: { ok: true, courseType: '小班课', experienceType: '', audience: '青少年', smallClassType: 'bootcamp', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [{ id: 'coach-yang', name: '杨教练' }],
+  users: [],
+  entitlements: [],
+  packages: [{ id: 'pkg-ideal-group', name: '企业团课', courseType: '小班课', type: '小班课', price: 0, lessons: 10, maxStudents: 4, status: 'active', smallClassType: 'bootcamp' }],
+  recommendEntitlements: () => ({ recommended: null, options: [] })
+});
+assert.strictEqual(idealGroupPlan.summary.create, 1, '理想团课 should auto-create a small class schedule');
+assert.strictEqual(idealGroupPlan.actions[0].candidate.resolvedStudents[0].name, '理想团课', '理想团课 should keep its own canonical student name');
+assert.strictEqual(sync.buildScheduleBody(idealGroupPlan.actions[0].candidate).courseTypeLevel2, '训练营', '理想团课 should use bootcamp level label');
+
+const pastProgressPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'past-progress-key',
+    startTime: '2026-07-20 10:00',
+    endTime: '2026-07-20 11:00',
+    coachName: '岳克舟教练',
+    studentNames: ['李先生'],
+    studentText: '李先生（2）',
+    lessonIndex: 2,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{ id: 'sch-li-lesson-1', startTime: '2026-07-19 10:00', endTime: '2026-07-19 11:00', coach: '岳克舟教练', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', experienceType: '', studentIds: ['stu-li'], entitlementId: 'ent-li', entitlementIds: ['ent-li'], lessonCount: 1, status: '已排课' }],
+  students: [{ id: 'stu-li', name: '李先生（李俊泽）', primaryCoach: '岳克舟教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-li', studentId: 'stu-li', courseType: '私教课', totalLessons: 10, usedLessons: 8, remainingLessons: 2, status: 'active' }]
+});
+assert.strictEqual(pastProgressPlan.summary.create, 1, 'historical lesson index should use the progress at that date');
+assert.strictEqual(pastProgressPlan.summary.notifyError, 0, 'historical lesson index should not be blocked by later lessons');
+
+const futureCopyPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'future-copy-key',
+    startTime: '2026-08-10 12:30',
+    endTime: '2026-08-10 13:30',
+    coachName: 'Siren',
+    studentNames: [],
+    studentText: '',
+    course: { ok: true, courseType: '小班课', experienceType: '', audience: '', smallClassType: 'family', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [{ id: 'coach-siren', name: 'Siren 教练' }],
+  users: [],
+  entitlements: []
+});
+assert.strictEqual(futureCopyPlan.summary.notifyError, 0, 'empty future template rows should not require operations confirmation');
+assert.strictEqual(futureCopyPlan.actions[0].sync.reason, '空学员模板/招募课暂不导入', 'empty future template rows should be marked as ignored templates');
+
 const tangguoBossAliasPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...companionCourses[0],
@@ -1788,6 +1885,57 @@ const consecutiveFutureLessonIndexPlan = sync.buildDryRunPlan({
   entitlements: [{ id: 'ent-xhb', studentId: 'stu-xhb', courseType: '私教课', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }]
 });
 assert.strictEqual(consecutiveFutureLessonIndexPlan.summary.create, 2, 'same sync run should count earlier planned schedules before checking the next lesson index');
+
+const consecutiveFutureLessonIndexWithRecommendationPlan = sync.buildDryRunPlan({
+  feishuCourses: [
+    {
+      ...courses[0],
+      sourceKey: 'consecutive-recommended-lesson-index-2',
+      startTime: '2026-08-17 14:00',
+      endTime: '2026-08-17 15:00',
+      coachName: '林铭教练',
+      studentNames: ['王先生'],
+      lessonIndex: 2,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+    },
+    {
+      ...courses[0],
+      sourceKey: 'consecutive-recommended-lesson-index-3',
+      startTime: '2026-08-18 14:00',
+      endTime: '2026-08-18 15:00',
+      coachName: '林铭教练',
+      studentNames: ['王先生'],
+      lessonIndex: 3,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+    }
+  ],
+  syncRows: [],
+  schedules: [{
+    id: 'sch-wang-lesson-1',
+    startTime: '2026-08-14 15:00',
+    endTime: '2026-08-14 16:00',
+    coach: '林铭教练',
+    campus: 'shunyi_mapo',
+    venue: '4号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-wang'],
+    entitlementId: 'ent-wang',
+    entitlementIds: ['ent-wang'],
+    lessonCount: 1,
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-wang', name: '王先生（阿萌）', primaryCoach: '林铭教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-wang', studentId: 'stu-wang', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }],
+  recommendEntitlements: rows => ({
+    recommended: rows.find(row => Number(row.remainingLessons || 0) > 0) ? { entitlementId: rows[0].id } : null,
+    options: rows.map(row => ({ entitlementId: row.id, selectable: Number(row.remainingLessons || 0) > 0 }))
+  })
+});
+assert.strictEqual(consecutiveFutureLessonIndexWithRecommendationPlan.summary.create, 2, 'recommended entitlements should use planned lesson consumption before checking the next Feishu lesson number');
+assert.strictEqual(consecutiveFutureLessonIndexWithRecommendationPlan.summary.notifyError, 0, 'recommended entitlement branch should not ask operations to confirm consecutive planned lesson indexes');
 
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
@@ -2143,17 +2291,16 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
     }]
   }, {
     put: async (table, id, row) => deleteWrites.push({ table, id, row }),
+    cancelScheduleById: async (scheduleId, reason) => deleteWrites.push({ table: 'ft_schedule', id: scheduleId, row: { id: scheduleId, status: '已取消', cancelReason: reason } }),
     uuidv4: () => 'uuid-delete',
     T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
     T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
   });
 
-  assert.strictEqual(appliedDelete[0].type, 'pending_delete', 'delete sync should create a pending confirmation task');
-  assert.match(appliedDelete[0].confirmUrl, /\/api\/feishu-schedule-sync\/confirm-delete\?taskId=/, 'pending delete should include a mobile confirmation link');
+  assert.strictEqual(appliedDelete[0].type, 'delete_schedule', 'delete sync should cancel the schedule automatically');
   assert.deepStrictEqual(appliedDelete[0].scheduleSnapshot.studentName, '赵新阳 田秀楠', 'pending delete should keep readable schedule information');
-  assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.row.status === 'pending'), 'delete sync should not cancel immediately, only create pending task');
-  assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.row.scheduleSnapshot?.studentName === '赵新阳 田秀楠'), 'delete confirmation task should save readable schedule information');
-  assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_sync' && item.row.status === 'pending_delete'), 'delete sync should mark relation as pending_delete');
+  assert.strictEqual(appliedDelete[0].scheduleId, 'sch-delete', 'auto delete should report the cancelled schedule id');
+  assert.ok(deleteWrites.some(item => item.table === 'ft_feishu_schedule_sync' && item.row.status === 'cancelled'), 'delete sync should mark relation as cancelled');
 
   const supersedeWrites = [];
   const appliedSupersede = await sync.applySyncPlan({

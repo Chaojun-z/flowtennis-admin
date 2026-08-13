@@ -343,6 +343,23 @@ function findSpecialCoursePackage(packages=[],candidate={}){
   })||null;
 }
 
+function confirmedVirtualStudent(rawName=''){
+  const key=normalizeStudentNameKey(resolveFeishuStudentAlias(rawName));
+  if(key===normalizeStudentNameKey('理想团课')){
+    return {id:'student-ideal-group-enterprise',name:'理想团课',campus:'shunyi_mapo'};
+  }
+  return null;
+}
+
+function findIdealGroupPackage(packages=[]){
+  return (packages||[]).find(row=>{
+    const status=cleanText(row.status||'active');
+    if(['inactive','off','voided','deleted','下架','作废'].includes(status))return false;
+    if(cleanText(row.name||row.packageName)!=='企业团课')return false;
+    return cleanText(row.courseType)==='小班课'&&cleanText(row.smallClassType||'bootcamp')==='bootcamp';
+  })||null;
+}
+
 function candidateEntitlementLessonCount(candidate={}){
   if(['专项课','小班课'].includes(candidate.course?.courseType))return 1;
   return Number(candidate.lessonCount||1);
@@ -943,7 +960,11 @@ function buildResolvedCandidate(raw,ctx={}){
     const confirmedAliasStudent=lookupName!==name&&lookupMatches.length===1?lookupMatches[0]:null;
     const student=confirmedAliasStudent||(candidates.length===1?candidates[0]:uniqueBySelectableEntitlement(candidates,raw,ctx))||uniqueByName(ctx.students,lookupName)||uniqueByName(ctx.students,name);
     if(student)resolvedStudents.push(student);
-    else unresolvedStudents.push(name);
+    else {
+      const virtualStudent=confirmedVirtualStudent(name);
+      if(virtualStudent)resolvedStudents.push(virtualStudent);
+      else unresolvedStudents.push(name);
+    }
   }
   const resolvedCoach=matchCoach(ctx.coaches,ctx.users,raw.coachName,ctx.schedules,ctx.students)||inferCoachFromResolvedStudents(raw.coachName,resolvedStudents);
   if(!resolvedCoach)errors.push(`无法唯一识别教练：${raw.coachName}`);
@@ -963,6 +984,7 @@ function confirmedSingleStudentSmallClass(raw={}){
   const keys=[...names,...text.split(/[、,，/&]+/)].map(name=>normalizeStudentNameKey(resolveFeishuStudentAlias(name)));
   if(keys.includes(normalizeStudentNameKey('王老板')))return true;
   if(keys.includes(normalizeStudentNameKey('笑逐')))return true;
+  if(keys.includes(normalizeStudentNameKey('理想团课')))return true;
   return keys.includes(normalizeStudentNameKey('曦曦🐳'))&&keys.includes(normalizeStudentNameKey('朋友'));
 }
 
@@ -970,6 +992,12 @@ function confirmedEmptyRecruitingCourse(raw={}){
   if((raw.studentNames||[]).length>0||cleanText(raw.studentText))return false;
   const text=cleanText(raw.courseText||raw.course?.raw||raw.course?.specialTopic||raw.course?.courseDisplayName);
   return /初阶训练课|初阶专项课|零基础训练营|发接发|专项/.test(text);
+}
+
+function emptyFutureTemplateCourse(raw={}){
+  if((raw.studentNames||[]).length>0||cleanText(raw.studentText))return false;
+  const text=cleanText(raw.courseText||raw.course?.raw||raw.course?.courseDisplayName||raw.course?.courseType);
+  return /小班|团课|亲子|训练营|专项|体验|正式/.test(text);
 }
 
 function candidateStudentNameKeys(candidate={}){
@@ -1337,6 +1365,21 @@ function attachSchedulableStudents(candidate,ctx={}){
       };
     }
   }
+  if(candidate.course.courseType==='小班课'&&candidateStudentNameKeys(candidate).includes(normalizeStudentNameKey('理想团课'))&&scheduleStudents.length<candidate.resolvedStudents.length){
+    const pkg=findIdealGroupPackage(ctx.packages);
+    if(pkg){
+      return {
+        ...candidate,
+        scheduleStudents:candidate.resolvedStudents.slice(),
+        selectedEntitlements,
+        requiresPackagePurchase:true,
+        autoPackage:pkg,
+        packagePurchaseStudentIds:candidate.resolvedStudents
+          .filter(student=>!selectedStudentIds.has(String(student.id||'')))
+          .map(student=>student.id)
+      };
+    }
+  }
   if(!scheduleStudents.length){
     const hasPackageWithMismatchedIndex=Number(candidate.lessonIndex)>0&&candidate.resolvedStudents.some(student=>hasSelectableEntitlementIgnoringLessonIndex(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
     if(hasPackageWithMismatchedIndex){
@@ -1364,6 +1407,21 @@ function applyPlannedEntitlementConsumption(candidate={},ctx={}){
   });
 }
 
+function addPlannedSchedule(candidate={},ctx={}){
+  if(!Array.isArray(ctx.schedules))return;
+  const body=buildScheduleBody(candidate);
+  ctx.schedules.push({
+    ...body,
+    id:`planned-feishu-${sha256(String(candidate.sourceKey||`${candidate.startTime}|${body.studentName}`)).slice(0,24)}`
+  });
+}
+
+function applyPlannedSchedule(candidate={},ctx={}){
+  if(candidate.course?.isTrial)return;
+  addPlannedSchedule(candidate,ctx);
+  applyPlannedEntitlementConsumption(candidate,ctx);
+}
+
 function canAutoCreateHistoricalCourse(candidate={}){
   if(candidate.course?.isTrial)return true;
   if(candidate.course?.courseType==='陪打')return true;
@@ -1375,7 +1433,27 @@ function canAutoCreateHistoricalCourse(candidate={}){
 }
 
 function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],coaches=[],users=[],entitlements=[],packages=[],recommendEntitlements=null,nowKey='',scannedDateRanges=[]}={}){
-  const ctx={students,coaches,users,schedules,entitlements:(entitlements||[]).map(row=>({...row})),packages,recommendEntitlements};
+  const pendingDeleteScheduleIds=new Set((syncRows||[])
+    .filter(row=>row.status==='pending_delete')
+    .map(row=>String(row.scheduleId||''))
+    .filter(Boolean));
+  const planningSchedules=(schedules||[]).filter(row=>!pendingDeleteScheduleIds.has(String(row.id||'')));
+  const planningEntitlements=(entitlements||[]).map(row=>({...row}));
+  for(const schedule of schedules||[]){
+    if(!pendingDeleteScheduleIds.has(String(schedule.id||''))||!activeSchedule(schedule))continue;
+    const count=scheduleLessonCount(schedule);
+    const ids=[schedule.entitlementId,...parseMaybeArray(schedule.entitlementIds)].map(String).filter(Boolean);
+    for(const entitlementId of new Set(ids)){
+      const row=planningEntitlements.find(item=>String(item.id||'')===entitlementId);
+      if(!row)continue;
+      const used=Number(row.usedLessons);
+      const remaining=Number(row.remainingLessons);
+      if(Number.isFinite(used))row.usedLessons=Math.max(0,used-count);
+      if(Number.isFinite(remaining))row.remainingLessons=remaining+count;
+      if(row.status==='depleted'&&Number(row.remainingLessons)>0)row.status='active';
+    }
+  }
+  const ctx={students,coaches,users,schedules:planningSchedules,entitlements:planningEntitlements,packages,recommendEntitlements};
   const ignoredByKey=new Map((syncRows||[]).filter(row=>row.status==='ignored').map(row=>[String(row.sourceKey||''),row]));
   const syncByKey=new Map((syncRows||[]).filter(row=>row.status!=='ignored').map(row=>[String(row.sourceKey||''),row]));
   const activeSourceKeys=new Set();
@@ -1408,9 +1486,9 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:ignored});
       continue;
     }
-    if(confirmedEmptyRecruitingCourse(raw)){
+    if(confirmedEmptyRecruitingCourse(raw)||emptyFutureTemplateCourse(raw)){
       activeSourceKeys.add(raw.sourceKey);
-      actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:{status:'ignored',sourceKey:raw.sourceKey,reason:'空学员招募课暂不导入'}});
+      actions.push({type:'noop',sourceKey:raw.sourceKey,candidate:raw,sync:{status:'ignored',sourceKey:raw.sourceKey,reason:'空学员模板/招募课暂不导入'}});
       continue;
     }
     let candidate=buildResolvedCandidate(raw,ctx);
@@ -1422,7 +1500,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       continue;
     }
     if(sync?.scheduleId){
-      const existing=(schedules||[]).find(row=>String(row.id||'')===String(sync.scheduleId));
+      const existing=(planningSchedules||[]).find(row=>String(row.id||'')===String(sync.scheduleId));
       if(!existing){
         actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,reason:'同步记录绑定的系统排课不存在'});
       }else if(sync.status==='pending_update'&&sync.pendingFingerprint===candidate.fingerprint){
@@ -1453,50 +1531,50 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       }
       continue;
     }
-    const exact=exactScheduleMatch(candidate,schedules);
+    const exact=exactScheduleMatch(candidate,planningSchedules);
     if(exact){
       markRepresentedSchedule(exact);
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:exact,supersededSyncRows:supersededSyncRowsFor(exact,candidate.sourceKey)});
       continue;
     }
-    const contiguous=contiguousScheduleGroupMatch(candidate,schedules);
+    const contiguous=contiguousScheduleGroupMatch(candidate,planningSchedules);
     if(contiguous){
       markRepresentedSchedule(contiguous);
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:contiguous,scheduleIds:contiguous.scheduleIds,supersededSyncRows:supersededSyncRowsFor(contiguous,candidate.sourceKey)});
       continue;
     }
-    const systemVenueMatch=exactScheduleMatch(candidate,schedules,{ignoreVenue:true});
+    const systemVenueMatch=exactScheduleMatch(candidate,planningSchedules,{ignoreVenue:true});
     if(systemVenueMatch){
       markRepresentedSchedule(systemVenueMatch);
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueMatch,venueSource:'system',supersededSyncRows:supersededSyncRowsFor(systemVenueMatch,candidate.sourceKey)});
       continue;
     }
-    const systemVenueGroupMatch=contiguousScheduleGroupMatch(candidate,schedules,{ignoreVenue:true});
+    const systemVenueGroupMatch=contiguousScheduleGroupMatch(candidate,planningSchedules,{ignoreVenue:true});
     if(systemVenueGroupMatch){
       markRepresentedSchedule(systemVenueGroupMatch);
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueGroupMatch,scheduleIds:systemVenueGroupMatch.scheduleIds,venueSource:'system',supersededSyncRows:supersededSyncRowsFor(systemVenueGroupMatch,candidate.sourceKey)});
       continue;
     }
-    const missingCampusExact=exactScheduleMatch(candidate,schedules,{allowMissingCampus:true});
+    const missingCampusExact=exactScheduleMatch(candidate,planningSchedules,{allowMissingCampus:true});
     if(missingCampusExact){
       markRepresentedSchedule(missingCampusExact);
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:missingCampusExact,backfillExistingFields:true,supersededSyncRows:supersededSyncRowsFor(missingCampusExact,candidate.sourceKey)});
       continue;
     }
-    const missingCampusSameDay=sameDayUniqueScheduleMatch(candidate,schedules,{allowMissingCampus:true});
+    const missingCampusSameDay=sameDayUniqueScheduleMatch(candidate,planningSchedules,{allowMissingCampus:true});
     if(missingCampusSameDay){
       markRepresentedSchedule(missingCampusSameDay);
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:missingCampusSameDay,backfillExistingFields:true,timeSource:'system',supersededSyncRows:supersededSyncRowsFor(missingCampusSameDay,candidate.sourceKey)});
       continue;
     }
     if(historicalCourse){
-      const sameDayMatch=sameDayUniqueScheduleMatch(candidate,schedules);
+      const sameDayMatch=sameDayUniqueScheduleMatch(candidate,planningSchedules);
       if(sameDayMatch){
         markRepresentedSchedule(sameDayMatch);
         actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:sameDayMatch,timeSource:'system',supersededSyncRows:supersededSyncRowsFor(sameDayMatch,candidate.sourceKey)});
         continue;
       }
-      const systemVenueSameDayMatch=sameDayUniqueScheduleMatch(candidate,schedules,{ignoreVenue:true});
+      const systemVenueSameDayMatch=sameDayUniqueScheduleMatch(candidate,planningSchedules,{ignoreVenue:true});
       if(systemVenueSameDayMatch){
         markRepresentedSchedule(systemVenueSameDayMatch);
         actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:systemVenueSameDayMatch,timeSource:'system',venueSource:'system',supersededSyncRows:supersededSyncRowsFor(systemVenueSameDayMatch,candidate.sourceKey)});
@@ -1513,7 +1591,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       continue;
     }
     actions.push({type:candidate.course.isTrial?'create_trial_schedule':'create_schedule',sourceKey:candidate.sourceKey,candidate});
-    if(!candidate.course.isTrial)applyPlannedEntitlementConsumption(candidate,ctx);
+    applyPlannedSchedule(candidate,ctx);
   }
   for(const row of syncRows||[]){
     if(row.status!=='active')continue;
@@ -1783,7 +1861,7 @@ function cronAuthorized(req){
 function formatActionLine(action){
   const c=action.candidate||{};
   if(action.type==='notify_error')return `${formatCourseBrief(c)}：${operatorActionText(action.reason)}`;
-  if(action.type==='pending_delete')return `待确认删除：${formatScheduleBrief(action.schedule)||formatCourseBrief(c)||'系统已有排课'}`;
+  if(action.type==='pending_delete')return `自动取消：${formatScheduleBrief(action.schedule)||formatCourseBrief(c)||'系统已有排课'}`;
   return `${formatCourseBrief(c)}：${actionTypeText(action.type)}`;
 }
 
@@ -1825,6 +1903,7 @@ function actionTypeText(type=''){
   if(type==='create_schedule')return '已创建并扣课包';
   if(type==='create_trial_schedule')return '已创建并核销体验课包';
   if(type==='update_schedule')return '已修改系统排课';
+  if(type==='delete_schedule')return '已按飞书自动取消';
   return '已处理';
 }
 
@@ -1951,8 +2030,8 @@ function buildNotificationCard(result={}){
   const s=result.plan?.summary||{};
   const applied=Array.isArray(result.applied)?result.applied:[];
   const actionMap=actionBySourceKey(result);
-  const successItems=applied.filter(item=>!['error','pending_delete','refresh_sync'].includes(item.type));
-  const pendingDeletes=applied.filter(item=>item.type==='pending_delete');
+  const successItems=applied.filter(item=>!['error','refresh_sync'].includes(item.type));
+  const pendingDeletes=[];
   const pendingUpdates=applied.filter(item=>item.type==='pending_update');
   const appliedErrors=applied.filter(item=>item.type==='error');
   const notifyErrors=(result.plan?.actions||[]).filter(action=>action.type==='notify_error');
@@ -1962,9 +2041,9 @@ function buildNotificationCard(result={}){
   ];
   const count=(type)=>applied.length
     ? applied.filter(item=>item.type===type).length
-    : Number(s[type==='bind_existing'?'bindExisting':type==='create_schedule'?'create':type==='create_trial_schedule'?'createTrial':type==='update_schedule'?'update':type==='pending_delete'?'pendingDelete':type]||0);
+    : Number(s[type==='bind_existing'?'bindExisting':type==='create_schedule'?'create':type==='create_trial_schedule'?'createTrial':type==='update_schedule'?'update':type==='delete_schedule'||type==='pending_delete'?'pendingDelete':type]||0);
   const resultLine=[
-    `自动完成：新增 ${count('create_schedule')}｜体验课 ${count('create_trial_schedule')}｜修改 ${count('update_schedule')}｜绑定 ${count('bind_existing')}｜删除待确认 ${count('pending_delete')}`,
+    `自动完成：新增 ${count('create_schedule')}｜体验课 ${count('create_trial_schedule')}｜修改 ${count('update_schedule')}｜绑定 ${count('bind_existing')}｜自动取消 ${count('delete_schedule')}`,
     `需要处理：${needItems.length+pendingDeletes.length+pendingUpdates.length} 条`
   ].join('\n');
   const elements=[
@@ -2048,7 +2127,7 @@ function buildNotificationText(result){
     `【网球兄弟】排课自动同步`,
     `自动同步时间：${chinaDateTimeText(result.at||new Date())}`,
     `飞书表取数周期：${formatSheetPeriodText(result.sheetTitle||result.sheetId||'')}`,
-    `本次处理：新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，删除待确认 ${s.pendingDelete}`,
+    `本次处理：新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，自动取消 ${s.pendingDelete}`,
     `历史待清账：${s.notifyError} 条`
   ];
   const important=result.plan.actions.filter(a=>a.type!=='noop');
@@ -2057,8 +2136,6 @@ function buildNotificationText(result){
     lines.push(...important.slice(0,10).map(formatActionLine));
     if(important.length>10)lines.push(`其余 ${important.length-10} 条未展示，请先处理上方事项。`);
   }
-  const deleteLinks=(result.applied||[]).filter(item=>item.type==='pending_delete'&&item.confirmUrl).slice(0,8).map(item=>`确认取消：${item.confirmUrl}`);
-  if(deleteLinks.length)lines.push(...deleteLinks);
   return lines.join('\n');
 }
 
@@ -2161,9 +2238,9 @@ async function ensureSpecialCourseEntitlements(candidate,{entitlements=[],purcha
   const selected=Array.isArray(candidate.selectedEntitlements)?candidate.selectedEntitlements.slice():[];
   const byStudent=new Map(selected.map(row=>[String(row.studentId||''),row]));
   const pkg=candidate.autoPackage||{};
-  if(!pkg.id)throw new Error('专项课包商品缺失，不能自动购买');
+  if(!pkg.id)throw new Error('自动课包商品缺失，不能自动购买');
   const amount=specialCourseAutoPackageAmount(candidate)||Number(pkg.price||pkg.packagePrice||0);
-  if(!amount)throw new Error('专项课包金额无法确定，不能自动购买');
+  if(!amount&&cleanText(pkg.name||pkg.packageName)!=='企业团课')throw new Error('自动课包金额无法确定，不能自动购买');
   const purchases=[];
   for(const student of students){
     const studentId=String(student.id||'');
@@ -2302,13 +2379,11 @@ async function applySyncPlan(plan,ctx={}){
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,status:'pending_update',pendingUpdateTaskId:task.id,pendingFingerprint:action.candidate.fingerprint,updatedAt:now});
         applied.push({type:'pending_update',sourceKey:action.sourceKey,taskId:task.id,scheduleId:task.scheduleId,scheduleSnapshot:snapshot,reason:task.reason,confirmUrl:task.confirmUrl});
       }else if(action.type==='pending_delete'){
-        const publicBase=cleanText(process.env.FEISHU_SCHEDULE_PUBLIC_BASE_URL||process.env.STUDENT_REMINDER_PUBLIC_BASE_URL||'https://www.flowtennis.cn').replace(/\/+$/,'');
         const snapshot=scheduleSnapshot(action.schedule);
-        const task={id:`feishu-delete-${sha256(`${action.sourceKey}|${now}`).slice(0,24)}`,type:'delete_confirm',sourceKey:action.sourceKey,syncId:action.sync.id,scheduleId:action.sync.scheduleId,scheduleSnapshot:snapshot,status:'pending',createdAt:now,updatedAt:now,expiresAt:new Date(Date.now()+48*3600000).toISOString(),confirmToken:sha256(`${ctx.uuidv4()}|${action.sourceKey}|${now}`)};
-        task.confirmUrl=`${publicBase}/api/feishu-schedule-sync/confirm-delete?taskId=${encodeURIComponent(task.id)}&token=${encodeURIComponent(task.confirmToken)}`;
-        await ctx.put(ctx.T_FEISHU_SCHEDULE_TASKS,task.id,task);
-        await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,status:'pending_delete',updatedAt:now});
-        applied.push({type:action.type,sourceKey:action.sourceKey,taskId:task.id,scheduleId:task.scheduleId,scheduleSnapshot:snapshot,confirmUrl:task.confirmUrl});
+        const scheduleId=action.sync.scheduleId||action.schedule?.id;
+        if(scheduleId)await ctx.cancelScheduleById(scheduleId,'飞书排课表已删除，自动取消系统排课');
+        await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,status:'cancelled',cancelledAt:now,updatedAt:now});
+        applied.push({type:'delete_schedule',sourceKey:action.sourceKey,scheduleId,scheduleSnapshot:snapshot});
       }
     }catch(err){
       applied.push({type:'error',sourceKey:action.sourceKey,error:err.message});
@@ -2450,7 +2525,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
     if(!dryRun){
       const applyPlan=rangeMode?safeHistoryApplyPlan(plan,{includeTrial:historyTrialMode==='confirmed'}):plan;
       if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
-      result.applied=await applySyncPlan(applyPlan,{put,mkTable,uuidv4,createSchedule,updateSchedule,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,authorizations,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_ENTITLEMENT_AUTHORIZATIONS});
+      result.applied=await applySyncPlan(applyPlan,{put,mkTable,uuidv4,createSchedule,updateSchedule,cancelScheduleById,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,authorizations,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_ENTITLEMENT_AUTHORIZATIONS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
       const fingerprintNow=new Date().toISOString();
       for(const row of feishuSheet.fingerprintUpdates||[]){
