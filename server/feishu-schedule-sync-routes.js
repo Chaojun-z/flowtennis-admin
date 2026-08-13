@@ -1283,6 +1283,10 @@ function hasSelectableEntitlementIgnoringLessonIndex(student,candidate,entitleme
   return hasSelectableEntitlement(student,{...candidate,lessonIndex:null},entitlements,recommendEntitlements);
 }
 
+function selectEntitlementIgnoringLessonIndex(student,candidate,entitlements=[],recommendEntitlements,schedules=[]){
+  return selectEntitlementForStudent(student,{...candidate,lessonIndex:null},entitlements,recommendEntitlements,schedules);
+}
+
 function lessonIndexMismatchDetails(candidate,ctx={}){
   const index=Number(candidate.lessonIndex);
   if(!Number.isFinite(index)||index<=0)return '';
@@ -1381,10 +1385,26 @@ function attachSchedulableStudents(candidate,ctx={}){
     }
   }
   if(!scheduleStudents.length){
-    const hasPackageWithMismatchedIndex=Number(candidate.lessonIndex)>0&&candidate.resolvedStudents.some(student=>hasSelectableEntitlementIgnoringLessonIndex(student,candidate,ctx.entitlements,ctx.recommendEntitlements));
-    if(hasPackageWithMismatchedIndex){
+    const mismatchEntitlements=[];
+    const mismatchStudents=[];
+    if(Number(candidate.lessonIndex)>0){
+      for(const student of candidate.resolvedStudents||[]){
+        const selected=selectEntitlementIgnoringLessonIndex(student,candidate,ctx.entitlements,ctx.recommendEntitlements,ctx.schedules);
+        if(selected){
+          mismatchEntitlements.push(selected);
+          mismatchStudents.push(student);
+        }
+      }
+    }
+    if(mismatchEntitlements.length){
       const detail=lessonIndexMismatchDetails(candidate,ctx);
-      return {...candidate,scheduleStudents:[],errors:[...candidate.errors,`飞书括号课时编号和系统课包进度不一致，需要运营确认${detail?`：${detail}`:''}`]};
+      return {
+        ...candidate,
+        scheduleStudents:mismatchStudents,
+        selectedEntitlements:mismatchEntitlements,
+        lessonIndexAutoAudited:true,
+        lessonIndexAuditNote:`课时编号自查：飞书括号编号和系统进度不一致，已按系统可扣课包继续同步${detail?`；${detail}`:''}`
+      };
     }
     return {...candidate,scheduleStudents:[],errors:[...candidate.errors,'没有可自动扣课的可用课包']};
   }
@@ -1700,7 +1720,7 @@ function buildScheduleBody(candidate,extra={}){
     sourceLeadId:extra.sourceLeadId||'',
     sourceLeadName:extra.sourceLeadName||'',
     actualStudentCount:Math.max(scheduleStudents.length,candidate.studentNames.length||1),
-    notes:[candidate.sharedPackageNote,confirmedPayment.confirmedPaymentNote,`飞书排课表同步 ${candidate.sheetTitle||candidate.sheetId||''} ${candidate.sourceCell||''}`.trim()].filter(Boolean).join('；')
+    notes:[candidate.sharedPackageNote,confirmedPayment.confirmedPaymentNote,candidate.lessonIndexAuditNote,`飞书排课表同步 ${candidate.sheetTitle||candidate.sheetId||''} ${candidate.sourceCell||''}`.trim()].filter(Boolean).join('；')
   };
 }
 

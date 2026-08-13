@@ -1668,9 +1668,9 @@ const lessonIndexMismatchPlan = sync.buildDryRunPlan({
   users: [],
   entitlements: [{ id: 'ent-ljz', studentId: 'stu-ljz', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
 });
-assert.strictEqual(lessonIndexMismatchPlan.summary.notifyError, 1, 'lesson index mismatch should block automatic import');
-assert.match(lessonIndexMismatchPlan.actions[0].reason, /括号课时编号和系统课包进度不一致/, 'lesson index mismatch should ask operations to confirm');
-assert.match(lessonIndexMismatchPlan.actions[0].reason, /飞书第9节，系统下一节第2节/, 'lesson index mismatch should include the Feishu and system lesson numbers');
+assert.strictEqual(lessonIndexMismatchPlan.summary.create, 1, 'lesson index mismatch should auto-sync when a usable entitlement is clear');
+assert.strictEqual(lessonIndexMismatchPlan.summary.notifyError, 0, 'lesson index mismatch should not ask operations to confirm when system can choose the package');
+assert.match(sync.buildScheduleBody(lessonIndexMismatchPlan.actions[0].candidate).notes, /飞书第9节，系统下一节第2节/, 'lesson index mismatch should keep the Feishu and system lesson numbers in internal notes');
 
 const multiHourEndingLessonIndexPlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -1936,6 +1936,33 @@ const consecutiveFutureLessonIndexWithRecommendationPlan = sync.buildDryRunPlan(
 });
 assert.strictEqual(consecutiveFutureLessonIndexWithRecommendationPlan.summary.create, 2, 'recommended entitlements should use planned lesson consumption before checking the next Feishu lesson number');
 assert.strictEqual(consecutiveFutureLessonIndexWithRecommendationPlan.summary.notifyError, 0, 'recommended entitlement branch should not ask operations to confirm consecutive planned lesson indexes');
+
+const autoAuditLessonIndexMismatchPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'auto-audit-lesson-index-mismatch-key',
+    startTime: '2026-08-19 17:30',
+    endTime: '2026-08-19 18:30',
+    coachName: 'Siren',
+    studentNames: ['淇淇'],
+    studentText: '淇淇（9）',
+    lessonIndex: 9,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-qiqi', name: '淇淇（ZT）', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-qiqi', studentId: 'stu-qiqi', courseType: '私教课', totalLessons: 10, usedLessons: 7, remainingLessons: 3, status: 'active', packageName: '青少年1v1 黄金时间10课时' }],
+  recommendEntitlements: rows => ({
+    recommended: rows.find(row => Number(row.remainingLessons || 0) > 0) ? { entitlementId: rows[0].id } : null,
+    options: rows.map(row => ({ entitlementId: row.id, selectable: Number(row.remainingLessons || 0) > 0 }))
+  })
+});
+assert.strictEqual(autoAuditLessonIndexMismatchPlan.summary.create, 1, 'lesson index mismatches with a usable entitlement should auto-create after system self-check');
+assert.strictEqual(autoAuditLessonIndexMismatchPlan.summary.notifyError, 0, 'lesson index mismatches should not require operations confirmation when a usable entitlement is clear');
+assert.match(sync.buildScheduleBody(autoAuditLessonIndexMismatchPlan.actions[0].candidate).notes, /课时编号自查/, 'auto-audited lesson index mismatches should leave an internal schedule note');
 
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
