@@ -684,6 +684,38 @@ assert.strictEqual(
   '在期学员近90天正式课活跃必须只按排课表正式课事实输出'
 );
 
+const staleSummaryCase = {
+  teachingStudentSummaryRows: [
+    {
+      id: 'stale-summary-recent-formal',
+      studentId: 'stale-summary-recent-formal',
+      name: '旧摘要近30天正式课',
+      displayName: '旧摘要近30天正式课',
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: false,
+      hasFormalAttended: true,
+      completedLessons: 1,
+      lastFormalLessonAt: '2026-07-08',
+      detailRecentLessonDate: '2026-07-08',
+      activityStatusLabel: '近30天活跃',
+      detailLessonRecordRows: [
+        { kind: 'schedule', time: '2026-07-08 10:00-11:00', courseType: '私教课', lessonDelta: -1 }
+      ]
+    }
+  ]
+};
+const staleSummaryStandard = buildStandardLifecycleMetrics({ ...staleSummaryCase, now: new Date('2026-07-09 00:00:00') });
+assert.deepStrictEqual(
+  staleSummaryStandard.views.activeStudents.map(row => row.studentId),
+  ['stale-summary-recent-formal'],
+  '旧摘要的 isActiveStudentRoster=false 不能覆盖近90天正式课事实，近30天活跃学员必须进入在期学员'
+);
+assert.strictEqual(
+  staleSummaryStandard.teachingSummary.historicalFormalLesson30Count,
+  staleSummaryStandard.teachingSummary.activeFormalLesson30Count,
+  '只读摘要时，近30天正式课活跃也必须保持历史页和在期页一致'
+);
+
 const futureScheduleData = {
   students: [{ id: 'student-future-completed', name: '未来已结束误标' }],
   purchases: [],

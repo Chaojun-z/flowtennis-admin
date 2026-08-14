@@ -1442,10 +1442,11 @@ function teachingStudentInHistoricalRoster(data = {}, row = {}, now = new Date()
 
 function teachingStudentInActiveRoster(data = {}, row = {}, now = new Date()) {
   if ((Number(row.packageBalanceRemaining) || 0) > 0) return true;
+  const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId), teachingStudentSummaryDateFallback(data, row)), now);
+  if (days !== null && days <= 90) return true;
   const snapshotValue = booleanSnapshotValue(row.isActiveStudentRoster);
   if (row.hasTeachingSummarySnapshot && snapshotValue !== undefined) return snapshotValue;
-  const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId), teachingStudentSummaryDateFallback(data, row)), now);
-  return days !== null && days <= 90;
+  return false;
 }
 
 function hasFreshTeachingLessonFacts(data = {}) {
