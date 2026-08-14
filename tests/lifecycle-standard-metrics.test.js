@@ -716,6 +716,78 @@ assert.strictEqual(
   '只读摘要时，近30天正式课活跃也必须保持历史页和在期页一致'
 );
 
+const summaryFastPathRows = [
+  {
+    id: 'summary-fast-trial-only',
+    studentId: 'summary-fast-trial-only',
+    name: '摘要体验未正式',
+    displayName: '摘要体验未正式',
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: false,
+    hasTrialAttended: false,
+    hasFormalAttended: false,
+    completedLessons: 1,
+    detailLessonRecordRows: [
+      { kind: 'schedule', time: '2026-07-01 10:00-11:00', courseType: '体验课', lessonDelta: -1 }
+    ]
+  },
+  {
+    id: 'summary-fast-formal-recent',
+    studentId: 'summary-fast-formal-recent',
+    name: '摘要正式近30天',
+    displayName: '摘要正式近30天',
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: false,
+    hasTrialAttended: false,
+    hasFormalAttended: false,
+    completedLessons: 1,
+    lastFormalLessonAt: '2026-07-08',
+    detailRecentLessonDate: '2026-07-08',
+    detailLessonRecordRows: [
+      { kind: 'schedule', time: '2026-07-08 10:00-11:00', courseType: '私教课', lessonDelta: -1 }
+    ]
+  },
+  {
+    id: 'summary-fast-trial-formal-recent',
+    studentId: 'summary-fast-trial-formal-recent',
+    name: '摘要体验后正式近30天',
+    displayName: '摘要体验后正式近30天',
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: false,
+    hasTrialAttended: false,
+    hasFormalAttended: false,
+    completedLessons: 2,
+    lastFormalLessonAt: '2026-07-07',
+    detailRecentLessonDate: '2026-07-07',
+    detailLessonRecordRows: [
+      { kind: 'schedule', time: '2026-07-02 10:00-11:00', courseType: '体验课', lessonDelta: -1 },
+      { kind: 'schedule', time: '2026-07-07 10:00-11:00', courseType: '私教课', lessonDelta: -1 }
+    ]
+  }
+];
+const summaryFastPathLifecycleRows = summaryFastPathRows.map(row => ({
+  customerKey: `teaching-summary:${row.studentId}`,
+  studentId: row.studentId,
+  displayName: row.displayName,
+  studentStage: 'student',
+  hasTeachingSummarySnapshot: true,
+  hasTrialAttended: false,
+  hasFormalAttended: false,
+  hasScheduleRecord: true,
+  hasCourseStudentEntry: true,
+  hasFreeCourseFollowup: true
+}));
+const summaryFastPathStandard = buildStandardLifecycleMetrics({
+  teachingStudentSummaryRows: summaryFastPathRows,
+  customerLifecycleRows: summaryFastPathLifecycleRows,
+  now: new Date('2026-07-09 00:00:00')
+});
+assert.strictEqual(summaryFastPathStandard.teachingSummary.historicalTrialAttendedCount, 2, '摘要首屏必须从明细反推上过体验课');
+assert.strictEqual(summaryFastPathStandard.teachingSummary.historicalFormalAttendedCount, 2, '摘要首屏必须从最近正式课或明细反推上过正式课');
+assert.strictEqual(summaryFastPathStandard.teachingSummary.historicalTrialWithoutFormalCount, 1, '摘要首屏体验未正式必须用同一套反推后的体验/正式事实');
+assert.strictEqual(summaryFastPathStandard.teachingSummary.historicalFormalLesson30Count, 2, '摘要首屏近30天正式课活跃不能只信 hasFormalAttended 布尔字段');
+assert.strictEqual(summaryFastPathStandard.teachingSummary.activeFormalLesson30Count, 2, '摘要首屏在期页近30天正式课活跃必须和历史页一致');
+
 const futureScheduleData = {
   students: [{ id: 'student-future-completed', name: '未来已结束误标' }],
   purchases: [],

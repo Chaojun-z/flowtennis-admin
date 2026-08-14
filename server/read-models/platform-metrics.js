@@ -841,6 +841,14 @@ function teachingSummaryRowHasConsumedTrialPackage(row = {}) {
   });
 }
 
+function teachingSummaryRowHasFormalLesson(row = {}, now = new Date()) {
+  if (booleanSnapshotValue(row.hasFormalAttended) === true) return true;
+  const lessonRows = arraySnapshotValue(row.detailLessonRecordRows);
+  if (lessonRows.some(item => text(item?.kind) === 'schedule' && item?.countAsCompletedLesson !== false && !courseRowIsTrial(item))) return true;
+  if (lessonRows.length) return false;
+  return teachingDateOnOrBeforeNow(row.lastFormalLessonAt, now);
+}
+
 function buildTeachingStudentSummaryFieldMap(data = {}) {
   const details = new Map();
   (data.teachingStudentSummaryRows || data.studentTeachingSummaries || [])
@@ -848,6 +856,7 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
       const studentId = text(row.studentId || row.id);
       if (!studentId) return;
       const hasTrialAttended = teachingSummaryRowHasTrialLesson(row) || teachingSummaryRowHasConsumedTrialPackage(row);
+      const hasFormalAttended = teachingSummaryRowHasFormalLesson(row, data.now || new Date());
       details.set(studentId, {
         hasTeachingSummarySnapshot: true,
         packageListRows: arraySnapshotValue(row.packageListRows),
@@ -880,7 +889,7 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
         isHistoricalStudentRoster: booleanSnapshotValue(row.isHistoricalStudentRoster),
         isActiveStudentRoster: booleanSnapshotValue(row.isActiveStudentRoster),
         hasTrialAttended: hasTrialAttended ? true : booleanSnapshotValue(row.hasTrialAttended),
-        hasFormalAttended: booleanSnapshotValue(row.hasFormalAttended),
+        hasFormalAttended: hasFormalAttended ? true : booleanSnapshotValue(row.hasFormalAttended),
         summaryUpdatedAt: text(row.summaryUpdatedAt || row.updatedAt)
       });
     });
@@ -1499,7 +1508,7 @@ function teachingStudentHasTrialAttendedFact(data = {}, row = {}, now = new Date
 function teachingStudentHasFormalAttendedFact(data = {}, row = {}, now = new Date()) {
   if (teachingStudentFormalLessonFactRows(data, text(row.studentId), now).length > 0) return true;
   if (!hasFreshTeachingLessonFacts(data) && row.hasTeachingSummarySnapshot) {
-    return booleanSnapshotValue(row.hasFormalAttended) === true;
+    return booleanSnapshotValue(row.hasFormalAttended) === true || teachingSummaryRowHasFormalLesson(row, now);
   }
   return false;
 }
@@ -1769,6 +1778,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
       const studentId = text(row.studentId || row.id);
       if (!studentId || byStudentId.has(studentId)) return;
       const hasTrialAttended = teachingSummaryRowHasTrialLesson(row) || teachingSummaryRowHasConsumedTrialPackage(row) || booleanSnapshotValue(row.hasTrialAttended) === true;
+      const hasFormalAttended = teachingSummaryRowHasFormalLesson(row, data.now || new Date());
       byStudentId.set(studentId, {
         customerKey: `teaching-summary:${studentId}`,
         sourceLeadId: text(row.sourceLeadId),
@@ -1800,7 +1810,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
         hasTrialExperience: hasTrialAttended,
         hasTeachingSummarySnapshot: true,
         hasTrialAttended,
-        hasFormalAttended: booleanSnapshotValue(row.hasFormalAttended) === true,
+        hasFormalAttended,
         hasScheduleRecord: true,
         hasCourseStudentEntry: true,
         hasFreeCourseFollowup: true,
@@ -1863,7 +1873,7 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
       .map(item => dateOnly(item.startTime || item.endTime || item.createdAt))
       .filter(Boolean)
       .sort()
-      .pop() || (booleanSnapshotValue(row.hasFormalAttended) === true ? teachingStudentSummaryDateFallback(data, row) : '');
+      .pop() || (teachingStudentHasFormalAttendedFact(data, row, now) ? teachingStudentSummaryDateFallback(data, row) : '');
     const days = teachingDaysSince(latest, now);
     return days !== null && days <= daysLimit;
   };
