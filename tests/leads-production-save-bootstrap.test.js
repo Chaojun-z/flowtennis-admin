@@ -43,7 +43,7 @@ function baseDeps(overrides = {}) {
   };
 }
 
-async function postNewLead(handle) {
+async function postNewLead(handle, overrides = {}) {
   const res = makeRes();
   await handle({
     path: '/leads',
@@ -56,7 +56,7 @@ async function postNewLead(handle) {
       campus: 'shunyi_mapo',
       demandProduct: '私教课',
       createInitialFollowup: true
-    },
+    , ...overrides},
     user: { role: 'admin' },
     res,
     query: new URLSearchParams()
@@ -117,6 +117,35 @@ async function postNewLead(handle) {
   assert.strictEqual(duplicateRes.body.lead.id, 'lead-existing', 'duplicate lead save should reuse the existing lead');
   assert.ok(!duplicate.writes.some(item => item.table === 'ft_leads'), 'duplicate lead save must not write a second lead row');
   assert.ok(!duplicate.writes.some(item => item.table === 'ft_lead_followups'), 'duplicate lead save must not write a second initial followup');
+
+  const sameNameNoPhoneLead = rules.normalizeLeadRecord({
+    id: 'lead-same-name',
+    displayName: '阿里同名',
+    wechatName: '阿里同名',
+    phone: '',
+    leadDate: '2026-08-02',
+    source: '抖音',
+    demandProduct: '小班课',
+    createdAt: '2026-08-02T10:00:00.000Z',
+    updatedAt: '2026-08-02T10:00:00.000Z'
+  }, { id: 'lead-same-name', now: '2026-08-02T10:00:00.000Z' });
+  const sameNameNoPhoneDuplicate = baseDeps({
+    isProductionRuntime: () => true,
+    scan: async (table) => table === 'ft_leads' ? [sameNameNoPhoneLead] : []
+  });
+  const sameNameNoPhoneHandle = createLeadsRoutes(sameNameNoPhoneDuplicate.deps);
+  const sameNameNoPhoneRes = await postNewLead(sameNameNoPhoneHandle, {
+    displayName: '阿里同名',
+    wechatName: '阿里同名',
+    leadDate: '2026-08-03',
+    source: '抖音',
+    demandProduct: '小班课'
+  });
+
+  assert.strictEqual(sameNameNoPhoneRes.statusCode, 200, 'same-name no-phone lead save should succeed');
+  assert.strictEqual(sameNameNoPhoneRes.body.duplicate, true, 'same-name no-phone lead save should reuse the only matching lead');
+  assert.strictEqual(sameNameNoPhoneRes.body.lead.id, 'lead-same-name', 'same-name no-phone lead save should return the existing lead');
+  assert.ok(!sameNameNoPhoneDuplicate.writes.some(item => item.table === 'ft_leads' && item.id === 'lead-same-name' && item.row.leadDate === '2026-08-03'), 'same-name no-phone lead save must not write a second lead row');
 
   const rows = { ft_leads: [], ft_lead_followups: [] };
   const repeated = baseDeps({

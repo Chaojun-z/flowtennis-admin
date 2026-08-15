@@ -291,6 +291,41 @@ function createLeadsRoutes(deps={}){
     return key?`lead-manual-${stableLeadCreateHash(key)}`:'';
   }
 
+  function leadIdentityName(value=''){
+    return cleanLeadText(value)
+      .toLowerCase()
+      .replace(/\s+/g,'')
+      .replace(/[·.。_\-\/|｜，,;；]/g,'');
+  }
+
+  function leadDisplayNameText(lead={}){
+    return cleanLeadText(lead.displayName||lead.wechatName||lead.name);
+  }
+
+  function leadNameKey(lead={}){
+    return leadIdentityName(leadDisplayNameText(lead));
+  }
+
+  function buildLeadNameIndex(rows=[]){
+    const index=new Map();
+    visibleLeadSourceRows(rows).forEach(row=>{
+      const key=leadNameKey(row);
+      if(!key)return;
+      const list=index.get(key)||[];
+      list.push(row);
+      index.set(key,list);
+    });
+    return index;
+  }
+
+  function findUniqueLeadByName(lead={},rowsOrIndex=[]){
+    if(cleanLeadText(lead.phone))return null;
+    const key=leadNameKey(lead);
+    if(!key)return null;
+    const rows=rowsOrIndex instanceof Map?(rowsOrIndex.get(key)||[]):(buildLeadNameIndex(rowsOrIndex).get(key)||[]);
+    return rows.length===1?rows[0]:null;
+  }
+
   function earliestDuplicateLead(lead,rows=[]){
     if(typeof buildLeadDedupKey!=='function')return null;
     const key=buildLeadDedupKey(lead);
@@ -306,7 +341,7 @@ function createLeadsRoutes(deps={}){
     const byId=typeof get==='function'?await get(T_LEADS,lead.id).catch(()=>null):null;
     if(byId&&!['merged','voided','deleted'].includes(cleanLeadText(byId.status)))return byId;
     const rows=typeof scan==='function'?await scan(T_LEADS).catch(()=>[]):[];
-    return earliestDuplicateLead(lead,rows);
+    return earliestDuplicateLead(lead,rows)||findUniqueLeadByName(lead,rows);
   }
 
   function hiddenLeadSourceIds(rows=[]){
@@ -939,7 +974,8 @@ function createLeadsRoutes(deps={}){
       });
       const existingLeads=await scan(T_LEADS).catch(()=>[]);
       const existingKeys=new Set((existingLeads||[]).map(buildLeadDedupKey));
-      const rowsToCreate=dedupeLeadRows(previewRows).filter(row=>!existingKeys.has(buildLeadDedupKey(row)));
+      const existingLeadNameIndex=buildLeadNameIndex(existingLeads);
+      const rowsToCreate=dedupeLeadRows(previewRows).filter(row=>!existingKeys.has(buildLeadDedupKey(row))&&!findUniqueLeadByName(row,existingLeadNameIndex));
       const createdLeads=[];
       const createdFollowups=[];
       for(const row of rowsToCreate){

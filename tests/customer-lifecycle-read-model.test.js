@@ -96,6 +96,57 @@ assert.ok(sets.course.has('lead-1'), 'course conversion set should use lifecycle
 assert.ok(sets.booking.has('lead-1'), 'booking conversion set should use lifecycle sourceLeadId');
 assert.ok(sets.membership.has('lead-1'), 'membership conversion set should use lifecycle sourceLeadId');
 
+const sameNameNoPhoneRows = buildCustomerLifecycleRows({
+  leads: [
+    {
+      id: 'lead-same-name',
+      displayName: '同名无号',
+      leadDate: '2026-06-01'
+    }
+  ],
+  students: [
+    {
+      id: 'student-same-name',
+      name: '同名无号'
+    }
+  ]
+});
+
+assert.strictEqual(sameNameNoPhoneRows.length, 1, 'same-name no-phone student should reuse the only matching lead instead of creating a synthetic duplicate');
+assert.strictEqual(sameNameNoPhoneRows[0].sourceLeadId, 'lead-same-name', 'same-name no-phone student should bind to the existing lead');
+assert.strictEqual(sameNameNoPhoneRows[0].studentId, 'student-same-name', 'same-name no-phone student should stay on the shared lifecycle row');
+const sameNameNoPhoneLeadPoolRows = buildLeadPoolRows({ leads: sameNameNoPhoneRows, customerLifecycleRows: sameNameNoPhoneRows, lifecycleScope: 'course' });
+assert.strictEqual(sameNameNoPhoneLeadPoolRows.length, 1, 'same-name no-phone lead pool should keep only one visible row');
+assert.strictEqual(sameNameNoPhoneLeadPoolRows[0].id, 'lead-same-name', 'same-name no-phone lead pool should reuse the existing lead id');
+
+const sameNameNoPhoneCourtRows = buildCustomerLifecycleRows({
+  leads: [
+    {
+      id: 'lead-same-name',
+      displayName: '同名无号',
+      leadDate: '2026-06-01'
+    }
+  ],
+  courts: [
+    {
+      id: 'court-same-name',
+      name: '同名无号',
+      status: 'active'
+    }
+  ],
+  membershipAccounts: [
+    {
+      id: 'membership-same-name',
+      courtId: 'court-same-name',
+      status: 'active'
+    }
+  ]
+});
+assert.strictEqual(sameNameNoPhoneCourtRows.length, 1, 'same-name no-phone court should reuse the only matching lead instead of creating a synthetic duplicate');
+assert.strictEqual(sameNameNoPhoneCourtRows[0].sourceLeadId, 'lead-same-name', 'same-name no-phone court should bind to the existing lead');
+assert.strictEqual(sameNameNoPhoneCourtRows[0].courtId, 'court-same-name', 'same-name no-phone court should stay on the shared lifecycle row');
+assert.strictEqual(sameNameNoPhoneCourtRows[0].membershipAccountId, 'membership-same-name', 'same-name no-phone membership account should also bind to the shared lifecycle row');
+
 const freePrivateRows = buildCustomerLifecycleRows({
   students: [
     {

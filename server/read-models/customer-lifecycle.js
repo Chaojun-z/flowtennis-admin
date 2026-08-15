@@ -245,6 +245,14 @@ function firstValue(...values) {
   return values.map(text).find(Boolean) || '';
 }
 
+function leadIdentityName(value) {
+  return text(value)
+    .replace(/1[3-9]\d{9}/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[·.。_\-\/|｜，,;；]/g, '');
+}
+
 function makeEmptyRow(key) {
   return {
     customerKey: key,
@@ -314,15 +322,22 @@ function buildCustomerLifecycleRows({
   const byKey = new Map();
   const leadsById = new Map((leads || []).map(row => [leadId(row), row]).filter(([id]) => id));
   const leadAliasToId = new Map();
+  const leadNameToIds = new Map();
   const leadByStudentId = new Map();
   const leadByCourtId = new Map();
   const leadByMembershipAccountId = new Map();
   (leads || []).forEach(row => {
     const id = leadId(row);
     if (!id) return;
+    const nameKey = leadIdentityName(firstValue(row.displayName, row.wechatName, row.name));
     [id, ...mergedLeadIds(row)].forEach(alias => {
       if (alias) leadAliasToId.set(alias, id);
     });
+    if (nameKey) {
+      const ids = leadNameToIds.get(nameKey) || [];
+      ids.push(id);
+      leadNameToIds.set(nameKey, [...new Set(ids)]);
+    }
     if (text(row.studentId)) leadByStudentId.set(text(row.studentId), id);
     if (text(row.courtId)) leadByCourtId.set(text(row.courtId), id);
     if (text(row.membershipAccountId)) leadByMembershipAccountId.set(text(row.membershipAccountId), id);
@@ -331,6 +346,13 @@ function buildCustomerLifecycleRows({
   function resolveLeadSourceId(value) {
     const id = text(value);
     return id ? (leadAliasToId.get(id) || id) : '';
+  }
+
+  function resolveLeadSourceIdByName(...values) {
+    const nameKey = leadIdentityName(values.map(text).find(Boolean) || '');
+    if (!nameKey) return '';
+    const ids = leadNameToIds.get(nameKey) || [];
+    return ids.length === 1 ? ids[0] : '';
   }
 
   function rowFor(sourceId, fallbackKey) {
@@ -384,7 +406,8 @@ function buildCustomerLifecycleRows({
     const sid = text(student.id || student.studentId);
     if (!sid) return;
     studentsById.set(sid, student);
-    const sourceId = resolveLeadSourceId(sourceLeadId(student) || leadByStudentId.get(sid) || '');
+    const sourceId = resolveLeadSourceId(sourceLeadId(student) || leadByStudentId.get(sid) || '')
+      || resolveLeadSourceIdByName(student.displayName, student.wechatName, student.name);
     const row = rowFor(sourceId, `student:${sid}`);
     const stage = studentStage(student, { purchases, entitlements, schedule, feedbacks });
     const courseDealPath = studentCourseDealPath(student, { purchases, entitlements, schedule, feedbacks });
@@ -491,7 +514,8 @@ function buildCustomerLifecycleRows({
     const cid = text(court.id || court.courtId);
     if (!cid) return;
     courtsById.set(cid, court);
-    const sourceId = resolveLeadSourceId(sourceLeadId(court) || leadByCourtId.get(cid) || '');
+    const sourceId = resolveLeadSourceId(sourceLeadId(court) || leadByCourtId.get(cid) || '')
+      || resolveLeadSourceIdByName(court.displayName, court.wechatName, court.name, court.courtName);
     const row = rowFor(sourceId, `court:${cid}`);
     const stage = courtStage(court, membershipAccounts);
     mergeIntoRow(row, {
@@ -518,7 +542,8 @@ function buildCustomerLifecycleRows({
     const court = courtsById.get(text(account.courtId)) || {};
     const courtId = text(account.courtId);
     if (!courtId) return;
-    const sourceId = resolveLeadSourceId(sourceLeadId(account) || sourceLeadId(court) || leadByMembershipAccountId.get(accountId) || '');
+    const sourceId = resolveLeadSourceId(sourceLeadId(account) || sourceLeadId(court) || leadByMembershipAccountId.get(accountId) || '')
+      || resolveLeadSourceIdByName(court.displayName, court.wechatName, court.name, court.courtName, account.courtName, account.name);
     const row = rowFor(sourceId, courtId ? `court:${courtId}` : `membership:${accountId}`);
     mergeIntoRow(row, {
       sourceLeadId: sourceId,
@@ -552,7 +577,8 @@ function buildCustomerLifecycleRows({
   (membershipOrders || []).forEach(order => {
     const account = (membershipAccounts || []).find(row => text(row.id) === text(order.membershipAccountId)) || {};
     const court = courtsById.get(text(order.courtId || account.courtId)) || {};
-    const sourceId = resolveLeadSourceId(sourceLeadId(order) || sourceLeadId(account) || sourceLeadId(court));
+    const sourceId = resolveLeadSourceId(sourceLeadId(order) || sourceLeadId(account) || sourceLeadId(court))
+      || resolveLeadSourceIdByName(court.displayName, court.wechatName, court.name, court.courtName, account.courtName, account.name, order.name);
     const courtId = text(order.courtId || account.courtId);
     if (!courtId) return;
     const row = rowFor(sourceId, courtId ? `court:${courtId}` : `membership-order:${text(order.id)}`);
