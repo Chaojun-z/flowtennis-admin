@@ -34,8 +34,21 @@ function fnBody(source, name) {
   ['admin-users', 'adminUser', 'AdminUser', 'renderAdminUsers', 'onAdminUserFilterChange', null]
 ].forEach(([file, prefix, title, renderFn, filterFn, sortFn]) => {
   const source = pageSource(file);
-  assert.match(fnBody(source, filterFn), new RegExp(`${prefix}Page=standardListFirstPage\\(\\)`), `${file} filters should reset to first page through the global list flow`);
-  if (sortFn) assert.match(fnBody(source, sortFn), new RegExp(`${prefix}Page=standardListFirstPage\\(\\)`), `${file} sorting should reset to first page through the global list flow`);
+  const resetPattern = new RegExp(`${prefix}Page=standardListFirstPage\\(\\)`);
+  const filterBody = fnBody(source, filterFn);
+  if (file === 'students' && /resetCurrentStudentListPage\(\)/.test(filterBody)) {
+    assert.match(fnBody(source, 'resetCurrentStudentListPage'), resetPattern, `${file} filters should reset to first page through the global list flow`);
+  } else {
+    assert.match(filterBody, resetPattern, `${file} filters should reset to first page through the global list flow`);
+  }
+  if (sortFn) {
+    const sortBody = fnBody(source, sortFn);
+    if (file === 'students' && /resetCurrentStudentListPage\(\)/.test(sortBody)) {
+      assert.match(fnBody(source, 'resetCurrentStudentListPage'), resetPattern, `${file} sorting should reset to first page through the global list flow`);
+    } else {
+      assert.match(sortBody, resetPattern, `${file} sorting should reset to first page through the global list flow`);
+    }
+  }
   assert.match(fnBody(source, `set${title}PageSize`), new RegExp(`${prefix}PageSize=standardListPageSize\\(value,${prefix}PageSize\\)`), `${file} page size should use the global 15/50/100 rule`);
   assert.match(fnBody(source, `set${title}Page`), /standardListPagination\(/, `${file} page switching should use global page normalization`);
   assert.match(fnBody(source, renderFn), /standardListSlice\(/, `${file} rendering should use global page slicing and empty-page fallback`);

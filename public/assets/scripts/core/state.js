@@ -1139,7 +1139,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       return;
     }
     if(name==='schedule'){
-      setDatasetValue('schedule',data.items||data.schedule||data.rows||[]);
+      setDatasetValue('schedule',data||{});
       staleCachedDatasets.delete('schedule');
       markDatasetLoaded('schedule',requestKey);
       return;

@@ -10,7 +10,7 @@ const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'pa
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
-assert.match(indexHtml, /state\.js\?v=20260809-student-lesson-fact-guard-v1/, 'state script version should force a fresh browser load for latest page data changes');
+assert.match(indexHtml, /state\.js\?v=20260816-schedule-pagination-total-v1/, 'state script version should force a fresh browser load for schedule pagination fixes');
 assert.match(indexHtml, /schedule\.js\?v=20260807-button-stability-v1/, 'schedule script version should force a fresh browser load after button stability fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps an old broken schedule script');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
@@ -19,6 +19,8 @@ assert.match(source, /await recoverMissingPageRenderer\(pg\);[\s\S]*renderLoaded
 assert.match(stateSource, /function scheduleListPageDataUrl\(/, 'schedule page should build a scoped list URL for server-side pagination');
 assert.match(stateSource, /schedule:\(\{fresh=false\}=\{\}\)=>apiCall\('GET',scheduleListPageDataUrl\(\{fresh\}\)\)/, 'schedule page should load the server-paged schedule list endpoint');
 assert.doesNotMatch(stateSource, /schedule:\(\)=>apiCall\('GET','\/page-data\/schedule-list-view\?all=1'\)/, 'schedule page first-screen loader should not use the old all=1 request');
+assert.match(stateSource, /if\(name==='schedule'\)\{[\s\S]*setDatasetValue\('schedule',data\|\|\{\}\)/, 'schedule page loader should preserve pagination.total instead of passing only current-page items');
+assert.doesNotMatch(stateSource, /if\(name==='schedule'\)\{[\s\S]*setDatasetValue\('schedule',data\.items\|\|data\.schedule\|\|data\.rows\|\|\[\]\)/, 'schedule page loader must not drop server pagination metadata');
 assert.match(scheduleSource, /function scheduleCurrentServerPageData\(/, 'schedule page should read pagination metadata from the server response');
 assert.match(fnBody('renderSchedule'), /const serverPage=scheduleCurrentServerPageData\(\)[\s\S]*total:serverPage\.total[\s\S]*slice:list/, 'schedule table should render the server-returned page and server total');
 
