@@ -592,6 +592,25 @@ assert.strictEqual(beginnerSpecialAutoPurchasePlan.summary.create, 1, 'beginner 
 assert.strictEqual(beginnerSpecialAutoPurchasePlan.actions[0].candidate.requiresPackagePurchase, true, 'beginner special course without entitlements should mark package purchase before scheduling');
 assert.deepStrictEqual(beginnerSpecialAutoPurchasePlan.actions[0].candidate.scheduleStudents.map(row=>row.name), ['Jerry', 'Zoe'], 'auto-purchased special course should keep all students in the schedule');
 
+const beginnerSpecialUnknownStudentsPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...beginnerSpecialCourses[0],
+    sourceKey: 'beginner-special-unknown-students-key',
+    studentNames: ['Solitary Nook', 'Debra'],
+    studentText: 'Solitary Nook、Debra'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [{ id: 'coach-yue', name: '岳克舟教练' }],
+  users: [],
+  packages: [{ id: 'pkg-beginner-special', name: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元', courseType: '专项课', specialTopic: '初阶专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', price: 199 }],
+  nowKey: '2026-08-08 00:00'
+});
+assert.strictEqual(beginnerSpecialUnknownStudentsPlan.summary.notifyError, 0, 'unknown beginner special students should not require manual confirmation');
+assert.strictEqual(beginnerSpecialUnknownStudentsPlan.summary.create, 1, 'unknown beginner special students should enter create flow');
+assert.strictEqual(beginnerSpecialUnknownStudentsPlan.actions[0].candidate.requiresSpecialLeadConversion, true, 'unknown beginner special students should create leads before package purchase');
+
 const ignoredSourcePlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...beginnerSpecialCourses[0],
@@ -1410,6 +1429,42 @@ assert.strictEqual(sharedPackagePlan.summary.create, 1, '德德 using 小林 pac
 assert.deepStrictEqual(sharedPackagePlan.actions[0].candidate.resolvedStudents.map(row=>row.name), ['小林'], 'shared package schedule should use the package owner as the system student');
 assert.match(sync.buildScheduleBody(sharedPackagePlan.actions[0].candidate).notes, /德德使用小林课包 2/, 'shared package schedule should keep the attendee note');
 
+const sharedPackageIgnoresOwnerLessonIndexPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'shared-package-owner-progress-key',
+    startTime: '2026-08-18 11:00',
+    endTime: '2026-08-18 12:00',
+    coachName: '刘润扬',
+    studentText: '德德（使用小林课包7）',
+    studentNames: ['小林'],
+    lessonIndex: 7,
+    sharedPackageAttendeeName: '德德',
+    sharedPackageOwnerName: '小林',
+    sharedPackageNote: '德德使用小林课包 7',
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [
+    { id: 'sch-xiaolin-1', startTime: '2026-04-15 19:30', endTime: '2026-04-15 20:30', studentIds: ['stu-xiaolin'], studentName: '小林', coach: 'Siren 教练', courseType: '私教课', entitlementId: 'ent-xiaolin', entitlementIds: ['ent-xiaolin'], status: '已排课' },
+    { id: 'sch-xiaolin-2', startTime: '2026-07-16 19:00', endTime: '2026-07-16 20:00', studentIds: ['stu-xiaolin'], studentName: '小林', coach: '刘润扬教练', courseType: '私教课', entitlementId: 'ent-xiaolin', entitlementIds: ['ent-xiaolin'], status: '已排课' },
+    { id: 'sch-xiaolin-3', startTime: '2026-07-21 11:00', endTime: '2026-07-21 12:00', studentIds: ['stu-xiaolin'], studentName: '小林', coach: '刘润扬教练', courseType: '私教课', entitlementId: 'ent-xiaolin', entitlementIds: ['ent-xiaolin'], status: '已排课' },
+    { id: 'sch-xiaolin-4', startTime: '2026-07-23 11:00', endTime: '2026-07-23 12:00', studentIds: ['stu-xiaolin'], studentName: '小林', coach: '刘润扬教练', courseType: '私教课', entitlementId: 'ent-xiaolin', entitlementIds: ['ent-xiaolin'], status: '已排课' },
+    { id: 'sch-xiaolin-5', startTime: '2026-07-23 12:00', endTime: '2026-07-23 13:00', studentIds: ['stu-xiaolin'], studentName: '小林', coach: '刘润扬教练', courseType: '私教课', entitlementId: 'ent-xiaolin', entitlementIds: ['ent-xiaolin'], status: '已排课' },
+    { id: 'sch-xiaolin-6', startTime: '2026-07-30 11:00', endTime: '2026-07-30 12:00', studentIds: ['stu-xiaolin'], studentName: '小林', coach: '刘润扬教练', courseType: '私教课', entitlementId: 'ent-xiaolin', entitlementIds: ['ent-xiaolin'], status: '已排课' },
+    { id: 'sch-xiaolin-7', startTime: '2026-08-06 11:00', endTime: '2026-08-06 12:00', studentIds: ['stu-xiaolin'], studentName: '小林', coach: '刘润扬教练', courseType: '私教课', entitlementId: 'ent-xiaolin', entitlementIds: ['ent-xiaolin'], status: '已排课' }
+  ],
+  students: [
+    { id: 'stu-xiaolin', name: '小林', primaryCoach: '刘润扬教练' },
+    { id: 'stu-dede', name: '德德', primaryCoach: '刘润扬教练' }
+  ],
+  coaches: [{ id: 'coach-liu', name: '刘润扬教练' }],
+  users: [],
+  entitlements: [{ id: 'ent-xiaolin', studentId: 'stu-xiaolin', studentName: '小林', courseType: '私教课', totalLessons: 15, usedLessons: 9, remainingLessons: 6, status: 'active' }]
+});
+assert.strictEqual(sharedPackageIgnoresOwnerLessonIndexPlan.summary.create, 1, 'shared package should use owner package when it has remaining lessons even if bracket index is attendee-facing');
+assert.deepStrictEqual(sync.buildScheduleBody(sharedPackageIgnoresOwnerLessonIndexPlan.actions[0].candidate).entitlementIds, ['ent-xiaolin'], '德德 should consume 小林 package');
+
 const authorizedSharedPackagePlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -1744,8 +1799,12 @@ const confirmedMaggieAliasPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
     sourceKey: 'maggie-alias-key',
+    startTime: '2026-08-14 16:00',
+    endTime: '2026-08-14 18:00',
     coachName: '朝珺',
+    studentText: '很伟大',
     studentNames: ['很伟大'],
+    lessonCount: 2,
     course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
   }],
   syncRows: [],
@@ -1753,10 +1812,14 @@ const confirmedMaggieAliasPlan = sync.buildDryRunPlan({
   students: [{ id: 'stu-maggie', name: '很玮大Maggie', primaryCoach: '朝珺教练' }],
   coaches: [],
   users: [],
-  entitlements: [{ id: 'ent-maggie', studentId: 'stu-maggie', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+  entitlements: []
 });
-assert.strictEqual(confirmedMaggieAliasPlan.summary.create, 1, '很伟大 should resolve to 很玮大Maggie automatically');
+assert.strictEqual(confirmedMaggieAliasPlan.summary.create, 1, '很伟大 should resolve to 很玮大Maggie and use direct payment automatically');
 assert.strictEqual(confirmedMaggieAliasPlan.summary.notifyError, 0, 'confirmed Maggie alias should not require operations confirmation');
+const confirmedMaggieBody = sync.buildScheduleBody(confirmedMaggieAliasPlan.actions[0].candidate);
+assert.strictEqual(confirmedMaggieBody.settlementType, 'direct', '很伟大 should use direct payment');
+assert.strictEqual(confirmedMaggieBody.paidAmount, 800, '很伟大 2h private lesson fee should be 800');
+assert.strictEqual(confirmedMaggieBody.fieldFeeAmount, 440, '很伟大 2h Mapo field fee should be 440');
 
 const confirmedCompanionLeadPlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -2393,6 +2456,39 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
   assert.deepStrictEqual(specialPurchaseBodies.map(row => row.studentId), ['stu-jerry', 'stu-zoe'], 'special course sync should buy one package for each missing student');
   assert.strictEqual(specialPurchaseBodies[0].amountPaid, 199, 'beginner special package should use the confirmed 199 amount');
   assert.deepStrictEqual(specialCreatedBody.entitlementIds.sort(), ['ent-stu-jerry', 'ent-stu-zoe'].sort(), 'special course schedule should consume purchased entitlements');
+
+  const specialLeadBodies = [];
+  const specialConvertedLeadIds = [];
+  const specialUnknownPurchaseBodies = [];
+  let specialUnknownCreatedBody = null;
+  await sync.applySyncPlan({
+    actions: [beginnerSpecialUnknownStudentsPlan.actions[0]]
+  }, {
+    put: async () => {},
+    uuidv4: () => 'uuid-special-unknown',
+    createLead: async (body) => {
+      specialLeadBodies.push(body);
+      return { lead: { id: `lead-${body.displayName}`, ...body } };
+    },
+    convertLeadToStudent: async (leadId) => {
+      specialConvertedLeadIds.push(leadId);
+      const name = leadId.replace(/^lead-/, '');
+      return { student: { id: `stu-${name}`, name } };
+    },
+    purchasePackage: async (body) => {
+      specialUnknownPurchaseBodies.push(body);
+      return { purchase: { id: `pur-${body.studentId}`, packageName: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元' }, entitlement: { id: `ent-${body.studentId}`, studentId: body.studentId, courseType: '专项课', specialTopic: '初阶专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', remainingLessons: 1, status: 'active' } };
+    },
+    createSchedule: async (body) => { specialUnknownCreatedBody = body; return { schedule: { id: 'sch-special-unknown' } }; },
+    entitlements: [],
+    leads: [],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.deepStrictEqual(specialLeadBodies.map(row => row.displayName), ['Solitary Nook', 'Debra'], 'unknown special course students should create one lead per name');
+  assert.deepStrictEqual(specialConvertedLeadIds, ['lead-Solitary Nook', 'lead-Debra'], 'created special leads should be converted before purchase');
+  assert.deepStrictEqual(specialUnknownPurchaseBodies.map(row => row.studentId), ['stu-Solitary Nook', 'stu-Debra'], 'special course package purchase should use converted student ids');
+  assert.deepStrictEqual(specialUnknownCreatedBody.studentIds, ['stu-Solitary Nook', 'stu-Debra'], 'special course schedule should use converted student ids');
 
   const authWrites = [];
   let sharedCreatedBody = null;

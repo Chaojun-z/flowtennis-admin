@@ -361,6 +361,17 @@ function confirmedVirtualStudent(rawName=''){
   return null;
 }
 
+function virtualSpecialLeadStudent(rawName='',candidate={}){
+  const name=cleanText(rawName);
+  if(!name||candidate.course?.courseType!=='专项课')return null;
+  return {
+    id:`feishu-special-lead-${sha256([candidate.sourceKey,name].join('|')).slice(0,24)}`,
+    name,
+    campus:candidate.campus||'shunyi_mapo',
+    virtualSpecialLead:true
+  };
+}
+
 function findIdealGroupPackage(packages=[]){
   return (packages||[]).find(row=>{
     const status=cleanText(row.status||'active');
@@ -784,6 +795,16 @@ function venueConflictForCandidate(candidate={},existing={},schedules=[]){
   })||null;
 }
 
+function venueConflictForNewCandidate(candidate={},schedules=[]){
+  const fields=scheduleCandidateFields(candidate);
+  return (schedules||[]).find(row=>{
+    if(!activeSchedule(row))return false;
+    if(String(row.venue||'')!==String(fields.venue||''))return false;
+    if(!campusKeysMatch(row.campus,fields.campus,{allowMissingCampus:true}))return false;
+    return scheduleTimeOverlaps(row,fields);
+  })||null;
+}
+
 function historicalUpdateConflict(candidate={},existing={},ctx={}){
   const fields=scheduleCandidateFields(candidate);
   const studentIds=new Set((fields.studentIds||[]).map(String).filter(Boolean));
@@ -1015,7 +1036,9 @@ function buildResolvedCandidate(raw,ctx={}){
     if(student)resolvedStudents.push(student);
     else {
       const virtualStudent=confirmedVirtualStudent(name);
+      const specialLeadStudent=virtualSpecialLeadStudent(name,raw);
       if(virtualStudent)resolvedStudents.push(virtualStudent);
+      else if(specialLeadStudent)resolvedStudents.push(specialLeadStudent);
       else unresolvedStudents.push(name);
     }
   }
@@ -1136,6 +1159,17 @@ function confirmedDirectPrivatePayment(candidate={}){
       confirmedPaymentNote:'陈沐白单次付费：课时费400元/小时，场地费按马坡标准'
     };
   }
+  if(has('很伟大')||has('很玮大Maggie')){
+    return {
+      settlementType:'direct',
+      payMethod:'微信',
+      paidAmount:Math.round(Number(candidate.lessonCount||0)*400*100)/100,
+      fieldFeeAmount:ownMapoFieldFeeAmount(candidate),
+      fieldFeePayMethod:'微信',
+      fieldFeeReason:'单次付费场地费',
+      confirmedPaymentNote:'很伟大单次付费：课时费400元/小时，场地费按马坡实际经营费用'
+    };
+  }
   return null;
 }
 
@@ -1148,7 +1182,8 @@ function attachSharedPackageStudent(candidate,ctx={}){
   const attendee=matches.length===1?matches[0]:uniqueByName(ctx.students,attendeeName);
   if(!attendee?.id)return {...candidate,errors:[...candidate.errors,`无法唯一识别共享课包实际学员：${candidate.sharedPackageAttendeeName}`]};
   if(String(attendee.id)===String(owner.id))return {...candidate,scheduleStudents:[owner]};
-  const selected=selectEntitlementForStudent(owner,candidate,ctx.entitlements,ctx.recommendEntitlements,ctx.schedules);
+  const selected=selectEntitlementForStudent(owner,candidate,ctx.entitlements,ctx.recommendEntitlements,ctx.schedules)
+    ||selectEntitlementIgnoringLessonIndex(owner,candidate,ctx.entitlements,ctx.recommendEntitlements,ctx.schedules);
   if(!selected)return {...candidate,errors:[...candidate.errors,'共享课包所有人没有可扣课包']};
   return {
     ...candidate,
@@ -1424,6 +1459,7 @@ function attachSchedulableStudents(candidate,ctx={}){
         scheduleStudents:candidate.resolvedStudents.slice(),
         selectedEntitlements,
         requiresPackagePurchase:true,
+        requiresSpecialLeadConversion:candidate.resolvedStudents.some(student=>student.virtualSpecialLead),
         autoPackage:pkg,
         packagePurchaseStudentIds:candidate.resolvedStudents
           .filter(student=>!selectedStudentIds.has(String(student.id||'')))
@@ -1692,6 +1728,11 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     }
     if(historicalCourse&&!canAutoCreateHistoricalCourse(candidate)){
       actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,reason:'历史排课缺少系统绑定，需要运营确认后补建'});
+      continue;
+    }
+    const createConflict=venueConflictForNewCandidate(candidate,planningSchedules);
+    if(createConflict){
+      actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,conflict:createConflict,reason:`目标时间或场地已有排课：${scheduleSnapshot(createConflict).brief}`});
       continue;
     }
     actions.push({type:candidate.course.isTrial?'create_trial_schedule':'create_schedule',sourceKey:candidate.sourceKey,candidate});
@@ -2311,6 +2352,24 @@ function buildCompanionLeadBody(candidate={}){
   };
 }
 
+function buildSpecialLeadBody(candidate={},name=''){
+  const displayName=cleanText(name);
+  return {
+    displayName,
+    wechatName:displayName,
+    phone:'',
+    source:'飞书排课表',
+    campus:candidate.campus||'',
+    customerType:candidate.course?.audience||'',
+    demandProduct:candidate.course?.courseDisplayName||candidate.course?.specialTopic||'专项课',
+    consultType:'专项课',
+    rawStatus:'已转化',
+    convertedProducts:['专项课'],
+    profileNote:'飞书排课同步：初阶/专项课学员，按已确认规则建线索、买课包并核销排课',
+    createInitialFollowup:true
+  };
+}
+
 async function resolveCompanionLeadStudent(candidate,{leads=[],convertLeadToStudent,createLead}={}){
   const current=(candidate.scheduleStudents||candidate.resolvedStudents||[]).find(row=>!row.virtualCompanionLead);
   if(current?.id)return {student:current,lead:null};
@@ -2347,6 +2406,34 @@ async function resolveTrialStudent(candidate,{leads=[],convertLeadToStudent,crea
   const student=result?.student;
   if(!student?.id)throw new Error('线索转学员失败');
   return {student,lead};
+}
+
+async function resolveSpecialLeadStudents(candidate,{leads=[],convertLeadToStudent,createLead}={}){
+  const resolved=[];
+  const leadByVirtualId=new Map();
+  for(const item of candidate.scheduleStudents||candidate.resolvedStudents||[]){
+    if(!item?.virtualSpecialLead){
+      resolved.push(item);
+      continue;
+    }
+    const name=cleanText(item.name);
+    const matches=findLeadMatches(leads,name);
+    if(matches.length>1)throw new Error(`专项课找到多个相似线索，需要运营确认：${name}`);
+    let lead=matches[0]||null;
+    if(!lead){
+      if(typeof createLead!=='function')throw new Error(`专项课找不到历史学员或唯一线索：${name}`);
+      const created=await createLead(buildSpecialLeadBody(candidate,name));
+      lead=created?.lead;
+      if(!lead?.id)throw new Error('专项课线索创建失败');
+    }
+    if(typeof convertLeadToStudent!=='function')throw new Error('线索转学员处理器不可用');
+    const result=await convertLeadToStudent(lead.id);
+    const student=result?.student;
+    if(!student?.id)throw new Error('专项课线索转学员失败');
+    resolved.push(student);
+    leadByVirtualId.set(String(item.id||''),lead);
+  }
+  return {students:resolved, leadByVirtualId};
 }
 
 async function ensureTrialEntitlement(candidate,{entitlements=[],packages=[],purchasePackage,student}={}){
@@ -2480,6 +2567,10 @@ async function applySyncPlan(plan,ctx={}){
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:action.schedule.id,scheduleIds});
       }else if(action.type==='create_schedule'){
         let candidate=action.candidate;
+        if(candidate.requiresSpecialLeadConversion){
+          const special=await resolveSpecialLeadStudents(candidate,ctx);
+          candidate={...candidate,scheduleStudents:special.students,resolvedStudents:special.students,specialLeadByVirtualId:special.leadByVirtualId};
+        }
         if(candidate.requiresPackagePurchase){
           const special=await ensureSpecialCourseEntitlements(candidate,ctx);
           candidate={...candidate,selectedEntitlements:special.selectedEntitlements};
