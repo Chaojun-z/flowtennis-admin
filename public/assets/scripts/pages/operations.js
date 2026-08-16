@@ -769,8 +769,8 @@ function operationsCoachHourText(value) {
 
 function operationsCoachUsedHoursCell(row = {}) {
   const teachingHours=Number(row.teachingHours)||0;
-  const teachingStudentCount=Number(row.teachingStudentCount)||0;
-  return `<div class="operations-coach-detail-hours"><span>${operationsCoachHourText(teachingHours)} / ${fmt(teachingStudentCount)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
+  const teachingAttendanceCount=Number(row.teachingAttendanceCount ?? row.teachingStudentCount)||0;
+  return `<div class="operations-coach-detail-hours"><span>${operationsCoachHourText(teachingHours)} / ${fmt(teachingAttendanceCount)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
 }
 
 function operationsCoachTrialConversionText(row = {}) {
@@ -810,7 +810,7 @@ function renderOperationsCoachDetailTable(rows = []) {
     ${operationsCoachChartHeader('教练课时详细统计')}
     <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table">
       <colgroup><col style="width:14%"><col style="width:16%"><col style="width:12%"><col style="width:42%"><col style="width:16%"></colgroup>
-      <thead><tr><th>教练</th><th>教学课时/人数</th><th>体验课转化</th><th>课程结构（课时）</th><th>课程反馈（课次）</th></tr></thead>
+      <thead><tr><th>教练</th><th>课时/上课人次</th><th>体验课转化</th><th>课程结构（课时）</th><th>课程反馈（课次）</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div></div>
   </section>`;

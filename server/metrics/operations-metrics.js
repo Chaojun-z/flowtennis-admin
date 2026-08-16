@@ -1252,6 +1252,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       sortOrder: row.sortOrder,
       usedHours: 0,
       teachingHours: 0,
+      teachingAttendanceCount: 0,
       lessonCount: 0,
       availableHours,
       revenue: 0,
@@ -1280,6 +1281,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       sortOrder: 9999,
       usedHours: 0,
       teachingHours: 0,
+      teachingAttendanceCount: 0,
       lessonCount: 0,
       availableHours,
       revenue: 0,
@@ -1301,13 +1303,12 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
     });
     const current = grouped.get(coach);
     const hours = coachScheduleDurationHours(row);
-    const companion = isCompanionSchedule(row);
     if (isCoachOccupancySchedule(row)) return;
     current.usedHours = normalizePreciseHours(current.usedHours + hours);
-    if (!companion) {
-      current.teachingHours = normalizePreciseHours(current.teachingHours + hours);
-      scheduleStudentKeys(row).forEach(key => current.teachingStudentKeys.add(key));
-    }
+    current.teachingHours = normalizePreciseHours(current.teachingHours + hours);
+    const studentKeys = scheduleStudentKeys(row);
+    current.teachingAttendanceCount += Math.max(1, studentKeys.length);
+    studentKeys.forEach(key => current.teachingStudentKeys.add(key));
     current.lessonCount += 1;
     const mixType = normalizeCoachCourseType(row);
     const mix = current.courseMix.find(item => item.type === mixType);
@@ -1328,6 +1329,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       sortOrder: 9999,
       usedHours: 0,
       teachingHours: 0,
+      teachingAttendanceCount: 0,
       lessonCount: 0,
       availableHours,
       revenue: 0,
@@ -1389,7 +1391,8 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       ...row,
       campusHours: undefined,
       teachingStudentKeys: undefined,
-      teachingStudentCount: row.teachingStudentKeys?.size || 0,
+      teachingStudentCount: row.teachingAttendanceCount || 0,
+      teachingUniqueStudentCount: row.teachingStudentKeys?.size || 0,
       campusDistribution,
       campusDistributionText: campusDistribution.length ? campusDistribution.map(item => `${item.campusName} ${metricText(item.hours)}`).join(' | ') : '-',
       feedbackCompletionRate: rate(row.feedbackCompleted, row.feedbackRequired),

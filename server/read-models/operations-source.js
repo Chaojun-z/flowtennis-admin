@@ -71,6 +71,11 @@ async function readOperationsRows({ table, getCachedScan, scanFirstRows, columns
   return getCachedScan(table, { columns });
 }
 
+async function getOperationsScheduleRows({ getScheduleListRows, getCachedScan, table, columns }) {
+  if (typeof getScheduleListRows === 'function') return getScheduleListRows();
+  return getCachedScan(table, { columns });
+}
+
 function getOperationsRowsCacheKey(user = {}) {
   return JSON.stringify({
     id: user.id || user.userId || user.username || '',
@@ -86,6 +91,7 @@ async function getOperationsBaseRows({
   listCampusesWithDefaults,
   getCachedScan,
   scanFirstRows,
+  getScheduleListRows,
   isProductionRuntime,
   mergeDuplicateLeadRows,
   getFinancePageSnapshotIfCached,
@@ -135,7 +141,7 @@ async function getOperationsBaseRows({
     readOperationsRows({ table: T_MEMBERSHIP_ACCOUNTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS, limit: 2000 }),
     readOperationsRows({ table: T_MEMBERSHIP_ORDERS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ORDER_FIELDS, limit: 2000 }),
     getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
-    readOperationsRows({ table: T_SCHEDULE, getCachedScan, scanFirstRows, columns: OPERATIONS_SCHEDULE_FIELDS, limit: 2000 }),
+    getOperationsScheduleRows({ getScheduleListRows, getCachedScan, table: T_SCHEDULE, columns: OPERATIONS_SCHEDULE_FIELDS }),
     T_FEEDBACKS ? readOperationsRows({ table: T_FEEDBACKS, getCachedScan, scanFirstRows, columns: OPERATIONS_FEEDBACK_FIELDS, limit: 2000 }) : Promise.resolve([]),
     useGlobalFinanceSnapshot && typeof getFinancePageSnapshotIfCached === 'function'
       ? Promise.resolve(getFinancePageSnapshotIfCached()).catch(() => null)
