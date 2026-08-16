@@ -1301,6 +1301,7 @@ const coachAttendanceParityMetrics = buildOperationsMetrics({
   schedule: [
     { id: 'same-student-private-1', coach: '杨教练', studentId: 'stu-a', studentName: '学生A', startTime: '2026-07-15 09:00:00', endTime: '2026-07-15 10:00:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
     { id: 'same-student-private-2', coach: '杨教练', studentId: 'stu-a', startTime: '2026-07-15 10:00:00', endTime: '2026-07-15 10:30:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
+    { id: 'zero-hour-trial', coach: '杨教练', studentId: 'stu-trial', startTime: '2026-07-15 10:30:00', endTime: '2026-07-15 11:30:00', status: '已排课', courseType: '体验课', lessonCount: 0, durationHours: 0, campus: 'shunyi_mapo' },
     { id: 'group-two-students', coach: '杨教练', studentIds: ['stu-b', 'stu-c'], studentName: '学生B、学生C', startTime: '2026-07-15 11:00:00', endTime: '2026-07-15 12:00:00', status: '已排课', courseType: '小班课', standardCourseType: '理想团课', campus: 'shunyi_mapo' },
     { id: 'companion-one-attendance', coach: '杨教练', studentId: 'lead-companion', startTime: '2026-07-15 13:00:00', endTime: '2026-07-15 13:30:00', status: '已排课', courseType: '陪打', standardCourseType: '陪打', campus: 'shunyi_mapo' },
     { id: 'coach-occupancy-excluded', coach: '杨教练', studentId: 'yang-occupancy', startTime: '2026-07-15 14:00:00', endTime: '2026-07-15 16:00:00', status: '已排课', courseType: '教练占场', standardCourseType: '教练占场', campus: 'shunyi_mapo' }
@@ -1320,8 +1321,8 @@ const coachAttendanceParityMetrics = buildOperationsMetrics({
 const coachAttendanceParityYang = coachAttendanceParityMetrics.coach.rows.find(row => row.coach === '杨教练');
 assert.strictEqual(coachAttendanceParityYang?.usedHours, 3, 'coach workload should match completed non-occupancy schedule hours including companion services');
 assert.strictEqual(coachAttendanceParityYang?.teachingHours, 3, 'coach teaching hours should match schedule lesson hours including companion services');
-assert.strictEqual(coachAttendanceParityYang?.teachingStudentCount, 5, 'coach attendance should count lesson attendances instead of unique students');
-assert.strictEqual(coachAttendanceParityYang?.teachingUniqueStudentCount, 4, 'coach unique student count should remain available as a separate diagnostic field');
+assert.strictEqual(coachAttendanceParityYang?.teachingStudentCount, 6, 'coach attendance should count lesson attendances instead of unique students');
+assert.strictEqual(coachAttendanceParityYang?.teachingUniqueStudentCount, 5, 'coach unique student count should remain available as a separate diagnostic field');
 assert.strictEqual(coachAttendanceParityYang?.courseMix.find(item => item.type === '陪打')?.hours, 0.5, 'coach course mix should still show companion workload hours');
 
 assert.deepStrictEqual(

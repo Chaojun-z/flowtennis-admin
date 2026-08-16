@@ -934,18 +934,22 @@ function purchaseCoachName(row = {}) {
 }
 
 function scheduleDurationHours(row = {}) {
+  const hasExplicitHours = row.durationHours !== undefined || row.hours !== undefined;
   const explicit = Number(row.durationHours ?? row.hours);
-  if (Number.isFinite(explicit) && explicit > 0) return round(explicit, 1);
+  if (hasExplicitHours && Number.isFinite(explicit) && explicit >= 0) return round(explicit, 1);
+  const hasLessonCount = row.lessonCount !== undefined;
   const lessonCount = Number(row.lessonCount);
-  if (lessonCount > 0) return round(lessonCount, 1);
+  if (hasLessonCount && Number.isFinite(lessonCount) && lessonCount >= 0) return round(lessonCount, 1);
   return hoursBetween(row.startTime || row.start, row.endTime || row.end);
 }
 
 function coachScheduleDurationHours(row = {}) {
+  const hasExplicitHours = row.durationHours !== undefined || row.hours !== undefined;
   const explicit = Number(row.durationHours ?? row.hours);
-  if (Number.isFinite(explicit) && explicit > 0) return normalizePreciseHours(explicit);
+  if (hasExplicitHours && Number.isFinite(explicit) && explicit >= 0) return normalizePreciseHours(explicit);
+  const hasLessonCount = row.lessonCount !== undefined;
   const lessonCount = Number(row.lessonCount);
-  if (lessonCount > 0) return normalizePreciseHours(lessonCount);
+  if (hasLessonCount && Number.isFinite(lessonCount) && lessonCount >= 0) return normalizePreciseHours(lessonCount);
   return preciseHoursBetween(row.startTime || row.start, row.endTime || row.end);
 }
 
