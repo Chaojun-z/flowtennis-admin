@@ -1,0 +1,137 @@
+{
+  "mode": "dry-run",
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "reportPath": "/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/offline-reports/repair-multi-course-display-bind-20260816-dry-run.json",
+  "operationId": "repair-multi-course-display-bind-20260816",
+  "batchId": "batch-repair-multi-course-display-bind-20260816",
+  "generatedAt": "2026-08-16T12:38:46.651Z",
+  "requested": {
+    "targetIds": 28,
+    "skippedByUser": 1
+  },
+  "updates": [],
+  "skipped": [
+    {
+      "id": "cxe-202602-thirdparty-schedule-12286c878a4eff58",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-38c3e3d3346dacf1",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-423d102ff29d0cc8",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-5160af23c005394c",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-558d17c34f8771b7",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-5959747e2ed2caea",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-5aef9a6396f7b089",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-5b457ac8d992fe18",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-c857ff810a509951",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-ec6c12cf9e87539b",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-ef51eaed815d3685",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-f07deb91dda8f575",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-7299a88cd6c0",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-7def554fe8e5",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-b7e81054e147",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-d8c490438aa3",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-f43fbad65d9f",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-f6c32ea4a8d0",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-464bb994ae1c",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-4a5f01e4a5ca",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-7466f324231a",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-78c4f908576b",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-7c50636d78d3",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-abdaf95644b4",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-cd2c2d3b5b7e",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-fee91574c01a",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-ffac1b582929",
+      "reason": "字段已一致，无需写入"
+    },
+    {
+      "id": "cxe-thirdparty-schedule-67-551811088ac6",
+      "reason": "字段已一致，无需写入"
+    }
+  ],
+  "conflictIndex": {
+    "staleIndexIds": [],
+    "nextIndexRows": []
+  }
+}
