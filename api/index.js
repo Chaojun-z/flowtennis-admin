@@ -3522,8 +3522,44 @@ async function sendOfficialAccountTemplateMessage(message){
   if(data.errcode&&data.errcode!==0)throw new Error(`服务号模板消息发送失败：${data.errmsg||data.errcode}`);
   return data;
 }
+function compactOfficialAccountDigestClock(value=''){
+  const text=String(value||'').trim();
+  return text.replace(/^0/,'').replace(/:00$/,'');
+}
+function compactOfficialAccountDigestTimeRange(line=''){
+  const matched=String(line||'').match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+  return matched?`${compactOfficialAccountDigestClock(matched[1])}-${compactOfficialAccountDigestClock(matched[2])}`:'';
+}
+function buildOfficialAccountDigestLessonSummary(lines=[],lessonCount=0,max=32){
+  const count=Number(lessonCount)||lines.length||0;
+  const prefix=`${count}节`;
+  const ranges=(lines||[]).map(compactOfficialAccountDigestTimeRange).filter(Boolean);
+  if(!ranges.length)return prefix;
+  const selected=[];
+  for(const range of ranges){
+    const remainingAfter=ranges.length-selected.length-1;
+    const suffix=remainingAfter>0?`、+${remainingAfter}节`:'';
+    const candidate=`${prefix}｜${[...selected,range].join('、')}${suffix}`;
+    if(candidate.length>max)break;
+    selected.push(range);
+  }
+  const remaining=ranges.length-selected.length;
+  return `${prefix}${selected.length?`｜${selected.join('、')}`:''}${remaining>0?`、+${remaining}节`:''}`;
+}
+function officialAccountDigestCampusFromLine(line=''){
+  const location=String(line||'').split('｜').pop().trim();
+  const names=Object.values(CAMPUS_DISPLAY_NAMES||{});
+  return names.find(name=>location.includes(name))||location.split(/\s+/)[0]||'';
+}
+function buildOfficialAccountDigestLocation(lines=[]){
+  const campuses=[...new Set((lines||[]).map(officialAccountDigestCampusFromLine).filter(Boolean))];
+  if(!campuses.length)return '待确认';
+  return campuses.length===1?campuses[0]:'多校区';
+}
 function buildOfficialAccountDigestTemplatePayload({templateId,openid,message,appId=WECHAT_MINIPROGRAM_APPID}){
   const lines=Array.isArray(message?.lines)?message.lines:[];
+  const coachName=normalizeCoachDigestName(message?.coachName||message?.title||'')||'教练';
+  const lessonCount=message?.lessonCount??lines.length;
   return {
     touser:openid,
     template_id:templateId,
@@ -3532,11 +3568,11 @@ function buildOfficialAccountDigestTemplatePayload({templateId,openid,message,ap
       pagepath:'pages/schedule/schedule'
     },
     data:{
-      thing1:{value:truncateWechatValue(message?.title||'明日排课汇总')},
-      phrase2:{value:'次日课表'},
+      thing1:{value:'明日课表'},
+      phrase2:{value:truncateWechatValue(coachName,5)},
       time4:{value:String(message?.digestDate||'').trim()},
-      thing7:{value:truncateWechatValue(lines.join('；')||message?.summary||'暂无排课')},
-      character_string11:{value:String(message?.lessonCount??lines.length??'')}
+      thing7:{value:truncateWechatValue(buildOfficialAccountDigestLocation(lines))},
+      character_string11:{value:buildOfficialAccountDigestLessonSummary(lines,lessonCount)}
     }
   };
 }

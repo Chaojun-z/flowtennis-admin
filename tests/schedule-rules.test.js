@@ -1188,14 +1188,42 @@ assert.deepStrictEqual(
       pagepath: 'pages/schedule/schedule'
     },
     data: {
-      thing1: { value: '明日排课汇总' },
-      phrase2: { value: '次日课表' },
+      thing1: { value: '明日课表' },
+      phrase2: { value: '朝珺' },
       time4: { value: '2026-05-16' },
-      thing7: { value: '09:00-10:00 私教课｜小鹿｜顺' },
-      character_string11: { value: '2' }
+      thing7: { value: '顺义马坡' },
+      character_string11: { value: '2节｜9-10、14-15' }
     }
   },
-  'official account digest payload should match the selected daily digest template fields'
+  'official account digest payload should use the current template as a concise schedule summary'
+);
+
+assert.deepStrictEqual(
+  rules.buildOfficialAccountDigestTemplatePayload({
+    templateId: 'digest-tpl',
+    openid: 'oa-openid',
+    message: {
+      title: '林铭教练教练次日课表',
+      coachName: '林铭教练',
+      digestDate: '2026-08-12',
+      lessonCount: 5,
+      lines: [
+        '11:00-12:00 私教课｜史多颖｜顺义马坡 3号场',
+        '12:00-13:00 私教课｜铁大象｜顺义马坡 4号场',
+        '14:00-15:00 私教课｜十一｜顺义马坡 2号场',
+        '19:00-20:00 私教课｜笑逐｜顺义马坡 4号场',
+        '20:00-21:00 私教课｜MMJUAN｜顺义马坡 4号场'
+      ]
+    }
+  }).data,
+  {
+    thing1: { value: '明日课表' },
+    phrase2: { value: '林铭' },
+    time4: { value: '2026-08-12' },
+    thing7: { value: '顺义马坡' },
+    character_string11: { value: '5节｜11-12、12-13、14-15、19-20、20-21' }
+  },
+  'official account digest should not truncate the first lesson as the whole digest'
 );
 
 assert.strictEqual(
@@ -1210,8 +1238,8 @@ assert.strictEqual(
       lines: ['12:00-13:00 私教课｜葡萄｜顺义马坡']
     }
   }).data.phrase2.value,
-  '次日课表',
-  'official account digest phrase field should not contain coach names'
+  'Siren',
+  'official account digest phrase field should use a normalized coach name'
 );
 
 assert.deepStrictEqual(
