@@ -126,7 +126,7 @@ function splitFeishuStudentNames(value){
   const text=cleanText(value);
   if(!text)return [];
   const key=normalizeStudentNameKey(text);
-  if(key===normalizeStudentNameKey('misha黄总'))return ['misha','黄总'];
+  if(key===normalizeStudentNameKey('misha黄总')||key===normalizeStudentNameKey('黄总misha'))return ['misha','黄总'];
   return text.split(/[、,，/]+/).map(cleanText).filter(Boolean);
 }
 
@@ -751,6 +751,26 @@ function rawFeishuRowMayRepresentSchedule(raw={},schedule={},ctx={}){
     [raw.studentText,...(raw.studentNames||[]),...(raw.resolvedStudents||[]).map(student=>student.name)],
     [scheduleStudentText,...scheduleStudentNames]
   );
+}
+
+function duplicateFeishuRowExactScheduleMatch(raw={},candidate={},allRows=[],planningSchedules=[],ctx={}){
+  return (allRows||[]).find(other=>{
+    if(!other||String(other.sourceKey||'')===String(raw.sourceKey||''))return false;
+    if(String(other.startTime||'')!==String(candidate.startTime||''))return false;
+    if(String(other.endTime||'')!==String(candidate.endTime||''))return false;
+    if(String(other.venue||'')!==String(candidate.venue||''))return false;
+    if(String(other.campus||'')!==String(candidate.campus||''))return false;
+    if(Number(other.lessonIndex||0)!==Number(candidate.lessonIndex||0))return false;
+    if(String(other.course?.courseType||'')!==String(candidate.course?.courseType||''))return false;
+    if(String(other.course?.experienceType||'')!==String(candidate.course?.experienceType||''))return false;
+    if(!looseStudentNameMatches(
+      [candidate.studentText,...(candidate.studentNames||[])],
+      [other.studentText,...(other.studentNames||[])]
+    ))return false;
+    const otherCandidate=buildResolvedCandidate(other,ctx);
+    if(otherCandidate.errors.length)return false;
+    return exactScheduleMatch(otherCandidate,planningSchedules);
+  });
 }
 
 function venueConflictForCandidate(candidate={},existing={},schedules=[]){
@@ -1608,6 +1628,11 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     if(entitlementBacked){
       markRepresentedSchedule(entitlementBacked);
       actions.push({type:'bind_existing',sourceKey:candidate.sourceKey,candidate,schedule:entitlementBacked,entitlementBackedMatch:true,supersededSyncRows:supersededSyncRowsFor(entitlementBacked,candidate.sourceKey)});
+      continue;
+    }
+    const duplicateExact=duplicateFeishuRowExactScheduleMatch(raw,candidate,orderedFeishuCourses,planningSchedules,ctx);
+    if(duplicateExact){
+      actions.push({type:'noop',sourceKey:candidate.sourceKey,candidate,sync:{status:'ignored',sourceKey:candidate.sourceKey,reason:'同一时间同一学员飞书重复行，已有另一行绑定系统排课'}});
       continue;
     }
     const contiguous=contiguousScheduleGroupMatch(candidate,planningSchedules);

@@ -58,6 +58,7 @@ assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sha
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageAttendeeName, '德德', 'shared package note should keep the actual learner');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageOwnerName, '小林', 'shared package note should keep the package owner');
 assert.deepStrictEqual(sync.parseStudentCell('misha 黄总（2）').names, ['misha', '黄总'], 'confirmed Misha and Huang pair should be parsed as two students');
+assert.deepStrictEqual(sync.parseStudentCell('黄总 misha（4）').names, ['misha', '黄总'], 'confirmed Misha and Huang pair should also support reversed order');
 assert.deepStrictEqual(sync.parseStudentCell('王老板、王老板孩子').names, ['王老板'], 'Wang boss family course should use one canonical student record');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:00' }, '2026-07-20 12:01'), false, 'courses already started before baseline should be ignored');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:30' }, '2026-07-20 12:01'), true, 'future courses after baseline should be sync candidates');
@@ -1469,6 +1470,93 @@ const mishaHuangPairBody = sync.buildScheduleBody(mishaHuangPairPlan.actions[0].
 assert.deepStrictEqual(mishaHuangPairBody.entitlementIds, ['ent-huang'], 'second confirmed pair lesson should rotate to Huang package');
 assert.strictEqual(mishaHuangPairBody.packageOwnerStudentId, 'stu-huang', 'pair schedule should keep package owner metadata');
 assert.strictEqual(mishaHuangPairBody.usedByStudentId, 'stu-misha', 'pair schedule should let the non-owner show authorized package usage');
+
+const reversedMishaHuangPairPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'reversed-misha-huang-pair-key',
+    startTime: '2026-08-19 12:00',
+    endTime: '2026-08-19 13:00',
+    coachName: '朝珺',
+    studentText: '黄总 misha（4）',
+    studentNames: sync.parseStudentCell('黄总 misha（4）').names,
+    lessonIndex: 4,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [
+    { id: 'sch-prev-1', startTime: '2026-07-08 12:00', endTime: '2026-07-08 13:00', studentIds: ['stu-misha','stu-huang'], studentName: 'misha、黄总', coach: '朝珺教练', courseType: '私教课', entitlementId: 'ent-misha', entitlementIds: ['ent-misha'], status: '已排课' },
+    { id: 'sch-prev-2', startTime: '2026-07-29 12:00', endTime: '2026-07-29 13:00', studentIds: ['stu-misha','stu-huang'], studentName: 'misha、黄总', coach: '朝珺教练', courseType: '私教课', entitlementId: 'ent-huang', entitlementIds: ['ent-huang'], status: '已排课' },
+    { id: 'sch-prev-3', startTime: '2026-08-12 12:00', endTime: '2026-08-12 13:00', studentIds: ['stu-misha','stu-huang'], studentName: 'misha、黄总', coach: '朝珺教练', courseType: '私教课', entitlementId: 'ent-misha', entitlementIds: ['ent-misha'], status: '已排课' }
+  ],
+  students: [
+    { id: 'stu-misha', name: 'misha', primaryCoach: '朝珺教练' },
+    { id: 'stu-huang', name: '黄总', primaryCoach: '朝珺教练' }
+  ],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  entitlements: [
+    { id: 'ent-misha', studentId: 'stu-misha', studentName: 'misha', courseType: '私教课', totalLessons: 10, usedLessons: 2, remainingLessons: 8, status: 'active' },
+    { id: 'ent-huang', studentId: 'stu-huang', studentName: '黄总', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }
+  ]
+});
+assert.strictEqual(reversedMishaHuangPairPlan.summary.create, 1, 'reversed confirmed Misha and Huang pair should create without manual confirmation');
+assert.deepStrictEqual(sync.buildScheduleBody(reversedMishaHuangPairPlan.actions[0].candidate).entitlementIds, ['ent-huang'], 'fourth confirmed pair lesson should rotate to Huang package');
+
+const wangBossDuplicateCoachPlan = sync.buildDryRunPlan({
+  feishuCourses: [
+    {
+      ...courses[0],
+      sourceKey: 'a-wang-boss-liu-duplicate',
+      startTime: '2026-08-19 15:00',
+      endTime: '2026-08-19 16:00',
+      coachName: '刘润扬',
+      studentText: '王老板（9）',
+      studentNames: ['王老板'],
+      lessonIndex: 9,
+      venue: '2号场',
+      campus: 'shunyi_mapo',
+      course: { ok: true, courseType: '小班课', experienceType: '', audience: '', smallClassType: 'family', isTrial: false }
+    },
+    {
+      ...courses[0],
+      sourceKey: 'z-wang-boss-yang-existing',
+      startTime: '2026-08-19 15:00',
+      endTime: '2026-08-19 16:00',
+      coachName: '杨教练',
+      studentText: '王老板（9）',
+      studentNames: ['王老板'],
+      lessonIndex: 9,
+      venue: '2号场',
+      campus: 'shunyi_mapo',
+      course: { ok: true, courseType: '小班课', experienceType: '', audience: '', smallClassType: 'family', isTrial: false }
+    },
+    {
+      ...courses[0],
+      sourceKey: 'wang-boss-final-lesson',
+      startTime: '2026-08-20 14:00',
+      endTime: '2026-08-20 15:00',
+      coachName: '刘润扬',
+      studentText: '王老板（10）',
+      studentNames: ['王老板'],
+      lessonIndex: 10,
+      venue: '2号场',
+      campus: 'shunyi_mapo',
+      course: { ok: true, courseType: '小班课', experienceType: '', audience: '', smallClassType: 'family', isTrial: false }
+    }
+  ],
+  syncRows: [],
+  schedules: [
+    { id: 'sch-wang-existing-yang', startTime: '2026-08-19 15:00', endTime: '2026-08-19 16:00', studentIds: ['stu-wang'], studentName: 'JR 王老板', coach: '杨教练', courseType: '小班课', venue: '2号场', campus: 'shunyi_mapo', entitlementId: 'ent-wang', entitlementIds: ['ent-wang'], status: '已排课' }
+  ],
+  students: [{ id: 'stu-wang', name: 'JR 王老板', primaryCoach: '刘润扬教练' }],
+  coaches: [{ id: 'coach-liu', name: '刘润扬教练' }, { id: 'coach-yang', name: '杨教练' }],
+  users: [],
+  entitlements: [{ id: 'ent-wang', studentId: 'stu-wang', studentName: 'JR 王老板', courseType: '小班课', totalLessons: 10, usedLessons: 9, remainingLessons: 1, status: 'active' }]
+});
+assert.strictEqual(wangBossDuplicateCoachPlan.summary.notifyError, 0, 'duplicate Feishu coach row should not consume the final Wang Boss lesson before 8/20');
+assert.strictEqual(wangBossDuplicateCoachPlan.summary.create, 1, 'Wang Boss 8/20 final lesson should still be created');
+assert.strictEqual(wangBossDuplicateCoachPlan.actions.filter(action=>action.sourceKey==='a-wang-boss-liu-duplicate')[0].type, 'noop', 'duplicate Wang Boss row should be ignored when another row already binds the existing schedule');
 
 const annotatedAliasPlan = sync.buildDryRunPlan({
   feishuCourses: [{
