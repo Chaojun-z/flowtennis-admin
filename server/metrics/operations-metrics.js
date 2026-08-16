@@ -971,9 +971,11 @@ function isValidCoursePurchase(row = {}) {
 }
 
 function scheduleStudentKeys(row = {}) {
+  const ids = [...parseArr(row.studentIds), row.studentId]
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+  if (ids.length) return [...new Set(ids)];
   return [...new Set([
-    ...parseArr(row.studentIds),
-    row.studentId,
     ...parseArr(row.studentNames),
     row.studentName
   ].map(value => String(value || '').trim()).filter(Boolean))];

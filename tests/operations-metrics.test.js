@@ -1299,9 +1299,9 @@ const coachAttendanceParityMetrics = buildOperationsMetrics({
   coaches: [{ id: 'yang', name: '杨教练', status: 'active' }],
   students: [],
   schedule: [
-    { id: 'same-student-private-1', coach: '杨教练', studentId: 'stu-a', startTime: '2026-07-15 09:00:00', endTime: '2026-07-15 10:00:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
+    { id: 'same-student-private-1', coach: '杨教练', studentId: 'stu-a', studentName: '学生A', startTime: '2026-07-15 09:00:00', endTime: '2026-07-15 10:00:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
     { id: 'same-student-private-2', coach: '杨教练', studentId: 'stu-a', startTime: '2026-07-15 10:00:00', endTime: '2026-07-15 10:30:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
-    { id: 'group-two-students', coach: '杨教练', studentIds: ['stu-b', 'stu-c'], startTime: '2026-07-15 11:00:00', endTime: '2026-07-15 12:00:00', status: '已排课', courseType: '小班课', standardCourseType: '理想团课', campus: 'shunyi_mapo' },
+    { id: 'group-two-students', coach: '杨教练', studentIds: ['stu-b', 'stu-c'], studentName: '学生B、学生C', startTime: '2026-07-15 11:00:00', endTime: '2026-07-15 12:00:00', status: '已排课', courseType: '小班课', standardCourseType: '理想团课', campus: 'shunyi_mapo' },
     { id: 'companion-one-attendance', coach: '杨教练', studentId: 'lead-companion', startTime: '2026-07-15 13:00:00', endTime: '2026-07-15 13:30:00', status: '已排课', courseType: '陪打', standardCourseType: '陪打', campus: 'shunyi_mapo' },
     { id: 'coach-occupancy-excluded', coach: '杨教练', studentId: 'yang-occupancy', startTime: '2026-07-15 14:00:00', endTime: '2026-07-15 16:00:00', status: '已排课', courseType: '教练占场', standardCourseType: '教练占场', campus: 'shunyi_mapo' }
   ],
