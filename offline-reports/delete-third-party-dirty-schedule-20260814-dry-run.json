@@ -1,0 +1,209 @@
+{
+  "mode": "dry-run",
+  "createdAt": "2026-08-17T09:41:26.310Z",
+  "target": {
+    "id": "third-party-schedule-3b1ae0dc-aab5-4d17-9892-10dffdbdeb69",
+    "studentName": "小鹿",
+    "studentIds": [
+      "abda0438-bd46-440d-a211-d431a3b1e451"
+    ],
+    "coach": "杨教练",
+    "coachId": "c1eda306-b188-43cb-8800-aa1fbb45b97f",
+    "startTime": "2026-08-14 14:00:00",
+    "endTime": "2026-08-14 16:00:00",
+    "campus": "",
+    "venue": "1号场",
+    "status": "已排课",
+    "scheduleSource": "第三方同步排课",
+    "lessonCount": 0,
+    "updatedAt": "2026-08-14T16:38:23.557Z",
+    "createdAt": "2026-08-14T16:38:23.557Z"
+  },
+  "tables": {
+    "ft_schedule": [
+      {
+        "id": "third-party-schedule-3b1ae0dc-aab5-4d17-9892-10dffdbdeb69",
+        "absentStudentIds": [],
+        "batchId": "cxe-sync-20260814-cbcfb194-26d5-42fc-b6ff-ff30234e51b4",
+        "campus": "",
+        "coach": "杨教练",
+        "coachId": "c1eda306-b188-43cb-8800-aa1fbb45b97f",
+        "confirmStatus": "待确认",
+        "courseType": "私教课",
+        "createdAt": "2026-08-14T16:38:23.557Z",
+        "createdBy": "daily-auto-sync",
+        "date": "2026-08-14",
+        "endTime": "2026-08-14 16:00:00",
+        "expectedStudentIds": [
+          "abda0438-bd46-440d-a211-d431a3b1e451"
+        ],
+        "lessonCount": 0,
+        "notes": "杨教练 小鹿 私教课",
+        "notifyStatus": "未通知",
+        "operationAt": "2026-08-14T16:38:23.557Z",
+        "operationBy": "daily-auto-sync",
+        "operationId": "third-party-sync-import-15871ecd-c94b-40ff-91a1-e4da37b1eadf",
+        "operationType": "third-party-sync-import",
+        "scheduleSource": "第三方同步排课",
+        "standardCourseType": "私教课",
+        "startTime": "2026-08-14 14:00:00",
+        "status": "已排课",
+        "studentIds": [
+          "abda0438-bd46-440d-a211-d431a3b1e451"
+        ],
+        "studentName": "小鹿",
+        "thirdPartySyncImports": [
+          {
+            "batchId": "cxe-sync-20260814-cbcfb194-26d5-42fc-b6ff-ff30234e51b4",
+            "sourceRecordId": "generated-7840be308c0e91ca-22",
+            "operationId": "third-party-sync-import-15871ecd-c94b-40ff-91a1-e4da37b1eadf",
+            "importedAt": "2026-08-14T16:38:23.557Z"
+          }
+        ],
+        "updatedAt": "2026-08-14T16:38:23.557Z",
+        "venue": "1号场"
+      }
+    ],
+    "ft_schedule_conflict_index": [],
+    "ft_coach_schedule_index": [
+      {
+        "id": "coach-id:c1eda306-b188-43cb-8800-aa1fbb45b97f",
+        "scheduleIds": [
+          "b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+          "d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+          "e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+          "7691156b-df07-4ffd-bdc3-7485dcd65a79",
+          "1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+          "ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+          "b5952c07-3925-4439-9b2f-839805023012",
+          "0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+          "745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+          "dae1e307-0a03-471c-9444-4963139cfc37",
+          "c18cf640-d3da-4920-940c-80f70f6dc139",
+          "69d7799b-caa1-41ef-80fb-340fa1fc47d5",
+          "6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+          "d33d766f-5420-4573-bdc8-9517112845a2",
+          "39a05c2d-f749-4f58-84aa-02118a20178d",
+          "86e1889e-666a-41fa-b038-a6b632f27c21",
+          "8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+          "f8d8ff18-c6ae-466c-9043-fa01838d3f3b",
+          "d19992b3-fe35-4938-a108-d8c2e54ed2b0",
+          "third-party-schedule-54015ff8-ad6f-4b00-b753-add25900ef06",
+          "8abb614c-6e7c-4504-9a99-6a687049cfbd",
+          "c98aa3a8-48e7-430b-8330-ca596e6adef2",
+          "4582bd18-0396-4605-bde4-fadb0291c611",
+          "4a9ef5a7-77d5-486c-8f21-558afad44d4e",
+          "3bc15238-37ae-4810-b4c8-9ba35252df3c",
+          "68deaa6a-f6f2-4d57-b60d-2a573b5a84e5",
+          "566d1da6-bf62-4035-a491-4b994125ca37",
+          "a4ac5270-9a1e-4892-b00c-7986bd254d42",
+          "882a84ea-758a-4539-8181-77c0e100968e",
+          "c22bf9f8-d73d-488d-95fa-89d04bff1c60",
+          "652b61c5-0df4-4093-8c9c-c50840ec47e3",
+          "f3abf8d9-f20d-4010-9c76-d4d03642a313",
+          "b0e14f0a-8392-45b6-b639-09292a733dcb",
+          "0a8f67a7-d4fe-47d3-8230-8efdcc14a515",
+          "8377282e-bb45-4303-aafd-8e1f658bc9bf",
+          "890013c0-8767-41d3-8874-0acd907bd21b",
+          "c850691d-f94e-48e7-a7de-dc710085b5c4",
+          "de69ed76-8630-4777-8c6c-1760cf531c55",
+          "d0705c3b-a2f2-4dd8-a9eb-4021089389ba",
+          "685afca1-d728-4f73-94e6-6906d39f86eb",
+          "64ec7ab8-ef7a-485f-85fa-b34891f48c48",
+          "c40c1d38-987f-47be-a04c-88e06ff0a864",
+          "0e0161c7-0697-4cb3-b4de-d3c222351ad4",
+          "third-party-schedule-e01d9c67-8c5b-447f-82f1-192dae93e8af",
+          "dc777372-0139-4746-83a8-0723a98d14fb",
+          "c010f935-926d-4ba7-8dd3-95e02bc49b17",
+          "third-party-schedule-6d7fc9ea-638c-479b-8886-b18008911591"
+        ],
+        "updatedAt": "2026-08-17T09:31:27.805Z"
+      },
+      {
+        "id": "coach-name:杨教练",
+        "scheduleIds": [
+          "b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+          "d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+          "e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+          "7691156b-df07-4ffd-bdc3-7485dcd65a79",
+          "1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+          "ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+          "b5952c07-3925-4439-9b2f-839805023012",
+          "0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+          "745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+          "522aaa5b-3dc5-427b-89e7-f136dd9dd994",
+          "8c45afc7-eaf0-4af0-84bd-04004e49449c",
+          "247ef588-fa56-4706-ab2d-6b808bdd2739",
+          "dae1e307-0a03-471c-9444-4963139cfc37",
+          "c18cf640-d3da-4920-940c-80f70f6dc139",
+          "69d7799b-caa1-41ef-80fb-340fa1fc47d5",
+          "6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+          "d33d766f-5420-4573-bdc8-9517112845a2",
+          "39a05c2d-f749-4f58-84aa-02118a20178d",
+          "86e1889e-666a-41fa-b038-a6b632f27c21",
+          "8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+          "f8d8ff18-c6ae-466c-9043-fa01838d3f3b",
+          "d19992b3-fe35-4938-a108-d8c2e54ed2b0",
+          "third-party-schedule-54015ff8-ad6f-4b00-b753-add25900ef06",
+          "8abb614c-6e7c-4504-9a99-6a687049cfbd",
+          "c98aa3a8-48e7-430b-8330-ca596e6adef2",
+          "4582bd18-0396-4605-bde4-fadb0291c611",
+          "4a9ef5a7-77d5-486c-8f21-558afad44d4e",
+          "3bc15238-37ae-4810-b4c8-9ba35252df3c",
+          "68deaa6a-f6f2-4d57-b60d-2a573b5a84e5",
+          "566d1da6-bf62-4035-a491-4b994125ca37",
+          "a4ac5270-9a1e-4892-b00c-7986bd254d42",
+          "882a84ea-758a-4539-8181-77c0e100968e",
+          "c22bf9f8-d73d-488d-95fa-89d04bff1c60",
+          "652b61c5-0df4-4093-8c9c-c50840ec47e3",
+          "f3abf8d9-f20d-4010-9c76-d4d03642a313",
+          "b0e14f0a-8392-45b6-b639-09292a733dcb",
+          "0a8f67a7-d4fe-47d3-8230-8efdcc14a515",
+          "8377282e-bb45-4303-aafd-8e1f658bc9bf",
+          "890013c0-8767-41d3-8874-0acd907bd21b",
+          "c850691d-f94e-48e7-a7de-dc710085b5c4",
+          "de69ed76-8630-4777-8c6c-1760cf531c55",
+          "d0705c3b-a2f2-4dd8-a9eb-4021089389ba",
+          "685afca1-d728-4f73-94e6-6906d39f86eb",
+          "64ec7ab8-ef7a-485f-85fa-b34891f48c48",
+          "c40c1d38-987f-47be-a04c-88e06ff0a864",
+          "0e0161c7-0697-4cb3-b4de-d3c222351ad4",
+          "third-party-schedule-e01d9c67-8c5b-447f-82f1-192dae93e8af",
+          "dc777372-0139-4746-83a8-0723a98d14fb",
+          "c010f935-926d-4ba7-8dd3-95e02bc49b17",
+          "565f2ada-b134-467c-8d5d-5bdf2029bd51",
+          "48261c8c-96ea-4069-acfb-63a2c8daeee3",
+          "9a48e90c-61c2-44ac-97be-53dc9ed38ccd",
+          "1b9654d7-202c-41d2-b8d5-27d2bd512906",
+          "a727773e-df0a-4771-b961-aac03f941bcb",
+          "be47f2f3-e0cd-421a-aff2-4e8c466ae07f",
+          "4060bedc-b0e4-4b4f-8df1-e8d748d12053",
+          "ff4016dd-c8b2-458a-a235-a44652884e7f",
+          "third-party-schedule-6d7fc9ea-638c-479b-8886-b18008911591",
+          "third-party-schedule-807c5aa8-39a0-4a3e-bcd4-1d128e5fdaed"
+        ],
+        "updatedAt": "2026-08-17T09:31:27.836Z"
+      }
+    ]
+  },
+  "plannedDeletes": {
+    "ft_schedule": [
+      "third-party-schedule-3b1ae0dc-aab5-4d17-9892-10dffdbdeb69"
+    ],
+    "ft_schedule_conflict_index": []
+  },
+  "plannedCoachIndexUpdates": [
+    {
+      "id": "coach-id:c1eda306-b188-43cb-8800-aa1fbb45b97f",
+      "beforeCount": 47,
+      "afterCount": 47,
+      "containsTarget": false
+    },
+    {
+      "id": "coach-name:杨教练",
+      "beforeCount": 59,
+      "afterCount": 59,
+      "containsTarget": false
+    }
+  ]
+}

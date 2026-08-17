@@ -17,6 +17,8 @@ const T_SCHEDULE = 'ft_schedule';
 const T_MEMBERSHIP_ACCOUNTS = 'ft_membership_accounts';
 const T_COACHES = 'ft_coaches';
 const T_STUDENTS = 'ft_students';
+const THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS = 'shunyi_mapo';
+const THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS_NAME = '顺义马坡';
 const THIRD_PARTY_SYNC_TABLES = [
   T_THIRD_PARTY_SYNC_BATCHES,
   T_THIRD_PARTY_SYNC_RAW_RECORDS,
@@ -890,6 +892,20 @@ function scheduleRowMatchesImportItem(schedule = {}, item = {}) {
     && (!item.venue || cleanText(schedule.venue || schedule.court || schedule.courtName) === item.venue);
 }
 
+function scheduleTimeOverlapsImportItem(schedule = {}, item = {}) {
+  if (scheduleDateOf(schedule) !== item.date) return false;
+  const itemStartText = scheduleClockOf(item.startTime);
+  const itemEndText = scheduleClockOf(item.endTime);
+  const scheduleStartText = scheduleClockOf(schedule.startTime || schedule.startClock || schedule.beginTime);
+  const scheduleEndText = scheduleClockOf(schedule.endTime || schedule.endClock || schedule.finishTime);
+  if (!itemStartText || !itemEndText || !scheduleStartText || !scheduleEndText) return false;
+  const itemStart = timeMinutes(itemStartText);
+  const itemEnd = timeMinutes(itemEndText);
+  const scheduleStart = timeMinutes(scheduleStartText);
+  const scheduleEnd = timeMinutes(scheduleEndText);
+  return itemStart < scheduleEnd && scheduleStart < itemEnd;
+}
+
 function scheduleCoachName(schedule = {}) {
   return cleanText(schedule.coach || schedule.coachName || schedule.teacher || schedule.primaryCoach);
 }
@@ -935,10 +951,26 @@ function findScheduleForImportItem(item = {}, schedules = [], coaches = []) {
   return null;
 }
 
+function findScheduleOverlapForImportItem(item = {}, schedules = [], coaches = [], students = []) {
+  const inferredCoach = inferCoachForScheduleImport(item, coaches, schedules);
+  const inferredStudent = inferStudentForScheduleImport(item, students);
+  if (!inferredCoach?.name && !inferredStudent?.id && !inferredStudent?.name) return null;
+  return (schedules || []).find(row => {
+    if (!scheduleTimeOverlapsImportItem(row, item)) return false;
+    if (item.venue && cleanText(row.venue || row.court || row.courtName) !== item.venue) return false;
+    const sameCoach = inferredCoach?.name && compactName(scheduleCoachName(row)) === compactName(inferredCoach.name);
+    const studentIds = Array.isArray(row.studentIds) ? row.studentIds.map(cleanText) : [];
+    const sameStudentId = inferredStudent?.id && studentIds.includes(cleanText(inferredStudent.id));
+    const sameStudentName = inferredStudent?.name && textHasName(row.studentName || row.students || row.remark, inferredStudent.name);
+    return !!(sameCoach || sameStudentId || sameStudentName);
+  }) || null;
+}
+
 function scheduleImportBlockReason(item = {}, schedules = [], coaches = [], students = []) {
   if (item.finalType !== '排课占场') return '';
   if (cleanText(item.confirmation?.bindTargetId || item.bindTargetId)) return '';
   if (findScheduleForImportItem(item, schedules, coaches)) return '';
+  if (findScheduleOverlapForImportItem(item, schedules, coaches, students)) return '已有重叠排课，请先确认是否重复';
   const coach = inferCoachForScheduleImport(item, coaches, schedules);
   const student = inferStudentForScheduleImport(item, students);
   if (!coach && !student) return '未识别到真实教练和学员，需运营确认';
@@ -991,7 +1023,9 @@ function buildScheduleForThirdPartyImport(item = {}, trace = {}, now = '', uuidv
     coach: coach.name || '',
     coachId: coach.id || '',
     venue: item.venue,
-    campus: item.campus || '',
+    campus: item.campus || THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS,
+    campusName: item.campusName || THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS_NAME,
+    locationType: 'own',
     lessonCount: 0,
     status: '已排课',
     notifyStatus: '未通知',
@@ -1025,11 +1059,13 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
     if (schedule) {
       assertScheduleMatchesImportItem(schedule, item);
       const imports = Array.isArray(schedule.thirdPartySyncImports) ? schedule.thirdPartySyncImports : [];
-      const next = { ...schedule, thirdPartySyncImports: [...imports.filter(row => String(row.sourceRecordId || '') !== item.sourceRecordId), { batchId: item.batchId, sourceRecordId: item.sourceRecordId, operationId: trace.operationId || '', importedAt: now }], updatedAt: now, ...trace };
+      const next = { ...schedule, campus: schedule.campus || THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS, campusName: schedule.campusName || THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS_NAME, locationType: schedule.locationType || 'own', thirdPartySyncImports: [...imports.filter(row => String(row.sourceRecordId || '') !== item.sourceRecordId), { batchId: item.batchId, sourceRecordId: item.sourceRecordId, operationId: trace.operationId || '', importedAt: now }], updatedAt: now, ...trace };
       await put(table, schedule.id, next);
       written.push({ table, id: schedule.id, sourceRecordId: item.sourceRecordId });
       return written;
     }
+    const blockReason = scheduleImportBlockReason(item, schedules, coaches, students);
+    if (blockReason) throw new Error(blockReason);
     const coach = inferCoachForScheduleImport(item, coaches, schedules);
     const student = inferStudentForScheduleImport(item, students);
     if (!coach || !student) throw new Error(scheduleImportBlockReason(item, schedules, coaches, students) || '未识别到真实教练和学员，需运营确认');

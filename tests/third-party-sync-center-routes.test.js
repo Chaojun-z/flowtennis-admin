@@ -478,6 +478,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(writes.some(row => row.table === 'ft_courts'), 'business import should write courts table');
   assert.ok(writes.some(row => row.table === 'ft_financial_ledger'), 'business import should write finance ledger table');
   assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课' && row.row.coach === '小鹿' && row.row.studentName === '张三'), 'private lesson locks may create a schedule only after matching real coach and student');
+  assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课' && row.row.campus === 'shunyi_mapo' && row.row.campusName === '顺义马坡' && row.row.locationType === 'own'), 'third-party schedule imports should default to Shunyi Mapo campus');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_results' && row.row.status === 'completed' && row.row.fullDisposition?.ok), 'full import result should be auditable');
 
   scans.ft_third_party_sync_batches.push({ id: 'member-batch', batchId: 'member-batch', status: 'prechecked' });
@@ -602,6 +603,33 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(existingScheduleRes.body.result.status, 'completed', 'same date time venue and coach should bind the existing schedule');
   assert.ok(scans.ft_schedule.some(row => row.id === 'schedule-siren-special' && row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'SIREN-SPECIAL')), 'existing siren schedule should receive the third-party import mark');
   assert.ok(!scans.ft_schedule.some(row => row.id !== 'schedule-siren-special' && row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'SIREN-SPECIAL')), 'existing schedule match should not create a duplicate schedule');
+
+  scans.ft_third_party_sync_batches.push({ id: 'overlap-schedule-batch', batchId: 'overlap-schedule-batch', status: 'prechecked' });
+  scans.ft_third_party_sync_prechecks.push({
+    id: 'overlap-schedule-precheck-1',
+    batchId: 'overlap-schedule-batch',
+    sourceRecordId: 'OVERLAP-SCHEDULE',
+    sourceType: 'lock',
+    date: '2026-08-14',
+    venue: '1号场',
+    startTime: '14:00',
+    endTime: '16:00',
+    customerName: '马坡运营',
+    operatorAccount: '马坡运营',
+    remark: '小鹿 张三 私教课',
+    recommendedType: 'auto_import',
+    needsConfirmation: false,
+    suggestedFinalType: '排课占场'
+  });
+  scans.ft_schedule.push({ id: 'schedule-overlap-existing', date: '2026-08-14', venue: '1号场', startTime: '2026-08-14 14:00', endTime: '2026-08-14 15:30', coach: '小鹿', studentIds: ['student-zhangsan'], studentName: '张三', status: '已排课' });
+  const overlapScheduleRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'overlap-schedule-batch' }
+  });
+  assert.strictEqual(overlapScheduleRes.body.result.status, 'paused', 'overlapping third-party schedule imports should pause instead of creating a duplicate');
+  assert.ok(overlapScheduleRes.body.plan.blocked.some(row => row.sourceRecordId === 'OVERLAP-SCHEDULE' && row.reason === '已有重叠排课，请先确认是否重复'), 'overlapping schedule import should explain the duplicate risk');
+  assert.ok(!scans.ft_schedule.some(row => row.id !== 'schedule-overlap-existing' && row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'OVERLAP-SCHEDULE')), 'overlapping import must not create or mark a second schedule row');
 
   scans.ft_third_party_sync_batches.push({ id: 'extra-service-batch', batchId: 'extra-service-batch', status: 'prechecked', counts: { totalSourceCount: 2 } });
   const extraServicePrecheck = precheckThirdPartyRecords([
