@@ -2596,12 +2596,54 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
   const pendingUpdateCard = sync.buildNotificationCard({
     at: '2026-08-07T10:00:00.000Z',
     sheetTitle: '8.3-8.9 当前周',
-    plan: { summary: { total: 1, noop: 0, bindExisting: 0, create: 0, createTrial: 0, update: 0, pendingDelete: 0, notifyError: 0 }, actions: [] },
+    plan: {
+      summary: { total: 1, noop: 0, bindExisting: 0, create: 0, createTrial: 0, update: 0, pendingDelete: 0, notifyError: 1 },
+      actions: [{
+        type: 'notify_error',
+        sourceKey: 'pending-update-key',
+        candidate: {
+          date: '2026-08-05',
+          startClock: '14:00',
+          endClock: '15:00',
+          studentText: '张佳良 老二（8）',
+          courseText: '青少年私教【正式】',
+          coachName: 'Siren',
+          venueText: '马坡室内',
+          courtText: '3号'
+        },
+        reason: '历史排课修改需要运营确认'
+      }]
+    },
     applied: appliedPendingUpdate
   });
   const cardJson = JSON.stringify(pendingUpdateCard);
   assert.match(cardJson, /确认按飞书修改/, 'pending update card should expose an operation button in Feishu');
   assert.match(cardJson, /confirm-update/, 'pending update button should point to the update confirmation endpoint');
+  const staleAppliedCard = sync.buildNotificationCard({
+    at: '2026-08-07T10:00:00.000Z',
+    sheetTitle: '8.3-8.9 当前周',
+    plan: { summary: { total: 0, noop: 0, bindExisting: 0, create: 0, createTrial: 0, update: 0, pendingDelete: 0, notifyError: 0 }, actions: [] },
+    applied: [{ type: 'pending_update', sourceKey: 'old-history-key', confirmUrl: 'https://old.example/confirm-update' }]
+  });
+  const staleCardJson = JSON.stringify(staleAppliedCard);
+  assert.match(staleCardJson, /需要处理：0 条/, 'Feishu notification should only count the latest sync plan');
+  assert.doesNotMatch(staleCardJson, /old\.example|确认按飞书修改/, 'stale historical confirmation tasks should not appear in the latest notification');
+  const currentText = sync.buildNotificationText({
+    at: '2026-08-07T10:00:00.000Z',
+    sheetTitle: '8.3-8.9 当前周',
+    plan: {
+      summary: { total: 4, noop: 0, bindExisting: 0, create: 1, createTrial: 0, update: 2, pendingDelete: 1, notifyError: 1 },
+      actions: [
+        { type: 'create_schedule', sourceKey: 'auto-create', candidate: { date: '2026-08-05', startClock: '10:00', studentText: '自动成功' } },
+        { type: 'update_schedule', sourceKey: 'auto-update', candidate: { date: '2026-08-05', startClock: '11:00', studentText: '自动修改' } },
+        { type: 'pending_delete', sourceKey: 'auto-delete', schedule: { startTime: '2026-08-05 12:00', endTime: '2026-08-05 13:00', studentName: '自动取消' } },
+        { type: 'notify_error', sourceKey: 'need-confirm', candidate: { date: '2026-08-05', startClock: '13:00', studentText: '需要确认' }, reason: '没有可自动扣课的可用课包' }
+      ]
+    },
+    applied: [{ type: 'pending_update', sourceKey: 'old-history-key', confirmUrl: 'https://old.example/confirm-update' }]
+  });
+  assert.match(currentText, /需要处理：1 条/, 'text fallback should use the same latest-plan notification count');
+  assert.doesNotMatch(currentText, /自动成功|自动修改|old\.example/, 'text fallback should not list auto-success or stale historical tasks as operator work');
 
   const deleteWrites = [];
   const appliedDelete = await sync.applySyncPlan({
@@ -2650,12 +2692,18 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
     }]
   }, {
     put: async (table, id, row) => supersedeWrites.push({ table, id, row }),
+    tasks: [
+      { id: 'old-task', type: 'delete_confirm', sourceKey: 'old-venue-key', scheduleId: 'sch-deadia', status: 'pending' },
+      { id: 'new-task', type: 'delete_confirm', sourceKey: 'new-venue-key', scheduleId: 'sch-deadia', status: 'pending' }
+    ],
     T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
     T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
   });
 
   assert.strictEqual(appliedSupersede[0].type, 'bind_existing', 'new source key should still bind the existing schedule');
   assert.ok(supersedeWrites.some(item => item.id === 'old-venue-sync' && item.row.status === 'superseded' && item.row.supersededBySourceKey === 'new-venue-key'), 'old sync row for the same schedule should be marked superseded');
+  assert.ok(supersedeWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.id === 'old-task' && item.row.status === 'superseded'), 'old pending confirmation tasks should be closed when the schedule is represented by the latest Feishu row');
+  assert.ok(supersedeWrites.some(item => item.table === 'ft_feishu_schedule_tasks' && item.id === 'new-task' && item.row.status === 'superseded'), 'current source key confirmation tasks should also be closed after successful auto binding');
 
   const originalAxiosPost = axios.post;
   const originalAxiosGet = axios.get;

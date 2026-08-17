@@ -2171,14 +2171,24 @@ function actionBySourceKey(result={}){
   return map;
 }
 
+function currentAppliedItems(result={}){
+  const applied=Array.isArray(result.applied)?result.applied:[];
+  const currentSourceKeys=new Set((result.plan?.actions||[]).map(action=>cleanText(action.sourceKey)).filter(Boolean));
+  if(!currentSourceKeys.size)return applied.filter(item=>!cleanText(item.sourceKey));
+  return applied.filter(item=>{
+    const sourceKey=cleanText(item.sourceKey);
+    return sourceKey&&currentSourceKeys.has(sourceKey);
+  });
+}
+
 function buildNotificationCard(result={}){
   const s=result.plan?.summary||{};
-  const applied=Array.isArray(result.applied)?result.applied:[];
+  const applied=currentAppliedItems(result);
   const actionMap=actionBySourceKey(result);
   const successItems=applied.filter(item=>!['error','refresh_sync'].includes(item.type));
   const pendingDeletes=[];
-  const pendingUpdates=applied.filter(item=>item.type==='pending_update');
-  const appliedErrors=applied.filter(item=>item.type==='error');
+  const pendingUpdates=applied.filter(item=>item.type==='pending_update'&&actionMap.has(item.sourceKey));
+  const appliedErrors=applied.filter(item=>item.type==='error'&&actionMap.has(item.sourceKey));
   const notifyErrors=(result.plan?.actions||[]).filter(action=>action.type==='notify_error');
   const needItems=[
     ...notifyErrors.map(action=>({kind:'notify',action})),
@@ -2268,18 +2278,31 @@ function buildNotificationCard(result={}){
 
 function buildNotificationText(result){
   const s=result.plan.summary;
+  const actionMap=actionBySourceKey(result);
+  const applied=currentAppliedItems(result);
+  const notifyErrors=(result.plan?.actions||[]).filter(action=>action.type==='notify_error');
+  const appliedErrors=applied.filter(item=>item.type==='error'&&actionMap.has(item.sourceKey));
+  const pendingUpdates=applied.filter(item=>item.type==='pending_update'&&actionMap.has(item.sourceKey));
+  const needItems=[
+    ...notifyErrors.map(action=>({kind:'notify',action})),
+    ...appliedErrors.map(item=>({kind:'error',item,action:actionMap.get(item.sourceKey)})),
+    ...pendingUpdates.map(item=>({kind:'pending_update',item,action:actionMap.get(item.sourceKey)}))
+  ];
   const lines=[
     `【网球兄弟】排课自动同步`,
     `自动同步时间：${chinaDateTimeText(result.at||new Date())}`,
     `飞书表取数周期：${formatSheetPeriodText(result.sheetTitle||result.sheetId||'')}`,
     `本次处理：新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，自动取消 ${s.pendingDelete}`,
-    `历史待清账：${s.notifyError} 条`
+    `需要处理：${needItems.length} 条`
   ];
-  const important=result.plan.actions.filter(a=>a.type!=='noop');
-  if(important.length){
+  if(needItems.length){
     lines.push('需要运营处理：');
-    lines.push(...important.slice(0,10).map(formatActionLine));
-    if(important.length>10)lines.push(`其余 ${important.length-10} 条未展示，请先处理上方事项。`);
+    lines.push(...needItems.slice(0,10).map(item=>{
+      if(item.kind==='error')return `${formatCourseBrief(item.action?.candidate||{})}：${cleanText(item.item.error||'自动处理失败')}`;
+      if(item.kind==='pending_update')return `${formatCourseBrief(item.action?.candidate||{})}：确认按飞书修改`;
+      return formatActionLine(item.action);
+    }));
+    if(needItems.length>10)lines.push(`其余 ${needItems.length-10} 条未展示，请先处理上方事项。`);
   }
   return lines.join('\n');
 }
@@ -2546,6 +2569,19 @@ async function ensureSharedPackageAuthorization(candidate,ctx={}){
   return {...candidate,sharedPackageAuthorization:{...auth,authorizationId:row.id}};
 }
 
+async function supersedePendingFeishuTasks(ctx={},sourceKeys=[],now='',reason='当前飞书同步已处理，旧确认任务失效'){
+  if(!ctx.T_FEISHU_SCHEDULE_TASKS||typeof ctx.put!=='function'||!Array.isArray(ctx.tasks))return;
+  const keys=new Set((Array.isArray(sourceKeys)?sourceKeys:[sourceKeys]).map(cleanText).filter(Boolean));
+  if(!keys.size)return;
+  for(let index=0;index<ctx.tasks.length;index+=1){
+    const task=ctx.tasks[index];
+    if(cleanText(task.status)!=='pending'||!keys.has(cleanText(task.sourceKey)))continue;
+    const next={...task,status:'superseded',supersededAt:now,updatedAt:now,supersededReason:reason};
+    await ctx.put(ctx.T_FEISHU_SCHEDULE_TASKS,task.id,next);
+    ctx.tasks[index]=next;
+  }
+}
+
 async function applySyncPlan(plan,ctx={}){
   const applied=[];
   const now=new Date().toISOString();
@@ -2553,6 +2589,7 @@ async function applySyncPlan(plan,ctx={}){
     try{
       if(action.type==='refresh_sync'){
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,lastFingerprint:action.candidate.fingerprint,status:'active',updatedAt:now,lastSyncedAt:now});
+        await supersedePendingFeishuTasks(ctx,[action.sourceKey],now);
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:action.schedule?.id||action.sync.scheduleId});
       }else if(action.type==='bind_existing'){
         const scheduleIds=Array.isArray(action.scheduleIds)&&action.scheduleIds.length?action.scheduleIds:[action.schedule.id];
@@ -2564,6 +2601,7 @@ async function applySyncPlan(plan,ctx={}){
         for(const oldRow of action.supersededSyncRows||[]){
           await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,oldRow.id,{...oldRow,status:'superseded',supersededBySourceKey:action.sourceKey,supersededByScheduleId:action.schedule.id,supersededAt:now,updatedAt:now});
         }
+        await supersedePendingFeishuTasks(ctx,[action.sourceKey,...(action.supersededSyncRows||[]).map(row=>row.sourceKey)],now);
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:action.schedule.id,scheduleIds});
       }else if(action.type==='create_schedule'){
         let candidate=action.candidate;
@@ -2586,6 +2624,7 @@ async function applySyncPlan(plan,ctx={}){
         if(!schedule?.id)throw new Error('系统排课创建失败');
         const row={id:`feishu-sync-${sha256(action.sourceKey).slice(0,24)}`,source:'feishu-sheet',sheetId:action.candidate.sheetId||'',sheetTitle:action.candidate.sheetTitle||'',sourceKey:action.sourceKey,scheduleId:schedule.id,startTime:action.candidate.startTime,endTime:action.candidate.endTime,lastFingerprint:action.candidate.fingerprint,status:'active',createdAt:now,updatedAt:now,lastSyncedAt:now};
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,row.id,row);
+        await supersedePendingFeishuTasks(ctx,[action.sourceKey],now);
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:schedule.id});
       }else if(action.type==='create_trial_schedule'){
         const trial=await resolveTrialStudent(action.candidate,ctx);
@@ -2596,6 +2635,7 @@ async function applySyncPlan(plan,ctx={}){
         if(!schedule?.id)throw new Error('系统体验课排课创建失败');
         const row={id:`feishu-sync-${sha256(action.sourceKey).slice(0,24)}`,source:'feishu-sheet',sheetId:action.candidate.sheetId||'',sheetTitle:action.candidate.sheetTitle||'',sourceKey:action.sourceKey,scheduleId:schedule.id,startTime:action.candidate.startTime,endTime:action.candidate.endTime,lastFingerprint:action.candidate.fingerprint,status:'active',createdAt:now,updatedAt:now,lastSyncedAt:now};
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,row.id,row);
+        await supersedePendingFeishuTasks(ctx,[action.sourceKey],now);
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:schedule.id});
       }else if(action.type==='update_schedule'){
         const body=buildScheduleBody(action.candidate);
@@ -2606,8 +2646,10 @@ async function applySyncPlan(plan,ctx={}){
         const result=await ctx.updateSchedule(action.schedule.id,body);
         const schedule=result?.schedule;
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,lastFingerprint:action.candidate.fingerprint,status:'active',updatedAt:now,lastSyncedAt:now});
+        await supersedePendingFeishuTasks(ctx,[action.sourceKey],now);
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:schedule?.id||action.schedule.id});
       }else if(action.type==='notify_error'&&action.confirmableUpdate&&action.sync?.id&&action.schedule?.id){
+        await supersedePendingFeishuTasks(ctx,[action.sourceKey],now,'当前已生成新的修改确认任务，旧确认任务失效');
         const publicBase=cleanText(process.env.FEISHU_SCHEDULE_PUBLIC_BASE_URL||process.env.STUDENT_REMINDER_PUBLIC_BASE_URL||'https://www.flowtennis.cn').replace(/\/+$/,'');
         const snapshot=scheduleSnapshot(action.schedule);
         const task={id:`feishu-update-${sha256(`${action.sourceKey}|${now}`).slice(0,24)}`,type:'update_confirm',sourceKey:action.sourceKey,syncId:action.sync.id,scheduleId:action.schedule.id,scheduleSnapshot:snapshot,reason:action.reason||'',status:'pending',createdAt:now,updatedAt:now,expiresAt:new Date(Date.now()+48*3600000).toISOString(),confirmToken:sha256(`${ctx.uuidv4()}|${action.sourceKey}|${now}`),updateBody:buildScheduleBody(action.candidate),nextFingerprint:action.candidate.fingerprint};
@@ -2620,6 +2662,7 @@ async function applySyncPlan(plan,ctx={}){
         const scheduleId=action.sync.scheduleId||action.schedule?.id;
         if(scheduleId)await ctx.cancelScheduleById(scheduleId,'飞书排课表已删除，自动取消系统排课');
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,action.sync.id,{...action.sync,status:'cancelled',cancelledAt:now,updatedAt:now});
+        await supersedePendingFeishuTasks(ctx,[action.sourceKey],now);
         applied.push({type:'delete_schedule',sourceKey:action.sourceKey,scheduleId,scheduleSnapshot:snapshot});
       }
     }catch(err){
@@ -2762,7 +2805,8 @@ function createFeishuScheduleSyncRoutes(deps={}){
     if(!dryRun){
       const applyPlan=rangeMode?safeHistoryApplyPlan(plan,{includeTrial:historyTrialMode==='confirmed'}):plan;
       if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
-      result.applied=await applySyncPlan(applyPlan,{put,mkTable,uuidv4,createSchedule,updateSchedule,cancelScheduleById,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,authorizations,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_ENTITLEMENT_AUTHORIZATIONS});
+      const tasks=await getCachedScan(T_FEISHU_SCHEDULE_TASKS,{fresh:true}).catch(()=>[]);
+      result.applied=await applySyncPlan(applyPlan,{put,mkTable,uuidv4,createSchedule,updateSchedule,cancelScheduleById,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,authorizations,tasks,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_ENTITLEMENT_AUTHORIZATIONS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
       const fingerprintNow=new Date().toISOString();
       for(const row of feishuSheet.fingerprintUpdates||[]){
