@@ -1,0 +1,1547 @@
+{
+  "mode": "dry-run",
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "reportPath": "offline-reports/repair-history-annotated-risk-rules-20260816-after-confirmed-remaining-student-risks-dry-run.json",
+  "operationId": "repair-history-annotated-risk-rules-20260816",
+  "batchId": "batch-repair-history-annotated-risk-rules-20260816",
+  "generatedAt": "2026-08-17T08:06:16.941Z",
+  "sourceReport": "/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/offline-reports/history-schedule-three-way-risk-scan-20260814.json",
+  "requested": {
+    "feishuVenueLikelyWrongKeepSystem": 45,
+    "venueNeedsThirdPartyButMissing": 84,
+    "fakeNameOrMissingStudentId": 151,
+    "duplicateExactGroups": 6
+  },
+  "updates": [
+    {
+      "type": "fakeNameStudentResolved",
+      "changedFields": [
+        "studentName",
+        "studentIds",
+        "expectedStudentIds"
+      ],
+      "before": {
+        "id": "cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+        "absentStudentIds": [],
+        "authorizedStudentName": "",
+        "batchId": "batch-repair-yang-july-schedule-20260816",
+        "campus": "shunyi_mapo",
+        "campusName": "顺义马坡",
+        "cancelReason": "",
+        "classId": "",
+        "coach": "杨教练",
+        "coachId": "c1eda306-b188-43cb-8800-aa1fbb45b97f",
+        "coachLateFieldFeeAmount": 0,
+        "coachLateFree": false,
+        "coachLateHandledAt": "",
+        "coachLateHandledBy": "",
+        "coachName": "杨教练",
+        "confirmStatus": "待确认",
+        "courseDisplayName": "陪打",
+        "courseType": "陪打",
+        "courseTypeLevel2": "陪打",
+        "createdAt": "2026-07-20T03:26:45.323Z",
+        "createdBy": "第三方导入",
+        "date": "2026-07-13",
+        "durationHours": 2,
+        "endTime": "2026-07-13 18:00",
+        "entitlementId": "",
+        "entitlementIds": [],
+        "expectedStudentIds": [],
+        "experienceType": "",
+        "externalCourtName": "",
+        "externalNotes": "",
+        "externalVenueName": "",
+        "fieldFeeAmount": 0,
+        "fieldFeeNote": "",
+        "fieldFeePayMethod": "",
+        "fieldFeeReason": "",
+        "hours": 2,
+        "isTrial": false,
+        "lateMinutes": 0,
+        "lateReason": "",
+        "lessonCount": 2,
+        "locationType": "own",
+        "notes": "第三方陪打导入：唐果陪打",
+        "notifyStatus": "未通知",
+        "operationAt": "2026-08-16T10:48:40.468Z",
+        "operationBy": "Codex",
+        "operationId": "repair-yang-july-schedule-20260816",
+        "operationType": "repair-yang-july-schedule-20260816",
+        "packageId": "",
+        "packageName": "",
+        "paidAmount": 400,
+        "payMethod": "储值卡",
+        "productId": "",
+        "productName": "",
+        "purchaseId": "",
+        "repairReason": "按用户确认的杨教练7月课表修复：2026-07-13 16:00-18:00 陪打",
+        "requiresFieldFee": false,
+        "scheduleSource": "订场陪打",
+        "settlementType": "direct",
+        "smallClassType": "",
+        "source": "manual-repair",
+        "sourceExcelRow": 413,
+        "sourceSystem": "changxiaoer",
+        "specialTopic": "",
+        "standardCourseType": "陪打",
+        "startTime": "2026-07-13 16:00",
+        "state": "已排课",
+        "status": "已排课",
+        "storedValueAmount": 400,
+        "storedValueCourtId": "eed2716c-c642-49ac-b00d-96e8b7c4e549",
+        "storedValueFieldFeeAmount": 0,
+        "storedValueFieldFeeCourtId": "",
+        "studentId": "",
+        "studentIds": [],
+        "studentName": "陪打",
+        "studentNames": [
+          "陪打"
+        ],
+        "systemStatus": "已排课",
+        "thirdPartyDedupKey": "13901293813|2026-07-1321:37:48|其他|支出(会员扣费)|-400.00(实充:363.69，赠送:36.31)|3256",
+        "updatedAt": "2026-08-16T10:48:40.468Z",
+        "usedByStudentName": "",
+        "venue": "4号场"
+      },
+      "after": {
+        "id": "cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+        "absentStudentIds": [],
+        "authorizedStudentName": "",
+        "batchId": "batch-repair-history-annotated-risk-rules-20260816",
+        "campus": "shunyi_mapo",
+        "campusName": "顺义马坡",
+        "cancelReason": "",
+        "classId": "",
+        "coach": "杨教练",
+        "coachId": "c1eda306-b188-43cb-8800-aa1fbb45b97f",
+        "coachLateFieldFeeAmount": 0,
+        "coachLateFree": false,
+        "coachLateHandledAt": "",
+        "coachLateHandledBy": "",
+        "coachName": "杨教练",
+        "confirmStatus": "待确认",
+        "courseDisplayName": "陪打",
+        "courseType": "陪打",
+        "courseTypeLevel2": "陪打",
+        "createdAt": "2026-07-20T03:26:45.323Z",
+        "createdBy": "第三方导入",
+        "date": "2026-07-13",
+        "durationHours": 2,
+        "endTime": "2026-07-13 18:00",
+        "entitlementId": "",
+        "entitlementIds": [],
+        "expectedStudentIds": [
+          "b3c1c399-b209-4e9e-af56-80b74c7270ac"
+        ],
+        "experienceType": "",
+        "externalCourtName": "",
+        "externalNotes": "",
+        "externalVenueName": "",
+        "fieldFeeAmount": 0,
+        "fieldFeeNote": "",
+        "fieldFeePayMethod": "",
+        "fieldFeeReason": "",
+        "hours": 2,
+        "isTrial": false,
+        "lateMinutes": 0,
+        "lateReason": "",
+        "lessonCount": 2,
+        "locationType": "own",
+        "notes": "第三方陪打导入：唐果陪打",
+        "notifyStatus": "未通知",
+        "operationAt": "2026-08-17T08:06:16.941Z",
+        "operationBy": "Codex",
+        "operationId": "repair-history-annotated-risk-rules-20260816",
+        "operationType": "repair-history-annotated-risk-rules-20260816",
+        "packageId": "",
+        "packageName": "",
+        "paidAmount": 400,
+        "payMethod": "储值卡",
+        "productId": "",
+        "productName": "",
+        "purchaseId": "",
+        "repairReason": "假姓名/缺学员ID：按飞书学员唯一匹配绑定真实学员",
+        "requiresFieldFee": false,
+        "scheduleSource": "订场陪打",
+        "settlementType": "direct",
+        "smallClassType": "",
+        "source": "manual-repair",
+        "sourceExcelRow": 413,
+        "sourceSystem": "changxiaoer",
+        "specialTopic": "",
+        "standardCourseType": "陪打",
+        "startTime": "2026-07-13 16:00",
+        "state": "已排课",
+        "status": "已排课",
+        "storedValueAmount": 400,
+        "storedValueCourtId": "eed2716c-c642-49ac-b00d-96e8b7c4e549",
+        "storedValueFieldFeeAmount": 0,
+        "storedValueFieldFeeCourtId": "",
+        "studentId": "",
+        "studentIds": [
+          "b3c1c399-b209-4e9e-af56-80b74c7270ac"
+        ],
+        "studentName": "唐果",
+        "studentNames": [
+          "陪打"
+        ],
+        "systemStatus": "已排课",
+        "thirdPartyDedupKey": "13901293813|2026-07-1321:37:48|其他|支出(会员扣费)|-400.00(实充:363.69，赠送:36.31)|3256",
+        "updatedAt": "2026-08-17T08:06:16.941Z",
+        "usedByStudentName": "",
+        "venue": "4号场"
+      }
+    }
+  ],
+  "deletes": [],
+  "resolvedNoop": [
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "046d113c-54e6-4086-93c8-3d630c892d19",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "06e9a033-9da6-477c-94f0-23164952b0e7",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "16e1c477-28f4-418a-adab-b3589ec10abc",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "2971a204-6ab9-475c-b3c0-bce1b2ec6afe",
+      "venue": "1号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "36939c5a-11cb-4597-8ffe-003f4cd50777",
+      "venue": "1号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "497274a9-8933-462a-a1f8-331b9ee25290",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "5350232a-b7cf-4eef-a280-88f916310172",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "72a00d6c-40f6-4125-a857-e007a4990f88",
+      "venue": "1号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "acb60f1b-f57c-4865-8945-af43fc80fde2",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "b5b1016a-39ca-4361-bb81-403cfaec4321",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "b959b70d-6f82-4f22-8824-c7b0ddc42f5a",
+      "venue": "3号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "bdecc5c0-e991-4bdd-bcde-3aba561b2e83",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "c48009d4-02f8-410e-b70d-93de34372453",
+      "venue": "1号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "c5c1b95f-7e7d-47bc-bdf3-6917e93ef2cf",
+      "venue": "3号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202604-schedule-35b879e884ee",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202604-schedule-6275ca64c570",
+      "venue": "1号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202604-schedule-876764a357c0",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202604-schedule-d20f6648476a",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202604-schedule-d94d4b769661",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202604-schedule-e5fae2a22d07",
+      "venue": "3号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-1b68785cf1bf",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-26d6030336c3",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-2878df581bcc",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-4e44048ba952",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-53514df52744",
+      "venue": "3号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-85ece30e35af",
+      "venue": "1号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-b1a623e1fe46",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-bde827d8200c",
+      "venue": "1号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-202606-schedule-d0e8c4ced86a",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "cxe-thirdparty-schedule-cxe_lock_2026-07-12_200",
+      "venue": "1号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "d660afbf-7bf9-4fd0-91c6-a0682ae64b09",
+      "venue": "3号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "e89caf6e-7241-441c-a16e-38991def3cca",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "f8b6414a-ae3b-4ea4-affa-ac1934288cdc",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "fbb5b6f8-6bf5-499e-8dd1-e25cf3d5f05b",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:254867578ec0",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:3235793a648c",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:34596890d53c",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:4d380f025ac2",
+      "venue": "3号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:81dd6a637874",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:d6b1903b6cff",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:d8e3228f90b6",
+      "venue": "2号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:db91c4fd5d3d",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:e7e22bdc6ff8",
+      "venue": "4号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:f3deafc971c2",
+      "venue": "3号场"
+    },
+    {
+      "type": "thirdPartyVenueAlreadyCorrect",
+      "id": "repair-smallclass-20260416-1900",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "04266044-ec01-47c0-981f-a6f8b0acac5e",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "08b0fdaf-f09c-423c-b52f-6684d5ff2331",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "0a1c50ad-9898-4646-ae2a-0e1d19f08876",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "0ae94d13-ce0f-4af1-b9d9-0dab08443d10",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "13a3e759-39fd-4148-be0d-34fb44fff4d8",
+      "venue": "3号场"
+    },
+    {
+      "type": "manualConfirmedVenueAlreadyCorrect",
+      "id": "1d511114-933a-4740-a1a3-ad3e9b85c3e8",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "336d0c2a-e29f-45de-b51a-19808b944329",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "401e3ce3-c630-43b0-b531-690301faf2ca",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "47ddf247-ea14-47ae-beb5-cdd4900e4315",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "4a246f63-c1b9-4a86-8968-5eaa0ca51460",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "4a9ef5a7-77d5-486c-8f21-558afad44d4e",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "54a6b055-a0d0-4145-b3a1-443f84978447",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "54a80ece-b4bf-47a6-80f0-e06ce5a97708",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "5d0a041f-7b93-4753-a016-8199fa67cce8",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "5d4d3302-4211-4ad5-8fd4-e18c46aa41d5",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "6036a93e-08c8-4357-aa8d-dc5f126b2c38",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "61ef0f08-cd61-4802-a36c-fb1a09a3d466",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "6b948f1a-2791-4dce-8393-1b6bf41bff11",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "72f3f543-de94-4c1a-a49d-b1969c53c66b",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "8471f59e-8213-4824-aef8-0e40d10f9146",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "8ce6d88d-c2b4-4792-b0a2-804d718279d8",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "9b975b57-fbfd-41c5-99d6-232db050b601",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "a98ecc64-7d96-4dfb-9399-6ef2514e5139",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "aa905835-9fa0-4540-af30-eff0a426608d",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "afa7da25-1c4e-4901-a953-650dba05dc77",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "b0e14f0a-8392-45b6-b639-09292a733dcb",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "b49e184c-98d3-413f-a62a-fb5d06f38699",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "b567280b-b974-40af-b534-bfc1ddcc6824",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "c2435fed-7909-4ebe-849d-4eeead19f8d5",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "cxe-202602-thirdparty-schedule-67e8af55c56fc0d4",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "cxe-202602-thirdparty-schedule-ac18388c1c4917ee",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "cxe-202602-thirdparty-schedule-b2b7a11ccf28c727",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "cxe-202602-thirdparty-schedule-d0042af4a7f92418",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueNeedsThirdPartyAlreadyCorrect",
+      "id": "cxe-thirdparty-schedule-28-ed426b597b02",
+      "venue": "3号场"
+    },
+    {
+      "type": "manualConfirmedVenueAlreadyCorrect",
+      "id": "dae1e307-0a03-471c-9444-4963139cfc37",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "de0d26e9-84bb-4882-8008-58a77b0a5530",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "dfa7dd03-24e3-444b-86f7-ce02c06ba416",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "e21e5922-be93-48a6-b175-7bc7b4a025e9",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "e6820f71-5c38-474b-81a5-7d7b6b246fef",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "ea0c28f4-aa8f-4607-bbe0-5c412f034d16",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "ef461f00-7bd8-4b79-95a4-4b4f5e661a29",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "f19e719c-689a-4023-9036-1c4708bca02e",
+      "venue": "3号场"
+    },
+    {
+      "type": "manualConfirmedVenueAlreadyCorrect",
+      "id": "fdf7eed6-cf03-4e20-bdbe-0a995fed9244",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:0288d135eb8a",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:0c3b0a55f0a0",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:108d33d19c91",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:10fce41c4fe6",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:114ba845c3ec",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:1ba22e8d17b1",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:22cf09b365bf",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:2407d6a6f6c0",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:2c97705e607e",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:2ce1e7efd741",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:350a1241f4f5",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:3812a63201c4",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:391ffa11de9d",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:3e800e396f9c",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:3fd0abd855e6",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:41dfa9b79ac7",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueNeedsThirdPartyAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:486d6ab7ab5b",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:5cae17549619",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:5dce18484ade",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:5e1f549fd04a",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:61f758f83b05",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:7859075f4f2d",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:79eaa0badc83",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:7f488c921edc",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:85f59474cf72",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:8a30bfbb4c5a",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:b005f267ce71",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:b06efcef3d3d",
+      "venue": "2号场"
+    },
+    {
+      "type": "manualConfirmedVenueAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:bbc6979f3ed9",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:cc63d32cc499",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:d704f82cb0ad",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueNeedsThirdPartyAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:da26b95acccd",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:df8177846910",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:e45746f3858c",
+      "venue": "2号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:e5e18c2d93c2",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:f40d86fbb28b",
+      "venue": "3号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "private_lesson_csv_import_20260527:schedule:fae7fa7876a8",
+      "venue": "4号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "repair-smallclass-20260514-1900",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "repair-smallclass-20260521-1900",
+      "venue": "1号场"
+    },
+    {
+      "type": "venueFallbackToFeishuAlreadyCorrect",
+      "id": "third-party-schedule-b86e32da-dd4c-43ed-86af-704d41232e5f",
+      "venue": "3号场"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-0cecfbe3ad00a23e"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-21178b70fc20923f"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-2430a30f9412aa96"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-34c64ce361629014"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-35a76131a25e6238"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-37579b06a37d16fb"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-38c3e3d3346dacf1"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-3f29fdb1a505006c"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-3f5802785353e5f0"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-4c5b56ee9d407e0a"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-54e3baaeb89678f0"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-558d17c34f8771b7"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-5959747e2ed2caea"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-5aef9a6396f7b089"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-5b457ac8d992fe18"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-5c71918c4eec52c8"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-5e4eb4be0680b38d"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-5e543eb5071babdb"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-66ede07cf8c845db"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-67e8af55c56fc0d4"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-6fd02b77de4342ea"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-70df92cecea92ab2"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-712ba32844ec9ed3"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-72d3c4d70bf6b84f"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-7629a7e04539ee87"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-77eb3598001383e2"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-8426306003284f2e"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-8a7963597989d780"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-930fb80d68124ebd"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-9886ceb340bc1711"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-9d24d03b5ef5dc16"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-ac18388c1c4917ee"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-aea70d7897c8c7ad"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-b2b7a11ccf28c727"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-b8a66eb16b509b58"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-bd78c9996907f28d"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-c0be9e206a8b44d4"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-c31315df6df47572"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-c9ac3ee9c30cedac"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-cc01b2245f10d5b5"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-cc62a7a31ddd21ae"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-d0042af4a7f92418"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-d44a3f88c8b2ef6e"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-e0d33957e5bd4dce"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-202602-thirdparty-schedule-e2ad2c91e95898a6"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-play-hit-16601350737-2026-07-0815-49-43--------------140-00----127-32----12-68--4412"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-01b447cd657b"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-094f6790ccdf"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-0b5bb7ff5c11"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-0c79e1c1e2f9"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-0ce363734320"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-11a76e14e2c0"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-131388e8a1e7"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-2f7821894836"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-307ad6451054"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-41aaaa53ec4a"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-43c49238b25b"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-5f06df6e82c5"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-6c38f52d000a"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-6c9a31065de9"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-7299a88cd6c0"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-7619fb0124c9"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-77511021fffb"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-8340ace93b45"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-85428521e878"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-96c73a9363a4"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-9d712985294c"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-a1c14755b66c"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-aeb9f21e47f0"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-b3bd29a5b25c"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-b7e81054e147"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-b920cf3c152f"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-c6b70587bc03"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-c90e12720d64"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-cbf44499f644"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-d20f6648476a"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-d67c71685749"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-d8c490438aa3"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-df505ba77ece"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-e5b66cf0463e"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-e5fae2a22d07"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-f09f258efafb"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-fd62c770a08e"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202604-schedule-fdb96999e9ea"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-43092f42ba64"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-4a5f01e4a5ca"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-733106a0141b"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-78c4f908576b"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-7c50636d78d3"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-a3328cc5c6bc"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-cd2c2d3b5b7e"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-fb32789fee80"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-202606-schedule-fee91574c01a"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-schedule-67-551811088ac6"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-schedule-cxe_lock_2026-07-12_200"
+    },
+    {
+      "type": "studentAlreadyBound",
+      "id": "cxe-thirdparty-schedule-cxe_lock_2026-07-12_211"
+    }
+  ],
+  "remaining": [
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-12286c878a4eff58",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "Willian、Harrena、Lam（1v3）",
+      "feishuStudent": "Willian、Harrena、Lam（1v3）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-22919c733218c3a7",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "曹志国",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-290489419809c479",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "朝珺学员",
+      "feishuStudent": "朝珺学员"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-423d102ff29d0cc8",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "三人（牛宛如 王公达 amin）",
+      "feishuStudent": "三人（牛宛如 王公达 amin）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-5160af23c005394c",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "Willian、Lam、Harrena（1v3）",
+      "feishuStudent": "Willian、Lam、Harrena（1v3）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-6905faf81885d951",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "私教课",
+      "feishuStudent": "私教课"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-6a9e62fe7f725c66",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "艾雷",
+      "feishuStudent": "艾雷 1v2"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-6e29cc7b11dc6dbf",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "4人",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-844cb90dbb9df40d",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "黄总朋友",
+      "feishuStudent": "黄总朋友 转介绍"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-c857ff810a509951",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "三人（牛宛如 王公达 amin）",
+      "feishuStudent": "三人（牛宛如 王公达 amin）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-ec6c12cf9e87539b",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "Willian、Harrena（1v2）",
+      "feishuStudent": "Willian、Harrena（1v2）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-ef51eaed815d3685",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "三人（牛宛如 王公达 amin）",
+      "feishuStudent": "三人（牛宛如 王公达 amin）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-f07deb91dda8f575",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "三人（牛宛如 王公达 amin）",
+      "feishuStudent": "三人（牛宛如 王公达 amin）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-202602-thirdparty-schedule-f932afef69ec2237",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "学员的",
+      "feishuStudent": "朝珺学员"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-20260715-0731-schedule-66a0077d4fe2048d",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "征途朋友",
+      "feishuStudent": "征途两个朋友"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202604-schedule-330bb830fac8",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "无名用户",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202604-schedule-6275ca64c570",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "11",
+      "feishuStudent": "11"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202604-schedule-7def554fe8e5",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "曹先生 2节1v2",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202604-schedule-99634fd8f87b",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "-小林男朋友",
+      "feishuStudent": "小林男朋友（8）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202604-schedule-a0f3dd2e96f0",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "暖暖爸妈",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202604-schedule-f43fbad65d9f",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "4人",
+      "feishuStudent": "4人"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202604-schedule-f6c32ea4a8d0",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "h航 1v2",
+      "feishuStudent": "h航 1v2"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202604-schedule-fb5a10b0802f",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "淇淇（ZT）",
+      "feishuStudent": "淇淇（ZT）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-2c2e05e7c1a5",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-464bb994ae1c",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "2.0集训营（4人）",
+      "feishuStudent": "2.0集训营（4人）"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-6fe8dd618405",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-7466f324231a",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "4人",
+      "feishuStudent": "4人"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-80af25f561ff",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-85468bbb33dd",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "、原、体验",
+      "feishuStudent": "原"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-a24372bbdaa0",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "吃很多饭&朋友",
+      "feishuStudent": "吃很多饭&朋友"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-a53e9f33e583",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-abdaf95644b4",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "Yee.等三人",
+      "feishuStudent": "Yee.等三人"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-b2318d2fa9bf",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "",
+      "feishuStudent": ""
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-e44e651c8075",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "开心&朋友",
+      "feishuStudent": "开心&朋友"
+    },
+    {
+      "type": "fakeNameOrMissingStudentId",
+      "id": "cxe-thirdparty-202606-schedule-ffac1b582929",
+      "reason": "无法唯一匹配真实学员",
+      "currentStudentName": "2.0集训营（4人）",
+      "feishuStudent": "2.0集训营（4人）"
+    }
+  ],
+  "conflictIndex": {
+    "staleIndexIds": [
+      "2026-07-13|coach|%E6%9D%A8%E6%95%99%E7%BB%83|cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+      "2026-07-13|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256"
+    ],
+    "nextIndexRows": [
+      {
+        "id": "2026-07-13|coach|%E6%9D%A8%E6%95%99%E7%BB%83|cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+        "scheduleId": "cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+        "indexDate": "2026-07-13",
+        "indexType": "coach",
+        "indexKey": "杨教练",
+        "startTime": "2026-07-13 16:00",
+        "endTime": "2026-07-13 18:00",
+        "coach": "杨教练",
+        "studentIds": [
+          "b3c1c399-b209-4e9e-af56-80b74c7270ac"
+        ],
+        "campus": "shunyi_mapo",
+        "venue": "4号场",
+        "allowLinkedVenueConflict": false,
+        "linkedScheduleGroupId": "",
+        "status": "已排课",
+        "updatedAt": "2026-08-17T08:06:16.980Z"
+      },
+      {
+        "id": "2026-07-13|student|b3c1c399-b209-4e9e-af56-80b74c7270ac|cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+        "scheduleId": "cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+        "indexDate": "2026-07-13",
+        "indexType": "student",
+        "indexKey": "b3c1c399-b209-4e9e-af56-80b74c7270ac",
+        "startTime": "2026-07-13 16:00",
+        "endTime": "2026-07-13 18:00",
+        "coach": "杨教练",
+        "studentIds": [
+          "b3c1c399-b209-4e9e-af56-80b74c7270ac"
+        ],
+        "campus": "shunyi_mapo",
+        "venue": "4号场",
+        "allowLinkedVenueConflict": false,
+        "linkedScheduleGroupId": "",
+        "status": "已排课",
+        "updatedAt": "2026-08-17T08:06:16.980Z"
+      },
+      {
+        "id": "2026-07-13|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+        "scheduleId": "cxe-play-hit-13901293813-2026-07-1321-37-48--------------400-00----363-69----36-31--3256",
+        "indexDate": "2026-07-13",
+        "indexType": "venue",
+        "indexKey": "shunyi_mapo|4号场",
+        "startTime": "2026-07-13 16:00",
+        "endTime": "2026-07-13 18:00",
+        "coach": "杨教练",
+        "studentIds": [
+          "b3c1c399-b209-4e9e-af56-80b74c7270ac"
+        ],
+        "campus": "shunyi_mapo",
+        "venue": "4号场",
+        "allowLinkedVenueConflict": false,
+        "linkedScheduleGroupId": "",
+        "status": "已排课",
+        "updatedAt": "2026-08-17T08:06:16.980Z"
+      }
+    ]
+  }
+}
