@@ -1729,6 +1729,25 @@ function timetableScrollLeft(days = [], isCurrentWeek = true) {
   return Math.max(0, Math.round(rpxToPx(todayIndex * TIMETABLE_DAY_WIDTH_RPX)));
 }
 
+function normalizeScheduleRouteTab(value = '') {
+  const tab = String(value || '').trim();
+  return ['dashboard', 'timetable', 'students', 'shifts'].includes(tab) ? tab : '';
+}
+
+function scheduleTabState(activeTab = 'dashboard') {
+  return {
+    activeTab,
+    isDashboard: activeTab === 'dashboard',
+    isTimetable: activeTab === 'timetable',
+    isStudents: activeTab === 'students',
+    isShifts: activeTab === 'shifts',
+    dashboardTabClass: activeTab === 'dashboard' ? 'active' : '',
+    timetableTabClass: activeTab === 'timetable' ? 'active' : '',
+    studentsTabClass: activeTab === 'students' ? 'active' : '',
+    shiftsTabClass: activeTab === 'shifts' ? 'active' : ''
+  };
+}
+
 Page({
   data: {
     loading: true,
@@ -1862,9 +1881,11 @@ Page({
   },
 
   onLoad(options = {}) {
+    const routeTab = normalizeScheduleRouteTab(options.tab);
     this.setData({
       pendingRouteScheduleId: String(options.scheduleId || '').trim(),
-      pendingRouteAction: String(options.action || '').trim()
+      pendingRouteAction: String(options.action || '').trim(),
+      ...(routeTab ? scheduleTabState(routeTab) : {})
     });
     this.load();
   },
@@ -2004,17 +2025,7 @@ Page({
 
   switchTab(event) {
     const activeTab = event.currentTarget.dataset.tab || 'timetable';
-    this.setData({
-      activeTab,
-      isDashboard: activeTab === 'dashboard',
-      isTimetable: activeTab === 'timetable',
-      isStudents: activeTab === 'students',
-      isShifts: activeTab === 'shifts',
-      dashboardTabClass: activeTab === 'dashboard' ? 'active' : '',
-      timetableTabClass: activeTab === 'timetable' ? 'active' : '',
-      studentsTabClass: activeTab === 'students' ? 'active' : '',
-      shiftsTabClass: activeTab === 'shifts' ? 'active' : ''
-    }, () => {
+    this.setData(scheduleTabState(activeTab), () => {
       if (activeTab === 'timetable') this.renderWeek();
     });
   },

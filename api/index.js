@@ -2994,6 +2994,10 @@ function courseReminderStudentValue(schedule={},previousFeedbackSummary=''){
   const summary=String(previousFeedbackSummary||'').trim();
   return summary?`${studentName}｜${summary}`:studentName;
 }
+function officialAccountTimetablePagePath(scheduleId=''){
+  const id=encodeURIComponent(String(scheduleId||''));
+  return `pages/schedule/schedule?tab=timetable${id?`&scheduleId=${id}`:''}`;
+}
 function courseReminderStudentNames(schedule={}){
   return String(schedule?.studentName||'')
     .split(/[、,，|/]/)
@@ -3059,7 +3063,7 @@ function buildOfficialAccountCourseReminderMessage({templateId,openid,schedule,a
     template_id:templateId,
     miniprogram:{
       appid:String(appId||WECHAT_MINIPROGRAM_APPID),
-      pagepath:mini.page
+      pagepath:officialAccountTimetablePagePath(schedule?.id)
     },
     data:mini.data
   };
@@ -3565,7 +3569,7 @@ function buildOfficialAccountDigestTemplatePayload({templateId,openid,message,ap
     template_id:templateId,
     miniprogram:{
       appid:String(appId||WECHAT_MINIPROGRAM_APPID),
-      pagepath:'pages/schedule/schedule'
+      pagepath:'pages/schedule/schedule?tab=timetable'
     },
     data:{
       thing1:{value:'明日课表'},

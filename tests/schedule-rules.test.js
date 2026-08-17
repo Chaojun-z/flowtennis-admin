@@ -866,7 +866,7 @@ assert.deepStrictEqual(
     template_id: 'official-reminder-tpl',
     miniprogram: {
       appid: 'wx7acb7603ee803923',
-      pagepath: 'pages/detail/detail?scheduleId=due-cross'
+      pagepath: 'pages/schedule/schedule?tab=timetable&scheduleId=due-cross'
     },
     data: {
       time3: { value: '2026年4月20日 12:00' },
@@ -876,7 +876,7 @@ assert.deepStrictEqual(
       thing6: { value: '小鹿' }
     }
   },
-  'official account course reminder should jump to the coach mini program'
+  'official account course reminder should jump directly to the native timetable tab'
 );
 
 assert.strictEqual(
@@ -909,7 +909,7 @@ assert.deepStrictEqual(
     template_id: 'official-reminder-tpl',
     miniprogram: {
       appid: 'wx7acb7603ee803923',
-      pagepath: 'pages/detail/detail?scheduleId=due-cross'
+      pagepath: 'pages/schedule/schedule?tab=timetable&scheduleId=due-cross'
     },
     data: {
       time3: { value: '2026年4月20日 12:00' },
@@ -919,7 +919,7 @@ assert.deepStrictEqual(
       thing6: { value: '小鹿｜上节：正手稳定，下节练脚步' }
     }
   },
-  'official account course reminder should append previous feedback to the student field and keep current detail jump'
+  'official account course reminder should append previous feedback to the student field and keep direct timetable jump'
 );
 
 const coachFeedbackReminderRows = [
@@ -1185,7 +1185,7 @@ assert.deepStrictEqual(
     template_id: 'digest-tpl',
     miniprogram: {
       appid: 'wx7acb7603ee803923',
-      pagepath: 'pages/schedule/schedule'
+      pagepath: 'pages/schedule/schedule?tab=timetable'
     },
     data: {
       thing1: { value: '明日课表' },
@@ -1676,7 +1676,7 @@ assert.strictEqual(
 
     assert.strictEqual(result.sent, 1, 'official account course reminder should send once');
     assert.strictEqual(sent.length, 1, 'official account course reminder should build one outgoing message');
-    assert.deepStrictEqual(sent[0].miniprogram, { appid: 'wx-mini-appid', pagepath: 'pages/detail/detail?scheduleId=due-1' }, 'official account course reminder should use mini program jump');
+    assert.deepStrictEqual(sent[0].miniprogram, { appid: 'wx-mini-appid', pagepath: 'pages/schedule/schedule?tab=timetable&scheduleId=due-1' }, 'official account course reminder should use direct timetable mini program jump');
     assert.strictEqual(sent[0].data.thing6.value, '小鹿｜上节：正手稳定，下节练脚步', 'official account course reminder should append previous feedback to the student field');
     assert.strictEqual(writes[0][0], 'due-1', 'official account course reminder should write back to the same schedule');
     assert.strictEqual(writes[0][1].courseReminderSentAt, reminderNow.toISOString(), 'official account course reminder should mark the sent time');
