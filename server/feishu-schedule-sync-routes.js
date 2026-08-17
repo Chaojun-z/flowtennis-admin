@@ -1191,12 +1191,19 @@ function attachSharedPackageStudent(candidate,ctx={}){
     selectedEntitlements:[selected],
     sharedPackageAuthorization:{
       entitlementId:selected.id||'',
+      purchaseId:selected.purchaseId||'',
+      packageName:selected.packageName||'',
+      validFrom:sharedPackageAuthorizationValidFrom(selected),
       ownerStudentId:owner.id||'',
       ownerStudentName:owner.name||candidate.sharedPackageOwnerName||'',
       authorizedStudentId:attendee.id||'',
       authorizedStudentName:attendee.name||candidate.sharedPackageAttendeeName||''
     }
   };
+}
+
+function sharedPackageAuthorizationValidFrom(entitlement={}){
+  return String(entitlement.purchaseDate||entitlement.usageStartDate||entitlement.validFrom||'').slice(0,10);
 }
 
 function confirmedMishaHuangPair(candidate={}){
@@ -2551,7 +2558,7 @@ async function ensureSharedPackageAuthorization(candidate,ctx={}){
     authorizedStudentId:auth.authorizedStudentId,
     authorizedStudentName:auth.authorizedStudentName||'',
     status:'active',
-    validFrom:String(candidate.startTime||'').slice(0,10),
+    validFrom:String(auth.validFrom||'').slice(0,10),
     validUntil:'',
     notes:candidate.sharedPackageNote||'飞书排课同步自动授权',
     createdBy:'飞书同步',

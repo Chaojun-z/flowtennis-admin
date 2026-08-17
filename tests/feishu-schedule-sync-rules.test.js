@@ -1486,11 +1486,12 @@ const authorizedSharedPackagePlan = sync.buildDryRunPlan({
   ],
   coaches: [{ id: 'coach-liu', name: '刘润扬教练' }],
   users: [],
-  entitlements: [{ id: 'ent-shiyi', studentId: 'stu-shiyi', studentName: '十一', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active' }]
+  entitlements: [{ id: 'ent-shiyi', studentId: 'stu-shiyi', studentName: '十一', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active', purchaseDate: '2026-03-25' }]
 });
 assert.strictEqual(authorizedSharedPackagePlan.summary.create, 1, 'shared package should be schedulable after resolving owner and actual learner');
 assert.deepStrictEqual(authorizedSharedPackagePlan.actions[0].candidate.scheduleStudents.map(row=>row.name), ['达达'], 'shared package schedule should be created for the actual learner');
 assert.deepStrictEqual(sync.buildScheduleBody(authorizedSharedPackagePlan.actions[0].candidate).entitlementIds, ['ent-shiyi'], 'shared package schedule should consume the owner package');
+assert.strictEqual(authorizedSharedPackagePlan.actions[0].candidate.sharedPackageAuthorization.validFrom, '2026-03-25', 'auto-created shared package authorization should start from the package purchase date');
 
 const mishaHuangPairPlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -2400,6 +2401,60 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
   assert.strictEqual(writes[0].table, 'ft_feishu_schedule_sync', 'created schedule should write sync relation');
   assert.strictEqual(writes[0].row.sheetId, 'GrbZdi', 'sync relation should record source sheet id for future deletion scope');
   assert.strictEqual(writes[0].row.startTime, '2026-07-20 13:30', 'sync relation should record source start time for baseline audits');
+
+  const sharedAuthWrites = [];
+  await sync.applySyncPlan({
+    actions: [{
+      type: 'create_schedule',
+      sourceKey: 'shared-history-key',
+      candidate: {
+        sourceKey: 'shared-history-key',
+        sheetId: 'GrbZdi',
+        fingerprint: 'fp-shared-history',
+        sheetTitle: '8.17-8.23',
+        sourceCell: 'R8C11',
+        date: '2026-08-20',
+        startClock: '10:30',
+        endClock: '11:30',
+        startTime: '2026-08-20 10:30',
+        endTime: '2026-08-20 11:30',
+        lessonCount: 1,
+        coachName: '刘润扬',
+        resolvedCoach: { id: 'coach-liu', name: '刘润扬教练' },
+        course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false },
+        studentNames: ['小林'],
+        resolvedStudents: [{ id: 'stu-xiaolin', name: '小林' }],
+        scheduleStudents: [{ id: 'stu-dede', name: '德德' }],
+        selectedEntitlements: [{ id: 'ent-xiaolin' }],
+        sharedPackageNote: '德德使用小林课包 8',
+        sharedPackageAuthorization: {
+          entitlementId: 'ent-xiaolin',
+          purchaseId: 'purchase-xiaolin',
+          packageName: '1v1私教课 · 10课时 · 非黄金',
+          validFrom: '2026-03-25',
+          ownerStudentId: 'stu-xiaolin',
+          ownerStudentName: '小林',
+          authorizedStudentId: 'stu-dede',
+          authorizedStudentName: '德德'
+        },
+        campus: 'shunyi_mapo',
+        locationType: 'own',
+        venue: '1号场',
+        venueText: '马坡室内',
+        courtText: '1号'
+      }
+    }]
+  }, {
+    put: async (table, id, row) => sharedAuthWrites.push({ table, id, row }),
+    uuidv4: () => 'uuid-shared',
+    createSchedule: async (body) => ({ schedule: { id: 'sch-shared-history', ...body } }),
+    authorizations: [],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks',
+    T_ENTITLEMENT_AUTHORIZATIONS: 'ft_entitlement_authorizations'
+  });
+  const sharedAuthWrite = sharedAuthWrites.find(item => item.table === 'ft_entitlement_authorizations');
+  assert.strictEqual(sharedAuthWrite.row.validFrom, '2026-03-25', 'written shared package authorization should use the package purchase date, not the Feishu class date');
 
   const newTrialCandidate = {
     ...candidate,
