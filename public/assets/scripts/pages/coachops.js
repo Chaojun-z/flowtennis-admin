@@ -619,6 +619,7 @@ function coachOpsRows(){
     .filter(row=>campus==='all'||row.rangeRows.length||coachOpsHomeCampusCoachNames().includes(coachOpsRowDisplayName(row)))
     .sort((a,b)=>(Number(a.sortOrder)||coachSortValue(coachOpsRowDisplayName(a)))-(Number(b.sortOrder)||coachSortValue(coachOpsRowDisplayName(b)))||coachOpsRowDisplayName(a).localeCompare(coachOpsRowDisplayName(b),'zh-Hans-CN'));
 }
+function coachOpsPeriodSummaryText(rows){return `共 ${lessonUnitsText(sumScheduleLessonUnits((rows||[]).flatMap(row=>row.rangeRows||[])))} 节`;}
 function renderCoachOpsRangeFilter(){
   const host=document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadRangeHost':'coachOpsRangeHost');
   if(!host)return;
@@ -715,6 +716,7 @@ function renderCoachOps(){if(currentPage!=='coachschedule'&&currentPage!=='coach
   const nowHeadHtml=showNowLine?`<div class="coach-ops-now-head" style="top:${nowLineTop}px"><i>${String(nowForGrid.getHours()).padStart(2,'0')}:${String(nowForGrid.getMinutes()).padStart(2,'0')}</i><b></b></div>`:'';
   const gridCard=document.querySelector('#page-coachschedule .coach-ops-grid-card');
   const rows=coachOpsRows();
+  const periodSummary=document.getElementById('coachOpsPeriodSummary');if(periodSummary)periodSummary.textContent=coachOpsPeriodSummaryText(rows);
   if(gridCard){
     gridCard.classList.toggle('mode-day',mode==='day');
     gridCard.classList.toggle('mode-week',mode==='week');

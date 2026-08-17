@@ -22,6 +22,11 @@ const coachopsRuntime = {
   sameCampusValue: (a, b) => String(a || '') === String(b || ''),
   campus: 'all'
 };
+coachopsRuntime.lessonUnitsText = value => {
+  const n = Number(value) || 0;
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
+};
+coachopsRuntime.sumScheduleLessonUnits = rows => (rows || []).reduce((sum, row) => sum + (Number(row.lessonCount) || 0), 0);
 vm.runInNewContext(coachopsSource, coachopsRuntime);
 
 assert.match(
@@ -176,6 +181,24 @@ assert.match(
   pagesCss,
   /coach-ops-month-preview\{[^}]*z-index:320/,
   'month coach hover preview should sit above the calendar grid'
+);
+assert.match(
+  fs.readFileSync(path.join(root, 'public/index.html'), 'utf8'),
+  /id="coachOpsPeriodSummary">共 0 节/,
+  'coach schedule toolbar should reserve a period lesson summary next to the date selector'
+);
+assert.strictEqual(
+  coachopsRuntime.coachOpsPeriodSummaryText([
+    { rangeRows: [{ lessonCount: 1 }, { lessonCount: 1.5 }] },
+    { rangeRows: [{ lessonCount: 2 }] }
+  ]),
+  '共 4.5 节',
+  'period lesson summary should add the currently filtered visible rows'
+);
+assert.match(
+  pagesCss,
+  /#page-coachschedule \.coach-ops-period-summary\{[^}]*white-space:nowrap/,
+  'period lesson summary should stay as one compact toolbar item'
 );
 
 console.log('coachops calendar view tests passed');

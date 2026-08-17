@@ -2457,6 +2457,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-date-btn::after{content:"";display:inline-block;width:16px;height:16px;margin-left:4px;flex:0 0 16px;background:center/16px 16px no-repeat url("data:image/svg+xml,%3Csvg viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M292.16 385.856a21.344 21.344 0 0 0-0.448 29.696l204.736 217.984a21.344 21.344 0 0 0 31.136 0l204.736-217.984a21.344 21.344 0 1 0-31.136-29.216L512 587.744l-189.184-201.408a21.344 21.344 0 0 0-30.176-0.96z' fill='%23666666'/%3E%3C/svg%3E")}
 #page-coachschedule .coach-date-btn.is-today{color:var(--coach-ops-theme)}
 #page-coachschedule .coach-date-btn.is-muted{color:#9CA3AF}
+#page-coachschedule .coach-ops-period-summary{display:inline-flex;align-items:center;height:28px;box-sizing:border-box;padding:0 4px;color:#2F241E;font-size:14px;font-weight:600;line-height:1;white-space:nowrap}
 #page-coachschedule .coach-ops-nav:hover,#page-coachschedule .coach-date-btn:hover{background:#F7F8FA;border-color:#DDE1E7}
 #page-coachschedule .coach-ops-arrow:hover{background:#F7F8FA;border-color:transparent;box-shadow:none;transform:none}
 #page-coachschedule .coach-ops-arrow:hover::after{content:attr(data-tip);position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);height:22px;box-sizing:border-box;padding:0 8px;border-radius:6px;background:rgba(255,251,247,.98);color:#5F3F2A;font-size:10px;font-weight:400;line-height:22px;white-space:nowrap;box-shadow:0 8px 18px rgba(64,36,18,.14);z-index:420;pointer-events:none}
@@ -2754,6 +2755,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
   body.admin-mobile #page-coachschedule .coach-ops-grid-card{height:auto;min-height:0;overflow:visible;border-radius:10px;background:transparent}
   body.admin-mobile #page-coachschedule .coach-ops-grid-titlebar{display:grid;grid-template-columns:1fr;gap:6px;padding:0 0 10px;background:transparent;border-bottom:0}
   body.admin-mobile #page-coachschedule #coachOpsViewTitle{font-size:15px;line-height:20px;margin:0;color:#2F241E}
+  body.admin-mobile #page-coachschedule .coach-ops-period-summary{grid-column:1/-1;height:22px;padding:0;font-size:13px}
   body.admin-mobile #page-coachschedule .coach-ops-grid-hint,body.admin-mobile #page-coachschedule .coach-ops-grid-clock,body.admin-mobile #page-coachschedule .coach-ops-head{display:none}
   body.admin-mobile #page-coachschedule .coach-ops-scroll{overflow:visible;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;scrollbar-width:none}
   body.admin-mobile #page-coachschedule .coach-ops-scroll::-webkit-scrollbar{display:none}
