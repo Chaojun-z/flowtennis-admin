@@ -170,7 +170,7 @@ function buildWeekTodoCards(groups = []) {
       ...item,
       weekdayText,
       dateText,
-      metaText: `${item.shortLocation || item.locationText || ''} | ${item.student || item.studentText || ''}`,
+      metaText: `${item.shortLocation || item.locationText || ''}｜${item.student || item.studentText || ''}`,
       packageText: firstNonEmpty(item.packageProgressText, item.packageText),
       courseTagText: dashboardCourseTag(item).text,
       courseTagClass: dashboardCourseTag(item).className,
@@ -261,6 +261,38 @@ function lessonRecordCountText(recordCount = 0, lessonUnits = 0) {
   return `${lessonUnitsText(lessonUnits)}课时 / ${recordCount}节课`;
 }
 
+function studentDetailCompletedLessonText(student = {}, fallbackUnits = 0) {
+  const value = Number(student.completedLessons);
+  return lessonUnitsText(Number.isFinite(value) ? value : fallbackUnits);
+}
+
+function dateOnlyText(value = '') {
+  return String(value || '').slice(0, 10);
+}
+
+function daysAgoText(value = '', now = new Date()) {
+  const dateText = dateOnlyText(value);
+  const date = parseLocalDate(dateText);
+  if (!date) return '';
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const days = Math.max(0, Math.floor((today - start) / 86400000));
+  return `${dateText} · ${days}天前`;
+}
+
+function studentDetailPackageBalanceText(student = {}, entitlements = []) {
+  return firstNonEmpty(
+    student.detailPackageBalanceText,
+    student.packageBalanceText,
+    studentPackageBalanceText(studentEntitlements(student.id, entitlements))
+  ) || '暂无记录';
+}
+
+function studentDetailRecentLessonText(student = {}, latestRecord = null) {
+  const text = daysAgoText(firstNonEmpty(student.detailRecentLessonDate, student.lastFormalLessonAt, latestRecord && latestRecord.sortTime));
+  return text || '暂无记录';
+}
+
 function lessonRecordUnitsCompactText(recordCount = 0, lessonUnits = 0) {
   return `${recordCount}/${lessonUnitsText(lessonUnits)}`;
 }
@@ -334,6 +366,28 @@ function studentPackageListText(entitlements = []) {
   const summary = entitlementSummary(entitlements);
   if (summary.total <= 0) return '';
   return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
+}
+
+function mergeTeachingStudentViews(students = [], teachingStudentViews = {}) {
+  const rows = [
+    ...(Array.isArray(teachingStudentViews.historicalStudents) ? teachingStudentViews.historicalStudents : []),
+    ...(Array.isArray(teachingStudentViews.activeStudents) ? teachingStudentViews.activeStudents : []),
+    ...(Array.isArray(teachingStudentViews.formalStudents) ? teachingStudentViews.formalStudents : []),
+    ...(Array.isArray(teachingStudentViews.courseStudents) ? teachingStudentViews.courseStudents : [])
+  ];
+  const byId = new Map(rows.map(item => [String(item.studentId || item.id || '').trim(), item]).filter(([id]) => id));
+  return (students || []).map((student) => {
+    const view = byId.get(String(student.id || '').trim()) || {};
+    return {
+      ...student,
+      completedLessons: view.completedLessons == null ? student.completedLessons : view.completedLessons,
+      detailRecentLessonDate: firstNonEmpty(view.detailRecentLessonDate, student.detailRecentLessonDate),
+      lastFormalLessonAt: firstNonEmpty(view.lastFormalLessonAt, student.lastFormalLessonAt),
+      packageBalanceText: firstNonEmpty(view.packageBalanceText, student.packageBalanceText),
+      detailPackageBalanceText: firstNonEmpty(view.detailPackageBalanceText, student.detailPackageBalanceText),
+      detailLessonRecordRows: Array.isArray(view.detailLessonRecordRows) ? view.detailLessonRecordRows : student.detailLessonRecordRows
+    };
+  });
 }
 
 function scheduleEntitlements(schedule = {}, entitlements = []) {
@@ -1576,6 +1630,17 @@ function studentLedgerLessonUnits(row = {}, schedule = {}) {
   return Math.max(consumed, planned);
 }
 
+function studentLedgerRecordMetaParts(row = {}, linkedSchedule = {}) {
+  return [
+    row.sourceVenue || row.venue || row.courtName || row.court || linkedSchedule.venue || linkedSchedule.loc || linkedSchedule.locationText,
+    row.coach || linkedSchedule.coach
+  ].filter(Boolean);
+}
+
+function studentLedgerRecordHasDisplayContext(row = {}, linkedSchedule = {}, metaParts = []) {
+  return !!(linkedSchedule.id || metaParts.length >= 2);
+}
+
 function studentLedgerRecordKey(studentId = '', row = {}, schedule = {}) {
   if (schedule && schedule.id) return `schedule:${schedule.id}`;
   if (row.scheduleId) return `schedule:${row.scheduleId}`;
@@ -1612,20 +1677,19 @@ function buildStudentLessonRecords(student = {}, context = {}) {
     const sortTime = studentLedgerSortTime(row, linkedSchedule);
     if (!timeText || !sortTime) return;
     if (!lessonRecordHasEnded(sortTime, linkedSchedule, now)) return;
+    const metaParts = studentLedgerRecordMetaParts(row, linkedSchedule);
+    if (!studentLedgerRecordHasDisplayContext(row, linkedSchedule, metaParts)) return;
     const key = studentLedgerRecordKey(student.id, row, linkedSchedule);
     map.set(key, {
       scheduleId: linkedSchedule.id || '',
       time: timeText,
       sortTime,
-      courseType: dashboardCourseTag(linkedSchedule).text || '课包',
+      courseType: firstNonEmpty(row.courseType, row.standardCourseType, row.packageName, dashboardCourseTag(linkedSchedule).text, '课包'),
       courseTypeClass: dashboardCourseTag(linkedSchedule).className === 'is-trial' ? 'detail-tag-trial' : 'detail-tag-private',
       status: '已结束',
       statusClass: 'detail-tag-muted',
       lessonUnits: studentLedgerLessonUnits(row, linkedSchedule),
-      metaParts: [
-        row.sourceVenue || row.venue || row.courtName || row.court || linkedSchedule.venue || linkedSchedule.loc || linkedSchedule.locationText,
-        row.coach || linkedSchedule.coach
-      ].filter(Boolean)
+      metaParts
     });
   });
   completedStudentSchedules(schedule)
@@ -1701,7 +1765,12 @@ function buildStudentDetailData(student, context = {}) {
       phoneEmpty: !firstNonEmpty(student.phone),
       type: firstNonEmpty(student.type) || '暂无记录',
       campus: campus || '暂无记录',
-      campusEmpty: !campus
+      campusEmpty: !campus,
+      cumulative: studentDetailCompletedLessonText(student, lessonUnitsCompleted),
+      packageProgress: studentDetailPackageBalanceText(student, entitlements),
+      packageEmpty: !firstNonEmpty(student.detailPackageBalanceText, student.packageBalanceText, studentPackageBalanceText(studentEntitlements(student.id, entitlements))),
+      recentLesson: studentDetailRecentLessonText(student, latestRecord),
+      recentLessonEmpty: !firstNonEmpty(student.detailRecentLessonDate, student.lastFormalLessonAt, latestRecord && latestRecord.sortTime)
     },
     summary: {
       coach: responsibleCoach || '暂无记录',
@@ -1710,8 +1779,8 @@ function buildStudentDetailData(student, context = {}) {
       classEmpty: !activeClass,
       lastClass: latestRecord ? latestRecord.time : '暂无记录',
       lastClassEmpty: !latestRecord,
-      cumulative: `${lessonRecordCountText(lessonRecordCount, lessonUnitsCompleted)}`,
-      packageProgress: packageText || '暂无记录',
+      cumulative: studentDetailCompletedLessonText(student, lessonUnitsCompleted),
+      packageProgress: studentDetailPackageBalanceText(student, entitlements),
       packageEmpty: !packageText
     },
     remark: {
@@ -1890,6 +1959,8 @@ Page({
     showCoachMenu: false,
     pendingRouteScheduleId: '',
     pendingRouteAction: '',
+    detailReturnTarget: '',
+    feedbackReturnTarget: '',
     detailSheetClass: '',
     feedbackSheetClass: '',
     proposalSheetClass: '',
@@ -1965,7 +2036,8 @@ Page({
       const now = new Date();
       const schedule = adaptSchedule(data.schedule || [], data.feedbacks || []);
       const studentSchedule = adaptSchedule(data.studentSchedule || data.schedule || [], data.feedbacks || []);
-      const studentsList = buildStudentCards(data.students || [], data.entitlements || [], studentSchedule, coachName, data.entitlementLedger || []);
+      const studentsRaw = mergeTeachingStudentViews(data.students || [], data.teachingStudentViews || {});
+      const studentsList = buildStudentCards(studentsRaw, data.entitlements || [], studentSchedule, coachName, data.entitlementLedger || []);
       const shiftsList = [];
       this.setData({
         schedule,
@@ -1974,12 +2046,12 @@ Page({
         feedbacks: data.feedbacks || [],
         coachProposals: data.coachProposals || [],
         campusesRaw: data.campuses || [],
-        studentsRaw: data.students || [],
+        studentsRaw,
         classesRaw: data.classes || [],
         entitlementsRaw: data.entitlements || [],
         entitlementLedgerRaw: data.entitlementLedger || [],
         studentsList,
-        studentStats: buildStudentStats(data.students || [], coachName, data.entitlements || []),
+        studentStats: buildStudentStats(studentsRaw, coachName, data.entitlements || []),
         shiftsList,
         shiftStats: buildShiftStats(shiftsList),
         coachGreeting: coachGreeting(now),
@@ -2107,8 +2179,16 @@ Page({
       this.closeCoachMenu();
       return;
     }
+    if (this.data.showPoster) {
+      this.closePoster();
+      return;
+    }
     if (this.data.showFeedback) {
       this.closeFeedback();
+      return;
+    }
+    if (this.data.showDetail) {
+      this.closeDetail();
       return;
     }
     this.closeSheets();
@@ -2190,9 +2270,8 @@ Page({
         coachProposals: this.data.coachProposals,
         coachName: currentCoachName()
       }),
+      detailReturnTarget: this.data.showStudentDetail ? 'student' : '',
       showDetail: true,
-      showStudentDetail: false,
-      studentDetailSheetClass: '',
       detailSheetClass: 'sheet-show'
     });
   },
@@ -2264,6 +2343,8 @@ Page({
       posterSheetClass: '',
       studentDetailSheetClass: '',
       shiftDetailSheetClass: '',
+      detailReturnTarget: '',
+      feedbackReturnTarget: '',
       feedbackForm: feedbackFormFromRecord(),
       feedbackCounts: feedbackCountsOf(),
       proposalForm: proposalFormFromRecord(),
@@ -2286,9 +2367,37 @@ Page({
     });
   },
 
+  closeDetail() {
+    this.setData({
+      showDetail: false,
+      detailSheetClass: '',
+      detailReturnTarget: '',
+      selectedClass: null,
+      selectedClassDetail: null
+    });
+  },
+
   closeFeedback() {
-    this.closeSheets();
-    this.restoreTimetableScroll();
+    const returnToDetail = this.data.feedbackReturnTarget === 'detail' && this.data.selectedClassDetail;
+    this.setData({
+      showFeedback: false,
+      feedbackSheetClass: '',
+      feedbackReturnTarget: '',
+      feedbackForm: feedbackFormFromRecord(),
+      feedbackCounts: feedbackCountsOf(),
+      feedbackHasSaved: false,
+      feedbackEditing: false,
+      feedbackFocusedField: '',
+      feedbackListStyle: 'normal',
+      feedbackListCursors: {},
+      feedbackSelectionRanges: {},
+      feedbackSheetScrollTop: 0,
+      feedbackContextParts: [],
+      showDetail: returnToDetail ? true : false,
+      detailSheetClass: returnToDetail ? 'sheet-show' : '',
+      selectedClass: returnToDetail ? this.data.selectedClass : null,
+      selectedClassDetail: returnToDetail ? this.data.selectedClassDetail : null
+    }, () => this.restoreTimetableScroll());
   },
 
   openProposal() {
@@ -2373,6 +2482,7 @@ Page({
       showFeedback: true,
       detailSheetClass: '',
       feedbackSheetClass: 'sheet-show',
+      feedbackReturnTarget: 'detail',
       feedbackForm,
       feedbackCounts: feedbackCountsOf(feedbackForm),
       feedbackHasSaved: !!currentFeedback,
@@ -2407,6 +2517,7 @@ Page({
       showFeedback: true,
       detailSheetClass: '',
       feedbackSheetClass: 'sheet-show',
+      feedbackReturnTarget: '',
       feedbackForm,
       feedbackCounts: feedbackCountsOf(feedbackForm),
       feedbackHasSaved: !!currentFeedback,

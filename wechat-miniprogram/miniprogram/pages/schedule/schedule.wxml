@@ -180,10 +180,11 @@
               </view>
               <view class="week-task-location">
                 <text>{{item.shortLocation}}</text>
-                <text class="week-task-separator">|</text>
+                <text class="week-task-separator">｜</text>
                 <text>{{item.student}}</text>
+                <text wx:if="{{item.packageText}}" class="week-task-separator">｜</text>
+                <text wx:if="{{item.packageText}}">课包 {{item.packageText}}</text>
               </view>
-              <view wx:if="{{item.packageText}}" class="week-task-package">课包进度 {{item.packageText}}</view>
               <view class="week-task-divider"></view>
               <view class="week-task-actions">
                 <button class="week-task-outline" data-id="{{item.id}}" bindtap="openDetail">查看详情</button>
@@ -424,35 +425,17 @@
             <text class="student-detail-label">所在校区</text>
             <text class="student-detail-value is-strong {{selectedStudentDetail.basic.campusEmpty ? 'is-empty' : ''}}">{{selectedStudentDetail.basic.campus}}</text>
           </view>
-        </view>
-
-        <view class="student-detail-card">
-          <view class="student-detail-section-title">
-            <view class="student-detail-section-bar"></view>
-            <text>教练视角摘要</text>
-          </view>
-          <view class="student-detail-row">
-            <text class="student-detail-label">负责教练</text>
-            <view class="student-detail-value-group">
-              <text class="student-detail-value is-strong">{{selectedStudentDetail.summary.coach}}</text>
-              <text class="student-detail-helper">（归属: {{selectedStudentDetail.summary.owner}}）</text>
-            </view>
-          </view>
-          <view class="student-detail-row">
-            <text class="student-detail-label">所上班次</text>
-            <text class="student-detail-value {{selectedStudentDetail.summary.classEmpty ? 'is-empty' : ''}}">{{selectedStudentDetail.summary.className}}</text>
-          </view>
-          <view class="student-detail-row">
-            <text class="student-detail-label">最近上课</text>
-            <text class="student-detail-value is-strong {{selectedStudentDetail.summary.lastClassEmpty ? 'is-empty' : ''}}">{{selectedStudentDetail.summary.lastClass}}</text>
-          </view>
           <view class="student-detail-row">
             <text class="student-detail-label">累计上课</text>
-            <text class="student-detail-value is-strong">{{selectedStudentDetail.summary.cumulative}}</text>
+            <text class="student-detail-value is-strong">{{selectedStudentDetail.basic.cumulative}}</text>
           </view>
           <view class="student-detail-row">
             <text class="student-detail-label">课包进度</text>
-            <text class="student-detail-value {{selectedStudentDetail.summary.packageEmpty ? 'is-empty' : ''}}">{{selectedStudentDetail.summary.packageProgress}}</text>
+            <text class="student-detail-value {{selectedStudentDetail.basic.packageEmpty ? 'is-empty' : ''}}">{{selectedStudentDetail.basic.packageProgress}}</text>
+          </view>
+          <view class="student-detail-row">
+            <text class="student-detail-label">最近上课</text>
+            <text class="student-detail-value is-strong {{selectedStudentDetail.basic.recentLessonEmpty ? 'is-empty' : ''}}">{{selectedStudentDetail.basic.recentLesson}}</text>
           </view>
         </view>
 
@@ -601,7 +584,7 @@
       <view class="sheet-handle detail-sheet-handle"></view>
       <view class="detail-sheet-head">
         <text class="detail-sheet-title">排课详情</text>
-        <button class="detail-sheet-close" bindtap="closeSheets">×</button>
+        <button class="detail-sheet-close" bindtap="closeDetail">×</button>
       </view>
       <scroll-view scroll-y enhanced show-scrollbar="{{false}}" class="sheet-body detail-sheet-body">
         <view class="detail-section-card">
@@ -750,7 +733,7 @@
         </view>
       </scroll-view>
       <view class="detail-sheet-actions">
-        <button class="detail-sheet-btn is-ghost" bindtap="closeSheets">关闭</button>
+        <button class="detail-sheet-btn is-ghost" bindtap="closeDetail">关闭</button>
         <button wx:if="{{selectedClassDetail.isSmallGroup}}" class="detail-sheet-btn is-outline" bindtap="openProposal">{{selectedClassDetail.proposalActionText}}</button>
         <button class="detail-sheet-btn is-primary" bindtap="openFeedback">{{selectedClassDetail.actionText}}</button>
       </view>
