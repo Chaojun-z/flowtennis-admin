@@ -780,6 +780,58 @@ function workbenchStandardTrialStats(standardLifecycleMetrics={}){
     overallTrialConversionRate:conversionRate
   };
 }
+function workbenchStatusLabel(status=''){
+  return {
+    '已排课':'待上课',
+    '已结束':'已下课',
+    '已下课':'已下课',
+    '已取消':'已取消'
+  }[status]||status||'待上课';
+}
+function workbenchCampusName(row={}){
+  const raw=String(row?.campus||'').trim();
+  if(raw==='__external__'||raw==='external')return String(row?.externalVenueName||row?.venue||'校区外').trim();
+  return displayCampusName(raw)||String(row?.campusName||raw||'').trim();
+}
+function workbenchCourseRowIsTrial(row={}){
+  const textValue=[
+    row?.courseType,
+    row?.standardCourseType,
+    row?.experienceType,
+    row?.packageName,
+    row?.productName,
+    row?.className,
+    row?.notes
+  ].filter(Boolean).join(' ');
+  return row?.isTrial===true||String(row?.isTrial).toLowerCase()==='true'||/体验/.test(textValue);
+}
+function workbenchLessonText(value){
+  const n=Number(value)||0;
+  return Number.isInteger(n)?String(n):String(Math.round(n*10)/10);
+}
+function workbenchStudentPackageSummary(studentId='',entitlements=[]){
+  const id=String(studentId||'').trim();
+  const rows=(Array.isArray(entitlements)?entitlements:[])
+    .filter(row=>String(row?.studentId||'').trim()===id)
+    .filter(row=>!['voided','已作废','cancelled','已取消'].includes(String(row?.status||'').trim()))
+    .filter(row=>!workbenchCourseRowIsTrial(row));
+  const total=rows.reduce((sum,row)=>sum+parseLessonValue(row?.totalLessons),0);
+  const used=rows.reduce((sum,row)=>{
+    const direct=parseLessonValue(row?.usedLessons);
+    if(direct>0)return sum+direct;
+    const rowTotal=parseLessonValue(row?.totalLessons);
+    const remaining=parseLessonValue(row?.remainingLessons);
+    return sum+Math.max(0,rowTotal-remaining);
+  },0);
+  const remaining=rows.reduce((sum,row)=>sum+parseLessonValue(row?.remainingLessons),0);
+  return {
+    packageProgressText:total>0?`${workbenchLessonText(used)}/${workbenchLessonText(total)}`:'',
+    packageBalanceText:total>0?`${workbenchLessonText(remaining)}/${workbenchLessonText(total)}`:'',
+    packageUsedLessons:used,
+    packageTotalLessons:total,
+    packageRemainingLessons:remaining
+  };
+}
 function resolveWorkbenchState(schedule,prevSchedule,now=new Date(),feedbacks=[]){
   const fromBackend=schedule?.workbenchState;
   if(fromBackend&&typeof fromBackend==='object'&&fromBackend.code&&fromBackend.label){
@@ -872,15 +924,35 @@ function decorateWorkbenchScheduleRows(schedule=[],feedbacks=[],purchases=[],now
     return String(a?.startTime||'').localeCompare(String(b?.startTime||''));
   });
   let prevByCoachDay=new Map();
+  const options=arguments[4]&&typeof arguments[4]==='object'?arguments[4]:{};
+  const feedbackCandidates=collectCoachFeedbackReminderCandidates({
+    rows:sorted,
+    feedbacks,
+    entitlements:options.entitlements||[],
+    plans:options.plans||[],
+    now
+  });
+  const feedbackCandidateByScheduleId=new Map(feedbackCandidates.map(item=>[String(item?.schedule?.id||''),item]).filter(([id])=>id));
   return sorted.map(item=>{
     const coachKey=String(item?.coach||'').trim();
     const dayKeyValue=dateKey(item?.startTime);
     const prevKey=`${coachKey}__${dayKeyValue}`;
     const prevSchedule=prevByCoachDay.get(prevKey)||null;
     const workbenchState=resolveWorkbenchState(item,prevSchedule,now,feedbacks);
+    const effectiveStatus=effectiveScheduleStatus(item,now);
+    const feedbackCandidate=feedbackCandidateByScheduleId.get(String(item?.id||''))||null;
     prevByCoachDay.set(prevKey,item);
     return {
       ...item,
+      effectiveStatus,
+      statusLabel:workbenchStatusLabel(effectiveStatus),
+      campusName:workbenchCampusName(item),
+      isCancelled:effectiveStatus==='已取消',
+      isEnded:effectiveStatus==='已结束',
+      isUpcoming:effectiveStatus==='已排课',
+      hasFeedback:scheduleHasFeedbackRecord(item,feedbacks),
+      feedbackRequired:!!feedbackCandidate,
+      requiredFeedbackLessonNumber:feedbackCandidate?.triggerLessonNumber||0,
       workbenchState:workbenchState
     };
   });
@@ -3071,8 +3143,7 @@ function buildOfficialAccountCourseReminderMessage({templateId,openid,schedule,a
 function isCoachFeedbackReminderLessonNumber(value){
   const lessonNumber=parseInt(value,10);
   if(!Number.isFinite(lessonNumber)||lessonNumber<=0)return false;
-  const mod=lessonNumber%8;
-  return mod===1||mod===3||mod===5||mod===0;
+  return [1,3,5,8].includes(lessonNumber);
 }
 function firstCoachFeedbackReminderLessonNumber(previousLessons=0,currentLessons=0){
   const start=Math.floor(Number(previousLessons)||0)+1;
@@ -6606,23 +6677,28 @@ function workbenchLessonUnits(schedule){
   if(Number.isFinite(start)&&Number.isFinite(end)&&end>start)return Math.max(0,(end-start)/3600000);
   return 1;
 }
-function decorateWorkbenchStudents(students=[],schedule=[],now=new Date()){
+function decorateWorkbenchStudents(students=[],schedule=[],now=new Date(),entitlements=[]){
   const lessons=Array.isArray(schedule)?schedule:[];
-  return (Array.isArray(students)?students:[]).map(item=>({
-    ...item,
-    phone:firstNonEmptyText(item?.phone,item?.mobile,item?.phoneNumber),
-    type:firstNonEmptyText(item?.type,item?.studentType,item?.category),
-    campus:firstNonEmptyText(item?.campus,item?.campusName,item?.primaryCampus),
-    primaryCoach:firstNonEmptyText(item?.primaryCoach,item?.coachName),
-    ownerCoach:firstNonEmptyText(item?.ownerCoach,item?.saleCoach,item?.salesCoach),
-    remark:firstNonEmptyText(item?.remark,item?.studentRemark,item?.note,item?.notes),
-    historyIssue:firstNonEmptyText(item?.historyIssue,item?.issueHistory,item?.issueNote,item?.healthNote),
-    focusNote:firstNonEmptyText(item?.focusNote,item?.sessionFocus),
-    lessonUnitsCompleted:lessons
+  const includeMiniProgramSummary=arguments.length>=4;
+  return (Array.isArray(students)?students:[]).map(item=>{
+    const endedLessons=lessons
       .filter(lesson=>effectiveScheduleStatus(lesson,now)==='已结束')
-      .filter(lesson=>parseArr(lesson?.studentIds).includes(item?.id)||String(lesson?.studentId||'')===String(item?.id||''))
-      .reduce((sum,lesson)=>sum+workbenchLessonUnits(lesson),0)
-  }));
+      .filter(lesson=>parseArr(lesson?.studentIds).includes(item?.id)||String(lesson?.studentId||'')===String(item?.id||''));
+    return {
+      ...item,
+      phone:firstNonEmptyText(item?.phone,item?.mobile,item?.phoneNumber),
+      type:firstNonEmptyText(item?.type,item?.studentType,item?.category),
+      campus:firstNonEmptyText(workbenchCampusName(item),item?.campusName,item?.campus,item?.primaryCampus),
+      primaryCoach:firstNonEmptyText(item?.primaryCoach,item?.coachName),
+      ownerCoach:firstNonEmptyText(item?.ownerCoach,item?.saleCoach,item?.salesCoach),
+      remark:firstNonEmptyText(item?.remark,item?.studentRemark,item?.note,item?.notes),
+      historyIssue:firstNonEmptyText(item?.historyIssue,item?.issueHistory,item?.issueNote,item?.healthNote),
+      focusNote:firstNonEmptyText(item?.focusNote,item?.sessionFocus),
+      ...(includeMiniProgramSummary?{lessonRecordCount:endedLessons.length}:{}),
+      lessonUnitsCompleted:endedLessons.reduce((sum,lesson)=>sum+workbenchLessonUnits(lesson),0),
+      ...(includeMiniProgramSummary?workbenchStudentPackageSummary(item?.id,entitlements):{})
+    };
+  });
 }
 function decorateWorkbenchFeedbacks(feedbacks=[]){
   return (Array.isArray(feedbacks)?feedbacks:[]).map(item=>({
@@ -7342,6 +7418,7 @@ module.exports._test={
   filterLoadAllForUser,
   buildWorkbenchStats,
   resolveWorkbenchState,
+  decorateWorkbenchScheduleRows,
   decorateWorkbenchClasses,
   decorateWorkbenchStudents,
   decorateWorkbenchFeedbacks,
@@ -7402,6 +7479,7 @@ module.exports._test={
   buildPreviousCourseFeedbackSummary,
   buildCourseReminderSubscribeMessage,
   buildOfficialAccountCourseReminderMessage,
+  isCoachFeedbackReminderLessonNumber,
   collectCoachFeedbackReminderCandidates,
   buildOfficialAccountCoachFeedbackReminderMessage,
   buildStudentReminderBindToken,

@@ -1,7 +1,10 @@
 const assert = require('assert');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const api = require('../api/index.js');
 const poster = require('../server/feishu-coach-digest-poster.js');
+const miniSchedule = require('../wechat-miniprogram/miniprogram/utils/schedule.js');
 
 const rules = api._test;
 const legacyMapoCode = ['ma', 'bao'].join('');
@@ -17,6 +20,7 @@ assert.ok(rules.collectCourseReminderCandidates, 'api._test should expose course
 assert.ok(rules.buildCourseReminderSubscribeMessage, 'api._test should expose course reminder message helper');
 assert.ok(rules.buildPreviousCourseFeedbackSummary, 'api._test should expose previous course feedback summary helper');
 assert.ok(rules.collectCoachFeedbackReminderCandidates, 'api._test should expose coach feedback reminder candidate helper');
+assert.ok(rules.isCoachFeedbackReminderLessonNumber, 'api._test should expose required feedback lesson number helper');
 assert.ok(rules.buildOfficialAccountCoachFeedbackReminderMessage, 'api._test should expose coach feedback reminder message helper');
 assert.ok(rules.sendOfficialAccountCoachFeedbackReminders, 'api._test should expose coach feedback reminder sender');
 assert.ok(rules.buildStudentReminderBindToken, 'api._test should expose student reminder bind token helper');
@@ -53,6 +57,127 @@ assert.ok(rules.decorateWorkbenchStudents, 'api._test should expose student cont
 assert.ok(rules.decorateWorkbenchFeedbacks, 'api._test should expose feedback contract normalization helper');
 assert.ok(rules.feedbackScopeForSchedule, 'api._test should expose feedback scope helper');
 assert.ok(rules.buildFeedbackRecord, 'api._test should expose feedback record builder');
+assert.ok(miniSchedule.campusDisplayName, 'mini-program schedule utility should expose campus display helper');
+
+assert.strictEqual(
+  miniSchedule.campusDisplayName('shunyi_mapo'),
+  '顺义马坡',
+  'mini-program campus display helper should convert backend campus code to display name'
+);
+
+assert.strictEqual(
+  miniSchedule.formatScheduleItem({
+    startTime: '2026-08-21 09:00',
+    endTime: '2026-08-21 10:00',
+    status: '已结束',
+    effectiveStatus: '已排课',
+    statusLabel: '待上课',
+    campus: 'shunyi_mapo'
+  }).statusText,
+  '待上课',
+  'mini-program schedule formatter should trust backend effective status over stale raw status'
+);
+
+{
+  const miniPageSource = fs.readFileSync(path.join(__dirname, '../wechat-miniprogram/miniprogram/pages/schedule/schedule.js'), 'utf8');
+  const miniPageWxml = fs.readFileSync(path.join(__dirname, '../wechat-miniprogram/miniprogram/pages/schedule/schedule.wxml'), 'utf8');
+  assert.match(miniPageSource, /weekTodoRequiredOnly:\s*true/, 'mini-program workbench should default to required feedback only');
+  assert.match(miniPageSource, /requiredOnly && !\(state\.code === 'pending' && item\.feedbackRequired === true\)/, 'mini-program required filter should only keep backend-marked required pending feedback cards');
+  assert.match(miniPageWxml, /checkbox[\s\S]*checked="\{\{weekTodoRequiredOnly\}\}"[\s\S]*只看必填/, 'mini-program workbench should render the required-only checkbox');
+}
+
+assert.deepStrictEqual(
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 16].filter(rules.isCoachFeedbackReminderLessonNumber),
+  [1, 3, 5, 8],
+  'coach required feedback lessons should be exactly the 1st, 3rd, 5th and 8th lessons in a package'
+);
+
+{
+  const now = new Date('2026-08-17T10:00:00+08:00');
+  const rows = [
+    {
+      id: 'future-821',
+      startTime: '2026-08-21 09:00',
+      endTime: '2026-08-21 10:00',
+      status: '已结束',
+      campus: 'shunyi_mapo',
+      studentId: 'student-1',
+      studentIds: ['student-1'],
+      entitlementId: 'ent-1',
+      lessonCount: 1,
+      courseType: '私教课'
+    },
+    {
+      id: 'cancelled-729',
+      startTime: '2026-07-29 09:00',
+      endTime: '2026-07-29 10:00',
+      status: '已取消',
+      campus: 'shunyi_mapo',
+      studentId: 'student-1',
+      studentIds: ['student-1'],
+      entitlementId: 'ent-1',
+      lessonCount: 1,
+      courseType: '私教课'
+    }
+  ];
+  const decorated = rules.decorateWorkbenchScheduleRows(rows, [], [], now, {
+    entitlements: [{ id: 'ent-1', studentId: 'student-1', totalLessons: 10, courseType: '私教课', status: 'active' }]
+  });
+  const future = decorated.find(row => row.id === 'future-821');
+  const cancelled = decorated.find(row => row.id === 'cancelled-729');
+  assert.strictEqual(future.effectiveStatus, '已排课', 'future schedule must not inherit stale ended status');
+  assert.strictEqual(future.statusLabel, '待上课', 'future schedule should display as pending class');
+  assert.strictEqual(future.isEnded, false, 'future schedule must not be greyed as ended');
+  assert.strictEqual(future.campusName, '顺义马坡', 'workbench schedule should expose display campus name');
+  assert.strictEqual(cancelled.isCancelled, true, 'cancelled schedule should be marked for mini-program filtering');
+  assert.strictEqual(cancelled.workbenchState, null, 'cancelled schedule should not create todo state');
+}
+
+{
+  const schedules = Array.from({ length: 9 }, (_, index) => ({
+    id: `lesson-${index + 1}`,
+    startTime: `2026-08-${String(index + 1).padStart(2, '0')} 09:00`,
+    endTime: `2026-08-${String(index + 1).padStart(2, '0')} 10:00`,
+    status: '已排课',
+    feedbackScope: 'student',
+    studentId: 'student-1',
+    studentIds: ['student-1'],
+    entitlementId: 'ent-1',
+    lessonCount: 1,
+    courseType: '私教课'
+  }));
+  const candidates = rules.collectCoachFeedbackReminderCandidates({
+    rows: schedules,
+    feedbacks: [],
+    entitlements: [{ id: 'ent-1', studentId: 'student-1', totalLessons: 10, courseType: '私教课', status: 'active' }],
+    now: new Date('2026-08-17T10:00:00+08:00')
+  });
+  assert.deepStrictEqual(
+    candidates.map(item => item.schedule.id),
+    ['lesson-1', 'lesson-3', 'lesson-5', 'lesson-8'],
+    'only the 1st, 3rd, 5th and 8th ended lessons should be required feedback candidates'
+  );
+}
+
+{
+  const students = rules.decorateWorkbenchStudents(
+    [{ id: 'student-1', name: '小鹿' }],
+    [
+      { id: 'done-1', studentId: 'student-1', studentIds: ['student-1'], startTime: '2026-08-10 09:00', endTime: '2026-08-10 10:00', status: '已排课', lessonCount: 1 },
+      { id: 'done-2', studentId: 'student-1', studentIds: ['student-1'], startTime: '2026-08-11 09:00', endTime: '2026-08-11 10:00', status: '已排课', lessonCount: 1 },
+      { id: 'done-3', studentId: 'student-1', studentIds: ['student-1'], startTime: '2026-08-12 09:00', endTime: '2026-08-12 10:00', status: '已排课', lessonCount: 1 },
+      { id: 'future-1', studentId: 'student-1', studentIds: ['student-1'], startTime: '2026-08-21 09:00', endTime: '2026-08-21 10:00', status: '已排课', lessonCount: 1 }
+    ],
+    new Date('2026-08-17T10:00:00+08:00'),
+    [
+      { id: 'formal-ent', studentId: 'student-1', totalLessons: 10, remainingLessons: 7, usedLessons: 3, courseType: '私教课', status: 'active' },
+      { id: 'trial-ent', studentId: 'student-1', totalLessons: 1, remainingLessons: 0, usedLessons: 1, courseType: '体验课', status: 'active' }
+    ]
+  );
+  assert.strictEqual(students[0].lessonRecordCount, 3, 'student completed lesson count should exclude future schedules');
+  assert.strictEqual(students[0].lessonUnitsCompleted, 3, 'student completed lesson units should exclude future schedules');
+  assert.strictEqual(students[0].packageProgressText, '3/10', 'formal package progress should exclude trial package lessons');
+}
 
 assert.strictEqual(
   rules.effectiveScheduleStatus(

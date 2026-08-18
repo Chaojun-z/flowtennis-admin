@@ -1,5 +1,5 @@
 const { loginWithWechat, loadCoachWorkbench, saveCoachFeedback, saveCoachProposal, TOKEN_KEY, USER_KEY } = require('../../utils/api');
-const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, classBlockStyle, workbenchTodoState, scheduleLocationText } = require('../../utils/schedule');
+const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, classBlockStyle, workbenchTodoState, scheduleLocationText, campusDisplayName } = require('../../utils/schedule');
 
 const TIMETABLE_START_HOUR = 7;
 const TIMETABLE_END_HOUR = 22;
@@ -117,7 +117,8 @@ function decorateWorkbenchClass(item, now = new Date()) {
   };
 }
 
-function buildWeekTodoGroups(days = [], now = new Date(), todayShownIds = new Set()) {
+function buildWeekTodoGroups(days = [], now = new Date(), todayShownIds = new Set(), options = {}) {
+  const requiredOnly = options.requiredOnly !== false;
   return days
     .map(day => ({
       ...day,
@@ -126,6 +127,7 @@ function buildWeekTodoGroups(days = [], now = new Date(), todayShownIds = new Se
           if (day.isToday && todayShownIds.has(String(item.id))) return null;
           const state = workbenchTodoState(item, now);
           if (!state) return null;
+          if (requiredOnly && !(state.code === 'pending' && item.feedbackRequired === true)) return null;
           return {
             ...item,
             todoLabel: state.label,
@@ -278,7 +280,13 @@ function entitlementUsedLessons(item = {}) {
 }
 
 function entitlementSummary(entitlements = []) {
-  const rows = (entitlements || []).filter(isUsableEntitlement);
+  const rows = (entitlements || []).filter(isUsableEntitlement).filter(item => !/体验/.test(String([
+    item.courseType,
+    item.standardCourseType,
+    item.packageName,
+    item.productName,
+    item.name
+  ].filter(Boolean).join(' '))));
   return rows.reduce((summary, item) => {
     summary.total += lessonValue(item.totalLessons);
     summary.used += entitlementUsedLessons(item);
@@ -296,13 +304,13 @@ function studentPackageProgressText(entitlements = []) {
 function studentPackageBalanceText(entitlements = []) {
   const summary = entitlementSummary(entitlements);
   if (summary.total <= 0) return '';
-  return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
+  return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}`;
 }
 
 function studentPackageListText(entitlements = []) {
   const summary = entitlementSummary(entitlements);
   if (summary.total <= 0) return '';
-  return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
+  return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}`;
 }
 
 function scheduleEntitlements(schedule = {}, entitlements = []) {
@@ -361,6 +369,9 @@ function localDateKey(value) {
 }
 
 function scheduleEnded(item = {}, now = new Date()) {
+  if (item.isCancelled || item.effectiveStatus === '已取消') return false;
+  if (item.isEnded === true || item.effectiveStatus === '已结束') return true;
+  if (item.isUpcoming === true || item.effectiveStatus === '已排课') return false;
   const status = String(item.status || item.statusText || '').trim();
   if (status === '已取消') return false;
   if (status === '已结束' || status === '已下课') return true;
@@ -446,15 +457,16 @@ function extractTimeRange(text = '') {
 
 function normalizeCampusOptions(campuses = [], fallbackCampus = '') {
   const options = (campuses || []).map((item) => {
-    const label = firstNonEmpty(item.name, item.campusName, item.label, item.code, item.id);
+    const label = campusDisplayName(firstNonEmpty(item.name, item.campusName, item.label, item.code, item.id));
     if (!label) return null;
     return {
       id: item.id || label,
       name: label
     };
   }).filter(Boolean);
-  if (fallbackCampus && !options.some(item => item.name === fallbackCampus)) {
-    options.unshift({ id: fallbackCampus, name: fallbackCampus });
+  const fallbackName = campusDisplayName(fallbackCampus);
+  if (fallbackName && !options.some(item => item.name === fallbackName)) {
+    options.unshift({ id: fallbackCampus, name: fallbackName });
   }
   return options;
 }
@@ -473,13 +485,15 @@ function scheduleTimeTextOf(value, fallback = '14:00') {
 function buildStudentCards(students = [], entitlements = [], schedule = [], coachName = '', entitlementLedger = []) {
   return (students || []).map((student, index) => {
     const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, []));
-    const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
+    const validSchedule = relatedSchedule.filter(item => !item.isCancelled && String(item.effectiveStatus || item.status || '') !== '已取消');
     const lessonRecords = buildStudentLessonRecords(student, { schedule: validSchedule, entitlements, entitlementLedger });
-    const lessonUnitsCompleted = lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
-    const lessonRecordCount = lessonRecords.length;
+    const backendLessonUnits = Number(student.lessonUnitsCompleted);
+    const backendLessonCount = Number(student.lessonRecordCount);
+    const lessonUnitsCompleted = Number.isFinite(backendLessonUnits) ? backendLessonUnits : lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
+    const lessonRecordCount = Number.isFinite(backendLessonCount) ? backendLessonCount : lessonRecords.length;
     const lastRecord = lessonRecords[0] || null;
     const lastClassAt = String(lastRecord && lastRecord.sortTime || '');
-    const packageText = studentPackageListText(studentEntitlements(student.id, entitlements));
+    const packageText = firstNonEmpty(student.packageProgressText, studentPackageListText(studentEntitlements(student.id, entitlements)));
     const isOwner = String(student.primaryCoach || '').trim() === coachName;
     return {
       id: student.id,
@@ -528,7 +542,7 @@ function buildShiftCards(classes = [], students = []) {
       studentNames: names.join('、'),
       scheduleTime: firstNonEmpty(item.scheduleTime) || '暂无记录',
       coach: item.coach || '',
-      campus: firstNonEmpty(item.campus) || '',
+      campus: campusDisplayName(firstNonEmpty(item.campusName, item.campus)) || '',
       remark: firstNonEmpty(item.remark),
       usedLessons,
       totalLessons,
@@ -558,7 +572,7 @@ function buildShiftStats(shifts = []) {
 }
 
 function buildShiftScheduleForm(shift, linkedClass = null, campuses = []) {
-  const fallbackCampus = firstNonEmpty(shift && shift.campus, linkedClass && linkedClass.campus);
+  const fallbackCampus = campusDisplayName(firstNonEmpty(shift && shift.campusName, shift && shift.campus, linkedClass && linkedClass.campusName, linkedClass && linkedClass.campus));
   const campusOptions = normalizeCampusOptions(campuses, fallbackCampus);
   const { startTime, endTime } = extractTimeRange(firstNonEmpty(shift && shift.scheduleTime, linkedClass && linkedClass.classTime));
   const studentIds = linkedClass ? studentIdsOf(linkedClass) : [];
@@ -580,7 +594,7 @@ function buildShiftScheduleForm(shift, linkedClass = null, campuses = []) {
 }
 
 function buildScheduleEditForm(selectedClass, linkedClass = null, campuses = []) {
-  const fallbackCampus = firstNonEmpty(selectedClass && selectedClass.campus, linkedClass && linkedClass.campus);
+  const fallbackCampus = campusDisplayName(firstNonEmpty(selectedClass && selectedClass.campusName, selectedClass && selectedClass.campus, linkedClass && linkedClass.campusName, linkedClass && linkedClass.campus));
   const campusOptions = normalizeCampusOptions(campuses, fallbackCampus);
   const campusName = fallbackCampus || (campusOptions[0] ? campusOptions[0].name : '');
   const campusIndex = campusOptions.findIndex(item => item.name === campusName);
@@ -642,7 +656,7 @@ function buildShiftDetailData(shift, context = {}) {
     },
     summary: {
       coach: firstNonEmpty(shift.coach, linkedClass && linkedClass.coach, coachName) || '暂无记录',
-      campus: firstNonEmpty(shift.campus, linkedClass && linkedClass.campus) || '暂无记录',
+      campus: campusDisplayName(firstNonEmpty(shift.campusName, shift.campus, linkedClass && linkedClass.campusName, linkedClass && linkedClass.campus)) || '暂无记录',
       scheduleTime: firstNonEmpty(shift.scheduleTime, linkedClass && linkedClass.scheduleTime) || '暂无记录',
       progress: shift.progress || `${usedLessons}/${totalLessons}`,
       remaining: `${remainingLessons} 节`
@@ -1493,7 +1507,9 @@ function feedbackPosterDataForMini(schedule = {}, form = {}, preserveListMarkers
 }
 
 function studentScheduleStatusMeta(item = {}) {
-  if (String(item.status || '') === '已取消') return { text: '已取消', className: 'detail-tag-muted' };
+  if (item.isCancelled || String(item.effectiveStatus || item.status || '') === '已取消') return { text: '已取消', className: 'detail-tag-muted' };
+  if (item.isEnded === true || String(item.effectiveStatus || '') === '已结束') return { text: '已结束', className: 'detail-tag-muted' };
+  if (item.isUpcoming === true || String(item.effectiveStatus || '') === '已排课') return { text: '待上课', className: 'detail-tag-success' };
   const end = parseLocalDate(item.endTime || item.startTime);
   if (end && end <= new Date()) return { text: '已结束', className: 'detail-tag-muted' };
   return { text: '待上课', className: 'detail-tag-success' };
@@ -1544,6 +1560,12 @@ function studentLedgerRecordKey(studentId = '', row = {}, schedule = {}) {
   return [studentId, row.sourceDate || row.relatedDate || '', row.sourceTimeBand || row.scheduleTime || '', row.coach || ''].join('|');
 }
 
+function lessonRecordHasEnded(sortTime = '', schedule = {}, now = new Date()) {
+  if (schedule && schedule.id) return scheduleEnded(schedule, now);
+  const time = parseLocalDate(sortTime);
+  return !!(time && time <= now);
+}
+
 function studentLedgerRows(student = {}, entitlements = [], entitlementLedger = []) {
   const studentId = String(student.id || '').trim();
   const entIds = new Set(studentEntitlements(studentId, entitlements).map(item => String(item.id || '').trim()).filter(Boolean));
@@ -1559,12 +1581,14 @@ function buildStudentLessonRecords(student = {}, context = {}) {
   const entitlements = Array.isArray(context.entitlements) ? context.entitlements : [];
   const entitlementLedger = Array.isArray(context.entitlementLedger) ? context.entitlementLedger : [];
   const scheduleById = new Map(schedule.map(item => [String(item.id || ''), item]).filter(([id]) => id));
+  const now = context.now || new Date();
   const map = new Map();
   studentLedgerRows(student, entitlements, entitlementLedger).forEach(row => {
     const linkedSchedule = scheduleById.get(String(row.scheduleId || '')) || {};
     const timeText = studentLedgerTimeText(row, linkedSchedule);
     const sortTime = studentLedgerSortTime(row, linkedSchedule);
     if (!timeText || !sortTime) return;
+    if (!lessonRecordHasEnded(sortTime, linkedSchedule, now)) return;
     const key = studentLedgerRecordKey(student.id, row, linkedSchedule);
     map.set(key, {
       scheduleId: linkedSchedule.id || '',
@@ -1634,15 +1658,17 @@ function buildStudentDetailData(student, context = {}) {
   const relatedClasses = classes.filter(item => relatedClassIds.includes(String(item.id || '').trim()));
   const relatedSchedule = schedule.filter(item => scheduleMatchesStudent(student, item, relatedClassIds));
   const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
-  const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
+  const validSchedule = relatedSchedule.filter(item => !item.isCancelled && String(item.effectiveStatus || item.status || '') !== '已取消');
   const lessonRecords = buildStudentLessonRecords(student, { schedule: validSchedule, entitlements, entitlementLedger });
-  const lessonUnitsCompleted = lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
-  const lessonRecordCount = lessonRecords.length;
+  const backendLessonUnits = Number(student.lessonUnitsCompleted);
+  const backendLessonCount = Number(student.lessonRecordCount);
+  const lessonUnitsCompleted = Number.isFinite(backendLessonUnits) ? backendLessonUnits : lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
+  const lessonRecordCount = Number.isFinite(backendLessonCount) ? backendLessonCount : lessonRecords.length;
   const latestRecord = lessonRecords[0] || null;
-  const packageText = studentPackageBalanceText(studentEntitlements(student.id, entitlements));
+  const packageText = firstNonEmpty(student.packageProgressText, studentPackageBalanceText(studentEntitlements(student.id, entitlements)));
   const ownerCoach = firstNonEmpty(student.ownerCoach, student.primaryCoach, activeClass && activeClass.coach);
   const responsibleCoach = firstNonEmpty(student.primaryCoach, activeClass && activeClass.coach, coachName);
-  const campus = firstNonEmpty(student.campus, activeClass && activeClass.campus);
+  const campus = campusDisplayName(firstNonEmpty(student.campusName, student.campus, activeClass && activeClass.campusName, activeClass && activeClass.campus));
   const remark = firstNonEmpty(student.remark);
   const detail = {
     studentId: student.id,
@@ -1786,6 +1812,7 @@ Page({
     studentScheduleRaw: [],
     visibleClasses: [],
     dashboardClasses: [],
+    weekTodoRequiredOnly: true,
     weekTodoGroups: [],
     weekTodoCards: [],
     reminderItems: [],
@@ -1959,7 +1986,7 @@ Page({
   },
 
   renderWeek() {
-    const { weekOffset, schedule, coachWorkbenchStats } = this.data;
+    const { weekOffset, schedule, coachWorkbenchStats, weekTodoRequiredOnly } = this.data;
     const now = new Date();
     const mergedStats = standardWorkbenchStats(coachWorkbenchStats);
     const hasOverallTrialStats = Object.prototype.hasOwnProperty.call(mergedStats, 'overallTrialStudentCount');
@@ -1969,7 +1996,7 @@ Page({
     const today = days.find(day => day.isToday);
     const dashboardClasses = today ? today.items.map(item => decorateWorkbenchClass(item, now)) : [];
     const todayShownIds = new Set((dashboardClasses || []).map(item => String(item.id || '')).filter(Boolean));
-    const weekTodoGroups = buildWeekTodoGroups(days, now, todayShownIds);
+    const weekTodoGroups = buildWeekTodoGroups(days, now, todayShownIds, { requiredOnly: weekTodoRequiredOnly });
     const weekTodoCards = buildWeekTodoCards(weekTodoGroups);
     const todoItems = weekTodoGroups.reduce((all, day) => all.concat(day.items), []);
     const pending = todoItems.filter(item => item.todoLabel === '待反馈').length;
@@ -2021,6 +2048,12 @@ Page({
         todo: todoItems.length
       }
     });
+  },
+
+  toggleWeekTodoRequiredOnly() {
+    this.setData({
+      weekTodoRequiredOnly: !this.data.weekTodoRequiredOnly
+    }, () => this.renderWeek());
   },
 
   switchTab(event) {

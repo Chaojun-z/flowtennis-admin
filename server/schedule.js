@@ -46,11 +46,13 @@ function scheduleLessonDelta(rec){
 function effectiveScheduleStatus(rec,now=new Date()){
   if(!rec)return '';
   const status=rec.status||'已排课';
-  if(status==='已下课')return '已结束';
-  if(status==='已取消'||status==='已结束')return status;
   const end=dateMs(rec.endTime);
   const nowMs=now instanceof Date?now.getTime():dateMs(now);
-  if(status==='已排课'&&Number.isFinite(end)&&Number.isFinite(nowMs)&&end<nowMs)return '已结束';
+  if(status==='已取消')return status;
+  if((status==='已结束'||status==='已下课')&&Number.isFinite(end)&&Number.isFinite(nowMs)&&end>nowMs)return '已排课';
+  if(status==='已下课')return '已结束';
+  if(status==='已结束')return status;
+  if(status==='已排课'&&Number.isFinite(end)&&Number.isFinite(nowMs)&&end<=nowMs)return '已结束';
   return status;
 }
 function scheduleLessonChargeStatus(rec,ledger=[]){

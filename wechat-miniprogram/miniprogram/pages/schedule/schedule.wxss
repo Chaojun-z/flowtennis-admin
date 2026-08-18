@@ -342,6 +342,21 @@ page {
   margin-top: 48rpx;
 }
 
+.required-filter {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  color: #475569;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.required-checkbox {
+  transform: scale(0.72);
+  transform-origin: center;
+}
+
 .schedule-card,
 .student-card,
 .shift-card {

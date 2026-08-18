@@ -730,7 +730,7 @@ function createCorePageDataRoutes(deps={}){
         const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
         const coachRefs=buildCoachRefs({coaches,users});
         const scheduleRowsPromise=user.role==='admin'?getScheduleListRows():getCoachScheduleRowsForUser(user,coachRefs);
-        const [campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger]=await Promise.all([
+        const [campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans]=await Promise.all([
           listCampusesWithDefaults(),
           cappedScan(T_STUDENTS),
           cappedScan(T_CLASSES),
@@ -739,21 +739,28 @@ function createCorePageDataRoutes(deps={}){
           scanCoachProposals(),
           cappedScan(T_PURCHASES),
           cappedScan(T_ENTITLEMENTS),
-          cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger)
+          cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
+          cappedScan(T_PLANS)
         ]);
-        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,coaches},user,coachRefs);
+        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans,coaches},user,coachRefs);
         const now=new Date();
-        const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
         const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
-        const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,scoped.purchases||[],now);
+        const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,scoped.purchases||[],now,{
+          entitlements:scoped.entitlements||[],
+          plans:scoped.plans||[]
+        }).filter(row=>!row.isCancelled);
         const scheduleIds=new Set((scoped.schedule||[]).map(row=>String(row.id||'')).filter(Boolean));
         const studentScheduleIds=[...new Set((scoped.entitlementLedger||[]).map(row=>String(row.scheduleId||'')).filter(id=>id&&!scheduleIds.has(id)))];
         const extraStudentSchedule=studentScheduleIds.length
           ? (await Promise.all(studentScheduleIds.map(id=>getCachedRow(T_SCHEDULE,id).catch(()=>null)))).filter(Boolean).map(row=>projectScheduleListRow(row))
           : [];
         const decoratedStudentSchedule=extraStudentSchedule.length
-          ? decorateWorkbenchScheduleRows([...(scoped.schedule||[]),...extraStudentSchedule],decoratedFeedbacks,scoped.purchases||[],now)
+          ? decorateWorkbenchScheduleRows([...(scoped.schedule||[]),...extraStudentSchedule],decoratedFeedbacks,scoped.purchases||[],now,{
+              entitlements:scoped.entitlements||[],
+              plans:scoped.plans||[]
+            }).filter(row=>!row.isCancelled)
           : decoratedSchedule;
+        const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],decoratedStudentSchedule,now,scoped.entitlements||[]);
         const decoratedClasses=decorateWorkbenchClasses(scoped.classes||[],scoped.schedule||[]);
         const customerLifecycleRows=buildCustomerLifecycleRows({
           students:scoped.students,

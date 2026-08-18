@@ -160,6 +160,10 @@
         <view class="section-heading week-heading">
           <text class="section-title">本周待办</text>
           <text class="section-date">{{weekRange}}</text>
+          <label class="required-filter" bindtap="toggleWeekTodoRequiredOnly">
+            <checkbox class="required-checkbox" checked="{{weekTodoRequiredOnly}}" color="#2b3a55" />
+            <text>只看必填</text>
+          </label>
         </view>
 
         <view wx:if="{{weekTodoCards.length}}">

@@ -216,8 +216,8 @@ assert.match(scheduleJs, /lessonRecordCountText/, 'student detail should summari
 assert.match(scheduleJs, /cumulative:\s*lessonRecordUnitsCompactText\(/, 'student list should show record count before lesson units');
 assert.match(scheduleJs, /cumulative:\s*`\$\{lessonRecordCountText\(lessonRecordCount,\s*lessonUnitsCompleted\)\}`/, 'student detail should show record count and lesson units in one summary');
 assert.match(scheduleJs, /return `\$\{recordCount\}\/\$\{lessonUnitsText\(lessonUnits\)\}`/, 'student list compact lesson summary should render records before lesson units');
-assert.match(scheduleJs, /function studentPackageListText[\s\S]*return `\$\{lessonUnitsText\(summary\.remaining\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student list package summary should render remaining over total without extra text');
-assert.match(scheduleJs, /function studentPackageBalanceText[\s\S]*return `\$\{lessonUnitsText\(summary\.remaining\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student detail package progress should render remaining over total like the web');
+assert.match(scheduleJs, /function studentPackageListText[\s\S]*return `\$\{lessonUnitsText\(summary\.used\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student list package summary should render used over total without extra text');
+assert.match(scheduleJs, /function studentPackageBalanceText[\s\S]*return `\$\{lessonUnitsText\(summary\.used\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student detail package progress should render used over total like the web');
 assert.match(scheduleJs, /type:\s*isOwner \? '归属' : '代课'/, 'student list tags should use compact ownership/substitute wording');
 assert.match(scheduleJs, /showPackage:\s*isOwner && !!packageText/, 'substitute students should not show package data');
 assert.match(scheduleJs, /function buildStudentLessonRecords[\s\S]*studentLedgerRows[\s\S]*completedStudentSchedules/, 'student detail should merge package ledger rows with schedule rows like the web');
@@ -238,7 +238,7 @@ assert.match(scheduleJs, /timetableScrollTop/, 'mini program schedule page shoul
 assert.match(scheduleJs, /timetableScrollLeft/, 'mini program schedule page should compute a horizontal scroll position for the timetable');
 assert.match(scheduleJs, /return Math\.max\(0,\s*Math\.round\(rpxToPx\(todayIndex \* TIMETABLE_DAY_WIDTH_RPX\)\)\);/, 'mini program timetable should align today to the first visible day column');
 assert.match(scheduleJs, /const todayShownIds = new Set\(/, 'mini program schedule page should track today cards already rendered in the dashboard');
-assert.match(scheduleJs, /buildWeekTodoGroups\(days,\s*now,\s*todayShownIds\)/, 'mini program weekly todos should receive dashboard shown ids for de-duplication');
+assert.match(scheduleJs, /buildWeekTodoGroups\(days,\s*now,\s*todayShownIds,\s*\{\s*requiredOnly:\s*weekTodoRequiredOnly\s*\}\)/, 'mini program weekly todos should receive dashboard shown ids and required-only state');
 assert.match(scheduleJs, /if\s*\(\s*day\.isToday\s*&&\s*todayShownIds\.has\(String\(item\.id\)\)\s*\)\s*return null;/, 'mini program weekly todos should skip classes that already appear in today dashboard');
 assert.match(scheduleJs, /decorateTimetableDays\(buildTimetableDays\(schedule,\s*weekOffset,\s*now\)\)/, 'mini program timetable should build its window from the full schedule dataset so current week can preview next-week days');
 assert.match(scheduleJs, /currentTimeText/, 'mini program schedule page should compute the current-time marker text');

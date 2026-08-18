@@ -64,6 +64,18 @@ function scheduleLocationText(item = {}) {
   return [campus, venue].filter(Boolean).join(' · ') || '地点待确认';
 }
 
+function effectiveStatusText(item = {}) {
+  const label = String(item.statusLabel || item.displayStatus || '').trim();
+  if (label) return label;
+  const effective = String(item.effectiveStatus || '').trim();
+  if (effective === '已排课') return '待上课';
+  if (effective === '已结束' || effective === '已下课') return '已下课';
+  if (effective) return effective;
+  const status = String(item.status || '').trim();
+  if (status === '已排课') return '待上课';
+  return status || '待上课';
+}
+
 function formatScheduleItem(item) {
   const state = item.workbenchState && item.workbenchState.code ? item.workbenchState : null;
   return {
@@ -72,16 +84,16 @@ function formatScheduleItem(item) {
     title: item.courseType || item.className || '课程',
     studentText: item.studentName || '学员待确认',
     locationText: scheduleLocationText(item),
-    statusText: state ? state.label : (item.status || '已排课')
+    statusText: state ? state.label : effectiveStatusText(item)
   };
 }
 
 function hasScheduleFeedback(item = {}) {
-  return !!(item.hasFeedback || item.feedbackId || item.feedbackAt || item.feedbackStatus === '已反馈');
+  return !!(item.hasFeedback || item.feedbackId || item.feedbackAt || item.feedbackStatus === '已反馈' || item.feedbackStatus === '已填写');
 }
 
 function workbenchTodoState(item = {}, now = new Date()) {
-  if (item.status === '已取消') return null;
+  if (item.isCancelled || item.effectiveStatus === '已取消' || item.status === '已取消') return null;
   const start = parseDate(item.startTime);
   const end = parseDate(item.endTime || item.startTime);
   if (start && end && start <= now && now < end) {
@@ -173,6 +185,7 @@ module.exports = {
   buildWeekDays,
   buildTimetableDays,
   classBlockStyle,
+  campusDisplayName,
   findSchedule,
   formatScheduleItem,
   scheduleLocationText,
