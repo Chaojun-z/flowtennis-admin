@@ -533,7 +533,7 @@ page {
 
 .week-task-card {
   width: 361px;
-  height: 130px;
+  height: 148px;
   max-width: 100%;
   margin: 18rpx auto 0;
   display: flex;
@@ -558,7 +558,7 @@ page {
 .week-task-main {
   flex: 1;
   min-width: 0;
-  padding: 16px 16px 14px 0;
+  padding: 14px 16px 12px 0;
   box-sizing: border-box;
 }
 
@@ -618,6 +618,18 @@ page {
   transform: translateY(-7px);
 }
 
+.week-task-package {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform: translateY(-7px);
+}
+
 .week-task-separator {
   margin: 0 12rpx;
   color: #cbd5e1;
@@ -628,16 +640,16 @@ page {
   width: 325px;
   max-width: 100%;
   height: 1px;
-  margin-top: 8px;
+  margin-top: 6px;
   background: #f1f5f9;
-  transform: translateY(-6px);
+  transform: translateY(-5px);
 }
 
 .week-task-actions {
   justify-content: flex-end;
   gap: 18rpx;
-  margin-top: 8px;
-  transform: translateY(-8px);
+  margin-top: 6px;
+  transform: translateY(-6px);
 }
 
 .week-task-outline,

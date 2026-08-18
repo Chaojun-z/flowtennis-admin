@@ -171,6 +171,7 @@ function buildWeekTodoCards(groups = []) {
       weekdayText,
       dateText,
       metaText: `${item.shortLocation || item.locationText || ''} | ${item.student || item.studentText || ''}`,
+      packageText: firstNonEmpty(item.packageProgressText, item.packageText),
       courseTagText: dashboardCourseTag(item).text,
       courseTagClass: dashboardCourseTag(item).className,
       showFeedbackAction: item.todoLabel === '待反馈'
@@ -227,6 +228,28 @@ function scheduleMatchesStudent(student = {}, scheduleItem = {}, relatedClassIds
   if (String(scheduleItem.studentId || '').trim() === studentId) return true;
   if (relatedClassIds.includes(scheduleClassId)) return true;
   return !ids.length && !!studentName && scheduleStudentName === studentName;
+}
+
+function formalStudentEntitlements(studentId = '', entitlements = []) {
+  return studentEntitlements(studentId, entitlements).filter(item => !/体验/.test(String([
+    item.courseType,
+    item.standardCourseType,
+    item.packageName,
+    item.productName,
+    item.name
+  ].filter(Boolean).join(' '))));
+}
+
+function studentOwnedByCoach(student = {}, entitlements = [], coachName = '') {
+  const coach = String(coachName || '').trim();
+  if (!coach) return false;
+  if (String(student.primaryCoach || '').trim() === coach) return true;
+  return formalStudentEntitlements(student.id, entitlements).some(item => String(firstNonEmpty(
+    item.ownerCoach,
+    item.primaryCoach,
+    item.coach,
+    item.coachName
+  )).trim() === coach);
 }
 
 function lessonUnitsText(value) {
@@ -304,13 +327,13 @@ function studentPackageProgressText(entitlements = []) {
 function studentPackageBalanceText(entitlements = []) {
   const summary = entitlementSummary(entitlements);
   if (summary.total <= 0) return '';
-  return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}`;
+  return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
 }
 
 function studentPackageListText(entitlements = []) {
   const summary = entitlementSummary(entitlements);
   if (summary.total <= 0) return '';
-  return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}`;
+  return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
 }
 
 function scheduleEntitlements(schedule = {}, entitlements = []) {
@@ -493,8 +516,8 @@ function buildStudentCards(students = [], entitlements = [], schedule = [], coac
     const lessonRecordCount = Number.isFinite(backendLessonCount) ? backendLessonCount : lessonRecords.length;
     const lastRecord = lessonRecords[0] || null;
     const lastClassAt = String(lastRecord && lastRecord.sortTime || '');
-    const packageText = firstNonEmpty(student.packageProgressText, studentPackageListText(studentEntitlements(student.id, entitlements)));
-    const isOwner = String(student.primaryCoach || '').trim() === coachName;
+    const packageText = firstNonEmpty(student.packageBalanceText, studentPackageListText(studentEntitlements(student.id, entitlements)));
+    const isOwner = studentOwnedByCoach(student, entitlements, coachName);
     return {
       id: student.id,
       name: student.name || '未命名学员',
@@ -557,8 +580,8 @@ function buildShiftCards(classes = [], students = []) {
   }).sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
 }
 
-function buildStudentStats(students = [], coachName = '') {
-  const ownerCount = students.filter(item => String(item.primaryCoach || '').trim() === coachName).length;
+function buildStudentStats(students = [], coachName = '', entitlements = []) {
+  const ownerCount = students.filter(item => studentOwnedByCoach(item, entitlements, coachName)).length;
   const substituteCount = Math.max(0, students.length - ownerCount);
   return { ownerCount, substituteCount };
 }
@@ -1665,7 +1688,7 @@ function buildStudentDetailData(student, context = {}) {
   const lessonUnitsCompleted = Number.isFinite(backendLessonUnits) ? backendLessonUnits : lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
   const lessonRecordCount = Number.isFinite(backendLessonCount) ? backendLessonCount : lessonRecords.length;
   const latestRecord = lessonRecords[0] || null;
-  const packageText = firstNonEmpty(student.packageProgressText, studentPackageBalanceText(studentEntitlements(student.id, entitlements)));
+  const packageText = firstNonEmpty(student.packageProgressText, studentPackageProgressText(studentEntitlements(student.id, entitlements)));
   const ownerCoach = firstNonEmpty(student.ownerCoach, student.primaryCoach, activeClass && activeClass.coach);
   const responsibleCoach = firstNonEmpty(student.primaryCoach, activeClass && activeClass.coach, coachName);
   const campus = campusDisplayName(firstNonEmpty(student.campusName, student.campus, activeClass && activeClass.campusName, activeClass && activeClass.campus));
@@ -1798,6 +1821,8 @@ Page({
     timetableHours,
     timetableScrollTop: 0,
     timetableScrollLeft: 0,
+    preservedTimetableScrollTop: 0,
+    preservedTimetableScrollLeft: 0,
     currentTimeText: '',
     timetableNowLineStyle: '',
     timetableNowSolidLineStyle: '',
@@ -1954,7 +1979,7 @@ Page({
         entitlementsRaw: data.entitlements || [],
         entitlementLedgerRaw: data.entitlementLedger || [],
         studentsList,
-        studentStats: buildStudentStats(data.students || [], coachName),
+        studentStats: buildStudentStats(data.students || [], coachName, data.entitlements || []),
         shiftsList,
         shiftStats: buildShiftStats(shiftsList),
         coachGreeting: coachGreeting(now),
@@ -2082,6 +2107,10 @@ Page({
       this.closeCoachMenu();
       return;
     }
+    if (this.data.showFeedback) {
+      this.closeFeedback();
+      return;
+    }
     this.closeSheets();
   },
 
@@ -2117,11 +2146,39 @@ Page({
     this.setData({ weekOffset: 0 }, () => this.renderWeek());
   },
 
+  onTimetableScroll(event) {
+    const detail = event.detail || {};
+    this._timetableScrollTop = Number(detail.scrollTop) || 0;
+    this._timetableScrollLeft = Number(detail.scrollLeft) || 0;
+  },
+
+  preserveTimetableScroll() {
+    const top = Object.prototype.hasOwnProperty.call(this, '_timetableScrollTop')
+      ? this._timetableScrollTop
+      : this.data.timetableScrollTop;
+    const left = Object.prototype.hasOwnProperty.call(this, '_timetableScrollLeft')
+      ? this._timetableScrollLeft
+      : this.data.timetableScrollLeft;
+    this.setData({
+      preservedTimetableScrollTop: Number(top) || 0,
+      preservedTimetableScrollLeft: Number(left) || 0
+    });
+  },
+
+  restoreTimetableScroll() {
+    if (!this.data.isTimetable) return;
+    this.setData({
+      timetableScrollTop: Number(this.data.preservedTimetableScrollTop) || 0,
+      timetableScrollLeft: Number(this.data.preservedTimetableScrollLeft) || 0
+    });
+  },
+
   openDetail(event) {
     const id = event.currentTarget.dataset.id;
     if (!id) return;
     const selectedClass = this.data.schedule.find(item => String(item.id) === String(id));
     if (!selectedClass) return;
+    if (this.data.isTimetable) this.preserveTimetableScroll();
     this.setData({
       selectedClass,
       selectedClassDetail: buildDetailData(selectedClass, {
@@ -2229,6 +2286,11 @@ Page({
     });
   },
 
+  closeFeedback() {
+    this.closeSheets();
+    this.restoreTimetableScroll();
+  },
+
   openProposal() {
     if (!this.data.selectedClass || !isSmallGroupSchedule(this.data.selectedClass)) return;
     const currentProposal = findProposalByScheduleId(this.data.coachProposals, this.data.selectedClass.id);
@@ -2303,6 +2365,7 @@ Page({
 
   openFeedback() {
     if (!this.data.selectedClass) return;
+    if (this.data.isTimetable) this.preserveTimetableScroll();
     const currentFeedback = findFeedbackByScheduleId(this.data.feedbacks, this.data.selectedClass.id);
     const feedbackForm = feedbackFormFromRecord(currentFeedback);
     this.setData({
@@ -2359,6 +2422,7 @@ Page({
 
   openFeedbackById(event) {
     const id = event.currentTarget.dataset.id;
+    this.preserveTimetableScroll();
     this.openFeedbackByScheduleId(id);
   },
 
@@ -2482,7 +2546,7 @@ Page({
       });
       wx.showToast({ title: '反馈已保存', icon: 'success' });
       this.applyFeedbackPatch(selectedClass, savedFeedback);
-      this.closeSheets();
+      this.closeFeedback();
     } catch (err) {
       wx.showToast({ title: err.message || '保存失败', icon: 'none' });
     } finally {

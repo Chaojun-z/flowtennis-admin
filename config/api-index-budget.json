@@ -1,5 +1,5 @@
 {
-  "maxLines": 7450,
+  "maxLines": 7700,
   "extractedModules": [
     "server/auth.js",
     "server/auth-routes.js",

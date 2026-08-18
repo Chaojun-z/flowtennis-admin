@@ -811,10 +811,17 @@ function workbenchLessonText(value){
 }
 function workbenchStudentPackageSummary(studentId='',entitlements=[]){
   const id=String(studentId||'').trim();
-  const rows=(Array.isArray(entitlements)?entitlements:[])
+  const rows=workbenchFormalEntitlementsForStudent(id,entitlements);
+  return workbenchPackageSummaryFromRows(rows);
+}
+function workbenchFormalEntitlementsForStudent(studentId='',entitlements=[]){
+  const id=String(studentId||'').trim();
+  return (Array.isArray(entitlements)?entitlements:[])
     .filter(row=>String(row?.studentId||'').trim()===id)
     .filter(row=>!['voided','已作废','cancelled','已取消'].includes(String(row?.status||'').trim()))
     .filter(row=>!workbenchCourseRowIsTrial(row));
+}
+function workbenchPackageSummaryFromRows(rows=[]){
   const total=rows.reduce((sum,row)=>sum+parseLessonValue(row?.totalLessons),0);
   const used=rows.reduce((sum,row)=>{
     const direct=parseLessonValue(row?.usedLessons);
@@ -831,6 +838,16 @@ function workbenchStudentPackageSummary(studentId='',entitlements=[]){
     packageTotalLessons:total,
     packageRemainingLessons:remaining
   };
+}
+function workbenchSchedulePackageSummary(schedule={},entitlements=[]){
+  const ids=[...parseArr(schedule?.entitlementIds),String(schedule?.entitlementId||'').trim()].filter(Boolean);
+  const entitlementRows=Array.isArray(entitlements)?entitlements:[];
+  const rows=ids.length
+    ? entitlementRows.filter(row=>ids.includes(String(row?.id||'').trim()))
+    : [...new Set([...parseArr(schedule?.studentIds),String(schedule?.studentId||'').trim()].filter(Boolean))]
+      .flatMap(studentId=>workbenchFormalEntitlementsForStudent(studentId,entitlementRows))
+      .slice(0,1);
+  return workbenchPackageSummaryFromRows(rows.filter(row=>!workbenchCourseRowIsTrial(row)));
 }
 function resolveWorkbenchState(schedule,prevSchedule,now=new Date(),feedbacks=[]){
   const fromBackend=schedule?.workbenchState;
@@ -941,6 +958,7 @@ function decorateWorkbenchScheduleRows(schedule=[],feedbacks=[],purchases=[],now
     const workbenchState=resolveWorkbenchState(item,prevSchedule,now,feedbacks);
     const effectiveStatus=effectiveScheduleStatus(item,now);
     const feedbackCandidate=feedbackCandidateByScheduleId.get(String(item?.id||''))||null;
+    const packageSummary=workbenchSchedulePackageSummary(item,options.entitlements||[]);
     prevByCoachDay.set(prevKey,item);
     return {
       ...item,
@@ -953,6 +971,7 @@ function decorateWorkbenchScheduleRows(schedule=[],feedbacks=[],purchases=[],now
       hasFeedback:scheduleHasFeedbackRecord(item,feedbacks),
       feedbackRequired:!!feedbackCandidate,
       requiredFeedbackLessonNumber:feedbackCandidate?.triggerLessonNumber||0,
+      ...packageSummary,
       workbenchState:workbenchState
     };
   });

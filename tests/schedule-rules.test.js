@@ -121,7 +121,7 @@ assert.deepStrictEqual(
     }
   ];
   const decorated = rules.decorateWorkbenchScheduleRows(rows, [], [], now, {
-    entitlements: [{ id: 'ent-1', studentId: 'student-1', totalLessons: 10, courseType: '私教课', status: 'active' }]
+    entitlements: [{ id: 'ent-1', studentId: 'student-1', totalLessons: 10, remainingLessons: 7, usedLessons: 3, courseType: '私教课', status: 'active' }]
   });
   const future = decorated.find(row => row.id === 'future-821');
   const cancelled = decorated.find(row => row.id === 'cancelled-729');
@@ -129,6 +129,7 @@ assert.deepStrictEqual(
   assert.strictEqual(future.statusLabel, '待上课', 'future schedule should display as pending class');
   assert.strictEqual(future.isEnded, false, 'future schedule must not be greyed as ended');
   assert.strictEqual(future.campusName, '顺义马坡', 'workbench schedule should expose display campus name');
+  assert.strictEqual(future.packageProgressText, '3/10', 'workbench schedule should expose formal package progress for mini-program todo cards');
   assert.strictEqual(cancelled.isCancelled, true, 'cancelled schedule should be marked for mini-program filtering');
   assert.strictEqual(cancelled.workbenchState, null, 'cancelled schedule should not create todo state');
 }
@@ -177,6 +178,7 @@ assert.deepStrictEqual(
   assert.strictEqual(students[0].lessonRecordCount, 3, 'student completed lesson count should exclude future schedules');
   assert.strictEqual(students[0].lessonUnitsCompleted, 3, 'student completed lesson units should exclude future schedules');
   assert.strictEqual(students[0].packageProgressText, '3/10', 'formal package progress should exclude trial package lessons');
+  assert.strictEqual(students[0].packageBalanceText, '7/10', 'formal package balance should show remaining lessons over total lessons');
 }
 
 assert.strictEqual(
