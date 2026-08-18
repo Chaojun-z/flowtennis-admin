@@ -82,7 +82,7 @@ assert.strictEqual(
   const miniPageSource = fs.readFileSync(path.join(__dirname, '../wechat-miniprogram/miniprogram/pages/schedule/schedule.js'), 'utf8');
   const miniPageWxml = fs.readFileSync(path.join(__dirname, '../wechat-miniprogram/miniprogram/pages/schedule/schedule.wxml'), 'utf8');
   assert.match(miniPageSource, /weekTodoRequiredOnly:\s*true/, 'mini-program workbench should default to required feedback only');
-  assert.match(miniPageSource, /requiredOnly && !\(state\.code === 'pending' && item\.feedbackRequired === true\)/, 'mini-program required filter should only keep backend-marked required pending feedback cards');
+  assert.match(miniPageSource, /requiredOnly && !\(state\.code === 'pending' && requiredFeedbackTodoVisible\(item\)\)/, 'mini-program required filter should only keep required formal package nodes or trial pending feedback cards');
   assert.match(miniPageWxml, /checkbox[\s\S]*checked="\{\{weekTodoRequiredOnly\}\}"[\s\S]*只看必填/, 'mini-program workbench should render the required-only checkbox');
 }
 
@@ -90,6 +90,26 @@ assert.deepStrictEqual(
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 16].filter(rules.isCoachFeedbackReminderLessonNumber),
   [1, 3, 5, 8],
   'coach required feedback lessons should be exactly the 1st, 3rd, 5th and 8th lessons in a package'
+);
+assert.strictEqual(
+  miniSchedule.requiredFeedbackTodoVisible({ courseType: '私教课', feedbackRequired: true, packageProgressText: '6/10' }),
+  false,
+  'mini-program required-only todos should not show the 6th formal package lesson'
+);
+assert.strictEqual(
+  miniSchedule.requiredFeedbackTodoVisible({ courseType: '私教课', feedbackRequired: true, requiredFeedbackLessonNumber: 5, packageProgressText: '6/10' }),
+  false,
+  'mini-program required-only todos should trust the displayed package progress when it conflicts with backend required flags'
+);
+assert.strictEqual(
+  miniSchedule.requiredFeedbackTodoVisible({ courseType: '私教课', feedbackRequired: true, packageProgressText: '5/10' }),
+  true,
+  'mini-program required-only todos should show the 5th formal package lesson'
+);
+assert.strictEqual(
+  miniSchedule.requiredFeedbackTodoVisible({ courseType: '体验课', packageProgressText: '1/1' }),
+  true,
+  'mini-program required-only todos should show all trial lessons'
 );
 
 {

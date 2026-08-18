@@ -1,5 +1,5 @@
 const { loginWithWechat, loadCoachWorkbench, saveCoachFeedback, saveCoachProposal, TOKEN_KEY, USER_KEY } = require('../../utils/api');
-const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, classBlockStyle, workbenchTodoState, scheduleLocationText, campusDisplayName } = require('../../utils/schedule');
+const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, classBlockStyle, workbenchTodoState, requiredFeedbackTodoVisible, scheduleLocationText, campusDisplayName } = require('../../utils/schedule');
 
 const TIMETABLE_START_HOUR = 7;
 const TIMETABLE_END_HOUR = 22;
@@ -127,7 +127,7 @@ function buildWeekTodoGroups(days = [], now = new Date(), todayShownIds = new Se
           if (day.isToday && todayShownIds.has(String(item.id))) return null;
           const state = workbenchTodoState(item, now);
           if (!state) return null;
-          if (requiredOnly && !(state.code === 'pending' && item.feedbackRequired === true)) return null;
+          if (requiredOnly && !(state.code === 'pending' && requiredFeedbackTodoVisible(item))) return null;
           return {
             ...item,
             todoLabel: state.label,

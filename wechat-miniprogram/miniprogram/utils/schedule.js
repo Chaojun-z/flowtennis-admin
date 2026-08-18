@@ -10,6 +10,7 @@ CAMPUS_DISPLAY[['ma', 'bao'].join('')] = '顺义马坡';
 CAMPUS_DISPLAY[['马', '宝'].join('')] = '顺义马坡';
 CAMPUS_DISPLAY['顺义马坡'] = '顺义马坡';
 CAMPUS_DISPLAY['马坡'] = '顺义马坡';
+const REQUIRED_FEEDBACK_LESSON_NUMBERS = [1, 3, 5, 8];
 
 function parseDate(value) {
   if (!value) return null;
@@ -90,6 +91,38 @@ function formatScheduleItem(item) {
 
 function hasScheduleFeedback(item = {}) {
   return !!(item.hasFeedback || item.feedbackId || item.feedbackAt || item.feedbackStatus === '已反馈' || item.feedbackStatus === '已填写');
+}
+
+function isTrialCourse(item = {}) {
+  if (item.isTrial === true) return true;
+  return /体验/.test(String([
+    item.courseType,
+    item.standardCourseType,
+    item.title,
+    item.type,
+    item.className,
+    item.packageName,
+    item.productName,
+    item.experienceType
+  ].filter(Boolean).join(' ')));
+}
+
+function packageProgressLessonNumber(item = {}) {
+  const raw = String(item.packageProgressText || item.packageText || item.packageProgress || '').trim();
+  const match = raw.match(/(\d+(?:\.\d+)?)\s*\/\s*\d+/);
+  return match ? Number(match[1]) : 0;
+}
+
+function requiredFeedbackTodoVisible(item = {}) {
+  if (isTrialCourse(item)) return true;
+  const progressLessonNumber = packageProgressLessonNumber(item);
+  if (progressLessonNumber > 0) return REQUIRED_FEEDBACK_LESSON_NUMBERS.includes(Math.floor(progressLessonNumber));
+  const lessonNumber = Number(
+    item.requiredFeedbackLessonNumber
+    || item.triggerLessonNumber
+    || item.feedbackLessonNumber
+  );
+  return REQUIRED_FEEDBACK_LESSON_NUMBERS.includes(Math.floor(lessonNumber));
 }
 
 function workbenchTodoState(item = {}, now = new Date()) {
@@ -188,6 +221,7 @@ module.exports = {
   campusDisplayName,
   findSchedule,
   formatScheduleItem,
+  requiredFeedbackTodoVisible,
   scheduleLocationText,
   workbenchTodoState,
   weekRangeText
