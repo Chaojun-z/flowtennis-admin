@@ -78,7 +78,7 @@ assert.deepStrictEqual(sync.selectFeishuScheduleSheets([
   { sheet_id: 'CurrentWeek', title: '7.27-8.2（当前周）' },
   { sheet_id: 'NextWeek', title: '8.3-8.9' },
   { sheet_id: 'LaterWeek', title: '8.10-8.16' }
-], 'OldWeek', '2026-08-01').map(row => row.sheet_id), ['CurrentWeek', 'NextWeek'], 'regular sync should always read current week and next week');
+], 'OldWeek', '2026-08-01').map(row => row.sheet_id), ['OldWeek', 'CurrentWeek', 'NextWeek'], 'regular sync should always read current week, next week and the rolling latest 10 days');
 
 const interleavedValues = [
   ['时间', null, null, 'Siren', null, null, null, '杨教练', null, null, null],
@@ -670,6 +670,35 @@ const beginnerSpecialUnknownStudentsPlan = sync.buildDryRunPlan({
 assert.strictEqual(beginnerSpecialUnknownStudentsPlan.summary.notifyError, 0, 'unknown beginner special students should not require manual confirmation');
 assert.strictEqual(beginnerSpecialUnknownStudentsPlan.summary.create, 1, 'unknown beginner special students should enter create flow');
 assert.strictEqual(beginnerSpecialUnknownStudentsPlan.actions[0].candidate.requiresSpecialLeadConversion, true, 'unknown beginner special students should create leads before package purchase');
+
+const confirmedDirectUnknownStudentPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'confirmed-direct-unknown-student-key',
+    startTime: '2026-08-22 12:00',
+    endTime: '2026-08-22 13:00',
+    date: '2026-08-22',
+    coachName: '晓哲',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    studentNames: ['新正式学员'],
+    studentText: '新正式学员',
+    lessonCount: 1,
+    durationMinutes: 60,
+    confirmedPaymentLocked: true,
+    confirmedPayment: { settlementType: 'direct', payMethod: '微信', paidAmount: 300 },
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: [],
+  nowKey: '2026-08-22 00:00'
+});
+assert.strictEqual(confirmedDirectUnknownStudentPlan.summary.notifyError, 0, 'confirmed direct-pay formal lessons should not create an unsearchable schedule or require manual matching for a clear new name');
+assert.strictEqual(confirmedDirectUnknownStudentPlan.summary.create, 1, 'confirmed direct-pay formal lessons with a clear new name should enter create flow');
+assert.strictEqual(confirmedDirectUnknownStudentPlan.actions[0].candidate.requiresFormalLeadConversion, true, 'clear new formal lesson names should create a searchable student before scheduling');
 
 const ignoredSourcePlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -2684,6 +2713,50 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
   assert.deepStrictEqual(specialUnknownPurchaseBodies.map(row => row.studentId), ['stu-Solitary Nook', 'stu-Debra'], 'special course package purchase should use converted student ids');
   assert.deepStrictEqual(specialUnknownCreatedBody.studentIds, ['stu-Solitary Nook', 'stu-Debra'], 'special course schedule should use converted student ids');
 
+  const formalLeadBodies = [];
+  const formalConvertedLeadIds = [];
+  let formalCreatedBody = null;
+  const appliedFormalUnknown = await sync.applySyncPlan({
+    actions: [confirmedDirectUnknownStudentPlan.actions[0]]
+  }, {
+    put: async () => {},
+    uuidv4: () => 'uuid-formal',
+    createLead: async (body) => {
+      formalLeadBodies.push(body);
+      return { lead: { id: 'lead-formal-new', ...body } };
+    },
+    convertLeadToStudent: async (leadId) => {
+      formalConvertedLeadIds.push(leadId);
+      return { student: { id: 'stu-formal-new', name: '新正式学员' } };
+    },
+    createSchedule: async (body) => { formalCreatedBody = body; return { schedule: { id: 'sch-formal-new', ...body } }; },
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.deepStrictEqual(formalLeadBodies.map(row => row.displayName), ['新正式学员'], 'new direct-pay formal student should create a lead first');
+  assert.deepStrictEqual(formalConvertedLeadIds, ['lead-formal-new'], 'new direct-pay formal lead should be converted to a searchable student');
+  assert.deepStrictEqual(formalCreatedBody.studentIds, ['stu-formal-new'], 'direct-pay formal schedule should use the converted real student id');
+  assert.strictEqual(formalCreatedBody.sourceLeadId, 'lead-formal-new', 'direct-pay formal schedule should keep the source lead relation');
+  assert.strictEqual(appliedFormalUnknown[0].scheduleId, 'sch-formal-new', 'new direct-pay formal student flow should still create the schedule');
+
+  const missingStudentBindWrites = [];
+  const appliedMissingStudentBind = await sync.applySyncPlan({
+    actions: [{
+      type: 'bind_existing',
+      sourceKey: 'bind-missing-student-key',
+      candidate,
+      schedule: { id: 'sch-missing-student', studentIds: ['stu-missing'], startTime: candidate.startTime, endTime: candidate.endTime }
+    }]
+  }, {
+    put: async (table, id, row) => missingStudentBindWrites.push({ table, id, row }),
+    students: [],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.strictEqual(appliedMissingStudentBind[0].type, 'error', 'binding an existing schedule with missing student profiles should not silently succeed');
+  assert.match(appliedMissingStudentBind[0].error, /学员档案缺失/, 'missing student profile bind error should be explicit');
+  assert.strictEqual(missingStudentBindWrites.length, 0, 'missing student profile bind should not write an active sync relation');
+
   const authWrites = [];
   let sharedCreatedBody = null;
   await sync.applySyncPlan({
@@ -3009,8 +3082,8 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
       query: new URLSearchParams('dryRun=true')
     }));
     assert.strictEqual(jsonPayload.mode, 'sheet', 'regular cron sync should compare the whole Feishu document instead of future rows only');
-    assert.strictEqual(jsonPayload.courseCount, 4, 'regular cron sync should include current week and next week rows');
-    assert.deepStrictEqual(jsonPayload.sheetIds, ['GrbZdi', 'NextWeek'], 'regular cron sync should not scan old sheets during the non-8am run');
+    assert.strictEqual(jsonPayload.courseCount, 6, 'regular cron sync should include current week, next week and rolling latest 10 days rows');
+    assert.deepStrictEqual(jsonPayload.sheetIds, ['OldWeek', 'GrbZdi', 'NextWeek'], 'regular cron sync should scan rolling latest 10 days every run');
 
     const baselineWrites = [];
     const baselineRoute = sync.createFeishuScheduleSyncRoutes({
@@ -3042,7 +3115,7 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
       res: {},
       query: new URLSearchParams('notify=false&scanAllSheets=true')
     }));
-    assert.strictEqual(jsonPayload.courseCount, 4, 'first all-sheet scan should baseline old sheets without processing them');
+    assert.strictEqual(jsonPayload.courseCount, 6, 'first all-sheet scan should process rolling latest 10 days and still baseline older changed sheets');
     assert.ok(baselineWrites.some(item => item.row.source === 'feishu-sheet-fingerprint' && item.row.sheetId === 'OldWeek'), 'first all-sheet scan should store old sheet fingerprint baseline');
 
     const changedOldWeekValues = oldWeekValues.map(row => row.slice());

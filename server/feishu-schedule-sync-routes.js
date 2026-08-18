@@ -416,6 +416,29 @@ function virtualSpecialLeadStudent(rawName='',candidate={}){
   };
 }
 
+function clearFeishuStudentNameForAutoLead(rawName=''){
+  const name=cleanText(rawName);
+  const key=normalizeStudentNameKey(name);
+  if(!key)return false;
+  if(/^\d+人?$/.test(key))return false;
+  if(['朋友','家长','学员','多人','待定','未知'].includes(key))return false;
+  if(/[?？]/.test(name))return false;
+  return true;
+}
+
+function virtualFormalLeadStudent(rawName='',candidate={}){
+  const name=cleanText(rawName);
+  if(candidate.course?.isTrial||candidate.course?.courseType==='专项课')return null;
+  if(!candidate.confirmedPaymentLocked&&!confirmedDirectPrivatePayment({...candidate,studentNames:[name],studentText:name}))return null;
+  if(!clearFeishuStudentNameForAutoLead(name))return null;
+  return {
+    id:`feishu-formal-lead-${sha256([candidate.sourceKey,name].join('|')).slice(0,24)}`,
+    name,
+    campus:candidate.campus||'shunyi_mapo',
+    virtualFormalLead:true
+  };
+}
+
 function findIdealGroupPackage(packages=[]){
   return (packages||[]).find(row=>{
     const status=cleanText(row.status||'active');
@@ -1099,8 +1122,10 @@ function buildResolvedCandidate(raw,ctx={}){
     else {
       const virtualStudent=confirmedVirtualStudent(name);
       const specialLeadStudent=virtualSpecialLeadStudent(name,raw);
+      const formalLeadStudent=virtualFormalLeadStudent(name,raw);
       if(virtualStudent)resolvedStudents.push(virtualStudent);
       else if(specialLeadStudent)resolvedStudents.push(specialLeadStudent);
+      else if(formalLeadStudent)resolvedStudents.push(formalLeadStudent);
       else unresolvedStudents.push(name);
     }
   }
@@ -1531,7 +1556,15 @@ function attachSchedulableStudents(candidate,ctx={}){
     };
   }
   const confirmedPayment=candidate.confirmedPaymentLocked?candidate.confirmedPayment:confirmedDirectPrivatePayment(candidate);
-  if(confirmedPayment)return {...candidate,scheduleStudents:candidate.confirmedPaymentLocked?candidate.resolvedStudents.slice():candidate.resolvedStudents.slice(0,1),confirmedPayment};
+  if(confirmedPayment){
+    const scheduleStudents=candidate.confirmedPaymentLocked?candidate.resolvedStudents.slice():candidate.resolvedStudents.slice(0,1);
+    return {
+      ...candidate,
+      scheduleStudents,
+      confirmedPayment,
+      requiresFormalLeadConversion:scheduleStudents.some(student=>student.virtualFormalLead)
+    };
+  }
   const selectedEntitlements=[];
   const selectedStudentIds=new Set();
   const scheduleStudents=candidate.resolvedStudents.filter(student=>{
@@ -2047,9 +2080,10 @@ function selectFeishuScheduleSheets(meta=[],configuredSheetId='',todayKey=chinaT
   const currentRange=sheetTitleDateRange(current.title||'',todayKey);
   if(!currentRange)return [current];
   const nextRange={start:addDaysKey(currentRange.end,1),end:addDaysKey(currentRange.end,7)};
+  const rollingRecentRange={start:addDaysKey(todayKey,-10),end:todayKey};
   const selected=sheets.filter(sheet=>{
     const range=sheetTitleDateRange(sheet.title||'',todayKey);
-    return rangesOverlap(range,currentRange)||rangesOverlap(range,nextRange);
+    return rangesOverlap(range,currentRange)||rangesOverlap(range,nextRange)||rangesOverlap(range,rollingRecentRange);
   });
   return selected.length?selected:[current];
 }
@@ -2493,6 +2527,52 @@ function buildSpecialLeadBody(candidate={},name=''){
   };
 }
 
+function buildFormalLeadBody(candidate={},name=''){
+  const displayName=cleanText(name);
+  return {
+    displayName,
+    wechatName:displayName,
+    phone:'',
+    source:'飞书排课表',
+    campus:candidate.campus||'',
+    customerType:candidate.course?.audience||'',
+    demandProduct:candidate.course?.courseDisplayName||candidate.course?.courseType||'正式课',
+    consultType:candidate.course?.courseType||'正式课',
+    rawStatus:'已转化',
+    convertedProducts:[candidate.course?.courseType||'正式课'],
+    profileNote:'',
+    createInitialFollowup:true
+  };
+}
+
+async function resolveFormalLeadStudents(candidate,{leads=[],convertLeadToStudent,createLead}={}){
+  const resolved=[];
+  const leadByVirtualId=new Map();
+  for(const item of candidate.scheduleStudents||candidate.resolvedStudents||[]){
+    if(!item?.virtualFormalLead){
+      resolved.push(item);
+      continue;
+    }
+    const name=cleanText(item.name);
+    const matches=findLeadMatches(leads,name);
+    if(matches.length>1)throw new Error(`正式课找到多个相似线索，需要运营确认：${name}`);
+    let lead=matches[0]||null;
+    if(!lead){
+      if(typeof createLead!=='function')throw new Error(`正式课找不到历史学员或唯一线索：${name}`);
+      const created=await createLead(buildFormalLeadBody(candidate,name));
+      lead=created?.lead;
+      if(!lead?.id)throw new Error('正式课线索创建失败');
+    }
+    if(typeof convertLeadToStudent!=='function')throw new Error('线索转学员处理器不可用');
+    const result=await convertLeadToStudent(lead.id);
+    const student=result?.student;
+    if(!student?.id)throw new Error('正式课线索转学员失败');
+    resolved.push(student);
+    leadByVirtualId.set(String(item.id||''),lead);
+  }
+  return {students:resolved,leadByVirtualId};
+}
+
 async function resolveCompanionLeadStudent(candidate,{leads=[],convertLeadToStudent,createLead}={}){
   const current=(candidate.scheduleStudents||candidate.resolvedStudents||[]).find(row=>!row.virtualCompanionLead);
   if(current?.id)return {student:current,lead:null};
@@ -2682,6 +2762,18 @@ async function supersedePendingFeishuTasks(ctx={},sourceKeys=[],now='',reason='�
   }
 }
 
+function assertExistingScheduleStudentsSearchable(schedule={},ctx={}){
+  if(!Array.isArray(ctx.students))return;
+  const knownIds=new Set(ctx.students.map(row=>String(row.id||'')).filter(Boolean));
+  const missing=parseMaybeArray(schedule.studentIds).map(String).filter(id=>id&&!knownIds.has(id));
+  if(missing.length)throw new Error(`学员档案缺失：${missing.join('、')}`);
+}
+
+function assertNoVirtualScheduleStudents(candidate={}){
+  const virtual=(candidate.scheduleStudents||[]).filter(row=>row?.virtualFormalLead||row?.virtualSpecialLead||row?.virtualCompanionLead);
+  if(virtual.length)throw new Error(`学员档案未创建完成：${virtual.map(row=>row.name||row.id).join('、')}`);
+}
+
 async function applySyncPlan(plan,ctx={}){
   const applied=[];
   const now=new Date().toISOString();
@@ -2692,6 +2784,7 @@ async function applySyncPlan(plan,ctx={}){
         await supersedePendingFeishuTasks(ctx,[action.sourceKey],now);
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:action.schedule?.id||action.sync.scheduleId});
       }else if(action.type==='bind_existing'){
+        assertExistingScheduleStudentsSearchable(action.schedule,ctx);
         const scheduleIds=Array.isArray(action.scheduleIds)&&action.scheduleIds.length?action.scheduleIds:[action.schedule.id];
         if(action.backfillExistingFields&&typeof ctx.updateSchedule==='function'){
           await ctx.updateSchedule(action.schedule.id,buildScheduleBody(action.candidate));
@@ -2705,6 +2798,18 @@ async function applySyncPlan(plan,ctx={}){
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:action.schedule.id,scheduleIds});
       }else if(action.type==='create_schedule'){
         let candidate=action.candidate;
+        if(candidate.requiresFormalLeadConversion){
+          const formal=await resolveFormalLeadStudents(candidate,ctx);
+          const leads=[...formal.leadByVirtualId.values()];
+          candidate={
+            ...candidate,
+            scheduleStudents:formal.students,
+            resolvedStudents:formal.students,
+            formalLeadByVirtualId:formal.leadByVirtualId,
+            sourceLeadId:leads.length===1?leads[0].id||'':candidate.sourceLeadId||'',
+            sourceLeadName:leads.length===1?leads[0].name||leads[0].leadName||leads[0].displayName||'':candidate.sourceLeadName||''
+          };
+        }
         if(candidate.requiresSpecialLeadConversion){
           const special=await resolveSpecialLeadStudents(candidate,ctx);
           candidate={...candidate,scheduleStudents:special.students,resolvedStudents:special.students,specialLeadByVirtualId:special.leadByVirtualId};
@@ -2718,6 +2823,7 @@ async function applySyncPlan(plan,ctx={}){
           candidate={...candidate,scheduleStudents:[companion.student],resolvedStudents:[companion.student],sourceLeadId:companion.lead?.id||'',sourceLeadName:companion.lead?.name||companion.lead?.leadName||companion.lead?.displayName||''};
         }
         candidate=await ensureSharedPackageAuthorization(candidate,ctx);
+        assertNoVirtualScheduleStudents(candidate);
         const body=buildScheduleBody(candidate,{sourceLeadId:candidate.sourceLeadId||'',sourceLeadName:candidate.sourceLeadName||''});
         const result=await ctx.createSchedule(body);
         const schedule=result?.schedule;
@@ -2906,7 +3012,7 @@ function createFeishuScheduleSyncRoutes(deps={}){
       const applyPlan=rangeMode?safeHistoryApplyPlan(plan,{includeTrial:historyTrialMode==='confirmed'}):plan;
       if(rangeMode&&historyApplyMode!=='safeConfirmed')throw new Error('历史区间写入缺少确认参数 historyApply=safeConfirmed');
       const tasks=await getCachedScan(T_FEISHU_SCHEDULE_TASKS,{fresh:true}).catch(()=>[]);
-      result.applied=await applySyncPlan(applyPlan,{put,mkTable,uuidv4,createSchedule,updateSchedule,cancelScheduleById,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,packages,entitlements,leads,authorizations,tasks,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_ENTITLEMENT_AUTHORIZATIONS});
+      result.applied=await applySyncPlan(applyPlan,{put,mkTable,uuidv4,createSchedule,updateSchedule,cancelScheduleById,convertLeadToStudent,createLead,purchasePackage,recommendEntitlements,students,packages,entitlements,leads,authorizations,tasks,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_ENTITLEMENT_AUTHORIZATIONS});
       if(rangeMode)result.historySafeAppliedSummary=applyPlan.summary;
       const fingerprintNow=new Date().toISOString();
       for(const row of feishuSheet.fingerprintUpdates||[]){
