@@ -736,7 +736,7 @@ function createCorePageDataRoutes(deps={}){
         const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
         const coachRefs=buildCoachRefs({coaches,users});
         const scheduleRowsPromise=user.role==='admin'?getScheduleListRows():getCoachScheduleRowsForUser(user,coachRefs);
-        const [campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans]=await Promise.all([
+        const [campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans,studentTeachingSummaries]=await Promise.all([
           listCampusesWithDefaults(),
           cappedScan(T_STUDENTS),
           cappedScan(T_CLASSES),
@@ -746,9 +746,10 @@ function createCorePageDataRoutes(deps={}){
           cappedScan(T_PURCHASES),
           cappedScan(T_ENTITLEMENTS),
           cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
-          cappedScan(T_PLANS)
+          cappedScan(T_PLANS),
+          cappedScan(T_STUDENT_TEACHING_SUMMARY)
         ]);
-        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans,coaches},user,coachRefs);
+        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans,studentTeachingSummaries,coaches},user,coachRefs);
         const now=new Date();
         const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
         const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,scoped.purchases||[],now,{
@@ -775,7 +776,15 @@ function createCorePageDataRoutes(deps={}){
           schedule:scoped.schedule
         });
         const standardLifecycleMetrics=buildStandardLifecycleMetrics({...scoped,customerLifecycleRows});
-        const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,scoped);
+        const teachingSummaryRows=scoped.studentTeachingSummaries||[];
+        const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,teachingSummaryRows.length?{
+          ...scoped,
+          purchases:[],
+          entitlements:[],
+          entitlementLedger:[],
+          schedule:[],
+          teachingStudentSummaryRows:teachingSummaryRows
+        }:scoped);
         const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,standardLifecycleMetrics,now});
         return sendJson(res,{
           campuses:scoped.campuses||[],
@@ -788,6 +797,7 @@ function createCorePageDataRoutes(deps={}){
           coachProposals:scoped.coachProposals||[],
           entitlements:scoped.entitlements||[],
           entitlementLedger:scoped.entitlementLedger||[],
+          studentTeachingSummaries:scoped.studentTeachingSummaries||[],
           customerLifecycleRows,
           teachingStudentViews,
           standardLifecycleMetrics,

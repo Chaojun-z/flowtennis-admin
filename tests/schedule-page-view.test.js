@@ -195,7 +195,12 @@ assert.match(fnBody('openScheduleModal'), /姓名<\/label>[\s\S]*sch_stuSearch[\
 assert.match(source, /schedule:\['campuses','students','courts','schedule','coaches','coachProposals'\]/, 'schedule page should render the schedule list before lifecycle student roster finishes');
 assert.match(source, /schedule:\['classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'\]/, 'schedule page should refresh lifecycle student roster in the background after first paint');
 assert.match(source, /if\(name==='coachSchedulePage'\)\{[\s\S]*teachingStudentViews=data\.teachingStudentViews\|\|teachingStudentViews/, 'coach schedule calendar should hydrate the same student roster used by schedule search');
-assert.match(corePagesSource, /if\(path==='\/page-data\/coach-schedule'[\s\S]*const teachingStudentViews=buildTeachingStudentViews\(customerLifecycleRows,scoped\);[\s\S]*teachingStudentViews,/, 'coach schedule page data should return the schedule search student roster');
+const coachScheduleRouteSource = corePagesSource.slice(
+  corePagesSource.indexOf("path==='/page-data/coach-schedule'&&method==='GET'"),
+  corePagesSource.indexOf("path==='/page-data/workbench'&&method==='GET'")
+);
+assert.match(coachScheduleRouteSource, /students:scoped\.students\|\|\[\]/, 'coach schedule page data should return the lightweight student roster');
+assert.doesNotMatch(coachScheduleRouteSource, /buildTeachingStudentViews/, 'coach schedule page data should not borrow workbench teaching views through a cross-route regex match');
 assert.match(corePagesSource, /if\(path==='\/page-data\/purchases'[\s\S]*hydrateScheduleRowsByLedgerIds[\s\S]*buildTeachingStudentViews\(customerLifecycleRows,scoped\)/, 'purchases page data should hydrate schedules referenced by entitlement ledger before building lesson detail rows');
 assert.match(source, /function scheduleStudentRosterRows\([\s\S]*teachingStudentViews\?\.historicalStudents[\s\S]*teachingStudentViews\?\.activeStudents/, 'schedule student search should use the same lifecycle roster as the student list');
 assert.match(fnBody('renderScheduleStudentSuggestions'), /const searchRows=scheduleStudentSearchRows\(selectedIds\)[\s\S]*searchRows\.filter/, 'schedule student suggestions should search the lifecycle roster instead of the raw students table');

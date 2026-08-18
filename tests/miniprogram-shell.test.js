@@ -231,6 +231,9 @@ assert.match(scheduleJs, /cumulative:\s*lessonRecordUnitsCompactText\(/, 'studen
 assert.match(scheduleJs, /cumulative:\s*studentDetailCompletedLessonText\(student,\s*lessonUnitsCompleted\)/, 'student detail should show the web historical student completed lesson value');
 assert.match(scheduleJs, /packageProgress:\s*studentDetailPackageBalanceText\(student,\s*entitlements\)/, 'student detail package progress should use the web historical student package balance value');
 assert.match(scheduleJs, /recentLesson:\s*studentDetailRecentLessonText\(student,\s*latestRecord\)/, 'student detail recent lesson should use the web historical student recent lesson date with days ago text');
+assert.match(scheduleJs, /function studentDetailLessonRecordsFromUnifiedRows[\s\S]*detailLessonRecordRows/, 'student detail should normalize lesson records from the unified teaching read model');
+assert.match(scheduleJs, /const lessonRecords = studentDetailLessonRecordsFromUnifiedRows\(student\.detailLessonRecordRows\|\|\[\]\)/, 'student detail must use unified read model lesson records instead of local schedule and ledger reconstruction');
+assert.doesNotMatch(scheduleJs.match(/function buildStudentDetailData\(student, context = \{\}\)[\s\S]*?\n\}/)[0], /buildStudentLessonRecords\(/, 'student detail must not privately rebuild lesson records from mini program schedule or ledger data');
 assert.match(scheduleJs, /return `\$\{recordCount\}\/\$\{lessonUnitsText\(lessonUnits\)\}`/, 'student list compact lesson summary should render records before lesson units');
 assert.match(scheduleJs, /function studentPackageListText[\s\S]*return `\$\{lessonUnitsText\(summary\.remaining\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student list package balance should render remaining over total without extra text');
 assert.match(scheduleJs, /function studentPackageBalanceText[\s\S]*return `\$\{lessonUnitsText\(summary\.remaining\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student package balance should render remaining over total');
@@ -378,6 +381,10 @@ assert.doesNotMatch(configJs, /WEB_VIEW_URL/, 'mini program config should no lon
 const apiServerJs = readText('api/index.js');
 const authRoutesJs = readText('server/auth-routes.js');
 const corePageDataJs = readText('server/page-data/core-pages.js');
+const workbenchRouteSource = corePageDataJs.slice(
+  corePageDataJs.indexOf("path==='/page-data/workbench'&&method==='GET'"),
+  corePageDataJs.indexOf('return false;', corePageDataJs.indexOf("path==='/page-data/workbench'&&method==='GET'"))
+);
 assert.match(authRoutesJs, /\/auth\/wechat-login/, 'API should support mini program login by bound openid');
 assert.match(apiServerJs, /findWechatUserByOpenId/, 'API should find the bound coach account by openid');
 assert.match(apiServerJs, /function officialAccountTimetablePagePath/, 'course reminders should build timetable deep links through a dedicated helper');
@@ -398,8 +405,13 @@ assert.match(apiServerJs, /pendingFeedbackCount/, 'workbench API should expose s
 assert.match(apiServerJs, /trialConversionRate/, 'workbench API should expose standard stats fields');
 assert.match(apiServerJs, /overallTrialConversionRate/, 'workbench API should expose overall coach trial conversion stats for the mini program');
 assert.match(apiServerJs, /workbenchState:/, 'workbench API should expose standard state enum for each schedule');
+assert.match(apiServerJs, /studentTeachingSummaries:normalized\.studentTeachingSummaries\.filter\(row=>studentIds\.has\(String\(row\.studentId\|\|row\.id\|\|''\)\.trim\(\)\)\)/, 'coach-scoped workbench data should keep unified teaching summary rows for visible students');
 assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API should read entitlement balances for the mini program');
 assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS\.entitlementLedger\)/, 'workbench API should read entitlement consume ledger for the mini program');
+assert.match(workbenchRouteSource, /cappedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'workbench API should read the unified student teaching summary for mini program student details');
+assert.match(workbenchRouteSource, /studentTeachingSummaries:scoped\.studentTeachingSummaries\|\|\[\]/, 'workbench API should return scoped unified student teaching summary rows');
+assert.match(workbenchRouteSource, /buildTeachingStudentViews\(customerLifecycleRows,teachingSummaryRows\.length\?\{[\s\S]*teachingStudentSummaryRows:teachingSummaryRows/, 'workbench API should build mini program student views from the unified teaching summary read model');
+assert.match(workbenchRouteSource, /purchases:\[\][\s\S]*entitlements:\[\][\s\S]*entitlementLedger:\[\][\s\S]*schedule:\[\]/, 'workbench API should stop local package, ledger, and schedule facts from overriding the unified teaching summary');
 assert.match(corePageDataJs, /entitlements:scoped\.entitlements\|\|\[\]/, 'workbench API should return scoped entitlement balances');
 assert.match(corePageDataJs, /entitlementLedger:scoped\.entitlementLedger\|\|\[\]/, 'workbench API should return scoped entitlement ledger');
 assert.match(corePageDataJs, /studentSchedule:decoratedStudentSchedule/, 'workbench API should return an expanded schedule set for student details without changing the timetable schedule');

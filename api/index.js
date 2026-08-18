@@ -1959,7 +1959,8 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     feedbacks:normalized.feedbacks.filter(f=>scheduleIds.has(f.scheduleId)),
     coachProposals:normalized.coachProposals.filter(p=>scheduleIds.has(p.scheduleId)),
     leads:[],
-    leadFollowups:[]
+    leadFollowups:[],
+    studentTeachingSummaries:normalized.studentTeachingSummaries.filter(row=>studentIds.has(String(row.studentId||row.id||'').trim()))
   };
 }
 function addCoachAliasValue(values,value){

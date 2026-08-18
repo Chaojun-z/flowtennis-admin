@@ -1714,6 +1714,32 @@ function buildStudentLessonRecords(student = {}, context = {}) {
   return [...map.values()].sort((a, b) => String(b.sortTime || '').localeCompare(String(a.sortTime || '')));
 }
 
+function studentDetailLessonRecordsFromUnifiedRows(detailLessonRecordRows = []) {
+  return (Array.isArray(detailLessonRecordRows) ? detailLessonRecordRows : [])
+    .map((row) => {
+      const time = firstNonEmpty(row.time, row.scheduleTime, row.startTime, row.relatedDate, row.createdAt);
+      const sortTime = firstNonEmpty(row.sortTime, row.time, row.startTime, row.endTime, row.relatedDate, row.createdAt);
+      const courseType = firstNonEmpty(row.courseType, row.standardCourseType, row.packageName, row.productName, row.className, row.courseName, '课程');
+      const status = firstNonEmpty(row.statusText, row.status, '已结束');
+      return {
+        scheduleId: firstNonEmpty(row.scheduleId, row.id),
+        time,
+        sortTime,
+        courseType,
+        courseTypeClass: /体验/.test(courseType) ? 'detail-tag-trial' : 'detail-tag-private',
+        status,
+        statusClass: /待|进行/.test(status) ? 'detail-tag-success' : 'detail-tag-muted',
+        lessonUnits: Number(row.lessonUnits || row.completedLessons || row.lessonCount || row.consumedLessons) || 1,
+        metaParts: [
+          row.venue || row.sourceVenue || row.courtName || row.court || row.locationText,
+          row.coach || row.coachName || row.primaryCoach
+        ].filter(Boolean)
+      };
+    })
+    .filter(row => row.time && row.sortTime)
+    .sort((a, b) => String(b.sortTime || '').localeCompare(String(a.sortTime || '')));
+}
+
 function studentDetailLessonRecordTitle(total = 0, expanded = false) {
   if (!total) return '';
   if (expanded) return '（全部）';
@@ -1737,20 +1763,15 @@ function studentDetailLessonRecordView(detail = {}, expanded = false) {
 function buildStudentDetailData(student, context = {}) {
   if (!student) return null;
   const classes = Array.isArray(context.classes) ? context.classes : [];
-  const schedule = Array.isArray(context.schedule) ? context.schedule : [];
   const entitlements = Array.isArray(context.entitlements) ? context.entitlements : [];
-  const entitlementLedger = Array.isArray(context.entitlementLedger) ? context.entitlementLedger : [];
   const coachName = String(context.coachName || '').trim();
   const relatedClassIds = studentRelatedClassIds(student.id, classes);
   const relatedClasses = classes.filter(item => relatedClassIds.includes(String(item.id || '').trim()));
-  const relatedSchedule = schedule.filter(item => scheduleMatchesStudent(student, item, relatedClassIds));
   const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
-  const validSchedule = relatedSchedule.filter(item => !item.isCancelled && String(item.effectiveStatus || item.status || '') !== '已取消');
-  const lessonRecords = buildStudentLessonRecords(student, { schedule: validSchedule, entitlements, entitlementLedger });
-  const backendLessonUnits = Number(student.lessonUnitsCompleted);
-  const backendLessonCount = Number(student.lessonRecordCount);
-  const lessonUnitsCompleted = Number.isFinite(backendLessonUnits) ? backendLessonUnits : lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
-  const lessonRecordCount = Number.isFinite(backendLessonCount) ? backendLessonCount : lessonRecords.length;
+  const lessonRecords = studentDetailLessonRecordsFromUnifiedRows(student.detailLessonRecordRows||[]);
+  const completedLessons = Number(student.completedLessons);
+  const lessonUnitsCompleted = Number.isFinite(completedLessons) ? completedLessons : lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
+  const lessonRecordCount = lessonRecords.length;
   const latestRecord = lessonRecords[0] || null;
   const packageText = firstNonEmpty(student.packageProgressText, studentPackageProgressText(studentEntitlements(student.id, entitlements)));
   const ownerCoach = firstNonEmpty(student.ownerCoach, student.primaryCoach, activeClass && activeClass.coach);
