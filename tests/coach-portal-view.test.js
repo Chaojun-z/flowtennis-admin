@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { html, appSource: source } = require('./helpers/read-index-bundle');
+const scheduleHelperSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'schedule-helpers.js'), 'utf8');
 
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 function fnBody(name){
@@ -12,6 +13,15 @@ function fnBody(name){
   const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
   const next = candidates.length ? Math.min(...candidates) : -1;
   return source.slice(start, next === -1 ? source.length : next);
+}
+function helperFnBody(name){
+  const start = scheduleHelperSource.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist in schedule helpers`);
+  const nextFunction = scheduleHelperSource.indexOf('\nfunction ', start + 1);
+  const nextAsync = scheduleHelperSource.indexOf('\nasync function ', start + 1);
+  const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
+  const next = candidates.length ? Math.min(...candidates) : -1;
+  return scheduleHelperSource.slice(start, next === -1 ? scheduleHelperSource.length : next);
 }
 function standardConfigBlock(key) {
   const marker = `key:'${key}'`;
@@ -474,7 +484,7 @@ assert.match(
 );
 
 assert.match(
-  fnBody('renderScheduleDetailCard'),
+  helperFnBody('renderScheduleDetailCard'),
   /openFeedbackPosterModal\('\$\{feedbackId\}','\$\{scheduleId\}'\)[\s\S]*生成海报/,
   'coach-side submitted feedback should keep the poster generation entry'
 );

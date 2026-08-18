@@ -1,5 +1,4 @@
-var coachOpsDraggedName='',COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter',coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
-var COACH_OPS_DAY_HOUR_HEIGHT=56;
+var coachOpsDraggedName='',COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter',coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'',COACH_OPS_DAY_HOUR_HEIGHT=56;
 var COACH_OPS_DAY_COACH_WIDTH=128;
 var COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30;
 var COACH_OPS_MONTH_VISIBLE_COACHES=5;

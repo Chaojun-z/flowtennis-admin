@@ -1317,12 +1317,13 @@ function normalizeCurrentPageForRole(){
     localStorage.setItem(PAGE_KEY,currentPage);
   }
 }
+const SCHEDULE_HELPERS_RENDERER_SRC='/assets/scripts/pages/schedule-helpers.js?v=20260817-detail-helper-split-v1';
 const SCHEDULE_RENDERER_SRC='/assets/scripts/pages/schedule.js?v=20260728-repeatable-schedule-renderer-v3';
 const COACH_OPS_RENDERER_SRC='/assets/scripts/pages/coachops.js?v=20260728-repeatable-coachops-renderer-v6';
 const PAGE_RENDERER_RECOVERY={
-  schedule:{required:['renderSchedule'],scripts:[SCHEDULE_RENDERER_SRC]},
-  coachschedule:{required:['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'],scripts:[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC]},
-  coachops:{required:['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'],scripts:[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC]}
+  schedule:{required:['renderSchedule'],scripts:[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC]},
+  coachschedule:{required:['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'],scripts:[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC]},
+  coachops:{required:['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'],scripts:[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC]}
 };
 let pageRendererRecoveryPromises=new Map();
 function pageRendererReady(pg){

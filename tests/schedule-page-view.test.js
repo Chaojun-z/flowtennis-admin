@@ -6,14 +6,15 @@ const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 's
 const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const stateSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core', 'state.js'), 'utf8');
 const scheduleSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'schedule.js'), 'utf8');
+const scheduleHelperSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'schedule-helpers.js'), 'utf8');
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
-assert.match(indexHtml, /state\.js\?v=20260816-schedule-pagination-total-v1/, 'state script version should force a fresh browser load for schedule pagination fixes');
+assert.match(indexHtml, /state\.js\?v=20260817-schedule-helper-recovery-v1/, 'state script version should force a fresh browser load for schedule helper recovery fixes');
 assert.match(indexHtml, /schedule\.js\?v=20260807-button-stability-v1/, 'schedule script version should force a fresh browser load after button stability fixes');
-assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps an old broken schedule script');
-assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
+assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
+assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
 assert.match(source, /await recoverMissingPageRenderer\(pg\);[\s\S]*renderLoadedCurrentPage\(pg\)/, 'page data loader should reload a missing page renderer before rendering');
 assert.match(stateSource, /function scheduleListPageDataUrl\(/, 'schedule page should build a scoped list URL for server-side pagination');
@@ -32,6 +33,15 @@ function fnBody(name){
   const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
   const next = candidates.length ? Math.min(...candidates) : -1;
   return source.slice(start, next === -1 ? source.length : next);
+}
+function helperFnBody(name){
+  const start = scheduleHelperSource.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist in schedule helpers`);
+  const nextFunction = scheduleHelperSource.indexOf('\nfunction ', start + 1);
+  const nextAsync = scheduleHelperSource.indexOf('\nasync function ', start + 1);
+  const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
+  const next = candidates.length ? Math.min(...candidates) : -1;
+  return scheduleHelperSource.slice(start, next === -1 ? scheduleHelperSource.length : next);
 }
 
 assert.match(source, /function buildRepeatScheduleSeeds\(/, 'schedule page should expose a repeat schedule helper');
@@ -272,7 +282,7 @@ assert.match(fnBody('openScheduleDetail'), /modal-schedule-drawer/, 'schedule de
 assert.match(source, /排课信息[\s\S]*教练提案[\s\S]*课后反馈/, 'schedule detail drawer should keep three tabs');
 assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('基础信息'[\s\S]*renderScheduleDetailCard\('反馈内容'/, 'schedule detail drawer should organize fields into Feishu-style cards');
 assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('基础信息'[\s\S]*renderScheduleDetailCard\('设置迟到'[\s\S]*renderScheduleDetailCard\('备注信息'/, 'schedule detail drawer should place late settings between basic info and notes');
-assert.match(source, /function scheduleDetailHeaderHtml\([\s\S]*studentNames[\s\S]*renderDetailDrawerHero/, 'schedule detail drawer title should use student names through the shared drawer header');
+assert.match(scheduleHelperSource, /function scheduleDetailHeaderHtml\([\s\S]*studentNames[\s\S]*renderDetailDrawerHero/, 'schedule detail drawer title should use student names through the shared drawer header');
 assert.match(source, /function scheduleResolveStudentName\(/, 'schedule detail should resolve student names from related datasets before rendering');
 assert.doesNotMatch(fnBody('scheduleStudentSummary'), /students\.find\(st=>st\.id===id\)\?\.name\|\|id/, 'schedule student summary should not fall back to displaying raw student ids');
 assert.match(source, /function scheduleDetailInfoHtml\([\s\S]*姓名[\s\S]*课程类型[\s\S]*standardCourseTypeLabel[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课时间[\s\S]*lessonField\.label[\s\S]*上课教练[\s\S]*地点类型[\s\S]*上课校区\/场馆名称[\s\S]*场地[\s\S]*循环排课/, 'schedule detail basic fields should show standard course type and keep repeat scheduling as the last field');
@@ -280,7 +290,7 @@ assert.doesNotMatch(source, /历史问题/, 'schedule detail drawer should remov
 assert.match(source, /排课备注/, 'schedule detail drawer should rename coach note to schedule note');
 assert.doesNotMatch(source, /if\(!isSmallGroupSchedule\(s\)\)return scheduleDetailField\('教练提案'/, 'schedule detail proposal tab should not collapse non-small-group lessons into one placeholder field');
 assert.match(fnBody('isSmallGroupSchedule'), /scheduleCourseType\(s\)==='小班课'[\s\S]*normalizeExperienceType\(s\?\.experienceType/, 'small-group trial lessons should also require coach proposals');
-assert.match(fnBody('scheduleDetailTabsHtml'), /create[\s\S]*\[\['info','排课信息'\]\]/, 'new schedule drawer should only show schedule info tab');
+assert.match(helperFnBody('scheduleDetailTabsHtml'), /create[\s\S]*\[\['info','排课信息'\]\]/, 'new schedule drawer should only show schedule info tab');
 assert.match(fnBody('openScheduleModal'), /scheduleDetailTabsHtml\('info',\{create:!id\}\)/, 'schedule create drawer should hide proposal and feedback tabs');
 assert.match(source, /function scheduleDetailProposalCardsHtml\(/, 'schedule detail proposal should render filled proposals through dedicated cards');
 assert.match(fnBody('scheduleDetailProposalCardsHtml'), /学员信息[\s\S]*学员级别[\s\S]*学员数量[\s\S]*教学目标[\s\S]*教学组织[\s\S]*1级进阶[\s\S]*2级进阶[\s\S]*3级进阶[\s\S]*进阶逻辑[\s\S]*进阶逻辑[\s\S]*结语[\s\S]*提交时间/, 'filled proposal should use the requested three-card field layout');
@@ -296,13 +306,13 @@ assert.match(fnBody('scheduleDetailFeedbackEmptyHtml'), /暂无课后反馈[\s\S
 assert.match(fnBody('scheduleDetailFeedbackHtml'), /if\(!fb\)return scheduleDetailFeedbackEmptyHtml\(\)/, 'missing feedback should render an empty state');
 assert.match(fnBody('openScheduleDetail'), /const feedbackCanEdit=!!fb[\s\S]*section:feedbackCanEdit\?'feedback':''/, 'feedback edit action should only show when feedback exists');
 assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('反馈内容'[\s\S]*className:'schedule-feedback-card'/, 'feedback card should have a scoped class for full-width feedback fields');
-assert.match(source, /function editScheduleDetailSection\(/, 'schedule detail drawer should support local section editing');
-assert.match(source, /function cancelScheduleDetailSectionEdit\(/, 'schedule detail drawer should support cancelling local edits');
+assert.match(scheduleHelperSource, /function editScheduleDetailSection\(/, 'schedule detail drawer should support local section editing');
+assert.match(scheduleHelperSource, /function cancelScheduleDetailSectionEdit\(/, 'schedule detail drawer should support cancelling local edits');
 assert.match(source, /function saveScheduleDetailSectionEdit\(/, 'schedule detail drawer should support saving local edits');
 assert.match(fnBody('saveScheduleDetailSectionEdit'), /runStandardMutation\(saveButton/, 'local section saves should give immediate saving feedback through the global mutation helper');
 assert.doesNotMatch(fnBody('saveScheduleDetailSectionEdit'), /catch\(e\)[\s\S]*saveButton[\s\S]*disabled=false/, 'local section save failures should not restore the save button by hand');
-assert.match(fnBody('renderScheduleDetailCard'), /schedule-detail-action muted[\s\S]*取消[\s\S]*schedule-detail-action primary[\s\S]*保存修改/, 'schedule detail local edit actions should show cancel and save modification');
-assert.match(fnBody('renderScheduleDetailCard'), /canCancelSchedule[\s\S]*openCancelScheduleModal\('\$\{scheduleId\}'\)[\s\S]*>取消<\/button>[\s\S]*openScheduleModal\('\$\{scheduleId\}'\)">编辑/, 'schedule detail basic info card should show cancel to the left of edit');
+assert.match(helperFnBody('renderScheduleDetailCard'), /schedule-detail-action muted[\s\S]*取消[\s\S]*schedule-detail-action primary[\s\S]*保存修改/, 'schedule detail local edit actions should show cancel and save modification');
+assert.match(helperFnBody('renderScheduleDetailCard'), /canCancelSchedule[\s\S]*openCancelScheduleModal\('\$\{scheduleId\}'\)[\s\S]*>取消<\/button>[\s\S]*openScheduleModal\('\$\{scheduleId\}'\)">编辑/, 'schedule detail basic info card should show cancel to the left of edit');
 assert.match(fnBody('openScheduleDetail'), /const canCancelSchedule=effectiveScheduleStatus\(s\)!=='已取消'[\s\S]*renderScheduleDetailCard\('基础信息'[\s\S]*canCancelSchedule/, 'schedule detail should hide the cancel entry for already-cancelled schedules');
 assert.match(styles, /\.overlay\.schedule-drawer-overlay[\s\S]*justify-content:flex-end/, 'schedule detail drawer overlay should align the panel to the right');
 assert.match(styles, /\.overlay\.schedule-drawer-overlay \.modal\.modal-court\.modal-schedule-drawer\{[\s\S]*translateX\(100%\)/, 'schedule detail drawer should close by sliding out to the right');
@@ -331,7 +341,7 @@ assert.match(fnBody('openScheduleModal'), /scheduleDetailHeaderHtml[\s\S]*schedu
 assert.match(fnBody('openScheduleModal'), /姓名[\s\S]*课程类型[\s\S]*sch_standardCourseType[\s\S]*schedule-settlement-row[\s\S]*schedule-time-row[\s\S]*上课教练[\s\S]*地点类型[\s\S]*sch_locationPlaceLabel[\s\S]*场地[\s\S]*schedule-repeat-row/, 'schedule create and edit should edit the adjusted field order inside the detail card structure');
 assert.match(fnBody('openScheduleModal'), /renderScheduleDetailFormCard\('基础信息'[\s\S]*renderScheduleDetailFormCard\('设置迟到'[\s\S]*renderScheduleDetailFormCard\('备注信息'/, 'schedule create and edit should place late settings between basic info and notes');
 assert.doesNotMatch(fnBody('openScheduleModal'), /schedule-drawer-form-head/, 'schedule create and edit should not use a separate form drawer header');
-assert.match(source, /function renderScheduleDetailFormCard\(/, 'schedule drawer should expose a card renderer for editable detail modules');
+assert.match(scheduleHelperSource, /function renderScheduleDetailFormCard\(/, 'schedule drawer should expose a card renderer for editable detail modules');
 assert.doesNotMatch(fnBody('openCancelScheduleModal'), /setCourtModalFrame\('取消排课'/, 'schedule cancellation should no longer use the old centered modal frame');
 assert.match(fnBody('openCancelScheduleModal'), /modal-schedule-drawer/, 'schedule cancellation should use the same right-side drawer container');
 assert.match(fnBody('openCancelScheduleModal'), /schedule-drawer-form-actions[\s\S]*scheduleCancelBtn/, 'schedule cancellation should place return/confirm in the drawer header');
@@ -394,7 +404,7 @@ assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-pro
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-item \.tms-dropdown-display\{[\s\S]*overflow:hidden[\s\S]*text-overflow:ellipsis[\s\S]*white-space:nowrap/, 'long package names should stay inside the package dropdown field');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-item \.tms-dropdown-menu\{[\s\S]*left:0[\s\S]*width:492px/, 'schedule package dropdown menu should open wider from the input field');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-item \.tms-dropdown-item span\{[\s\S]*white-space:normal/, 'long package option text should wrap inside the wider menu');
-assert.match(fnBody('scheduleDetailHeaderHtml'), /scheduleStatusTagClass\(rawStatus\)/, 'schedule detail header status tag should use the same color class as the list');
+assert.match(helperFnBody('scheduleDetailHeaderHtml'), /scheduleStatusTagClass\(rawStatus\)/, 'schedule detail header status tag should use the same color class as the list');
 assert.match(fnBody('scheduleDetailLateHtml'), /是否迟到[\s\S]*迟到原因[\s\S]*迟到时长[\s\S]*需承担场地费用/, 'schedule late detail should use the requested field order');
 assert.match(fnBody('openScheduleModal'), /上课教练[\s\S]*sch_coach[\s\S]*地点类型[\s\S]*sch_locationType[\s\S]*sch_locationPlaceLabel[\s\S]*场地/, 'location fields should move after coach with dynamic place label');
 assert.match(fnBody('toggleScheduleLocationType'), /sch_locationPlaceLabel[\s\S]*type==='external'\?'场馆名称':'上课校区'/, 'location place label should switch between campus and venue name without stars');

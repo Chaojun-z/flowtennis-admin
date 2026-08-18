@@ -64,7 +64,7 @@ assert.doesNotMatch(
 
 assert.match(
   stateSource,
-  /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/,
+  /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/,
   'coach schedule calendar should recover schedule.js dependencies if the browser keeps old broken scripts'
 );
 
@@ -304,7 +304,7 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /var COACH_OPS_DAY_HOUR_HEIGHT=56;/,
+  /COACH_OPS_DAY_HOUR_HEIGHT=56/,
   'coach schedule day view should use a denser 56px hour height'
 );
 
