@@ -1,0 +1,149 @@
+{
+  "generatedAt": "2026-08-18T04:50:53.223Z",
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "checkedSchedules": [
+    {
+      "id": "repair-yang-july-20260725-1600-zero-basic-group",
+      "startTime": "2026-07-25 16:00",
+      "endTime": "2026-07-25 17:30",
+      "status": "已排课",
+      "studentName": "🐰🐰🐰🐰🐰、🌞艾薇、朋友",
+      "studentNames": [
+        "🐰🐰🐰🐰🐰",
+        "🌞艾薇",
+        "朋友"
+      ],
+      "studentId": "",
+      "studentIds": [
+        "0bf7004b-4160-4749-9e02-d58b7b072e96",
+        "repair-student-20260818-aiwei",
+        "repair-student-20260818-friend"
+      ],
+      "coach": "杨教练",
+      "courseType": "小班课",
+      "standardCourseType": "零基础小班体验课"
+    },
+    {
+      "id": "c850691d-f94e-48e7-a7de-dc710085b5c4",
+      "startTime": "2026-07-31 12:00",
+      "endTime": "2026-07-31 13:00",
+      "status": "已排课",
+      "studentName": "Jay、阳光正好",
+      "studentNames": [
+        "Jay",
+        "阳光正好"
+      ],
+      "studentId": "",
+      "studentIds": [
+        "5db707b6-4e1f-499d-ab09-889ff7598d97",
+        "b38a521d-7fc2-4e53-9e59-4224d530e680"
+      ],
+      "coach": "杨教练",
+      "venue": "1号场",
+      "courseType": "小班课",
+      "standardCourseType": "零基础小班体验课"
+    },
+    {
+      "id": "522aaa5b-3dc5-427b-89e7-f136dd9dd994",
+      "startTime": "2026-07-26 10:00",
+      "endTime": "2026-07-26 11:30",
+      "status": "已排课",
+      "studentName": "王有理、艾斯、李鹏昊",
+      "studentNames": [
+        "王有理",
+        "艾斯",
+        "李鹏昊"
+      ],
+      "studentId": "",
+      "studentIds": [
+        "7c610f7c-8139-46ce-90b8-ec9e681741e3",
+        "new-student-9f2faf5f3ee4",
+        "seed-student-042"
+      ],
+      "coach": "杨教练",
+      "venue": "1号场",
+      "courseType": "小班课",
+      "standardCourseType": "初阶训练课体验课/正式课"
+    },
+    {
+      "id": "8c45afc7-eaf0-4af0-84bd-04004e49449c",
+      "startTime": "2026-07-26 12:00",
+      "endTime": "2026-07-26 13:30",
+      "status": "已排课",
+      "studentName": "poppy yu、伊明、张昊",
+      "studentNames": [
+        "poppy yu",
+        "伊明",
+        "张昊"
+      ],
+      "studentId": "",
+      "studentIds": [
+        "05379b34-dc4b-476e-88c7-af248fc6e79f",
+        "ed545b83-cfd0-4d39-894b-d5ddfb7a3b0e",
+        "seed-student-041"
+      ],
+      "coach": "杨教练",
+      "venue": "1号场",
+      "courseType": "小班课",
+      "standardCourseType": "【2.5-3.0】发接发与实战练习"
+    },
+    {
+      "id": "247ef588-fa56-4706-ab2d-6b808bdd2739",
+      "startTime": "2026-07-26 15:00",
+      "endTime": "2026-07-26 16:00",
+      "status": "已排课",
+      "studentName": "笑逐",
+      "studentNames": [
+        "笑逐"
+      ],
+      "studentId": "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486",
+      "studentIds": [
+        "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486"
+      ],
+      "coach": "杨教练",
+      "venue": "2号场",
+      "courseType": "小班课",
+      "standardCourseType": "青少年团课"
+    }
+  ],
+  "createdStudents": [
+    {
+      "id": "repair-student-20260818-aiwei",
+      "name": "🌞艾薇",
+      "sourceLeadId": "1a5a25ea-bcb1-4b38-8f13-58b4172e2ace",
+      "type": "青少年",
+      "campus": "shunyi_mapo"
+    },
+    {
+      "id": "repair-student-20260818-friend",
+      "name": "朋友",
+      "sourceLeadId": "repair-lead-20260818-friend",
+      "type": "青少年",
+      "campus": "shunyi_mapo"
+    }
+  ],
+  "createdLeads": [
+    {
+      "id": "1a5a25ea-bcb1-4b38-8f13-58b4172e2ace",
+      "name": "🌞艾薇",
+      "studentId": "repair-student-20260818-aiwei",
+      "status": "active"
+    },
+    {
+      "id": "repair-lead-20260818-friend",
+      "name": "朋友",
+      "studentId": "repair-student-20260818-friend",
+      "status": "active"
+    }
+  ],
+  "emptyStudentRowsCount": 0,
+  "emptyStudentRows": [],
+  "badXueyuanCount": 0,
+  "badXueyuan": []
+}
