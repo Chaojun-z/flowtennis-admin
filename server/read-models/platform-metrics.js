@@ -991,6 +991,23 @@ function earliestBusinessDateText(...values) {
 }
 
 function leadBusinessDate(row = {}, lead = {}) {
+  const materializedStudentLead = /^lead-from-student-/.test(text(lead.id || lead.leadId || row.sourceLeadId || row.leadId));
+  if (materializedStudentLead) {
+    return earliestBusinessDateText(
+      row.firstTouchAt,
+      row.trialAtRaw,
+      row.trialBookedAt,
+      row.trialAttendedAt,
+      row.courseFirstPurchaseAt,
+      row.conversionAt,
+      lead.firstTouchAt,
+      lead.trialAtRaw,
+      lead.trialBookedAt,
+      lead.trialAttendedAt,
+      lead.courseFirstPurchaseAt,
+      lead.conversionAt
+    );
+  }
   const explicitLeadDate = text(row.leadDate || lead.leadDate || row.leadEnteredAt);
   if (explicitLeadDate) return explicitLeadDate;
   return earliestBusinessDateText(
@@ -1171,9 +1188,9 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       profileNote: visibleLeadProfileNote(lead),
       dealType,
       conversionType: dealType,
-      studentId: realStudentId || (!existing ? text(lifecycle.studentId) : ''),
-      courtId: realCourtId || (!existing ? text(lifecycle.courtId) : ''),
-      membershipAccountId: realMembershipAccountId || (!existing ? text(lifecycle.membershipAccountId) : ''),
+      studentId: realStudentId || text(lifecycle.studentId),
+      courtId: realCourtId || text(lifecycle.courtId),
+      membershipAccountId: realMembershipAccountId || text(lifecycle.membershipAccountId),
       leadDate: leadBusinessDate(lifecycle, lead),
       createdAt: text(lead.createdAt || lifecycle.createdAt || lifecycle.leadDate),
       leadStage,
@@ -1213,7 +1230,22 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
     });
   });
 
-  const result = [...rows.values()];
+  const result = [...rows.values()].filter(row => {
+    if (lifecycleScope !== 'course') return true;
+    const studentStage = text(row.studentStage);
+    const hasCourseEvidence = ['trial', 'formal'].includes(studentStage)
+      || row.hasCourseConversion
+      || row.hasTrialExperience
+      || row.hasCourseStudentEntry
+      || /课程|体验/.test(text(row.dealType))
+      || /课程|体验/.test(text(row.conversionType))
+      || /课程|体验|私教|小班|课包/.test(text(row.demandProduct || row.consultType));
+    const hasBookingEvidence = !!text(row.courtId || row.membershipAccountId)
+      || row.hasBookingConversion
+      || row.hasMembershipConversion
+      || ['booking', 'member'].includes(text(row.courtStage));
+    return hasCourseEvidence || !hasBookingEvidence;
+  });
   return mergeDuplicates ? mergeDuplicateLeadPoolRows(result) : result;
 }
 

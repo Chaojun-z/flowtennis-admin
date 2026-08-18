@@ -636,6 +636,18 @@ function createLeadsRoutes(deps={}){
     return getCachedScan(T_LEAD_FOLLOWUPS,{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]);
   }
 
+  async function readLeadLifecycleFactRows(table){
+    if(!table)return [];
+    if(isLocalPreviewFastMode())return [];
+    if(isProductionRuntime()&&typeof scanFirstRows==='function'){
+      const limit=PRODUCTION_PAGE_READ_LIMITS?.[table]||PRODUCTION_PAGE_READ_LIMITS?.default;
+      return scanFirstRows(table,{limit}).catch(()=>[]);
+    }
+    if(typeof getCachedScan==='function')return getCachedScan(table).catch(()=>[]);
+    if(typeof scan==='function')return scan(table).catch(()=>[]);
+    return [];
+  }
+
   async function applyPersistedLeadSnapshot(lead){
     const leadId=cleanLeadText(lead?.id);
     if(!leadId||!T_LEAD_FOLLOWUPS||typeof scan!=='function'||typeof applyLeadFollowupsSnapshot!=='function')return lead;
@@ -667,7 +679,15 @@ function createLeadsRoutes(deps={}){
       readCachedLeadSourceRows(),
       readLeadFollowupRows().catch(()=>[])
     ]);
-    const [students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=[[],[],[],[],[],[],[]];
+    const [students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
+      readLeadLifecycleFactRows(T_STUDENTS),
+      readLeadLifecycleFactRows(T_PURCHASES),
+      readLeadLifecycleFactRows(T_ENTITLEMENTS),
+      readLeadLifecycleFactRows(T_SCHEDULE),
+      readLeadLifecycleFactRows(T_COURTS),
+      readLeadLifecycleFactRows(T_MEMBERSHIP_ACCOUNTS),
+      readLeadLifecycleFactRows(T_MEMBERSHIP_ORDERS)
+    ]);
     const hiddenLeadIds=hiddenLeadSourceIds(leads);
     let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(visibleLeadSourceRows(leads),followups)),{persist:false});
     let customerLifecycleRows=buildCustomerLifecycleRows({
@@ -680,7 +700,7 @@ function createLeadsRoutes(deps={}){
       membershipAccounts,
       membershipOrders
     });
-    const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows,{persist:false});
+    const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows);
     if(createdLeads.length){
       mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
       customerLifecycleRows=buildCustomerLifecycleRows({

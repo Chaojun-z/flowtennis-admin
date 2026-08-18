@@ -356,9 +356,15 @@ function createCorePageDataRoutes(deps={}){
       if(!fresh&&T_STUDENT_TEACHING_SUMMARY){
         const studentTeachingSummaries=await getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]);
         if(studentTeachingSummaries.length){
-          const scoped=filterLoadAllForUser({studentTeachingSummaries},user);
-          loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:true}).catch(err=>console.warn('[customer-center-list] fact model background refresh failed',err?.message||err));
-          return sendJson(res,buildCustomerCenterListPayload({summaryRows:scoped.studentTeachingSummaries,query}));
+          const factModel=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:true});
+          const teachingData={...factModel.scoped,teachingStudentSummaryRows:factModel.scoped.studentTeachingSummaries};
+          return sendJson(res,buildCustomerCenterPagePayload({
+            customerLifecycleRows:factModel.customerLifecycleRows,
+            teachingData,
+            query,
+            prebuiltTeachingStudentViews:factModel.teachingStudentViews,
+            prebuiltStandardLifecycleMetrics:factModel.standardLifecycleMetrics
+          }));
         }
       }
       const {scoped,customerLifecycleRows}=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:fresh});
