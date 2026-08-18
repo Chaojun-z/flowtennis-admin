@@ -439,7 +439,7 @@
           </view>
         </view>
 
-        <view class="student-detail-card">
+        <view wx:if="{{!selectedStudentDetail.remark.isEmpty}}" class="student-detail-card">
           <view class="student-detail-section-title">
             <view class="student-detail-section-bar"></view>
             <text>学员备注</text>
@@ -453,8 +453,6 @@
           <view class="student-detail-section-title">
             <view class="student-detail-section-bar"></view>
             <text>上课记录</text>
-            <text wx:if="{{selectedStudentDetail.lessonRecordTitleSub}}" class="student-detail-title-sub">{{selectedStudentDetail.lessonRecordTitleSub}}</text>
-            <text wx:if="{{selectedStudentDetail.lessonRecordPreviewSub}}" class="student-detail-title-sub">{{selectedStudentDetail.lessonRecordPreviewSub}}</text>
           </view>
           <view wx:if="{{selectedStudentDetail.hasLessonRecords}}">
             <view class="student-record-list">
@@ -462,8 +460,8 @@
                 <view class="student-record-main">
                   <view class="student-record-head">
                     <text class="student-record-time">{{item.time}}</text>
-                    <text class="detail-inline-tag {{item.courseTypeClass}}">{{item.courseType}}</text>
                     <text class="detail-inline-tag {{item.statusClass}}">{{item.status}}</text>
+                    <text wx:if="{{item.feedbackStatusText}}" class="detail-inline-tag {{item.feedbackStatusClass}}">{{item.feedbackStatusText}}</text>
                   </view>
                   <view class="student-record-meta">
                     <block wx:for="{{item.metaParts}}" wx:key="*this" wx:for-item="metaPart">

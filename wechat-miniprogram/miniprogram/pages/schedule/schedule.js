@@ -916,6 +916,23 @@ function firstNonEmpty(...values) {
   return '';
 }
 
+function studentDetailLessonRecordHasFeedback(row = {}) {
+  const status = firstNonEmpty(row.feedbackStatus, row.feedbackState, row.feedbackStatusText).toLowerCase();
+  if (/已.*反馈|已.*填写|filled|done|completed|true/.test(status)) return true;
+  if (/未|待|missing|false/.test(status)) return false;
+  if (row.hasFeedback === true || String(row.hasFeedback || '').toLowerCase() === 'true') return true;
+  if (row.hasFeedback === false || String(row.hasFeedback || '').toLowerCase() === 'false') return false;
+  return !!firstNonEmpty(
+    row.feedbackId,
+    row.feedbackAt,
+    row.feedbackCreatedAt,
+    row.practicedToday,
+    row.knowledgePoint,
+    row.nextTraining,
+    row.feedbackSummary
+  );
+}
+
 function buildNoticeField(content = '', useBox = false) {
   const text = String(content || '').trim();
   return {
@@ -1721,6 +1738,7 @@ function studentDetailLessonRecordsFromUnifiedRows(detailLessonRecordRows = []) 
       const sortTime = firstNonEmpty(row.sortTime, row.time, row.startTime, row.endTime, row.relatedDate, row.createdAt);
       const courseType = firstNonEmpty(row.courseType, row.standardCourseType, row.packageName, row.productName, row.className, row.courseName, '课程');
       const status = firstNonEmpty(row.statusText, row.status, '已结束');
+      const hasFeedback = studentDetailLessonRecordHasFeedback(row);
       return {
         scheduleId: firstNonEmpty(row.scheduleId, row.id),
         time,
@@ -1729,10 +1747,13 @@ function studentDetailLessonRecordsFromUnifiedRows(detailLessonRecordRows = []) 
         courseTypeClass: /体验/.test(courseType) ? 'detail-tag-trial' : 'detail-tag-private',
         status,
         statusClass: /待|进行/.test(status) ? 'detail-tag-success' : 'detail-tag-muted',
+        feedbackStatusText: hasFeedback ? '' : '未反馈',
+        feedbackStatusClass: 'detail-tag-warning',
         lessonUnits: Number(row.lessonUnits || row.completedLessons || row.lessonCount || row.consumedLessons) || 1,
         metaParts: [
           row.venue || row.sourceVenue || row.courtName || row.court || row.locationText,
-          row.coach || row.coachName || row.primaryCoach
+          row.coach || row.coachName || row.primaryCoach,
+          courseType
         ].filter(Boolean)
       };
     })
@@ -1754,8 +1775,8 @@ function studentDetailLessonRecordView(detail = {}, expanded = false) {
     showAllLessonRecords: expanded,
     lessonRecordsShown: expanded ? lessonRecords : lessonRecords.slice(0, STUDENT_DETAIL_RECORD_PREVIEW_COUNT),
     hasMoreLessonRecords: lessonRecords.length > STUDENT_DETAIL_RECORD_PREVIEW_COUNT,
-    lessonRecordTitleSub: lessonRecordCountText(detail.lessonRecordCount || lessonRecords.length, detail.lessonUnitsCompleted || 0),
-    lessonRecordPreviewSub: studentDetailLessonRecordTitle(lessonRecords.length, expanded),
+    lessonRecordTitleSub: '',
+    lessonRecordPreviewSub: '',
     lessonRecordToggleText: expanded ? '收起上课记录' : '查看全部上课记录'
   };
 }
@@ -2277,7 +2298,8 @@ Page({
   openDetail(event) {
     const id = event.currentTarget.dataset.id;
     if (!id) return;
-    const selectedClass = this.data.schedule.find(item => String(item.id) === String(id));
+    const selectedClass = (this.data.schedule || []).find(item => String(item.id) === String(id))
+      || (this.data.studentScheduleRaw || []).find(item => String(item.id) === String(id));
     if (!selectedClass) return;
     if (this.data.isTimetable) this.preserveTimetableScroll();
     this.setData({

@@ -619,6 +619,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
   const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
   const schedulesById = new Map((data.schedule || []).map(row => [text(row.id), row]));
+  const feedbackScheduleIds = new Set((data.feedbacks || []).map(row => text(row.scheduleId)).filter(Boolean));
   const scheduleRows = data.schedule || [];
   const studentsById = new Map((data.students || []).map(row => [text(row.id || row.studentId), row]));
   const rowsByStudent = new Map();
@@ -636,6 +637,13 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     rows.push(row);
     rowsByStudent.set(id, rows);
   };
+  const lessonHasFeedback = (scheduleId, row = {}) => !!(
+    feedbackScheduleIds.has(text(scheduleId))
+    || row.feedbackId
+    || row.feedbackAt
+    || row.feedbackStatus === '已反馈'
+    || row.hasFeedback === true
+  );
 
   (data.entitlementLedger || [])
     .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0)
@@ -662,8 +670,10 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
         }));
         const fallbackTime = ledgerFallbackDateTime(row);
         const sortTime = text(schedule.startTime || fallbackTime || row.relatedDate || row.scheduleTime || row.createdAt);
+        const scheduleId = text(row.scheduleId || schedule.id);
         push(studentId, {
           kind: 'ledger',
+          scheduleId,
           sortTime,
           time: dateTimeText(schedule, fallbackTime || row.relatedDate || row.scheduleTime || row.createdAt),
           packageName: teachingPackageName(entitlement, purchase),
@@ -678,6 +688,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           campus: text(schedule.campus || row.campus || entitlement.campus),
           venue: text(schedule.venue || row.venue || row.sourceVenue || row.courtName || row.court),
           coach: text(schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach),
+          hasFeedback: lessonHasFeedback(scheduleId, schedule),
           lessonDelta: Number(row.lessonDelta) || 0,
           unit: packageUnitLabel(entitlement),
           reason: text(row.reason || row.notes)
@@ -693,8 +704,10 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean).forEach(studentId => {
         if (ledgerScheduleStudentKeys.has(`${studentId}|${text(row.id)}`)) return;
         if (ledgerScheduleFactKeys.has(lessonFactKey(studentId, row))) return;
+        const scheduleId = text(row.id);
         push(studentId, {
           kind: 'schedule',
+          scheduleId,
           sortTime,
           time: dateTimeText(row),
           packageName: '',
@@ -703,6 +716,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           campus: text(row.campus || row.campusName),
           venue: text(row.venue || row.court),
           coach: text(row.coach || row.coachName),
+          hasFeedback: lessonHasFeedback(scheduleId, row),
           lessonDelta: -Math.abs(scheduleLessonUnits(row)),
           unit: '节',
           reason: text(row.notes)

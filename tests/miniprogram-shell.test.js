@@ -144,7 +144,11 @@ assert.match(scheduleWxml, /feedback-course-time[\s\S]*selectedClassDetail\.basi
 assert.match(scheduleWxml, /scroll-top="\{\{feedbackSheetScrollTop\}\}"/, 'feedback sheet should reset its scroll position when opened from any entry');
 assert.match(scheduleWxml, /今天练习了/, 'feedback sheet first field should use the requested label copy');
 assert.match(scheduleWxml, /poster-sheet[\s\S]*生成反馈海报[\s\S]*posterStyles[\s\S]*feedbackPosterCanvas[\s\S]*手机端可直接长按海报保存[\s\S]*保存相册[\s\S]*分享海报/, 'poster sheet should render the real six-template canvas poster shell');
-assert.match(scheduleWxml, /student-detail-sheet[\s\S]*学员详情[\s\S]*基础信息[\s\S]*累计上课[\s\S]*selectedStudentDetail\.basic\.cumulative[\s\S]*课包进度[\s\S]*selectedStudentDetail\.basic\.packageProgress[\s\S]*最近上课[\s\S]*selectedStudentDetail\.basic\.recentLesson[\s\S]*学员备注[\s\S]*上课记录[\s\S]*selectedStudentDetail\.lessonRecordTitleSub[\s\S]*查看全部上课记录[\s\S]*关闭/, 'student detail sheet should render student metrics inside basic info and lesson history expansion entry');
+assert.match(scheduleWxml, /student-detail-sheet[\s\S]*学员详情[\s\S]*基础信息[\s\S]*累计上课[\s\S]*selectedStudentDetail\.basic\.cumulative[\s\S]*课包进度[\s\S]*selectedStudentDetail\.basic\.packageProgress[\s\S]*最近上课[\s\S]*selectedStudentDetail\.basic\.recentLesson[\s\S]*学员备注[\s\S]*上课记录[\s\S]*查看全部上课记录[\s\S]*关闭/, 'student detail sheet should render student metrics inside basic info and lesson history expansion entry');
+assert.match(scheduleWxml, /wx:if="\{\{!selectedStudentDetail\.remark\.isEmpty\}\}"[\s\S]*学员备注/, 'student detail should hide the remark section when no remark exists');
+assert.doesNotMatch(scheduleWxml, /selectedStudentDetail\.lessonRecordTitleSub|selectedStudentDetail\.lessonRecordPreviewSub/, 'student detail lesson records should not render count or preview subtitles');
+assert.doesNotMatch(scheduleWxml, /student-record-head[\s\S]*item\.courseType[\s\S]*item\.status/, 'student lesson records should not render course type as a separate header tag');
+assert.match(scheduleWxml, /student-record-head[\s\S]*item\.status[\s\S]*item\.feedbackStatusText/, 'student lesson record tags should show status before pending feedback');
 assert.doesNotMatch(scheduleWxml, /教练视角摘要/, 'student detail sheet should no longer render the coach perspective summary card');
 assert.match(scheduleWxml, /shift-detail-sheet[\s\S]*班级详情[\s\S]*基础信息[\s\S]*班级概览[\s\S]*班级备注[\s\S]*最近一次排课[\s\S]*关闭/, 'shift detail sheet should render the mapped class profile sections');
 assert.match(scheduleWxml, /wx:elif="\{\{!shiftsList\.length\}\}"[\s\S]*暂无班次/, 'shift page should render an empty state instead of mock cards when classes are empty');
@@ -234,6 +238,9 @@ assert.match(scheduleJs, /recentLesson:\s*studentDetailRecentLessonText\(student
 assert.match(scheduleJs, /function studentDetailLessonRecordsFromUnifiedRows[\s\S]*detailLessonRecordRows/, 'student detail should normalize lesson records from the unified teaching read model');
 assert.match(scheduleJs, /const lessonRecords = studentDetailLessonRecordsFromUnifiedRows\(student\.detailLessonRecordRows\|\|\[\]\)/, 'student detail must use unified read model lesson records instead of local schedule and ledger reconstruction');
 assert.doesNotMatch(scheduleJs.match(/function buildStudentDetailData\(student, context = \{\}\)[\s\S]*?\n\}/)[0], /buildStudentLessonRecords\(/, 'student detail must not privately rebuild lesson records from mini program schedule or ledger data');
+assert.match(scheduleJs, /function studentDetailLessonRecordsFromUnifiedRows[\s\S]*metaParts:\s*\[[\s\S]*courseType[\s\S]*\]\.filter\(Boolean\)/, 'student detail lesson record meta should include course type after venue and coach');
+assert.match(scheduleJs, /feedbackStatusText:\s*hasFeedback \? '' : '未反馈'/, 'student detail lesson records should mark only missing feedback');
+assert.match(openDetailBody, /this\.data\.studentScheduleRaw/, 'student lesson records should open schedule detail from the historical student schedule pool when needed');
 assert.match(scheduleJs, /return `\$\{recordCount\}\/\$\{lessonUnitsText\(lessonUnits\)\}`/, 'student list compact lesson summary should render records before lesson units');
 assert.match(scheduleJs, /function studentPackageListText[\s\S]*return `\$\{lessonUnitsText\(summary\.remaining\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student list package balance should render remaining over total without extra text');
 assert.match(scheduleJs, /function studentPackageBalanceText[\s\S]*return `\$\{lessonUnitsText\(summary\.remaining\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student package balance should render remaining over total');
@@ -649,6 +656,7 @@ assert.match(scheduleWxss, /\.schedule-create-sheet\s*\{[\s\S]*height:\s*calc\(1
 assert.match(scheduleWxss, /\.cancel-schedule-sheet\s*\{[\s\S]*height:\s*calc\(100vh - 320rpx\);/, 'native cancel schedule sheet should use a shorter lower sheet');
 assert.match(scheduleWxss, /\.shift-empty\s*\{[\s\S]*height:\s*160px;[\s\S]*border-radius:\s*16px;/, 'shift empty state should use the new native empty panel instead of mock cards');
 assert.match(scheduleWxss, /\.student-detail-card\s*\{[\s\S]*padding:\s*40rpx;[\s\S]*border-radius:\s*32rpx;[\s\S]*background:\s*#fff;/, 'student detail cards should match the white rounded mapped sections');
+assert.match(scheduleWxss, /\.student-detail-value,\s*\n\.student-detail-helper\s*\{[\s\S]*font-size:\s*13px;/, 'student detail field values should use the same font size as labels');
 assert.match(scheduleWxss, /\.student-detail-btn\s*\{[\s\S]*height:\s*96rpx;[\s\S]*border-radius:\s*48rpx;[\s\S]*background:\s*#f8fafc;/, 'student detail close button should match the bottom pill token');
 assert.match(scheduleWxss, /\.student-record-toggle\s*\{[\s\S]*margin-top:\s*24rpx;[\s\S]*color:\s*#2b3a55;/, 'student detail should style the expand-all lesson history action as a clear inline button');
 assert.match(scheduleWxss, /\.student-strong\s*\{[\s\S]*font-weight:\s*400;/, 'student list lesson and package values should use regular weight');
