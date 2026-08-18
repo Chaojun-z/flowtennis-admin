@@ -60,6 +60,7 @@ assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sha
 assert.deepStrictEqual(sync.parseStudentCell('misha 黄总（2）').names, ['misha', '黄总'], 'confirmed Misha and Huang pair should be parsed as two students');
 assert.deepStrictEqual(sync.parseStudentCell('黄总 misha（4）').names, ['misha', '黄总'], 'confirmed Misha and Huang pair should also support reversed order');
 assert.deepStrictEqual(sync.parseStudentCell('王老板、王老板孩子').names, ['王老板'], 'Wang boss family course should use one canonical student record');
+assert.deepStrictEqual(sync.parseStudentCell('chris').names, ['chris'], 'Chris raw name should remain parseable before alias resolution');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:00' }, '2026-07-20 12:01'), false, 'courses already started before baseline should be ignored');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:30' }, '2026-07-20 12:01'), true, 'future courses after baseline should be sync candidates');
 assert.strictEqual(sync.validDateKey('2026-07-01'), '2026-07-01', 'valid history date query should be accepted');
@@ -114,6 +115,65 @@ const beginnerSpecialCourses = sync.parseFeishuScheduleRows({ values: beginnerSp
 assert.strictEqual(beginnerSpecialCourses[0].course.courseType, '专项课', 'beginner mixed training should map to special course');
 assert.strictEqual(beginnerSpecialCourses[0].course.skillLevelMin, '零基础', 'beginner special course should use zero-basics level');
 assert.strictEqual(beginnerSpecialCourses[0].course.specialTopic, '初阶专项课', 'beginner special course should use the standard topic');
+
+const confirmedAugustVenueCorrectionValues = [
+  ['时间', null, null, '岳克舟', null, null, null, '杨', null, null, null, '林铭', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员', '课程', '场馆', '场地号', '学员', '课程', '场馆', '场地号', '学员'],
+  ['2026-08-18', '二', '11:00-12:00', '成人私教【正式】', '马坡室内', '3号', '王先生（非黄1）', '成人私教【正式】', '马坡室内', '3号', '甄女士（非黄1）', '青少年私教【正式】', '马坡室内', '3号', '子涵（4）'],
+  ['2026-08-21', '五', '11:00-12:00', null, null, null, null, null, null, null, null, '成人私教【正式】', '马坡室内', '3号', '史多灏（8）']
+];
+const confirmedAugustVenueCorrectionCourses = sync.parseFeishuScheduleRows({ values: confirmedAugustVenueCorrectionValues, sheetId: 'i1nPU2', sheetTitle: '8.17-8.23' });
+assert.strictEqual(confirmedAugustVenueCorrectionCourses.find(row => row.studentText.includes('王先生')).venue, '1号场', 'confirmed Wang 8/18 lesson should use court 1');
+assert.strictEqual(confirmedAugustVenueCorrectionCourses.find(row => row.studentText.includes('甄女士')).venue, '2号场', 'confirmed Zhen 8/18 lesson should use court 2');
+assert.strictEqual(confirmedAugustVenueCorrectionCourses.find(row => row.studentText.includes('史多灏')).venue, '4号场', 'confirmed Shi 8/21 lesson should use court 4');
+
+const confirmedMuziBorrowCourtValues = [
+  ['时间', null, null, 'siren', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
+  ['2026-08-08', '六', '15:00-16:00', '成人私教【正式】', '马坡室内', '1号', '朝珺木子']
+];
+const confirmedMuziBorrowCourtCourses = sync.parseFeishuScheduleRows({ values: confirmedMuziBorrowCourtValues, sheetId: 'EGRknT', sheetTitle: '8.3-8.9' });
+assert.strictEqual(confirmedMuziBorrowCourtCourses[0].coachName, '朝珺教练', 'confirmed Muzi note should switch the coach to Chaojun');
+assert.deepStrictEqual(confirmedMuziBorrowCourtCourses[0].studentNames, ['木子'], 'confirmed Muzi note should use Muzi as the student');
+assert.strictEqual(confirmedMuziBorrowCourtCourses[0].allowLinkedVenueConflict, true, 'confirmed Muzi borrowed court should be allowed as linked venue conflict');
+const confirmedMuziBorrowCourtPlan = sync.buildDryRunPlan({
+  feishuCourses: confirmedMuziBorrowCourtCourses,
+  syncRows: [],
+  schedules: [{ id: 'sch-sister', startTime: '2026-08-08 14:30', endTime: '2026-08-08 16:00', coach: 'Siren 教练', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', experienceType: '', studentIds: ['stu-sister'], studentName: '小土豆的姐姐', status: '已排课' }],
+  students: [{ id: 'stu-muzi', name: '木子', primaryCoach: '朝珺教练' }],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练' }],
+  users: [],
+  entitlements: []
+});
+assert.strictEqual(confirmedMuziBorrowCourtPlan.summary.create, 1, 'confirmed Muzi borrowed court should create a linked schedule despite venue overlap');
+assert.strictEqual(sync.buildScheduleBody(confirmedMuziBorrowCourtPlan.actions[0].candidate).allowLinkedVenueConflict, true, 'linked venue flag should be persisted on Muzi schedule');
+
+const confirmedJerryWifeAceValues = [
+  ['时间', null, null, '岳克舟', null, null, null],
+  ['日期', '星期', '时段', '课程', '场馆', '场地号', '学员'],
+  ['2026-08-16', '日', '10:00-11:30', '初阶训练课体验课/正式课', '马坡室内', '1号', 'Jerry、Jerry、艾斯']
+];
+const confirmedJerryWifeAceCourses = sync.parseFeishuScheduleRows({ values: confirmedJerryWifeAceValues, sheetId: 'yGW4Do', sheetTitle: '8.10-8.16' });
+assert.deepStrictEqual(confirmedJerryWifeAceCourses[0].studentNames, ['Jerry', 'Jerry 老婆', '艾斯'], 'confirmed repeated Jerry cell should mean Jerry, Jerry wife and Ace');
+const confirmedJerryWifeAcePlan = sync.buildDryRunPlan({
+  feishuCourses: confirmedJerryWifeAceCourses,
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-jerry', name: 'Jerry' },
+    { id: 'stu-jerry-wife', name: 'Jerry 老婆' },
+    { id: 'stu-ace', name: '艾斯' }
+  ],
+  coaches: [{ id: 'coach-yue', name: '岳克舟教练' }],
+  users: [],
+  entitlements: []
+});
+assert.strictEqual(confirmedJerryWifeAcePlan.summary.create, 1, 'confirmed Jerry wife Ace class should be created as a direct paid schedule');
+const confirmedJerryWifeAceBody = sync.buildScheduleBody(confirmedJerryWifeAcePlan.actions[0].candidate);
+assert.deepStrictEqual(confirmedJerryWifeAceBody.studentIds, ['stu-jerry', 'stu-jerry-wife', 'stu-ace'], 'confirmed direct paid group should keep all three students');
+assert.strictEqual(confirmedJerryWifeAceBody.settlementType, 'direct', 'confirmed Jerry wife Ace class should use direct settlement');
+assert.strictEqual(confirmedJerryWifeAceBody.payMethod, '微信', 'confirmed Jerry wife Ace class should keep WeChat payment');
+assert.strictEqual(confirmedJerryWifeAceBody.paidAmount, 594, 'confirmed Jerry wife Ace class should keep total paid amount');
 
 const blankContinuationValues = [
   ['时间', null, null, '杨教练', null, null, null],
@@ -1383,6 +1443,85 @@ const confirmedAliasPlan = sync.buildDryRunPlan({
 assert.strictEqual(confirmedAliasPlan.summary.create, 1, 'confirmed student alias should resolve 锤锤 to 是锤锤呀');
 assert.strictEqual(confirmedAliasPlan.actions[0].candidate.resolvedStudents[0].name, '是锤锤呀', 'confirmed alias should keep canonical student record');
 assert.strictEqual(sync.buildScheduleBody(confirmedAliasPlan.actions[0].candidate).standardCourseType, '专项课', 'special schedule body should persist standard special course type');
+
+const chrisAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    sourceKey: 'chris-alias-key',
+    startTime: '2026-08-08 17:30',
+    endTime: '2026-08-08 18:30',
+    coachName: '林铭',
+    studentText: 'chris',
+    studentNames: ['chris'],
+    durationMinutes: 60,
+    lessonCount: 1,
+    course: { ok: true, courseType: '体验课', experienceType: '成人', audience: '成人', isTrial: true },
+    campus: 'shunyi_mapo',
+    venue: '3号场'
+  }],
+  syncRows: [],
+  schedules: [{ id: 'sch-christine', startTime: '2026-08-08 17:30', endTime: '2026-08-08 18:30', coach: '林铭教练', campus: 'shunyi_mapo', venue: '3号场', courseType: '体验课', experienceType: '成人', studentIds: ['stu-christine'], studentName: 'CHRISTINE', status: '已排课' }],
+  students: [{ id: 'stu-christine', name: 'CHRISTINE', primaryCoach: '林铭教练' }],
+  coaches: [],
+  users: []
+});
+assert.strictEqual(chrisAliasPlan.summary.bindExisting, 1, 'confirmed chris alias should bind the existing CHRISTINE schedule');
+assert.strictEqual(chrisAliasPlan.summary.notifyError, 0, 'confirmed chris alias should not create a conflict question');
+
+const yangZitianBaoHongPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    sourceKey: 'yang-zitian-baohong-key',
+    startTime: '2026-08-14 11:00',
+    endTime: '2026-08-14 12:00',
+    coachName: '林铭',
+    studentText: '杨梓天（6）',
+    studentNames: ['杨梓天'],
+    lessonIndex: 6,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false },
+    campus: 'shunyi_mapo',
+    venue: '1号场'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-yang-zitian', name: '杨梓天', status: 'merged', mergedIntoStudentId: 'stu-baohong', primaryCoach: '林铭教练' },
+    { id: 'stu-baohong', name: '宝红 ～', primaryCoach: '林铭教练' }
+  ],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-baohong', studentId: 'stu-baohong', studentName: '宝红 ～', courseType: '私教课', totalLessons: 10, usedLessons: 5, remainingLessons: 5, status: 'active' }]
+});
+assert.strictEqual(yangZitianBaoHongPlan.summary.create, 1, 'confirmed Yang Zitian lessons should use Bao Hong package automatically');
+const yangZitianBaoHongBody = sync.buildScheduleBody(yangZitianBaoHongPlan.actions[0].candidate);
+assert.deepStrictEqual(yangZitianBaoHongBody.entitlementIds, ['ent-baohong'], 'Yang Zitian should consume Bao Hong entitlement');
+assert.match(yangZitianBaoHongBody.notes, /杨梓天使用宝红课包/, 'Yang Zitian package-owner note should be saved');
+
+const sameSlotCourseTextMismatchPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    sourceKey: 'same-slot-course-text-mismatch-key',
+    startTime: '2026-08-02 14:00',
+    endTime: '2026-08-02 16:00',
+    coachName: '刘润扬',
+    studentText: '艾斯、Jerry、Choli、柠檬草',
+    studentNames: ['艾斯', 'Jerry', 'Choli', '柠檬草'],
+    durationMinutes: 120,
+    lessonCount: 2,
+    course: { ok: true, courseType: '专项课', experienceType: '', audience: '', isTrial: false, specialTopic: '初阶专项课' },
+    campus: 'shunyi_mapo',
+    venue: '3号场'
+  }],
+  syncRows: [],
+  schedules: [{ id: 'sch-same-slot', startTime: '2026-08-02 14:00', endTime: '2026-08-02 16:00', coach: '刘润扬教练', campus: 'shunyi_mapo', venue: '3号场', courseType: '体验课', experienceType: '成人', studentIds: ['stu-ace', 'stu-jerry', 'stu-choli', 'stu-lemongrass'], studentName: '艾斯、Jerry、Choli、柠檬草', status: '已排课' }],
+  students: [
+    { id: 'stu-ace', name: '艾斯', primaryCoach: '刘润扬教练' },
+    { id: 'stu-jerry', name: 'Jerry', primaryCoach: '刘润扬教练' },
+    { id: 'stu-choli', name: 'Choli', primaryCoach: '刘润扬教练' },
+    { id: 'stu-lemongrass', name: '柠檬草', primaryCoach: '刘润扬教练' }
+  ],
+  coaches: [],
+  users: []
+});
+assert.strictEqual(sameSlotCourseTextMismatchPlan.summary.bindExisting, 1, 'same time coach venue and students should bind even when course text differs');
+assert.strictEqual(sameSlotCourseTextMismatchPlan.summary.notifyError, 0, 'same course with text mismatch should not ask for venue conflict confirmation');
 
 const chenxiFriendPlan = sync.buildDryRunPlan({
   feishuCourses: [{
