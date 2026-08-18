@@ -1,0 +1,159 @@
+{
+  "generatedAt": "2026-08-18T03:47:03.336Z",
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "checkedSchedules": [
+    {
+      "id": "cxe-thirdparty-202606-schedule-4a5f01e4a5ca",
+      "startTime": "2026-06-06 14:00",
+      "endTime": "2026-06-06 16:00",
+      "status": "已排课",
+      "studentName": "桃子（曹沐言）、蜜桃（张爱崴）、胡可航（航航）、显峰（京长发，鑫长发）",
+      "studentNames": [
+        "桃子（曹沐言）",
+        "蜜桃（张爱崴）",
+        "胡可航（航航）",
+        "显峰（京长发，鑫长发）"
+      ],
+      "studentId": "",
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "9fdfffe7-3607-4aae-ae63-462d77f99283",
+        "19d5092f-cf4b-41a5-82a4-e2aa8d27803a",
+        "repair-student-20260818-ecc8a9dd67ec"
+      ],
+      "sourceLeadId": "",
+      "sourceLeadName": "桃子（曹沐言）、蜜桃（张爱崴）、胡可航（航航）、显峰（京长发，鑫长发）",
+      "courseType": "小班课",
+      "standardCourseType": "青少年小班课/训练营"
+    },
+    {
+      "id": "40f7ecf9-f380-4863-aaea-80a82374019e",
+      "startTime": "2026-07-11 13:00",
+      "endTime": "2026-07-11 14:00",
+      "status": "已排课",
+      "studentName": "白沐凡",
+      "studentNames": [
+        "白沐凡"
+      ],
+      "studentId": "repair-student-20260818-daf2aa567254",
+      "studentIds": [
+        "repair-student-20260818-daf2aa567254"
+      ],
+      "sourceLeadId": "repair-lead-20260818-daf2aa567254",
+      "sourceLeadName": "白沐凡",
+      "courseType": "私教课",
+      "standardCourseType": "私教课"
+    },
+    {
+      "id": "9f62c6d1-59d9-4f9a-9d47-0118d03a0b1e",
+      "startTime": "2026-06-26 14:00",
+      "endTime": "2026-06-26 15:00",
+      "status": "已排课",
+      "studentName": "小白",
+      "studentNames": [
+        "小白"
+      ],
+      "studentId": "repair-student-20260818-9d5024733894",
+      "studentIds": [
+        "repair-student-20260818-9d5024733894"
+      ],
+      "sourceLeadId": "repair-lead-20260818-9d5024733894",
+      "sourceLeadName": "小白",
+      "courseType": "私教课",
+      "standardCourseType": "私教课"
+    },
+    {
+      "id": "da991c16-ad2b-4ae4-9a94-d0d6a84881d8",
+      "startTime": "2026-06-10 19:00",
+      "endTime": "2026-06-10 20:00",
+      "status": "已排课",
+      "studentName": "李俊泽",
+      "studentNames": [
+        "李俊泽"
+      ],
+      "studentId": "seed-student-044",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "sourceLeadId": "lead-from-student-seed-student-044",
+      "sourceLeadName": "李俊泽",
+      "courseType": "私教课",
+      "standardCourseType": "私教课"
+    },
+    {
+      "id": "f8b6414a-ae3b-4ea4-affa-ac1934288cdc",
+      "startTime": "2026-04-25 14:00",
+      "endTime": "2026-04-25 18:00",
+      "status": "已排课",
+      "studentName": "yx",
+      "studentNames": [
+        "yx"
+      ],
+      "studentId": "349a719a-d92e-405e-b38a-626ae3a58365",
+      "studentIds": [
+        "349a719a-d92e-405e-b38a-626ae3a58365"
+      ],
+      "sourceLeadId": "lead-from-student-349a719a-d92e-405e-b38a-626ae3a58365",
+      "sourceLeadName": "yx",
+      "courseType": "私教课",
+      "standardCourseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-schedule-141-4356c920dd50",
+      "startTime": "2026-07-15 19:00",
+      "endTime": "2026-07-15 21:00",
+      "status": "已排课",
+      "studentName": "理想团课",
+      "studentNames": [
+        "理想团课"
+      ],
+      "studentId": "student-ideal-group-enterprise",
+      "studentIds": [
+        "student-ideal-group-enterprise"
+      ],
+      "sourceLeadId": "",
+      "sourceLeadName": "理想团课",
+      "courseType": "小班课",
+      "standardCourseType": "理想团课"
+    },
+    {
+      "id": "schedule-ideal-group-20260811-1900",
+      "startTime": "2026-08-11 19:00",
+      "endTime": "2026-08-11 21:00",
+      "status": "已排课",
+      "studentName": "理想团课",
+      "studentNames": [
+        "理想团课"
+      ],
+      "studentId": "student-ideal-group-enterprise",
+      "studentIds": [
+        "student-ideal-group-enterprise"
+      ],
+      "sourceLeadId": "",
+      "sourceLeadName": "理想团课",
+      "courseType": "小班课",
+      "standardCourseType": "理想团课"
+    }
+  ],
+  "xianfengStudent": {
+    "id": "repair-student-20260818-ecc8a9dd67ec",
+    "name": "显峰（京长发，鑫长发）",
+    "sourceLeadId": "3321cba5-febc-4c86-9186-d5e8a8205733",
+    "type": "青少年",
+    "campus": "shunyi_mapo"
+  },
+  "xianfengLead": {
+    "id": "3321cba5-febc-4c86-9186-d5e8a8205733",
+    "name": "显峰（京长发，鑫长发）",
+    "studentId": "repair-student-20260818-ecc8a9dd67ec",
+    "status": "active"
+  },
+  "remainingRiskCount": 0,
+  "remainingRisks": []
+}
