@@ -1,0 +1,4162 @@
+{
+  "generatedAt": "2026-08-18T03:05:57.954Z",
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "activeSchedules": 1554,
+  "courseNameInStudentCount": 0,
+  "courseNameInStudent": [],
+  "obviousBadNameCount": 19,
+  "obviousBadName": [
+    {
+      "id": "02c79e1d-b581-4d05-b6bc-0da1baa0ca83",
+      "startTime": "2026-06-03 07:00",
+      "endTime": "2026-06-03 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "065174fd-7c83-4282-a44f-26c8c8c70de9",
+      "startTime": "2026-04-29 07:00",
+      "endTime": "2026-04-29 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "094ad321-eac6-4b09-a031-645fa81d43f3",
+      "startTime": "2026-05-20 07:00",
+      "endTime": "2026-05-20 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "3d4b2856-6107-4f42-8b6d-4690d9c88f32",
+      "startTime": "2026-05-27 07:00",
+      "endTime": "2026-05-27 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "40f7ecf9-f380-4863-aaea-80a82374019e",
+      "startTime": "2026-07-11 13:00",
+      "endTime": "2026-07-11 14:00",
+      "studentName": "白沐凡 私教课",
+      "studentIds": [
+        "4ffe9196-2f2b-495e-aff5-2ec7b2d80ed3"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课",
+      "standardCourseType": "私教课",
+      "bad": [
+        "私教课"
+      ]
+    },
+    {
+      "id": "42c2c5bb-0ec7-4a0e-9320-db748d6a55a7",
+      "startTime": "2026-05-13 07:00",
+      "endTime": "2026-05-13 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "4fa2e030-6f39-4003-b943-254bb2069e01",
+      "startTime": "2026-06-17 07:00",
+      "endTime": "2026-06-17 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "550c6801-86a0-4a7f-a52f-39a1204cb230",
+      "startTime": "2026-06-10 07:00",
+      "endTime": "2026-06-10 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "5f33f284-b491-4feb-8610-de94faf5ebd7",
+      "startTime": "2026-04-22 07:00",
+      "endTime": "2026-04-22 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国网北区 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "970f61cc-bc0a-4b35-8080-fbe774915eef",
+      "startTime": "2026-06-24 07:00",
+      "endTime": "2026-06-24 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "9f62c6d1-59d9-4f9a-9d47-0118d03a0b1e",
+      "startTime": "2026-06-26 14:00",
+      "endTime": "2026-06-26 15:00",
+      "studentName": "小白 私教课",
+      "studentIds": [
+        "4ffe9196-2f2b-495e-aff5-2ec7b2d80ed3"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课",
+      "standardCourseType": "私教课",
+      "bad": [
+        "私教课"
+      ]
+    },
+    {
+      "id": "a37a2c33-54fe-4cce-bd15-a94d54b5dc0e",
+      "startTime": "2026-04-17 13:00",
+      "endTime": "2026-04-17 14:00",
+      "studentName": "私教课（140+300）",
+      "studentIds": [
+        "50a1e5a9-8089-4b8e-a7a1-93c323c65f04"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课",
+      "standardCourseType": "私教课",
+      "bad": [
+        "私教课",
+        "私教课（"
+      ]
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-4a5f01e4a5ca",
+      "startTime": "2026-06-06 14:00",
+      "endTime": "2026-06-06 16:00",
+      "studentName": "桃子、蜜桃（9）+航航（2）+显峰孩子体验课",
+      "studentNames": [
+        "桃子",
+        "蜜桃",
+        "航航",
+        "显峰孩子"
+      ],
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "9fdfffe7-3607-4aae-ae63-462d77f99283"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课",
+      "standardCourseType": "青少年小班课/训练营",
+      "bad": [
+        "体验课"
+      ]
+    },
+    {
+      "id": "cxe-thirdparty-schedule-141-4356c920dd50",
+      "startTime": "2026-07-15 19:00",
+      "endTime": "2026-07-15 21:00",
+      "studentName": "理想团课",
+      "studentNames": [
+        "理想团课"
+      ],
+      "studentIds": [],
+      "coach": "杨教练",
+      "venue": "4号场",
+      "courseType": "小班课",
+      "standardCourseType": "理想团课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "da991c16-ad2b-4ae4-9a94-d0d6a84881d8",
+      "startTime": "2026-06-10 19:00",
+      "endTime": "2026-06-10 20:00",
+      "studentName": "李俊泽私教课（免费）",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "coach": "朝珺教练",
+      "venue": "3号场",
+      "courseType": "私教课",
+      "standardCourseType": "私教课",
+      "bad": [
+        "私教课",
+        "私教课（",
+        "免费"
+      ]
+    },
+    {
+      "id": "f116428b-2f21-4554-a2c7-8502921f5dac",
+      "startTime": "2026-06-11 19:00",
+      "endTime": "2026-06-11 21:00",
+      "studentName": "理想团课",
+      "studentIds": [
+        "seed-student-002",
+        "seed-student-003"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课",
+      "standardCourseType": "成人私教【正式】",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "f8b6414a-ae3b-4ea4-affa-ac1934288cdc",
+      "startTime": "2026-04-25 14:00",
+      "endTime": "2026-04-25 18:00",
+      "studentName": "yx 静怡 私教课",
+      "studentIds": [
+        "ef3cd435-4836-4b3e-9227-de7e32a3c8a1"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课",
+      "standardCourseType": "私教课",
+      "bad": [
+        "私教课"
+      ]
+    },
+    {
+      "id": "fae9bad5-1c74-47b4-a49f-d7f9e384ffb0",
+      "startTime": "2026-05-06 07:00",
+      "endTime": "2026-05-06 09:00",
+      "studentName": "有知有行团课",
+      "studentIds": [
+        "afa0ad1b-d7f8-49e2-b53a-b9db0fd4bbf5"
+      ],
+      "coach": "朝珺教练",
+      "venue": "国家网球中心 · C1",
+      "courseType": "私教课",
+      "bad": [
+        "团课"
+      ]
+    },
+    {
+      "id": "schedule-ideal-group-20260811-1900",
+      "startTime": "2026-08-11 19:00",
+      "endTime": "2026-08-11 21:00",
+      "studentName": "理想团课",
+      "studentIds": [
+        "student-ideal-group-enterprise"
+      ],
+      "coach": "杨教练",
+      "venue": "3号场",
+      "courseType": "小班课",
+      "standardCourseType": "理想团课",
+      "bad": [
+        "团课"
+      ]
+    }
+  ],
+  "nameMismatchCount": 253,
+  "nameMismatch": [
+    {
+      "id": "014834c3-5384-4566-b7d7-cad15f1f886f",
+      "startTime": "2026-07-11 11:00",
+      "endTime": "2026-07-11 12:00",
+      "studentName": "将来（赵新阳孩子）",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "04905c45-086c-4c6b-a9cc-0a2fbab95a90",
+      "startTime": "2026-06-15 11:00",
+      "endTime": "2026-06-15 12:00",
+      "studentName": "杨梓天",
+      "studentIds": [
+        "b925dea4-e18f-446f-9373-e30a10946c1c"
+      ],
+      "fileStudentNames": [
+        "宝红 ～"
+      ],
+      "coach": "林铭教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "06e9a033-9da6-477c-94f0-23164952b0e7",
+      "startTime": "2026-06-23 16:00",
+      "endTime": "2026-06-23 17:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "086bf459-5d4e-4712-b6b1-fb80a3742f9c",
+      "startTime": "2026-07-05 11:00",
+      "endTime": "2026-07-05 12:00",
+      "studentName": "苏女士",
+      "studentIds": [
+        "0fda7e8b-d369-4b7e-afde-f5b93cb05ddc"
+      ],
+      "fileStudentNames": [
+        "LKY（苏女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "087b37dc-9218-423c-8f54-9ecf76391c90",
+      "startTime": "2026-06-15 17:30",
+      "endTime": "2026-06-15 18:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "0a47284c-2d52-41a9-a9ee-688b20275db5",
+      "startTime": "2026-07-26 10:00",
+      "endTime": "2026-07-26 11:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "0c579716-0d88-492e-8aca-d1df8031223f",
+      "startTime": "2026-06-08 19:00",
+      "endTime": "2026-06-08 20:00",
+      "studentName": "mjh",
+      "studentIds": [
+        "3bd8dc79-360f-4a0a-8feb-f23a1c0ed0f6"
+      ],
+      "fileStudentNames": [
+        "mjh（小胡）"
+      ],
+      "coach": "Rive 天昊教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "0e3ea69e-d160-4ba5-9bc7-bd4cbd03e618",
+      "startTime": "2026-06-29 14:00",
+      "endTime": "2026-06-29 15:00",
+      "studentName": "哈库呐",
+      "studentIds": [
+        "seed-student-005"
+      ],
+      "fileStudentNames": [
+        "线熙宇（哈库呐玛塔塔）"
+      ],
+      "coach": "吴教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "11aa185b-f172-4b91-a6dd-24d800755b23",
+      "startTime": "2026-06-26 16:00",
+      "endTime": "2026-06-26 17:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "14290c80-acf4-4552-a8cc-97d06dee7e27",
+      "startTime": "2026-07-01 19:00",
+      "endTime": "2026-07-01 20:00",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "1c2e09ac-b5a6-4510-9502-7587ac7a7eef",
+      "startTime": "2026-07-21 18:00",
+      "endTime": "2026-07-21 19:00",
+      "studentName": "宋曦",
+      "studentIds": [
+        "import-student-5b311a24-5d69-1472-5252-d45ca083597c"
+      ],
+      "fileStudentNames": [
+        "宋曦（Dixon）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "1d5ae3ff-6db2-40b9-894a-ae995c84e79b",
+      "startTime": "2026-07-05 10:00",
+      "endTime": "2026-07-05 11:00",
+      "studentName": "张先生",
+      "studentIds": [
+        "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      ],
+      "fileStudentNames": [
+        "张先生（张昊然）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "1e4e2bd0-ef88-4d4e-b750-4d7cfe173e10",
+      "startTime": "2026-07-06 17:30",
+      "endTime": "2026-07-06 18:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "1e594de4-5b4e-43aa-bfab-c8106fbaaf0b",
+      "startTime": "2026-06-29 18:30",
+      "endTime": "2026-06-29 19:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "2516bc29-8806-41a6-9308-f6aefdaa353f",
+      "startTime": "2026-07-20 13:00",
+      "endTime": "2026-07-20 14:00",
+      "studentName": "晨曦",
+      "studentIds": [
+        "2b65be17-4190-4b2f-9dfe-5988d4652cc6"
+      ],
+      "fileStudentNames": [
+        "曦曦🐳"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "271d46ba-4f56-44ea-81d3-b0a6e02d97a3",
+      "startTime": "2026-07-14 15:00",
+      "endTime": "2026-07-14 16:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "272906d4-20df-45e1-913c-2d71638ec089",
+      "startTime": "2026-07-22 14:30",
+      "endTime": "2026-07-22 15:30",
+      "studentName": "瑶瑶",
+      "studentIds": [
+        "import-student-10fb990d-c8d7-4d8c-44dd-1bf5dcd5e543"
+      ],
+      "fileStudentNames": [
+        "🐲L.（瑶瑶）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "2a2a2111-aee4-4441-a381-b2c3f2a1dde9",
+      "startTime": "2026-05-01 10:00",
+      "endTime": "2026-05-01 11:00",
+      "studentName": "Behysaari",
+      "studentIds": [
+        "83dd77da-ac34-458a-81be-6aa2705d5722"
+      ],
+      "fileStudentNames": [
+        "Behysaari（张女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "2b3da581-a294-4005-87a9-a1d3cede02e5",
+      "startTime": "2026-06-02 16:00",
+      "endTime": "2026-06-02 17:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "32b1f2d1-0261-482e-8f62-87a6c0bff4f2",
+      "startTime": "2026-07-20 17:30",
+      "endTime": "2026-07-20 18:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "3c8fd7fb-ace7-44b2-82a1-4b088a6591a0",
+      "startTime": "2026-06-26 12:30",
+      "endTime": "2026-06-26 13:30",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "3efaeeca-34af-47fc-8c94-27036b3202a3",
+      "startTime": "2026-07-11 18:00",
+      "endTime": "2026-07-11 20:00",
+      "studentName": "张先生",
+      "studentIds": [
+        "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      ],
+      "fileStudentNames": [
+        "张先生（张昊然）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "3fa724c7-8f73-4867-b502-0737610c29a7",
+      "startTime": "2026-07-07 14:00",
+      "endTime": "2026-07-07 15:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "3fb62120-c1ae-450e-bcb2-8858582ebae1",
+      "startTime": "2026-06-18 12:00",
+      "endTime": "2026-06-18 13:00",
+      "studentName": "安嵩",
+      "studentIds": [
+        "ad4b9eca-571c-4745-ba6e-cf70d44f4fc5"
+      ],
+      "fileStudentNames": [
+        "安嵩（黑个🏂）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "3fc483c0-5e40-416a-85d3-508d8176487e",
+      "startTime": "2026-07-19 09:00",
+      "endTime": "2026-07-19 10:00",
+      "studentName": "LKY",
+      "studentIds": [
+        "0fda7e8b-d369-4b7e-afde-f5b93cb05ddc"
+      ],
+      "fileStudentNames": [
+        "LKY（苏女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "40d22bf3-5c5b-47a3-8d7b-7ecbab22710b",
+      "startTime": "2026-07-24 14:00",
+      "endTime": "2026-07-24 15:00",
+      "studentName": "王老板",
+      "studentIds": [
+        "57314083-0162-4bd9-be35-758d872b192e"
+      ],
+      "fileStudentNames": [
+        "JR 王老板"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "40f7ecf9-f380-4863-aaea-80a82374019e",
+      "startTime": "2026-07-11 13:00",
+      "endTime": "2026-07-11 14:00",
+      "studentName": "白沐凡 私教课",
+      "studentIds": [
+        "4ffe9196-2f2b-495e-aff5-2ec7b2d80ed3"
+      ],
+      "fileStudentNames": [
+        "陈沐白"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "41ae025c-6a2d-443c-8ff3-fe62937a546b",
+      "startTime": "2026-07-24 19:30",
+      "endTime": "2026-07-24 20:30",
+      "studentName": "丹姐&Eric",
+      "studentIds": [
+        "bf449a1e-3c44-41c2-afca-597790d23a56"
+      ],
+      "fileStudentNames": [
+        "Eric（妈妈：花开富贵）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "2号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "42be0e59-0382-40d3-88c4-b05682eb7ce1",
+      "startTime": "2026-08-01 16:00",
+      "endTime": "2026-08-01 17:00",
+      "studentName": "William",
+      "studentIds": [
+        "ec7ab368-1726-40c7-8b9d-4a409f90c1bf"
+      ],
+      "fileStudentNames": [
+        "William（时节）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "4410bb7d-50c6-4eaa-b7d6-06f807e43b00",
+      "startTime": "2026-06-14 14:00",
+      "endTime": "2026-06-14 15:00",
+      "studentName": "苏女士",
+      "studentIds": [
+        "0fda7e8b-d369-4b7e-afde-f5b93cb05ddc"
+      ],
+      "fileStudentNames": [
+        "LKY（苏女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "49320b0e-9ba7-478b-9b8a-7c4ed1b77d64",
+      "startTime": "2026-06-18 14:00",
+      "endTime": "2026-06-18 15:00",
+      "studentName": "杨梓天",
+      "studentIds": [
+        "b925dea4-e18f-446f-9373-e30a10946c1c"
+      ],
+      "fileStudentNames": [
+        "宝红 ～"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "4b8ce0db-0ae8-486b-85cb-742d98d02fc3",
+      "startTime": "2026-07-15 15:00",
+      "endTime": "2026-07-15 16:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "4dcd2ee1-5891-478a-b789-052237bab7f2",
+      "startTime": "2026-07-26 11:00",
+      "endTime": "2026-07-26 12:00",
+      "studentName": "将来",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "4eb6aab3-1813-49eb-9843-fec73f5a64c7",
+      "startTime": "2026-06-28 16:00",
+      "endTime": "2026-06-28 17:00",
+      "studentName": "William",
+      "studentIds": [
+        "ec7ab368-1726-40c7-8b9d-4a409f90c1bf"
+      ],
+      "fileStudentNames": [
+        "William（时节）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "55162d0c-1f61-4994-80ca-6d5f3830f164",
+      "startTime": "2026-07-06 14:00",
+      "endTime": "2026-07-06 15:00",
+      "studentName": "哈库呐",
+      "studentIds": [
+        "seed-student-005"
+      ],
+      "fileStudentNames": [
+        "线熙宇（哈库呐玛塔塔）"
+      ],
+      "coach": "吴教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "558a2b23-4811-4d64-8335-cf1697c7e99b",
+      "startTime": "2026-06-06 10:00",
+      "endTime": "2026-06-06 11:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "Rive 天昊教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "5951e321-61ae-40fc-9f49-4493ebcc52a8",
+      "startTime": "2026-06-13 09:30",
+      "endTime": "2026-06-13 10:30",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "5be3b753-ce34-48ef-a9b7-2e3625aac752",
+      "startTime": "2026-08-10 17:30",
+      "endTime": "2026-08-10 18:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "5ecdd0af-666d-4ecd-becc-2c6320d21b80",
+      "startTime": "2026-06-25 15:00",
+      "endTime": "2026-06-25 16:00",
+      "studentName": "杨梓天",
+      "studentIds": [
+        "b925dea4-e18f-446f-9373-e30a10946c1c"
+      ],
+      "fileStudentNames": [
+        "宝红 ～"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "5f381dc6-2dac-435d-b47f-90ec222808fc",
+      "startTime": "2026-07-05 17:00",
+      "endTime": "2026-07-05 18:00",
+      "studentName": "将来（赵新阳孩子）",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "603328fd-e5c6-4c1e-9379-d4fc55d69262",
+      "startTime": "2026-06-17 14:00",
+      "endTime": "2026-06-17 15:00",
+      "studentName": "瑶瑶",
+      "studentIds": [
+        "import-student-10fb990d-c8d7-4d8c-44dd-1bf5dcd5e543"
+      ],
+      "fileStudentNames": [
+        "🐲L.（瑶瑶）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "62ff5cf7-ea05-4b71-a610-76628cea4b87",
+      "startTime": "2026-06-20 14:00",
+      "endTime": "2026-06-20 15:00",
+      "studentName": "小成",
+      "studentIds": [
+        "0eeacb47-1d84-4232-9ddf-c5304b3dda25"
+      ],
+      "fileStudentNames": [
+        "小成（不要说话）"
+      ],
+      "coach": "宋教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "6863b5ac-907a-43ae-843e-644a66ac9956",
+      "startTime": "2026-07-25 17:00",
+      "endTime": "2026-07-25 18:00",
+      "studentName": "苏女士",
+      "studentIds": [
+        "0fda7e8b-d369-4b7e-afde-f5b93cb05ddc"
+      ],
+      "fileStudentNames": [
+        "LKY（苏女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "6c2d5b08-8d35-4d71-bfef-8ec1a2aac21a",
+      "startTime": "2026-08-07 11:00",
+      "endTime": "2026-08-07 12:00",
+      "studentName": "杨梓天",
+      "studentIds": [
+        "b925dea4-e18f-446f-9373-e30a10946c1c"
+      ],
+      "fileStudentNames": [
+        "宝红 ～"
+      ],
+      "coach": "林铭教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "6d734224-d652-4f0c-ab7f-74f454b1b9ba",
+      "startTime": "2026-07-17 19:00",
+      "endTime": "2026-07-17 20:00",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "6dd33f44-eb04-4ba6-b930-15de89a69570",
+      "startTime": "2026-06-07 11:00",
+      "endTime": "2026-06-07 12:00",
+      "studentName": "苏女士",
+      "studentIds": [
+        "0fda7e8b-d369-4b7e-afde-f5b93cb05ddc"
+      ],
+      "fileStudentNames": [
+        "LKY（苏女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "6f04a8db-578d-4869-b041-47ca5e09344c",
+      "startTime": "2026-06-04 12:00",
+      "endTime": "2026-06-04 13:00",
+      "studentName": "安嵩",
+      "studentIds": [
+        "ad4b9eca-571c-4745-ba6e-cf70d44f4fc5"
+      ],
+      "fileStudentNames": [
+        "安嵩（黑个🏂）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "70cb7c26-94e0-41e2-ad54-948139818218",
+      "startTime": "2026-05-24 11:00",
+      "endTime": "2026-05-24 12:00",
+      "studentName": "苏女士",
+      "studentIds": [
+        "0fda7e8b-d369-4b7e-afde-f5b93cb05ddc"
+      ],
+      "fileStudentNames": [
+        "LKY（苏女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "718edf55-c0e4-46c1-b72c-1436e322ac6e",
+      "startTime": "2026-07-12 16:00",
+      "endTime": "2026-07-12 17:00",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "724c9871-55e6-4a5c-b625-4937f2a78ce4",
+      "startTime": "2026-08-01 10:00",
+      "endTime": "2026-08-01 11:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "740c6c44-f186-4145-a850-1f54298e4e2d",
+      "startTime": "2026-08-14 13:00",
+      "endTime": "2026-08-14 14:00",
+      "studentName": "晨曦",
+      "studentIds": [
+        "2b65be17-4190-4b2f-9dfe-5988d4652cc6"
+      ],
+      "fileStudentNames": [
+        "曦曦🐳"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "7887f03b-a58a-4d29-81c7-d11a6936afc5",
+      "startTime": "2026-07-13 17:30",
+      "endTime": "2026-07-13 18:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "790340c3-d9c8-43e1-978c-ecca137641df",
+      "startTime": "2026-05-28 14:00",
+      "endTime": "2026-05-28 15:00",
+      "studentName": "瑶瑶",
+      "studentIds": [
+        "import-student-10fb990d-c8d7-4d8c-44dd-1bf5dcd5e543"
+      ],
+      "fileStudentNames": [
+        "🐲L.（瑶瑶）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "79977224-0607-48ed-9202-7bbd6cabb913",
+      "startTime": "2026-08-06 16:00",
+      "endTime": "2026-08-06 17:00",
+      "studentName": "瑶瑶",
+      "studentIds": [
+        "import-student-10fb990d-c8d7-4d8c-44dd-1bf5dcd5e543"
+      ],
+      "fileStudentNames": [
+        "🐲L.（瑶瑶）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "79f0a6f3-1939-405a-adff-d90202314dc0",
+      "startTime": "2026-06-30 12:00",
+      "endTime": "2026-06-30 13:00",
+      "studentName": "安嵩",
+      "studentIds": [
+        "ad4b9eca-571c-4745-ba6e-cf70d44f4fc5"
+      ],
+      "fileStudentNames": [
+        "安嵩（黑个🏂）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "7a6f7025-3ad2-4c6f-9bce-f02d963d9c21",
+      "startTime": "2026-07-27 17:30",
+      "endTime": "2026-07-27 18:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "7b07af7f-4080-4e3c-9b46-c5befb0c4f8f",
+      "startTime": "2026-07-07 10:00",
+      "endTime": "2026-07-07 11:00",
+      "studentName": "张先生",
+      "studentIds": [
+        "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      ],
+      "fileStudentNames": [
+        "张先生（张昊然）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "7b72a212-c2d5-4f9f-a00d-de306e53a38d",
+      "startTime": "2026-07-03 12:00",
+      "endTime": "2026-07-03 13:00",
+      "studentName": "宋曦",
+      "studentIds": [
+        "import-student-5b311a24-5d69-1472-5252-d45ca083597c"
+      ],
+      "fileStudentNames": [
+        "宋曦（Dixon）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "7e3103dc-185a-4af4-9b39-286e3b181646",
+      "startTime": "2026-07-16 11:30",
+      "endTime": "2026-07-16 12:30",
+      "studentName": "杨梓天",
+      "studentIds": [
+        "b925dea4-e18f-446f-9373-e30a10946c1c"
+      ],
+      "fileStudentNames": [
+        "宝红 ～"
+      ],
+      "coach": "林铭教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "7f1d456f-fc67-41de-9209-a78aaf628a6e",
+      "startTime": "2026-07-31 13:00",
+      "endTime": "2026-07-31 14:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "林铭教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "7fac4777-d4e0-4d4e-acc4-720b34de7e02",
+      "startTime": "2026-06-22 17:30",
+      "endTime": "2026-06-22 18:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "8153d739-c118-4acf-96b7-f53ab2f65356",
+      "startTime": "2026-05-29 12:00",
+      "endTime": "2026-05-29 13:00",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "82a1051e-3933-4f08-bb59-d80dea0e37c2",
+      "startTime": "2026-06-05 19:00",
+      "endTime": "2026-06-05 20:00",
+      "studentName": "纪宁",
+      "studentIds": [
+        "seed-student-011"
+      ],
+      "fileStudentNames": [
+        "纪宁（vii）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "82fffae7-a3f2-4547-aeff-69bae1598960",
+      "startTime": "2026-05-31 16:00",
+      "endTime": "2026-05-31 17:00",
+      "studentName": "William",
+      "studentIds": [
+        "ec7ab368-1726-40c7-8b9d-4a409f90c1bf"
+      ],
+      "fileStudentNames": [
+        "William（时节）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "86e1889e-666a-41fa-b038-a6b632f27c21",
+      "startTime": "2026-08-01 14:00",
+      "endTime": "2026-08-01 16:00",
+      "studentName": "张先生",
+      "studentIds": [
+        "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      ],
+      "fileStudentNames": [
+        "张先生（张昊然）"
+      ],
+      "coach": "杨教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "8c1024d3-c95a-4a4c-a324-50dbcd69ff57",
+      "startTime": "2026-07-13 19:30",
+      "endTime": "2026-07-13 20:30",
+      "studentName": "一帆",
+      "studentIds": [
+        "7f72935a-4e7c-4999-ab71-d8a2927f9ac6"
+      ],
+      "fileStudentNames": [
+        "一帆（YING）"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "8d2da34f-e950-4f86-a18c-896f69fede47",
+      "startTime": "2026-07-16 13:00",
+      "endTime": "2026-07-16 14:00",
+      "studentName": "晨曦",
+      "studentIds": [
+        "2b65be17-4190-4b2f-9dfe-5988d4652cc6"
+      ],
+      "fileStudentNames": [
+        "曦曦🐳"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "8e150081-eb28-40a2-b941-71878ad8f706",
+      "startTime": "2026-06-17 12:00",
+      "endTime": "2026-06-17 13:00",
+      "studentName": "宋曦",
+      "studentIds": [
+        "import-student-5b311a24-5d69-1472-5252-d45ca083597c"
+      ],
+      "fileStudentNames": [
+        "宋曦（Dixon）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "8e1e34f2-75b7-4259-8101-519202916dbf",
+      "startTime": "2026-07-04 10:00",
+      "endTime": "2026-07-04 11:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "925efc8e-7f6c-415a-8667-825fda6d2e26",
+      "startTime": "2026-07-18 13:00",
+      "endTime": "2026-07-18 14:00",
+      "studentName": "一帆",
+      "studentIds": [
+        "7f72935a-4e7c-4999-ab71-d8a2927f9ac6"
+      ],
+      "fileStudentNames": [
+        "一帆（YING）"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "943b4549-a1a2-4d7d-9004-67d777257426",
+      "startTime": "2026-07-04 15:00",
+      "endTime": "2026-07-04 17:00",
+      "studentName": "张先生",
+      "studentIds": [
+        "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      ],
+      "fileStudentNames": [
+        "张先生（张昊然）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "94ef2d31-144d-45da-a612-21cfa0f4603d",
+      "startTime": "2026-06-21 17:00",
+      "endTime": "2026-06-21 18:00",
+      "studentName": "William",
+      "studentIds": [
+        "ec7ab368-1726-40c7-8b9d-4a409f90c1bf"
+      ],
+      "fileStudentNames": [
+        "William（时节）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "95bdaebc-e044-470b-a2bd-95647d512365",
+      "startTime": "2026-06-01 18:30",
+      "endTime": "2026-06-01 19:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "9628156e-3d2c-4fff-baee-97a49931852c",
+      "startTime": "2026-07-11 10:00",
+      "endTime": "2026-07-11 11:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "996d2476-0e71-4b7d-97ff-ff66ad382a83",
+      "startTime": "2026-07-30 13:00",
+      "endTime": "2026-07-30 14:00",
+      "studentName": "晨曦",
+      "studentIds": [
+        "2b65be17-4190-4b2f-9dfe-5988d4652cc6"
+      ],
+      "fileStudentNames": [
+        "曦曦🐳"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "9a09b81c-6ee8-4e37-bb6b-c9525ef94844",
+      "startTime": "2026-07-15 14:00",
+      "endTime": "2026-07-15 16:00",
+      "studentName": "张佳良 老二",
+      "studentIds": [
+        "seed-student-028"
+      ],
+      "fileStudentNames": [
+        "张佳良老二"
+      ],
+      "coach": "Siren 教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "9a379a8c-3638-43a7-a558-e72bb9485ad0",
+      "startTime": "2026-08-10 13:00",
+      "endTime": "2026-08-10 14:00",
+      "studentName": "晨曦",
+      "studentIds": [
+        "2b65be17-4190-4b2f-9dfe-5988d4652cc6"
+      ],
+      "fileStudentNames": [
+        "曦曦🐳"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "9d024cff-a826-4bb8-91f9-e7ad44644f56",
+      "startTime": "2026-07-20 15:00",
+      "endTime": "2026-07-20 16:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "9f62c6d1-59d9-4f9a-9d47-0118d03a0b1e",
+      "startTime": "2026-06-26 14:00",
+      "endTime": "2026-06-26 15:00",
+      "studentName": "小白 私教课",
+      "studentIds": [
+        "4ffe9196-2f2b-495e-aff5-2ec7b2d80ed3"
+      ],
+      "fileStudentNames": [
+        "陈沐白"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "a1555617-999b-42d5-afb2-294cdebb7729",
+      "startTime": "2026-07-17 14:00",
+      "endTime": "2026-07-17 15:00",
+      "studentName": "王老板",
+      "studentIds": [
+        "57314083-0162-4bd9-be35-758d872b192e"
+      ],
+      "fileStudentNames": [
+        "JR 王老板"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "2号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "a29593ff-bb9d-45d5-9dfb-b09aa726ffc0",
+      "startTime": "2026-06-16 12:00",
+      "endTime": "2026-06-16 13:00",
+      "studentName": "安嵩",
+      "studentIds": [
+        "ad4b9eca-571c-4745-ba6e-cf70d44f4fc5"
+      ],
+      "fileStudentNames": [
+        "安嵩（黑个🏂）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "a37a2c33-54fe-4cce-bd15-a94d54b5dc0e",
+      "startTime": "2026-04-17 13:00",
+      "endTime": "2026-04-17 14:00",
+      "studentName": "私教课（140+300）",
+      "studentIds": [
+        "50a1e5a9-8089-4b8e-a7a1-93c323c65f04"
+      ],
+      "fileStudentNames": [
+        "佳妮"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "a6298488-02a5-4b89-84c2-a1cb7ea1ec5a",
+      "startTime": "2026-06-04 11:00",
+      "endTime": "2026-06-04 12:00",
+      "studentName": "冯女士",
+      "studentIds": [
+        "194c0622-fb0c-468b-bdd9-7c5fea063f6f"
+      ],
+      "fileStudentNames": [
+        "冯女士（Aimee🐰）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "a98ecc64-7d96-4dfb-9399-6ef2514e5139",
+      "startTime": "2026-07-24 12:00",
+      "endTime": "2026-07-24 13:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "a9b4f970-adf2-4e80-af75-07fa078fcf01",
+      "startTime": "2026-06-20 17:00",
+      "endTime": "2026-06-20 19:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "ab202a39-337d-47d2-97d4-eeb4656c87b0",
+      "startTime": "2026-05-28 12:00",
+      "endTime": "2026-05-28 13:00",
+      "studentName": "安嵩",
+      "studentIds": [
+        "ad4b9eca-571c-4745-ba6e-cf70d44f4fc5"
+      ],
+      "fileStudentNames": [
+        "安嵩（黑个🏂）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "1号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "b04e217b-097c-43ce-8816-55c185902f7d",
+      "startTime": "2026-06-27 12:30",
+      "endTime": "2026-06-27 13:30",
+      "studentName": "一帆",
+      "studentIds": [
+        "7f72935a-4e7c-4999-ab71-d8a2927f9ac6"
+      ],
+      "fileStudentNames": [
+        "一帆（YING）"
+      ],
+      "coach": "林铭教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "b49e184c-98d3-413f-a62a-fb5d06f38699",
+      "startTime": "2026-08-14 11:00",
+      "endTime": "2026-08-14 12:00",
+      "studentName": "杨梓天",
+      "studentIds": [
+        "b925dea4-e18f-446f-9373-e30a10946c1c"
+      ],
+      "fileStudentNames": [
+        "宝红 ～"
+      ],
+      "coach": "林铭教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "b5d72c24-ca9e-4359-8242-604e36a469fe",
+      "startTime": "2026-06-13 13:00",
+      "endTime": "2026-06-13 14:00",
+      "studentName": "小成",
+      "studentIds": [
+        "0eeacb47-1d84-4232-9ddf-c5304b3dda25"
+      ],
+      "fileStudentNames": [
+        "小成（不要说话）"
+      ],
+      "coach": "宋教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "b959b70d-6f82-4f22-8824-c7b0ddc42f5a",
+      "startTime": "2026-07-12 14:00",
+      "endTime": "2026-07-12 16:00",
+      "studentName": "小成",
+      "studentIds": [
+        "0eeacb47-1d84-4232-9ddf-c5304b3dda25"
+      ],
+      "fileStudentNames": [
+        "小成（不要说话）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "ba16c0bb-3c37-4973-b908-07117b9da4fa",
+      "startTime": "2026-07-06 20:00",
+      "endTime": "2026-07-06 21:00",
+      "studentName": "一帆",
+      "studentIds": [
+        "7f72935a-4e7c-4999-ab71-d8a2927f9ac6"
+      ],
+      "fileStudentNames": [
+        "一帆（YING）"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "ba962808-0d16-40f3-99d7-f70e0972db87",
+      "startTime": "2026-06-02 12:00",
+      "endTime": "2026-06-02 13:00",
+      "studentName": "安嵩",
+      "studentIds": [
+        "ad4b9eca-571c-4745-ba6e-cf70d44f4fc5"
+      ],
+      "fileStudentNames": [
+        "安嵩（黑个🏂）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "bd92b1ed-7742-4f7a-8a54-869515a7ee34",
+      "startTime": "2026-06-30 14:00",
+      "endTime": "2026-06-30 15:00",
+      "studentName": "哈库呐",
+      "studentIds": [
+        "seed-student-005"
+      ],
+      "fileStudentNames": [
+        "线熙宇（哈库呐玛塔塔）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "c0bc9e31-5c15-49a7-8863-5e65da9a3d8e",
+      "startTime": "2026-07-09 15:00",
+      "endTime": "2026-07-09 16:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "c1adcb40-d6e2-4a47-b0f0-c3ae2858dcc7",
+      "startTime": "2026-07-19 16:00",
+      "endTime": "2026-07-19 17:00",
+      "studentName": "William",
+      "studentIds": [
+        "ec7ab368-1726-40c7-8b9d-4a409f90c1bf"
+      ],
+      "fileStudentNames": [
+        "William（时节）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "c1f8870e-c9a1-48e3-be94-249582908e9a",
+      "startTime": "2026-07-26 16:00",
+      "endTime": "2026-07-26 17:00",
+      "studentName": "William",
+      "studentIds": [
+        "ec7ab368-1726-40c7-8b9d-4a409f90c1bf"
+      ],
+      "fileStudentNames": [
+        "William（时节）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "c2325c17-eb4e-4e49-b377-d9e767d4087e",
+      "startTime": "2026-07-10 09:00",
+      "endTime": "2026-07-10 10:00",
+      "studentName": "张先生",
+      "studentIds": [
+        "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      ],
+      "fileStudentNames": [
+        "张先生（张昊然）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "c2435fed-7909-4ebe-849d-4eeead19f8d5",
+      "startTime": "2026-05-27 12:00",
+      "endTime": "2026-05-27 13:00",
+      "studentName": "宋曦",
+      "studentIds": [
+        "import-student-5b311a24-5d69-1472-5252-d45ca083597c"
+      ],
+      "fileStudentNames": [
+        "宋曦（Dixon）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "c5ce4a2e-8aa8-49f8-a248-719bdb180b80",
+      "startTime": "2026-06-10 14:00",
+      "endTime": "2026-06-10 15:00",
+      "studentName": "哈库呐",
+      "studentIds": [
+        "seed-student-005"
+      ],
+      "fileStudentNames": [
+        "线熙宇（哈库呐玛塔塔）"
+      ],
+      "coach": "吴教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "c611383b-55c5-47ef-8529-8a6813cd668d",
+      "startTime": "2026-06-12 15:00",
+      "endTime": "2026-06-12 16:00",
+      "studentName": "杨梓天",
+      "studentIds": [
+        "b925dea4-e18f-446f-9373-e30a10946c1c"
+      ],
+      "fileStudentNames": [
+        "宝红 ～"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "c7ab57b5-b1b1-41b5-910b-b8a0a9bdc8b4",
+      "startTime": "2026-06-27 16:00",
+      "endTime": "2026-06-27 17:00",
+      "studentName": "小成",
+      "studentIds": [
+        "0eeacb47-1d84-4232-9ddf-c5304b3dda25"
+      ],
+      "fileStudentNames": [
+        "小成（不要说话）"
+      ],
+      "coach": "宋教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "c884e6e3-587c-4f0d-aeff-e006cadbe068",
+      "startTime": "2026-06-28 17:00",
+      "endTime": "2026-06-28 18:00",
+      "studentName": "将来（赵新阳孩子）",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cd2152c5-2bfc-4fd3-8fa2-188cd1cf85e8",
+      "startTime": "2026-07-16 17:00",
+      "endTime": "2026-07-16 18:00",
+      "studentName": "小土豆的姐姐朋友",
+      "studentIds": [
+        "3351b493-cdd1-4faf-b863-feb20be25879"
+      ],
+      "fileStudentNames": [
+        "小土豆的姐姐的朋友"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-38c3e3d3346dacf1",
+      "startTime": "2026-02-04 14:00",
+      "endTime": "2026-02-04 16:00",
+      "studentName": "桃子、笑逐、牛晨孩子、康康",
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486"
+      ],
+      "fileStudentNames": [
+        "桃子（曹沐言）",
+        "笑逐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-558d17c34f8771b7",
+      "startTime": "2026-02-03 14:00",
+      "endTime": "2026-02-03 16:00",
+      "studentName": "桃子、笑逐、牛晨孩子、康康",
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486"
+      ],
+      "fileStudentNames": [
+        "桃子（曹沐言）",
+        "笑逐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-5959747e2ed2caea",
+      "startTime": "2026-02-06 14:00",
+      "endTime": "2026-02-06 16:00",
+      "studentName": "桃子、笑逐、牛晨孩子、康康",
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486"
+      ],
+      "fileStudentNames": [
+        "桃子（曹沐言）",
+        "笑逐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-5aef9a6396f7b089",
+      "startTime": "2026-02-02 14:00",
+      "endTime": "2026-02-02 16:00",
+      "studentName": "桃子、笑逐、牛晨孩子、康康",
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486"
+      ],
+      "fileStudentNames": [
+        "桃子（曹沐言）",
+        "笑逐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-202602-thirdparty-schedule-5b457ac8d992fe18",
+      "startTime": "2026-02-05 14:00",
+      "endTime": "2026-02-05 16:00",
+      "studentName": "桃子、笑逐、牛晨孩子、康康",
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486"
+      ],
+      "fileStudentNames": [
+        "桃子（曹沐言）",
+        "笑逐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-20260715-0731-schedule-0e72234c98c1c38c",
+      "startTime": "2026-07-20 10:00",
+      "endTime": "2026-07-20 11:00",
+      "studentName": "李先生",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-20260715-0731-schedule-ecda3dae0154d4fc",
+      "startTime": "2026-07-16 15:00",
+      "endTime": "2026-07-16 16:00",
+      "studentName": "yutong",
+      "studentIds": [
+        "1bf3878b-8789-48c4-8cb2-2dc86ca93f7b"
+      ],
+      "fileStudentNames": [
+        "Yutong"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-20260715-0731-schedule-ed74a3a68ad201d4",
+      "startTime": "2026-07-15 15:00",
+      "endTime": "2026-07-15 16:00",
+      "studentName": "李先生",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-1306d57a703a",
+      "startTime": "2026-04-05 15:00",
+      "endTime": "2026-04-05 16:00",
+      "studentName": "是锤锤呀",
+      "studentIds": [
+        "seed-student-001"
+      ],
+      "fileStudentNames": [
+        "佑佑"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-1bf4cb46a2cd",
+      "startTime": "2026-04-11 15:00",
+      "endTime": "2026-04-11 19:00",
+      "studentName": "yx",
+      "studentIds": [
+        "349a719a-d92e-405e-b38a-626ae3a58365"
+      ],
+      "fileStudentNames": [
+        "YX"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-35b879e884ee",
+      "startTime": "2026-04-10 11:00",
+      "endTime": "2026-04-10 13:00",
+      "studentName": "W.Jing 1v2",
+      "studentIds": [
+        "abda0438-bd46-440d-a211-d431a3b1e451"
+      ],
+      "fileStudentNames": [
+        "小鹿"
+      ],
+      "coach": "Siren",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-54c147337fc9",
+      "startTime": "2026-04-10 10:00",
+      "endTime": "2026-04-10 11:00",
+      "studentName": "于晓溪",
+      "studentIds": [
+        "seed-student-031"
+      ],
+      "fileStudentNames": [
+        "杨子一"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-7299a88cd6c0",
+      "startTime": "2026-04-15 10:00",
+      "endTime": "2026-04-15 12:00",
+      "studentName": "W.Jing 1v2（7）",
+      "studentIds": [
+        "seed-student-038"
+      ],
+      "fileStudentNames": [
+        "W.Jing"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-7619fb0124c9",
+      "startTime": "2026-04-28 18:30",
+      "endTime": "2026-04-28 19:30",
+      "studentName": "小胡",
+      "studentIds": [
+        "repair-student-20260816-3ab08ab75f2c"
+      ],
+      "fileStudentNames": [
+        "mjh小胡"
+      ],
+      "coach": "Rive 天昊教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-aaa792013e21",
+      "startTime": "2026-04-01 19:00",
+      "endTime": "2026-04-01 21:00",
+      "studentName": "小林 德德",
+      "studentIds": [
+        "10b084c7-5390-4c36-854d-7adf7fe6bfcf",
+        "c7a3d63f-52a2-46f2-953a-6d80a2b22f69"
+      ],
+      "fileStudentNames": [
+        "小林",
+        "德德"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-b7e81054e147",
+      "startTime": "2026-04-26 13:00",
+      "endTime": "2026-04-26 14:00",
+      "studentName": "孙姐 1v2",
+      "studentIds": [
+        "be6af076-a464-4270-967e-28c9007a1c86"
+      ],
+      "fileStudentNames": [
+        "孙姐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-bc0487b11a0b",
+      "startTime": "2026-04-15 19:30",
+      "endTime": "2026-04-15 20:30",
+      "studentName": "小林",
+      "studentIds": [
+        "coursepkg-student-20260527-12c6b7dfb963"
+      ],
+      "fileStudentNames": [
+        "魏平涛"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-c544e81023e1",
+      "startTime": "2026-04-19 11:00",
+      "endTime": "2026-04-19 12:00",
+      "studentName": "周欣 小鹿",
+      "studentIds": [
+        "abda0438-bd46-440d-a211-d431a3b1e451"
+      ],
+      "fileStudentNames": [
+        "小鹿"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-c89cbf746438",
+      "startTime": "2026-04-26 16:00",
+      "endTime": "2026-04-26 17:00",
+      "studentName": "caranee",
+      "studentIds": [
+        "private_lesson_csv_import_20260524-student-1970-宁宁"
+      ],
+      "fileStudentNames": [
+        "宁宁"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-d8c490438aa3",
+      "startTime": "2026-04-07 14:00",
+      "endTime": "2026-04-07 16:00",
+      "studentName": "W.Jing 1v2（1） 非黄",
+      "studentIds": [
+        "seed-student-038"
+      ],
+      "fileStudentNames": [
+        "W.Jing"
+      ],
+      "coach": "吴教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202604-schedule-d94d4b769661",
+      "startTime": "2026-04-22 19:30",
+      "endTime": "2026-04-22 20:30",
+      "studentName": "天昊 熊",
+      "studentIds": [
+        "fdf08500-b73f-4d2f-94ea-30e92153dad3"
+      ],
+      "fileStudentNames": [
+        "熊"
+      ],
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-03bf8e9e7334",
+      "startTime": "2026-06-29 19:30",
+      "endTime": "2026-06-29 20:30",
+      "studentName": "、暴躁壹壹、",
+      "studentIds": [
+        "import-student-cba443b0-df05-84e9-bb59-a49876f7b363"
+      ],
+      "fileStudentNames": [
+        "暴躁壹壹"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-04c9a26d1164",
+      "startTime": "2026-06-23 10:00",
+      "endTime": "2026-06-23 11:00",
+      "studentName": "、袁冶、",
+      "studentIds": [
+        "seed-student-033"
+      ],
+      "fileStudentNames": [
+        "袁冶"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-0faaacf4bcf4",
+      "startTime": "2026-06-23 08:30",
+      "endTime": "2026-06-23 09:30",
+      "studentName": "李东",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-636e7aed9d2b"
+      ],
+      "fileStudentNames": [
+        "时节老公"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-0fef41b3c054",
+      "startTime": "2026-06-19 14:30",
+      "endTime": "2026-06-19 15:30",
+      "studentName": "、小土豆的姐姐侄女、",
+      "studentIds": [
+        "d6117d08-fa29-4235-ac29-0b6372d6e13c"
+      ],
+      "fileStudentNames": [
+        "小土豆的姐姐侄女"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-12642822ca58",
+      "startTime": "2026-06-25 17:30",
+      "endTime": "2026-06-25 18:30",
+      "studentName": "、王麦枘、",
+      "studentIds": [
+        "import-student-3c2f6e29-cd45-ad0c-5a95-f402ad27b39a"
+      ],
+      "fileStudentNames": [
+        "王麦枘"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-13e9164ef183",
+      "startTime": "2026-06-19 15:00",
+      "endTime": "2026-06-19 17:00",
+      "studentName": "2.0集训营（4人）",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-f46e0ba81b23"
+      ],
+      "fileStudentNames": [
+        "端午"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-1a293166e7fc",
+      "startTime": "2026-06-08 07:00",
+      "endTime": "2026-06-08 08:00",
+      "studentName": "kent、王浩",
+      "studentIds": [
+        "cxe-thirdparty-student-470bc5781627"
+      ],
+      "fileStudentNames": [
+        "ken"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-1b68785cf1bf",
+      "startTime": "2026-06-03 19:00",
+      "endTime": "2026-06-03 20:00",
+      "studentName": "芦先生",
+      "studentIds": [
+        "seed-student-042"
+      ],
+      "fileStudentNames": [
+        "李鹏昊"
+      ],
+      "coach": "Rive 天昊教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-1d2a459b39c7",
+      "startTime": "2026-06-05 20:30",
+      "endTime": "2026-06-05 21:30",
+      "studentName": "chen",
+      "studentIds": [
+        "2bc8bd37-45ca-4cdb-bd3d-fb960594e557"
+      ],
+      "fileStudentNames": [
+        "沈沉 shenchen"
+      ],
+      "coach": "宋教练",
+      "venue": "1号场",
+      "courseType": "陪打"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-2528ffc3d0e1",
+      "startTime": "2026-06-19 15:30",
+      "endTime": "2026-06-19 17:00",
+      "studentName": "丫丫、杜晞瑞、小土豆的姐姐",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-f46e0ba81b23"
+      ],
+      "fileStudentNames": [
+        "端午"
+      ],
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-2675db0838bb",
+      "startTime": "2026-06-07 15:00",
+      "endTime": "2026-06-07 16:00",
+      "studentName": "、宁宁、",
+      "studentIds": [
+        "private_lesson_csv_import_20260524-student-1970-宁宁"
+      ],
+      "fileStudentNames": [
+        "宁宁"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-26d6030336c3",
+      "startTime": "2026-06-30 14:00",
+      "endTime": "2026-06-30 15:00",
+      "studentName": "哈库呐",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-222bb75c9ed3"
+      ],
+      "fileStudentNames": [
+        "请保护流浪狗"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-2878df581bcc",
+      "startTime": "2026-06-12 13:00",
+      "endTime": "2026-06-12 14:00",
+      "studentName": "锤锤（非黄2.5）",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-eeabb11a6909"
+      ],
+      "fileStudentNames": [
+        "捶捶"
+      ],
+      "coach": "林铭教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-3447754f5f9c",
+      "startTime": "2026-06-06 09:00",
+      "endTime": "2026-06-06 10:00",
+      "studentName": "李瑞丰",
+      "studentIds": [
+        "import-student-ea780820-24f3-99da-76c8-0de276b2a380"
+      ],
+      "fileStudentNames": [
+        "葛超、Madison He"
+      ],
+      "coach": "林铭教练",
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-37b63b2f3b8d",
+      "startTime": "2026-06-25 09:00",
+      "endTime": "2026-06-25 10:00",
+      "studentName": "许先生",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-39f5a971ab30"
+      ],
+      "fileStudentNames": [
+        "许"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-3ad545c6e237",
+      "startTime": "2026-06-11 14:00",
+      "endTime": "2026-06-11 15:00",
+      "studentName": "林姐、",
+      "studentIds": [
+        "cxe-thirdparty-student-1feedbf2d224"
+      ],
+      "fileStudentNames": [
+        "林姐"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "陪打"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-3de554914fbf",
+      "startTime": "2026-06-18 13:00",
+      "endTime": "2026-06-18 14:00",
+      "studentName": "董文糯",
+      "studentIds": [
+        "19001dd2-7287-45b2-94b0-bf26795aa5df"
+      ],
+      "fileStudentNames": [
+        "董文糯🙄🤐"
+      ],
+      "coach": "宋教练",
+      "venue": "4号场",
+      "courseType": "陪打"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-3e743e1d6752",
+      "startTime": "2026-06-16 20:00",
+      "endTime": "2026-06-16 21:00",
+      "studentName": "、快乐的小废物、",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-5ad41f9482f4"
+      ],
+      "fileStudentNames": [
+        "快乐的小废物"
+      ],
+      "coach": "林铭教练",
+      "venue": "2号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-456b485f7e3c",
+      "startTime": "2026-06-07 16:00",
+      "endTime": "2026-06-07 17:00",
+      "studentName": "William",
+      "studentIds": [
+        "ec7ab368-1726-40c7-8b9d-4a409f90c1bf"
+      ],
+      "fileStudentNames": [
+        "William（时节）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-4a2d334e3093",
+      "startTime": "2026-06-27 14:00",
+      "endTime": "2026-06-27 16:00",
+      "studentName": "、小土豆的姐姐、朋友、",
+      "studentIds": [
+        "seed-student-015"
+      ],
+      "fileStudentNames": [
+        "小土豆的姐姐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-4a5f01e4a5ca",
+      "startTime": "2026-06-06 14:00",
+      "endTime": "2026-06-06 16:00",
+      "studentName": "桃子、蜜桃（9）+航航（2）+显峰孩子体验课",
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "9fdfffe7-3607-4aae-ae63-462d77f99283"
+      ],
+      "fileStudentNames": [
+        "桃子（曹沐言）",
+        "蜜桃（张爱崴）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-4c7b12af7702",
+      "startTime": "2026-06-07 17:00",
+      "endTime": "2026-06-07 18:00",
+      "studentName": "、赵新阳孩子、",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-044386e52f02"
+      ],
+      "fileStudentNames": [
+        "赵新阳孩子"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-4e44048ba952",
+      "startTime": "2026-06-26 16:00",
+      "endTime": "2026-06-26 17:00",
+      "studentName": "、暖暖妈妈、",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-6f6f957664d6"
+      ],
+      "fileStudentNames": [
+        "暖暖妈妈"
+      ],
+      "coach": "Siren 教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-4f631587ebe5",
+      "startTime": "2026-06-19 19:00",
+      "endTime": "2026-06-19 20:00",
+      "studentName": "张先生&小马哥",
+      "studentIds": [
+        "ebfd62e5-4c7f-499f-be6c-266118324e30"
+      ],
+      "fileStudentNames": [
+        "小马哥"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "1号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-543d2d55bad3",
+      "startTime": "2026-06-27 11:00",
+      "endTime": "2026-06-27 12:00",
+      "studentName": "、子涵、",
+      "studentIds": [
+        "6b655916-9271-484d-a8e9-c54318d0b432"
+      ],
+      "fileStudentNames": [
+        "子涵"
+      ],
+      "coach": "林铭教练",
+      "venue": "2号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-5bfa35d59216",
+      "startTime": "2026-06-30 11:00",
+      "endTime": "2026-06-30 12:00",
+      "studentName": "艾女士孩子",
+      "studentIds": [
+        "7ef17ae2-7c47-4026-a28a-37464dfd1c69"
+      ],
+      "fileStudentNames": [
+        "艾女士"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-6ae500b48d96",
+      "startTime": "2026-06-22 15:00",
+      "endTime": "2026-06-22 16:00",
+      "studentName": "Andy",
+      "studentIds": [
+        "7ef17ae2-7c47-4026-a28a-37464dfd1c69"
+      ],
+      "fileStudentNames": [
+        "艾女士"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-78c4f908576b",
+      "startTime": "2026-06-13 14:00",
+      "endTime": "2026-06-13 16:00",
+      "studentName": "笑逐、航航、李宣泽（体验）",
+      "studentIds": [
+        "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486",
+        "ec57559a-1320-4d56-b4c9-47a99f99863e"
+      ],
+      "fileStudentNames": [
+        "笑逐",
+        "李宣泽"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-7c1f7f987871",
+      "startTime": "2026-06-27 17:00",
+      "endTime": "2026-06-27 18:00",
+      "studentName": "单先生&李女士",
+      "studentIds": [
+        "import-student-ea780820-24f3-99da-76c8-0de276b2a380"
+      ],
+      "fileStudentNames": [
+        "葛超、Madison He"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-7c50636d78d3",
+      "startTime": "2026-06-20 15:00",
+      "endTime": "2026-06-20 17:00",
+      "studentName": "丫丫、希瑞、小土豆的姐姐、小土豆的姐姐朋友",
+      "studentIds": [
+        "seed-student-007",
+        "seed-student-015"
+      ],
+      "fileStudentNames": [
+        "丫丫",
+        "小土豆的姐姐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-820cc99ec4d0",
+      "startTime": "2026-06-02 09:00",
+      "endTime": "2026-06-02 10:30",
+      "studentName": "子杰、到",
+      "studentIds": [
+        "manual-student-zijie-20260519"
+      ],
+      "fileStudentNames": [
+        "子杰"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-82a74e69be9d",
+      "startTime": "2026-06-20 11:00",
+      "endTime": "2026-06-20 12:00",
+      "studentName": "张昊、马晨",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-ad3a106bf076"
+      ],
+      "fileStudentNames": [
+        "发接发"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-849e494b8e8e",
+      "startTime": "2026-06-16 12:00",
+      "endTime": "2026-06-16 13:00",
+      "studentName": "、Deadia、",
+      "studentIds": [
+        "94b63112-135c-48d6-9888-f2047702db4f"
+      ],
+      "fileStudentNames": [
+        "Deadia"
+      ],
+      "coach": "林铭教练",
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-85ece30e35af",
+      "startTime": "2026-06-28 14:30",
+      "endTime": "2026-06-28 15:30",
+      "studentName": "、kiko、",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-274022e2bd64"
+      ],
+      "fileStudentNames": [
+        "kiko"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-9208243dbb21",
+      "startTime": "2026-06-25 19:00",
+      "endTime": "2026-06-25 21:00",
+      "studentName": "、理想、",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-215d8b3fb105"
+      ],
+      "fileStudentNames": [
+        "理想"
+      ],
+      "coach": "林铭教练",
+      "venue": "2号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-b1a623e1fe46",
+      "startTime": "2026-06-25 18:30",
+      "endTime": "2026-06-25 19:30",
+      "studentName": "陈女士",
+      "studentIds": [
+        "import-student-ea780820-24f3-99da-76c8-0de276b2a380"
+      ],
+      "fileStudentNames": [
+        "葛超、Madison He"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-bde827d8200c",
+      "startTime": "2026-06-07 16:00",
+      "endTime": "2026-06-07 17:00",
+      "studentName": "william",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-935ebed7dcb8"
+      ],
+      "fileStudentNames": [
+        "掌管卡刃的杜"
+      ],
+      "coach": "Siren",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-c0efd25df6f6",
+      "startTime": "2026-06-06 16:00",
+      "endTime": "2026-06-06 18:00",
+      "studentName": "yx",
+      "studentIds": [
+        "349a719a-d92e-405e-b38a-626ae3a58365"
+      ],
+      "fileStudentNames": [
+        "YX"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-c4519fae8cd5",
+      "startTime": "2026-06-26 10:00",
+      "endTime": "2026-06-26 11:00",
+      "studentName": "、Andy、",
+      "studentIds": [
+        "7c9a7080-5ee7-49e7-8f84-5880cdd2f2ca"
+      ],
+      "fileStudentNames": [
+        "Andy"
+      ],
+      "coach": "林铭教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-cce9eb8dfd6f",
+      "startTime": "2026-06-19 12:00",
+      "endTime": "2026-06-19 13:00",
+      "studentName": "Eric（妈妈：花开富贵）",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-17d279eb6602"
+      ],
+      "fileStudentNames": [
+        "花开富贵孩子"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-cd2c2d3b5b7e",
+      "startTime": "2026-06-21 15:00",
+      "endTime": "2026-06-21 17:00",
+      "studentName": "丫丫、希瑞、小土豆的姐姐、小土豆的姐姐朋友",
+      "studentIds": [
+        "seed-student-007",
+        "seed-student-015"
+      ],
+      "fileStudentNames": [
+        "丫丫",
+        "小土豆的姐姐"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-d0c9d36035e5",
+      "startTime": "2026-06-06 20:00",
+      "endTime": "2026-06-06 21:00",
+      "studentName": "大鹏&林慧煊",
+      "studentIds": [
+        "import-student-ea780820-24f3-99da-76c8-0de276b2a380"
+      ],
+      "fileStudentNames": [
+        "葛超、Madison He"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-d0e8c4ced86a",
+      "startTime": "2026-06-05 19:00",
+      "endTime": "2026-06-05 20:00",
+      "studentName": "、FC、",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-dadecd5ecd0e"
+      ],
+      "fileStudentNames": [
+        "FC"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-dd769b727556",
+      "startTime": "2026-06-01 19:30",
+      "endTime": "2026-06-01 20:30",
+      "studentName": "、暴躁壹壹、",
+      "studentIds": [
+        "import-student-cba443b0-df05-84e9-bb59-a49876f7b363"
+      ],
+      "fileStudentNames": [
+        "暴躁壹壹"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-e98e305565fc",
+      "startTime": "2026-06-16 14:00",
+      "endTime": "2026-06-16 15:00",
+      "studentName": "Christine",
+      "studentIds": [
+        "f30c2515-302f-48b2-975b-abfa028ece34"
+      ],
+      "fileStudentNames": [
+        "CHRISTINE"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "2号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-f6033dd8d0e1",
+      "startTime": "2026-06-19 15:00",
+      "endTime": "2026-06-19 16:00",
+      "studentName": "、史多灏、",
+      "studentIds": [
+        "819727f6-b902-49fd-af87-fdec04716b19"
+      ],
+      "fileStudentNames": [
+        "史多灏"
+      ],
+      "coach": "林铭教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-f65d4f16d93d",
+      "startTime": "2026-06-20 10:00",
+      "endTime": "2026-06-20 11:00",
+      "studentName": "、连女士、",
+      "studentIds": [
+        "cxe-thirdparty-202606-student-ee2f5ed341aa"
+      ],
+      "fileStudentNames": [
+        "连女士"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-fd7a4d31b255",
+      "startTime": "2026-06-19 17:00",
+      "endTime": "2026-06-19 18:00",
+      "studentName": "、张昊、",
+      "studentIds": [
+        "seed-student-041"
+      ],
+      "fileStudentNames": [
+        "张昊"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "cxe-thirdparty-202606-schedule-fee91574c01a",
+      "startTime": "2026-06-27 14:00",
+      "endTime": "2026-06-27 16:00",
+      "studentName": "桃子、航航、刘小喵2个孩子",
+      "studentIds": [
+        "ed8fdf10-5f45-4c66-8a0b-9348d239ce81"
+      ],
+      "fileStudentNames": [
+        "桃子（曹沐言）"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "cxe-thirdparty-schedule-63-2005b3ad635f",
+      "startTime": "2026-07-09 14:00",
+      "endTime": "2026-07-09 15:00",
+      "studentName": "小宇",
+      "studentIds": [
+        "cxe-thirdparty-student-470bc5781627"
+      ],
+      "fileStudentNames": [
+        "ken"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "2号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "cxe-thirdparty-schedule-67-551811088ac6",
+      "startTime": "2026-07-09 19:00",
+      "endTime": "2026-07-09 20:00",
+      "studentName": "吃糖的麻花、艾斯",
+      "studentIds": [
+        "new-student-9f2faf5f3ee4"
+      ],
+      "fileStudentNames": [
+        "艾斯"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "d19992b3-fe35-4938-a108-d8c2e54ed2b0",
+      "startTime": "2026-08-05 14:00",
+      "endTime": "2026-08-05 16:00",
+      "studentName": "小鹿",
+      "studentIds": [
+        "seed-student-009"
+      ],
+      "fileStudentNames": [
+        "简先生"
+      ],
+      "coach": "杨教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "d19ab531-9d10-468a-ad8d-fe16779c6201",
+      "startTime": "2026-06-16 16:00",
+      "endTime": "2026-06-16 17:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "d1ec4aa3-bf19-4250-b244-a81f96aff6f1",
+      "startTime": "2026-06-30 09:30",
+      "endTime": "2026-06-30 10:30",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "d243cd34-3a02-4af3-868e-e667d24d6689",
+      "startTime": "2026-07-09 19:00",
+      "endTime": "2026-07-09 20:00",
+      "studentName": "吃糖的麻花、艾斯",
+      "studentIds": [
+        "import-student-cba443b0-df05-84e9-bb59-a49876f7b363"
+      ],
+      "fileStudentNames": [
+        "暴躁壹壹"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "d29a06cc-3473-4270-b008-d5b1e6c3836e",
+      "startTime": "2026-08-07 17:30",
+      "endTime": "2026-08-07 19:30",
+      "studentName": "唐总",
+      "studentIds": [
+        "b3c1c399-b209-4e9e-af56-80b74c7270ac"
+      ],
+      "fileStudentNames": [
+        "唐果"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "陪打"
+    },
+    {
+      "id": "d3be8b0b-92da-43ad-8d7c-2a5fdc7374f0",
+      "startTime": "2026-06-18 19:00",
+      "endTime": "2026-06-18 21:00",
+      "studentName": "rzwyyy、Christine、陈鹭、李鹏昊",
+      "studentIds": [
+        "new-student-2d6eb2c4ebe3",
+        "f30c2515-302f-48b2-975b-abfa028ece34",
+        "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+        "seed-student-042"
+      ],
+      "fileStudentNames": [
+        "rzwyyy",
+        "CHRISTINE",
+        "陈鹭",
+        "李鹏昊"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "d79368d0-c9a4-41e6-ae4c-29dac0548e43",
+      "startTime": "2026-06-18 19:30",
+      "endTime": "2026-06-18 20:30",
+      "studentName": "一帆",
+      "studentIds": [
+        "7f72935a-4e7c-4999-ab71-d8a2927f9ac6"
+      ],
+      "fileStudentNames": [
+        "一帆（YING）"
+      ],
+      "coach": "林铭教练",
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "d98e941d-8a45-4468-919c-2ff0769bfb90",
+      "startTime": "2026-07-23 13:00",
+      "endTime": "2026-07-23 14:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "林铭教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "da991c16-ad2b-4ae4-9a94-d0d6a84881d8",
+      "startTime": "2026-06-10 19:00",
+      "endTime": "2026-06-10 20:00",
+      "studentName": "李俊泽私教课（免费）",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "deeb1351-58b1-4c0d-92af-05e960644e19",
+      "startTime": "2026-08-06 13:00",
+      "endTime": "2026-08-06 14:00",
+      "studentName": "晨曦",
+      "studentIds": [
+        "2b65be17-4190-4b2f-9dfe-5988d4652cc6"
+      ],
+      "fileStudentNames": [
+        "曦曦🐳"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "e261c172-833c-4a6f-a8da-93ed36b1c767",
+      "startTime": "2026-05-28 19:00",
+      "endTime": "2026-05-28 20:00",
+      "studentName": "J ",
+      "studentIds": [
+        "f1692647-fb78-47df-a3b6-3a44a695bb9c"
+      ],
+      "fileStudentNames": [
+        "J （十里堡）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "e60a41a4-3b1e-47f1-9fe7-27e791ff6fd8",
+      "startTime": "2026-06-21 14:00",
+      "endTime": "2026-06-21 15:00",
+      "studentName": "小成",
+      "studentIds": [
+        "0eeacb47-1d84-4232-9ddf-c5304b3dda25"
+      ],
+      "fileStudentNames": [
+        "小成（不要说话）"
+      ],
+      "coach": "宋教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "e65c1a13-45bd-4da4-b4e1-00ce4b0c24fc",
+      "startTime": "2026-07-31 12:00",
+      "endTime": "2026-07-31 13:00",
+      "studentName": "安嵩",
+      "studentIds": [
+        "ad4b9eca-571c-4745-ba6e-cf70d44f4fc5"
+      ],
+      "fileStudentNames": [
+        "安嵩（黑个🏂）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "e676f878-0228-4b36-a123-dfa93f4c5822",
+      "startTime": "2026-05-01 09:00",
+      "endTime": "2026-05-01 10:00",
+      "studentName": "苏女士 1v1",
+      "studentIds": [
+        "0fda7e8b-d369-4b7e-afde-f5b93cb05ddc"
+      ],
+      "fileStudentNames": [
+        "LKY（苏女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "eebf784b-5976-466d-a804-03a0872293b1",
+      "startTime": "2026-06-25 12:00",
+      "endTime": "2026-06-25 13:00",
+      "studentName": "安嵩",
+      "studentIds": [
+        "ad4b9eca-571c-4745-ba6e-cf70d44f4fc5"
+      ],
+      "fileStudentNames": [
+        "安嵩（黑个🏂）"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "eec322da-90b4-4a97-9a7e-e77264e5fdb3",
+      "startTime": "2026-06-06 10:00",
+      "endTime": "2026-06-06 11:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "f0b898ba-864c-4b61-9e35-07f31d7b523f",
+      "startTime": "2026-06-10 14:00",
+      "endTime": "2026-06-10 15:00",
+      "studentName": "瑶瑶",
+      "studentIds": [
+        "import-student-10fb990d-c8d7-4d8c-44dd-1bf5dcd5e543"
+      ],
+      "fileStudentNames": [
+        "🐲L.（瑶瑶）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "f0d93e71-1087-4cff-bc4c-6fba2359ef32",
+      "startTime": "2026-05-29 19:00",
+      "endTime": "2026-05-29 20:00",
+      "studentName": "纪宁",
+      "studentIds": [
+        "seed-student-011"
+      ],
+      "fileStudentNames": [
+        "纪宁（vii）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "f116428b-2f21-4554-a2c7-8502921f5dac",
+      "startTime": "2026-06-11 19:00",
+      "endTime": "2026-06-11 21:00",
+      "studentName": "理想团课",
+      "studentIds": [
+        "seed-student-002",
+        "seed-student-003"
+      ],
+      "fileStudentNames": [
+        "misha",
+        "黄总"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "f252d682-2d3c-4af5-b858-5a96ef468d5e",
+      "startTime": "2026-06-27 09:30",
+      "endTime": "2026-06-27 10:30",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "f4287c96-3f7d-4c36-9456-33cbbddfde83",
+      "startTime": "2026-07-29 14:00",
+      "endTime": "2026-07-29 15:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "林铭教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "f67538af-fea4-4f72-8022-4d6118ee2867",
+      "startTime": "2026-08-05 18:30",
+      "endTime": "2026-08-05 19:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "f8b6414a-ae3b-4ea4-affa-ac1934288cdc",
+      "startTime": "2026-04-25 14:00",
+      "endTime": "2026-04-25 18:00",
+      "studentName": "yx 静怡 私教课",
+      "studentIds": [
+        "ef3cd435-4836-4b3e-9227-de7e32a3c8a1"
+      ],
+      "fileStudentNames": [
+        "胡之超"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "fab1cb45-3b34-412c-9538-8e3bc8cb655c",
+      "startTime": "2026-07-18 10:00",
+      "endTime": "2026-07-18 11:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "fcba1236-2b0d-4a8d-b30b-b4570de9fa03",
+      "startTime": "2026-06-14 15:00",
+      "endTime": "2026-06-14 16:00",
+      "studentName": "小成",
+      "studentIds": [
+        "0eeacb47-1d84-4232-9ddf-c5304b3dda25"
+      ],
+      "fileStudentNames": [
+        "小成（不要说话）"
+      ],
+      "coach": "宋教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "fe570f54-b789-4861-9e91-f49cc965830e",
+      "startTime": "2026-07-05 14:00",
+      "endTime": "2026-07-05 15:00",
+      "studentName": "小酒",
+      "studentIds": [
+        "2e6d5bd4-d178-45c5-883f-8acef2ccf9dd"
+      ],
+      "fileStudentNames": [
+        "小酒（再吃胖胖啦）"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "3号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "ff0674f2-77f3-4829-ae2c-42e6b71df1ef",
+      "startTime": "2026-07-13 14:00",
+      "endTime": "2026-07-13 15:00",
+      "studentName": "哈库呐",
+      "studentIds": [
+        "seed-student-005"
+      ],
+      "fileStudentNames": [
+        "线熙宇（哈库呐玛塔塔）"
+      ],
+      "coach": "吴教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "ff37e49e-acd6-4589-ac53-5e14ed74675f",
+      "startTime": "2026-06-09 16:00",
+      "endTime": "2026-06-09 17:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260524-schedule-2026|2027-线熙宇（哈库呐玛塔塔）",
+      "startTime": "2026-05-20 14:00",
+      "endTime": "2026-05-20 16:00",
+      "studentName": "哈库呐",
+      "studentIds": [
+        "seed-student-005"
+      ],
+      "fileStudentNames": [
+        "线熙宇（哈库呐玛塔塔）"
+      ],
+      "coach": "吴教练",
+      "venue": "4号",
+      "courseType": "私教正式课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:05093b261185",
+      "startTime": "2026-05-17 18:00",
+      "endTime": "2026-05-17 19:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:078645c83ad9",
+      "startTime": "2026-03-05 18:00",
+      "endTime": "2026-03-05 19:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:129d5bfd864f",
+      "startTime": "2026-03-21 10:00",
+      "endTime": "2026-03-21 11:00",
+      "studentName": "暖暖爸爸",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:130f9df4c18a",
+      "startTime": "2026-03-28 18:00",
+      "endTime": "2026-03-28 19:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:188ac1ad6cf2",
+      "startTime": "2026-05-07 12:00",
+      "endTime": "2026-05-07 13:00",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:1935dabc235d",
+      "startTime": "2026-03-08 18:00",
+      "endTime": "2026-03-08 19:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:1a85fe1f4c1a",
+      "startTime": "2026-03-27 20:00",
+      "endTime": "2026-03-27 22:00",
+      "studentName": "小林/德德",
+      "studentIds": [
+        "seed-student-034"
+      ],
+      "fileStudentNames": [
+        "小林、德德"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:1db09ef0e6fb",
+      "startTime": "2026-05-18 18:30",
+      "endTime": "2026-05-18 19:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:1e52abf23b65",
+      "startTime": "2026-03-15 17:00",
+      "endTime": "2026-03-15 18:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:2c97705e607e",
+      "startTime": "2026-05-08 18:30",
+      "endTime": "2026-05-08 19:30",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:2d12ecf989b9",
+      "startTime": "2026-03-04 13:00",
+      "endTime": "2026-03-04 15:00",
+      "studentName": "于晓溪",
+      "studentIds": [
+        "seed-student-022"
+      ],
+      "fileStudentNames": [
+        "余晓溪"
+      ],
+      "coach": "吴教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:40fa9e981096",
+      "startTime": "2026-03-23 18:00",
+      "endTime": "2026-03-23 19:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "李运韬",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:50b9b9cb7821",
+      "startTime": "2026-04-02 15:00",
+      "endTime": "2026-04-02 16:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:51ed86ebf767",
+      "startTime": "2026-03-17 16:00",
+      "endTime": "2026-03-17 17:00",
+      "studentName": "暖暖爸爸",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "刘朝",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:5e7cbf076f9d",
+      "startTime": "2026-05-10 17:00",
+      "endTime": "2026-05-10 18:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:61d0e6669210",
+      "startTime": "2026-04-30 15:00",
+      "endTime": "2026-04-30 16:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:6284607d2a5e",
+      "startTime": "2026-04-27 12:00",
+      "endTime": "2026-04-27 13:00",
+      "studentName": "小林/德德",
+      "studentIds": [
+        "seed-student-034"
+      ],
+      "fileStudentNames": [
+        "小林、德德"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:7cbc6f7e5131",
+      "startTime": "2026-05-03 10:00",
+      "endTime": "2026-05-03 11:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:7d5446004378",
+      "startTime": "2026-04-24 12:00",
+      "endTime": "2026-04-24 13:00",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:8596d0f0774d",
+      "startTime": "2026-03-09 13:00",
+      "endTime": "2026-03-09 14:00",
+      "studentName": "于晓溪",
+      "studentIds": [
+        "seed-student-022"
+      ],
+      "fileStudentNames": [
+        "余晓溪"
+      ],
+      "coach": "Siren 教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:8732b5adad17",
+      "startTime": "2026-05-25 18:30",
+      "endTime": "2026-05-25 19:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:9f4faca2bfab",
+      "startTime": "2026-04-26 15:00",
+      "endTime": "2026-04-26 16:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:aa2ef7fc9041",
+      "startTime": "2026-05-16 14:00",
+      "endTime": "2026-05-16 15:00",
+      "studentName": "苏女士",
+      "studentIds": [
+        "0fda7e8b-d369-4b7e-afde-f5b93cb05ddc"
+      ],
+      "fileStudentNames": [
+        "LKY（苏女士）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:b52586083e24",
+      "startTime": "2026-03-22 10:00",
+      "endTime": "2026-03-22 11:00",
+      "studentName": "暖暖爸爸",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:b6619b47914e",
+      "startTime": "2026-04-03 20:00",
+      "endTime": "2026-04-03 22:00",
+      "studentName": "小林/德德",
+      "studentIds": [
+        "seed-student-034"
+      ],
+      "fileStudentNames": [
+        "小林、德德"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:cdc980ba68e2",
+      "startTime": "2026-05-24 17:00",
+      "endTime": "2026-05-24 18:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:ceb5d9fb27bb",
+      "startTime": "2026-05-10 18:00",
+      "endTime": "2026-05-10 19:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:d3a23efa502c",
+      "startTime": "2026-03-22 17:00",
+      "endTime": "2026-03-22 18:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:d5bf16068832",
+      "startTime": "2026-04-11 10:00",
+      "endTime": "2026-04-11 11:00",
+      "studentName": "暖暖爸爸",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:d6b1903b6cff",
+      "startTime": "2026-04-28 16:00",
+      "endTime": "2026-04-28 17:00",
+      "studentName": "暖暖爸妈",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "吴教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:d74f228080b5",
+      "startTime": "2026-01-19 14:00",
+      "endTime": "2026-01-19 15:00",
+      "studentName": "哈库呐",
+      "studentIds": [
+        "seed-student-005"
+      ],
+      "fileStudentNames": [
+        "线熙宇（哈库呐玛塔塔）"
+      ],
+      "coach": "吴教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:d8e3228f90b6",
+      "startTime": "2026-04-17 16:00",
+      "endTime": "2026-04-17 17:00",
+      "studentName": "小土豆的姐姐朋友",
+      "studentIds": [
+        "seed-student-021"
+      ],
+      "fileStudentNames": [
+        "袁博"
+      ],
+      "coach": "Siren",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:da26b95acccd",
+      "startTime": "2026-03-07 12:00",
+      "endTime": "2026-03-07 13:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "1号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:db91c4fd5d3d",
+      "startTime": "2026-04-22 12:00",
+      "endTime": "2026-04-22 13:00",
+      "studentName": "葡萄",
+      "studentIds": [
+        "seed-student-002",
+        "seed-student-003"
+      ],
+      "fileStudentNames": [
+        "misha",
+        "黄总"
+      ],
+      "coach": "Siren",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:dccb347838fe",
+      "startTime": "2026-04-05 17:00",
+      "endTime": "2026-04-05 18:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:e0ffd0ed2f3f",
+      "startTime": "2026-05-15 12:00",
+      "endTime": "2026-05-15 13:00",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:ef65ac0e4f97",
+      "startTime": "2026-05-22 17:00",
+      "endTime": "2026-05-22 18:00",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:f0783d760575",
+      "startTime": "2026-05-11 17:30",
+      "endTime": "2026-05-11 18:30",
+      "studentName": "连女士",
+      "studentIds": [
+        "import-student-dffc7714-0c0f-e3a5-ab90-a9cfbad91d24"
+      ],
+      "fileStudentNames": [
+        "莲儿（连女士）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:f57253c2ee58",
+      "startTime": "2026-05-17 17:00",
+      "endTime": "2026-05-17 18:00",
+      "studentName": "赵新阳/田秀楠",
+      "studentIds": [
+        "seed-student-024"
+      ],
+      "fileStudentNames": [
+        "赵新阳 田秀楠"
+      ],
+      "coach": "Siren 教练",
+      "venue": "3号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:f722b598ff1c",
+      "startTime": "2026-04-01 19:00",
+      "endTime": "2026-04-01 21:00",
+      "studentName": "小林/德德",
+      "studentIds": [
+        "seed-student-034"
+      ],
+      "fileStudentNames": [
+        "小林、德德"
+      ],
+      "coach": "朝珺教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "private_lesson_csv_import_20260527:schedule:f74d15134635",
+      "startTime": "2026-03-24 16:00",
+      "endTime": "2026-03-24 17:00",
+      "studentName": "暖暖爸爸",
+      "studentIds": [
+        "seed-student-030"
+      ],
+      "fileStudentNames": [
+        "高老师（暖暖爸爸）"
+      ],
+      "coach": "吴教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "repair-smallclass-20260416-1900",
+      "startTime": "2026-04-16 19:00",
+      "endTime": "2026-04-16 20:00",
+      "studentName": "艾斯、Golden.Z™、樊先生（临时取消）",
+      "studentIds": [
+        "new-student-9f2faf5f3ee4",
+        "82dde631-d23b-4617-934f-b4aaddf87521"
+      ],
+      "fileStudentNames": [
+        "艾斯",
+        "Golden.Z™"
+      ],
+      "coach": "晓哲教练",
+      "venue": "4号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "repair-smallclass-20260507-1900",
+      "startTime": "2026-05-07 19:00",
+      "endTime": "2026-05-07 21:00",
+      "studentName": "陈鹭（体验）、rzwyyy、Golden.Z™、艾斯",
+      "studentIds": [
+        "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+        "new-student-2d6eb2c4ebe3",
+        "82dde631-d23b-4617-934f-b4aaddf87521",
+        "new-student-9f2faf5f3ee4"
+      ],
+      "fileStudentNames": [
+        "陈鹭",
+        "rzwyyy",
+        "Golden.Z™",
+        "艾斯"
+      ],
+      "coach": "Rive 天昊教练",
+      "venue": "3号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "repair-smallclass-20260514-1900",
+      "startTime": "2026-05-14 19:00",
+      "endTime": "2026-05-14 21:00",
+      "studentName": "陈鹭、Golden.Z™、one1（体验）、cc z（体验）",
+      "studentIds": [
+        "dd33361c-5c42-4f91-92ee-e6138df7d4b5",
+        "82dde631-d23b-4617-934f-b4aaddf87521"
+      ],
+      "fileStudentNames": [
+        "陈鹭",
+        "Golden.Z™"
+      ],
+      "coach": "晓哲教练",
+      "venue": "1号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "repair-smallclass-20260521-1900",
+      "startTime": "2026-05-21 19:00",
+      "endTime": "2026-05-21 21:00",
+      "studentName": "朱一龙（体验）、Chris、rzwyyy、Golden.Z™",
+      "studentIds": [
+        "new-student-2d6eb2c4ebe3",
+        "82dde631-d23b-4617-934f-b4aaddf87521"
+      ],
+      "fileStudentNames": [
+        "rzwyyy",
+        "Golden.Z™"
+      ],
+      "coach": "晓哲教练",
+      "venue": "1号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "repair-smallclass-20260709-1900",
+      "startTime": "2026-07-09 19:00",
+      "endTime": "2026-07-09 20:00",
+      "studentName": "吃糖的麻花、艾斯",
+      "studentIds": [
+        "new-student-9f2faf5f3ee4"
+      ],
+      "fileStudentNames": [
+        "艾斯"
+      ],
+      "coach": "岳克舟教练",
+      "venue": "2号场",
+      "courseType": "体验课"
+    },
+    {
+      "id": "repair-smallclass-20260719-1000",
+      "startTime": "2026-07-19 10:00",
+      "endTime": "2026-07-19 12:00",
+      "studentName": "陈雪莹、🍉、王有理、艾斯",
+      "studentIds": [
+        "7c610f7c-8139-46ce-90b8-ec9e681741e3",
+        "new-student-9f2faf5f3ee4"
+      ],
+      "fileStudentNames": [
+        "王有理",
+        "艾斯"
+      ],
+      "coach": "刘润扬教练",
+      "venue": "4号场",
+      "courseType": "小班课"
+    },
+    {
+      "id": "third-party-schedule-3c8fcb43-b7d4-4560-bb9d-31af1be6d3db",
+      "startTime": "2026-07-31 12:30",
+      "endTime": "2026-07-31 13:30",
+      "studentName": "宋曦",
+      "studentIds": [
+        "import-student-5b311a24-5d69-1472-5252-d45ca083597c"
+      ],
+      "fileStudentNames": [
+        "宋曦（Dixon）"
+      ],
+      "coach": "朝珺教练",
+      "venue": "4号场",
+      "courseType": "私教课"
+    },
+    {
+      "id": "third-party-schedule-4c242d97-7e58-4394-be97-c6e9aaaae659",
+      "startTime": "2026-07-31 18:30",
+      "endTime": "2026-07-31 19:30",
+      "studentName": "李俊泽",
+      "studentIds": [
+        "seed-student-044"
+      ],
+      "fileStudentNames": [
+        "李先生（李俊泽）"
+      ],
+      "coach": "Siren 教练",
+      "venue": "2号场",
+      "courseType": "私教课"
+    }
+  ]
+}
