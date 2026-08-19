@@ -1,0 +1,760 @@
+{
+  "operationId": "repair-bind-missing-schedule-students-20260818",
+  "batchId": "batch-repair-bind-missing-schedule-students-20260818",
+  "mode": "write",
+  "writeTarget": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "generatedAt": "2026-08-18T04:40:57.170Z",
+  "summary": {
+    "unboundSchedules": 18,
+    "studentPuts": 1,
+    "scheduleUpdates": 18,
+    "conflictIndexDeletes": 0,
+    "conflictIndexPuts": 53,
+    "blockers": 0
+  },
+  "blockers": [],
+  "studentPuts": [
+    {
+      "id": "repair-bind-missing-schedule-students-20260818-student-you",
+      "name": "you",
+      "phone": "",
+      "type": "",
+      "source": "",
+      "campus": "shunyi_mapo",
+      "primaryCoach": "杨教练",
+      "sourceLeadId": "lead-from-student-repair-bind-missing-schedule-students-20260818-student-you",
+      "notes": "按历史排课补建最小学员档案",
+      "status": "active",
+      "createdAt": "2026-08-18T04:40:57.170Z",
+      "updatedAt": "2026-08-18T04:40:57.170Z",
+      "updatedBy": "Codex",
+      "operationId": "repair-bind-missing-schedule-students-20260818",
+      "batchId": "batch-repair-bind-missing-schedule-students-20260818"
+    }
+  ],
+  "scheduleUpdates": [
+    {
+      "id": "0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+      "before": {
+        "startTime": "2026-07-22 16:30",
+        "endTime": "2026-07-22 17:30",
+        "status": "已排课",
+        "studentName": "丫丫",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-22 16:30",
+        "endTime": "2026-07-22 17:30",
+        "status": "已排课",
+        "studentName": "丫丫",
+        "studentId": "seed-student-007",
+        "studentIds": [
+          "seed-student-007"
+        ],
+        "repairReason": "绑定缺失学员ID：丫丫 -> seed-student-007"
+      }
+    },
+    {
+      "id": "1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+      "before": {
+        "startTime": "2026-07-23 16:00",
+        "endTime": "2026-07-23 17:00",
+        "status": "已排课",
+        "studentName": "史多灏",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-23 16:00",
+        "endTime": "2026-07-23 17:00",
+        "status": "已排课",
+        "studentName": "史多灏",
+        "studentId": "819727f6-b902-49fd-af87-fdec04716b19",
+        "studentIds": [
+          "819727f6-b902-49fd-af87-fdec04716b19"
+        ],
+        "repairReason": "绑定缺失学员ID：史多灏 -> 819727f6-b902-49fd-af87-fdec04716b19"
+      }
+    },
+    {
+      "id": "39a05c2d-f749-4f58-84aa-02118a20178d",
+      "before": {
+        "startTime": "2026-07-30 16:00",
+        "endTime": "2026-07-30 18:00",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-30 16:00",
+        "endTime": "2026-07-30 18:00",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "f4d9aeed-2d5b-4790-8351-00e83dc89bee",
+        "studentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "repairReason": "绑定缺失学员ID：张先生 -> f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      }
+    },
+    {
+      "id": "45924cf4-fa65-470d-9123-97fec1dbe4e3",
+      "before": {
+        "startTime": "2026-07-17 15:00",
+        "endTime": "2026-07-17 16:00",
+        "status": "已排课",
+        "studentName": "简先生",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-17 15:00",
+        "endTime": "2026-07-17 16:00",
+        "status": "已排课",
+        "studentName": "简先生",
+        "studentId": "seed-student-009",
+        "studentIds": [
+          "seed-student-009"
+        ],
+        "repairReason": "绑定缺失学员ID：简先生 -> seed-student-009"
+      }
+    },
+    {
+      "id": "6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+      "before": {
+        "startTime": "2026-07-29 17:00",
+        "endTime": "2026-07-29 19:00",
+        "status": "已排课",
+        "studentName": "小鹿",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-29 17:00",
+        "endTime": "2026-07-29 19:00",
+        "status": "已排课",
+        "studentName": "小鹿",
+        "studentId": "abda0438-bd46-440d-a211-d431a3b1e451",
+        "studentIds": [
+          "abda0438-bd46-440d-a211-d431a3b1e451"
+        ],
+        "repairReason": "绑定缺失学员ID：小鹿 -> abda0438-bd46-440d-a211-d431a3b1e451"
+      }
+    },
+    {
+      "id": "745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+      "before": {
+        "startTime": "2026-07-19 12:00",
+        "endTime": "2026-07-19 13:00",
+        "status": "已排课",
+        "studentName": "赵新阳",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-19 12:00",
+        "endTime": "2026-07-19 13:00",
+        "status": "已排课",
+        "studentName": "赵新阳",
+        "studentId": "seed-student-024",
+        "studentIds": [
+          "seed-student-024"
+        ],
+        "repairReason": "绑定缺失学员ID：赵新阳 -> seed-student-024"
+      }
+    },
+    {
+      "id": "7691156b-df07-4ffd-bdc3-7485dcd65a79",
+      "before": {
+        "startTime": "2026-07-23 12:00",
+        "endTime": "2026-07-23 13:00",
+        "status": "已排课",
+        "studentName": "deadia",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-23 12:00",
+        "endTime": "2026-07-23 13:00",
+        "status": "已排课",
+        "studentName": "deadia",
+        "studentId": "94b63112-135c-48d6-9888-f2047702db4f",
+        "studentIds": [
+          "94b63112-135c-48d6-9888-f2047702db4f"
+        ],
+        "repairReason": "绑定缺失学员ID：deadia -> 94b63112-135c-48d6-9888-f2047702db4f"
+      }
+    },
+    {
+      "id": "8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+      "before": {
+        "startTime": "2026-07-26 17:00",
+        "endTime": "2026-07-26 19:00",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-26 17:00",
+        "endTime": "2026-07-26 19:00",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "f4d9aeed-2d5b-4790-8351-00e83dc89bee",
+        "studentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "repairReason": "绑定缺失学员ID：张先生 -> f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      }
+    },
+    {
+      "id": "b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+      "before": {
+        "startTime": "2026-07-19 10:00",
+        "endTime": "2026-07-19 11:00",
+        "status": "已排课",
+        "studentName": "张佳良 老大",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-19 10:00",
+        "endTime": "2026-07-19 11:00",
+        "status": "已排课",
+        "studentName": "张佳良 老大",
+        "studentId": "seed-student-027",
+        "studentIds": [
+          "seed-student-027"
+        ],
+        "repairReason": "绑定缺失学员ID：张佳良 老大 -> seed-student-027"
+      }
+    },
+    {
+      "id": "b5952c07-3925-4439-9b2f-839805023012",
+      "before": {
+        "startTime": "2026-07-25 18:00",
+        "endTime": "2026-07-25 19:00",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-25 18:00",
+        "endTime": "2026-07-25 19:00",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "f4d9aeed-2d5b-4790-8351-00e83dc89bee",
+        "studentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "repairReason": "绑定缺失学员ID：张先生 -> f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      }
+    },
+    {
+      "id": "ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+      "before": {
+        "startTime": "2026-07-25 19:00",
+        "endTime": "2026-07-25 20:00",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-25 19:00",
+        "endTime": "2026-07-25 20:00",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "f4d9aeed-2d5b-4790-8351-00e83dc89bee",
+        "studentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "repairReason": "绑定缺失学员ID：张先生 -> f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      }
+    },
+    {
+      "id": "cxe-20260715-0731-schedule-2e1df6563f500e0a",
+      "before": {
+        "startTime": "2026-07-17 16:00",
+        "endTime": "2026-07-17 18:00",
+        "status": "已排课",
+        "studentName": "小鹿",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-17 16:00",
+        "endTime": "2026-07-17 18:00",
+        "status": "已排课",
+        "studentName": "小鹿",
+        "studentId": "abda0438-bd46-440d-a211-d431a3b1e451",
+        "studentIds": [
+          "abda0438-bd46-440d-a211-d431a3b1e451"
+        ],
+        "repairReason": "绑定缺失学员ID：小鹿 -> abda0438-bd46-440d-a211-d431a3b1e451"
+      }
+    },
+    {
+      "id": "cxe-20260715-0731-schedule-cad2da0db6c9c5b0",
+      "before": {
+        "startTime": "2026-07-18 17:00",
+        "endTime": "2026-07-18 18:00",
+        "status": "已排课",
+        "studentName": "张昊",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-18 17:00",
+        "endTime": "2026-07-18 18:00",
+        "status": "已排课",
+        "studentName": "张昊",
+        "studentId": "seed-student-041",
+        "studentIds": [
+          "seed-student-041"
+        ],
+        "repairReason": "绑定缺失学员ID：张昊 -> seed-student-041"
+      }
+    },
+    {
+      "id": "cxe-thirdparty-schedule-90-c4cbc8949580",
+      "before": {
+        "startTime": "2026-07-11 17:00",
+        "endTime": "2026-07-11 18:00",
+        "status": "已排课",
+        "studentName": "张昊",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-11 17:00",
+        "endTime": "2026-07-11 18:00",
+        "status": "已排课",
+        "studentName": "张昊",
+        "studentId": "seed-student-041",
+        "studentIds": [
+          "seed-student-041"
+        ],
+        "repairReason": "绑定缺失学员ID：张昊 -> seed-student-041"
+      }
+    },
+    {
+      "id": "d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+      "before": {
+        "startTime": "2026-07-24 15:00",
+        "endTime": "2026-07-24 16:00",
+        "status": "已排课",
+        "studentName": "简先生",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-24 15:00",
+        "endTime": "2026-07-24 16:00",
+        "status": "已排课",
+        "studentName": "简先生",
+        "studentId": "seed-student-009",
+        "studentIds": [
+          "seed-student-009"
+        ],
+        "repairReason": "绑定缺失学员ID：简先生 -> seed-student-009"
+      }
+    },
+    {
+      "id": "e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+      "before": {
+        "startTime": "2026-07-24 16:00",
+        "endTime": "2026-07-24 18:00",
+        "status": "已排课",
+        "studentName": "小鹿",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-24 16:00",
+        "endTime": "2026-07-24 18:00",
+        "status": "已排课",
+        "studentName": "小鹿",
+        "studentId": "abda0438-bd46-440d-a211-d431a3b1e451",
+        "studentIds": [
+          "abda0438-bd46-440d-a211-d431a3b1e451"
+        ],
+        "repairReason": "绑定缺失学员ID：小鹿 -> abda0438-bd46-440d-a211-d431a3b1e451"
+      }
+    },
+    {
+      "id": "repair-yang-july-20260712-1400-you",
+      "before": {
+        "startTime": "2026-07-12 14:00",
+        "endTime": "2026-07-12 15:00",
+        "status": "已排课",
+        "studentName": "you",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-12 14:00",
+        "endTime": "2026-07-12 15:00",
+        "status": "已排课",
+        "studentName": "you",
+        "studentId": "repair-bind-missing-schedule-students-20260818-student-you",
+        "studentIds": [
+          "repair-bind-missing-schedule-students-20260818-student-you"
+        ],
+        "repairReason": "绑定缺失学员ID：you -> repair-bind-missing-schedule-students-20260818-student-you"
+      }
+    },
+    {
+      "id": "repair-zhanghaoran-20260723-1730",
+      "before": {
+        "startTime": "2026-07-22 17:30",
+        "endTime": "2026-07-22 19:30",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "",
+        "studentIds": []
+      },
+      "after": {
+        "startTime": "2026-07-22 17:30",
+        "endTime": "2026-07-22 19:30",
+        "status": "已排课",
+        "studentName": "张先生",
+        "studentId": "f4d9aeed-2d5b-4790-8351-00e83dc89bee",
+        "studentIds": [
+          "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+        ],
+        "repairReason": "绑定缺失学员ID：张先生 -> f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+      }
+    }
+  ],
+  "conflictIndexDeletes": [],
+  "conflictIndexPuts": [
+    {
+      "id": "2026-07-22|coach|%E6%9D%A8%E6%95%99%E7%BB%83|0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+      "scheduleId": "0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-22|student|seed-student-007|0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+      "scheduleId": "0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+      "indexType": "student",
+      "indexKey": "seed-student-007"
+    },
+    {
+      "id": "2026-07-22|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+      "scheduleId": "0cbb8e4f-94ae-420d-b64e-f30614daeda1",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-23|coach|%E6%9D%A8%E6%95%99%E7%BB%83|1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+      "scheduleId": "1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-23|student|819727f6-b902-49fd-af87-fdec04716b19|1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+      "scheduleId": "1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+      "indexType": "student",
+      "indexKey": "819727f6-b902-49fd-af87-fdec04716b19"
+    },
+    {
+      "id": "2026-07-23|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+      "scheduleId": "1fc30fbf-fb6b-40fc-bc1a-1cfa8914c9b1",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-30|coach|%E6%9D%A8%E6%95%99%E7%BB%83|39a05c2d-f749-4f58-84aa-02118a20178d",
+      "scheduleId": "39a05c2d-f749-4f58-84aa-02118a20178d",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-30|student|f4d9aeed-2d5b-4790-8351-00e83dc89bee|39a05c2d-f749-4f58-84aa-02118a20178d",
+      "scheduleId": "39a05c2d-f749-4f58-84aa-02118a20178d",
+      "indexType": "student",
+      "indexKey": "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+    },
+    {
+      "id": "2026-07-30|venue|shunyi_mapo%7C1%E5%8F%B7%E5%9C%BA|39a05c2d-f749-4f58-84aa-02118a20178d",
+      "scheduleId": "39a05c2d-f749-4f58-84aa-02118a20178d",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|1号场"
+    },
+    {
+      "id": "2026-07-17|coach|%E6%9D%A8%E6%95%99%E7%BB%83|45924cf4-fa65-470d-9123-97fec1dbe4e3",
+      "scheduleId": "45924cf4-fa65-470d-9123-97fec1dbe4e3",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-17|student|seed-student-009|45924cf4-fa65-470d-9123-97fec1dbe4e3",
+      "scheduleId": "45924cf4-fa65-470d-9123-97fec1dbe4e3",
+      "indexType": "student",
+      "indexKey": "seed-student-009"
+    },
+    {
+      "id": "2026-07-17|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|45924cf4-fa65-470d-9123-97fec1dbe4e3",
+      "scheduleId": "45924cf4-fa65-470d-9123-97fec1dbe4e3",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-29|coach|%E6%9D%A8%E6%95%99%E7%BB%83|6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+      "scheduleId": "6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-29|student|abda0438-bd46-440d-a211-d431a3b1e451|6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+      "scheduleId": "6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+      "indexType": "student",
+      "indexKey": "abda0438-bd46-440d-a211-d431a3b1e451"
+    },
+    {
+      "id": "2026-07-29|venue|shunyi_mapo%7C1%E5%8F%B7%E5%9C%BA|6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+      "scheduleId": "6b59b12f-0166-4a9a-9b89-85915bbf78f2",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|1号场"
+    },
+    {
+      "id": "2026-07-19|coach|%E6%9D%A8%E6%95%99%E7%BB%83|745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+      "scheduleId": "745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-19|student|seed-student-024|745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+      "scheduleId": "745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+      "indexType": "student",
+      "indexKey": "seed-student-024"
+    },
+    {
+      "id": "2026-07-19|venue|shunyi_mapo%7C2%E5%8F%B7%E5%9C%BA|745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+      "scheduleId": "745a05a8-cca5-4d08-850c-3f0d83f3abdd",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|2号场"
+    },
+    {
+      "id": "2026-07-23|coach|%E6%9D%A8%E6%95%99%E7%BB%83|7691156b-df07-4ffd-bdc3-7485dcd65a79",
+      "scheduleId": "7691156b-df07-4ffd-bdc3-7485dcd65a79",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-23|student|94b63112-135c-48d6-9888-f2047702db4f|7691156b-df07-4ffd-bdc3-7485dcd65a79",
+      "scheduleId": "7691156b-df07-4ffd-bdc3-7485dcd65a79",
+      "indexType": "student",
+      "indexKey": "94b63112-135c-48d6-9888-f2047702db4f"
+    },
+    {
+      "id": "2026-07-23|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|7691156b-df07-4ffd-bdc3-7485dcd65a79",
+      "scheduleId": "7691156b-df07-4ffd-bdc3-7485dcd65a79",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|4号场"
+    },
+    {
+      "id": "2026-07-26|coach|%E6%9D%A8%E6%95%99%E7%BB%83|8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+      "scheduleId": "8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-26|student|f4d9aeed-2d5b-4790-8351-00e83dc89bee|8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+      "scheduleId": "8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+      "indexType": "student",
+      "indexKey": "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+    },
+    {
+      "id": "2026-07-26|venue|shunyi_mapo%7C2%E5%8F%B7%E5%9C%BA|8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+      "scheduleId": "8b999215-aa62-44c0-a69e-5e8e3ea6481b",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|2号场"
+    },
+    {
+      "id": "2026-07-19|coach|%E6%9D%A8%E6%95%99%E7%BB%83|b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+      "scheduleId": "b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-19|student|seed-student-027|b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+      "scheduleId": "b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+      "indexType": "student",
+      "indexKey": "seed-student-027"
+    },
+    {
+      "id": "2026-07-19|venue|shunyi_mapo%7C2%E5%8F%B7%E5%9C%BA|b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+      "scheduleId": "b2486b41-ed9a-4a46-92cf-c0adc3eb967b",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|2号场"
+    },
+    {
+      "id": "2026-07-25|coach|%E6%9D%A8%E6%95%99%E7%BB%83|b5952c07-3925-4439-9b2f-839805023012",
+      "scheduleId": "b5952c07-3925-4439-9b2f-839805023012",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-25|student|f4d9aeed-2d5b-4790-8351-00e83dc89bee|b5952c07-3925-4439-9b2f-839805023012",
+      "scheduleId": "b5952c07-3925-4439-9b2f-839805023012",
+      "indexType": "student",
+      "indexKey": "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+    },
+    {
+      "id": "2026-07-25|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|b5952c07-3925-4439-9b2f-839805023012",
+      "scheduleId": "b5952c07-3925-4439-9b2f-839805023012",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-25|coach|%E6%9D%A8%E6%95%99%E7%BB%83|ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+      "scheduleId": "ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-25|student|f4d9aeed-2d5b-4790-8351-00e83dc89bee|ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+      "scheduleId": "ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+      "indexType": "student",
+      "indexKey": "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+    },
+    {
+      "id": "2026-07-25|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+      "scheduleId": "ba1db58c-a99e-47bf-9518-5f04a9ef0571",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-17|coach|%E6%9D%A8%E6%95%99%E7%BB%83|cxe-20260715-0731-schedule-2e1df6563f500e0a",
+      "scheduleId": "cxe-20260715-0731-schedule-2e1df6563f500e0a",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-17|student|abda0438-bd46-440d-a211-d431a3b1e451|cxe-20260715-0731-schedule-2e1df6563f500e0a",
+      "scheduleId": "cxe-20260715-0731-schedule-2e1df6563f500e0a",
+      "indexType": "student",
+      "indexKey": "abda0438-bd46-440d-a211-d431a3b1e451"
+    },
+    {
+      "id": "2026-07-17|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|cxe-20260715-0731-schedule-2e1df6563f500e0a",
+      "scheduleId": "cxe-20260715-0731-schedule-2e1df6563f500e0a",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|4号场"
+    },
+    {
+      "id": "2026-07-18|coach|%E6%9D%A8%E6%95%99%E7%BB%83|cxe-20260715-0731-schedule-cad2da0db6c9c5b0",
+      "scheduleId": "cxe-20260715-0731-schedule-cad2da0db6c9c5b0",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-18|student|seed-student-041|cxe-20260715-0731-schedule-cad2da0db6c9c5b0",
+      "scheduleId": "cxe-20260715-0731-schedule-cad2da0db6c9c5b0",
+      "indexType": "student",
+      "indexKey": "seed-student-041"
+    },
+    {
+      "id": "2026-07-18|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|cxe-20260715-0731-schedule-cad2da0db6c9c5b0",
+      "scheduleId": "cxe-20260715-0731-schedule-cad2da0db6c9c5b0",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-11|coach|%E6%9D%A8%E6%95%99%E7%BB%83|cxe-thirdparty-schedule-90-c4cbc8949580",
+      "scheduleId": "cxe-thirdparty-schedule-90-c4cbc8949580",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-11|student|seed-student-041|cxe-thirdparty-schedule-90-c4cbc8949580",
+      "scheduleId": "cxe-thirdparty-schedule-90-c4cbc8949580",
+      "indexType": "student",
+      "indexKey": "seed-student-041"
+    },
+    {
+      "id": "2026-07-11|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|cxe-thirdparty-schedule-90-c4cbc8949580",
+      "scheduleId": "cxe-thirdparty-schedule-90-c4cbc8949580",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-24|coach|%E6%9D%A8%E6%95%99%E7%BB%83|d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+      "scheduleId": "d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-24|student|seed-student-009|d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+      "scheduleId": "d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+      "indexType": "student",
+      "indexKey": "seed-student-009"
+    },
+    {
+      "id": "2026-07-24|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+      "scheduleId": "d7db03ee-9f3f-498a-9b9b-9fb5886aa8ed",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-24|coach|%E6%9D%A8%E6%95%99%E7%BB%83|e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+      "scheduleId": "e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-24|student|abda0438-bd46-440d-a211-d431a3b1e451|e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+      "scheduleId": "e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+      "indexType": "student",
+      "indexKey": "abda0438-bd46-440d-a211-d431a3b1e451"
+    },
+    {
+      "id": "2026-07-24|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+      "scheduleId": "e36e1c32-9d8b-4d5d-ac62-4675ac822014",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    },
+    {
+      "id": "2026-07-12|coach|%E6%9D%A8%E6%95%99%E7%BB%83|repair-yang-july-20260712-1400-you",
+      "scheduleId": "repair-yang-july-20260712-1400-you",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-12|student|repair-bind-missing-schedule-students-20260818-student-you|repair-yang-july-20260712-1400-you",
+      "scheduleId": "repair-yang-july-20260712-1400-you",
+      "indexType": "student",
+      "indexKey": "repair-bind-missing-schedule-students-20260818-student-you"
+    },
+    {
+      "id": "2026-07-22|coach|%E6%9D%A8%E6%95%99%E7%BB%83|repair-zhanghaoran-20260723-1730",
+      "scheduleId": "repair-zhanghaoran-20260723-1730",
+      "indexType": "coach",
+      "indexKey": "杨教练"
+    },
+    {
+      "id": "2026-07-22|student|f4d9aeed-2d5b-4790-8351-00e83dc89bee|repair-zhanghaoran-20260723-1730",
+      "scheduleId": "repair-zhanghaoran-20260723-1730",
+      "indexType": "student",
+      "indexKey": "f4d9aeed-2d5b-4790-8351-00e83dc89bee"
+    },
+    {
+      "id": "2026-07-22|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|repair-zhanghaoran-20260723-1730",
+      "scheduleId": "repair-zhanghaoran-20260723-1730",
+      "indexType": "venue",
+      "indexKey": "shunyi_mapo|3号场"
+    }
+  ]
+}
