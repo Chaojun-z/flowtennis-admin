@@ -18,7 +18,8 @@ const ownerEntitlement = {
   status: 'active',
   courseType: '私教课',
   totalLessons: 10,
-  remainingLessons: 6
+  remainingLessons: 6,
+  maxStudents: 1
 };
 const authorizedSchedule = {
   id: 'schedule-authorized',
@@ -57,6 +58,26 @@ assert.throws(
 assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule(ownerEntitlement, authorizedSchedule, { authorizations: [authorization] }),
   'student A should consume student B package when B has authorized A'
+);
+
+const coAttendedAuthorizedSchedule = {
+  ...authorizedSchedule,
+  id: 'schedule-co-attended-authorized',
+  studentIds: ['student-owner', 'student-brother'],
+  studentName: '哥哥、弟弟',
+  packageOwnerStudentId: 'student-owner',
+  usedByStudentId: 'student-brother'
+};
+
+assert.doesNotThrow(
+  () => rules.validateEntitlementForSchedule(ownerEntitlement, coAttendedAuthorizedSchedule, { authorizations: [authorization] }),
+  '1v1 package should allow a co-attended shared-package schedule when only one package lesson is consumed'
+);
+
+assert.throws(
+  () => rules.validateEntitlementForSchedule(ownerEntitlement, { ...coAttendedAuthorizedSchedule, packageOwnerStudentId: '', usedByStudentId: '' }, { authorizations: [authorization] }),
+  /课包适用人数不匹配/,
+  'ordinary two-student schedules should still not consume a 1v1 package without shared-package metadata'
 );
 
 assert.strictEqual(

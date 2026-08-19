@@ -253,6 +253,41 @@ const plan = sync.buildDryRunPlan({
 assert.strictEqual(plan.summary.bindExisting, 1, 'first baseline should bind exact existing future schedule instead of creating duplicate');
 assert.strictEqual(plan.summary.create, 0, 'exact existing future schedule should not be recreated');
 
+const staleSyncFallbackPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'stale-sync-fallback-key',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coachName: '晓哲',
+    studentNames: ['W.Jing'],
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [{
+    id: 'sync-stale',
+    sourceKey: 'stale-sync-fallback-key',
+    scheduleId: 'missing-schedule-id',
+    status: 'active'
+  }],
+  schedules: [{
+    id: 'sch-stale-fallback-existing',
+    startTime: '2026-07-20 12:00',
+    endTime: '2026-07-20 13:30',
+    coach: '晓哲',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-1'],
+    status: '已排课'
+  }],
+  students: [{ id: 'stu-1', name: 'W.Jing' }],
+  coaches: [{ id: 'coach-xz', name: '晓哲' }],
+  users: []
+});
+assert.strictEqual(staleSyncFallbackPlan.summary.notifyError, 0, 'stale sync rows should not require operations confirmation when the Feishu row can be matched again');
+assert.strictEqual(staleSyncFallbackPlan.summary.bindExisting, 1, 'stale sync rows should fall back to normal existing schedule binding');
+
 const coachSuffixPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -2404,6 +2439,49 @@ assert.strictEqual(autoAuditLessonIndexMismatchPlan.summary.create, 1, 'lesson i
 assert.strictEqual(autoAuditLessonIndexMismatchPlan.summary.notifyError, 0, 'lesson index mismatches should not require operations confirmation when a usable entitlement is clear');
 assert.match(sync.buildScheduleBody(autoAuditLessonIndexMismatchPlan.actions[0].candidate).notes, /课时编号自查/, 'auto-audited lesson index mismatches should leave an internal schedule note');
 
+const staleFeishuScheduleReleasesFinalLessonPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'william-final-current-feishu-key',
+    startTime: '2026-08-23 16:00',
+    endTime: '2026-08-23 17:00',
+    durationMinutes: 60,
+    lessonCount: 1,
+    coachName: 'Siren',
+    studentNames: ['william'],
+    studentText: 'william（10）',
+    lessonIndex: 10,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '青少年', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [{
+    id: 'stale-feishu-william-lesson',
+    startTime: '2026-08-16 16:00',
+    endTime: '2026-08-16 17:00',
+    coach: 'Siren 教练',
+    campus: 'shunyi_mapo',
+    venue: '3号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-william'],
+    studentName: 'William（时节）',
+    entitlementId: 'ent-william',
+    entitlementIds: ['ent-william'],
+    status: '已排课',
+    scheduleSource: 'feishu-sheet',
+    notes: '飞书排课表同步 8.10-8.16'
+  }],
+  students: [{ id: 'stu-william', name: 'William（时节）', primaryCoach: 'Siren 教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-william', studentId: 'stu-william', courseType: '私教课', totalLessons: 10, usedLessons: 10, remainingLessons: 0, status: 'depleted', packageName: '青少年1v1 黄金时间10课时' }],
+  nowKey: '2026-08-20 00:00',
+  scannedDateRanges: [{ start: '2026-08-10', end: '2026-08-23' }]
+});
+assert.strictEqual(staleFeishuScheduleReleasesFinalLessonPlan.summary.notifyError, 0, 'deleted stale Feishu schedules should not make final normal lesson numbers ask operations for a package');
+assert.strictEqual(staleFeishuScheduleReleasesFinalLessonPlan.summary.create, 1, 'the released final lesson should be schedulable');
+assert.strictEqual(staleFeishuScheduleReleasesFinalLessonPlan.summary.pendingDelete, 1, 'the stale Feishu-source schedule should be automatically cancelled in the same run');
+
 const deletePlan = sync.buildDryRunPlan({
   feishuCourses: [],
   syncRows: [{ id: 'sync-1', sourceKey: 'old-key', scheduleId: 'sch-old', status: 'active' }],
@@ -2491,6 +2569,32 @@ assert.deepStrictEqual(safeHistoryPlan.summary, {
   pendingDelete: 0,
   notifyError: 0
 }, 'history safe apply should only execute confirmed bind/formal-create actions by default');
+
+const retryableErrorNotification = sync.buildNotificationText({
+  at: '2026-08-19T10:00:00+08:00',
+  sheetTitle: '8.17-8.23',
+  plan: {
+    summary: { create: 1, createTrial: 0, update: 0, bindExisting: 0, pendingDelete: 0, notifyError: 0 },
+    actions: [{
+      type: 'create_schedule',
+      sourceKey: 'retryable-error-key',
+      candidate: {
+        sourceKey: 'retryable-error-key',
+        date: '2026-08-20',
+        startClock: '13:00',
+        endClock: '14:00',
+        coachName: '岳克舟',
+        studentText: '晨曦',
+        courseText: '成人私教【正式】',
+        venueText: '马坡室内',
+        courtText: '4号'
+      }
+    }]
+  },
+  applied: [{ type: 'error', sourceKey: 'retryable-error-key', error: '排课校验超时，请稍后重试' }]
+});
+assert.match(retryableErrorNotification, /系统重试：1 条/, 'retryable system failures should be shown as system retry count');
+assert.match(retryableErrorNotification, /需要处理：0 条/, 'retryable system failures should not be counted as operator confirmations');
 
 const trialConfirmedHistoryPlan = sync.safeHistoryApplyPlan({
   actions: [

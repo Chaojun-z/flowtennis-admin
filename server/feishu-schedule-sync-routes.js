@@ -1680,10 +1680,24 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     .filter(row=>row.status==='pending_delete')
     .map(row=>String(row.scheduleId||''))
     .filter(Boolean));
-  const planningSchedules=(schedules||[]).filter(row=>!pendingDeleteScheduleIds.has(String(row.id||'')));
+  const rawSourceKeys=new Set((feishuCourses||[]).map(row=>String(row.sourceKey||'')).filter(Boolean));
+  const rawMatchCtx={students,coaches,users,schedules,entitlements,packages,recommendEntitlements};
+  const staleFeishuSourceScheduleIds=new Set();
+  for(const schedule of schedules||[]){
+    const scheduleId=String(schedule?.id||'');
+    if(!scheduleId||pendingDeleteScheduleIds.has(scheduleId))continue;
+    if(!activeSchedule(schedule)||!feishuSourceSchedule(schedule))continue;
+    if(!courseInAnyDateRange(schedule,scannedDateRanges))continue;
+    const activeSyncRows=(syncRows||[]).filter(row=>row.status==='active'&&String(row.scheduleId||'')===scheduleId);
+    if(activeSyncRows.some(row=>rawSourceKeys.has(String(row.sourceKey||''))))continue;
+    if((feishuCourses||[]).some(raw=>rawFeishuRowMayRepresentSchedule(raw,schedule,rawMatchCtx)))continue;
+    staleFeishuSourceScheduleIds.add(scheduleId);
+  }
+  const excludedPlanningScheduleIds=new Set([...pendingDeleteScheduleIds,...staleFeishuSourceScheduleIds]);
+  const planningSchedules=(schedules||[]).filter(row=>!excludedPlanningScheduleIds.has(String(row.id||'')));
   const planningEntitlements=(entitlements||[]).map(row=>({...row}));
   for(const schedule of schedules||[]){
-    if(!pendingDeleteScheduleIds.has(String(schedule.id||''))||!activeSchedule(schedule))continue;
+    if(!excludedPlanningScheduleIds.has(String(schedule.id||''))||!activeSchedule(schedule))continue;
     const count=scheduleLessonCount(schedule);
     const ids=[schedule.entitlementId,...parseMaybeArray(schedule.entitlementIds)].map(String).filter(Boolean);
     for(const entitlementId of new Set(ids)){
@@ -1709,11 +1723,19 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
   }
   function supersededSyncRowsFor(schedule,sourceKey){
     const scheduleIds=new Set([String(schedule?.id||''),...parseMaybeArray(schedule?.scheduleIds).map(String)].filter(Boolean));
-    if(!scheduleIds.size)return [];
-    return (syncRows||[]).filter(row=>{
+    const rows=(syncRows||[]).filter(row=>{
       if(row.status!=='active')return false;
-      if(String(row.sourceKey||'')===String(sourceKey||''))return false;
-      return scheduleIds.has(String(row.scheduleId||''));
+      if(String(row.sourceKey||'')===String(sourceKey||'')){
+        return !!row.scheduleId&&!(planningSchedules||[]).some(item=>String(item.id||'')===String(row.scheduleId||''));
+      }
+      return scheduleIds.size&&scheduleIds.has(String(row.scheduleId||''));
+    });
+    const seen=new Set();
+    return rows.filter(row=>{
+      const id=String(row.id||'');
+      if(!id||seen.has(id))return false;
+      seen.add(id);
+      return true;
     });
   }
   const orderedFeishuCourses=(feishuCourses||[]).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||''))||String(a.sourceKey||'').localeCompare(String(b.sourceKey||'')));
@@ -1750,7 +1772,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
     if(sync?.scheduleId){
       const existing=(planningSchedules||[]).find(row=>String(row.id||'')===String(sync.scheduleId));
       if(!existing){
-        actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,reason:'同步记录绑定的系统排课不存在'});
+        candidate={...candidate,staleSync:sync};
       }else if(sync.status==='pending_update'&&sync.pendingFingerprint===candidate.fingerprint){
         markRepresentedSchedule(existing);
         actions.push({type:'noop',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing});
@@ -1777,7 +1799,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
         markRepresentedSchedule(existing);
         actions.push({type:'noop',sourceKey:candidate.sourceKey,candidate,sync,schedule:existing});
       }
-      continue;
+      if(existing)continue;
     }
     const exact=exactScheduleMatch(candidate,planningSchedules);
     if(exact){
@@ -1866,7 +1888,7 @@ function buildDryRunPlan({feishuCourses=[],syncRows=[],schedules=[],students=[],
       actions.push({type:'notify_error',sourceKey:candidate.sourceKey,candidate,conflict:createConflict,reason:`目标时间或场地已有排课：${scheduleSnapshot(createConflict).brief}`});
       continue;
     }
-    actions.push({type:candidate.course.isTrial?'create_trial_schedule':'create_schedule',sourceKey:candidate.sourceKey,candidate});
+    actions.push({type:candidate.course.isTrial?'create_trial_schedule':'create_schedule',sourceKey:candidate.sourceKey,candidate,supersededSyncRows:supersededSyncRowsFor(null,candidate.sourceKey)});
     applyPlannedSchedule(candidate,ctx);
   }
   for(const row of syncRows||[]){
@@ -2315,6 +2337,10 @@ function currentAppliedItems(result={}){
   });
 }
 
+function retryableSystemSyncError(error=''){
+  return /超时|请稍后重试|timeout|timed out/i.test(cleanText(error));
+}
+
 function buildNotificationCard(result={}){
   const s=result.plan?.summary||{};
   const applied=currentAppliedItems(result);
@@ -2322,7 +2348,8 @@ function buildNotificationCard(result={}){
   const successItems=applied.filter(item=>!['error','refresh_sync'].includes(item.type));
   const pendingDeletes=[];
   const pendingUpdates=applied.filter(item=>item.type==='pending_update'&&actionMap.has(item.sourceKey));
-  const appliedErrors=applied.filter(item=>item.type==='error'&&actionMap.has(item.sourceKey));
+  const retryableErrors=applied.filter(item=>item.type==='error'&&actionMap.has(item.sourceKey)&&retryableSystemSyncError(item.error));
+  const appliedErrors=applied.filter(item=>item.type==='error'&&actionMap.has(item.sourceKey)&&!retryableSystemSyncError(item.error));
   const notifyErrors=(result.plan?.actions||[]).filter(action=>action.type==='notify_error');
   const needItems=[
     ...notifyErrors.map(action=>({kind:'notify',action})),
@@ -2333,8 +2360,9 @@ function buildNotificationCard(result={}){
     : Number(s[type==='bind_existing'?'bindExisting':type==='create_schedule'?'create':type==='create_trial_schedule'?'createTrial':type==='update_schedule'?'update':type==='delete_schedule'||type==='pending_delete'?'pendingDelete':type]||0);
   const resultLine=[
     `自动完成：新增 ${count('create_schedule')}｜体验课 ${count('create_trial_schedule')}｜修改 ${count('update_schedule')}｜绑定 ${count('bind_existing')}｜自动取消 ${count('delete_schedule')}`,
-    `需要处理：${needItems.length+pendingDeletes.length+pendingUpdates.length} 条`
-  ].join('\n');
+    `需要处理：${needItems.length+pendingDeletes.length+pendingUpdates.length} 条`,
+    retryableErrors.length?`系统重试：${retryableErrors.length} 条`:''
+  ].filter(Boolean).join('\n');
   const elements=[
     {
       tag:'div',
@@ -2415,7 +2443,8 @@ function buildNotificationText(result){
   const actionMap=actionBySourceKey(result);
   const applied=currentAppliedItems(result);
   const notifyErrors=(result.plan?.actions||[]).filter(action=>action.type==='notify_error');
-  const appliedErrors=applied.filter(item=>item.type==='error'&&actionMap.has(item.sourceKey));
+  const retryableErrors=applied.filter(item=>item.type==='error'&&actionMap.has(item.sourceKey)&&retryableSystemSyncError(item.error));
+  const appliedErrors=applied.filter(item=>item.type==='error'&&actionMap.has(item.sourceKey)&&!retryableSystemSyncError(item.error));
   const pendingUpdates=applied.filter(item=>item.type==='pending_update'&&actionMap.has(item.sourceKey));
   const needItems=[
     ...notifyErrors.map(action=>({kind:'notify',action})),
@@ -2429,6 +2458,7 @@ function buildNotificationText(result){
     `本次处理：新增 ${s.create}，体验课新增 ${s.createTrial}，修改 ${s.update}，绑定 ${s.bindExisting}，自动取消 ${s.pendingDelete}`,
     `需要处理：${needItems.length} 条`
   ];
+  if(retryableErrors.length)lines.push(`系统重试：${retryableErrors.length} 条`);
   if(needItems.length){
     lines.push('需要运营处理：');
     lines.push(...needItems.slice(0,10).map(item=>{
@@ -2792,6 +2822,7 @@ async function applySyncPlan(plan,ctx={}){
         const row={id:`feishu-sync-${sha256(action.sourceKey).slice(0,24)}`,source:'feishu-sheet',sheetId:action.candidate.sheetId||'',sheetTitle:action.candidate.sheetTitle||'',sourceKey:action.sourceKey,scheduleId:action.schedule.id,scheduleIds,startTime:action.candidate.startTime,endTime:action.candidate.endTime,lastFingerprint:action.candidate.fingerprint,status:'active',createdAt:now,updatedAt:now,lastSyncedAt:now};
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,row.id,row);
         for(const oldRow of action.supersededSyncRows||[]){
+          if(String(oldRow.id||'')===String(row.id||''))continue;
           await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,oldRow.id,{...oldRow,status:'superseded',supersededBySourceKey:action.sourceKey,supersededByScheduleId:action.schedule.id,supersededAt:now,updatedAt:now});
         }
         await supersedePendingFeishuTasks(ctx,[action.sourceKey,...(action.supersededSyncRows||[]).map(row=>row.sourceKey)],now);
@@ -2830,6 +2861,10 @@ async function applySyncPlan(plan,ctx={}){
         if(!schedule?.id)throw new Error('系统排课创建失败');
         const row={id:`feishu-sync-${sha256(action.sourceKey).slice(0,24)}`,source:'feishu-sheet',sheetId:action.candidate.sheetId||'',sheetTitle:action.candidate.sheetTitle||'',sourceKey:action.sourceKey,scheduleId:schedule.id,startTime:action.candidate.startTime,endTime:action.candidate.endTime,lastFingerprint:action.candidate.fingerprint,status:'active',createdAt:now,updatedAt:now,lastSyncedAt:now};
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,row.id,row);
+        for(const oldRow of action.supersededSyncRows||[]){
+          if(String(oldRow.id||'')===String(row.id||''))continue;
+          await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,oldRow.id,{...oldRow,status:'superseded',supersededBySourceKey:action.sourceKey,supersededByScheduleId:schedule.id,supersededAt:now,updatedAt:now});
+        }
         await supersedePendingFeishuTasks(ctx,[action.sourceKey],now);
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:schedule.id});
       }else if(action.type==='create_trial_schedule'){
@@ -2841,6 +2876,10 @@ async function applySyncPlan(plan,ctx={}){
         if(!schedule?.id)throw new Error('系统体验课排课创建失败');
         const row={id:`feishu-sync-${sha256(action.sourceKey).slice(0,24)}`,source:'feishu-sheet',sheetId:action.candidate.sheetId||'',sheetTitle:action.candidate.sheetTitle||'',sourceKey:action.sourceKey,scheduleId:schedule.id,startTime:action.candidate.startTime,endTime:action.candidate.endTime,lastFingerprint:action.candidate.fingerprint,status:'active',createdAt:now,updatedAt:now,lastSyncedAt:now};
         await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,row.id,row);
+        for(const oldRow of action.supersededSyncRows||[]){
+          if(String(oldRow.id||'')===String(row.id||''))continue;
+          await ctx.put(ctx.T_FEISHU_SCHEDULE_SYNC,oldRow.id,{...oldRow,status:'superseded',supersededBySourceKey:action.sourceKey,supersededByScheduleId:schedule.id,supersededAt:now,updatedAt:now});
+        }
         await supersedePendingFeishuTasks(ctx,[action.sourceKey],now);
         applied.push({type:action.type,sourceKey:action.sourceKey,scheduleId:schedule.id});
       }else if(action.type==='update_schedule'){

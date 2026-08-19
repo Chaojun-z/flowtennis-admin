@@ -1255,7 +1255,12 @@ function validateEntitlementForSchedule(entitlement,schedule,options={}){
   if(!isScheduleInsideEntitlementTimeWindows(schedule,entitlement)&&!scheduleNeedsFieldFeeForEntitlement(entitlement,schedule))throw new Error('不在课包可用时间段');
   const max=parseInt(entitlement.maxStudents)||0;
   const scheduleSmallClassType=normalizeSmallClassType(schedule.smallClassType||schedule.packageSubType||schedule.subType,'');
-  const countForMax=scheduleSmallClassType==='family'?(parseInt(schedule.actualStudentCount)||studentIds.length):studentIds.length;
+  const usage=scheduleEntitlementUsageContext(entitlement,schedule);
+  const explicitSharedPackageUse=usage.isAuthorizedUse&&
+    String(usage.packageOwnerStudentId||'')===String(entitlement.studentId||'')&&
+    studentIds.includes(String(usage.packageOwnerStudentId||''))&&
+    studentIds.includes(String(usage.usedByStudentId||''));
+  const countForMax=explicitSharedPackageUse?1:(scheduleSmallClassType==='family'?(parseInt(schedule.actualStudentCount)||studentIds.length):studentIds.length);
   if(max>0&&countForMax>max)throw new Error('课包适用人数不匹配');
   if(isSmallGroupCourse(entitlement)&&isSmallGroupCourse(schedule)){
     const entType=normalizeSmallClassType(entitlement.smallClassType);
