@@ -339,43 +339,14 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/customer-center-list'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const fresh=query?.get('fresh')==='1'||query?.get('forceFresh')==='1';
-      if(!fresh){
-        const cachedFactModel=readCustomerCenterFactModelCache(user);
-        if(cachedFactModel){
-          const teachingData={...cachedFactModel.scoped,teachingStudentSummaryRows:cachedFactModel.scoped.studentTeachingSummaries};
-          return sendJson(res,buildCustomerCenterPagePayload({
-            customerLifecycleRows:cachedFactModel.customerLifecycleRows,
-            teachingData,
-            query,
-            prebuiltTeachingStudentViews:cachedFactModel.teachingStudentViews,
-            prebuiltStandardLifecycleMetrics:cachedFactModel.standardLifecycleMetrics
-          }));
-        }
-      }
-      if(!fresh&&T_STUDENT_TEACHING_SUMMARY){
-        const studentTeachingSummaries=await getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]);
-        if(studentTeachingSummaries.length){
-          const factModel=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:true});
-          const teachingData={...factModel.scoped,teachingStudentSummaryRows:factModel.scoped.studentTeachingSummaries};
-          return sendJson(res,buildCustomerCenterPagePayload({
-            customerLifecycleRows:factModel.customerLifecycleRows,
-            teachingData,
-            query,
-            prebuiltTeachingStudentViews:factModel.teachingStudentViews,
-            prebuiltStandardLifecycleMetrics:factModel.standardLifecycleMetrics
-          }));
-        }
-      }
-      const {scoped,customerLifecycleRows}=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:true});
-      const teachingData={...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries};
-      const cachedFactModel=readCustomerCenterFactModelCache(user);
+      const factModel=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:true});
+      const teachingData={...factModel.scoped,teachingStudentSummaryRows:factModel.scoped.studentTeachingSummaries};
       return sendJson(res,buildCustomerCenterPagePayload({
-        customerLifecycleRows,
+        customerLifecycleRows:factModel.customerLifecycleRows,
         teachingData,
         query,
-        prebuiltTeachingStudentViews:cachedFactModel?.teachingStudentViews,
-        prebuiltStandardLifecycleMetrics:cachedFactModel?.standardLifecycleMetrics
+        prebuiltTeachingStudentViews:factModel.teachingStudentViews,
+        prebuiltStandardLifecycleMetrics:factModel.standardLifecycleMetrics
       }));
     }
     if(path==='/page-data/purchase-detail'&&method==='GET'){

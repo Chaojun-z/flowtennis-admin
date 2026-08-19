@@ -586,6 +586,29 @@ function teachingLessonRowsCompletedUnits(rows = []) {
   }, 0);
 }
 
+function teachingStudentPackageConsumedUnits(packageFields = {}) {
+  const total = Number(packageFields.detailPackageBalanceTotal);
+  const remaining = Number(packageFields.detailPackageBalanceRemaining);
+  if (Number.isFinite(total) && total > 0 && Number.isFinite(remaining)) {
+    return Math.max(0, round(total - remaining, 1));
+  }
+  const rows = Array.isArray(packageFields.detailPackageOrderRows) ? packageFields.detailPackageOrderRows : [];
+  const used = rows
+    .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
+    .reduce((sum, row) => {
+      const rowTotal = Number(row.totalLessons);
+      const rowRemaining = Number(row.remainingLessons);
+      if (!Number.isFinite(rowTotal) || rowTotal <= 0 || !Number.isFinite(rowRemaining)) return sum;
+      return sum + Math.max(0, rowTotal - rowRemaining);
+    }, 0);
+  return used > 0 ? round(used, 1) : null;
+}
+
+function teachingStudentDirectFormalLessonUnits(data = {}, studentId = '', now = new Date(), row = {}) {
+  return round(teachingStudentDirectFormalLessonRows(data, studentId, now, row)
+    .reduce((sum, item) => sum + scheduleLessonUnits(item), 0), 1);
+}
+
 function buildTeachingStudentCoursePaidMap(data = {}) {
   const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
   const purchaseRows = new Map();
@@ -1035,10 +1058,18 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       : money(summaryFields.cumulativeCoursePaidAmount || 0);
     const lessonRowCompleted = round(teachingLessonRowsCompletedUnits(lessonRows), 1);
     const summaryCompleted = round(summaryFields.completedLessons || 0, 1);
+    const packageConsumedLimit = options.includeTrial ? null : teachingStudentPackageConsumedUnits(packageFields);
+    const directFormalCompleted = packageConsumedLimit === null ? 0 : teachingStudentDirectFormalLessonUnits(data, studentId, now, { ...summaryFields, ...packageFields, studentId });
+    const packageConservedCompleted = actualCompleted => {
+      if (packageConsumedLimit === null) return round(actualCompleted, 1);
+      const actual = round(actualCompleted, 1);
+      const actualPackageCompleted = Math.max(0, actual - directFormalCompleted);
+      return round(Math.min(actualPackageCompleted, packageConsumedLimit) + directFormalCompleted, 1);
+    };
     const completedLessons = lessonDetailMap.has(studentId)
-      ? lessonRowCompleted
+      ? packageConservedCompleted(lessonRowCompleted)
       : rawSummaryLessonRows.length
-        ? (summaryLessonRows.length ? Math.max(lessonRowCompleted, summaryCompleted) : 0)
+        ? (summaryLessonRows.length ? packageConservedCompleted(Math.max(lessonRowCompleted, summaryCompleted)) : 0)
         : summaryCompleted;
     details.set(studentId, {
       packageListRows: [],
@@ -1625,6 +1656,12 @@ function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
     || teachingDateOnOrBeforeNow(row.detailRecentLessonDate || row.lastFormalLessonAt, now)
     || hasPastLessonRow;
   const saysNever = /未.*上课|从未/.test(text(row.activityStatusLabel));
+  const packageConsumedLimit = teachingStudentPackageConsumedUnits(row);
+  if (packageConsumedLimit !== null) {
+    const directRows = lessonRows.filter(item => !courseRowIsTrial(item) && teachingPaymentIsDirect(item));
+    const directUnits = teachingLessonRowsCompletedUnits(directRows);
+    if ((Number(row.completedLessons) || 0) > packageConsumedLimit + directUnits) return true;
+  }
   return hasLessonFact && saysNever;
 }
 

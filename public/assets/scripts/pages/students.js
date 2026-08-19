@@ -254,11 +254,7 @@ function studentFormalEntitlementRows(stu){
   return studentActiveEntitlementRows(stu).filter(row=>!studentPackageRecordIsTrial(row));
 }
 function studentPackageRemainingLessons(stu){
-  const direct=Number(stu?.packageBalanceRemaining);
-  if(Number.isFinite(direct)&&direct>0)return direct;
-  const listRows=studentUnifiedPackageListRows(stu);
-  if(listRows.length)return listRows.reduce((sum,row)=>sum+(Number(row.remainingLessons)||0),0);
-  return studentFormalEntitlementRows(stu).reduce((sum,row)=>sum+(Number(row.remainingLessons)||0),0);
+  return studentPackageLessonMeta(stu).remaining||0;
 }
 function studentHasFormalPackage(stu){
   return studentFormalPurchaseRows(stu).length>0||studentFormalEntitlementRows(stu).length>0||studentUnifiedPackageListRows(stu).length>0||Number(stu?.coursePurchaseCount)>0;
@@ -520,10 +516,9 @@ function studentUnifiedPackageListTooltip(stu){
   return rows.length?rows.map(row=>studentUnifiedPackageLineText(row)).join('\n'):'-';
 }
 function studentUnifiedPackageBalanceHtml(stu){
-  const text=String(stu?.packageBalanceText||'').trim();
-  if(!text||text==='-')return renderStandardCellText('-',false);
-  const percent=Number(stu?.packageBalancePercent)||0;
-  return `<div class="tms-mini-bar"><div class="tms-mini-bar-fill" style="width:${Math.max(0,Math.min(100,percent))}%"></div><span class="tms-mini-bar-text">${esc(text)}</span></div>`;
+  const meta=studentPackageLessonMeta(stu);
+  if(!meta.hasPackage||!meta.text||meta.text==='-')return renderStandardCellText('-',false);
+  return `<div class="tms-mini-bar"><div class="tms-mini-bar-fill" style="width:${Math.max(0,Math.min(100,meta.pct||0))}%"></div><span class="tms-mini-bar-text">${esc(meta.text)}</span></div>`;
 }
 function studentUnifiedCompletedLessonCount(stu){
   return lessonUnitsText(stu?.completedLessons);
@@ -549,7 +544,7 @@ function studentSortValue(stu,key){
   if(key==='packagePurchaseDate')return studentListPackagePurchaseDate(stu);
   if(key==='lastLesson')return studentLastLessonDate(stu);
   if(key==='completedLessons')return Number(stu?.completedLessons)||0;
-  if(key==='packageLessons')return Number(stu?.packageBalanceRemaining)||0;
+  if(key==='packageLessons')return studentPackageRemainingLessons(stu);
   return '';
 }
 function ensureStudentDefaultSort(){
@@ -1228,7 +1223,7 @@ function renderStudentMobileCards(list){
       <div class="admin-h5-card-tags"><span>${esc(studentSourceText(s)||'-')}</span>${renderStudentLabelTag(studentActivityStatusText(s))}${renderStudentLabelTag(studentPaymentModeText(s))}</div>
       <div class="admin-h5-card-grid">
         <span><b>课包状态</b>${renderStudentLabelTag(studentPackageStatusText(s))}</span>
-        <span><b>课包余额</b>${esc(renderStandardEmptyText(s?.packageBalanceText))}</span>
+        <span><b>课包余额</b>${esc(renderStandardEmptyText(studentPackageLessonMeta(s).text))}</span>
         <span><b>最近上课</b>${esc(renderStandardEmptyText(studentRecentLessonText(s)))}</span>
         <span><b>累计上课</b>${esc(renderStandardEmptyText(studentCompletedLessonCount(s)))}</span>
         <span><b>累计课程付费</b>${esc(renderStandardEmptyText(studentCumulativeCoursePaidText(s)))}</span>

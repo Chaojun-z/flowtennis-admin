@@ -58,6 +58,91 @@ async function requestStudentDetail({ fresh = false } = {}) {
   return { res, calls };
 }
 
+async function requestInconsistentStudentDetail() {
+  const calls = { cappedScan: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const tableRows = {
+    purchases: [
+      { id: 'pur-1', studentId: 'stu-1', packageName: '第一课包', status: 'active', purchaseDate: '2026-01-01' },
+      { id: 'pur-2', studentId: 'stu-1', packageName: '第二课包', status: 'active', purchaseDate: '2026-06-01' }
+    ],
+    packages: [],
+    entitlements: [
+      { id: 'ent-1', purchaseId: 'pur-1', studentId: 'stu-1', packageName: '第一课包', totalLessons: 10, remainingLessons: 0, status: 'depleted' },
+      { id: 'ent-2', purchaseId: 'pur-2', studentId: 'stu-1', packageName: '第二课包', totalLessons: 10, remainingLessons: 2, status: 'active' }
+    ],
+    entitlement_ledger: Array.from({ length: 18 }, (_, index) => ({
+      id: `ledger-${index + 1}`,
+      entitlementId: index >= 10 ? 'ent-2' : 'ent-1',
+      purchaseId: index >= 10 ? 'pur-2' : 'pur-1',
+      studentId: 'stu-1',
+      scheduleId: `sch-${index + 1}`,
+      lessonDelta: -1,
+      relatedDate: `2026-06-${String(index + 1).padStart(2, '0')}`
+    })),
+    schedule: Array.from({ length: 19 }, (_, index) => ({
+      id: `sch-${index + 1}`,
+      studentId: 'stu-1',
+      startTime: `2026-06-${String(index + 1).padStart(2, '0')} 10:00:00`,
+      endTime: `2026-06-${String(index + 1).padStart(2, '0')} 11:00:00`,
+      status: '已结束',
+      courseType: '私教课',
+      lessonCount: 1
+    })),
+    membership_benefit_ledger: [],
+    feedbacks: []
+  };
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      return tableRows[table] || [];
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-1') {
+        return { id: 'stu-1', name: '王同学', phone: '13800000000', campus: 'mapo', type: '成人' };
+      }
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === 'stu-1') {
+        return {
+          id: 'stu-1',
+          studentId: 'stu-1',
+          name: '王同学',
+          teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+          activityStatusLabel: '近30天活跃',
+          completedLessons: 19,
+          detailPackageBalanceTotal: 20,
+          detailPackageBalanceRemaining: 2,
+          detailLessonRecordRows: [
+            { kind: 'ledger', time: '2026-06-19 10:00-11:00', courseType: '私教课', lessonDelta: -1 }
+          ]
+        };
+      }
+      return null;
+    },
+    PRODUCTION_PAGE_READ_LIMITS: { entitlementLedger: 100, schedule: 100, leads: 100 },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-1') });
+  return { res, calls };
+}
+
 (async () => {
   const { res, calls } = await requestStudentDetail();
   assert.strictEqual(res.statusCode, 200);
@@ -71,6 +156,15 @@ async function requestStudentDetail({ fresh = false } = {}) {
     res.body.detailStudentView.detailPackageOrderRows.map(row => [row.purchaseId, row.remainingLessons, row.totalLessons]),
     [['pur-1', 9, 10]],
     'student package rows should come from the same unified teaching summary fast path'
+  );
+
+  const inconsistent = await requestInconsistentStudentDetail();
+  assert.strictEqual(inconsistent.res.statusCode, 200);
+  assert.ok(inconsistent.calls.cappedScan > 0, 'inconsistent teaching summary should force full detail facts');
+  assert.strictEqual(
+    inconsistent.res.body.detailStudentView.completedLessons,
+    18,
+    'student detail should recompute impossible summary values from package-conserved facts'
   );
   console.log('student detail fast path tests passed');
 })().catch(err => {

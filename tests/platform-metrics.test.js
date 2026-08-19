@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const { buildPlatformMetrics } = require('../server/read-models/platform-metrics.js');
+const { buildPlatformMetrics, teachingSummaryNeedsLessonFacts, TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 const { buildOperationsMetrics } = require('../server/metrics/operations-metrics.js');
 
 const source = {
@@ -308,6 +308,107 @@ assert.strictEqual(
   currentPackageSectionRows.find(row => row.scheduleId === 'schedule-current-1')?.lessonSectionText,
   '[第01节]',
   'the first lesson in an older entitlement should keep its own package numbering'
+);
+
+const inconsistentPackageBalancePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-inconsistent-package', name: '课包余额累计冲突' }],
+  purchases: [
+    { id: 'purchase-inconsistent-1', studentId: 'student-inconsistent-package', packageName: '第一课包', status: 'active', actualAmount: 1000, purchaseDate: '2026-01-01' },
+    { id: 'purchase-inconsistent-2', studentId: 'student-inconsistent-package', packageName: '第二课包', status: 'active', actualAmount: 1000, purchaseDate: '2026-06-01' }
+  ],
+  entitlements: [
+    { id: 'ent-inconsistent-1', purchaseId: 'purchase-inconsistent-1', studentId: 'student-inconsistent-package', packageName: '第一课包', totalLessons: 10, remainingLessons: 0, usedLessons: 10, status: 'depleted' },
+    { id: 'ent-inconsistent-2', purchaseId: 'purchase-inconsistent-2', studentId: 'student-inconsistent-package', packageName: '第二课包', totalLessons: 10, remainingLessons: 2, usedLessons: 8, status: 'active' }
+  ],
+  entitlementLedger: Array.from({ length: 18 }, (_, index) => {
+    const no = index + 1;
+    const current = no > 10;
+    return {
+      id: `ledger-inconsistent-${no}`,
+      entitlementId: current ? 'ent-inconsistent-2' : 'ent-inconsistent-1',
+      purchaseId: current ? 'purchase-inconsistent-2' : 'purchase-inconsistent-1',
+      studentId: 'student-inconsistent-package',
+      scheduleId: `schedule-inconsistent-${no}`,
+      lessonDelta: -1,
+      relatedDate: `2026-06-${String(no).padStart(2, '0')}`,
+      reason: '上课消耗'
+    };
+  }),
+  schedule: [
+    ...Array.from({ length: 19 }, (_, index) => {
+      const no = index + 1;
+      return {
+        id: `schedule-inconsistent-${no}`,
+        studentId: 'student-inconsistent-package',
+        startTime: `2026-06-${String(no).padStart(2, '0')} 10:00:00`,
+        endTime: `2026-06-${String(no).padStart(2, '0')} 11:00:00`,
+        status: '已结束',
+        courseType: no === 19 ? '小班课' : '私教课',
+        coach: '林铭教练',
+        venue: '3号场',
+        lessonCount: 1
+      };
+    }),
+    { id: 'schedule-inconsistent-trial', studentId: 'student-inconsistent-package', startTime: '2026-06-20 18:00:00', endTime: '2026-06-20 19:00:00', status: '已结束', courseType: '体验课', coach: '宋俊吉教练', venue: '2号场', lessonCount: 1 }
+  ],
+  feedbacks: [],
+  now: new Date('2026-06-30 00:00:00')
+});
+const inconsistentPackageStudent = inconsistentPackageBalancePlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-inconsistent-package');
+assert.ok(inconsistentPackageStudent, 'inconsistent package student should enter formal view');
+assert.strictEqual(inconsistentPackageStudent.packageBalanceText, '2/10', 'student list balance should use the current active package balance');
+assert.strictEqual(inconsistentPackageStudent.detailPackageBalanceText, '2/20', 'student drawer balance should use all formal package orders');
+assert.strictEqual(
+  inconsistentPackageStudent.completedLessons,
+  18,
+  'formal cumulative lessons must not exceed formal package consumed lessons when package balance still has lessons'
+);
+assert.strictEqual(
+  inconsistentPackageStudent.detailLessonRecordRows.find(row => row.scheduleId === 'schedule-inconsistent-trial')?.lessonSectionText,
+  '',
+  'trial lesson rows must not consume package section numbers'
+);
+assert.strictEqual(
+  teachingSummaryNeedsLessonFacts({
+    id: 'student-inconsistent-package',
+    studentId: 'student-inconsistent-package',
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    detailPackageBalanceTotal: 20,
+    detailPackageBalanceRemaining: 2,
+    completedLessons: 19,
+    activityStatusLabel: '近30天活跃',
+    detailLessonRecordRows: [{ kind: 'ledger', time: '2026-06-19 10:00-11:00', courseType: '私教课', lessonDelta: -1 }]
+  }, new Date('2026-06-30 00:00:00')),
+  true,
+  'student detail fast path must reject summaries where cumulative lessons exceed formal package consumed lessons'
+);
+
+const smallClassPackagePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-small-class-package', name: '小班课包学员' }],
+  purchases: [
+    { id: 'purchase-small-class', studentId: 'student-small-class-package', packageName: '小班正式课包', status: 'active', actualAmount: 1000, purchaseDate: '2026-06-01' }
+  ],
+  entitlements: [
+    { id: 'ent-small-class', purchaseId: 'purchase-small-class', studentId: 'student-small-class-package', packageName: '小班正式课包', courseType: '小班课', totalLessons: 10, remainingLessons: 9, usedLessons: 1, status: 'active' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-small-class', entitlementId: 'ent-small-class', purchaseId: 'purchase-small-class', studentId: 'student-small-class-package', scheduleId: 'schedule-small-class', lessonDelta: -1, relatedDate: '2026-06-10', reason: '上课消耗' }
+  ],
+  schedule: [
+    { id: 'schedule-small-class', studentId: 'student-small-class-package', startTime: '2026-06-10 10:00:00', endTime: '2026-06-10 11:00:00', status: '已结束', courseType: '小班课', coach: '林铭教练', lessonCount: 1 }
+  ],
+  feedbacks: [],
+  now: new Date('2026-06-30 00:00:00')
+});
+const smallClassPackageStudent = smallClassPackagePlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-small-class-package');
+assert.ok(smallClassPackageStudent, 'small class package student should enter formal view');
+assert.strictEqual(smallClassPackageStudent.completedLessons, 1, 'small class package lessons should count as formal completed lessons');
+assert.strictEqual(
+  smallClassPackageStudent.detailLessonRecordRows.find(row => row.scheduleId === 'schedule-small-class')?.lessonSectionText,
+  '[第01节]',
+  'small class package lessons should show the current package section number'
 );
 
 const freeTrialLessonPlatform = buildPlatformMetrics({

@@ -974,6 +974,8 @@ function studentPackageLessonMeta(stu){
   if(Number.isFinite(directRemaining)&&Number.isFinite(directTotal)&&directTotal>0){
     return {hasPackage:true,remaining:directRemaining,total:directTotal,text:`${lessonQty(directRemaining)}/${lessonQty(directTotal)}`,pct:Math.max(0,Math.min(100,Math.round((directRemaining/directTotal)*100)))};
   }
+  if(Number.isFinite(detailRemaining)&&detailRemaining>0)return {hasPackage:true,remaining:detailRemaining,total:0,text:lessonQty(detailRemaining),pct:0};
+  if(Number.isFinite(directRemaining)&&directRemaining>0)return {hasPackage:true,remaining:directRemaining,total:0,text:lessonQty(directRemaining),pct:0};
   const detailRows=(Array.isArray(stu?.detailPackageOrderRows)?stu.detailPackageOrderRows:[]).filter(row=>String(row?.statusText||'')!=='已作废'&&lessonValue(row?.totalLessons)>0);
   if(detailRows.length){
     const activeRows=detailRows.filter(row=>lessonValue(row?.remainingLessons)>0);
