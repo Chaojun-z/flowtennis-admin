@@ -171,29 +171,42 @@ function createStorageServices({
     const normalizedLimit=Math.max(1,Math.min(parseInt(limit,10)||200,2000));
     const requestLimit=detectOverflow?normalizedLimit+1:normalizedLimit;
     const normalizedColumns=normalizeScanColumns(columns);
-    return withStorageRetry(()=>runStorageOperation('getRangeScanFirst',{table:t},(res,rej)=>{
-      gc().getRange({
-        tableName:t,
-        direction:TableStore.Direction.FORWARD,
-        inclusiveStartPrimaryKey:[{id:TableStore.INF_MIN}],
-        exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],
-        maxVersions:1,
-        limit:requestLimit,
-        ...(normalizedColumns.length?{columnsToGet:normalizedColumns}:{})
-      },(e,d)=>{
-        if(e)return rej(e);
-        const rows=[];
-        (d.rows||[]).forEach(r=>{
-          if(!r.primaryKey)return;
-          const obj={id:r.primaryKey[0].value};
-          (r.attributes||[]).forEach(a=>{
-            try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}
+    return withStorageRetry(()=>new Promise((res,rej)=>{
+      const rows=[];
+      function f(sk){
+        const remaining=requestLimit-rows.length;
+        if(remaining<=0){
+          if(detectOverflow&&rows.length>normalizedLimit)return rej(productionReadTruncatedError(t,normalizedLimit));
+          return res(rows);
+        }
+        runStorageOperation('getRangeScanFirst',{table:t},(opRes,opRej)=>{
+          gc().getRange({
+            tableName:t,
+            direction:TableStore.Direction.FORWARD,
+            inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],
+            exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],
+            maxVersions:1,
+            limit:remaining,
+            ...(normalizedColumns.length?{columnsToGet:normalizedColumns}:{})
+          },(e,d)=>{
+            if(e)return opRej(e);
+            opRes(d);
           });
-          rows.push(obj);
-        });
-        if(detectOverflow&&rows.length>normalizedLimit)return rej(productionReadTruncatedError(t,normalizedLimit));
-        res(rows);
-      });
+        }).then(d=>{
+          (d.rows||[]).forEach(r=>{
+            if(!r.primaryKey)return;
+            const obj={id:r.primaryKey[0].value};
+            (r.attributes||[]).forEach(a=>{
+              try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}
+            });
+            rows.push(obj);
+          });
+          if(detectOverflow&&rows.length>normalizedLimit)return rej(productionReadTruncatedError(t,normalizedLimit));
+          const nextStartPrimaryKey=d.nextStartPrimaryKey ? d.nextStartPrimaryKey.map(pk => ({ [pk.name]: pk.value })) : null;
+          nextStartPrimaryKey&&rows.length<requestLimit?f(nextStartPrimaryKey):res(rows);
+        }).catch(rej);
+      }
+      f();
     }));
   }
   function cappedScan(t, limit=productionPageReadLimits.default){
