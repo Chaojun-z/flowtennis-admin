@@ -788,6 +788,7 @@ function createCorePageDataRoutes(deps={}){
         const studentRoster=buildCoachMiniStudentRoster({
           teachingStudentViews,
           coachName:String(user.coachName||user.name||user.username||'').trim(),
+          students:scoped.students||[],
           schedule:decoratedStudentSchedule,
           now
         });

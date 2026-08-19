@@ -144,6 +144,12 @@ const rosterViews = buildTeachingStudentViews([{
 const miniRoster = buildCoachMiniStudentRoster({
   teachingStudentViews: rosterViews,
   coachName: '林铭教练',
+  students: [
+    { id: 'owned-active', type: '青少年' },
+    { id: 'owned-ended', type: '成人' },
+    { id: 'trial-only', type: '青少年' },
+    { id: 'substitute', type: '成人' }
+  ],
   schedule: [
     { id: 's-owned-week', studentId: 'owned-active', startTime: '2026-08-18 10:00:00', endTime: '2026-08-18 11:00:00', status: '已结束', coach: '林铭教练' },
     { id: 's-owned-future', studentId: 'owned-active', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', coach: '林铭教练' },
@@ -169,14 +175,56 @@ assert.deepStrictEqual(
 );
 
 assert.deepStrictEqual(
-  miniRoster.items.map(item => [item.id, item.studentTabKey, item.type, item.packageText]).sort((a, b) => a[0].localeCompare(b[0])),
+  miniRoster.items.map(item => [item.id, item.studentTabKey, item.type, item.relationType, item.packageText]).sort((a, b) => a[0].localeCompare(b[0])),
   [
-    ['owned-active', 'active', '归属', '7/10'],
-    ['owned-ended', 'ended', '归属', '0/10'],
-    ['substitute', 'substitute', '代课', ''],
-    ['trial-only', 'trial', '归属', '']
+    ['owned-active', 'active', '青少年', '归属', '7/10'],
+    ['owned-ended', 'ended', '成人', '归属', '0/10'],
+    ['substitute', 'substitute', '成人', '代课', '5/10'],
+    ['trial-only', 'trial', '青少年', '归属', '']
   ],
-  'mini roster items should exclude empty shells and keep substitute students separate from owned students'
+  'mini roster items should keep student type separate from ownership and show package balance for substitute students'
+);
+
+const ownedFallbackRoster = buildCoachMiniStudentRoster({
+  teachingStudentViews: {
+    courseStudents: [{
+      studentId: 'owned-fallback',
+      id: 'owned-fallback',
+      name: '归属兜底',
+      type: '成人',
+      primaryCoach: '林铭教练',
+      packageBalanceText: '2/10',
+      detailPackageBalanceText: '2/10',
+      packageBalanceTotal: 10,
+      packageBalanceRemaining: 2,
+      packageBalancePercent: 20
+    }]
+  },
+  coachName: '林铭教练',
+  students: [{ id: 'owned-fallback', type: '成人' }],
+  schedule: [{
+    id: 's-owned-fallback',
+    studentId: 'owned-fallback',
+    startTime: '2026-08-18 10:00:00',
+    endTime: '2026-08-18 11:00:00',
+    status: '已结束',
+    coach: '林铭教练'
+  }],
+  now: new Date('2026-08-19 10:00:00')
+});
+
+assert.deepStrictEqual(
+  ownedFallbackRoster.stats,
+  {
+    totalCount: 1,
+    weekActiveCount: 1,
+    monthActiveCount: 1,
+    activeCount: 1,
+    trialCount: 0,
+    endedCount: 0,
+    substituteCount: 0
+  },
+  'owned students must not fall through the active, trial, and ended tabs'
 );
 
 console.log('miniprogram student detail read model tests passed');

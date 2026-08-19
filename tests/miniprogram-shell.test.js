@@ -258,7 +258,8 @@ assert.match(scheduleJs, /return `\$\{recordCount\}\/\$\{lessonUnitsText\(lesson
 assert.doesNotMatch(scheduleJs, /function studentPackageListText/, 'student list package balance should not be rebuilt from mini program entitlement rows');
 assert.doesNotMatch(scheduleJs, /function studentPackageBalanceText/, 'student package balance should not be rebuilt from mini program entitlement rows');
 assert.doesNotMatch(scheduleJs, /function studentOwnedByCoach/, 'student ownership should come from the backend unified roster projection');
-assert.match(scheduleJs, /type:\s*firstNonEmpty\(student\.type\) \|\| '归属'/, 'student list tags should use backend ownership wording');
+assert.match(scheduleJs, /type:\s*firstNonEmpty\(student\.type\) \|\| '暂无记录'/, 'student type should keep the real adult or youth value');
+assert.match(scheduleJs, /relationType:\s*firstNonEmpty\(student\.relationType\) \|\| '归属'/, 'student ownership should use a separate relationType field');
 assert.match(scheduleJs, /showPackage:\s*!!student\.showPackage/, 'substitute package visibility should come from the backend roster projection');
 assert.match(scheduleJs, /function buildStudentLessonRecords[\s\S]*studentLedgerRows[\s\S]*completedStudentSchedules/, 'student detail should merge package ledger rows with schedule rows like the web');
 assert.match(scheduleJs, /function studentLedgerRecordHasDisplayContext[\s\S]*linkedSchedule\.id[\s\S]*metaParts\.length >= 2/, 'student detail lesson records should reject dirty orphan ledger rows without schedule, venue, and coach');
