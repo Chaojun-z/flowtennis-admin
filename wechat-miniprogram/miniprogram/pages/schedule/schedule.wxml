@@ -252,29 +252,44 @@
     <scroll-view wx:if="{{isStudents}}" scroll-y class="page-scroll page-bg">
       <view class="students-top">
         <view class="students-summary">
-          <view class="students-summary-block"><text class="students-number">{{studentStats.ownerCount}}</text><text class="students-caption">归属学员</text></view>
+          <view class="students-summary-block"><view><text class="students-number">{{studentStats.totalCount}}</text><text class="students-unit">人</text></view><text class="students-caption">当前学员</text></view>
           <view class="students-divider"></view>
-          <view class="students-summary-block"><text class="students-number">{{studentStats.substituteCount}}</text><text class="students-caption">代课学员</text></view>
+          <view class="students-summary-block"><view><text class="students-number">{{studentStats.weekActiveCount}}</text><text class="students-unit">人</text></view><text class="students-caption">本周上课</text></view>
+          <view class="students-divider"></view>
+          <view class="students-summary-block"><view><text class="students-number">{{studentStats.monthActiveCount}}</text><text class="students-unit">人</text></view><text class="students-caption">本月上课</text></view>
         </view>
       </view>
 
       <view class="page-body students-body">
+        <view class="student-tabs">
+          <view wx:for="{{studentTabs}}" wx:key="key" class="student-tab {{item.className}}" data-tab="{{item.key}}" bindtap="onStudentTabTap">
+            <text>{{item.label}}</text>
+            <text class="student-tab-count">{{item.count}}</text>
+          </view>
+        </view>
+        <view class="student-search">
+          <input class="student-search-input" value="{{studentSearchKeyword}}" bindinput="onStudentSearchInput" placeholder="搜索学员" placeholder-class="student-search-placeholder" />
+        </view>
         <view class="student-list">
-        <view wx:for="{{studentsList}}" wx:key="id" class="student-card" data-id="{{item.id}}" bindtap="openStudentDetail">
-          <view class="student-avatar {{item.avatarClass}}">{{item.avatarText}}</view>
+        <view wx:for="{{studentsFilteredList}}" wx:key="id" class="student-card" data-id="{{item.id}}" bindtap="openStudentDetail">
           <view class="student-main">
             <view class="student-row">
               <view class="student-title">
                 <text class="student-name">{{item.name}}</text>
-                <text class="student-tag {{item.tagClass}}">{{item.type}}</text>
+                <text class="student-course-label">{{item.courseLabel}}</text>
               </view>
-              <text wx:if="{{item.showLastClass}}" class="student-last-class">最近 {{item.lastClassText}}</text>
             </view>
             <view class="student-meta-line">
-              <text wx:if="{{item.showPackage}}" class="student-meta">当前课包余额：<text class="student-strong">{{item.packageText}}</text></text>
+              <text class="student-meta">课包余额</text>
+              <view class="student-progress">
+                <view class="student-progress-fill" style="width:{{item.packagePercent}}%"></view>
+              </view>
+              <text class="student-strong">{{item.packageText}}</text>
             </view>
+            <view class="student-last-line">最近上课：{{item.lastClassText}}</view>
           </view>
         </view>
+        <view wx:if="{{!studentsFilteredList.length}}" class="student-empty">暂无学员</view>
         </view>
       </view>
     </scroll-view>

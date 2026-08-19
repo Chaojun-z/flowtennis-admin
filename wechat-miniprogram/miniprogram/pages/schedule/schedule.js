@@ -4,7 +4,6 @@ const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, cl
 const TIMETABLE_START_HOUR = 7;
 const TIMETABLE_END_HOUR = 22;
 const timetableHours = Array.from({ length: TIMETABLE_END_HOUR - TIMETABLE_START_HOUR + 1 }, (_, i) => `${String(TIMETABLE_START_HOUR + i).padStart(2, '0')}:00`);
-const avatarClasses = ['avatar-warm', 'avatar-teal', 'avatar-green', 'avatar-purple'];
 const TIMETABLE_HOUR_HEIGHT_RPX = 150;
 const TIMETABLE_DAY_WIDTH_RPX = 228;
 const STUDENT_DETAIL_RECORD_PREVIEW_COUNT = 5;
@@ -372,6 +371,7 @@ function mergeTeachingStudentViews(students = [], teachingStudentViews = {}) {
   const rows = [
     ...(Array.isArray(teachingStudentViews.historicalStudents) ? teachingStudentViews.historicalStudents : []),
     ...(Array.isArray(teachingStudentViews.activeStudents) ? teachingStudentViews.activeStudents : []),
+    ...(Array.isArray(teachingStudentViews.trialStudents) ? teachingStudentViews.trialStudents : []),
     ...(Array.isArray(teachingStudentViews.formalStudents) ? teachingStudentViews.formalStudents : []),
     ...(Array.isArray(teachingStudentViews.courseStudents) ? teachingStudentViews.courseStudents : [])
   ];
@@ -381,11 +381,25 @@ function mergeTeachingStudentViews(students = [], teachingStudentViews = {}) {
     return {
       ...student,
       completedLessons: view.completedLessons == null ? student.completedLessons : view.completedLessons,
+      studentStage: firstNonEmpty(view.studentStage, student.studentStage),
+      trialStatus: firstNonEmpty(view.trialStatus, student.trialStatus),
+      courseDealPath: firstNonEmpty(view.courseDealPath, student.courseDealPath),
+      packageBalanceRemaining: view.packageBalanceRemaining == null ? student.packageBalanceRemaining : view.packageBalanceRemaining,
+      packageBalanceTotal: view.packageBalanceTotal == null ? student.packageBalanceTotal : view.packageBalanceTotal,
+      packageBalancePercent: view.packageBalancePercent == null ? student.packageBalancePercent : view.packageBalancePercent,
       detailRecentLessonDate: firstNonEmpty(view.detailRecentLessonDate, student.detailRecentLessonDate),
       lastFormalLessonAt: firstNonEmpty(view.lastFormalLessonAt, student.lastFormalLessonAt),
       packageBalanceText: firstNonEmpty(view.packageBalanceText, student.packageBalanceText),
       detailPackageBalanceText: firstNonEmpty(view.detailPackageBalanceText, student.detailPackageBalanceText),
-      detailLessonRecordRows: Array.isArray(view.detailLessonRecordRows) ? view.detailLessonRecordRows : student.detailLessonRecordRows
+      detailLessonRecordRows: Array.isArray(view.detailLessonRecordRows) ? view.detailLessonRecordRows : student.detailLessonRecordRows,
+      packageListRows: Array.isArray(view.packageListRows) ? view.packageListRows : student.packageListRows,
+      isHistoricalStudentRoster: view.isHistoricalStudentRoster == null ? student.isHistoricalStudentRoster : view.isHistoricalStudentRoster,
+      isActiveStudentRoster: view.isActiveStudentRoster == null ? student.isActiveStudentRoster : view.isActiveStudentRoster,
+      hasTrialAttended: view.hasTrialAttended == null ? student.hasTrialAttended : view.hasTrialAttended,
+      hasFormalAttended: view.hasFormalAttended == null ? student.hasFormalAttended : view.hasFormalAttended,
+      standardCourseType: firstNonEmpty(view.standardCourseType, student.standardCourseType),
+      courseType: firstNonEmpty(view.courseType, student.courseType),
+      searchText: firstNonEmpty(view.searchText, student.searchText)
     };
   });
 }
@@ -513,6 +527,15 @@ function formatMonthDay(value) {
   return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
 }
 
+function formatStudentRecentLessonText(value, now = new Date()) {
+  const date = parseLocalDate(value);
+  if (!date) return '暂无记录';
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const lessonDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const days = Math.max(0, Math.floor((today - lessonDay) / 86400000));
+  return `${date.getMonth() + 1}月${date.getDate()}日 · ${days}天前`;
+}
+
 function formatDateInputValue(value) {
   const date = value ? parseLocalDate(value) : new Date();
   const safeDate = date || new Date();
@@ -560,7 +583,7 @@ function scheduleTimeTextOf(value, fallback = '14:00') {
 }
 
 function buildStudentCards(students = [], entitlements = [], schedule = [], coachName = '', entitlementLedger = []) {
-  return (students || []).map((student, index) => {
+  return (students || []).map((student) => {
     const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, []));
     const validSchedule = relatedSchedule.filter(item => !item.isCancelled && String(item.effectiveStatus || item.status || '') !== '已取消');
     const lessonRecords = buildStudentLessonRecords(student, { schedule: validSchedule, entitlements, entitlementLedger });
@@ -569,21 +592,26 @@ function buildStudentCards(students = [], entitlements = [], schedule = [], coac
     const lessonUnitsCompleted = Number.isFinite(backendLessonUnits) ? backendLessonUnits : lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
     const lessonRecordCount = Number.isFinite(backendLessonCount) ? backendLessonCount : lessonRecords.length;
     const lastRecord = lessonRecords[0] || null;
-    const lastClassAt = String(lastRecord && lastRecord.sortTime || '');
+    const lastClassAt = firstNonEmpty(student.detailRecentLessonDate, student.lastFormalLessonAt, lastRecord && lastRecord.sortTime);
     const packageText = firstNonEmpty(student.packageBalanceText, studentPackageListText(studentEntitlements(student.id, entitlements)));
     const isOwner = studentOwnedByCoach(student, entitlements, coachName);
+    const packageProgress = studentPackageProgress(student, packageText);
+    const courseLabel = studentCourseLabel(student, studentEntitlements(student.id, entitlements));
+    const studentTabKey = studentRosterTabKey(student, packageProgress, courseLabel);
     return {
       id: student.id,
       name: student.name || '未命名学员',
-      avatarText: avatarText(student.name),
-      avatarClass: avatarClasses[index % avatarClasses.length],
       type: isOwner ? '归属' : '代课',
       tagClass: isOwner ? 'student-tag-owner' : 'student-tag-substitute',
       cumulative: lessonRecordUnitsCompactText(lessonRecordCount, lessonUnitsCompleted),
       packageText,
+      packagePercent: packageProgress.percent,
+      courseLabel,
+      studentTabKey,
+      searchText: [student.name, student.phone, courseLabel, student.searchText].filter(Boolean).join(' ').toLowerCase(),
       showPackage: isOwner && !!packageText,
       lastScheduleId: lastRecord && lastRecord.scheduleId,
-      lastClassText: formatMonthDay(lastRecord && lastRecord.sortTime),
+      lastClassText: formatStudentRecentLessonText(lastClassAt),
       lastClassAt,
       showLastClass: !!lastRecord
     };
@@ -593,6 +621,81 @@ function buildStudentCards(students = [], entitlements = [], schedule = [], coac
     if (a.type !== b.type) return a.type === '归属' ? -1 : 1;
     return a.name.localeCompare(b.name, 'zh-Hans-CN');
   });
+}
+
+function studentPackageProgress(student = {}, packageText = '') {
+  const direct = Number(student.packageBalancePercent);
+  if (Number.isFinite(direct) && direct >= 0) return { percent: Math.max(0, Math.min(100, Math.round(direct))) };
+  const remaining = Number(student.packageBalanceRemaining);
+  const total = Number(student.packageBalanceTotal);
+  if (Number.isFinite(remaining) && Number.isFinite(total) && total > 0) {
+    return { percent: Math.max(0, Math.min(100, Math.round((remaining / total) * 100))) };
+  }
+  const matched = String(packageText || '').match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+  if (!matched) return { percent: 0 };
+  const parsedRemaining = Number(matched[1]);
+  const parsedTotal = Number(matched[2]);
+  return { percent: parsedTotal > 0 ? Math.max(0, Math.min(100, Math.round((parsedRemaining / parsedTotal) * 100))) : 0 };
+}
+
+function studentCourseLabel(student = {}, entitlements = []) {
+  const packageRows = Array.isArray(student.packageListRows) ? student.packageListRows : [];
+  const sourceText = [
+    student.courseDisplayName,
+    student.standardCourseType,
+    student.courseType,
+    student.type,
+    student.customerType,
+    ...packageRows.flatMap(item => [item.courseDisplayName, item.standardCourseType, item.courseType, item.packageName, item.productName, item.name]),
+    ...entitlements.flatMap(item => [item.courseDisplayName, item.standardCourseType, item.courseType, item.packageName, item.productName, item.name])
+  ].filter(Boolean).join(' ');
+  const audience = (sourceText.match(/青少年|少儿|成人/) || [])[0] || firstNonEmpty(student.type, student.customerType);
+  const courseType = /体验/.test(sourceText) ? '体验'
+    : /1\s*[vV对]\s*1|私教/.test(sourceText) ? '1v1'
+      : /小班/.test(sourceText) ? '小班'
+        : firstNonEmpty(student.standardCourseType, student.courseType);
+  return [audience, courseType].filter(Boolean).join(' ') || '课程';
+}
+
+function studentRosterTabKey(student = {}, packageProgress = {}, courseLabel = '') {
+  const stage = String(student.studentStage || '').trim();
+  const combined = [courseLabel, student.trialStatus, student.courseDealPath, student.studentStatusLabel].filter(Boolean).join(' ');
+  if (stage === 'trial' || /体验/.test(combined)) return 'trial';
+  if (student.isActiveStudentRoster === true) return 'active';
+  if (student.isHistoricalStudentRoster === true || (Number(student.packageBalanceTotal) > 0 && Number(packageProgress.percent) <= 0)) return 'ended';
+  return stage === 'formal' ? 'active' : 'active';
+}
+
+function scheduleInCurrentWeek(item = {}, now = new Date()) {
+  const date = parseLocalDate(item.startTime || item.endTime);
+  if (!date) return false;
+  const current = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekday = current.getDay() || 7;
+  const start = new Date(current.getFullYear(), current.getMonth(), current.getDate() - weekday + 1).getTime();
+  const end = start + 7 * 86400000;
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return day >= start && day < end;
+}
+
+function scheduleInCurrentMonth(item = {}, now = new Date()) {
+  const date = parseLocalDate(item.startTime || item.endTime);
+  return !!(date && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth());
+}
+
+function validStudentScheduleIdsForWindow(students = [], schedule = [], predicate = () => false) {
+  const now = new Date();
+  const studentIds = new Set((students || []).map(item => String(item.id || '').trim()).filter(Boolean));
+  const matchedIds = new Set();
+  (schedule || []).forEach(item => {
+    const status = String(item.effectiveStatus || item.status || '').trim();
+    if (item.isCancelled || status === '已取消') return;
+    if (!predicate(item, now)) return;
+    studentIdsOf(item).forEach(id => {
+      const textId = String(id || '').trim();
+      if (studentIds.has(textId)) matchedIds.add(textId);
+    });
+  });
+  return matchedIds;
 }
 
 function classStatusMeta(status = '') {
@@ -634,10 +737,38 @@ function buildShiftCards(classes = [], students = []) {
   }).sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
 }
 
-function buildStudentStats(students = [], coachName = '', entitlements = []) {
-  const ownerCount = students.filter(item => studentOwnedByCoach(item, entitlements, coachName)).length;
-  const substituteCount = Math.max(0, students.length - ownerCount);
-  return { ownerCount, substituteCount };
+function buildStudentStats(students = [], schedule = []) {
+  const totalCount = students.length;
+  const weekActiveCount = validStudentScheduleIdsForWindow(students, schedule, scheduleInCurrentWeek).size;
+  const monthActiveCount = validStudentScheduleIdsForWindow(students, schedule, scheduleInCurrentMonth).size;
+  const activeCount = students.filter(item => item.studentTabKey === 'active').length;
+  const trialCount = students.filter(item => item.studentTabKey === 'trial').length;
+  const endedCount = students.filter(item => item.studentTabKey === 'ended').length;
+  return { totalCount, weekActiveCount, monthActiveCount, activeCount, trialCount, endedCount };
+}
+
+function buildStudentTabs(stats = {}, currentTab = 'all') {
+  const items = [
+    { key: 'all', label: '全部', count: stats.totalCount || 0 },
+    { key: 'active', label: '在课', count: stats.activeCount || 0 },
+    { key: 'trial', label: '体验', count: stats.trialCount || 0 },
+    { key: 'ended', label: '已结课', count: stats.endedCount || 0 }
+  ];
+  return items.map(item => ({ ...item, className: item.key === currentTab ? 'is-active' : '' }));
+}
+
+function studentMatchesTab(student = {}, tab = 'all') {
+  return !tab || tab === 'all' || student.studentTabKey === tab;
+}
+
+function studentMatchesSearch(student = {}, keyword = '') {
+  const q = String(keyword || '').trim().toLowerCase();
+  if (!q) return true;
+  return String(student.searchText || '').toLowerCase().includes(q);
+}
+
+function filterStudentCards(students = [], tab = 'all', keyword = '') {
+  return (students || []).filter(item => studentMatchesTab(item, tab) && studentMatchesSearch(item, keyword));
 }
 
 function buildShiftStats(shifts = []) {
@@ -1955,7 +2086,11 @@ Page({
     nextTravelReminder: false,
     coachWorkbenchStats: {},
     studentsList: [],
-    studentStats: { ownerCount: 0, substituteCount: 0 },
+    studentsFilteredList: [],
+    studentFilterTab: 'all',
+    studentSearchKeyword: '',
+    studentTabs: buildStudentTabs(),
+    studentStats: { totalCount: 0, weekActiveCount: 0, monthActiveCount: 0, activeCount: 0, trialCount: 0, endedCount: 0 },
     shiftsList: [],
     shiftStats: { totalCount: 0, activeCount: 0, totalLessons: 0, usedLessons: 0, remainingLessons: 0 },
     feedbackForm: feedbackFormFromRecord(),
@@ -2080,6 +2215,9 @@ Page({
       const studentSchedule = adaptSchedule(data.studentSchedule || data.schedule || [], data.feedbacks || []);
       const studentsRaw = mergeTeachingStudentViews(data.students || [], data.teachingStudentViews || {});
       const studentsList = buildStudentCards(studentsRaw, data.entitlements || [], studentSchedule, coachName, data.entitlementLedger || []);
+      const studentStats = buildStudentStats(studentsList, studentSchedule);
+      const studentTabs = buildStudentTabs(studentStats, this.data.studentFilterTab);
+      const studentsFilteredList = filterStudentCards(studentsList, this.data.studentFilterTab, this.data.studentSearchKeyword);
       const shiftsList = [];
       this.setData({
         schedule,
@@ -2093,7 +2231,9 @@ Page({
         entitlementsRaw: data.entitlements || [],
         entitlementLedgerRaw: data.entitlementLedger || [],
         studentsList,
-        studentStats: buildStudentStats(studentsRaw, coachName, data.entitlements || []),
+        studentsFilteredList,
+        studentStats,
+        studentTabs,
         shiftsList,
         shiftStats: buildShiftStats(shiftsList),
         coachGreeting: coachGreeting(now),
@@ -2193,6 +2333,23 @@ Page({
     this.setData({
       weekTodoRequiredOnly: !this.data.weekTodoRequiredOnly
     }, () => this.renderWeek());
+  },
+
+  onStudentTabTap(event) {
+    const studentFilterTab = event.currentTarget.dataset.tab || 'all';
+    this.setData({
+      studentFilterTab,
+      studentTabs: buildStudentTabs(this.data.studentStats, studentFilterTab),
+      studentsFilteredList: filterStudentCards(this.data.studentsList, studentFilterTab, this.data.studentSearchKeyword)
+    });
+  },
+
+  onStudentSearchInput(event) {
+    const studentSearchKeyword = event.detail.value || '';
+    this.setData({
+      studentSearchKeyword,
+      studentsFilteredList: filterStudentCards(this.data.studentsList, this.data.studentFilterTab, studentSearchKeyword)
+    });
   },
 
   switchTab(event) {
