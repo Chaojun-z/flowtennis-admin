@@ -35,6 +35,12 @@ assert.match(
 );
 
 assert.match(
+  scheduleJs,
+  /function scheduleEnded\(item = \{\}, now = new Date\(\)\)[\s\S]*const end = parseLocalDate\(item\.endTime\);[\s\S]*end <= now[\s\S]*isUpcoming/,
+  'mini timetable ended state must use current end time before stale upcoming flags'
+);
+
+assert.match(
   scheduleWxss,
   /\.tt-course-ended\b/,
   'mini timetable stylesheet should define the gray ended card style'

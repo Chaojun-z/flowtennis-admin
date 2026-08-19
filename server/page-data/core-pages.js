@@ -1,5 +1,5 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
-const { buildTeachingStudentViews, buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics, TEACHING_LESSON_DETAIL_SOURCE_VERSION, teachingSummaryNeedsLessonFacts } = require('../read-models/platform-metrics.js');
+const { buildTeachingStudentViews, buildCoachMiniStudentRoster, buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics, TEACHING_LESSON_DETAIL_SOURCE_VERSION, teachingSummaryNeedsLessonFacts } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
 const {
@@ -785,6 +785,12 @@ function createCorePageDataRoutes(deps={}){
           schedule:[],
           teachingStudentSummaryRows:teachingSummaryRows
         }:scoped);
+        const studentRoster=buildCoachMiniStudentRoster({
+          teachingStudentViews,
+          coachName:String(user.coachName||user.name||user.username||'').trim(),
+          schedule:decoratedStudentSchedule,
+          now
+        });
         const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,standardLifecycleMetrics,now});
         return sendJson(res,{
           campuses:scoped.campuses||[],
@@ -800,6 +806,7 @@ function createCorePageDataRoutes(deps={}){
           studentTeachingSummaries:scoped.studentTeachingSummaries||[],
           customerLifecycleRows,
           teachingStudentViews,
+          studentRoster,
           standardLifecycleMetrics,
           coachOpsUnifiedView:buildCoachOpsUnifiedView({
             coaches:scoped.coaches||[],

@@ -927,14 +927,19 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
     const packageFields = packageFieldMap.get(studentId) || {};
     const trialPackageFields = trialPackageFieldMap.get(studentId) || {};
     const rawSummaryLessonRows = data.ignoreTeachingSummaryDetailRows ? [] : (summaryFields.detailLessonRecordRows || []);
-    const summaryLessonRows = rawSummaryLessonRows
+    const datedSummaryLessonRows = rawSummaryLessonRows
       .filter(row => !dateOnly(row?.time || row?.sortTime || row?.relatedDate || row?.scheduleTime || row?.createdAt)
         || teachingDateOnOrBeforeNow(row?.time || row?.sortTime || row?.relatedDate || row?.scheduleTime || row?.createdAt, now));
+    const summaryLessonRows = datedSummaryLessonRows
+      .filter(row => options.includeTrial || !courseRowIsTrial(row));
+    const summaryTrialLessonRows = options.includeTrial ? [] : datedSummaryLessonRows
+      .filter(row => courseRowIsTrial(row))
+      .map(row => ({ ...row, countAsCompletedLesson: false }));
     const summaryRecentLessonDate = data.ignoreTeachingSummaryDetailRows || !teachingDateOnOrBeforeNow(summaryFields.detailRecentLessonDate, now)
       ? ''
       : summaryFields.detailRecentLessonDate;
     const lessonRows = lessonDetailMap.has(studentId) ? (lessonDetailMap.get(studentId) || []) : summaryLessonRows;
-    const trialLessonRows = (trialLessonDetailMap.get(studentId) || []).map(row => ({
+    const trialLessonRows = [...(trialLessonDetailMap.get(studentId) || []), ...summaryTrialLessonRows].map(row => ({
       ...row,
       countAsCompletedLesson: false
     }));
@@ -1973,6 +1978,213 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   };
 }
 
+function miniRosterCoachKey(value = '') {
+  return text(value).replace(/教练$/,'').replace(/\s+/g,'');
+}
+
+function miniRosterLessonQty(value) {
+  const n = Number(value) || 0;
+  return Number.isInteger(n) ? String(n) : String(round(n, 1));
+}
+
+function miniRosterDate(value) {
+  const date = value instanceof Date ? value : new Date(text(value).replace(' ', 'T'));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function miniRosterDaysAgoText(value = '', now = new Date(), options = {}) {
+  const date = miniRosterDate(dateOnly(value));
+  if (!date) return '';
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const lessonDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const days = Math.max(0, Math.floor((today - lessonDay) / 86400000));
+  if (options.fullDate) return `${dateOnly(value)} · ${days}天前`;
+  return `${date.getMonth() + 1}月${date.getDate()}日 · ${days}天前`;
+}
+
+function miniRosterCourseLabel(row = {}) {
+  const packageRows = Array.isArray(row.packageListRows) ? row.packageListRows : [];
+  const source = [
+    row.courseDisplayName,
+    row.standardCourseType,
+    row.courseType,
+    row.type,
+    row.customerType,
+    ...packageRows.flatMap(item => [item.courseDisplayName, item.standardCourseType, item.courseType, item.packageName, item.productName, item.name])
+  ].map(text).filter(Boolean).join(' ');
+  const audience = (source.match(/青少年|少儿|成人/) || [])[0] || text(row.type || row.customerType);
+  const courseType = /体验/.test(source) ? '体验'
+    : /1\s*[vV对]\s*1|私教/.test(source) ? '1v1'
+      : /小班/.test(source) ? '小班'
+        : text(row.standardCourseType || row.courseType);
+  return [audience, courseType].filter(Boolean).join(' ') || '课程';
+}
+
+function miniRosterOwnedByCoach(row = {}, coachName = '') {
+  const coachKey = miniRosterCoachKey(coachName);
+  if (!coachKey) return false;
+  const direct = [
+    row.primaryCoach,
+    row.ownerCoach,
+    row.coach,
+    row.coachName,
+    row.formalCoach,
+    row.owner
+  ].some(value => miniRosterCoachKey(value) === coachKey);
+  if (direct) return true;
+  return []
+    .concat(Array.isArray(row.packageListRows) ? row.packageListRows : [])
+    .concat(Array.isArray(row.detailPackageOrderRows) ? row.detailPackageOrderRows : [])
+    .some(item => [item.ownerCoach, item.primaryCoach, item.coach, item.coachName]
+      .some(value => miniRosterCoachKey(value) === coachKey));
+}
+
+function miniRosterScheduleIds(row = {}) {
+  return teachingScheduleStudentIds(row);
+}
+
+function miniRosterScheduleTouchedByCoach(row = {}, studentId = '', coachName = '') {
+  if (!miniRosterScheduleIds(row).includes(text(studentId))) return false;
+  return miniRosterCoachKey(row.coach || row.coachName || row.primaryCoach || row.teacher) === miniRosterCoachKey(coachName);
+}
+
+function miniRosterCompletedSchedule(row = {}, now = new Date()) {
+  if (!activeStatus(row)) return false;
+  const end = miniRosterDate(row.endTime || row.startTime || row.createdAt);
+  if (!end || end > now) return false;
+  const status = text(row.effectiveStatus || row.status || row.statusText || row.systemStatus);
+  return !['已取消','取消','cancelled','canceled','deleted','voided'].includes(status);
+}
+
+function miniRosterCurrentWeek(value, now = new Date()) {
+  const date = miniRosterDate(value);
+  if (!date) return false;
+  const current = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekday = current.getDay() || 7;
+  const start = new Date(current.getFullYear(), current.getMonth(), current.getDate() - weekday + 1).getTime();
+  const end = start + 7 * 86400000;
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return day >= start && day < end;
+}
+
+function miniRosterCurrentMonth(value, now = new Date()) {
+  const date = miniRosterDate(value);
+  return !!(date && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth());
+}
+
+function miniRosterStudentHasSubstituteFact(row = {}, coachName = '', schedule = []) {
+  const studentId = text(row.studentId || row.id);
+  if (!studentId) return false;
+  if ((schedule || []).some(item => miniRosterScheduleTouchedByCoach(item, studentId, coachName))) return true;
+  return (Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [])
+    .some(item => miniRosterCoachKey(item.coach || item.coachName) === miniRosterCoachKey(coachName));
+}
+
+function buildCoachMiniStudentRoster({
+  teachingStudentViews = {},
+  coachName = '',
+  schedule = [],
+  now = new Date()
+} = {}) {
+  const byId = new Map();
+  const putRow = (row = {}, tabKey = '') => {
+    const studentId = text(row.studentId || row.id);
+    if (!studentId) return;
+    const existing = byId.get(studentId) || {};
+    const existingRank = { active: 3, trial: 2, ended: 1, substitute: 0 }[existing.studentTabKey] ?? -1;
+    const nextRank = { active: 3, trial: 2, ended: 1, substitute: 0 }[tabKey] ?? -1;
+    if (!existing.studentTabKey || nextRank >= existingRank) byId.set(studentId, { ...existing, ...row, studentTabKey: tabKey });
+  };
+  (teachingStudentViews.activeStudents || []).forEach(row => putRow(row, 'active'));
+  (teachingStudentViews.trialAttendedWithoutFormalStudents || []).forEach(row => putRow(row, 'trial'));
+  (teachingStudentViews.formalStudents || [])
+    .filter(row => Number(row.packageBalanceTotal) > 0 && Number(row.packageBalanceRemaining) <= 0)
+    .forEach(row => putRow(row, 'ended'));
+  (teachingStudentViews.historicalStudents || [])
+    .filter(row => Number(row.packageBalanceTotal) > 0 && Number(row.packageBalanceRemaining) <= 0)
+    .forEach(row => putRow(row, 'ended'));
+  [
+    ...(teachingStudentViews.courseStudents || []),
+    ...(teachingStudentViews.formalStudents || []),
+    ...(teachingStudentViews.historicalStudents || []),
+    ...(teachingStudentViews.trialAttendedStudents || [])
+  ].forEach(row => {
+    const studentId = text(row.studentId || row.id);
+    if (!studentId || byId.has(studentId)) return;
+    if (miniRosterStudentHasSubstituteFact(row, coachName, schedule)) putRow(row, 'substitute');
+  });
+  const items = [...byId.values()].map(row => {
+    const owned = miniRosterOwnedByCoach(row, coachName);
+    const tabKey = owned ? row.studentTabKey : 'substitute';
+    const packageText = owned && text(row.packageBalanceText) !== '-' ? text(row.packageBalanceText) : '';
+    const detailPackageText = owned && text(row.detailPackageBalanceText) !== '-' ? text(row.detailPackageBalanceText) : packageText;
+    const recentDate = text(row.detailRecentLessonDate || row.lastFormalLessonAt);
+    const latestRecord = (Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [])[0] || {};
+    return {
+      ...row,
+      id: text(row.studentId || row.id),
+      studentId: text(row.studentId || row.id),
+      name: text(row.name || row.displayName) || '未命名学员',
+      type: owned ? '归属' : '代课',
+      tagClass: owned ? 'student-tag-owner' : 'student-tag-substitute',
+      studentTabKey: tabKey,
+      courseLabel: miniRosterCourseLabel(row),
+      packageText,
+      detailPackageProgressText: detailPackageText || '暂无记录',
+      packagePercent: owned ? Math.max(0, Math.min(100, Math.round(Number(row.packageBalancePercent) || 0))) : 0,
+      showPackage: owned && !!packageText,
+      lastScheduleId: text(latestRecord.scheduleId),
+      lastClassAt: recentDate,
+      lastClassText: miniRosterDaysAgoText(recentDate, now) || '暂无记录',
+      showLastClass: !!recentDate,
+      cumulative: miniRosterLessonQty(row.completedLessons),
+      detailCumulativeText: miniRosterLessonQty(row.completedLessons),
+      detailRecentLessonText: miniRosterDaysAgoText(recentDate, now, { fullDate: true }) || '暂无记录',
+      searchText: [row.name, row.displayName, row.phone, row.type, row.searchText, miniRosterCourseLabel(row)].map(text).filter(Boolean).join(' ').toLowerCase()
+    };
+  }).filter(row => row.studentTabKey === 'substitute' || ['active','trial','ended'].includes(row.studentTabKey));
+  const ownedItems = items.filter(row => row.type === '归属');
+  const ownedIds = new Set(ownedItems.map(row => row.studentId));
+  const attendedIds = (predicate) => {
+    const ids = new Set();
+    (schedule || []).filter(row => miniRosterCompletedSchedule(row, now)).forEach(row => {
+      const timeValue = row.endTime || row.startTime || row.createdAt;
+      if (!predicate(timeValue, now)) return;
+      teachingScheduleStudentIds(row).forEach(studentId => {
+        if (ownedIds.has(studentId)) ids.add(studentId);
+      });
+    });
+    return ids.size;
+  };
+  const stats = {
+    totalCount: ownedItems.length,
+    weekActiveCount: attendedIds(miniRosterCurrentWeek),
+    monthActiveCount: attendedIds(miniRosterCurrentMonth),
+    activeCount: ownedItems.filter(row => row.studentTabKey === 'active').length,
+    trialCount: ownedItems.filter(row => row.studentTabKey === 'trial').length,
+    endedCount: ownedItems.filter(row => row.studentTabKey === 'ended').length,
+    substituteCount: items.filter(row => row.studentTabKey === 'substitute').length
+  };
+  const order = { active: 0, trial: 1, substitute: 2, ended: 3 };
+  return {
+    stats,
+    tabs: [
+      { key: 'all', label: '全部', count: stats.totalCount },
+      { key: 'active', label: '在课', count: stats.activeCount },
+      { key: 'trial', label: '体验', count: stats.trialCount },
+      { key: 'ended', label: '已结课', count: stats.endedCount },
+      { key: 'substitute', label: '代课', count: stats.substituteCount }
+    ],
+    items: items.sort((a, b) => {
+      const orderCompare = (order[a.studentTabKey] ?? 9) - (order[b.studentTabKey] ?? 9);
+      if (orderCompare) return orderCompare;
+      const timeCompare = text(b.lastClassAt).localeCompare(text(a.lastClassAt));
+      if (timeCompare) return timeCompare;
+      return text(a.name).localeCompare(text(b.name), 'zh-Hans-CN');
+    })
+  };
+}
+
 function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOString()) {
   const studentId = text(row.studentId || row.id);
   if (!studentId) return null;
@@ -2292,6 +2504,7 @@ module.exports = {
   buildScopedLifecycleSource,
   buildLeadPoolRows,
   buildTeachingStudentViews,
+  buildCoachMiniStudentRoster,
   buildStudentTeachingSummaryRows,
   TEACHING_LESSON_DETAIL_SOURCE_VERSION,
   teachingSummaryNeedsLessonFacts,

@@ -229,40 +229,9 @@ function scheduleMatchesStudent(student = {}, scheduleItem = {}, relatedClassIds
   return !ids.length && !!studentName && scheduleStudentName === studentName;
 }
 
-function formalStudentEntitlements(studentId = '', entitlements = []) {
-  return studentEntitlements(studentId, entitlements).filter(item => !/体验/.test(String([
-    item.courseType,
-    item.standardCourseType,
-    item.packageName,
-    item.productName,
-    item.name
-  ].filter(Boolean).join(' '))));
-}
-
-function studentOwnedByCoach(student = {}, entitlements = [], coachName = '') {
-  const coach = String(coachName || '').trim();
-  if (!coach) return false;
-  if (String(student.primaryCoach || '').trim() === coach) return true;
-  return formalStudentEntitlements(student.id, entitlements).some(item => String(firstNonEmpty(
-    item.ownerCoach,
-    item.primaryCoach,
-    item.coach,
-    item.coachName
-  )).trim() === coach);
-}
-
 function lessonUnitsText(value) {
   const n = Number(value) || 0;
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
-}
-
-function lessonRecordCountText(recordCount = 0, lessonUnits = 0) {
-  return `${lessonUnitsText(lessonUnits)}课时 / ${recordCount}节课`;
-}
-
-function studentDetailCompletedLessonText(student = {}, fallbackUnits = 0) {
-  const value = Number(student.completedLessons);
-  return lessonUnitsText(Number.isFinite(value) ? value : fallbackUnits);
 }
 
 function dateOnlyText(value = '') {
@@ -277,19 +246,6 @@ function daysAgoText(value = '', now = new Date()) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const days = Math.max(0, Math.floor((today - start) / 86400000));
   return `${dateText} · ${days}天前`;
-}
-
-function studentDetailPackageBalanceText(student = {}, entitlements = []) {
-  return firstNonEmpty(
-    student.detailPackageBalanceText,
-    student.packageBalanceText,
-    studentPackageBalanceText(studentEntitlements(student.id, entitlements))
-  ) || '暂无记录';
-}
-
-function studentDetailRecentLessonText(student = {}, latestRecord = null) {
-  const text = daysAgoText(firstNonEmpty(student.detailRecentLessonDate, student.lastFormalLessonAt, latestRecord && latestRecord.sortTime));
-  return text || '暂无记录';
 }
 
 function lessonRecordUnitsCompactText(recordCount = 0, lessonUnits = 0) {
@@ -331,77 +287,6 @@ function entitlementUsedLessons(item = {}) {
   const total = lessonValue(item.totalLessons);
   const remaining = lessonValue(item.remainingLessons);
   return total > 0 ? Math.max(0, total - remaining) : 0;
-}
-
-function entitlementSummary(entitlements = []) {
-  const rows = (entitlements || []).filter(isUsableEntitlement).filter(item => !/体验/.test(String([
-    item.courseType,
-    item.standardCourseType,
-    item.packageName,
-    item.productName,
-    item.name
-  ].filter(Boolean).join(' '))));
-  return rows.reduce((summary, item) => {
-    summary.total += lessonValue(item.totalLessons);
-    summary.used += entitlementUsedLessons(item);
-    summary.remaining += lessonValue(item.remainingLessons);
-    return summary;
-  }, { total: 0, used: 0, remaining: 0 });
-}
-
-function studentPackageProgressText(entitlements = []) {
-  const summary = entitlementSummary(entitlements);
-  if (summary.total <= 0) return '';
-  return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}，剩${lessonUnitsText(summary.remaining)}`;
-}
-
-function studentPackageBalanceText(entitlements = []) {
-  const summary = entitlementSummary(entitlements);
-  if (summary.total <= 0) return '';
-  return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
-}
-
-function studentPackageListText(entitlements = []) {
-  const summary = entitlementSummary(entitlements);
-  if (summary.total <= 0) return '';
-  return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
-}
-
-function mergeTeachingStudentViews(students = [], teachingStudentViews = {}) {
-  const rows = [
-    ...(Array.isArray(teachingStudentViews.historicalStudents) ? teachingStudentViews.historicalStudents : []),
-    ...(Array.isArray(teachingStudentViews.activeStudents) ? teachingStudentViews.activeStudents : []),
-    ...(Array.isArray(teachingStudentViews.trialStudents) ? teachingStudentViews.trialStudents : []),
-    ...(Array.isArray(teachingStudentViews.formalStudents) ? teachingStudentViews.formalStudents : []),
-    ...(Array.isArray(teachingStudentViews.courseStudents) ? teachingStudentViews.courseStudents : [])
-  ];
-  const byId = new Map(rows.map(item => [String(item.studentId || item.id || '').trim(), item]).filter(([id]) => id));
-  return (students || []).map((student) => {
-    const view = byId.get(String(student.id || '').trim()) || {};
-    return {
-      ...student,
-      completedLessons: view.completedLessons == null ? student.completedLessons : view.completedLessons,
-      studentStage: firstNonEmpty(view.studentStage, student.studentStage),
-      trialStatus: firstNonEmpty(view.trialStatus, student.trialStatus),
-      courseDealPath: firstNonEmpty(view.courseDealPath, student.courseDealPath),
-      packageBalanceRemaining: view.packageBalanceRemaining == null ? student.packageBalanceRemaining : view.packageBalanceRemaining,
-      packageBalanceTotal: view.packageBalanceTotal == null ? student.packageBalanceTotal : view.packageBalanceTotal,
-      packageBalancePercent: view.packageBalancePercent == null ? student.packageBalancePercent : view.packageBalancePercent,
-      detailRecentLessonDate: firstNonEmpty(view.detailRecentLessonDate, student.detailRecentLessonDate),
-      lastFormalLessonAt: firstNonEmpty(view.lastFormalLessonAt, student.lastFormalLessonAt),
-      packageBalanceText: firstNonEmpty(view.packageBalanceText, student.packageBalanceText),
-      detailPackageBalanceText: firstNonEmpty(view.detailPackageBalanceText, student.detailPackageBalanceText),
-      detailLessonRecordRows: Array.isArray(view.detailLessonRecordRows) ? view.detailLessonRecordRows : student.detailLessonRecordRows,
-      packageListRows: Array.isArray(view.packageListRows) ? view.packageListRows : student.packageListRows,
-      isHistoricalStudentRoster: view.isHistoricalStudentRoster == null ? student.isHistoricalStudentRoster : view.isHistoricalStudentRoster,
-      isActiveStudentRoster: view.isActiveStudentRoster == null ? student.isActiveStudentRoster : view.isActiveStudentRoster,
-      hasTrialAttended: view.hasTrialAttended == null ? student.hasTrialAttended : view.hasTrialAttended,
-      hasFormalAttended: view.hasFormalAttended == null ? student.hasFormalAttended : view.hasFormalAttended,
-      standardCourseType: firstNonEmpty(view.standardCourseType, student.standardCourseType),
-      courseType: firstNonEmpty(view.courseType, student.courseType),
-      searchText: firstNonEmpty(view.searchText, student.searchText)
-    };
-  });
 }
 
 function scheduleEntitlements(schedule = {}, entitlements = []) {
@@ -461,13 +346,14 @@ function localDateKey(value) {
 
 function scheduleEnded(item = {}, now = new Date()) {
   if (item.isCancelled || item.effectiveStatus === '已取消') return false;
+  const end = parseLocalDate(item.endTime);
+  if (end && end <= now) return true;
   if (item.isEnded === true || item.effectiveStatus === '已结束') return true;
   if (item.isUpcoming === true || item.effectiveStatus === '已排课') return false;
   const status = String(item.status || item.statusText || '').trim();
   if (status === '已取消') return false;
   if (status === '已结束' || status === '已下课') return true;
-  const end = parseLocalDate(item.endTime);
-  return !!(end && end < now);
+  return false;
 }
 
 function standardWorkbenchStats(backendStats = {}) {
@@ -582,120 +468,29 @@ function scheduleTimeTextOf(value, fallback = '14:00') {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-function buildStudentCards(students = [], entitlements = [], schedule = [], coachName = '', entitlementLedger = []) {
-  return (students || []).map((student) => {
-    const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, []));
-    const validSchedule = relatedSchedule.filter(item => !item.isCancelled && String(item.effectiveStatus || item.status || '') !== '已取消');
-    const lessonRecords = buildStudentLessonRecords(student, { schedule: validSchedule, entitlements, entitlementLedger });
-    const backendLessonUnits = Number(student.lessonUnitsCompleted);
-    const backendLessonCount = Number(student.lessonRecordCount);
-    const lessonUnitsCompleted = Number.isFinite(backendLessonUnits) ? backendLessonUnits : lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
-    const lessonRecordCount = Number.isFinite(backendLessonCount) ? backendLessonCount : lessonRecords.length;
-    const lastRecord = lessonRecords[0] || null;
-    const lastClassAt = firstNonEmpty(student.detailRecentLessonDate, student.lastFormalLessonAt, lastRecord && lastRecord.sortTime);
-    const packageText = firstNonEmpty(student.packageBalanceText, studentPackageListText(studentEntitlements(student.id, entitlements)));
-    const isOwner = studentOwnedByCoach(student, entitlements, coachName);
-    const packageProgress = studentPackageProgress(student, packageText);
-    const courseLabel = studentCourseLabel(student, studentEntitlements(student.id, entitlements));
-    const studentTabKey = studentRosterTabKey(student, packageProgress, courseLabel);
-    return {
-      id: student.id,
-      name: student.name || '未命名学员',
-      type: isOwner ? '归属' : '代课',
-      tagClass: isOwner ? 'student-tag-owner' : 'student-tag-substitute',
-      cumulative: lessonRecordUnitsCompactText(lessonRecordCount, lessonUnitsCompleted),
-      packageText,
-      packagePercent: packageProgress.percent,
-      courseLabel,
-      studentTabKey,
-      searchText: [student.name, student.phone, courseLabel, student.searchText].filter(Boolean).join(' ').toLowerCase(),
-      showPackage: isOwner && !!packageText,
-      lastScheduleId: lastRecord && lastRecord.scheduleId,
-      lastClassText: formatStudentRecentLessonText(lastClassAt),
-      lastClassAt,
-      showLastClass: !!lastRecord
-    };
-  }).sort((a, b) => {
-    const lastClassCompare = String(b.lastClassAt || '').localeCompare(String(a.lastClassAt || ''));
-    if (lastClassCompare) return lastClassCompare;
-    if (a.type !== b.type) return a.type === '归属' ? -1 : 1;
-    return a.name.localeCompare(b.name, 'zh-Hans-CN');
-  });
+function studentRosterItems(studentRoster = {}) {
+  return Array.isArray(studentRoster.items) ? studentRoster.items : [];
 }
 
-function studentPackageProgress(student = {}, packageText = '') {
-  const direct = Number(student.packageBalancePercent);
-  if (Number.isFinite(direct) && direct >= 0) return { percent: Math.max(0, Math.min(100, Math.round(direct))) };
-  const remaining = Number(student.packageBalanceRemaining);
-  const total = Number(student.packageBalanceTotal);
-  if (Number.isFinite(remaining) && Number.isFinite(total) && total > 0) {
-    return { percent: Math.max(0, Math.min(100, Math.round((remaining / total) * 100))) };
-  }
-  const matched = String(packageText || '').match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
-  if (!matched) return { percent: 0 };
-  const parsedRemaining = Number(matched[1]);
-  const parsedTotal = Number(matched[2]);
-  return { percent: parsedTotal > 0 ? Math.max(0, Math.min(100, Math.round((parsedRemaining / parsedTotal) * 100))) : 0 };
-}
-
-function studentCourseLabel(student = {}, entitlements = []) {
-  const packageRows = Array.isArray(student.packageListRows) ? student.packageListRows : [];
-  const sourceText = [
-    student.courseDisplayName,
-    student.standardCourseType,
-    student.courseType,
-    student.type,
-    student.customerType,
-    ...packageRows.flatMap(item => [item.courseDisplayName, item.standardCourseType, item.courseType, item.packageName, item.productName, item.name]),
-    ...entitlements.flatMap(item => [item.courseDisplayName, item.standardCourseType, item.courseType, item.packageName, item.productName, item.name])
-  ].filter(Boolean).join(' ');
-  const audience = (sourceText.match(/青少年|少儿|成人/) || [])[0] || firstNonEmpty(student.type, student.customerType);
-  const courseType = /体验/.test(sourceText) ? '体验'
-    : /1\s*[vV对]\s*1|私教/.test(sourceText) ? '1v1'
-      : /小班/.test(sourceText) ? '小班'
-        : firstNonEmpty(student.standardCourseType, student.courseType);
-  return [audience, courseType].filter(Boolean).join(' ') || '课程';
-}
-
-function studentRosterTabKey(student = {}, packageProgress = {}, courseLabel = '') {
-  const stage = String(student.studentStage || '').trim();
-  const combined = [courseLabel, student.trialStatus, student.courseDealPath, student.studentStatusLabel].filter(Boolean).join(' ');
-  if (stage === 'trial' || /体验/.test(combined)) return 'trial';
-  if (student.isActiveStudentRoster === true) return 'active';
-  if (student.isHistoricalStudentRoster === true || (Number(student.packageBalanceTotal) > 0 && Number(packageProgress.percent) <= 0)) return 'ended';
-  return stage === 'formal' ? 'active' : 'active';
-}
-
-function scheduleInCurrentWeek(item = {}, now = new Date()) {
-  const date = parseLocalDate(item.startTime || item.endTime);
-  if (!date) return false;
-  const current = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekday = current.getDay() || 7;
-  const start = new Date(current.getFullYear(), current.getMonth(), current.getDate() - weekday + 1).getTime();
-  const end = start + 7 * 86400000;
-  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  return day >= start && day < end;
-}
-
-function scheduleInCurrentMonth(item = {}, now = new Date()) {
-  const date = parseLocalDate(item.startTime || item.endTime);
-  return !!(date && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth());
-}
-
-function validStudentScheduleIdsForWindow(students = [], schedule = [], predicate = () => false) {
-  const now = new Date();
-  const studentIds = new Set((students || []).map(item => String(item.id || '').trim()).filter(Boolean));
-  const matchedIds = new Set();
-  (schedule || []).forEach(item => {
-    const status = String(item.effectiveStatus || item.status || '').trim();
-    if (item.isCancelled || status === '已取消') return;
-    if (!predicate(item, now)) return;
-    studentIdsOf(item).forEach(id => {
-      const textId = String(id || '').trim();
-      if (studentIds.has(textId)) matchedIds.add(textId);
-    });
-  });
-  return matchedIds;
+function buildStudentCards(students = []) {
+  return (students || []).map((student) => ({
+    ...student,
+    id: String(student.id || student.studentId || '').trim(),
+    name: firstNonEmpty(student.name, student.displayName) || '未命名学员',
+    type: firstNonEmpty(student.type) || '归属',
+    tagClass: firstNonEmpty(student.tagClass) || (student.type === '代课' ? 'student-tag-substitute' : 'student-tag-owner'),
+    cumulative: firstNonEmpty(student.cumulative, student.detailCumulativeText) || '0',
+    packageText: firstNonEmpty(student.packageText),
+    packagePercent: Number.isFinite(Number(student.packagePercent)) ? Number(student.packagePercent) : 0,
+    courseLabel: firstNonEmpty(student.courseLabel) || '课程',
+    studentTabKey: firstNonEmpty(student.studentTabKey) || 'active',
+    searchText: firstNonEmpty(student.searchText, [student.name, student.displayName, student.phone, student.courseLabel].filter(Boolean).join(' ')).toLowerCase(),
+    showPackage: !!student.showPackage,
+    lastScheduleId: firstNonEmpty(student.lastScheduleId),
+    lastClassText: firstNonEmpty(student.lastClassText) || '暂无记录',
+    lastClassAt: firstNonEmpty(student.lastClassAt),
+    showLastClass: !!student.showLastClass
+  }));
 }
 
 function classStatusMeta(status = '') {
@@ -737,28 +532,20 @@ function buildShiftCards(classes = [], students = []) {
   }).sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
 }
 
-function buildStudentStats(students = [], schedule = []) {
-  const totalCount = students.length;
-  const weekActiveCount = validStudentScheduleIdsForWindow(students, schedule, scheduleInCurrentWeek).size;
-  const monthActiveCount = validStudentScheduleIdsForWindow(students, schedule, scheduleInCurrentMonth).size;
-  const activeCount = students.filter(item => item.studentTabKey === 'active').length;
-  const trialCount = students.filter(item => item.studentTabKey === 'trial').length;
-  const endedCount = students.filter(item => item.studentTabKey === 'ended').length;
-  return { totalCount, weekActiveCount, monthActiveCount, activeCount, trialCount, endedCount };
-}
-
-function buildStudentTabs(stats = {}, currentTab = 'all') {
-  const items = [
+function buildStudentTabs(stats = {}, currentTab = 'all', backendTabs = []) {
+  const items = Array.isArray(backendTabs) && backendTabs.length ? backendTabs : [
     { key: 'all', label: '全部', count: stats.totalCount || 0 },
     { key: 'active', label: '在课', count: stats.activeCount || 0 },
     { key: 'trial', label: '体验', count: stats.trialCount || 0 },
-    { key: 'ended', label: '已结课', count: stats.endedCount || 0 }
+    { key: 'ended', label: '已结课', count: stats.endedCount || 0 },
+    { key: 'substitute', label: '代课', count: stats.substituteCount || 0 }
   ];
   return items.map(item => ({ ...item, className: item.key === currentTab ? 'is-active' : '' }));
 }
 
 function studentMatchesTab(student = {}, tab = 'all') {
-  return !tab || tab === 'all' || student.studentTabKey === tab;
+  if (!tab || tab === 'all') return student.studentTabKey !== 'substitute';
+  return student.studentTabKey === tab;
 }
 
 function studentMatchesSearch(student = {}, keyword = '') {
@@ -1915,17 +1702,14 @@ function studentDetailLessonRecordView(detail = {}, expanded = false) {
 function buildStudentDetailData(student, context = {}) {
   if (!student) return null;
   const classes = Array.isArray(context.classes) ? context.classes : [];
-  const entitlements = Array.isArray(context.entitlements) ? context.entitlements : [];
   const coachName = String(context.coachName || '').trim();
   const relatedClassIds = studentRelatedClassIds(student.id, classes);
   const relatedClasses = classes.filter(item => relatedClassIds.includes(String(item.id || '').trim()));
   const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
   const lessonRecords = studentDetailLessonRecordsFromUnifiedRows(student.detailLessonRecordRows||[]);
-  const completedLessons = Number(student.completedLessons);
-  const lessonUnitsCompleted = Number.isFinite(completedLessons) ? completedLessons : lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
+  const lessonUnitsCompleted = Number(student.completedLessons) || 0;
   const lessonRecordCount = lessonRecords.length;
   const latestRecord = lessonRecords[0] || null;
-  const packageText = firstNonEmpty(student.packageProgressText, studentPackageProgressText(studentEntitlements(student.id, entitlements)));
   const ownerCoach = firstNonEmpty(student.ownerCoach, student.primaryCoach, activeClass && activeClass.coach);
   const responsibleCoach = firstNonEmpty(student.primaryCoach, activeClass && activeClass.coach, coachName);
   const campus = campusDisplayName(firstNonEmpty(student.campusName, student.campus, activeClass && activeClass.campusName, activeClass && activeClass.campus));
@@ -1939,11 +1723,11 @@ function buildStudentDetailData(student, context = {}) {
       type: firstNonEmpty(student.type) || '暂无记录',
       campus: campus || '暂无记录',
       campusEmpty: !campus,
-      cumulative: studentDetailCompletedLessonText(student, lessonUnitsCompleted),
-      packageProgress: studentDetailPackageBalanceText(student, entitlements),
-      packageEmpty: !firstNonEmpty(student.detailPackageBalanceText, student.packageBalanceText, studentPackageBalanceText(studentEntitlements(student.id, entitlements))),
-      recentLesson: studentDetailRecentLessonText(student, latestRecord),
-      recentLessonEmpty: !firstNonEmpty(student.detailRecentLessonDate, student.lastFormalLessonAt, latestRecord && latestRecord.sortTime)
+      cumulative: firstNonEmpty(student.detailCumulativeText, student.cumulative) || lessonUnitsText(lessonUnitsCompleted),
+      packageProgress: firstNonEmpty(student.detailPackageProgressText, student.packageText) || '暂无记录',
+      packageEmpty: !firstNonEmpty(student.detailPackageProgressText, student.packageText),
+      recentLesson: firstNonEmpty(student.detailRecentLessonText, student.lastClassText) || '暂无记录',
+      recentLessonEmpty: !firstNonEmpty(student.detailRecentLessonText, student.lastClassText, student.detailRecentLessonDate, student.lastFormalLessonAt, latestRecord && latestRecord.sortTime)
     },
     summary: {
       coach: responsibleCoach || '暂无记录',
@@ -1952,9 +1736,9 @@ function buildStudentDetailData(student, context = {}) {
       classEmpty: !activeClass,
       lastClass: latestRecord ? latestRecord.time : '暂无记录',
       lastClassEmpty: !latestRecord,
-      cumulative: studentDetailCompletedLessonText(student, lessonUnitsCompleted),
-      packageProgress: studentDetailPackageBalanceText(student, entitlements),
-      packageEmpty: !packageText
+      cumulative: firstNonEmpty(student.detailCumulativeText, student.cumulative) || lessonUnitsText(lessonUnitsCompleted),
+      packageProgress: firstNonEmpty(student.detailPackageProgressText, student.packageText) || '暂无记录',
+      packageEmpty: !firstNonEmpty(student.detailPackageProgressText, student.packageText)
     },
     remark: {
       text: remark || '暂无记录',
@@ -2213,10 +1997,11 @@ Page({
       const now = new Date();
       const schedule = adaptSchedule(data.schedule || [], data.feedbacks || []);
       const studentSchedule = adaptSchedule(data.studentSchedule || data.schedule || [], data.feedbacks || []);
-      const studentsRaw = mergeTeachingStudentViews(data.students || [], data.teachingStudentViews || {});
-      const studentsList = buildStudentCards(studentsRaw, data.entitlements || [], studentSchedule, coachName, data.entitlementLedger || []);
-      const studentStats = buildStudentStats(studentsList, studentSchedule);
-      const studentTabs = buildStudentTabs(studentStats, this.data.studentFilterTab);
+      const studentRoster = data.studentRoster || {};
+      const studentsRaw = studentRosterItems(studentRoster);
+      const studentsList = buildStudentCards(studentsRaw);
+      const studentStats = studentRoster.stats || {};
+      const studentTabs = buildStudentTabs(studentStats, this.data.studentFilterTab, studentRoster.tabs || []);
       const studentsFilteredList = filterStudentCards(studentsList, this.data.studentFilterTab, this.data.studentSearchKeyword);
       const shiftsList = [];
       this.setData({
