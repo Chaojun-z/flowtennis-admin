@@ -110,6 +110,7 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
   [normalizeStudentNameKey('黄晴 吕瑜')]: '吕瑜 黄晴',
   [normalizeStudentNameKey('唐总')]: '唐果',
   [normalizeStudentNameKey('很伟大')]: '很玮大Maggie',
+  [normalizeStudentNameKey('连女士')]: '莲儿（连女士）',
   [normalizeStudentNameKey('william')]: 'William（时节）',
   [normalizeStudentNameKey('chris')]: 'CHRISTINE',
   [normalizeStudentNameKey('柏杨')]: '柏杨（无名 Yang）',
@@ -134,7 +135,7 @@ function splitFeishuStudentNames(value){
 }
 
 function parseSharedPackageStudentCell(raw){
-  const match=cleanText(raw).match(/^(.+?)[（(]\s*使用\s*(.+?)\s*课包\s*(\d+)?\s*[）)]$/);
+  const match=cleanText(raw).match(/^(.+?)[（(]\s*使用\s*(.+?)\s*课\s*(?:包)?\s*(\d+)?\s*[）)]$/);
   if(!match)return null;
   const attendee=cleanText(match[1]);
   const packageOwner=cleanText(match[2]);
@@ -1361,11 +1362,15 @@ function selectEntitlementForStudent(student,candidate,entitlements=[],recommend
   const rows=(entitlements||[]).filter(row=>String(row.studentId||'')===String(student.id||'')&&specialCourseEntitlementMatches(row,candidate));
   if(typeof recommendEntitlements==='function'){
     const result=recommendEntitlements(rows,body);
-    if(!result?.recommended)return null;
-    const selected=rows.find(row=>String(row.id||'')===String(result.recommended.entitlementId||result.recommended.id||''));
-    return selected&&(entitlementLessonIndexMatches(selected,candidate,schedules)||splitPackageCycleLessonIndexMatches(rows,candidate))?selected:null;
+    if(result?.recommended){
+      const selected=rows.find(row=>String(row.id||'')===String(result.recommended.entitlementId||result.recommended.id||''));
+      if(selected&&(entitlementLessonIndexMatches(selected,candidate,schedules)||splitPackageCycleLessonIndexMatches(rows,candidate)||entitlementCanUseScheduleBackedBalance(selected,candidate,schedules)))return selected;
+    }
+    const scheduleBacked=rows.filter(row=>entitlementCanUseScheduleBackedBalance(row,candidate,schedules));
+    return scheduleBacked.length===1?scheduleBacked[0]:null;
   }
   return rows.find(row=>{
+    if(entitlementCanUseScheduleBackedBalance(row,candidate,schedules))return true;
     if(row.status&&row.status!=='active')return false;
     if(row.courseType&&row.courseType!==candidate.course.courseType)return false;
     if(row.experienceType&&candidate.course.experienceType&&row.experienceType!==candidate.course.experienceType)return false;
@@ -1477,6 +1482,22 @@ function splitPackageCycleLessonIndexMatches(rows=[],candidate={}){
     if(expected===index)return true;
   }
   return false;
+}
+
+function entitlementCanUseScheduleBackedBalance(row={},candidate={},schedules=[]){
+  const index=Number(candidate.lessonIndex);
+  if(!Number.isFinite(index)||index<=0)return false;
+  const total=Number(row.totalLessons);
+  if(!Number.isFinite(total)||total<=0||index>total)return false;
+  if(row.status&&!['active','depleted'].includes(row.status))return false;
+  if(row.courseType&&row.courseType!==candidate.course.courseType)return false;
+  if(row.experienceType&&candidate.course.experienceType&&row.experienceType!==candidate.course.experienceType)return false;
+  if(!specialCourseEntitlementMatches(row,candidate))return false;
+  const consumedBefore=consumedScheduleLessonsBefore(row,candidate,schedules);
+  if(consumedBefore===null)return false;
+  const count=candidateEntitlementLessonCount(candidate);
+  if(consumedBefore+count>total)return false;
+  return index>=consumedBefore+1&&index<=consumedBefore+count;
 }
 
 function entitlementCourseMatches(row={},candidate={}){

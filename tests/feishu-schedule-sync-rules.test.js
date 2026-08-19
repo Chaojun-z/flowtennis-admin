@@ -57,6 +57,8 @@ assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').les
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageNote, '德德使用小林课包 2', 'shared package note should be preserved for schedule notes');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageAttendeeName, '德德', 'shared package note should keep the actual learner');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageOwnerName, '小林', 'shared package note should keep the package owner');
+assert.deepStrictEqual(sync.parseStudentCell('达达（使用十一 课 7）').names, ['十一'], 'shared package parser should support Feishu text with a space before 课');
+assert.strictEqual(sync.parseStudentCell('达达（使用十一 课 7）').lessonIndex, 7, 'shared package parser should keep spaced lesson index');
 assert.deepStrictEqual(sync.parseStudentCell('misha 黄总（2）').names, ['misha', '黄总'], 'confirmed Misha and Huang pair should be parsed as two students');
 assert.deepStrictEqual(sync.parseStudentCell('黄总 misha（4）').names, ['misha', '黄总'], 'confirmed Misha and Huang pair should also support reversed order');
 assert.deepStrictEqual(sync.parseStudentCell('王老板、王老板孩子').names, ['王老板'], 'Wang boss family course should use one canonical student record');
@@ -1696,6 +1698,32 @@ assert.deepStrictEqual(authorizedSharedPackagePlan.actions[0].candidate.schedule
 assert.deepStrictEqual(sync.buildScheduleBody(authorizedSharedPackagePlan.actions[0].candidate).entitlementIds, ['ent-shiyi'], 'shared package schedule should consume the owner package');
 assert.strictEqual(authorizedSharedPackagePlan.actions[0].candidate.sharedPackageAuthorization.validFrom, '2026-03-25', 'auto-created shared package authorization should start from the package purchase date');
 
+const spacedSharedPackagePlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'authorized-spaced-shared-package-key',
+    coachName: '刘润扬',
+    studentText: '达达（使用十一 课 7）',
+    studentNames: sync.parseStudentCell('达达（使用十一 课 7）').names,
+    lessonIndex: sync.parseStudentCell('达达（使用十一 课 7）').lessonIndex,
+    sharedPackageNote: sync.parseStudentCell('达达（使用十一 课 7）').sharedPackageNote,
+    sharedPackageAttendeeName: sync.parseStudentCell('达达（使用十一 课 7）').sharedPackageAttendeeName,
+    sharedPackageOwnerName: sync.parseStudentCell('达达（使用十一 课 7）').sharedPackageOwnerName,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [
+    { id: 'stu-shiyi', name: '十一', primaryCoach: '刘润扬教练' },
+    { id: 'stu-dada', name: '达达', primaryCoach: '刘润扬教练' }
+  ],
+  coaches: [{ id: 'coach-liu', name: '刘润扬教练' }],
+  users: [],
+  entitlements: [{ id: 'ent-shiyi', studentId: 'stu-shiyi', studentName: '十一', courseType: '私教课', totalLessons: 10, usedLessons: 6, remainingLessons: 4, status: 'active', purchaseDate: '2026-03-25' }]
+});
+assert.strictEqual(spacedSharedPackagePlan.summary.create, 1, 'spaced shared package text should create without asking operations');
+assert.strictEqual(spacedSharedPackagePlan.summary.notifyError, 0, 'spaced shared package text should not notify when owner has remaining lessons');
+
 const mishaHuangPairPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -1729,6 +1757,28 @@ const mishaHuangPairBody = sync.buildScheduleBody(mishaHuangPairPlan.actions[0].
 assert.deepStrictEqual(mishaHuangPairBody.entitlementIds, ['ent-huang'], 'second confirmed pair lesson should rotate to Huang package');
 assert.strictEqual(mishaHuangPairBody.packageOwnerStudentId, 'stu-huang', 'pair schedule should keep package owner metadata');
 assert.strictEqual(mishaHuangPairBody.usedByStudentId, 'stu-misha', 'pair schedule should let the non-owner show authorized package usage');
+
+const lianAliasPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...courses[0],
+    sourceKey: 'lian-alias-key',
+    startTime: '2026-08-22 10:00',
+    endTime: '2026-08-22 11:00',
+    coachName: 'Siren',
+    studentText: '连女士（9）',
+    studentNames: ['连女士'],
+    lessonIndex: 9,
+    course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-lianer', name: '莲儿（连女士）', primaryCoach: 'Siren 教练' }],
+  coaches: [{ id: 'coach-siren', name: 'Siren 教练' }],
+  users: [],
+  entitlements: [{ id: 'ent-lianer', studentId: 'stu-lianer', studentName: '莲儿（连女士）', courseType: '私教课', totalLessons: 10, usedLessons: 8, remainingLessons: 2, status: 'active' }]
+});
+assert.strictEqual(lianAliasPlan.summary.create, 1, '连女士 should resolve to 莲儿（连女士） without manual confirmation');
+assert.strictEqual(lianAliasPlan.summary.notifyError, 0, '连女士 alias should not be reported as an unidentified student');
 
 const reversedMishaHuangPairPlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -2438,6 +2488,64 @@ const autoAuditLessonIndexMismatchPlan = sync.buildDryRunPlan({
 assert.strictEqual(autoAuditLessonIndexMismatchPlan.summary.create, 1, 'lesson index mismatches with a usable entitlement should auto-create after system self-check');
 assert.strictEqual(autoAuditLessonIndexMismatchPlan.summary.notifyError, 0, 'lesson index mismatches should not require operations confirmation when a usable entitlement is clear');
 assert.match(sync.buildScheduleBody(autoAuditLessonIndexMismatchPlan.actions[0].candidate).notes, /课时编号自查/, 'auto-audited lesson index mismatches should leave an internal schedule note');
+
+const normalLessonNumberCanRecoverLedgerBalancePlan = sync.buildDryRunPlan({
+  feishuCourses: [
+    {
+      ...courses[0],
+      sourceKey: 'wang-lesson-9-ledger-recover-key',
+      startTime: '2026-08-26 15:00',
+      endTime: '2026-08-26 16:00',
+      coachName: '林铭',
+      studentNames: ['王先生'],
+      studentText: '王先生（9）',
+      lessonIndex: 9,
+      durationMinutes: 60,
+      lessonCount: 1,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+    },
+    {
+      ...courses[0],
+      sourceKey: 'wang-lesson-10-ledger-recover-key',
+      startTime: '2026-08-27 14:00',
+      endTime: '2026-08-27 15:00',
+      coachName: '林铭',
+      studentNames: ['王先生'],
+      studentText: '王先生（10）',
+      lessonIndex: 10,
+      durationMinutes: 60,
+      lessonCount: 1,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+    }
+  ],
+  syncRows: [],
+  schedules: Array.from({ length: 8 }, (_, index) => ({
+    id: `sch-wang-${index + 1}`,
+    startTime: `2026-08-${14 + index} 15:00`,
+    endTime: `2026-08-${14 + index} 16:00`,
+    coach: '林铭教练',
+    campus: 'shunyi_mapo',
+    venue: '4号场',
+    courseType: '私教课',
+    experienceType: '',
+    studentIds: ['stu-wang'],
+    studentName: '王先生（阿萌）',
+    entitlementId: 'ent-wang',
+    entitlementIds: ['ent-wang'],
+    lessonCount: 1,
+    status: '已排课'
+  })),
+  students: [{ id: 'stu-wang', name: '王先生（阿萌）', primaryCoach: '林铭教练' }],
+  coaches: [],
+  users: [],
+  entitlements: [{ id: 'ent-wang', studentId: 'stu-wang', courseType: '私教课', totalLessons: 10, usedLessons: 10, remainingLessons: 0, status: 'depleted', packageName: '成人1v2非黄10课时' }],
+  recommendEntitlements: rows => ({
+    recommended: rows.find(row => Number(row.remainingLessons || 0) > 0) ? { entitlementId: rows[0].id } : null,
+    options: rows.map(row => ({ entitlementId: row.id, selectable: Number(row.remainingLessons || 0) > 0 }))
+  })
+});
+assert.strictEqual(normalLessonNumberCanRecoverLedgerBalancePlan.summary.create, 2, 'normal lesson numbers within package size should recover from ledger balance drift by counting effective schedules');
+assert.strictEqual(normalLessonNumberCanRecoverLedgerBalancePlan.summary.notifyError, 0, 'lesson 9 and 10 should not ask operations when effective schedule count leaves two lessons');
 
 const staleFeishuScheduleReleasesFinalLessonPlan = sync.buildDryRunPlan({
   feishuCourses: [{
