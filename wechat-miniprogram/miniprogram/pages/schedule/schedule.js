@@ -1651,7 +1651,8 @@ function buildStudentLessonRecords(student = {}, context = {}) {
 }
 
 function studentDetailLessonRecordsFromUnifiedRows(detailLessonRecordRows = []) {
-  return (Array.isArray(detailLessonRecordRows) ? detailLessonRecordRows : [])
+  const byKey = new Map();
+  (Array.isArray(detailLessonRecordRows) ? detailLessonRecordRows : [])
     .map((row) => {
       const time = firstNonEmpty(row.time, row.scheduleTime, row.startTime, row.relatedDate, row.createdAt);
       const sortTime = firstNonEmpty(row.sortTime, row.time, row.startTime, row.endTime, row.relatedDate, row.createdAt);
@@ -1668,6 +1669,7 @@ function studentDetailLessonRecordsFromUnifiedRows(detailLessonRecordRows = []) 
         statusClass: /待|进行/.test(status) ? 'detail-tag-success' : 'detail-tag-muted',
         feedbackStatusText: hasFeedback ? '' : '未反馈',
         feedbackStatusClass: 'detail-tag-warning',
+        hasFeedback,
         lessonUnits: Number(row.lessonUnits || row.completedLessons || row.lessonCount || row.consumedLessons) || 1,
         metaParts: [
           row.venue || row.sourceVenue || row.courtName || row.court || row.locationText,
@@ -1677,6 +1679,33 @@ function studentDetailLessonRecordsFromUnifiedRows(detailLessonRecordRows = []) 
       };
     })
     .filter(row => row.time && row.sortTime)
+    .forEach((row) => {
+      const key = firstNonEmpty(row.scheduleId, `${row.time}|${row.courseType}|${row.status}|${row.metaParts.join('|')}`);
+      const existing = byKey.get(key);
+      if (!existing) {
+        byKey.set(key, row);
+        return;
+      }
+      const mergedStatus = firstNonEmpty(existing.status, row.status, '已结束');
+      const merged = {
+        ...existing,
+        ...row,
+        scheduleId: firstNonEmpty(existing.scheduleId, row.scheduleId),
+        time: firstNonEmpty(existing.time, row.time),
+        sortTime: firstNonEmpty(existing.sortTime, row.sortTime),
+        courseType: firstNonEmpty(existing.courseType, row.courseType, '课程'),
+        courseTypeClass: /体验/.test(firstNonEmpty(existing.courseType, row.courseType, '课程')) ? 'detail-tag-trial' : 'detail-tag-private',
+        status: mergedStatus,
+        statusClass: /待|进行/.test(mergedStatus) ? 'detail-tag-success' : 'detail-tag-muted',
+        feedbackStatusText: (existing.hasFeedback || row.hasFeedback) ? '' : '未反馈',
+        feedbackStatusClass: 'detail-tag-warning',
+        hasFeedback: !!(existing.hasFeedback || row.hasFeedback),
+        lessonUnits: Math.max(Number(existing.lessonUnits) || 0, Number(row.lessonUnits) || 0) || 1,
+        metaParts: [...new Set([...(existing.metaParts || []), ...(row.metaParts || [])].map(value => String(value || '').trim()).filter(Boolean))]
+      };
+      byKey.set(key, merged);
+    });
+  return [...byKey.values()]
     .sort((a, b) => String(b.sortTime || '').localeCompare(String(a.sortTime || '')));
 }
 
@@ -1725,8 +1754,8 @@ function buildStudentDetailData(student, context = {}) {
       campus: campus || '暂无记录',
       campusEmpty: !campus,
       cumulative: firstNonEmpty(student.detailCumulativeText, student.cumulative) || lessonUnitsText(lessonUnitsCompleted),
-      packageProgress: firstNonEmpty(student.detailPackageProgressText, student.packageText) || '暂无记录',
-      packageEmpty: !firstNonEmpty(student.detailPackageProgressText, student.packageText),
+      packageProgress: firstNonEmpty(student.detailPackageProgressText, student.detailPackageBalanceText, student.packageText) || '暂无记录',
+      packageEmpty: !firstNonEmpty(student.detailPackageProgressText, student.detailPackageBalanceText, student.packageText),
       recentLesson: firstNonEmpty(student.detailRecentLessonText, student.lastClassText) || '暂无记录',
       recentLessonEmpty: !firstNonEmpty(student.detailRecentLessonText, student.lastClassText, student.detailRecentLessonDate, student.lastFormalLessonAt, latestRecord && latestRecord.sortTime)
     },
@@ -1738,8 +1767,8 @@ function buildStudentDetailData(student, context = {}) {
       lastClass: latestRecord ? latestRecord.time : '暂无记录',
       lastClassEmpty: !latestRecord,
       cumulative: firstNonEmpty(student.detailCumulativeText, student.cumulative) || lessonUnitsText(lessonUnitsCompleted),
-      packageProgress: firstNonEmpty(student.detailPackageProgressText, student.packageText) || '暂无记录',
-      packageEmpty: !firstNonEmpty(student.detailPackageProgressText, student.packageText)
+      packageProgress: firstNonEmpty(student.detailPackageProgressText, student.detailPackageBalanceText, student.packageText) || '暂无记录',
+      packageEmpty: !firstNonEmpty(student.detailPackageProgressText, student.detailPackageBalanceText, student.packageText)
     },
     remark: {
       text: remark || '暂无记录',

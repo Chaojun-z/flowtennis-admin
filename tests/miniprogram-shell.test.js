@@ -246,7 +246,7 @@ assert.match(scheduleJs, /showStudentDetail/, 'student detail sheet should use i
 assert.match(scheduleJs, /formatStudentClassTime[\s\S]*endText[\s\S]*`\$\{dateText\} \$\{startText\}-\$\{endText\}`/, 'student detail latest class should show the full start-end time range');
 assert.doesNotMatch(scheduleJs, /lessonRecordCountText/, 'student detail should not render the old lesson record count summary');
 assert.match(scheduleJs, /cumulative:\s*firstNonEmpty\(student\.detailCumulativeText,\s*student\.cumulative/, 'student detail should show the backend unified completed lesson value');
-assert.match(scheduleJs, /packageProgress:\s*firstNonEmpty\(student\.detailPackageProgressText,\s*student\.packageText/, 'student detail package progress should show the backend unified package balance value');
+assert.match(scheduleJs, /packageProgress:\s*firstNonEmpty\(student\.detailPackageProgressText,\s*student\.detailPackageBalanceText,\s*student\.packageText/, 'student detail package progress should show the backend unified package balance value');
 assert.match(scheduleJs, /recentLesson:\s*firstNonEmpty\(student\.detailRecentLessonText,\s*student\.lastClassText/, 'student detail recent lesson should show the backend unified recent lesson text');
 assert.match(scheduleJs, /function studentDetailLessonRecordsFromUnifiedRows[\s\S]*detailLessonRecordRows/, 'student detail should normalize lesson records from the unified teaching read model');
 assert.match(scheduleJs, /const lessonRecords = studentDetailLessonRecordsFromUnifiedRows\(student\.detailLessonRecordRows\|\|\[\]\)/, 'student detail must use unified read model lesson records instead of local schedule and ledger reconstruction');

@@ -521,6 +521,10 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
     const activeRows = includeTrial ? packageListRows : packageListRows.filter(row => (Number(row.remainingLessons) || 0) > 0);
     const displayRows = includeTrial || activeRows.length ? activeRows : packageListRows.slice(0, 1);
     const detailRows = includeTrial ? displayRows : packageListRows;
+    const ratioText = detailRows
+      .map(row => `${lessonQty(row.remainingLessons)}/${lessonQty(row.totalLessons)}`)
+      .filter(Boolean)
+      .join(',');
     const remaining = displayRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
     const total = displayRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
     const detailRemaining = detailRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
@@ -533,6 +537,7 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
       detailPackageBalanceTotal: detailTotal,
       detailPackageBalanceText: detailTotal > 0 ? `${lessonQty(detailRemaining)}/${lessonQty(detailTotal)}` : '-',
       detailPackageBalancePercent: detailTotal > 0 ? Math.max(0, Math.min(100, Math.round(detailRemaining / detailTotal * 100))) : 0,
+      detailPackageProgressText: ratioText || '-',
       packageListText: displayRows.map(row => `${row.packageName} ${lessonQty(row.remainingLessons)}/${lessonQty(row.totalLessons)}`).join('\n') || '-',
       packageBalanceRemaining: remaining,
       packageBalanceTotal: total,
@@ -724,8 +729,51 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       });
     });
 
+  const lessonDetailDedupKey = (row = {}) => {
+    const scheduleId = text(row.scheduleId);
+    if (scheduleId) return `schedule:${scheduleId}`;
+    return [
+      text(row.time),
+      text(row.courseType),
+      text(row.status),
+      text((Array.isArray(row.metaParts) ? row.metaParts : []).join('|'))
+    ].join('|');
+  };
+  const mergeLessonDetailRows = (primary = {}, secondary = {}) => {
+    const primaryHasFeedback = !!(primary.hasFeedback || primary.feedbackId || primary.feedbackAt || primary.feedbackStatus === '已反馈');
+    const secondaryHasFeedback = !!(secondary.hasFeedback || secondary.feedbackId || secondary.feedbackAt || secondary.feedbackStatus === '已反馈');
+    const courseType = text(primary.courseType || secondary.courseType || '课程');
+    const status = text(primary.status || secondary.status || '已结束');
+    return {
+      ...primary,
+      ...secondary,
+      scheduleId: text(primary.scheduleId || secondary.scheduleId),
+      time: text(primary.time || secondary.time),
+      sortTime: text(primary.sortTime || secondary.sortTime),
+      courseType,
+      courseTypeClass: /体验/.test(courseType) ? 'detail-tag-trial' : 'detail-tag-private',
+      status,
+      statusClass: /待|进行/.test(status) ? 'detail-tag-success' : 'detail-tag-muted',
+      hasFeedback: primaryHasFeedback || secondaryHasFeedback,
+      feedbackStatusText: primaryHasFeedback || secondaryHasFeedback ? '' : '未反馈',
+      feedbackStatusClass: 'detail-tag-warning',
+      lessonUnits: Math.max(Number(primary.lessonUnits) || 0, Number(secondary.lessonUnits) || 0) || 1,
+      metaParts: [...new Set([...(Array.isArray(primary.metaParts) ? primary.metaParts : []), ...(Array.isArray(secondary.metaParts) ? secondary.metaParts : [])].map(value => text(value)).filter(Boolean))]
+    };
+  };
   rowsByStudent.forEach((rows, studentId) => {
-    rowsByStudent.set(studentId, rows.sort((a, b) => text(b.sortTime).localeCompare(text(a.sortTime))));
+    const deduped = new Map();
+    rows.forEach(row => {
+      const key = lessonDetailDedupKey(row);
+      const existing = deduped.get(key);
+      if (!existing) {
+        deduped.set(key, row);
+        return;
+      }
+      const merged = mergeLessonDetailRows(existing, row);
+      deduped.set(key, merged);
+    });
+    rowsByStudent.set(studentId, [...deduped.values()].sort((a, b) => text(b.sortTime).localeCompare(text(a.sortTime))));
   });
   return rowsByStudent;
 }
@@ -884,6 +932,7 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
         detailPackageBalanceTotal: numberSnapshotValue(row.detailPackageBalanceTotal),
         detailPackageBalanceText: text(row.detailPackageBalanceText || row.packageBalanceText || '-'),
         detailPackageBalancePercent: numberSnapshotValue(row.detailPackageBalancePercent),
+        detailPackageProgressText: text(row.detailPackageProgressText || '-'),
         detailPackageOrderRows: arraySnapshotValue(row.detailPackageOrderRows),
         detailLessonRecordRows: arraySnapshotValue(row.detailLessonRecordRows),
         detailRecentLessonDate: text(row.detailRecentLessonDate || row.lastFormalLessonAt),
@@ -2021,8 +2070,19 @@ function miniRosterCourseLabel(row = {}) {
 }
 
 function miniRosterStudentType(row = {}, profile = {}) {
-  const direct = text(row.type || row.customerType || row.studentType || profile.type || profile.customerType || profile.studentType);
-  if (direct) return direct;
+  const candidates = [
+    row.type,
+    row.customerType,
+    row.studentType,
+    profile.type,
+    profile.customerType,
+    profile.studentType
+  ];
+  for (const candidate of candidates) {
+    const value = text(candidate);
+    if (!value || /代课|substitute/i.test(value)) continue;
+    if (/成人|青少年|少儿/.test(value)) return value === '少儿' ? '青少年' : value;
+  }
   const packageRows = Array.isArray(row.packageListRows) ? row.packageListRows : [];
   const source = [
     row.courseDisplayName,
@@ -2034,14 +2094,31 @@ function miniRosterStudentType(row = {}, profile = {}) {
   return matched === '少儿' ? '青少年' : (matched || '暂无记录');
 }
 
-function miniRosterOwnedTabKey(row = {}) {
-  const key = text(row.studentTabKey);
-  if (['active', 'trial', 'ended'].includes(key)) return key;
+function miniRosterHasFormalPackage(row = {}) {
   const total = Number(row.packageBalanceTotal) || Number(row.detailPackageBalanceTotal) || 0;
+  return total > 0;
+}
+
+function miniRosterHasTrialOnlyContext(row = {}) {
+  const trialHint = text(row.studentStage) === 'trial'
+    || /体验/.test(text(row.paymentModeLabel || row.trialStatus || row.trialPathLabel || row.courseLabel));
+  return trialHint && !row.hasFormalAttended && !miniRosterHasFormalPackage(row);
+}
+
+function miniRosterHasDisplayableSubstituteData(row = {}) {
+  return !!text(row.name || row.displayName || row.phone)
+    || (Array.isArray(row.detailLessonRecordRows) && row.detailLessonRecordRows.length > 0)
+    || (Array.isArray(row.detailPackageOrderRows) && row.detailPackageOrderRows.length > 0)
+    || (Array.isArray(row.packageListRows) && row.packageListRows.length > 0)
+    || (Number(row.completedLessons) || 0) > 0
+    || miniRosterHasFormalPackage(row);
+}
+
+function miniRosterOwnedTabKey(row = {}) {
   const remaining = Number(row.packageBalanceRemaining);
-  if (total > 0 && Number.isFinite(remaining)) return remaining > 0 ? 'active' : 'ended';
-  if (row.hasTrialAttended === true && row.hasFormalAttended !== true) return 'trial';
-  return 'active';
+  if (miniRosterHasTrialOnlyContext(row)) return 'trial';
+  if (remaining > 0) return 'active';
+  return 'ended';
 }
 
 function miniRosterOwnedByCoach(row = {}, coachName = '') {
@@ -2137,13 +2214,17 @@ function buildCoachMiniStudentRoster({
   ].forEach(row => {
     const studentId = text(row.studentId || row.id);
     if (!studentId || byId.has(studentId)) return;
-    if (miniRosterStudentHasSubstituteFact(row, coachName, schedule)) putRow(row, 'substitute');
+    if (miniRosterStudentHasSubstituteFact(row, coachName, schedule) && miniRosterHasDisplayableSubstituteData(row)) putRow(row, 'substitute');
   });
   const items = [...byId.values()].map(row => {
     const owned = miniRosterOwnedByCoach(row, coachName);
     const tabKey = owned ? miniRosterOwnedTabKey(row) : 'substitute';
-    const packageText = text(row.packageBalanceText) !== '-' ? text(row.packageBalanceText) : '';
-    const detailPackageText = text(row.detailPackageBalanceText) !== '-' ? text(row.detailPackageBalanceText) : packageText;
+    const packageText = text(row.detailPackageProgressText) !== '-'
+      ? text(row.detailPackageProgressText)
+      : (text(row.detailPackageBalanceText) !== '-' ? text(row.detailPackageBalanceText) : text(row.packageBalanceText));
+    const detailPackageText = text(row.detailPackageProgressText) !== '-'
+      ? text(row.detailPackageProgressText)
+      : (text(row.detailPackageBalanceText) !== '-' ? text(row.detailPackageBalanceText) : packageText);
     const recentDate = text(row.detailRecentLessonDate || row.lastFormalLessonAt);
     const latestRecord = (Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [])[0] || {};
     const relationType = owned ? '归属' : '代课';
@@ -2189,9 +2270,9 @@ function buildCoachMiniStudentRoster({
     totalCount: ownedItems.length,
     weekActiveCount: attendedIds(miniRosterCurrentWeek),
     monthActiveCount: attendedIds(miniRosterCurrentMonth),
-    activeCount: ownedItems.filter(row => row.studentTabKey === 'active').length,
+    activeCount: ownedItems.filter(row => row.studentTabKey === 'active' && (Number(row.packageBalanceRemaining) || 0) > 0).length,
     trialCount: ownedItems.filter(row => row.studentTabKey === 'trial').length,
-    endedCount: ownedItems.filter(row => row.studentTabKey === 'ended').length,
+    endedCount: ownedItems.filter(row => row.studentTabKey !== 'trial' && (row.studentTabKey === 'ended' || (Number(row.packageBalanceRemaining) || 0) <= 0)).length,
     substituteCount: items.filter(row => row.studentTabKey === 'substitute').length
   };
   const order = { active: 0, trial: 1, substitute: 2, ended: 3 };

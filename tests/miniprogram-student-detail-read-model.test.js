@@ -77,6 +77,60 @@ assert.deepStrictEqual(
   'mini program student detail lesson rows should carry schedule id and feedback state from the unified read model'
 );
 
+const duplicateViews = buildTeachingStudentViews([{
+  customerKey: 'student:duplicate-mini-detail',
+  studentId: 'duplicate-mini-detail',
+  displayName: '重复明细学员',
+  studentStage: 'formal'
+}], {
+  students: [{ id: 'duplicate-mini-detail', name: '重复明细学员' }],
+  purchases: [{
+    id: 'purchase-duplicate-mini-detail',
+    studentId: 'duplicate-mini-detail',
+    packageName: '私教课包',
+    status: 'active',
+    actualAmount: 1000
+  }],
+  entitlements: [{
+    id: 'entitlement-duplicate-mini-detail',
+    purchaseId: 'purchase-duplicate-mini-detail',
+    studentId: 'duplicate-mini-detail',
+    packageName: '私教课包',
+    totalLessons: 10,
+    remainingLessons: 9,
+    usedLessons: 1,
+    status: 'active'
+  }],
+  entitlementLedger: [{
+    id: 'ledger-duplicate-mini-detail',
+    entitlementId: 'entitlement-duplicate-mini-detail',
+    purchaseId: 'purchase-duplicate-mini-detail',
+    studentId: 'duplicate-mini-detail',
+    scheduleId: 'schedule-duplicate-mini-detail',
+    lessonDelta: -1,
+    relatedDate: '2026-08-10',
+    reason: '上课消耗'
+  }],
+  schedule: [{
+    id: 'schedule-duplicate-mini-detail',
+    studentId: 'duplicate-mini-detail',
+    startTime: '2026-08-10 10:00:00',
+    endTime: '2026-08-10 11:00:00',
+    status: '已结束',
+    courseType: '私教课',
+    venue: '3号场',
+    coach: '林铭教练',
+    lessonCount: 1
+  }],
+  now: new Date('2026-08-18 12:00:00')
+});
+const duplicateRow = duplicateViews.historicalStudents.find(item => item.studentId === 'duplicate-mini-detail');
+assert.strictEqual(
+  duplicateRow.detailLessonRecordRows.length,
+  1,
+  'duplicate schedule and ledger facts should merge into one lesson record'
+);
+
 const rosterViews = buildTeachingStudentViews([{
   customerKey: 'student:owned-active',
   studentId: 'owned-active',
@@ -225,6 +279,35 @@ assert.deepStrictEqual(
     substituteCount: 0
   },
   'owned students must not fall through the active, trial, and ended tabs'
+);
+
+const multiPackageRoster = buildCoachMiniStudentRoster({
+  teachingStudentViews: {
+    activeStudents: [{
+      studentId: 'multi-package-student',
+      id: 'multi-package-student',
+      name: '多课包学员',
+      type: '成人',
+      primaryCoach: '林铭教练',
+      packageBalanceText: '7/30',
+      detailPackageBalanceText: '7/30',
+      detailPackageProgressText: '5/10,0/10,2/10',
+      packageBalanceTotal: 30,
+      packageBalanceRemaining: 7,
+      packageBalancePercent: 23,
+      completedLessons: 11
+    }]
+  },
+  coachName: '林铭教练',
+  students: [{ id: 'multi-package-student', type: '成人' }],
+  schedule: [],
+  now: new Date('2026-08-19 10:00:00')
+});
+const multiPackageStudent = multiPackageRoster.items.find(item => item.studentId === 'multi-package-student');
+assert.strictEqual(
+  multiPackageStudent.packageText,
+  '5/10,0/10,2/10',
+  'mini roster should show each package balance separately when multiple packages exist'
 );
 
 console.log('miniprogram student detail read model tests passed');
