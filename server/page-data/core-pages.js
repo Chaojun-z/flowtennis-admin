@@ -748,14 +748,11 @@ function createCorePageDataRoutes(deps={}){
         });
         const standardLifecycleMetrics=buildStandardLifecycleMetrics({...scoped,customerLifecycleRows});
         const teachingSummaryRows=scoped.studentTeachingSummaries||[];
-        const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,teachingSummaryRows.length?{
+        const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,{
           ...scoped,
-          purchases:[],
-          entitlements:[],
-          entitlementLedger:[],
-          schedule:[],
-          teachingStudentSummaryRows:teachingSummaryRows
-        }:scoped);
+          teachingStudentSummaryRows:teachingSummaryRows,
+          ignoreTeachingSummaryDetailRows:true
+        });
         const studentRoster=buildCoachMiniStudentRoster({
           teachingStudentViews,
           coachName:String(user.coachName||user.name||user.username||'').trim(),

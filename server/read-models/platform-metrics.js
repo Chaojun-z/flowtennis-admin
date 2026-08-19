@@ -530,6 +530,9 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
     const detailRemaining = detailRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
     const detailTotal = detailRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
     const packageDates = displayRows.map(row => text(row.purchaseDate)).filter(Boolean).sort();
+    const ownerCoachRows = detailRows
+      .filter(row => text(row.ownerCoach))
+      .sort((a, b) => text(b.purchaseDate).localeCompare(text(a.purchaseDate)));
     details.set(studentId, {
       packageListRows: displayRows,
       detailPackageOrderRows: detailRows,
@@ -543,10 +546,76 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
       packageBalanceTotal: total,
       packageBalanceText: total > 0 ? `${lessonQty(remaining)}/${lessonQty(total)}` : '-',
       packageBalancePercent: total > 0 ? Math.max(0, Math.min(100, Math.round(remaining / total * 100))) : 0,
-      packagePurchaseDate: packageDates[0] || ''
+      packagePurchaseDate: packageDates[0] || '',
+      ownerCoach: text(ownerCoachRows[0]?.ownerCoach)
     });
   });
   return details;
+}
+
+function reconcileTeachingPackageFields(packageFields = {}, completedLessons = 0, directFormalCompleted = 0) {
+  const rows = Array.isArray(packageFields.detailPackageOrderRows) ? packageFields.detailPackageOrderRows : [];
+  const formalRows = rows.filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row) && (Number(row.totalLessons) || 0) > 0);
+  const total = formalRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
+  if (!total) return packageFields;
+  const packageCompleted = Math.max(0, Math.min(total, round((Number(completedLessons) || 0) - (Number(directFormalCompleted) || 0), 1)));
+  const currentConsumed = teachingStudentPackageConsumedUnits(packageFields);
+  if (!(packageCompleted > (Number(currentConsumed) || 0))) return packageFields;
+  const ordered = [...formalRows].sort((a, b) => (
+    text(a.purchaseDate).localeCompare(text(b.purchaseDate))
+    || text(a.purchaseId || a.entitlementId).localeCompare(text(b.purchaseId || b.entitlementId))
+  ));
+  const remainingByKey = new Map();
+  let usedLeft = packageCompleted;
+  ordered.forEach(row => {
+    const rowTotal = Number(row.totalLessons) || 0;
+    const rowUsed = Math.max(0, Math.min(rowTotal, usedLeft));
+    usedLeft = Math.max(0, round(usedLeft - rowUsed, 1));
+    const key = text(row.entitlementId || row.purchaseId || row.packageName);
+    remainingByKey.set(key, {
+      remainingLessons: round(rowTotal - rowUsed, 1),
+      usedLessons: round(rowUsed, 1)
+    });
+  });
+  const adjustedRows = rows.map(row => {
+    if (courseRowIsTrial(row) || courseRowIsCompanion(row)) return row;
+    const key = text(row.entitlementId || row.purchaseId || row.packageName);
+    const adjusted = remainingByKey.get(key);
+    if (!adjusted) return row;
+    return {
+      ...row,
+      ...adjusted,
+      statusText: adjusted.remainingLessons <= 0 ? '已用完' : (text(row.statusText) || '正常')
+    };
+  });
+  const activeRows = adjustedRows.filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row) && (Number(row.remainingLessons) || 0) > 0);
+  const displayRows = activeRows.length ? activeRows : adjustedRows.filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row)).slice(0, 1);
+  const detailRemaining = adjustedRows
+    .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
+    .reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
+  const detailTotal = adjustedRows
+    .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
+    .reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
+  const remaining = displayRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
+  const displayTotal = displayRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
+  const ownerCoachRows = adjustedRows
+    .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row) && text(row.ownerCoach))
+    .sort((a, b) => text(b.purchaseDate).localeCompare(text(a.purchaseDate)));
+  return {
+    ...packageFields,
+    packageListRows: displayRows,
+    detailPackageOrderRows: adjustedRows,
+    detailPackageBalanceRemaining: round(detailRemaining, 1),
+    detailPackageBalanceTotal: round(detailTotal, 1),
+    detailPackageBalanceText: detailTotal > 0 ? `${lessonQty(detailRemaining)}/${lessonQty(detailTotal)}` : '-',
+    detailPackageBalancePercent: detailTotal > 0 ? Math.max(0, Math.min(100, Math.round(detailRemaining / detailTotal * 100))) : 0,
+    detailPackageProgressText: adjustedRows.map(row => `${lessonQty(row.remainingLessons)}/${lessonQty(row.totalLessons)}`).filter(Boolean).join(',') || '-',
+    packageBalanceRemaining: round(remaining, 1),
+    packageBalanceTotal: round(displayTotal, 1),
+    packageBalanceText: displayTotal > 0 ? `${lessonQty(remaining)}/${lessonQty(displayTotal)}` : '-',
+    packageBalancePercent: displayTotal > 0 ? Math.max(0, Math.min(100, Math.round(remaining / displayTotal * 100))) : 0,
+    ownerCoach: text(ownerCoachRows[0]?.ownerCoach || packageFields.ownerCoach)
+  };
 }
 
 function buildTeachingStudentCompletedLessonMap(data = {}) {
@@ -691,6 +760,8 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       if (!studentIds.length) return;
       const ownerStudentId = entitlementLedgerOwnerStudentId(row, entitlementsById, purchasesById);
       const schedule = findScheduleForLedgerRow(row, schedulesById, scheduleRows, studentIds);
+      const scheduleTime = text(schedule.startTime || schedule.endTime);
+      if (scheduleTime && !teachingDateTimeOnOrBeforeNow(scheduleTime, data.now || new Date())) return;
       const trial = courseRowIsTrial(row) || courseRowIsTrial(entitlement) || courseRowIsTrial(purchase) || courseRowIsTrial(schedule);
       if (trial !== includeTrial || courseRowIsCompanion(row) || courseRowIsCompanion(entitlement) || courseRowIsCompanion(purchase) || courseRowIsCompanion(schedule)) return;
       const displayStudentIds = [...new Set([...studentIds, ownerStudentId].map(text).filter(Boolean))];
@@ -1058,7 +1129,11 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       : money(summaryFields.cumulativeCoursePaidAmount || 0);
     const lessonRowCompleted = round(teachingLessonRowsCompletedUnits(lessonRows), 1);
     const summaryCompleted = round(summaryFields.completedLessons || 0, 1);
-    const packageConsumedLimit = options.includeTrial ? null : teachingStudentPackageConsumedUnits(packageFields);
+    const rawPackageConsumedLimit = options.includeTrial ? null : teachingStudentPackageConsumedUnits(packageFields);
+    const ledgerPackageCompleted = options.includeTrial ? 0 : round(lessonRows
+      .filter(row => text(row.kind) === 'ledger' && !courseRowIsTrial(row) && !courseRowIsCompanion(row))
+      .reduce((sum, row) => sum + Math.abs(Number(row.lessonDelta) || 0), 0), 1);
+    const packageConsumedLimit = rawPackageConsumedLimit === null ? null : Math.max(rawPackageConsumedLimit, ledgerPackageCompleted);
     const directFormalCompleted = packageConsumedLimit === null ? 0 : teachingStudentDirectFormalLessonUnits(data, studentId, now, { ...summaryFields, ...packageFields, studentId });
     const packageConservedCompleted = actualCompleted => {
       if (packageConsumedLimit === null) return round(actualCompleted, 1);
@@ -1071,6 +1146,9 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       : rawSummaryLessonRows.length
         ? (summaryLessonRows.length ? packageConservedCompleted(Math.max(lessonRowCompleted, summaryCompleted)) : 0)
         : summaryCompleted;
+    const conservedPackageFields = options.includeTrial
+      ? packageFields
+      : reconcileTeachingPackageFields(packageFields, completedLessons, directFormalCompleted);
     details.set(studentId, {
       packageListRows: [],
       packageListText: '-',
@@ -1093,10 +1171,10 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       cumulativeCoursePaidAmount,
       cumulativeCoursePaidText: moneyText(cumulativeCoursePaidAmount),
       ...summaryFields,
-      ...packageFields,
+      ...conservedPackageFields,
       detailPackageOrderRows: [
-        ...(Array.isArray(packageFields.detailPackageOrderRows)
-          ? packageFields.detailPackageOrderRows
+        ...(Array.isArray(conservedPackageFields.detailPackageOrderRows)
+          ? conservedPackageFields.detailPackageOrderRows
           : (Array.isArray(summaryFields.detailPackageOrderRows) ? summaryFields.detailPackageOrderRows : [])),
         ...(includeTrialDetails && Array.isArray(trialPackageFields.detailPackageOrderRows) ? trialPackageFields.detailPackageOrderRows : [])
       ],

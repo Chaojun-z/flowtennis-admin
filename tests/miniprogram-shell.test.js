@@ -431,10 +431,10 @@ assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API shou
 assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS\.entitlementLedger\)/, 'workbench API should read entitlement consume ledger for the mini program');
 assert.match(workbenchRouteSource, /cappedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'workbench API should read the unified student teaching summary for mini program student details');
 assert.match(workbenchRouteSource, /studentTeachingSummaries:scoped\.studentTeachingSummaries\|\|\[\]/, 'workbench API should return scoped unified student teaching summary rows');
-assert.match(workbenchRouteSource, /buildTeachingStudentViews\(customerLifecycleRows,teachingSummaryRows\.length\?\{[\s\S]*teachingStudentSummaryRows:teachingSummaryRows/, 'workbench API should build mini program student views from the unified teaching summary read model');
+assert.match(workbenchRouteSource, /buildTeachingStudentViews\(customerLifecycleRows,\{[\s\S]*\.\.\.scoped[\s\S]*teachingStudentSummaryRows:teachingSummaryRows[\s\S]*ignoreTeachingSummaryDetailRows:true/, 'workbench API should build mini program student views from live facts with teaching summary rows only as auxiliary fields');
 assert.match(workbenchRouteSource, /buildCoachMiniStudentRoster\(\{[\s\S]*teachingStudentViews[\s\S]*coachName:[\s\S]*now[\s\S]*\}\)/, 'workbench API should return the backend unified mini student roster projection');
 assert.match(workbenchRouteSource, /studentRoster/, 'workbench API should expose studentRoster to the mini program');
-assert.match(workbenchRouteSource, /purchases:\[\][\s\S]*entitlements:\[\][\s\S]*entitlementLedger:\[\][\s\S]*schedule:\[\]/, 'workbench API should stop local package, ledger, and schedule facts from overriding the unified teaching summary');
+assert.doesNotMatch(workbenchRouteSource, /purchases:\[\][\s\S]*entitlements:\[\][\s\S]*entitlementLedger:\[\][\s\S]*schedule:\[\]/, 'workbench API must not drop live package, ledger, and schedule facts when teaching summaries exist');
 assert.match(corePageDataJs, /entitlements:scoped\.entitlements\|\|\[\]/, 'workbench API should return scoped entitlement balances');
 assert.match(corePageDataJs, /entitlementLedger:scoped\.entitlementLedger\|\|\[\]/, 'workbench API should return scoped entitlement ledger');
 assert.match(corePageDataJs, /studentSchedule:decoratedStudentSchedule/, 'workbench API should return an expanded schedule set for student details without changing the timetable schedule');

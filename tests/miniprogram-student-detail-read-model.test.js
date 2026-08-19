@@ -131,6 +131,113 @@ assert.strictEqual(
   'duplicate schedule and ledger facts should merge into one lesson record'
 );
 
+const shiLessonDate = (index) => index < 10
+  ? `2026-07-${String(index + 1).padStart(2, '0')}`
+  : `2026-08-${String(index - 9).padStart(2, '0')}`;
+const shiViews = buildTeachingStudentViews([{
+  customerKey: 'student:shi-duohao',
+  studentId: 'shi-duohao',
+  displayName: '史多灏',
+  owner: '宋教练',
+  formalCoach: '宋教练',
+  studentStage: 'formal'
+}], {
+  students: [{ id: 'shi-duohao', name: '史多灏', primaryCoach: '宋教练', type: '青少年' }],
+  purchases: [
+    { id: 'shi-pur-1', studentId: 'shi-duohao', packageName: '第一个私教课包', status: 'active', purchaseDate: '2026-05-01', ownerCoach: '宋教练', actualAmount: 1000 },
+    { id: 'shi-pur-2', studentId: 'shi-duohao', packageName: '第二个私教课包', status: 'active', purchaseDate: '2026-07-01', ownerCoach: '林铭教练', actualAmount: 1000 }
+  ],
+  entitlements: [
+    { id: 'shi-ent-1', purchaseId: 'shi-pur-1', studentId: 'shi-duohao', packageName: '第一个私教课包', totalLessons: 10, remainingLessons: 0, usedLessons: 10, ownerCoach: '宋教练', status: 'active' },
+    { id: 'shi-ent-2', purchaseId: 'shi-pur-2', studentId: 'shi-duohao', packageName: '第二个私教课包', totalLessons: 10, remainingLessons: 2, usedLessons: 8, ownerCoach: '林铭教练', status: 'active' }
+  ],
+  entitlementLedger: [
+    ...Array.from({ length: 19 }, (_, index) => ({
+      id: `shi-ledger-${index + 1}`,
+      entitlementId: index < 10 ? 'shi-ent-1' : 'shi-ent-2',
+      purchaseId: index < 10 ? 'shi-pur-1' : 'shi-pur-2',
+      studentId: 'shi-duohao',
+      scheduleId: `shi-sch-${index + 1}`,
+      lessonDelta: -1,
+      relatedDate: shiLessonDate(index),
+      reason: '上课消耗'
+    })),
+    {
+      id: 'shi-ledger-future',
+      entitlementId: 'shi-ent-2',
+      purchaseId: 'shi-pur-2',
+      studentId: 'shi-duohao',
+      scheduleId: 'shi-sch-future',
+      lessonDelta: -1,
+      relatedDate: '2026-08-15',
+      reason: '未来预约占用'
+    }
+  ],
+  schedule: [
+    ...Array.from({ length: 19 }, (_, index) => ({
+      id: `shi-sch-${index + 1}`,
+      studentId: 'shi-duohao',
+      startTime: `${shiLessonDate(index)} 15:00:00`,
+      endTime: `${shiLessonDate(index)} 16:00:00`,
+      status: '已结束',
+      courseType: index === 18 ? '小班课' : '私教课',
+      venue: index === 18 ? '3号场' : '2号场',
+      coach: '林铭教练',
+      lessonCount: 1
+    })),
+    {
+      id: 'shi-sch-trial',
+      studentId: 'shi-duohao',
+      startTime: '2026-06-06 18:00:00',
+      endTime: '2026-06-06 19:00:00',
+      status: '已结束',
+      courseType: '体验课',
+      experienceType: '私教体验课',
+      venue: '2号场',
+      coach: '宋教练',
+      lessonCount: 1
+    },
+    {
+      id: 'shi-sch-future',
+      studentId: 'shi-duohao',
+      startTime: '2026-08-22 11:00:00',
+      endTime: '2026-08-22 12:00:00',
+      status: '已排课',
+      courseType: '私教课',
+      venue: '3号场',
+      coach: '林铭教练',
+      lessonCount: 1
+    }
+  ],
+  now: new Date('2026-08-19 10:00:00')
+});
+const shiRow = shiViews.historicalStudents.find(item => item.studentId === 'shi-duohao');
+assert.strictEqual(shiRow.completedLessons, 19, 'formal cumulative lessons should exclude trial and future schedules but include formal small-group lessons');
+assert.strictEqual(shiRow.detailPackageBalanceRemaining, 1, 'formal package balance should conserve against completed formal package lessons');
+assert.strictEqual(shiRow.detailPackageBalanceText, '1/20', 'web and mini detail should share the same conserved formal package balance text');
+assert.strictEqual(shiRow.detailPackageProgressText, '1/10,0/10', 'current package progress should show package-level remaining lessons with the newest package first');
+assert.strictEqual(shiRow.ownerCoach, '林铭教练', 'latest effective formal package owner coach should override stale profile coach for ownership');
+assert.strictEqual(
+  shiRow.detailLessonRecordRows.some(item => String(item.scheduleId) === 'shi-sch-trial' || /体验/.test(String(item.courseType || item.packageName || ''))),
+  true,
+  'trial lessons should stay visible as trial records'
+);
+assert.strictEqual(
+  shiRow.detailLessonRecordRows.some(item => String(item.scheduleId) === 'shi-sch-trial' && String(item.lessonSectionText || '').includes('第')),
+  false,
+  'trial lessons should not receive package lesson section labels'
+);
+assert.strictEqual(
+  shiRow.detailLessonRecordRows.some(item => String(item.scheduleId) === 'shi-sch-future'),
+  false,
+  'future schedules must not appear in completed lesson records'
+);
+assert.strictEqual(
+  shiRow.detailLessonRecordRows.find(item => String(item.scheduleId) === 'shi-sch-19')?.lessonSectionText,
+  '[第09节]',
+  'lesson section labels should be numbered inside the current package'
+);
+
 const rosterViews = buildTeachingStudentViews([{
   customerKey: 'student:owned-active',
   studentId: 'owned-active',
