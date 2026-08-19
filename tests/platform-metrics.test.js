@@ -254,6 +254,62 @@ assert.deepStrictEqual(
   'student drawer lesson records should include direct paid trial lessons'
 );
 
+const currentPackageSectionPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-current-package', name: '当前课包学员' }],
+  purchases: [
+    { id: 'purchase-current-1', studentId: 'student-current-package', packageName: '第一课包', status: 'active', actualAmount: 1000, purchaseDate: '2026-01-01' },
+    { id: 'purchase-current-2', studentId: 'student-current-package', packageName: '第二课包', status: 'active', actualAmount: 1000, purchaseDate: '2026-06-01' }
+  ],
+  entitlements: [
+    { id: 'ent-current-1', purchaseId: 'purchase-current-1', studentId: 'student-current-package', packageName: '第一课包', totalLessons: 10, remainingLessons: 0, usedLessons: 10, status: 'depleted' },
+    { id: 'ent-current-2', purchaseId: 'purchase-current-2', studentId: 'student-current-package', packageName: '第二课包', totalLessons: 10, remainingLessons: 3, usedLessons: 7, status: 'active' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-current-1', entitlementId: 'ent-current-1', purchaseId: 'purchase-current-1', studentId: 'student-current-package', scheduleId: 'schedule-current-1', lessonDelta: -1, relatedDate: '2026-02-01', reason: '上课消耗' },
+    { id: 'ledger-current-2', entitlementId: 'ent-current-1', purchaseId: 'purchase-current-1', studentId: 'student-current-package', scheduleId: 'schedule-current-2', lessonDelta: -1, relatedDate: '2026-02-02', reason: '上课消耗' },
+    { id: 'ledger-current-3', entitlementId: 'ent-current-2', purchaseId: 'purchase-current-2', studentId: 'student-current-package', scheduleId: 'schedule-current-3', lessonDelta: -1, relatedDate: '2026-06-02', reason: '上课消耗' },
+    { id: 'ledger-current-4', entitlementId: 'ent-current-2', purchaseId: 'purchase-current-2', studentId: 'student-current-package', scheduleId: 'schedule-current-4', lessonDelta: -1, relatedDate: '2026-06-03', reason: '上课消耗' },
+    { id: 'ledger-current-5', entitlementId: 'ent-current-2', purchaseId: 'purchase-current-2', studentId: 'student-current-package', scheduleId: 'schedule-current-5', lessonDelta: -1, relatedDate: '2026-06-04', reason: '上课消耗' },
+    { id: 'ledger-current-6', entitlementId: 'ent-current-2', purchaseId: 'purchase-current-2', studentId: 'student-current-package', scheduleId: 'schedule-current-6', lessonDelta: -1, relatedDate: '2026-06-05', reason: '上课消耗' },
+    { id: 'ledger-current-7', entitlementId: 'ent-current-2', purchaseId: 'purchase-current-2', studentId: 'student-current-package', scheduleId: 'schedule-current-7', lessonDelta: -1, relatedDate: '2026-06-06', reason: '上课消耗' },
+    { id: 'ledger-current-8', entitlementId: 'ent-current-2', purchaseId: 'purchase-current-2', studentId: 'student-current-package', scheduleId: 'schedule-current-8', lessonDelta: -1, relatedDate: '2026-06-07', reason: '上课消耗' },
+    { id: 'ledger-current-9', entitlementId: 'ent-current-2', purchaseId: 'purchase-current-2', studentId: 'student-current-package', scheduleId: 'schedule-current-9', lessonDelta: -1, relatedDate: '2026-06-08', reason: '上课消耗' }
+  ],
+  schedule: [
+    { id: 'schedule-current-1', studentId: 'student-current-package', startTime: '2026-02-01 10:00:00', endTime: '2026-02-01 11:00:00', status: '已结束', courseType: '私教课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-2', studentId: 'student-current-package', startTime: '2026-02-02 10:00:00', endTime: '2026-02-02 11:00:00', status: '已结束', courseType: '体验课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-3', studentId: 'student-current-package', startTime: '2026-06-02 10:00:00', endTime: '2026-06-02 11:00:00', status: '已结束', courseType: '私教课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-4', studentId: 'student-current-package', startTime: '2026-06-03 10:00:00', endTime: '2026-06-03 11:00:00', status: '已结束', courseType: '私教课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-5', studentId: 'student-current-package', startTime: '2026-06-04 10:00:00', endTime: '2026-06-04 11:00:00', status: '已结束', courseType: '私教课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-6', studentId: 'student-current-package', startTime: '2026-06-05 10:00:00', endTime: '2026-06-05 11:00:00', status: '已结束', courseType: '私教课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-7', studentId: 'student-current-package', startTime: '2026-06-06 10:00:00', endTime: '2026-06-06 11:00:00', status: '已结束', courseType: '私教课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-8', studentId: 'student-current-package', startTime: '2026-06-07 10:00:00', endTime: '2026-06-07 11:00:00', status: '已结束', courseType: '私教课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-9', studentId: 'student-current-package', startTime: '2026-06-08 10:00:00', endTime: '2026-06-08 11:00:00', status: '已结束', courseType: '私教课', coach: '林铭教练', venue: '1号场', lessonCount: 1 },
+    { id: 'schedule-current-trial', studentId: 'student-current-package', startTime: '2026-03-01 10:00:00', endTime: '2026-03-01 11:00:00', status: '已结束', courseType: '体验课', coach: '林铭教练', venue: '2号场', lessonCount: 1 }
+  ],
+  feedbacks: [],
+  now: new Date('2026-06-10 00:00:00')
+});
+const currentPackageSectionStudent = currentPackageSectionPlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-current-package');
+assert.ok(currentPackageSectionStudent, 'current package lesson student should enter formal view');
+const currentPackageSectionRows = currentPackageSectionStudent.detailLessonRecordRows;
+assert.strictEqual(
+  currentPackageSectionRows.find(row => row.scheduleId === 'schedule-current-9')?.lessonSectionText,
+  '[第07节]',
+  'current package lesson numbering should reset for the latest entitlement instead of continuing the whole history'
+);
+assert.strictEqual(
+  currentPackageSectionRows.find(row => row.scheduleId === 'schedule-current-trial')?.lessonSectionText,
+  '',
+  'trial lessons should not carry a package section number'
+);
+assert.strictEqual(
+  currentPackageSectionRows.find(row => row.scheduleId === 'schedule-current-1')?.lessonSectionText,
+  '[第01节]',
+  'the first lesson in an older entitlement should keep its own package numbering'
+);
+
 const freeTrialLessonPlatform = buildPlatformMetrics({
   leads: [],
   students: [{ id: 'student-free-trial', name: '免费体验课学员' }],

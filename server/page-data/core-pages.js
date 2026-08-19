@@ -367,7 +367,7 @@ function createCorePageDataRoutes(deps={}){
           }));
         }
       }
-      const {scoped,customerLifecycleRows}=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:fresh});
+      const {scoped,customerLifecycleRows}=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:true});
       const teachingData={...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries};
       const cachedFactModel=readCustomerCenterFactModelCache(user);
       return sendJson(res,buildCustomerCenterPagePayload({

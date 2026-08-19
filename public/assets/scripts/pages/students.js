@@ -1175,16 +1175,25 @@ function studentLessonRecordMetaItem(kind,text){
 }
 function studentLessonRecordDetailSectionText(rows=[],index=0){
   const row=rows[index]||{};
+  const marker=typeof studentLessonSectionMarker==='function'?studentLessonSectionMarker:(value=>String(value));
+  if(row.lessonSectionText)return row.lessonSectionText;
+  const entitlementId=String(row.entitlementId||row.purchaseId||row.packageName||'').trim();
+  const unit=String(row.unit||'节').trim();
+  if(!entitlementId||unit==='次'||/体验/.test(String(row.courseType||row.packageName||'')))return '';
+  const packageRows=(Array.isArray(rows)?rows:[])
+    .filter(item=>String(item.entitlementId||item.purchaseId||item.packageName||'').trim()===entitlementId)
+    .filter(item=>Number(item.lessonDelta)<0)
+    .filter(item=>String(item.unit||'').trim()!=='次')
+    .filter(item=>!/体验/.test(String(item.courseType||item.packageName||'')));
+  const usedBefore=packageRows
+    .filter(item=>String(item.sortTime||item.time||'')<String(row.sortTime||row.time||''))
+    .reduce((sum,item)=>sum+Math.abs(Number(item.lessonDelta)||0),0);
   const count=Math.abs(Number(row.lessonDelta)||0);
   if(!count)return '';
-  const laterRows=rows.slice(index+1);
-  const usedBefore=laterRows.reduce((sum,item)=>sum+Math.abs(Number(item.lessonDelta)||0),0);
-  const startNo=Number.isInteger(usedBefore)?usedBefore+1:usedBefore;
+  const startNo=usedBefore+1;
   const endNo=usedBefore+count;
-  const marker=typeof studentLessonSectionMarker==='function'?studentLessonSectionMarker:(value=>String(value));
   const startText=marker(startNo);
   const endText=marker(endNo);
-  const unit=row.unit||'节';
   return `[第${startText}${startText===endText?'':`-${endText}`}${unit}]`;
 }
 function studentHasActiveSearchOrFilter(){

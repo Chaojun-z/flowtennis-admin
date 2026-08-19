@@ -147,6 +147,7 @@ assert.match(corePagesSource, /textSearchHit\(q,row\.searchText[\s\S]*row\.notes
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list'&&method==='GET'[\s\S]*getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'customer center list endpoint should read precomputed student teaching summary rows for schedule facts');
 assert.match(corePagesSource, /const fresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';/, 'customer center list endpoint should accept an explicit fresh flag');
 assert.match(customerCenterRouteSource, /const fresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';[\s\S]*if\(!fresh&&T_STUDENT_TEACHING_SUMMARY\)/, 'fresh customer center reads should bypass the summary-only fast response path');
+assert.match(customerCenterRouteSource, /const \{scoped,customerLifecycleRows\}=await loadCustomerCenterFactModel\(user,\{force:true,includeLessonFacts:true\}\);/, 'customer center fallback should still load live lesson facts instead of dropping back to summary-only data');
 assert.match(corePagesSource, /const needsTeachingFacts = includeLessonFacts \|\| !studentTeachingSummaries\.length/, 'fresh customer center reads and background calibration should include full lesson facts');
 assert.doesNotMatch(
   customerCenterRouteSource,

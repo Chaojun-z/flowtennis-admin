@@ -1390,10 +1390,17 @@ function studentLedgerBalanceNumbersAfter(row,ent={}){
 }
 function studentCumulativeLessonSectionText(row,ent={}){
   const studentId=String(row?.studentId||ent?.studentId||'').trim();
-  if(!studentId||Number(row.lessonDelta)>=0)return '';
+  const entitlementId=String(row?.entitlementId||ent?.id||row?.purchaseId||ent?.purchaseId||'').trim();
+  if(!studentId||Number(row.lessonDelta)>=0||!entitlementId)return '';
   const currentTime=studentEntitlementLedgerTimeText(row,findScheduleForEntitlementLedgerRow(row,students.find(s=>s.id===studentId)||{}));
-  const earlierDelta=studentEntitlementLedgerRows({id:studentId})
+  const unit=packageBalanceUnitLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''});
+  if(unit==='次'||courseRowIsTrial(row)||courseRowIsTrial(ent))return '';
+  const samePackageRows=studentEntitlementLedgerRows({id:studentId})
+    .filter(item=>String(item.entitlementId||'').trim()===entitlementId)
     .filter(item=>Number(item.lessonDelta)<0)
+    .filter(item=>packageBalanceUnitLabel({...ent,...item,packageName:ent.packageName||item?.packageName||row?.packageName||''})!=='次')
+    .sort((a,b)=>studentEntitlementLedgerTimeText(a,findScheduleForEntitlementLedgerRow(a,students.find(s=>s.id===(a?.studentId||studentId))||{})).localeCompare(studentEntitlementLedgerTimeText(b,findScheduleForEntitlementLedgerRow(b,students.find(s=>s.id===(b?.studentId||studentId))||{}))));
+  const earlierDelta=samePackageRows
     .filter(item=>studentEntitlementLedgerTimeText(item,findScheduleForEntitlementLedgerRow(item,students.find(s=>s.id===(item?.studentId||studentId))||{}))<currentTime)
     .reduce((sum,item)=>sum+Math.abs(Number(item.lessonDelta)||0),0);
   const count=Math.abs(Number(row.lessonDelta)||0);
@@ -1403,26 +1410,12 @@ function studentCumulativeLessonSectionText(row,ent={}){
   const startNo=Number.isInteger(usedBefore)?usedBefore+1:usedBefore;
   const startText=studentLessonSectionMarker(startNo);
   const endText=studentLessonSectionMarker(usedAfter);
-  const unit=packageBalanceUnitLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''});
   return `[第${startText}${startText===endText?'':`-${endText}`}${unit}]`;
 }
 function studentLessonRecordSectionText(row,ent={}){
   if(Number(row.lessonDelta)>=0)return '';
   const cumulativeText=studentCumulativeLessonSectionText(row,ent);
-  if(cumulativeText)return cumulativeText;
-  const balance=studentLedgerBalanceNumbersAfter(row,ent);
-  const total=balance?.total||Number(ent.totalLessons)||0;
-  if(!total)return '';
-  const remainingAfter=balance?.remaining??(Number(ent.remainingLessons)||0);
-  const count=Math.abs(Number(row.lessonDelta)||0);
-  const usedBefore=Math.max(0,total-remainingAfter-count);
-  const usedAfter=Math.max(0,total-remainingAfter);
-  const startNo=Number.isInteger(usedBefore)?usedBefore+1:usedBefore;
-  const endNo=usedAfter;
-  const startText=studentLessonSectionMarker(startNo);
-  const endText=studentLessonSectionMarker(endNo);
-  const unit=packageBalanceUnitLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''});
-  return `[第${startText}${startText===endText?'':`-${endText}`}${unit}]`;
+  return cumulativeText||'';
 }
 function studentLessonSectionMarker(value){
   const num=Number(value)||0;

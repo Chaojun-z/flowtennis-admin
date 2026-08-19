@@ -630,6 +630,13 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   const rowsByStudent = new Map();
   const ledgerScheduleStudentKeys = new Set();
   const ledgerScheduleFactKeys = new Set();
+  const lessonSectionMarker = value => {
+    const num = Number(value) || 0;
+    if (Number.isInteger(num)) return String(num).padStart(2, '0');
+    const fixed = String(Math.round(num * 10) / 10);
+    const [whole, decimal] = fixed.split('.');
+    return `${String(Number(whole) || 0).padStart(2, '0')}.${decimal}`;
+  };
   const lessonFactKey = (studentId, row = {}) => [
     text(studentId),
     dateOnly(row.startTime || row.relatedDate || row.scheduleTime || row.createdAt),
@@ -679,6 +686,8 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
         push(studentId, {
           kind: 'ledger',
           scheduleId,
+          entitlementId: text(row.entitlementId),
+          purchaseId: text(row.purchaseId || entitlement.purchaseId),
           sortTime,
           time: dateTimeText(schedule, fallbackTime || row.relatedDate || row.scheduleTime || row.createdAt),
           packageName: teachingPackageName(entitlement, purchase),
@@ -713,6 +722,8 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
         push(studentId, {
           kind: 'schedule',
           scheduleId,
+          entitlementId: text(row.entitlementId),
+          purchaseId: text(row.purchaseId),
           sortTime,
           time: dateTimeText(row),
           packageName: '',
@@ -774,6 +785,26 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       deduped.set(key, merged);
     });
     rowsByStudent.set(studentId, [...deduped.values()].sort((a, b) => text(b.sortTime).localeCompare(text(a.sortTime))));
+  });
+  rowsByStudent.forEach((rows, studentId) => {
+    const packageRows = rows
+      .filter(row => Number(row.lessonDelta) < 0)
+      .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
+      .filter(row => text(row.entitlementId) && String(row.unit || '').trim() !== '次')
+      .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)));
+    const usedBeforeByPackage = new Map();
+    packageRows.forEach(row => {
+      const packageKey = text(row.entitlementId || row.purchaseId || row.packageName);
+      if (!packageKey) return;
+      const usedBefore = usedBeforeByPackage.get(packageKey) || 0;
+      const count = Math.abs(Number(row.lessonDelta) || 0);
+      if (!count) return;
+      const startNo = usedBefore + 1;
+      const endNo = usedBefore + count;
+      row.lessonSectionText = `[第${lessonSectionMarker(startNo)}${startNo === endNo ? '' : `-${lessonSectionMarker(endNo)}`}${row.unit || '节'}]`;
+      usedBeforeByPackage.set(packageKey, endNo);
+    });
+    rowsByStudent.set(studentId, rows.map(row => ({ ...row, lessonSectionText: row.lessonSectionText || '' })));
   });
   return rowsByStudent;
 }
