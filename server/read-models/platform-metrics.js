@@ -276,6 +276,15 @@ function teachingDateTimeOnOrBeforeNow(value = '', now = new Date()) {
   return target <= base;
 }
 
+function teachingDateTimeAfterNow(value = '', now = new Date()) {
+  const raw = text(value);
+  if (!raw) return false;
+  const target = Date.parse(raw.replace(' ', 'T'));
+  const base = now instanceof Date ? now.getTime() : Date.parse(text(now).replace(' ', 'T'));
+  if (!Number.isFinite(target) || !Number.isFinite(base)) return false;
+  return target > base;
+}
+
 function scopeDate(value) {
   return text(value).replace(/\//g, '-').replace(/\./g, '-').slice(0, 10);
 }
@@ -388,6 +397,14 @@ function findScheduleForLedgerRow(ledger = {}, schedulesById = new Map(), schedu
   const byId = schedulesById.get(text(ledger.scheduleId));
   if (byId) return byId;
   return (scheduleRows || []).find(row => scheduleMatchesLedgerRow(row, ledger, studentIds)) || {};
+}
+
+function teachingLessonRecordMetaParts(row = {}) {
+  return [
+    [text(row.campus || row.campusName), text(row.venue || row.sourceVenue || row.courtName || row.court)].filter(Boolean).join(' '),
+    text(row.coach || row.coachName || row.primaryCoach),
+    courseTypeText(row)
+  ].filter(Boolean);
 }
 
 function courseTypeText(row = {}) {
@@ -722,6 +739,12 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   const rowsByStudent = new Map();
   const ledgerScheduleStudentKeys = new Set();
   const ledgerScheduleFactKeys = new Set();
+  const ledgersByScheduleId = new Map();
+  (data.entitlementLedger || [])
+    .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0 && text(row.scheduleId))
+    .forEach(row => {
+      if (!ledgersByScheduleId.has(text(row.scheduleId))) ledgersByScheduleId.set(text(row.scheduleId), row);
+    });
   const lessonSectionMarker = value => {
     const num = Number(value) || 0;
     if (Number.isInteger(num)) return String(num).padStart(2, '0');
@@ -767,23 +790,29 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       const displayStudentIds = [...new Set([...studentIds, ownerStudentId].map(text).filter(Boolean))];
       displayStudentIds.forEach(studentId => {
         if (text(row.scheduleId)) ledgerScheduleStudentKeys.add(`${studentId}|${text(row.scheduleId)}`);
-        ledgerScheduleFactKeys.add(lessonFactKey(studentId, {
-          startTime: schedule.startTime,
-          relatedDate: ledgerFallbackDateTime(row) || row.relatedDate,
-          scheduleTime: row.scheduleTime,
-          createdAt: row.createdAt,
-          coach: schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach
-        }));
         const fallbackTime = ledgerFallbackDateTime(row);
         const sortTime = text(schedule.startTime || fallbackTime || row.relatedDate || row.scheduleTime || row.createdAt);
         const scheduleId = text(row.scheduleId || schedule.id);
+        const displayTime = dateTimeText(schedule, fallbackTime || row.relatedDate || row.scheduleTime || row.createdAt);
+        const displayVenue = text(schedule.venue || row.venue || row.sourceVenue || row.courtName || row.court);
+        const displayCoach = text(schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach);
+        const hasLinkedSchedule = !!text(schedule.id);
+        const hasManualDisplayContext = /\d{1,2}:\d{2}/.test(displayTime) && !!displayVenue && !!displayCoach;
+        if (text(row.scheduleId) && !hasLinkedSchedule && !hasManualDisplayContext) return;
+        ledgerScheduleFactKeys.add(lessonFactKey(studentId, {
+          startTime: schedule.startTime,
+          relatedDate: fallbackTime || row.relatedDate,
+          scheduleTime: row.scheduleTime,
+          createdAt: row.createdAt,
+          coach: displayCoach
+        }));
         push(studentId, {
           kind: 'ledger',
           scheduleId,
           entitlementId: text(row.entitlementId),
           purchaseId: text(row.purchaseId || entitlement.purchaseId),
           sortTime,
-          time: dateTimeText(schedule, fallbackTime || row.relatedDate || row.scheduleTime || row.createdAt),
+          time: displayTime,
           packageName: teachingPackageName(entitlement, purchase),
           lessonRelationText: ledgerRelationText({ currentStudentId: studentId, actualStudentIds: studentIds, ownerStudentId, studentsById }),
           packageOwnerStudentId: ownerStudentId,
@@ -794,30 +823,38 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           countAsCompletedLesson: studentIds.includes(studentId),
           courseType: courseTypeText(schedule.courseType ? schedule : entitlement),
           campus: text(schedule.campus || row.campus || entitlement.campus),
-          venue: text(schedule.venue || row.venue || row.sourceVenue || row.courtName || row.court),
-          coach: text(schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach),
+          venue: displayVenue,
+          coach: displayCoach,
           hasFeedback: lessonHasFeedback(scheduleId, schedule),
           lessonDelta: Number(row.lessonDelta) || 0,
           unit: packageUnitLabel(entitlement),
+          status: '已结束',
+          statusClass: 'detail-tag-muted',
+          metaParts: teachingLessonRecordMetaParts({ ...schedule, ...row, venue: displayVenue, coach: displayCoach, courseType: courseTypeText(schedule.courseType ? schedule : entitlement) }),
           reason: text(row.reason || row.notes)
         });
       });
     });
 
   (data.schedule || [])
-    .filter(row => teachingScheduleLessonFact(row, data.now || new Date()))
+    .filter(row => teachingScheduleLessonFact(row, data.now || new Date()) || teachingSchedulePendingLessonFact(row, data.now || new Date()))
     .filter(row => courseRowIsTrial(row) === includeTrial)
     .forEach(row => {
+      const pending = teachingSchedulePendingLessonFact(row, data.now || new Date());
+      const scheduleId = text(row.id);
+      const linkedLedger = ledgersByScheduleId.get(scheduleId) || {};
+      const entitlementId = text(row.entitlementId || linkedLedger.entitlementId);
+      const purchaseId = text(row.purchaseId || linkedLedger.purchaseId);
+      if (pending && !text(entitlementId || purchaseId)) return;
       const sortTime = text(row.startTime || row.endTime || row.createdAt);
       parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean).forEach(studentId => {
         if (ledgerScheduleStudentKeys.has(`${studentId}|${text(row.id)}`)) return;
         if (ledgerScheduleFactKeys.has(lessonFactKey(studentId, row))) return;
-        const scheduleId = text(row.id);
         push(studentId, {
           kind: 'schedule',
           scheduleId,
-          entitlementId: text(row.entitlementId),
-          purchaseId: text(row.purchaseId),
+          entitlementId,
+          purchaseId,
           sortTime,
           time: dateTimeText(row),
           packageName: '',
@@ -827,8 +864,13 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           venue: text(row.venue || row.court),
           coach: text(row.coach || row.coachName),
           hasFeedback: lessonHasFeedback(scheduleId, row),
-          lessonDelta: -Math.abs(scheduleLessonUnits(row)),
+          lessonDelta: pending ? 0 : -Math.abs(scheduleLessonUnits(row)),
+          countAsCompletedLesson: pending ? false : true,
           unit: '节',
+          status: pending ? '待上课' : '已结束',
+          statusClass: pending ? 'detail-tag-success' : 'detail-tag-muted',
+          feedbackStatusText: pending ? '' : undefined,
+          metaParts: teachingLessonRecordMetaParts(row),
           reason: text(row.notes)
         });
       });
@@ -1120,9 +1162,10 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
     const detailLessonRows = options.includeTrial
       ? lessonRows
       : [...lessonRows, ...trialLessonRows].sort((a, b) => text(b.sortTime || b.time).localeCompare(text(a.sortTime || a.time)));
+    const completedLessonRows = lessonRows.filter(row => row?.countAsCompletedLesson !== false);
     const detailRecentLessonDate = lessonDetailMap.has(studentId)
-      ? (lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : '')
-      : text(summaryRecentLessonDate || (lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : ''));
+      ? (completedLessonRows[0]?.time ? completedLessonRows[0].time.slice(0, 10) : '')
+      : text(summaryRecentLessonDate || (completedLessonRows[0]?.time ? completedLessonRows[0].time.slice(0, 10) : ''));
     const benefitFields = benefitDetailMap.get(studentId) || {};
     const cumulativeCoursePaidAmount = coursePaidByStudent.has(studentId)
       ? money(coursePaidByStudent.get(studentId) || 0)
@@ -1612,6 +1655,14 @@ function teachingScheduleLessonFact(row = {}, now = new Date()) {
   if (teachingScheduleCompleted(row)) return happened;
   if (status === '已排课') return happened;
   return happened;
+}
+
+function teachingSchedulePendingLessonFact(row = {}, now = new Date()) {
+  if (!activeStatus(row) || courseRowIsCompanion(row)) return false;
+  if (teachingScheduleCompleted(row)) return false;
+  const status = text(row.status || row.systemStatus);
+  if (!['已排课', '待上课', '待确认', '预约', '已预约'].includes(status)) return false;
+  return teachingDateTimeAfterNow(row.startTime || row.endTime || row.createdAt, now);
 }
 
 function teachingScheduleStudentIds(row = {}) {

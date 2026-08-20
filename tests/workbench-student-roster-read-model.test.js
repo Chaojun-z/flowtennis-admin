@@ -37,16 +37,28 @@ const tableRows = {
     { id: 'shi-ent-1', purchaseId: 'shi-pur-1', studentId: 'shi-duohao', packageName: '第一个私教课包', totalLessons: 10, remainingLessons: 0, usedLessons: 10, ownerCoach: '宋教练', status: 'active' },
     { id: 'shi-ent-2', purchaseId: 'shi-pur-2', studentId: 'shi-duohao', packageName: '第二个私教课包', totalLessons: 10, remainingLessons: 2, usedLessons: 8, ownerCoach: '林铭教练', status: 'active' }
   ],
-  entitlement_ledger: Array.from({ length: 19 }, (_, index) => ({
-    id: `shi-ledger-${index + 1}`,
-    entitlementId: index < 10 ? 'shi-ent-1' : 'shi-ent-2',
-    purchaseId: index < 10 ? 'shi-pur-1' : 'shi-pur-2',
-    studentId: 'shi-duohao',
-    scheduleId: `shi-sch-${index + 1}`,
-    lessonDelta: -1,
-    relatedDate: lessonDate(index),
-    reason: '上课消耗'
-  })),
+  entitlement_ledger: [
+    ...Array.from({ length: 19 }, (_, index) => ({
+      id: `shi-ledger-${index + 1}`,
+      entitlementId: index < 10 ? 'shi-ent-1' : 'shi-ent-2',
+      purchaseId: index < 10 ? 'shi-pur-1' : 'shi-pur-2',
+      studentId: 'shi-duohao',
+      scheduleId: `shi-sch-${index + 1}`,
+      lessonDelta: -1,
+      relatedDate: lessonDate(index),
+      reason: '上课消耗'
+    })),
+    {
+      id: 'shi-ledger-future',
+      entitlementId: 'shi-ent-2',
+      purchaseId: 'shi-pur-2',
+      studentId: 'shi-duohao',
+      scheduleId: 'shi-sch-future',
+      lessonDelta: -1,
+      relatedDate: '2099-08-22',
+      reason: '未来预约占用'
+    }
+  ],
   schedule: [
     ...Array.from({ length: 19 }, (_, index) => ({
       id: `shi-sch-${index + 1}`,
@@ -130,11 +142,11 @@ const handler = createCorePageDataRoutes({
   assert.strictEqual(row.cumulative, '19', 'mini workbench roster should not be stuck on stale summary cumulative lessons');
   assert.strictEqual(row.packageText, '1/10,0/10', 'mini workbench roster should use conserved current package progress');
   assert.strictEqual(row.ownerCoach, '林铭教练', 'mini workbench roster should use the latest effective formal package owner coach');
-  assert.strictEqual(
-    row.detailLessonRecordRows.some(item => String(item.scheduleId) === 'shi-sch-future'),
-    false,
-    'mini workbench student detail rows should not include future schedules as completed lessons'
-  );
+  const futureRow = row.detailLessonRecordRows.find(item => String(item.scheduleId) === 'shi-sch-future');
+  assert.ok(futureRow, 'mini workbench student detail rows should include future schedules as pending package occupation');
+  assert.strictEqual(futureRow.countAsCompletedLesson, false, 'mini workbench future schedules should not count as completed lessons');
+  assert.strictEqual(futureRow.status, '待上课', 'mini workbench future schedules should render with pending status');
+  assert.strictEqual(futureRow.feedbackStatusText, '', 'mini workbench future schedules should not show pending feedback');
   console.log('workbench student roster read model tests passed');
 })().catch(err => {
   console.error(err);

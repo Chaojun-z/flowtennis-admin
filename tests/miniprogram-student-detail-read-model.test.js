@@ -171,7 +171,17 @@ const shiViews = buildTeachingStudentViews([{
       lessonDelta: -1,
       relatedDate: '2026-08-15',
       reason: '未来预约占用'
-    }
+    },
+    ...Array.from({ length: 4 }, (_, index) => ({
+      id: `shi-dirty-ledger-${index + 1}`,
+      entitlementId: 'shi-ent-2',
+      purchaseId: 'shi-pur-2',
+      studentId: 'shi-duohao',
+      scheduleId: `shi-dirty-sch-20260714-${index + 1}`,
+      lessonDelta: -1,
+      relatedDate: '2026-07-14',
+      reason: '异常裸扣课'
+    }))
   ],
   schedule: [
     ...Array.from({ length: 19 }, (_, index) => ({
@@ -229,8 +239,23 @@ assert.strictEqual(
 );
 assert.strictEqual(
   shiRow.detailLessonRecordRows.some(item => String(item.scheduleId) === 'shi-sch-future'),
+  true,
+  'future schedules should appear in lesson records as pending package occupation'
+);
+const shiFutureRow = shiRow.detailLessonRecordRows.find(item => String(item.scheduleId) === 'shi-sch-future');
+assert.strictEqual(shiFutureRow.countAsCompletedLesson, false, 'future schedules must not count as completed lessons');
+assert.strictEqual(shiFutureRow.lessonDelta, 0, 'future schedules should explain package occupation without adding completed consumption');
+assert.strictEqual(shiFutureRow.status, '待上课', 'future schedules should render as pending lessons');
+assert.strictEqual(shiFutureRow.feedbackStatusText, '', 'future schedules should not show pending feedback');
+assert.deepStrictEqual(
+  [shiFutureRow.time, shiFutureRow.venue, shiFutureRow.coach],
+  ['2026-08-22 11:00-12:00', '3号场', '林铭教练'],
+  'future schedule records should keep time, venue and coach context'
+);
+assert.strictEqual(
+  shiRow.detailLessonRecordRows.some(item => String(item.scheduleId || '').startsWith('shi-dirty-sch-20260714')),
   false,
-  'future schedules must not appear in completed lesson records'
+  'ledger rows without a matching schedule or display context should not become naked mini-program lesson records'
 );
 assert.strictEqual(
   shiRow.detailLessonRecordRows.find(item => String(item.scheduleId) === 'shi-sch-19')?.lessonSectionText,

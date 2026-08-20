@@ -1659,6 +1659,10 @@ function studentDetailLessonRecordsFromUnifiedRows(detailLessonRecordRows = []) 
       const courseType = firstNonEmpty(row.courseType, row.standardCourseType, row.packageName, row.productName, row.className, row.courseName, '课程');
       const status = firstNonEmpty(row.statusText, row.status, '已结束');
       const hasFeedback = studentDetailLessonRecordHasFeedback(row);
+      const pending = /待|进行/.test(status);
+      const backendMetaParts = Array.isArray(row.metaParts)
+        ? row.metaParts.map(value => String(value || '').trim()).filter(Boolean)
+        : [];
       return {
         scheduleId: firstNonEmpty(row.scheduleId, row.id),
         time,
@@ -1667,11 +1671,11 @@ function studentDetailLessonRecordsFromUnifiedRows(detailLessonRecordRows = []) 
         courseTypeClass: /体验/.test(courseType) ? 'detail-tag-trial' : 'detail-tag-private',
         status,
         statusClass: /待|进行/.test(status) ? 'detail-tag-success' : 'detail-tag-muted',
-        feedbackStatusText: hasFeedback ? '' : '未反馈',
+        feedbackStatusText: hasFeedback || pending ? '' : '未反馈',
         feedbackStatusClass: 'detail-tag-warning',
         hasFeedback,
         lessonUnits: Number(row.lessonUnits || row.completedLessons || row.lessonCount || row.consumedLessons) || 1,
-        metaParts: [
+        metaParts: backendMetaParts.length ? backendMetaParts : [
           row.venue || row.sourceVenue || row.courtName || row.court || row.locationText,
           row.coach || row.coachName || row.primaryCoach,
           courseType
