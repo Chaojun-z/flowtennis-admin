@@ -1,0 +1,170 @@
+{
+  "operationId": "repair-feishu-remaining-14-20260820",
+  "batchId": "batch-repair-feishu-remaining-14-20260820",
+  "mode": "dry-run",
+  "generatedAt": "2026-08-20T05:22:47.374Z",
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "reportPath": "/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/offline-reports/repair-feishu-remaining-14-20260820-dry-run.json",
+  "summary": {
+    "requested": 14,
+    "applied": 14,
+    "blockers": 0,
+    "changeSummary": {
+      "leads": 0,
+      "students": 0,
+      "purchases": 0,
+      "entitlements": 0,
+      "entitlementLedger": 0,
+      "schedule": 0,
+      "sync": 0,
+      "conflictIndex": 0,
+      "activeIndex": 0
+    },
+    "expectedFinanceImpact": {
+      "newCashIncome": 2996,
+      "directSpecialIncome": 2600,
+      "privateTrialIncome": 0,
+      "youthGroupTrialIncome": 396,
+      "note": "曦曦消课和艾女士日期修正只影响已入账日期/课包核销，不新增现金收入"
+    }
+  },
+  "blockers": [],
+  "applied": [
+    {
+      "sourceKey": "xhFjSx|2026-04-11|10:00|11:00|rive|四人|【25-30】发接发与实战练习|马坡室内|1号",
+      "type": "anonymous_special_direct",
+      "scheduleId": "feishu-schedule-1be74c1d3cc789fb8b963c6b",
+      "amount": 1040,
+      "count": 4
+    },
+    {
+      "sourceKey": "u1MuGV|2026-04-19|10:00|12:00|rive|4人|【25-30】发接发与实战练习|马坡室内|1号",
+      "type": "anonymous_special_direct",
+      "scheduleId": "feishu-schedule-7593c3101e91b5e93308ec08",
+      "amount": 1040,
+      "count": 4
+    },
+    {
+      "sourceKey": "32QK6G|2026-05-10|11:00|12:00|siren|2人|【25-30】发接发与实战练习|马坡室内|3号",
+      "type": "anonymous_special_direct",
+      "scheduleId": "feishu-schedule-8b35a3f96953a490c45bba40",
+      "amount": 520,
+      "count": 2
+    },
+    {
+      "sourceKey": "R7Henb|2026-04-24|20:30|21:30|小宋|11|成人私教【体验】|马坡室内|2号",
+      "type": "private_trial_existing",
+      "scheduleId": "feishu-schedule-a8166576dd0d24edad78fe50",
+      "studentName": 11,
+      "amount": 0
+    },
+    {
+      "sourceKey": "wSvaRO|2026-05-03|11:00|12:00|小宋|陈玲|成人私教【体验】|马坡室内|2号",
+      "type": "private_trial_existing",
+      "scheduleId": "feishu-schedule-c30121a10c03d5247b1924a6",
+      "studentName": "陈玲（哦哦）",
+      "amount": 0
+    },
+    {
+      "sourceKey": "wSvaRO|2026-05-03|17:00|18:00|小宋|judy|成人私教【体验】|马坡室内|4号",
+      "type": "private_trial_existing",
+      "scheduleId": "feishu-schedule-9111d8ce7b68efcf57bbcd82",
+      "studentName": "Judy",
+      "amount": 0
+    },
+    {
+      "sourceKey": "32QK6G|2026-05-10|14:00|15:00|rive|mo_mo大魔王|成人私教【体验】|马坡室内|3号",
+      "type": "private_trial_existing",
+      "scheduleId": "feishu-schedule-3aeb64530b577e195f9b81a2",
+      "studentName": "Mo_mo大魔王",
+      "amount": 0
+    },
+    {
+      "sourceKey": "l22wR0|2026-05-13|15:00|16:00|朝珺|joanna|成人私教【体验】|马坡室内|2号",
+      "type": "private_trial_existing",
+      "scheduleId": "feishu-schedule-6f27e7b1fae6822f6e096781",
+      "studentName": "Joanna",
+      "amount": 0
+    },
+    {
+      "sourceKey": "l22wR0|2026-05-13|16:00|17:00|朝珺|孙女士|成人私教【体验】|马坡室内|2号",
+      "type": "private_trial_existing",
+      "scheduleId": "ad7df449-8835-4446-93f1-6cb0df4bfd8f",
+      "studentName": "孙女士",
+      "amount": 0
+    },
+    {
+      "sourceKey": "l22wR0|2026-05-14|14:00|15:00|小舟|yunyun|成人私教【体验】|马坡室内|3号",
+      "type": "private_trial_existing",
+      "scheduleId": "feishu-schedule-ef2f815153cd7691099a0d80",
+      "studentName": "Yun Yun",
+      "amount": 0
+    },
+    {
+      "sourceKey": "YCKDn9|2026-06-25|18:30|19:30|刘润扬|陈女士|成人私教【体验】|马坡室内|3号",
+      "type": "private_trial_existing",
+      "scheduleId": "feishu-schedule-0957789c9a9f153001fcd4e8",
+      "studentName": "陈女士",
+      "amount": 0
+    },
+    {
+      "sourceKey": "AkAIal|2026-05-23|14:00|16:00|siren|桃子、蜜桃、笑逐+航航体验课|青少年团课|马坡室内|3号",
+      "type": "youth_group_trial",
+      "scheduleId": "feishu-schedule-66035fb96549bc8e2b0d1e43",
+      "studentName": "桃子（曹沐言）、蜜桃（张爱崴）、笑逐、航航",
+      "amount": 396
+    },
+    {
+      "sourceKey": "lIqkEZ|2026-07-08|15:00|16:00|朝珺|艾女士|成人私教【正式】|马坡室内|2号",
+      "type": "ai_ms_date_fix",
+      "scheduleId": "fdf7eed6-cf03-4e20-bdbe-0a995fed9244",
+      "from": "2026-07-08 15:00",
+      "to": "2026-07-08 15:00"
+    },
+    {
+      "sourceKey": "lIqkEZ|2026-07-10|13:00|14:00|岳克舟|曦曦、朋友|成人私教【体验】|马坡室内|1号",
+      "type": "xixi_package_schedule",
+      "scheduleId": "feishu-schedule-9f0430fb168722145bf69859",
+      "studentName": "曦曦🐳"
+    }
+  ],
+  "backups": {
+    "leads": [],
+    "students": [],
+    "purchases": [],
+    "entitlements": [],
+    "entitlementLedger": [],
+    "schedule": [],
+    "sync": [],
+    "conflictIndex": [],
+    "activeIndex": []
+  },
+  "planned": {
+    "leads": [],
+    "students": [],
+    "purchases": [],
+    "entitlements": [],
+    "entitlementLedger": [],
+    "schedule": [],
+    "sync": [],
+    "conflictIndex": [],
+    "activeIndex": []
+  },
+  "deletes": {
+    "leads": [],
+    "students": [],
+    "purchases": [],
+    "entitlements": [],
+    "entitlementLedger": [],
+    "schedule": [],
+    "sync": [],
+    "conflictIndex": [],
+    "activeIndex": []
+  }
+}
