@@ -1770,6 +1770,8 @@ function teachingStudentSummaryDateFallback(data = {}, row = {}) {
 function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
   if (String(row.teachingLessonDetailSourceVersion || '').trim() !== TEACHING_LESSON_DETAIL_SOURCE_VERSION) return true;
   const lessonRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : parseArr(row.detailLessonRecordRows);
+  const packageRows = Array.isArray(row.detailPackageOrderRows) ? row.detailPackageOrderRows : parseArr(row.detailPackageOrderRows);
+  if ((Number(row.completedLessons) || 0) === 0 && lessonRows.length === 0 && packageRows.length === 0) return true;
   const hasFutureRecentLesson = !!dateOnly(row.detailRecentLessonDate || row.lastFormalLessonAt)
     && !teachingDateOnOrBeforeNow(row.detailRecentLessonDate || row.lastFormalLessonAt, now);
   const hasFutureLessonRow = lessonRows.some(item => {

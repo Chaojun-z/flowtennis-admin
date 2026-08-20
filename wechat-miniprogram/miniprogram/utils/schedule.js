@@ -77,13 +77,21 @@ function effectiveStatusText(item = {}) {
   return status || '待上课';
 }
 
+function scheduleStudentText(item = {}) {
+  const summary = String(item.studentSummary || '').trim();
+  if (summary) return summary;
+  const names = Array.isArray(item.studentNames) ? item.studentNames : [];
+  const nameText = names.map(name => String(name || '').trim()).filter(Boolean).join('、');
+  return nameText || String(item.studentName || '').trim() || '学员待确认';
+}
+
 function formatScheduleItem(item) {
   const state = item.workbenchState && item.workbenchState.code ? item.workbenchState : null;
   return {
     ...item,
     timeText: timeText(item),
     title: item.courseType || item.className || '课程',
-    studentText: item.studentName || '学员待确认',
+    studentText: scheduleStudentText(item),
     locationText: scheduleLocationText(item),
     statusText: state ? state.label : effectiveStatusText(item)
   };

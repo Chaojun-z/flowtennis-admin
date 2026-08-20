@@ -290,6 +290,7 @@ assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('基础信
 assert.match(scheduleHelperSource, /function scheduleDetailHeaderHtml\([\s\S]*studentNames[\s\S]*renderDetailDrawerHero/, 'schedule detail drawer title should use student names through the shared drawer header');
 assert.match(source, /function scheduleResolveStudentName\(/, 'schedule detail should resolve student names from related datasets before rendering');
 assert.doesNotMatch(fnBody('scheduleStudentSummary'), /students\.find\(st=>st\.id===id\)\?\.name\|\|id/, 'schedule student summary should not fall back to displaying raw student ids');
+assert.match(fnBody('scheduleStudentSummary'), /const ids=parseArr\(s\?\.studentIds\)[\s\S]*scheduleResolveStudentName\(id\)[\s\S]*const names=parseArr\(s\?\.studentNames\)/, 'schedule student summary should prefer canonical names resolved from studentIds before stale studentNames');
 assert.match(source, /function scheduleDetailInfoHtml\([\s\S]*姓名[\s\S]*课程类型[\s\S]*standardCourseTypeLabel[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课时间[\s\S]*lessonField\.label[\s\S]*上课教练[\s\S]*地点类型[\s\S]*上课校区\/场馆名称[\s\S]*场地[\s\S]*循环排课/, 'schedule detail basic fields should show standard course type and keep repeat scheduling as the last field');
 assert.doesNotMatch(source, /历史问题/, 'schedule detail drawer should remove the historical issue field');
 assert.match(source, /排课备注/, 'schedule detail drawer should rename coach note to schedule note');

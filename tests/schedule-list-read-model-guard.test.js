@@ -159,6 +159,28 @@ async function main() {
   assert.strictEqual(buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 1, q: '关键备注' }).pagination.total, 1, '搜索 total 应正确');
   assert.strictEqual(buildScheduleListViewFromData({ ...mixedBase, schedule: [{ ...mixedRows[1], studentIds: ['stu-phone'], studentName: '' }] }, { page: 1, pageSize: 1, q: '13900001111' }).pagination.total, 1, '手机号搜索 total 应正确');
 
+  const aliasDisplayView = buildScheduleListViewFromData({
+    schedule: [{
+      id: 'alias-display',
+      startTime: '2026-08-13 09:00',
+      endTime: '2026-08-13 10:00',
+      studentIds: ['stu-xixi'],
+      studentNames: ['晨曦'],
+      studentName: '晨曦',
+      courseType: '私教课',
+      coach: '林铭',
+      campus: 'shunyi_mapo',
+      venue: '1号场',
+      status: '已排课'
+    }],
+    students: [{ id: 'stu-xixi', name: '曦曦🐳' }],
+    feedbacks: [],
+    coachProposals: [],
+    coachRefs: []
+  }, { page: 1, pageSize: 10, q: '晨曦' });
+  assert.strictEqual(aliasDisplayView.items[0].studentSummary, '曦曦🐳', '排课展示应优先使用 studentId 对应的正式学员名');
+  assert.strictEqual(aliasDisplayView.pagination.total, 1, '旧别名仍应保留在搜索文本里方便查历史数据');
+
   const stablePage1 = buildScheduleListViewFromData(mixedBase, { page: 1, pageSize: 2 });
   const stablePage2 = buildScheduleListViewFromData(mixedBase, { page: 2, pageSize: 2 });
   const stableIds = [...stablePage1.items, ...stablePage2.items].map(row => row.id);

@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const { workbenchTodoState } = require('../wechat-miniprogram/miniprogram/utils/schedule');
+const { formatScheduleItem, workbenchTodoState } = require('../wechat-miniprogram/miniprogram/utils/schedule');
 
 const root = path.join(__dirname, '..');
 const scheduleJs = fs.readFileSync(path.join(root, 'wechat-miniprogram/miniprogram/pages/schedule/schedule.js'), 'utf8');
@@ -20,6 +20,19 @@ assert.deepStrictEqual(
   staleUpcoming,
   { code: 'pending', label: '待反馈', className: 'tag-danger' },
   'ended lessons should not keep a stale 即将开始 state in the mini timetable'
+);
+
+assert.strictEqual(
+  formatScheduleItem({
+    studentIds: ['stu-xixi'],
+    studentNames: ['晨曦'],
+    studentName: '晨曦',
+    studentSummary: '曦曦🐳',
+    startTime: '2026-08-13 09:00',
+    endTime: '2026-08-13 10:00'
+  }).studentText,
+  '曦曦🐳',
+  'mini program schedule cards should prefer canonical student summary over stale studentName'
 );
 
 assert.match(

@@ -338,7 +338,7 @@ function scheduleResolveStudentName(id){
   }
   return scheduleLooksLikeStudentId(sid)?'':sid;
 }
-function scheduleStudentSummary(s){const summary=String(s?.studentSummary||'').trim();if(summary)return summary;const names=parseArr(s?.studentNames);if(names.length)return names.join('、');const ids=parseArr(s?.studentIds);if(ids.length){const resolved=ids.map(id=>scheduleResolveStudentName(id)).filter(Boolean);if(resolved.length)return resolved.join('、');}const raw=String(s?.studentName||'').trim();if(!raw)return '—';if(scheduleLooksLikeStudentId(raw))return scheduleResolveStudentName(raw)||'—';return raw;}
+function scheduleStudentSummary(s){const summary=String(s?.studentSummary||'').trim();if(summary)return summary;const ids=parseArr(s?.studentIds);if(ids.length){const resolved=ids.map(id=>scheduleResolveStudentName(id)).filter(Boolean);if(resolved.length)return resolved.join('、');}const names=parseArr(s?.studentNames);if(names.length)return names.join('、');const raw=String(s?.studentName||'').trim();if(!raw)return '—';if(scheduleLooksLikeStudentId(raw))return scheduleResolveStudentName(raw)||'—';return raw;}
 function scheduleParticipantSummary(s){
   const actual=parseArr(s?.studentIds);
   const expected=parseArr(s?.expectedStudentIds);

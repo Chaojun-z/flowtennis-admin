@@ -143,6 +143,92 @@ async function requestInconsistentStudentDetail() {
   return { res, calls };
 }
 
+async function requestEmptySummaryWithTrialFactsStudentDetail() {
+  const calls = { cappedScan: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const tableRows = {
+    purchases: [],
+    packages: [],
+    entitlements: [{
+      id: 'trial-ent-1',
+      studentId: 'stu-1',
+      packageName: '私教体验课',
+      totalLessons: 1,
+      usedLessons: 1,
+      remainingLessons: 0,
+      status: 'depleted'
+    }],
+    entitlement_ledger: [{
+      id: 'trial-ledger-1',
+      entitlementId: 'trial-ent-1',
+      studentId: 'stu-1',
+      scheduleId: 'trial-sch-1',
+      lessonDelta: -1,
+      relatedDate: '2026-06-02'
+    }],
+    schedule: [{
+      id: 'trial-sch-1',
+      studentId: 'stu-1',
+      studentIds: ['stu-1'],
+      startTime: '2026-06-02 18:00:00',
+      endTime: '2026-06-02 19:00:00',
+      status: '已结束',
+      courseType: '体验课',
+      experienceType: '私教体验课',
+      lessonCount: 1
+    }],
+    membership_benefit_ledger: [],
+    feedbacks: []
+  };
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      return tableRows[table] || [];
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-1') {
+        return { id: 'stu-1', name: '文大妞', phone: '13800000000', campus: 'shunyi_mapo', type: '成人' };
+      }
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === 'stu-1') {
+        return {
+          id: 'stu-1',
+          studentId: 'stu-1',
+          name: '文大妞',
+          teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+          activityStatusLabel: '从未正式上课',
+          completedLessons: 0,
+          detailPackageOrderRows: [],
+          detailLessonRecordRows: [],
+          detailBenefitRows: []
+        };
+      }
+      return null;
+    },
+    PRODUCTION_PAGE_READ_LIMITS: { entitlementLedger: 100, schedule: 100, leads: 100 },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-1') });
+  return { res, calls };
+}
+
 (async () => {
   const { res, calls } = await requestStudentDetail();
   assert.strictEqual(res.statusCode, 200);
@@ -165,6 +251,18 @@ async function requestInconsistentStudentDetail() {
     inconsistent.res.body.detailStudentView.completedLessons,
     18,
     'student detail should recompute impossible summary values from package-conserved facts'
+  );
+
+  const emptySummary = await requestEmptySummaryWithTrialFactsStudentDetail();
+  assert.strictEqual(emptySummary.res.statusCode, 200);
+  assert.ok(emptySummary.calls.cappedScan > 0, 'empty teaching summary detail should fall back to lesson facts');
+  assert.ok(
+    emptySummary.res.body.detailStudentView.detailLessonRecordRows.some(row => String(row.scheduleId || row.id || '').includes('trial-sch-1') || String(row.time || '').includes('2026-06-02')),
+    'student detail should show the attended trial lesson from schedule or ledger facts'
+  );
+  assert.ok(
+    emptySummary.res.body.detailStudentView.detailPackageOrderRows.some(row => String(row.packageName || '').includes('体验课') || String(row.entitlementId || row.id || '').includes('trial-ent-1')),
+    'student detail should show the trial package from entitlement facts'
   );
   console.log('student detail fast path tests passed');
 })().catch(err => {

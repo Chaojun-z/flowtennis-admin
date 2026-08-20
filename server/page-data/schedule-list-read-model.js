@@ -147,11 +147,11 @@ function studentSearchText(row = {}, studentIndexes = buildStudentIndexes()) {
 }
 
 function studentSummary(row = {}, studentIndexes = buildStudentIndexes()) {
-  const names = parseArr(row.studentNames).map(text).filter(Boolean);
-  if (names.length) return names.length === 1 ? names[0] : `${names[0]} 等 ${names.length} 人`;
   const ids = uniqueIds([...parseArr(row.studentIds), row.studentId]);
   const resolvedNames = ids.map((id) => resolveStudentName(id, studentIndexes)).filter(Boolean);
   if (resolvedNames.length) return resolvedNames.length === 1 ? resolvedNames[0] : `${resolvedNames[0]} 等 ${resolvedNames.length} 人`;
+  const names = parseArr(row.studentNames).map(text).filter(Boolean);
+  if (names.length) return names.length === 1 ? names[0] : `${names[0]} 等 ${names.length} 人`;
   const raw = text(row.studentName);
   return raw || '-';
 }
