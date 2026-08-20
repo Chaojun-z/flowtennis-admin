@@ -59,17 +59,12 @@ const WANG_TRIAL = {
 const WANG_PACKAGE = {
   sourcePurchaseId: 'repair-20260813-purchase-wang-ameng-1v2-nonprime-20260814',
   sourceEntitlementId: 'repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814',
-  splitPurchaseId: `${OPERATION_ID}-purchase-wang-nono-1v2-nonprime`,
-  splitEntitlementId: `${OPERATION_ID}-entitlement-wang-nono-1v2-nonprime`,
-  scheduleIds: [
-    'f9c52aa7-01c4-4f7b-a90f-391c56ead3d7',
-    'repair-20260818-schedule-wang-ameng-20260818-1100'
-  ],
-  ledgerIds: [
-    '6b4e28b3-0462-4c00-9e69-465cbe7f865c',
-    'repair-20260818-ledger-wang-ameng-20260818-1100'
-  ],
-  movedLessons: 2
+  nonoPurchaseId: `${OPERATION_ID}-purchase-wang-nono-1v1-prime-10`,
+  nonoEntitlementId: `${OPERATION_ID}-entitlement-wang-nono-1v1-prime-10`,
+  dirtySplitPurchaseId: `${OPERATION_ID}-purchase-wang-nono-1v2-nonprime`,
+  dirtySplitEntitlementId: `${OPERATION_ID}-entitlement-wang-nono-1v2-nonprime`,
+  amengPackageLessonCount: 8,
+  nonoPackageLessonCount: 2
 };
 
 const CHENXI_SCHEDULE_IDS = [
@@ -182,79 +177,86 @@ function patchTrialTransfer(row, now) {
   return patchStudentOwner(row, IDS.nonoStudent, '王先生（nono）', now, '王先生体验课归属从阿萌迁移到 nono');
 }
 
-function buildSplitPurchase(sourcePurchase = {}, now) {
-  const perLesson = numberValue(sourcePurchase.amountPaid) / Math.max(1, numberValue(sourcePurchase.totalLessons, 10) || 10);
-  const movedAmount = Math.round(perLesson * WANG_PACKAGE.movedLessons * 100) / 100;
+function restoreAmengPurchase(row = {}, now) {
   return trace({
-    ...sourcePurchase,
-    id: WANG_PACKAGE.splitPurchaseId,
+    ...row,
+    purchaseDate: '2026-08-12',
+    amountPaid: 4500,
+    totalLessons: 10,
+    packageName: '1v2私教课 · 10课时 · 非黄金',
+    ownerCoach: '林铭教练',
+    status: 'active'
+  }, now, '恢复王先生（阿萌）独立 10 课时课包');
+}
+
+function restoreAmengEntitlement(row = {}, now) {
+  return trace({
+    ...row,
+    totalLessons: 10,
+    usedLessons: 8,
+    remainingLessons: 2,
+    status: 'active',
+    packageName: '1v2私教课 · 10课时 · 非黄金',
+    ownerCoach: '林铭教练'
+  }, now, '恢复王先生（阿萌）独立 10 课时权益');
+}
+
+function buildNonoPurchase(row = {}, now) {
+  return trace({
+    ...row,
+    id: WANG_PACKAGE.nonoPurchaseId,
+    purchaseDate: '2026-08-15',
     studentId: IDS.nonoStudent,
     studentName: '王先生（nono）',
     sourceLeadId: IDS.nonoLead,
-    packageName: '1v2私教课 · 2课时 · 非黄金',
-    totalLessons: 2,
-    amountPaid: movedAmount,
-    createdAt: now,
-    updatedAt: now
-  }, now, '王先生（nono）从错绑的阿萌课包中拆出 2 课时归属');
+    amountPaid: 4500,
+    totalLessons: 10,
+    packageName: '1v1私教课 · 10课时 · 黄金',
+    ownerCoach: '岳克舟教练',
+    status: 'active'
+  }, now, '新建王先生（nono）独立 10 课时课包');
 }
 
-function patchSourcePurchaseAfterSplit(row = {}, now) {
-  const totalLessons = numberValue(row.totalLessons, 10) || 10;
-  const perLesson = numberValue(row.amountPaid) / Math.max(1, totalLessons);
-  const nextLessons = Math.max(0, totalLessons - WANG_PACKAGE.movedLessons);
-  return trace({
-    ...row,
-    totalLessons: nextLessons,
-    amountPaid: Math.round(perLesson * nextLessons * 100) / 100,
-    packageName: '1v2私教课 · 8课时 · 非黄金'
-  }, now, '阿萌课包扣除错绑给 nono 的 2 课时，金额总额保持不变');
-}
-
-function buildSplitEntitlement(sourceEntitlement = {}, splitPurchase = {}, now) {
+function buildNonoEntitlement(sourceEntitlement = {}, nonoPurchase = {}, now) {
   return trace({
     ...sourceEntitlement,
-    id: WANG_PACKAGE.splitEntitlementId,
-    purchaseId: splitPurchase.id,
+    id: WANG_PACKAGE.nonoEntitlementId,
+    purchaseId: nonoPurchase.id,
     studentId: IDS.nonoStudent,
     studentName: '王先生（nono）',
     sourceLeadId: IDS.nonoLead,
-    packageName: '1v2私教课 · 2课时 · 非黄金',
-    totalLessons: 2,
+    totalLessons: 10,
     usedLessons: 2,
-    remainingLessons: 0,
-    status: 'depleted',
-    createdAt: now,
-    updatedAt: now
-  }, now, '王先生（nono）承接 2 节已核销课时');
+    remainingLessons: 8,
+    status: 'active',
+    packageName: '1v1私教课 · 10课时 · 黄金',
+    ownerCoach: '岳克舟教练'
+  }, now, '王先生（nono）独立 10 课时权益承接现有核销');
 }
 
-function patchSourceEntitlementAfterSplit(row = {}, now) {
-  const totalLessons = Math.max(0, numberValue(row.totalLessons, 10) - WANG_PACKAGE.movedLessons);
-  const usedLessons = Math.min(totalLessons, Math.max(0, numberValue(row.usedLessons, 10) - WANG_PACKAGE.movedLessons));
-  return trace({
-    ...row,
-    totalLessons,
-    usedLessons,
-    remainingLessons: Math.max(0, totalLessons - usedLessons),
-    status: totalLessons - usedLessons > 0 ? 'active' : 'depleted',
-    packageName: '1v2私教课 · 8课时 · 非黄金'
-  }, now, '阿萌权益扣除错绑给 nono 的 2 课时');
-}
-
-function patchPackageSchedule(row, now) {
-  return patchScheduleToStudent(row, IDS.nonoStudent, '王先生（nono）', now, '王先生排课从阿萌改回 nono', {
-    purchaseId: WANG_PACKAGE.splitPurchaseId,
-    entitlementId: WANG_PACKAGE.splitEntitlementId,
-    entitlementIds: [WANG_PACKAGE.splitEntitlementId],
-    packageName: '1v2私教课 · 2课时 · 非黄金'
+function patchAmengPackageSchedule(row, now) {
+  return patchScheduleToStudent(row, IDS.amengStudent, '王先生（阿萌）', now, '恢复王先生（阿萌）独立 10 课时排课', {
+    purchaseId: WANG_PACKAGE.sourcePurchaseId,
+    entitlementId: WANG_PACKAGE.sourceEntitlementId,
+    entitlementIds: [WANG_PACKAGE.sourceEntitlementId],
+    packageName: '1v2私教课 · 10课时 · 非黄金'
   });
 }
 
-function patchPackageLedger(row, now) {
-  return patchStudentOwner(row, IDS.nonoStudent, '王先生（nono）', now, '王先生扣课流水从阿萌改回 nono', {
-    purchaseId: WANG_PACKAGE.splitPurchaseId,
-    entitlementId: WANG_PACKAGE.splitEntitlementId
+function patchNonoPackageSchedule(row, now) {
+  return patchScheduleToStudent(row, IDS.nonoStudent, '王先生（nono）', now, '新建王先生（nono）独立 10 课时排课', {
+    purchaseId: WANG_PACKAGE.nonoPurchaseId,
+    entitlementId: WANG_PACKAGE.nonoEntitlementId,
+    entitlementIds: [WANG_PACKAGE.nonoEntitlementId],
+    packageName: '1v1私教课 · 10课时 · 黄金',
+    sourceLeadId: IDS.nonoLead
+  });
+}
+
+function patchNonoLedger(row, now) {
+  return patchStudentOwner(row, IDS.nonoStudent, '王先生（nono）', now, '王先生（nono）独立课包核销', {
+    purchaseId: WANG_PACKAGE.nonoPurchaseId,
+    entitlementId: WANG_PACKAGE.nonoEntitlementId
   });
 }
 
@@ -292,8 +294,6 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
   const nonoLead = requireRow(leadById, IDS.nonoLead, '王先生（nono）线索');
   const ameng = requireRow(studentById, IDS.amengStudent, '王先生（阿萌）学员');
   const xixi = requireRow(studentById, IDS.xixiStudent, '曦曦🐳学员');
-  const hammerFake = requireRow(studentById, IDS.hammerFakeStudent, '捶捶脏学员');
-  const hammerSchedule = requireRow(scheduleById, IDS.hammerDirtySchedule, '捶捶脏排课');
   requireRow(studentById, IDS.wenStudent, '文大妞学员');
 
   const studentPuts = [];
@@ -319,17 +319,24 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
   const sourcePurchase = requireRow(purchaseById, WANG_PACKAGE.sourcePurchaseId, '王先生（阿萌）原 1v2 购买');
   const sourceEntitlement = requireRow(entitlementById, WANG_PACKAGE.sourceEntitlementId, '王先生（阿萌）原 1v2 权益');
   if (sourcePurchase && sourceEntitlement) {
-    const splitPurchase = buildSplitPurchase(sourcePurchase, now);
-    purchasePuts.push(patchSourcePurchaseAfterSplit(sourcePurchase, now), splitPurchase);
-    entitlementPuts.push(patchSourceEntitlementAfterSplit(sourceEntitlement, now), buildSplitEntitlement(sourceEntitlement, splitPurchase, now));
+    const nonoPurchase = buildNonoPurchase(sourcePurchase, now);
+    purchasePuts.push(restoreAmengPurchase(sourcePurchase, now), nonoPurchase);
+    entitlementPuts.push(restoreAmengEntitlement(sourceEntitlement, now), buildNonoEntitlement(sourceEntitlement, nonoPurchase, now));
   }
-  for (const id of WANG_PACKAGE.scheduleIds) {
-    const row = requireRow(scheduleById, id, '王先生（nono）正式排课');
-    if (row && active(row)) schedulePuts.push(patchPackageSchedule(row, now));
+  const amengPackageSchedules = schedules.filter(row => active(row)
+    && text(row.studentName) === '王先生（阿萌）'
+    && text(row.entitlementId) === WANG_PACKAGE.sourceEntitlementId);
+  const nonoPackageSchedules = schedules.filter(row => active(row)
+    && text(row.studentId) === IDS.nonoStudent
+    && [WANG_PACKAGE.nonoEntitlementId, WANG_PACKAGE.dirtySplitEntitlementId].includes(text(row.entitlementId)));
+  for (const row of amengPackageSchedules) {
+    schedulePuts.push(patchAmengPackageSchedule(row, now));
   }
-  for (const id of WANG_PACKAGE.ledgerIds) {
-    const row = requireRow(ledgerById, id, '王先生（nono）正式课扣课流水');
-    if (row) ledgerPuts.push(patchPackageLedger(row, now));
+  for (const row of nonoPackageSchedules) {
+    schedulePuts.push(patchNonoPackageSchedule(row, now));
+  }
+  for (const row of entitlementLedger.filter(row => text(row.studentId) === IDS.nonoStudent && [WANG_PACKAGE.nonoEntitlementId, WANG_PACKAGE.dirtySplitEntitlementId].includes(text(row.entitlementId)))) {
+    ledgerPuts.push(patchNonoLedger(row, now));
   }
 
   const chenxiRows = CHENXI_SCHEDULE_IDS.map(id => requireRow(scheduleById, id, '晨曦展示名排课')).filter(Boolean);
@@ -340,17 +347,23 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
   if (summaryById.has(IDS.wenStudent)) {
     deleteRows.push({ table: TABLES.studentSummary, id: IDS.wenStudent, reason: '删除文大妞空详情缓存，详情回源读取真实排课和扣课流水' });
   }
-  if (hammerSchedule && active(hammerSchedule)) {
-    deleteRows.push({ table: TABLES.schedule, id: IDS.hammerDirtySchedule, reason: '删除捶捶脏排课' });
-  }
   if (summaryById.has(IDS.hammerFakeStudent)) {
     deleteRows.push({ table: TABLES.studentSummary, id: IDS.hammerFakeStudent, reason: '删除捶捶脏学员缓存' });
   }
   if (leadById.has(IDS.hammerFakeLead)) {
     deleteRows.push({ table: TABLES.leads, id: IDS.hammerFakeLead, reason: '删除捶捶脏线索' });
   }
-  if (hammerFake) {
+  if (studentById.has(IDS.hammerFakeStudent)) {
     deleteRows.push({ table: TABLES.students, id: IDS.hammerFakeStudent, reason: '删除捶捶脏学员' });
+  }
+  if (scheduleById.has(IDS.hammerDirtySchedule)) {
+    deleteRows.push({ table: TABLES.schedule, id: IDS.hammerDirtySchedule, reason: '删除捶捶脏排课' });
+  }
+  if (purchaseById.has(WANG_PACKAGE.dirtySplitPurchaseId) && WANG_PACKAGE.dirtySplitPurchaseId !== WANG_PACKAGE.nonoPurchaseId) {
+    deleteRows.push({ table: TABLES.purchases, id: WANG_PACKAGE.dirtySplitPurchaseId, reason: '删除王先生（nono）旧 2 课时拆单脏订单' });
+  }
+  if (entitlementById.has(WANG_PACKAGE.dirtySplitEntitlementId) && WANG_PACKAGE.dirtySplitEntitlementId !== WANG_PACKAGE.nonoEntitlementId) {
+    deleteRows.push({ table: TABLES.entitlements, id: WANG_PACKAGE.dirtySplitEntitlementId, reason: '删除王先生（nono）旧 2 课时拆单脏权益' });
   }
 
   const fakeBusinessRefs = [
@@ -361,9 +374,11 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
   ];
   if (fakeBusinessRefs.length) blockers.push(`捶捶仍有额外业务引用：${fakeBusinessRefs.join(',')}`);
 
-  const activeWangSchedules = schedulePuts.filter(row => row.studentId === IDS.nonoStudent).length;
+  const amengPackageCount = schedulePuts.filter(row => row.studentId === IDS.amengStudent && row.packageName === '1v2私教课 · 10课时 · 非黄金').length;
+  const nonoPackageCount = schedulePuts.filter(row => row.studentId === IDS.nonoStudent && row.packageName === '1v1私教课 · 10课时 · 黄金').length;
   const chenxiUpdates = schedulePuts.filter(row => row.studentId === IDS.xixiStudent && row.studentName === '曦曦🐳').length;
-  if (activeWangSchedules !== 3) blockers.push(`王先生（nono）排课应修 3 条，当前计划 ${activeWangSchedules} 条`);
+  if (amengPackageCount !== WANG_PACKAGE.amengPackageLessonCount) blockers.push(`王先生（阿萌）排课应修 ${WANG_PACKAGE.amengPackageLessonCount} 条，当前计划 ${amengPackageCount} 条`);
+  if (nonoPackageCount !== WANG_PACKAGE.nonoPackageLessonCount) blockers.push(`王先生（nono）排课应修 ${WANG_PACKAGE.nonoPackageLessonCount} 条，当前计划 ${nonoPackageCount} 条`);
   if (chenxiUpdates !== CHENXI_SCHEDULE_IDS.length) blockers.push(`晨曦展示名应修 ${CHENXI_SCHEDULE_IDS.length} 条，当前计划 ${chenxiUpdates} 条`);
 
   const affectedScheduleIds = new Set(schedulePuts.map(row => text(row.id)).concat([IDS.hammerDirtySchedule]));
@@ -391,7 +406,9 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
     conflictIndex: { staleConflictIndexIds, nextConflictIndexRows },
     activeEntitlementIndex: { putRows: indexRows, deleteIds: activeIndexDeleteIds },
     summary: {
-      wangSchedules: activeWangSchedules,
+      wangSchedules: amengPackageCount + nonoPackageCount,
+      amengPackageSchedules: amengPackageCount,
+      nonoPackageSchedules: nonoPackageCount,
       chenxiSchedules: chenxiUpdates,
       deleteRows: deleteRows.length,
       blockers: blockers.length,
