@@ -1460,6 +1460,7 @@ function openMembershipDrawer(courtId){
       if(currentId===String(courtId))openMembershipDrawer(courtId);
     }).catch(e=>{
       console.warn('membership detail load failed',e);
+      if(Number(e?.status)===401||String(e.message||'').includes('未登录')||String(e.message||'').includes('登录')){doLogout();return;}
       toast('会员详情加载失败，请刷新后重试','error');
     });
     return;

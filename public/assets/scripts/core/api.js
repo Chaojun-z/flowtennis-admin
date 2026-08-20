@@ -119,7 +119,13 @@ async function apiCall(method,path,body,timeoutMs=60000){
         throw new Error(`${fallback} [${path}]`);
       }
     }
-    if(!res.ok)throw new Error(`${data.error||'请求失败'} [${path}]`);
+    if(!res.ok){
+      const error=new Error(`${data.error||'请求失败'} [${path}]`);
+      error.status=res.status;
+      error.data=data;
+      error.path=path;
+      throw error;
+    }
     return data;
   }catch(e){
     // Chrome/Safari 对 AbortController 的报错文案不统一，这里统一成可读提示

@@ -1,0 +1,71 @@
+{
+  "ok": true,
+  "batchId": "cleanup-duplicate-memberships-20260820",
+  "generatedAt": "2026-08-20T01:12:43.114Z",
+  "targetInstance": {
+    "endpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "instance": "flowtennis-ue"
+  },
+  "errors": [],
+  "courtUpdates": [
+    {
+      "id": "member-reconcile-court-f5998ae128e29ffc",
+      "name": "秋明",
+      "phone": 13911851999,
+      "beforeStatus": "active",
+      "afterStatus": "inactive",
+      "balance": 0
+    },
+    {
+      "id": "c0c73176-1e1c-4fc8-849e-b821789da154",
+      "name": "许女士",
+      "phone": 15101648989,
+      "beforeStatus": "active",
+      "afterStatus": "inactive",
+      "balance": 0
+    }
+  ],
+  "accountUpdates": [
+    {
+      "id": "member-reconcile-account-f5998ae128e29ffc",
+      "courtId": "member-reconcile-court-f5998ae128e29ffc",
+      "beforeStatus": "active",
+      "afterStatus": "cleared"
+    },
+    {
+      "id": "member-reconcile-account-e38dd5f7d9aa6bed",
+      "courtId": "c0c73176-1e1c-4fc8-849e-b821789da154",
+      "beforeStatus": "active",
+      "afterStatus": "cleared"
+    }
+  ],
+  "orderUpdates": [
+    {
+      "id": "member-reconcile-order-391bd6b61788aa6789a0978b",
+      "courtId": "c0c73176-1e1c-4fc8-849e-b821789da154",
+      "membershipAccountId": "member-reconcile-account-e38dd5f7d9aa6bed",
+      "beforeStatus": "active",
+      "afterStatus": "voided",
+      "rechargeAmount": 2000,
+      "bonusAmount": 166
+    }
+  ],
+  "eventCreates": [
+    {
+      "id": "cleanup-duplicate-memberships-20260820:member-reconcile-account-f5998ae128e29ffc",
+      "courtId": "member-reconcile-court-f5998ae128e29ffc",
+      "membershipAccountId": "member-reconcile-account-f5998ae128e29ffc",
+      "eventType": "duplicate_cleanup"
+    },
+    {
+      "id": "cleanup-duplicate-memberships-20260820:member-reconcile-account-e38dd5f7d9aa6bed",
+      "courtId": "c0c73176-1e1c-4fc8-849e-b821789da154",
+      "membershipAccountId": "member-reconcile-account-e38dd5f7d9aa6bed",
+      "eventType": "duplicate_cleanup"
+    }
+  ],
+  "indexDeletes": [
+    "member-reconcile-court-f5998ae128e29ffc",
+    "c0c73176-1e1c-4fc8-849e-b821789da154"
+  ]
+}
