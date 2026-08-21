@@ -52,6 +52,7 @@ assert.strictEqual(courses[0].lessonIndex, 11, 'student parser should keep brack
 assert.strictEqual(sync.normalizeNameKey('W.Jing'), sync.normalizeNameKey('wjing（11）'), 'student aliases should ignore case, dot, spaces and bracket text');
 assert.deepStrictEqual(sync.parseStudentCell('晨曦、朋友（2）').names, ['晨曦'], '晨曦、朋友 should only schedule the package owner');
 assert.strictEqual(sync.parseStudentCell('晨曦、朋友（2）').lessonIndex, 2, '晨曦、朋友 should keep the package lesson index');
+assert.deepStrictEqual(sync.parseStudentCell('🐰🐰🐰🐰🐰、🌞艾薇、朋友').names, ['🐰🐰🐰🐰🐰', '🌞艾薇', '🌞艾薇的朋友'], 'confirmed Aivi small class friend should become its own student');
 assert.deepStrictEqual(sync.parseStudentCell('德德（使用小林课包 2）').names, ['小林'], 'shared package note should schedule the package owner');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').lessonIndex, 2, 'shared package note should keep the package lesson index');
 assert.strictEqual(sync.parseStudentCell('德德（使用小林课包 2）').sharedPackageNote, '德德使用小林课包 2', 'shared package note should be preserved for schedule notes');
@@ -757,18 +758,26 @@ const confirmedIgnoredSourcePlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...beginnerSpecialCourses[0],
     sourceKey: 'GrbZdi|2026-07-25|16:00|17:30|杨|🐰🐰🐰🐰🐰、🌞艾薇、朋友|零基础训练营体验课|马坡室内|1号',
-    studentNames: ['🐰🐰🐰🐰🐰', '🌞艾薇', '朋友'],
+    studentNames: sync.parseStudentCell('🐰🐰🐰🐰🐰、🌞艾薇、朋友').names,
     studentText: '🐰🐰🐰🐰🐰、🌞艾薇、朋友',
     courseText: '零基础训练营体验课'
   }],
   syncRows: [],
   schedules: [],
-  students: [],
-  coaches: [],
-  users: []
+  students: [
+    { id: 'stu-rabbit', name: '🐰🐰🐰🐰🐰' },
+    { id: 'stu-aivi', name: '🌞艾薇' },
+    { id: 'stu-aivi-friend', name: '🌞艾薇的朋友' }
+  ],
+  coaches: [{ id: 'coach-yang', name: '杨教练' }],
+  users: [],
+  packages: [{ id: 'pkg-beginner-special', name: '专项课 · 零基础 · 初阶专项课 · 1次 · 129元', courseType: '专项课', specialTopic: '初阶专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', price: 129 }],
+  nowKey: '2026-07-25 00:00'
 });
-assert.strictEqual(confirmedIgnoredSourcePlan.summary.notifyError, 0, 'confirmed non-imported source row should not require a sync-table write to stay quiet');
-assert.strictEqual(confirmedIgnoredSourcePlan.summary.noop, 1, 'confirmed non-imported source row should be treated as noop');
+assert.strictEqual(confirmedIgnoredSourcePlan.summary.notifyError, 0, 'confirmed Aivi small class should not require manual confirmation');
+assert.strictEqual(confirmedIgnoredSourcePlan.summary.create, 1, 'confirmed Aivi small class should enter schedule creation instead of being ignored');
+assert.deepStrictEqual(confirmedIgnoredSourcePlan.actions[0].candidate.resolvedStudents.map(row => row.name), ['🐰🐰🐰🐰🐰', '🌞艾薇', '🌞艾薇的朋友'], 'confirmed Aivi small class should keep all three students');
+assert.strictEqual(confirmedIgnoredSourcePlan.actions[0].candidate.requiresPackagePurchase, true, 'confirmed Aivi small class should auto-create the 129 yuan special package when missing');
 
 const legacyCampusExistingPlan = sync.buildDryRunPlan({
   feishuCourses: [{
@@ -1936,6 +1945,47 @@ const xiaotudouFriendAliasPlan = sync.buildDryRunPlan({
 assert.strictEqual(xiaotudouFriendAliasPlan.summary.create, 1, 'confirmed friend alias should resolve to the friend student record');
 assert.strictEqual(xiaotudouFriendAliasPlan.actions[0].candidate.resolvedStudents[0].name, '小土豆的姐姐的朋友', 'friend alias should not resolve to 小土豆的姐姐');
 
+function assertConfirmedAliasResolves(aliasName, canonicalName) {
+  const sourceKey = `confirmed-alias-${sync.normalizeNameKey(aliasName)}-${sync.normalizeNameKey(canonicalName)}`;
+  const plan = sync.buildDryRunPlan({
+    feishuCourses: [{
+      ...courses[0],
+      sourceKey,
+      startTime: '2026-09-01 10:00',
+      endTime: '2026-09-01 11:00',
+      date: '2026-09-01',
+      startClock: '10:00',
+      endClock: '11:00',
+      coachName: 'Siren',
+      studentNames: [aliasName],
+      studentText: aliasName,
+      lessonIndex: 1,
+      course: { ok: true, courseType: '私教课', experienceType: '', audience: '成人', isTrial: false }
+    }],
+    syncRows: [],
+    schedules: [],
+    students: [{ id: `stu-${sync.normalizeNameKey(canonicalName)}`, name: canonicalName, primaryCoach: 'Siren 教练' }],
+    coaches: [{ id: 'coach-siren', name: 'Siren 教练' }],
+    users: [],
+    entitlements: [{ id: `ent-${sync.normalizeNameKey(canonicalName)}`, studentId: `stu-${sync.normalizeNameKey(canonicalName)}`, courseType: '私教课', totalLessons: 10, usedLessons: 0, remainingLessons: 10, status: 'active' }],
+    nowKey: '2026-08-31 00:00'
+  });
+  assert.strictEqual(plan.summary.create, 1, `${aliasName} should create a schedule through confirmed alias`);
+  assert.strictEqual(plan.summary.notifyError, 0, `${aliasName} should not require manual confirmation`);
+  assert.strictEqual(plan.actions[0].candidate.resolvedStudents[0].name, canonicalName, `${aliasName} should resolve to ${canonicalName}`);
+}
+
+assertConfirmedAliasResolves('小白', '陈慕白');
+assertConfirmedAliasResolves('小胡', 'mjh（小胡）');
+assertConfirmedAliasResolves('mjh小胡', 'mjh（小胡）');
+assertConfirmedAliasResolves('kRyst4I', 'Krystal');
+assertConfirmedAliasResolves('kRyst4l', 'Krystal');
+assertConfirmedAliasResolves('显峰', '显峰（京长发，鑫长发）');
+assertConfirmedAliasResolves('显峰孩子', '卢恩泽');
+assertConfirmedAliasResolves('显峰儿子', '卢恩泽');
+assertConfirmedAliasResolves('于宜歆', '宜歆');
+assertConfirmedAliasResolves('征途01', '征途');
+
 const companionPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...companionCourses[0],
@@ -1961,7 +2011,36 @@ const tangguoCompanionCorrection = sync.parseFeishuScheduleRows({ values: [
 ], sheetId: 'GrbZdi', sheetTitle: '7.20-7.26（当前周）' });
 assert.strictEqual(tangguoCompanionCorrection[0].course.courseType, '陪打', 'confirmed Tangguo private lesson typo should import as companion');
 assert.strictEqual(tangguoCompanionCorrection[0].course.payMethod, '储值卡', 'Tangguo companion correction should use stored value payment');
-assert.strictEqual(sync.buildScheduleBody({ ...tangguoCompanionCorrection[0], resolvedCoach: { name: '杨教练' }, scheduleStudents: [{ id: 'stu-tangguo', name: '唐果' }] }).paidAmount, 400, 'Tangguo companion correction should use confirmed 400 yuan amount');
+assert.strictEqual(sync.buildScheduleBody({ ...tangguoCompanionCorrection[0], resolvedCoach: { name: '杨教练' }, scheduleStudents: [{ id: 'stu-tangguo', name: '唐果' }] }).paidAmount, 400, 'Tangguo two-hour companion correction should use 200 yuan per hour');
+
+const tangguoOneHourCompanionCorrection = sync.parseFeishuScheduleRows({ values: [
+  ['时间', null, null, '马坡室内', null, null, null, '杨教练', null, null, null],
+  ['日期', '星期', '时段', '1号', '2号', '3号', '4号', '课程', '场馆', '场地号', '学员'],
+  ['2026-07-20', '一', '15:00-16:00', null, '杨教练', null, null, '成人私教【正式】', '马坡室内', '2号', '唐果']
+], sheetId: 'GrbZdi', sheetTitle: '7.20-7.26（当前周）' });
+assert.strictEqual(sync.buildScheduleBody({ ...tangguoOneHourCompanionCorrection[0], resolvedCoach: { name: '杨教练' }, scheduleStudents: [{ id: 'stu-tangguo', name: '唐果' }] }).paidAmount, 200, 'Tangguo one-hour companion correction should use 200 yuan');
+
+const shilipuExternalPackageCorrection = sync.parseFeishuScheduleRows({ values: [
+  ['时间', null, null, '马坡室内', null, null, null, 'Siren', null, null, null],
+  ['日期', '星期', '时段', '1号', '2号', '3号', '4号', '课程', '场馆', '场地号', '学员'],
+  ['2026-08-24', '一', '14:00-15:00', null, null, null, 'Siren', '成人私教【正式】 十里堡学员扣十里堡课包', '马坡室内', '4号', '陈川']
+], sheetId: 'GrbZdi', sheetTitle: '8.24-8.30（当前周）' });
+const shilipuExternalPackagePlan = sync.buildDryRunPlan({
+  feishuCourses: shilipuExternalPackageCorrection,
+  syncRows: [],
+  schedules: [],
+  students: [{ id: 'stu-chenchuan', name: '陈川', primaryCoach: 'Siren 教练' }],
+  coaches: [{ id: 'coach-siren', name: 'Siren 教练' }],
+  users: [],
+  entitlements: [],
+  nowKey: '2026-08-23 00:00'
+});
+assert.strictEqual(shilipuExternalPackagePlan.summary.create, 1, 'Shilipu package lesson should keep the schedule without local package entitlement');
+const shilipuExternalPackageBody = sync.buildScheduleBody(shilipuExternalPackagePlan.actions[0].candidate);
+assert.strictEqual(shilipuExternalPackageBody.settlementType, 'direct', 'Shilipu package lesson should not consume local package');
+assert.strictEqual(shilipuExternalPackageBody.paidAmount, 0, 'Shilipu package lesson should keep Shunyi Mapo income as zero');
+assert.deepStrictEqual(shilipuExternalPackageBody.entitlementIds, [], 'Shilipu package lesson should not attach local entitlement ids');
+assert.match(shilipuExternalPackageBody.notes, /十里堡学员，扣十里堡课包，顺义马坡收入 0/, 'Shilipu package lesson should leave the confirmed business note');
 
 
 const idealGroupPlan = sync.buildDryRunPlan({

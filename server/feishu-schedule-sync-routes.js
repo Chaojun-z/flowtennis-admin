@@ -114,7 +114,16 @@ const FEISHU_STUDENT_NAME_ALIASES = Object.freeze({
   [normalizeStudentNameKey('william')]: 'William（时节）',
   [normalizeStudentNameKey('chris')]: 'CHRISTINE',
   [normalizeStudentNameKey('柏杨')]: '柏杨（无名 Yang）',
-  [normalizeStudentNameKey('ops')]: 'Ops💫'
+  [normalizeStudentNameKey('ops')]: 'Ops💫',
+  [normalizeStudentNameKey('小白')]: '陈慕白',
+  [normalizeStudentNameKey('小胡')]: 'mjh（小胡）',
+  [normalizeStudentNameKey('mjh小胡')]: 'mjh（小胡）',
+  [normalizeStudentNameKey('kRyst4I')]: 'Krystal',
+  [normalizeStudentNameKey('kRyst4l')]: 'Krystal',
+  [normalizeStudentNameKey('于宜歆')]: '宜歆',
+  [normalizeStudentNameKey('显峰')]: '显峰（京长发，鑫长发）',
+  [normalizeStudentNameKey('显峰孩子')]: '卢恩泽',
+  [normalizeStudentNameKey('显峰儿子')]: '卢恩泽'
 });
 
 const FEISHU_CONFIRMED_COMPANION_LEAD_NAMES = new Set([
@@ -122,9 +131,7 @@ const FEISHU_CONFIRMED_COMPANION_LEAD_NAMES = new Set([
   normalizeStudentNameKey('沈萍')
 ]);
 
-const FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS = new Set([
-  'GrbZdi|2026-07-25|16:00|17:30|杨|🐰🐰🐰🐰🐰、🌞艾薇、朋友|零基础训练营体验课|马坡室内|1号'
-]);
+const FEISHU_CONFIRMED_IGNORED_SOURCE_KEYS = new Set([]);
 
 function splitFeishuStudentNames(value){
   const text=cleanText(value);
@@ -154,7 +161,7 @@ function applyConfirmedCourseCorrection(row={},course={},students={}){
   const studentKeys=(students.names||[]).map(normalizeStudentNameKey);
   const rawStudentKey=normalizeStudentNameKey(students.raw||row.studentText||'');
   if(studentKeys.includes(normalizeStudentNameKey('唐果'))&&/私教/.test(cleanText(row.courseText))){
-    return {ok:true,raw:course.raw||row.courseText,courseType:'陪打',experienceType:'',audience:'',isTrial:false,payMethod:'储值卡',paidAmount:400,confirmedCorrection:'唐果私教误写按陪打处理'};
+    return {ok:true,raw:course.raw||row.courseText,courseType:'陪打',experienceType:'',audience:'',isTrial:false,payMethod:'储值卡',confirmedCorrection:'唐果私教误写按陪打处理'};
   }
   if(/亲子小班/.test(cleanText(row.courseText))&&(studentKeys.includes(normalizeStudentNameKey('晨曦'))||rawStudentKey.includes(normalizeStudentNameKey('晨曦')))){
     return {ok:true,raw:course.raw||row.courseText,courseType:'私教课',experienceType:'',audience:'成人',isTrial:false,confirmedCorrection:'晨曦朋友亲子小班按私教课处理'};
@@ -200,12 +207,22 @@ function applyConfirmedFeishuCellCorrection(row={}){
   if(date==='2026-08-21'&&start==='11:00'&&end==='12:00'&&coachKey===normalizeNameKey('林铭')&&studentKey===normalizeStudentNameKey('史多灏')&&courtKey===normalizeNameKey('3号')){
     return {...row,courtText:'4号'};
   }
+  if(/十里堡/.test(`${row.courseText||''} ${row.studentText||''}`)){
+    return {
+      ...row,
+      confirmedPaymentLocked:true,
+      confirmedPayment:{settlementType:'direct',payMethod:'十里堡课包',paidAmount:0,confirmedPaymentNote:'十里堡学员，扣十里堡课包，顺义马坡收入 0'}
+    };
+  }
   return row;
 }
 
 function normalizeFeishuStudentNames(names=[]){
   const cleaned=(names||[]).map(cleanText).filter(Boolean);
   const keys=cleaned.map(normalizeStudentNameKey);
+  if(keys.includes(normalizeStudentNameKey('🌞艾薇'))&&keys.includes(normalizeStudentNameKey('朋友'))){
+    return cleaned.map(name=>normalizeStudentNameKey(name)===normalizeStudentNameKey('朋友')?'🌞艾薇的朋友':name);
+  }
   if(keys.includes(normalizeStudentNameKey('晨曦'))&&keys.includes(normalizeStudentNameKey('朋友'))){
     return cleaned.filter(name=>normalizeStudentNameKey(name)!==normalizeStudentNameKey('朋友'));
   }
@@ -217,7 +234,10 @@ function normalizeFeishuStudentNames(names=[]){
 
 function resolveFeishuStudentAlias(value){
   const raw=cleanText(value);
-  return FEISHU_STUDENT_NAME_ALIASES[normalizeStudentNameKey(raw)]||raw;
+  const key=normalizeStudentNameKey(raw);
+  if(FEISHU_STUDENT_NAME_ALIASES[key])return FEISHU_STUDENT_NAME_ALIASES[key];
+  if(key&&key.includes(normalizeStudentNameKey('征途')))return '征途';
+  return raw;
 }
 
 function studentNameKeys(value){
@@ -376,6 +396,8 @@ function specialCourseEntitlementMatches(row={},candidate={}){
 
 function specialCourseAutoPackageAmount(candidate={}){
   const topic=cleanText(candidate.course?.specialTopic||candidate.course?.courseDisplayName||candidate.courseText);
+  const studentKeys=candidateStudentNameKeys(candidate);
+  if(studentKeys.includes(normalizeStudentNameKey('🌞艾薇'))&&studentKeys.includes(normalizeStudentNameKey('🌞艾薇的朋友')))return 129;
   if(/初阶专项课|零基础/.test(topic))return 199;
   if(/发接发与实战练习/.test(topic))return 260;
   return 0;
