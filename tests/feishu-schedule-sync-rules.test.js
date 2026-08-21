@@ -709,6 +709,24 @@ assert.strictEqual(beginnerSpecialUnknownStudentsPlan.summary.notifyError, 0, 'u
 assert.strictEqual(beginnerSpecialUnknownStudentsPlan.summary.create, 1, 'unknown beginner special students should enter create flow');
 assert.strictEqual(beginnerSpecialUnknownStudentsPlan.actions[0].candidate.requiresSpecialLeadConversion, true, 'unknown beginner special students should create leads before package purchase');
 
+const dirtySpecialPeopleCountPlan = sync.buildDryRunPlan({
+  feishuCourses: [{
+    ...beginnerSpecialCourses[0],
+    sourceKey: 'dirty-special-people-count-key',
+    studentNames: ['4 人'],
+    studentText: '4 人'
+  }],
+  syncRows: [],
+  schedules: [],
+  students: [],
+  coaches: [{ id: 'coach-yue', name: '岳克舟教练' }],
+  users: [],
+  packages: [{ id: 'pkg-beginner-special', name: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元', courseType: '专项课', specialTopic: '初阶专项课', skillLevelMin: '零基础', skillLevelMax: '零基础', price: 199 }],
+  nowKey: '2026-08-08 00:00'
+});
+assert.strictEqual(dirtySpecialPeopleCountPlan.summary.notifyError, 1, 'special course people-count text should require manual confirmation');
+assert.match(dirtySpecialPeopleCountPlan.actions[0].reason, /无法唯一识别正式课学员/, '4 人 must not become an auto-created special-course lead');
+
 const confirmedDirectUnknownStudentPlan = sync.buildDryRunPlan({
   feishuCourses: [{
     ...courses[0],
@@ -2950,6 +2968,65 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
   assert.strictEqual(purchasedBodies[0].packageId, 'pkg-trial-adult', 'trial package lookup should accept active 239 adult trial packages without exact name matching');
   assert.strictEqual(purchasedBodies[0].payMethod, '大众点评券码', 'trial package purchase should use Dianping coupon write-off payment method');
   assert.strictEqual(appliedNewTrial[0].scheduleId, 'sch-new-trial', 'new trial student flow should still create the schedule');
+
+  const idealTrialCreatedBodies = [];
+  const appliedIdealTrial = await sync.applySyncPlan({
+    actions: [{
+      type: 'create_trial_schedule',
+      sourceKey: 'ideal-group-trial-key',
+      candidate: {
+        ...newTrialCandidate,
+        sourceKey: 'ideal-group-trial-key',
+        studentNames: ['理想团课'],
+        studentText: '理想团课',
+        resolvedStudents: [],
+        scheduleStudents: []
+      }
+    }]
+  }, {
+    put: async () => {},
+    uuidv4: () => 'uuid-ideal-trial',
+    createLead: async (body) => { idealTrialCreatedBodies.push(body); return { lead: { id: 'lead-ideal-group', ...body } }; },
+    convertLeadToStudent: async () => ({ student: { id: 'stu-ideal-group', name: '理想团课' } }),
+    purchasePackage: async () => ({ purchase: { id: 'pur-ideal-group' }, entitlement: { id: 'ent-ideal-group' } }),
+    createSchedule: async (body) => ({ schedule: { id: 'sch-ideal-group-trial', ...body } }),
+    packages: [{ id: 'pkg-trial-adult', name: '1v1 · 全天 · 1 课时', courseType: '体验课', experienceType: '私教体验课', price: 239, status: 'active' }],
+    entitlements: [],
+    leads: [{ id: 'lead-ideal', displayName: '理想' }],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.strictEqual(appliedIdealTrial[0].scheduleId, 'sch-ideal-group-trial', '理想团课 should not be blocked when it is a real exact name');
+  assert.deepStrictEqual(idealTrialCreatedBodies.map(row => row.displayName), ['理想团课'], '理想 lead must not be reused for 理想团课 by contains matching');
+
+  let dirtyTrialCreateCalled = false;
+  const appliedDirtyTrial = await sync.applySyncPlan({
+    actions: [{
+      type: 'create_trial_schedule',
+      sourceKey: 'dirty-trial-people-count-key',
+      candidate: {
+        ...newTrialCandidate,
+        sourceKey: 'dirty-trial-people-count-key',
+        studentNames: ['2人'],
+        studentText: '2人',
+        resolvedStudents: [],
+        scheduleStudents: []
+      }
+    }]
+  }, {
+    createLead: async () => { dirtyTrialCreateCalled = true; return { lead: { id: 'dirty-lead' } }; },
+    convertLeadToStudent: async () => ({}),
+    purchasePackage: async () => ({}),
+    createSchedule: async () => ({}),
+    packages: [{ id: 'pkg-trial-adult', courseType: '体验课', price: 239, status: 'active' }],
+    entitlements: [],
+    leads: [],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.strictEqual(appliedDirtyTrial[0].type, 'error', '2人 trial text should remain manual confirmation instead of creating a fake lead');
+  assert.match(appliedDirtyTrial[0].error, /人数\/占位文本/, 'dirty trial error should explain why it was not auto-created');
+  assert.strictEqual(dirtyTrialCreateCalled, false, '2人 must be blocked before createLead is called');
 
   const specialPurchaseBodies = [];
   let specialCreatedBody = null;

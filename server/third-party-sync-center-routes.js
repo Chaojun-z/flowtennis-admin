@@ -295,6 +295,13 @@ function compactName(value = '') {
   return cleanText(value).replace(/\s+/g, '').toLowerCase();
 }
 
+function nameTokens(value = '') {
+  return cleanText(value)
+    .split(/[\s、,，/|;；:：()（）【】\[\]{}<>《》]+/)
+    .map(compactName)
+    .filter(Boolean);
+}
+
 function rowName(row = {}) {
   return cleanText(row.name || row.coachName || row.studentName || row.realName || row.nickname || row.displayName);
 }
@@ -304,9 +311,20 @@ function rowIsActive(row = {}) {
 }
 
 function textHasName(text = '', name = '') {
-  const source = compactName(text);
   const target = compactName(name);
-  return !!target && source.includes(target);
+  if (!target || !clearThirdPartyStudentNameForAutoMatch(name)) return false;
+  return nameTokens(text).includes(target);
+}
+
+function clearThirdPartyStudentNameForAutoMatch(rawName = '') {
+  const name = cleanText(rawName);
+  const key = compactName(name);
+  if (!key) return false;
+  if (/^\d+人?$/.test(key)) return false;
+  if (['朋友', '家长', '学员', '多人', '待定', '未知'].includes(key)) return false;
+  if (/[?？]/.test(name)) return false;
+  if (/[、,，/&]/.test(name)) return false;
+  return true;
 }
 
 function isOperatorAssistedBookingLock(record = {}) {
@@ -930,11 +948,14 @@ function inferStudentForScheduleImport(item = {}, students = []) {
   const text = scheduleMatchText(item);
   const operator = compactName(item.operatorAccount);
   const phone = normalizeThirdPartyPhone(item.phone);
-  const byPhone = phone ? (students || []).find(row => rowIsActive(row) && normalizeThirdPartyPhone(row.phone || row.mobile || row.userPhone) === phone && compactName(rowName(row)) !== operator) : null;
+  const byPhone = phone ? (students || []).find(row => {
+    const name = rowName(row);
+    return rowIsActive(row) && clearThirdPartyStudentNameForAutoMatch(name) && normalizeThirdPartyPhone(row.phone || row.mobile || row.userPhone) === phone && compactName(name) !== operator;
+  }) : null;
   if (byPhone) return { id: cleanText(byPhone.id), name: rowName(byPhone), phone };
   const byName = (students || []).find(row => {
     const name = rowName(row);
-    if (!rowIsActive(row) || !name || isOperatorName(name) || compactName(name) === operator) return false;
+    if (!rowIsActive(row) || !name || !clearThirdPartyStudentNameForAutoMatch(name) || isOperatorName(name) || compactName(name) === operator) return false;
     return textHasName(text, name);
   });
   return byName ? { id: cleanText(byName.id), name: rowName(byName), phone: normalizeThirdPartyPhone(byName.phone || byName.mobile || byName.userPhone) } : null;

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { createStorageServices } = require('../server/storage');
+const { parseWriteFlags, assertProductionWriteTarget } = require('./lib/production-write-guard');
 
 const ROOT = path.join(__dirname, '..');
 const REPORT_DIR = path.join(ROOT, 'offline-reports');
@@ -245,9 +246,10 @@ async function applyPlan(storage, plan) {
 
 async function main() {
   loadEnv();
-  const write = process.argv.includes('--write');
+  const { write } = parseWriteFlags(process.argv.slice(2));
   const confirm = process.argv.includes('--confirm-production-write');
   if (write && !confirm) throw new Error('写入生产前必须显式加 --confirm-production-write');
+  const writeTarget = write ? await assertProductionWriteTarget({ env: process.env }) : null;
   const storage = createStorageServices({
     tableStoreConfig: {
       accessKeyId: process.env.ALIBABA_CLOUD_ACCESS_KEY_ID,
@@ -272,7 +274,7 @@ async function main() {
   }
   await applyPlan(storage, plan);
   const report = writeReport('write', safe);
-  console.log(JSON.stringify({ dryRun: false, report, ...safe }, null, 2));
+  console.log(JSON.stringify({ dryRun: false, report, target: writeTarget, ...safe }, null, 2));
 }
 
 if (require.main === module) {

@@ -576,6 +576,83 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(unsafeScheduleRes.body.plan.blocked.some(row => /未识别到真实教练和学员/.test(row.reason)), 'unsafe schedule row should explain the missing real coach/student');
   assert.ok(!scans.ft_schedule.some(row => row.coach === '马坡运营' || row.studentName === '马坡运营'), 'sync must never create fake Mapo operator schedule rows');
 
+  scans.ft_third_party_sync_batches.push({ id: 'ideal-group-import-batch', batchId: 'ideal-group-import-batch', status: 'prechecked' });
+  scans.ft_third_party_sync_prechecks.push({
+    id: 'ideal-group-precheck-1',
+    batchId: 'ideal-group-import-batch',
+    sourceRecordId: 'IDEAL-GROUP',
+    sourceType: 'lock',
+    date: '2026-08-02',
+    venue: '2号场',
+    startTime: '11:00',
+    endTime: '12:00',
+    customerName: '马坡运营',
+    operatorAccount: '马坡运营',
+    remark: '朝珺 理想团课 私教课',
+    recommendedType: 'auto_import',
+    needsConfirmation: false,
+    suggestedFinalType: '排课占场'
+  });
+  scans.ft_coaches.push({ id: 'coach-chaojun', name: '朝珺', status: 'active' });
+  scans.ft_students.push({ id: 'student-ideal', name: '理想', status: 'active' });
+  scans.ft_students.push({ id: 'student-ideal-group', name: '理想团课', status: 'active' });
+  const idealGroupImportRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'ideal-group-import-batch' }
+  });
+  assert.strictEqual(idealGroupImportRes.body.result.status, 'completed', 'third-party exact student name should still import schedule rows');
+  assert.ok(scans.ft_schedule.some(row => row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'IDEAL-GROUP') && row.studentName === '理想团课' && row.studentIds?.includes('student-ideal-group')), '理想团课 must match its own account instead of the shorter 理想 account');
+  assert.ok(!scans.ft_schedule.some(row => row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'IDEAL-GROUP') && row.studentIds?.includes('student-ideal')), '理想 must not be selected by contains matching for 理想团课');
+
+  scans.ft_third_party_sync_batches.push({ id: 'dirty-student-name-batch', batchId: 'dirty-student-name-batch', status: 'prechecked' });
+  scans.ft_coaches.push({ id: 'coach-siren', name: 'siren', status: 'active' });
+  scans.ft_third_party_sync_prechecks.push(
+    {
+      id: 'dirty-student-name-precheck-1',
+      batchId: 'dirty-student-name-batch',
+      sourceRecordId: 'DIRTY-2P',
+      sourceType: 'lock',
+      date: '2026-08-03',
+      venue: '1号场',
+      startTime: '10:00',
+      endTime: '11:00',
+      customerName: '马坡运营',
+      operatorAccount: '马坡运营',
+      remark: 'siren 2人 私教课',
+      recommendedType: 'auto_import',
+      needsConfirmation: false,
+      suggestedFinalType: '排课占场'
+    },
+    {
+      id: 'dirty-student-name-precheck-2',
+      batchId: 'dirty-student-name-batch',
+      sourceRecordId: 'DIRTY-4P',
+      sourceType: 'lock',
+      date: '2026-08-03',
+      venue: '2号场',
+      startTime: '10:00',
+      endTime: '11:00',
+      customerName: '马坡运营',
+      operatorAccount: '马坡运营',
+      remark: 'siren 4 人 私教课',
+      recommendedType: 'auto_import',
+      needsConfirmation: false,
+      suggestedFinalType: '排课占场'
+    }
+  );
+  scans.ft_students.push({ id: 'student-dirty-2p', name: '2人', status: 'active' });
+  scans.ft_students.push({ id: 'student-dirty-4p', name: '4 人', status: 'active' });
+  const dirtyStudentImportRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'dirty-student-name-batch' }
+  });
+  assert.strictEqual(dirtyStudentImportRes.body.result.status, 'paused', 'third-party dirty people-count names should be paused for manual confirmation');
+  assert.ok(dirtyStudentImportRes.body.plan.blocked.some(row => row.sourceRecordId === 'DIRTY-2P' && /未识别到真实学员/.test(row.reason)), '2人 must not be treated as a real student');
+  assert.ok(dirtyStudentImportRes.body.plan.blocked.some(row => row.sourceRecordId === 'DIRTY-4P' && /未识别到真实学员/.test(row.reason)), '4 人 must not be treated as a real student');
+  assert.ok(!scans.ft_schedule.some(row => ['2人', '4 人'].includes(row.studentName)), 'dirty people-count names must never create schedule students');
+
   scans.ft_third_party_sync_batches.push({ id: 'existing-schedule-batch', batchId: 'existing-schedule-batch', status: 'prechecked' });
   scans.ft_third_party_sync_prechecks.push({
     id: 'existing-schedule-precheck-1',
@@ -593,7 +670,6 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     needsConfirmation: false,
     suggestedFinalType: '排课占场'
   });
-  scans.ft_coaches.push({ id: 'coach-siren', name: 'siren', status: 'active' });
   scans.ft_schedule.push({ id: 'schedule-siren-special', date: '2026-08-02', venue: '2号场', startTime: '2026-08-02T10:00:00+08:00', endTime: '2026-08-02T11:00:00+08:00', coach: 'siren', studentName: '小鹿、锤锤呀', status: '已排课' });
   const existingScheduleRes = await call(handler, {
     path: '/third-party-sync/import',

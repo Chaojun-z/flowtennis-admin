@@ -431,6 +431,7 @@ function confirmedVirtualStudent(rawName=''){
 function virtualSpecialLeadStudent(rawName='',candidate={}){
   const name=cleanText(rawName);
   if(!name||candidate.course?.courseType!=='专项课')return null;
+  if(!clearFeishuStudentNameForAutoLead(name))return null;
   return {
     id:`feishu-special-lead-${sha256([candidate.sourceKey,name].join('|')).slice(0,24)}`,
     name,
@@ -446,6 +447,7 @@ function clearFeishuStudentNameForAutoLead(rawName=''){
   if(/^\d+人?$/.test(key))return false;
   if(['朋友','家长','学员','多人','待定','未知'].includes(key))return false;
   if(/[?？]/.test(name))return false;
+  if(/[、,，/&]/.test(name))return false;
   return true;
 }
 
@@ -2541,7 +2543,7 @@ function findLeadMatches(leads=[],name=''){
   const rows=(leads||[]).filter(row=>{
     if(row.studentId)return false;
     const rowKey=normalizeNameKey(row.name||row.leadName||row.customerName||row.displayName||row.wechatName);
-    return rowKey&&key&&(rowKey===key||rowKey.includes(key)||key.includes(rowKey));
+    return rowKey&&key&&rowKey===key;
   });
   return rows;
 }
@@ -2668,11 +2670,13 @@ async function resolveCompanionLeadStudent(candidate,{leads=[],convertLeadToStud
 
 async function resolveTrialStudent(candidate,{leads=[],convertLeadToStudent,createLead}={}){
   if(candidate.resolvedStudents.length)return {student:candidate.resolvedStudents[0],lead:null};
-  const matches=findLeadMatches(leads,candidate.studentNames[0]);
+  const trialName=cleanText(candidate.studentNames[0]);
+  const matches=findLeadMatches(leads,trialName);
   if(matches.length>1)throw new Error(`体验课找到多个相似线索，需要运营确认：${candidate.studentNames.join('、')}`);
   let lead=matches[0]||null;
   if(!lead){
     if(candidate.studentNames.length!==1)throw new Error(`体验课多人或模糊学员需要运营确认：${candidate.studentNames.join('、')}`);
+    if(!clearFeishuStudentNameForAutoLead(trialName))throw new Error(`体验课学员名疑似人数/占位文本，需要运营确认：${candidate.studentNames.join('、')}`);
     if(typeof createLead!=='function')throw new Error(`体验课找不到历史学员或唯一线索：${candidate.studentNames.join('、')}`);
     const created=await createLead(buildTrialLeadBody(candidate));
     lead=created?.lead;
