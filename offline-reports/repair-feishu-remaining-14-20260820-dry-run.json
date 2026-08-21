@@ -2,7 +2,7 @@
   "operationId": "repair-feishu-remaining-14-20260820",
   "batchId": "batch-repair-feishu-remaining-14-20260820",
   "mode": "dry-run",
-  "generatedAt": "2026-08-20T05:22:47.374Z",
+  "generatedAt": "2026-08-21T11:15:07.149Z",
   "target": {
     "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
     "onlineInstance": "flowtennis-ue",
@@ -24,7 +24,7 @@
       "schedule": 0,
       "sync": 0,
       "conflictIndex": 0,
-      "activeIndex": 0
+      "activeIndex": 3
     },
     "expectedFinanceImpact": {
       "newCashIncome": 2996,
@@ -143,7 +143,42 @@
     "schedule": [],
     "sync": [],
     "conflictIndex": [],
-    "activeIndex": []
+    "activeIndex": [
+      {
+        "id": "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "batchId": "batch-repair-feishu-70-light-fill-20260820",
+        "entitlementIds": [
+          "801dfa5e-c1fd-4cc3-83a1-bc7791e95525",
+          "feishu-trial-entitlement-0c22c93ad02f99bc4880a6d5"
+        ],
+        "operationAt": "2026-08-21T10:50:44.568Z",
+        "operationBy": "Codex",
+        "operationId": "repair-feishu-70-light-fill-20260820",
+        "operationType": "repair-feishu-70-light-fill-20260820",
+        "studentId": "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "updatedAt": "2026-08-21T10:50:44.568Z"
+      },
+      {
+        "id": "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486",
+        "entitlementIds": [
+          "36c64858-7591-4e76-9967-ac1c9cead7c6",
+          "feishu-trial-entitlement-2ce1ec286a4c978a925b1efd"
+        ],
+        "studentId": "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486",
+        "updatedAt": "2026-08-21T10:19:28.875Z"
+      },
+      {
+        "id": "2b65be17-4190-4b2f-9dfe-5988d4652cc6",
+        "batchId": "batch-repair-feishu-70-light-fill-20260820",
+        "entitlementIds": [],
+        "operationAt": "2026-08-21T10:50:44.568Z",
+        "operationBy": "Codex",
+        "operationId": "repair-feishu-70-light-fill-20260820",
+        "operationType": "repair-feishu-70-light-fill-20260820",
+        "studentId": "2b65be17-4190-4b2f-9dfe-5988d4652cc6",
+        "updatedAt": "2026-08-21T10:50:44.568Z"
+      }
+    ]
   },
   "planned": {
     "leads": [],
@@ -154,7 +189,50 @@
     "schedule": [],
     "sync": [],
     "conflictIndex": [],
-    "activeIndex": []
+    "activeIndex": [
+      {
+        "id": "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "studentId": "ed8fdf10-5f45-4c66-8a0b-9348d239ce81",
+        "entitlementIds": [
+          "801dfa5e-c1fd-4cc3-83a1-bc7791e95525",
+          "feishu-trial-entitlement-0c22c93ad02f99bc4880a6d5"
+        ],
+        "updatedAt": "2026-08-21T11:15:07.149Z",
+        "operationId": "repair-feishu-remaining-14-20260820",
+        "batchId": "batch-repair-feishu-remaining-14-20260820",
+        "operationType": "repair-feishu-remaining-14-20260820",
+        "operationAt": "2026-08-21T11:15:07.149Z",
+        "operationBy": "Codex",
+        "repairReason": "重建学员可用课包索引"
+      },
+      {
+        "id": "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486",
+        "studentId": "cf5c0cc0-b758-45d4-a18a-a8bcf5f6e486",
+        "entitlementIds": [
+          "36c64858-7591-4e76-9967-ac1c9cead7c6",
+          "feishu-trial-entitlement-2ce1ec286a4c978a925b1efd"
+        ],
+        "updatedAt": "2026-08-21T11:15:07.149Z",
+        "operationId": "repair-feishu-remaining-14-20260820",
+        "batchId": "batch-repair-feishu-remaining-14-20260820",
+        "operationType": "repair-feishu-remaining-14-20260820",
+        "operationAt": "2026-08-21T11:15:07.149Z",
+        "operationBy": "Codex",
+        "repairReason": "重建学员可用课包索引"
+      },
+      {
+        "id": "2b65be17-4190-4b2f-9dfe-5988d4652cc6",
+        "studentId": "2b65be17-4190-4b2f-9dfe-5988d4652cc6",
+        "entitlementIds": [],
+        "updatedAt": "2026-08-21T11:15:07.149Z",
+        "operationId": "repair-feishu-remaining-14-20260820",
+        "batchId": "batch-repair-feishu-remaining-14-20260820",
+        "operationType": "repair-feishu-remaining-14-20260820",
+        "operationAt": "2026-08-21T11:15:07.149Z",
+        "operationBy": "Codex",
+        "repairReason": "重建学员可用课包索引"
+      }
+    ]
   },
   "deletes": {
     "leads": [],

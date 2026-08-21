@@ -11,12 +11,12 @@
   "reportPath": "/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/offline-reports/repair-confirmed-student-identity-chain-20260820-dry-run.json",
   "operationId": "repair-confirmed-student-identity-chain-20260820",
   "batchId": "batch-repair-confirmed-student-identity-chain-20260820",
-  "generatedAt": "2026-08-20T04:15:34.235Z",
-  "wangSchedules": 10,
-  "amengPackageSchedules": 8,
+  "generatedAt": "2026-08-21T11:22:14.030Z",
+  "wangSchedules": 12,
+  "amengPackageSchedules": 10,
   "nonoPackageSchedules": 2,
   "chenxiSchedules": 6,
-  "deleteRows": 0,
+  "deleteRows": 1,
   "blockers": [],
   "amengName": "王先生（阿萌）",
   "xixiName": "曦曦🐳",
@@ -55,7 +55,7 @@
         "membershipAccountId": "",
         "nextAction": "",
         "nextFollowupAt": "",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -68,7 +68,7 @@
         "studentId": "student-from-lead-manual-x9icr6",
         "systemStatus": "已成交",
         "trialAtRaw": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "wechatName": "王先生（nono）"
       }
     ],
@@ -126,7 +126,7 @@
         "locationType": "own",
         "notes": "飞书排课表同步 8.10-8.16（当前周） R153C20",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -158,10 +158,94 @@
           "王先生（nono）"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "2号场"
+      },
+      {
+        "id": "0c8a3af2-ba53-4768-adba-9567b563cbb8",
+        "absentStudentIds": [],
+        "actualStudentCount": 1,
+        "allowLinkedVenueConflict": false,
+        "authorizationId": "",
+        "authorizedStudentId": "",
+        "authorizedStudentName": "",
+        "batchId": "batch-repair-confirmed-student-identity-chain-20260820",
+        "campus": "shunyi_mapo",
+        "cancelReason": "",
+        "coach": "林铭教练",
+        "coachId": "",
+        "coachLateFieldFeeAmount": 0,
+        "coachLateFree": false,
+        "coachLateHandledAt": "",
+        "coachLateHandledBy": "",
+        "confirmStatus": "待确认",
+        "courseDisplayName": "成人私教【正式】",
+        "courseType": "私教课",
+        "courseTypeLevel2": "成人私教课",
+        "createdAt": "2026-08-20T10:21:13.267Z",
+        "createdBy": "飞书同步",
+        "endTime": "2026-08-25 16:00",
+        "entitlementId": "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814",
+        "entitlementIds": [
+          "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814"
+        ],
+        "expectedStudentIds": [
+          "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+        ],
+        "experienceType": "",
+        "externalCourtName": "",
+        "externalNotes": "",
+        "externalVenueName": "",
+        "fieldFeeAmount": 0,
+        "fieldFeeNote": "",
+        "fieldFeePayMethod": "",
+        "fieldFeeReason": "",
+        "isTrial": false,
+        "lateMinutes": 0,
+        "lateReason": "",
+        "lessonCount": 1,
+        "linkedScheduleGroupId": "",
+        "locationType": "own",
+        "notes": "飞书排课表同步 8.24-8.30 R45C12",
+        "notifyStatus": "未通知",
+        "operationAt": "2026-08-21T11:22:14.030Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-student-identity-chain-20260820",
+        "operationType": "repair-confirmed-student-identity-chain-20260820",
+        "packageName": "1v2私教课 · 10课时 · 非黄金",
+        "packageOwnerStudentId": "",
+        "packageOwnerStudentName": "",
+        "paidAmount": 0,
+        "payMethod": "",
+        "purchaseId": "repair-20260813-purchase-wang-ameng-1v2-nonprime-20260814",
+        "requiresFieldFee": false,
+        "scheduleSource": "feishu-sheet",
+        "settlementType": "package",
+        "skillLevelMax": "",
+        "skillLevelMin": "",
+        "smallClassType": "",
+        "sourceLeadId": "",
+        "sourceLeadName": "",
+        "specialTopic": "",
+        "standardCourseType": "成人私教【正式】",
+        "startTime": "2026-08-25 15:00",
+        "status": "已排课",
+        "studentIds": [
+          "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+        ],
+        "studentName": "王先生（阿萌）",
+        "timeBand": "",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
+        "usedByStudentId": "",
+        "usedByStudentName": "",
+        "venue": "3号场",
+        "studentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
+        "studentNames": [
+          "王先生（阿萌）"
+        ],
+        "repairReason": "恢复王先生（阿萌）独立 10 课时排课"
       },
       {
         "id": "1880d61a-905f-4886-bf16-3733b0c31bf5",
@@ -214,7 +298,7 @@
         "locationType": "own",
         "notes": "飞书排课表同步 8.17-8.23 R43C12",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -246,7 +330,7 @@
           "王先生（阿萌）"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "4号场"
@@ -302,7 +386,7 @@
         "locationType": "own",
         "notes": "飞书排课表同步 8.17-8.23 R73C12",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -334,13 +418,13 @@
           "王先生（阿萌）"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "4号场"
       },
       {
-        "id": "59ec39f0-d9ea-401a-8968-80fa175db8f6",
+        "id": "29a18ad9-30bd-445e-abaa-0acdba0477ce",
         "absentStudentIds": [],
         "actualStudentCount": 1,
         "allowLinkedVenueConflict": false,
@@ -358,13 +442,11 @@
         "coachLateHandledBy": "",
         "confirmStatus": "待确认",
         "courseDisplayName": "成人私教【正式】",
-        "courseReminderCrossCampus": false,
-        "courseReminderSentAt": "2026-08-20T03:49:39.661Z",
         "courseType": "私教课",
         "courseTypeLevel2": "成人私教课",
-        "createdAt": "2026-08-13T10:53:12.565Z",
+        "createdAt": "2026-08-20T10:21:13.923Z",
         "createdBy": "飞书同步",
-        "endTime": "2026-08-20 15:00",
+        "endTime": "2026-08-26 16:00",
         "entitlementId": "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814",
         "entitlementIds": [
           "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814"
@@ -376,8 +458,6 @@
         "externalCourtName": "",
         "externalNotes": "",
         "externalVenueName": "",
-        "feishuCoachDailyDigestSentAt": "2026-08-19T12:32:48.531Z",
-        "feishuCoachDailyDigestSentDate": "2026-08-20",
         "fieldFeeAmount": 0,
         "fieldFeeNote": "",
         "fieldFeePayMethod": "",
@@ -388,9 +468,9 @@
         "lessonCount": 1,
         "linkedScheduleGroupId": "",
         "locationType": "own",
-        "notes": "飞书排课表同步 8.17-8.23 R99C12",
+        "notes": "飞书排课表同步 8.24-8.30 R73C12",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -400,7 +480,6 @@
         "paidAmount": 0,
         "payMethod": "",
         "purchaseId": "repair-20260813-purchase-wang-ameng-1v2-nonprime-20260814",
-        "repairReason": "恢复王先生（阿萌）独立 10 课时排课",
         "requiresFieldFee": false,
         "scheduleSource": "feishu-sheet",
         "settlementType": "package",
@@ -411,21 +490,106 @@
         "sourceLeadName": "",
         "specialTopic": "",
         "standardCourseType": "成人私教【正式】",
-        "startTime": "2026-08-20 14:00",
+        "startTime": "2026-08-26 15:00",
         "status": "已排课",
-        "studentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
         "studentIds": [
           "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
         ],
         "studentName": "王先生（阿萌）",
+        "timeBand": "",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
+        "usedByStudentId": "",
+        "usedByStudentName": "",
+        "venue": "3号场",
+        "studentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
         "studentNames": [
           "王先生（阿萌）"
         ],
+        "repairReason": "恢复王先生（阿萌）独立 10 课时排课"
+      },
+      {
+        "id": "8be000be-1e17-4c3e-bd82-9eea41688b7c",
+        "absentStudentIds": [],
+        "actualStudentCount": 1,
+        "allowLinkedVenueConflict": false,
+        "authorizationId": "",
+        "authorizedStudentId": "",
+        "authorizedStudentName": "",
+        "batchId": "batch-repair-confirmed-student-identity-chain-20260820",
+        "campus": "shunyi_mapo",
+        "cancelReason": "",
+        "coach": "林铭教练",
+        "coachId": "",
+        "coachLateFieldFeeAmount": 0,
+        "coachLateFree": false,
+        "coachLateHandledAt": "",
+        "coachLateHandledBy": "",
+        "confirmStatus": "待确认",
+        "courseDisplayName": "成人私教【正式】",
+        "courseType": "私教课",
+        "courseTypeLevel2": "成人私教课",
+        "createdAt": "2026-08-21T00:38:22.138Z",
+        "createdBy": "飞书同步",
+        "endTime": "2026-08-28 15:00",
+        "entitlementId": "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814",
+        "entitlementIds": [
+          "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814"
+        ],
+        "expectedStudentIds": [
+          "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+        ],
+        "experienceType": "",
+        "externalCourtName": "",
+        "externalNotes": "",
+        "externalVenueName": "",
+        "fieldFeeAmount": 0,
+        "fieldFeeNote": "",
+        "fieldFeePayMethod": "",
+        "fieldFeeReason": "",
+        "isTrial": false,
+        "lateMinutes": 0,
+        "lateReason": "",
+        "lessonCount": 1,
+        "linkedScheduleGroupId": "",
+        "locationType": "own",
+        "notes": "飞书排课表同步 8.24-8.30 R127C12",
+        "notifyStatus": "未通知",
+        "operationAt": "2026-08-21T11:22:14.030Z",
+        "operationBy": "Codex",
+        "operationId": "repair-confirmed-student-identity-chain-20260820",
+        "operationType": "repair-confirmed-student-identity-chain-20260820",
+        "packageName": "1v2私教课 · 10课时 · 非黄金",
+        "packageOwnerStudentId": "",
+        "packageOwnerStudentName": "",
+        "paidAmount": 0,
+        "payMethod": "",
+        "purchaseId": "repair-20260813-purchase-wang-ameng-1v2-nonprime-20260814",
+        "requiresFieldFee": false,
+        "scheduleSource": "feishu-sheet",
+        "settlementType": "package",
+        "skillLevelMax": "",
+        "skillLevelMin": "",
+        "smallClassType": "",
+        "sourceLeadId": "",
+        "sourceLeadName": "",
+        "specialTopic": "",
+        "standardCourseType": "成人私教【正式】",
+        "startTime": "2026-08-28 14:00",
+        "status": "已排课",
+        "studentIds": [
+          "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+        ],
+        "studentName": "王先生（阿萌）",
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
-        "venue": "4号场"
+        "venue": "4号场",
+        "studentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
+        "studentNames": [
+          "王先生（阿萌）"
+        ],
+        "repairReason": "恢复王先生（阿萌）独立 10 课时排课"
       },
       {
         "id": "9cda9e18-4dd6-41d1-8382-024b447b0903",
@@ -444,7 +608,7 @@
         "coachLateFree": false,
         "coachLateHandledAt": "",
         "coachLateHandledBy": "",
-        "confirmStatus": "待确认",
+        "confirmStatus": "",
         "courseDisplayName": "成人私教【正式】",
         "courseType": "私教课",
         "courseTypeLevel2": "成人私教课",
@@ -472,9 +636,9 @@
         "lessonCount": 1,
         "linkedScheduleGroupId": "",
         "locationType": "own",
-        "notes": "课时编号自查：飞书括号编号和系统进度不一致，已按系统可扣课包继续同步；王先生（阿萌）：飞书第7节，系统下一节第9节，课包「1v2私教课 · 10课时 · 非黄金」；飞书排课表同步 8.24-8.30 R17C12",
-        "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "notes": "飞书排课表同步 8.24-8.30 R17C12",
+        "notifyStatus": "",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -506,13 +670,13 @@
           "王先生（阿萌）"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "3号场"
       },
       {
-        "id": "c73e9448-27d1-4053-a0a8-9b3acb5c546e",
+        "id": "bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
         "absentStudentIds": [],
         "actualStudentCount": 1,
         "allowLinkedVenueConflict": false,
@@ -532,9 +696,9 @@
         "courseDisplayName": "成人私教【正式】",
         "courseType": "私教课",
         "courseTypeLevel2": "成人私教课",
-        "createdAt": "2026-08-19T00:39:29.321Z",
+        "createdAt": "2026-08-21T00:38:21.632Z",
         "createdBy": "飞书同步",
-        "endTime": "2026-08-25 15:00",
+        "endTime": "2026-08-27 16:00",
         "entitlementId": "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814",
         "entitlementIds": [
           "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814"
@@ -556,9 +720,9 @@
         "lessonCount": 1,
         "linkedScheduleGroupId": "",
         "locationType": "own",
-        "notes": "课时编号自查：飞书括号编号和系统进度不一致，已按系统可扣课包继续同步；王先生（阿萌）：飞书第8节，系统下一节第10节，课包「1v2私教课 · 10课时 · 非黄金」；飞书排课表同步 8.24-8.30 R43C12",
+        "notes": "飞书排课表同步 8.24-8.30 R101C12",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -568,7 +732,6 @@
         "paidAmount": 0,
         "payMethod": "",
         "purchaseId": "repair-20260813-purchase-wang-ameng-1v2-nonprime-20260814",
-        "repairReason": "恢复王先生（阿萌）独立 10 课时排课",
         "requiresFieldFee": false,
         "scheduleSource": "feishu-sheet",
         "settlementType": "package",
@@ -579,21 +742,22 @@
         "sourceLeadName": "",
         "specialTopic": "",
         "standardCourseType": "成人私教【正式】",
-        "startTime": "2026-08-25 14:00",
+        "startTime": "2026-08-27 15:00",
         "status": "已排课",
-        "studentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
         "studentIds": [
           "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
         ],
         "studentName": "王先生（阿萌）",
+        "timeBand": "",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
+        "usedByStudentId": "",
+        "usedByStudentName": "",
+        "venue": "4号场",
+        "studentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
         "studentNames": [
           "王先生（阿萌）"
         ],
-        "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
-        "usedByStudentId": "",
-        "usedByStudentName": "",
-        "venue": "3号场"
+        "repairReason": "恢复王先生（阿萌）独立 10 课时排课"
       },
       {
         "id": "cd6491eb-4fd5-459f-9fb3-87258d46db52",
@@ -646,7 +810,7 @@
         "locationType": "own",
         "notes": "飞书排课表同步 8.17-8.23 R17C12",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -678,7 +842,7 @@
           "王先生（阿萌）"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "4号场"
@@ -700,8 +864,10 @@
         "coachLateFree": false,
         "coachLateHandledAt": "",
         "coachLateHandledBy": "",
-        "confirmStatus": "待确认",
+        "confirmStatus": "",
         "courseDisplayName": "成人私教【正式】",
+        "courseReminderCrossCampus": false,
+        "courseReminderSentAt": "2026-08-21T05:04:59.762Z",
         "courseType": "私教课",
         "courseTypeLevel2": "成人私教课",
         "createdAt": "2026-08-13T10:53:16.516Z",
@@ -718,6 +884,8 @@
         "externalCourtName": "",
         "externalNotes": "",
         "externalVenueName": "",
+        "feishuCoachDailyDigestSentAt": "2026-08-20T12:34:33.708Z",
+        "feishuCoachDailyDigestSentDate": "2026-08-21",
         "fieldFeeAmount": 0,
         "fieldFeeNote": "",
         "fieldFeePayMethod": "",
@@ -728,9 +896,9 @@
         "lessonCount": 1,
         "linkedScheduleGroupId": "",
         "locationType": "own",
-        "notes": "飞书排课表同步 8.17-8.23 R129C12",
-        "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "notes": "飞书排课表同步 8.17-8.23（当前周） R129C12",
+        "notifyStatus": "",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -762,7 +930,7 @@
           "王先生（阿萌）"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "4号场"
@@ -791,7 +959,7 @@
         "lessonCount": 1,
         "maxStudents": 2,
         "notes": "飞书确认补建：王先生 1v2 私教，学员只写王先生（阿萌），实际自带同伴",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -814,7 +982,7 @@
         "studentNames": [
           "王先生（阿萌）"
         ],
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "venue": "4号场"
       },
       {
@@ -870,7 +1038,7 @@
         "locationType": "own",
         "notes": "课时编号自查：飞书括号编号和系统进度不一致，已按系统可扣课包继续同步；王先生（阿萌）：飞书第1节，系统下一节第2节，课包「1v2私教课 · 10课时 · 非黄金」；飞书排课表同步 8.10-8.16（当前周） R179C20",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -902,7 +1070,7 @@
           "王先生（nono）"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "1号场"
@@ -929,7 +1097,7 @@
         "isTrial": false,
         "lessonCount": 1,
         "notes": "用户确认：2026-08-18 11:00 岳克舟/王先生为 1 号场；飞书排课表同步 8.17-8.23 R37C20",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -951,7 +1119,7 @@
         "studentNames": [
           "王先生（nono）"
         ],
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "venue": "1号场"
       },
       {
@@ -997,7 +1165,7 @@
         "locationType": "own",
         "notes": "",
         "notifyStatus": "",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1024,7 +1192,7 @@
           "曦曦🐳"
         ],
         "timeBand": "非黄金时段",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentName": "",
         "venue": "3号场",
         "venueId": "",
@@ -1081,7 +1249,7 @@
         "locationType": "own",
         "notes": "飞书排课表同步 8.10-8.16（当前周） R125C20",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1113,7 +1281,7 @@
           "曦曦🐳"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "4号场"
@@ -1161,7 +1329,7 @@
         "locationType": "own",
         "notes": "",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1188,7 +1356,7 @@
           "曦曦🐳"
         ],
         "timeBand": "非黄金时段",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentName": "",
         "venue": "3号场",
         "venueId": "venue-1782359262159-2",
@@ -1238,7 +1406,7 @@
         "locationType": "own",
         "notes": "",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1268,7 +1436,7 @@
           "曦曦🐳"
         ],
         "timeBand": "非黄金时段",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentName": "",
         "venue": "3号场",
         "venueId": "venue-1782359262159-2",
@@ -1325,7 +1493,7 @@
         "locationType": "own",
         "notes": "飞书排课表同步 8.10-8.16 R13C20",
         "notifyStatus": "未通知",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1357,7 +1525,7 @@
           "曦曦🐳"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "",
         "usedByStudentName": "",
         "venue": "2号场"
@@ -1411,7 +1579,7 @@
         "locationType": "own",
         "notes": "飞书排课表同步 8.3-8.9（当前周） R97C20",
         "notifyStatus": "",
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1441,7 +1609,7 @@
           "曦曦🐳"
         ],
         "timeBand": "",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentName": "",
         "venue": "3号场"
       }
@@ -1485,7 +1653,7 @@
         ],
         "experienceType": "私教体验课",
         "finalAmount": 239,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1514,7 +1682,7 @@
         "studentName": "王先生（nono）",
         "studentPhone": "",
         "systemAmount": 239,
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usageEndDate": "",
         "usageStartDate": "2026-03-25"
       },
@@ -1527,7 +1695,7 @@
         "createdAt": "2026-08-13T06:28:23.219Z",
         "finalAmount": 4500,
         "maxStudents": 2,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1551,7 +1719,7 @@
         "studentName": "王先生（阿萌）",
         "systemAmount": 5000,
         "totalLessons": 10,
-        "updatedAt": "2026-08-20T04:15:34.235Z"
+        "updatedAt": "2026-08-21T11:22:14.030Z"
       },
       {
         "id": "repair-confirmed-student-identity-chain-20260820-purchase-wang-nono-1v1-prime-10",
@@ -1562,7 +1730,7 @@
         "createdAt": "2026-08-13T06:28:23.219Z",
         "finalAmount": 4500,
         "maxStudents": 2,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1586,7 +1754,7 @@
         "studentName": "王先生（nono）",
         "systemAmount": 5000,
         "totalLessons": 10,
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "sourceLeadId": "lead-manual-x9icr6"
       }
     ],
@@ -1627,7 +1795,7 @@
         ],
         "experienceType": "私教体验课",
         "maxStudents": 1,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1644,7 +1812,7 @@
         "studentName": "王先生（nono）",
         "timeBand": "全天",
         "totalLessons": 1,
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usageEndDate": "",
         "usageStartDate": "2026-03-25",
         "usedLessons": 1,
@@ -1657,7 +1825,7 @@
         "courseType": "私教课",
         "createdAt": "2026-08-13T06:28:23.219Z",
         "maxStudents": 2,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1673,7 +1841,7 @@
         "studentName": "王先生（阿萌）",
         "timeBand": "非黄金时段",
         "totalLessons": 10,
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedLessons": 8
       },
       {
@@ -1682,7 +1850,7 @@
         "courseType": "私教课",
         "createdAt": "2026-08-13T06:28:23.219Z",
         "maxStudents": 2,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1698,7 +1866,7 @@
         "studentName": "王先生（nono）",
         "timeBand": "非黄金时段",
         "totalLessons": 10,
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedLessons": 2,
         "sourceLeadId": "lead-manual-x9icr6"
       }
@@ -1712,7 +1880,7 @@
         "createdAt": "2026-08-14T10:47:59.578Z",
         "entitlementId": "3a0fed7f-2869-4960-8a52-9df6d36089ee",
         "lessonDelta": -1,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1726,7 +1894,7 @@
         "scheduleId": "b87a0269-d24e-4b7e-a52a-8e39bda51671",
         "studentId": "student-from-lead-manual-x9icr6",
         "studentName": "王先生（nono）",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
         "usedByStudentName": ""
       },
@@ -1738,7 +1906,7 @@
         "createdAt": "2026-08-15T10:11:48.448Z",
         "entitlementId": "repair-confirmed-student-identity-chain-20260820-entitlement-wang-nono-1v1-prime-10",
         "lessonDelta": -1,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1752,7 +1920,7 @@
         "scheduleId": "f9c52aa7-01c4-4f7b-a90f-391c56ead3d7",
         "studentId": "student-from-lead-manual-x9icr6",
         "studentName": "王先生（nono）",
-        "updatedAt": "2026-08-20T04:15:34.235Z",
+        "updatedAt": "2026-08-21T11:22:14.030Z",
         "usedByStudentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
         "usedByStudentName": ""
       },
@@ -1763,7 +1931,7 @@
         "createdAt": "2026-08-18T03:57:47.773Z",
         "entitlementId": "repair-confirmed-student-identity-chain-20260820-entitlement-wang-nono-1v1-prime-10",
         "lessonDelta": -1,
-        "operationAt": "2026-08-20T04:15:34.235Z",
+        "operationAt": "2026-08-21T11:22:14.030Z",
         "operationBy": "Codex",
         "operationId": "repair-confirmed-student-identity-chain-20260820",
         "operationType": "repair-confirmed-student-identity-chain-20260820",
@@ -1776,10 +1944,16 @@
         "scheduleId": "repair-20260818-schedule-wang-ameng-20260818-1100",
         "studentId": "student-from-lead-manual-x9icr6",
         "studentName": "王先生（nono）",
-        "updatedAt": "2026-08-20T04:15:34.235Z"
+        "updatedAt": "2026-08-21T11:22:14.030Z"
       }
     ],
-    "deleteRows": [],
+    "deleteRows": [
+      {
+        "table": "ft_student_teaching_summary",
+        "id": "76616540-bbb9-409b-86e0-10b0fefccd2b",
+        "reason": "删除文大妞空详情缓存，详情回源读取真实排课和扣课流水"
+      }
+    ],
     "conflictIndex": {
       "staleConflictIndexIds": [
         "2026-07-16|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|8d2da34f-e950-4f86-a18c-896f69fede47",
@@ -1821,18 +1995,24 @@
         "2026-08-19|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|21239414-c981-4581-8c15-34edaf1ddc42",
         "2026-08-19|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|21239414-c981-4581-8c15-34edaf1ddc42",
         "2026-08-19|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|21239414-c981-4581-8c15-34edaf1ddc42",
-        "2026-08-20|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|59ec39f0-d9ea-401a-8968-80fa175db8f6",
-        "2026-08-20|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|59ec39f0-d9ea-401a-8968-80fa175db8f6",
-        "2026-08-20|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|59ec39f0-d9ea-401a-8968-80fa175db8f6",
         "2026-08-21|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|fb1835f4-4bb5-42e3-b681-752dcf437939",
         "2026-08-21|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|fb1835f4-4bb5-42e3-b681-752dcf437939",
         "2026-08-21|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|fb1835f4-4bb5-42e3-b681-752dcf437939",
         "2026-08-24|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|9cda9e18-4dd6-41d1-8382-024b447b0903",
         "2026-08-24|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|9cda9e18-4dd6-41d1-8382-024b447b0903",
         "2026-08-24|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|9cda9e18-4dd6-41d1-8382-024b447b0903",
-        "2026-08-25|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|c73e9448-27d1-4053-a0a8-9b3acb5c546e",
-        "2026-08-25|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|c73e9448-27d1-4053-a0a8-9b3acb5c546e",
-        "2026-08-25|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|c73e9448-27d1-4053-a0a8-9b3acb5c546e"
+        "2026-08-25|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|0c8a3af2-ba53-4768-adba-9567b563cbb8",
+        "2026-08-25|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|0c8a3af2-ba53-4768-adba-9567b563cbb8",
+        "2026-08-25|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|0c8a3af2-ba53-4768-adba-9567b563cbb8",
+        "2026-08-26|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|29a18ad9-30bd-445e-abaa-0acdba0477ce",
+        "2026-08-26|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|29a18ad9-30bd-445e-abaa-0acdba0477ce",
+        "2026-08-26|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|29a18ad9-30bd-445e-abaa-0acdba0477ce",
+        "2026-08-27|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+        "2026-08-27|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+        "2026-08-27|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+        "2026-08-28|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|8be000be-1e17-4c3e-bd82-9eea41688b7c",
+        "2026-08-28|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|8be000be-1e17-4c3e-bd82-9eea41688b7c",
+        "2026-08-28|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|8be000be-1e17-4c3e-bd82-9eea41688b7c"
       ],
       "nextConflictIndexRows": [
         {
@@ -1852,7 +2032,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-15|student|student-from-lead-manual-x9icr6|b87a0269-d24e-4b7e-a52a-8e39bda51671",
@@ -1871,7 +2051,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-15|venue|shunyi_mapo%7C2%E5%8F%B7%E5%9C%BA|b87a0269-d24e-4b7e-a52a-8e39bda51671",
@@ -1890,7 +2070,64 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
+        },
+        {
+          "id": "2026-08-25|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|0c8a3af2-ba53-4768-adba-9567b563cbb8",
+          "scheduleId": "0c8a3af2-ba53-4768-adba-9567b563cbb8",
+          "indexDate": "2026-08-25",
+          "indexType": "coach",
+          "indexKey": "林铭教练",
+          "startTime": "2026-08-25 15:00",
+          "endTime": "2026-08-25 16:00",
+          "coach": "林铭教练",
+          "studentIds": [
+            "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+          ],
+          "campus": "shunyi_mapo",
+          "venue": "3号场",
+          "allowLinkedVenueConflict": false,
+          "linkedScheduleGroupId": "",
+          "status": "已排课",
+          "updatedAt": "2026-08-21T11:22:14.037Z"
+        },
+        {
+          "id": "2026-08-25|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|0c8a3af2-ba53-4768-adba-9567b563cbb8",
+          "scheduleId": "0c8a3af2-ba53-4768-adba-9567b563cbb8",
+          "indexDate": "2026-08-25",
+          "indexType": "student",
+          "indexKey": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
+          "startTime": "2026-08-25 15:00",
+          "endTime": "2026-08-25 16:00",
+          "coach": "林铭教练",
+          "studentIds": [
+            "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+          ],
+          "campus": "shunyi_mapo",
+          "venue": "3号场",
+          "allowLinkedVenueConflict": false,
+          "linkedScheduleGroupId": "",
+          "status": "已排课",
+          "updatedAt": "2026-08-21T11:22:14.037Z"
+        },
+        {
+          "id": "2026-08-25|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|0c8a3af2-ba53-4768-adba-9567b563cbb8",
+          "scheduleId": "0c8a3af2-ba53-4768-adba-9567b563cbb8",
+          "indexDate": "2026-08-25",
+          "indexType": "venue",
+          "indexKey": "shunyi_mapo|3号场",
+          "startTime": "2026-08-25 15:00",
+          "endTime": "2026-08-25 16:00",
+          "coach": "林铭教练",
+          "studentIds": [
+            "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+          ],
+          "campus": "shunyi_mapo",
+          "venue": "3号场",
+          "allowLinkedVenueConflict": false,
+          "linkedScheduleGroupId": "",
+          "status": "已排课",
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-18|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|1880d61a-905f-4886-bf16-3733b0c31bf5",
@@ -1909,7 +2146,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-18|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|1880d61a-905f-4886-bf16-3733b0c31bf5",
@@ -1928,7 +2165,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-18|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|1880d61a-905f-4886-bf16-3733b0c31bf5",
@@ -1947,7 +2184,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-19|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|21239414-c981-4581-8c15-34edaf1ddc42",
@@ -1966,7 +2203,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-19|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|21239414-c981-4581-8c15-34edaf1ddc42",
@@ -1985,7 +2222,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-19|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|21239414-c981-4581-8c15-34edaf1ddc42",
@@ -2004,54 +2241,73 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
-          "id": "2026-08-20|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|59ec39f0-d9ea-401a-8968-80fa175db8f6",
-          "scheduleId": "59ec39f0-d9ea-401a-8968-80fa175db8f6",
-          "indexDate": "2026-08-20",
+          "id": "2026-08-26|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|29a18ad9-30bd-445e-abaa-0acdba0477ce",
+          "scheduleId": "29a18ad9-30bd-445e-abaa-0acdba0477ce",
+          "indexDate": "2026-08-26",
           "indexType": "coach",
           "indexKey": "林铭教练",
-          "startTime": "2026-08-20 14:00",
-          "endTime": "2026-08-20 15:00",
+          "startTime": "2026-08-26 15:00",
+          "endTime": "2026-08-26 16:00",
           "coach": "林铭教练",
           "studentIds": [
             "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
           ],
           "campus": "shunyi_mapo",
-          "venue": "4号场",
+          "venue": "3号场",
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
-          "id": "2026-08-20|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|59ec39f0-d9ea-401a-8968-80fa175db8f6",
-          "scheduleId": "59ec39f0-d9ea-401a-8968-80fa175db8f6",
-          "indexDate": "2026-08-20",
+          "id": "2026-08-26|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|29a18ad9-30bd-445e-abaa-0acdba0477ce",
+          "scheduleId": "29a18ad9-30bd-445e-abaa-0acdba0477ce",
+          "indexDate": "2026-08-26",
           "indexType": "student",
           "indexKey": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
-          "startTime": "2026-08-20 14:00",
-          "endTime": "2026-08-20 15:00",
+          "startTime": "2026-08-26 15:00",
+          "endTime": "2026-08-26 16:00",
           "coach": "林铭教练",
           "studentIds": [
             "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
           ],
           "campus": "shunyi_mapo",
-          "venue": "4号场",
+          "venue": "3号场",
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
-          "id": "2026-08-20|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|59ec39f0-d9ea-401a-8968-80fa175db8f6",
-          "scheduleId": "59ec39f0-d9ea-401a-8968-80fa175db8f6",
-          "indexDate": "2026-08-20",
+          "id": "2026-08-26|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|29a18ad9-30bd-445e-abaa-0acdba0477ce",
+          "scheduleId": "29a18ad9-30bd-445e-abaa-0acdba0477ce",
+          "indexDate": "2026-08-26",
           "indexType": "venue",
-          "indexKey": "shunyi_mapo|4号场",
-          "startTime": "2026-08-20 14:00",
-          "endTime": "2026-08-20 15:00",
+          "indexKey": "shunyi_mapo|3号场",
+          "startTime": "2026-08-26 15:00",
+          "endTime": "2026-08-26 16:00",
+          "coach": "林铭教练",
+          "studentIds": [
+            "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+          ],
+          "campus": "shunyi_mapo",
+          "venue": "3号场",
+          "allowLinkedVenueConflict": false,
+          "linkedScheduleGroupId": "",
+          "status": "已排课",
+          "updatedAt": "2026-08-21T11:22:14.037Z"
+        },
+        {
+          "id": "2026-08-28|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|8be000be-1e17-4c3e-bd82-9eea41688b7c",
+          "scheduleId": "8be000be-1e17-4c3e-bd82-9eea41688b7c",
+          "indexDate": "2026-08-28",
+          "indexType": "coach",
+          "indexKey": "林铭教练",
+          "startTime": "2026-08-28 14:00",
+          "endTime": "2026-08-28 15:00",
           "coach": "林铭教练",
           "studentIds": [
             "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
@@ -2061,7 +2317,45 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
+        },
+        {
+          "id": "2026-08-28|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|8be000be-1e17-4c3e-bd82-9eea41688b7c",
+          "scheduleId": "8be000be-1e17-4c3e-bd82-9eea41688b7c",
+          "indexDate": "2026-08-28",
+          "indexType": "student",
+          "indexKey": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
+          "startTime": "2026-08-28 14:00",
+          "endTime": "2026-08-28 15:00",
+          "coach": "林铭教练",
+          "studentIds": [
+            "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+          ],
+          "campus": "shunyi_mapo",
+          "venue": "4号场",
+          "allowLinkedVenueConflict": false,
+          "linkedScheduleGroupId": "",
+          "status": "已排课",
+          "updatedAt": "2026-08-21T11:22:14.037Z"
+        },
+        {
+          "id": "2026-08-28|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|8be000be-1e17-4c3e-bd82-9eea41688b7c",
+          "scheduleId": "8be000be-1e17-4c3e-bd82-9eea41688b7c",
+          "indexDate": "2026-08-28",
+          "indexType": "venue",
+          "indexKey": "shunyi_mapo|4号场",
+          "startTime": "2026-08-28 14:00",
+          "endTime": "2026-08-28 15:00",
+          "coach": "林铭教练",
+          "studentIds": [
+            "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
+          ],
+          "campus": "shunyi_mapo",
+          "venue": "4号场",
+          "allowLinkedVenueConflict": false,
+          "linkedScheduleGroupId": "",
+          "status": "已排课",
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-24|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|9cda9e18-4dd6-41d1-8382-024b447b0903",
@@ -2080,7 +2374,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-24|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|9cda9e18-4dd6-41d1-8382-024b447b0903",
@@ -2099,7 +2393,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-24|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|9cda9e18-4dd6-41d1-8382-024b447b0903",
@@ -2118,64 +2412,64 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
-          "id": "2026-08-25|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|c73e9448-27d1-4053-a0a8-9b3acb5c546e",
-          "scheduleId": "c73e9448-27d1-4053-a0a8-9b3acb5c546e",
-          "indexDate": "2026-08-25",
+          "id": "2026-08-27|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+          "scheduleId": "bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+          "indexDate": "2026-08-27",
           "indexType": "coach",
           "indexKey": "林铭教练",
-          "startTime": "2026-08-25 14:00",
-          "endTime": "2026-08-25 15:00",
+          "startTime": "2026-08-27 15:00",
+          "endTime": "2026-08-27 16:00",
           "coach": "林铭教练",
           "studentIds": [
             "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
           ],
           "campus": "shunyi_mapo",
-          "venue": "3号场",
+          "venue": "4号场",
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
-          "id": "2026-08-25|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|c73e9448-27d1-4053-a0a8-9b3acb5c546e",
-          "scheduleId": "c73e9448-27d1-4053-a0a8-9b3acb5c546e",
-          "indexDate": "2026-08-25",
+          "id": "2026-08-27|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+          "scheduleId": "bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+          "indexDate": "2026-08-27",
           "indexType": "student",
           "indexKey": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
-          "startTime": "2026-08-25 14:00",
-          "endTime": "2026-08-25 15:00",
+          "startTime": "2026-08-27 15:00",
+          "endTime": "2026-08-27 16:00",
           "coach": "林铭教练",
           "studentIds": [
             "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
           ],
           "campus": "shunyi_mapo",
-          "venue": "3号场",
+          "venue": "4号场",
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
-          "id": "2026-08-25|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|c73e9448-27d1-4053-a0a8-9b3acb5c546e",
-          "scheduleId": "c73e9448-27d1-4053-a0a8-9b3acb5c546e",
-          "indexDate": "2026-08-25",
+          "id": "2026-08-27|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+          "scheduleId": "bbd4a218-b623-4dd8-ba96-9a30cc50cfc6",
+          "indexDate": "2026-08-27",
           "indexType": "venue",
-          "indexKey": "shunyi_mapo|3号场",
-          "startTime": "2026-08-25 14:00",
-          "endTime": "2026-08-25 15:00",
+          "indexKey": "shunyi_mapo|4号场",
+          "startTime": "2026-08-27 15:00",
+          "endTime": "2026-08-27 16:00",
           "coach": "林铭教练",
           "studentIds": [
             "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c"
           ],
           "campus": "shunyi_mapo",
-          "venue": "3号场",
+          "venue": "4号场",
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-17|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|cd6491eb-4fd5-459f-9fb3-87258d46db52",
@@ -2194,7 +2488,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-17|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|cd6491eb-4fd5-459f-9fb3-87258d46db52",
@@ -2213,7 +2507,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-17|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|cd6491eb-4fd5-459f-9fb3-87258d46db52",
@@ -2232,7 +2526,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-21|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|fb1835f4-4bb5-42e3-b681-752dcf437939",
@@ -2251,7 +2545,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-21|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|fb1835f4-4bb5-42e3-b681-752dcf437939",
@@ -2270,7 +2564,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-21|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|fb1835f4-4bb5-42e3-b681-752dcf437939",
@@ -2289,7 +2583,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-14|coach|%E6%9E%97%E9%93%AD%E6%95%99%E7%BB%83|repair-20260813-schedule-wang-ameng-20260814-1500",
@@ -2308,7 +2602,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-14|student|9057a99b-b7a5-4c0d-821f-3cb3b8adf67c|repair-20260813-schedule-wang-ameng-20260814-1500",
@@ -2327,7 +2621,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-14|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|repair-20260813-schedule-wang-ameng-20260814-1500",
@@ -2346,7 +2640,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.037Z"
         },
         {
           "id": "2026-08-16|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|f9c52aa7-01c4-4f7b-a90f-391c56ead3d7",
@@ -2365,7 +2659,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-16|student|student-from-lead-manual-x9icr6|f9c52aa7-01c4-4f7b-a90f-391c56ead3d7",
@@ -2384,7 +2678,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-16|venue|shunyi_mapo%7C1%E5%8F%B7%E5%9C%BA|f9c52aa7-01c4-4f7b-a90f-391c56ead3d7",
@@ -2403,7 +2697,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-18|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|repair-20260818-schedule-wang-ameng-20260818-1100",
@@ -2422,7 +2716,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-18|student|student-from-lead-manual-x9icr6|repair-20260818-schedule-wang-ameng-20260818-1100",
@@ -2441,7 +2735,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-18|venue|shunyi_mapo%7C1%E5%8F%B7%E5%9C%BA|repair-20260818-schedule-wang-ameng-20260818-1100",
@@ -2460,7 +2754,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-20|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|2516bc29-8806-41a6-9308-f6aefdaa353f",
@@ -2479,7 +2773,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-20|student|2b65be17-4190-4b2f-9dfe-5988d4652cc6|2516bc29-8806-41a6-9308-f6aefdaa353f",
@@ -2498,7 +2792,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-20|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|2516bc29-8806-41a6-9308-f6aefdaa353f",
@@ -2517,7 +2811,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-14|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|740c6c44-f186-4145-a850-1f54298e4e2d",
@@ -2536,7 +2830,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-14|student|2b65be17-4190-4b2f-9dfe-5988d4652cc6|740c6c44-f186-4145-a850-1f54298e4e2d",
@@ -2555,7 +2849,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-14|venue|shunyi_mapo%7C4%E5%8F%B7%E5%9C%BA|740c6c44-f186-4145-a850-1f54298e4e2d",
@@ -2574,7 +2868,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-16|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|8d2da34f-e950-4f86-a18c-896f69fede47",
@@ -2593,7 +2887,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-16|student|2b65be17-4190-4b2f-9dfe-5988d4652cc6|8d2da34f-e950-4f86-a18c-896f69fede47",
@@ -2612,7 +2906,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-16|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|8d2da34f-e950-4f86-a18c-896f69fede47",
@@ -2631,7 +2925,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-30|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|996d2476-0e71-4b7d-97ff-ff66ad382a83",
@@ -2650,7 +2944,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-30|student|2b65be17-4190-4b2f-9dfe-5988d4652cc6|996d2476-0e71-4b7d-97ff-ff66ad382a83",
@@ -2669,7 +2963,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-07-30|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|996d2476-0e71-4b7d-97ff-ff66ad382a83",
@@ -2688,7 +2982,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-10|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|9a379a8c-3638-43a7-a558-e72bb9485ad0",
@@ -2707,7 +3001,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-10|student|2b65be17-4190-4b2f-9dfe-5988d4652cc6|9a379a8c-3638-43a7-a558-e72bb9485ad0",
@@ -2726,7 +3020,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-10|venue|shunyi_mapo%7C2%E5%8F%B7%E5%9C%BA|9a379a8c-3638-43a7-a558-e72bb9485ad0",
@@ -2745,7 +3039,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-06|coach|%E5%B2%B3%E5%85%8B%E8%88%9F%E6%95%99%E7%BB%83|deeb1351-58b1-4c0d-92af-05e960644e19",
@@ -2764,7 +3058,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-06|student|2b65be17-4190-4b2f-9dfe-5988d4652cc6|deeb1351-58b1-4c0d-92af-05e960644e19",
@@ -2783,7 +3077,7 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         },
         {
           "id": "2026-08-06|venue|shunyi_mapo%7C3%E5%8F%B7%E5%9C%BA|deeb1351-58b1-4c0d-92af-05e960644e19",
@@ -2802,27 +3096,19 @@
           "allowLinkedVenueConflict": false,
           "linkedScheduleGroupId": "",
           "status": "已排课",
-          "updatedAt": "2026-08-20T04:15:34.243Z"
+          "updatedAt": "2026-08-21T11:22:14.038Z"
         }
       ]
     },
     "activeEntitlementIndex": {
       "putRows": [
         {
-          "id": "2b65be17-4190-4b2f-9dfe-5988d4652cc6",
-          "studentId": "2b65be17-4190-4b2f-9dfe-5988d4652cc6",
-          "entitlementIds": [
-            "9cb986a8-35f5-4724-bd57-908084f838e1"
-          ],
-          "updatedAt": "2026-08-20T04:15:34.235Z"
-        },
-        {
           "id": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
           "studentId": "9057a99b-b7a5-4c0d-821f-3cb3b8adf67c",
           "entitlementIds": [
             "repair-20260813-entitlement-wang-ameng-1v2-nonprime-20260814"
           ],
-          "updatedAt": "2026-08-20T04:15:34.235Z"
+          "updatedAt": "2026-08-21T11:22:14.030Z"
         },
         {
           "id": "student-from-lead-manual-x9icr6",
@@ -2830,7 +3116,7 @@
           "entitlementIds": [
             "repair-confirmed-student-identity-chain-20260820-entitlement-wang-nono-1v1-prime-10"
           ],
-          "updatedAt": "2026-08-20T04:15:34.235Z"
+          "updatedAt": "2026-08-21T11:22:14.030Z"
         }
       ],
       "deleteIds": [
@@ -2838,11 +3124,11 @@
       ]
     },
     "summary": {
-      "wangSchedules": 10,
-      "amengPackageSchedules": 8,
+      "wangSchedules": 12,
+      "amengPackageSchedules": 10,
       "nonoPackageSchedules": 2,
       "chenxiSchedules": 6,
-      "deleteRows": 0,
+      "deleteRows": 1,
       "blockers": 0,
       "amengName": "王先生（阿萌）",
       "xixiName": "曦曦🐳"

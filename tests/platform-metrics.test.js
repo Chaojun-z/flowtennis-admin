@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const { buildPlatformMetrics, teachingSummaryNeedsLessonFacts, TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
+const { buildPlatformMetrics, buildStudentTeachingSummaryRows, teachingSummaryNeedsLessonFacts, TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 const { buildOperationsMetrics } = require('../server/metrics/operations-metrics.js');
 
 const source = {
@@ -227,6 +227,27 @@ assert.deepStrictEqual(
   trialPackageStudent.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType]),
   [['ledger', '2026-08-02 10:00-11:00', '体验课']],
   'student drawer lesson records should include trial package consumption'
+);
+const trialPackageSummaryRow = buildStudentTeachingSummaryRows(trialPackagePlatform.customerLifecycleRows, {
+  leads: [],
+  students: [{ id: 'student-trial-package', name: '体验课包学员' }],
+  purchases: [
+    { id: 'purchase-trial-239', studentId: 'student-trial-package', packageName: '私教课体验课包', courseType: '体验课', packageLessons: 1, amountPaid: 239, status: 'active', purchaseDate: '2026-08-01' }
+  ],
+  entitlements: [
+    { id: 'ent-trial-239', studentId: 'student-trial-package', purchaseId: 'purchase-trial-239', packageName: '私教课体验课包', courseType: '体验课', totalLessons: 1, remainingLessons: 0, usedLessons: 1, status: 'depleted' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-trial-239', studentId: 'student-trial-package', entitlementId: 'ent-trial-239', purchaseId: 'purchase-trial-239', scheduleId: 'schedule-trial-239', lessonDelta: -1, relatedDate: '2026-08-02', reason: '体验课消耗' }
+  ],
+  schedule: [
+    { id: 'schedule-trial-239', studentId: 'student-trial-package', startTime: '2026-08-02 10:00:00', endTime: '2026-08-02 11:00:00', status: '已结束', courseType: '体验课', coach: '王教练', lessonCount: 1 }
+  ],
+  now: new Date('2026-08-10 00:00:00')
+}).find(row => row.studentId === 'student-trial-package');
+assert.ok(
+  trialPackageSummaryRow.detailLessonRecordRows.some(row => row.scheduleId === 'schedule-trial-239' && row.courseType === '体验课'),
+  'student teaching summary should keep attended trial lesson detail rows'
 );
 
 const directTrialLessonPlatform = buildPlatformMetrics({

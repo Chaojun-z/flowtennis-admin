@@ -2547,7 +2547,7 @@ function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOStrin
 function buildStudentTeachingSummaryRows(customerLifecycleRows = [], data = {}) {
   const now = data.now || new Date();
   const updatedAt = now instanceof Date ? now.toISOString() : text(now) || new Date().toISOString();
-  const views = buildTeachingStudentViews(customerLifecycleRows, { ...data, teachingStudentSummaryRows: [], includeTrialDetailsInFormalView: false });
+  const views = buildTeachingStudentViews(customerLifecycleRows, { ...data, teachingStudentSummaryRows: [] });
   return (views.historicalStudents || [])
     .map(row => teachingStudentSummarySnapshotRow({
       ...row,

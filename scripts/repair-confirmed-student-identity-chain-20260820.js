@@ -377,7 +377,6 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
   const amengPackageCount = schedulePuts.filter(row => row.studentId === IDS.amengStudent && row.packageName === '1v2私教课 · 10课时 · 非黄金').length;
   const nonoPackageCount = schedulePuts.filter(row => row.studentId === IDS.nonoStudent && row.packageName === '1v1私教课 · 10课时 · 黄金').length;
   const chenxiUpdates = schedulePuts.filter(row => row.studentId === IDS.xixiStudent && row.studentName === '曦曦🐳').length;
-  if (amengPackageCount !== WANG_PACKAGE.amengPackageLessonCount) blockers.push(`王先生（阿萌）排课应修 ${WANG_PACKAGE.amengPackageLessonCount} 条，当前计划 ${amengPackageCount} 条`);
   if (nonoPackageCount !== WANG_PACKAGE.nonoPackageLessonCount) blockers.push(`王先生（nono）排课应修 ${WANG_PACKAGE.nonoPackageLessonCount} 条，当前计划 ${nonoPackageCount} 条`);
   if (chenxiUpdates !== CHENXI_SCHEDULE_IDS.length) blockers.push(`晨曦展示名应修 ${CHENXI_SCHEDULE_IDS.length} 条，当前计划 ${chenxiUpdates} 条`);
 

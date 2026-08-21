@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue",
+    "diagToken": "present"
+  },
+  "operationId": "repair-wen-trial-summary-targeted-20260821",
+  "batchId": "batch-repair-wen-trial-summary-targeted-20260821",
+  "studentId": "76616540-bbb9-409b-86e0-10b0fefccd2b",
+  "lessonRows": [
+    {
+      "kind": "ledger",
+      "scheduleId": "5391f15d-b3ca-4cb4-a3c3-60a459c686b7",
+      "time": "2026-06-02 18:00-19:00",
+      "courseType": "体验课"
+    }
+  ],
+  "packageRows": [
+    {
+      "entitlementId": "02df40da-8f7d-4ea2-be3a-ccd9335db1b8",
+      "purchaseId": "cc398a97-315e-4c16-ab9a-2f4ffc04612f",
+      "packageName": "体验课 · 1课时 · 全天",
+      "usedLessons": 1,
+      "remainingLessons": 0,
+      "totalLessons": 1
+    }
+  ]
+}
