@@ -93,11 +93,34 @@ function summaryRowHasConsumedTrialPackage(row={}){
   });
 }
 
+function summaryRowDateMs(value){
+  const raw=String(value||'').trim().replace(' ','T');
+  const parsed=Date.parse(raw);
+  return Number.isFinite(parsed)?parsed:0;
+}
+
+function summaryRowIsActiveStudentRoster(row={}){
+  if(row.isActiveStudentRoster===true||String(row.isActiveStudentRoster).toLowerCase()==='true')return true;
+  if((Number(row.packageBalanceRemaining)||0)>0)return true;
+  const activityLabel=String(row.activityStatusLabel||'').trim();
+  if(['近30天活跃','31-90天活跃','课包活跃中','有余额未活跃'].includes(activityLabel))return true;
+  const studentStatusLabel=String(row.studentStatusLabel||'').trim();
+  if(['课包活跃中','有余额未活跃'].includes(studentStatusLabel))return true;
+  const packageStatusLabel=String(row.packageStatusLabel||'').trim();
+  if(['课包有余额','课包即将耗尽'].includes(packageStatusLabel))return true;
+  const recentLessonAt=String(row.detailRecentLessonDate||row.lastFormalLessonAt||'').trim();
+  if(!recentLessonAt)return false;
+  const days=Math.floor((Date.now()-summaryRowDateMs(recentLessonAt))/86400000);
+  return Number.isFinite(days)&&days>=0&&days<=90;
+}
+
 function buildCustomerCenterSummaryLifecycleRows(summaryRows=[]){
   return (Array.isArray(summaryRows)?summaryRows:[]).map(row=>{
     const studentId=String(row.studentId||row.id||'').trim();
     if(!studentId)return null;
     const hasTrialAttended=row.hasTrialAttended===true||String(row.hasTrialAttended).toLowerCase()==='true'||summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row);
+    const hasFormalAttended=row.hasFormalAttended===true||String(row.hasFormalAttended).toLowerCase()==='true';
+    const isActiveStudentRoster=summaryRowIsActiveStudentRoster(row);
     return {
       customerKey:`teaching-summary:${studentId}`,
       sourceLeadId:String(row.sourceLeadId||'').trim(),
@@ -129,10 +152,26 @@ function buildCustomerCenterSummaryLifecycleRows(summaryRows=[]){
       hasTrialExperience:hasTrialAttended,
       hasTeachingSummarySnapshot:true,
       hasTrialAttended,
-      hasFormalAttended:row.hasFormalAttended===true||String(row.hasFormalAttended).toLowerCase()==='true',
+      hasFormalAttended,
       hasScheduleRecord:true,
       hasCourseStudentEntry:true,
       hasFreeCourseFollowup:true,
+      detailLessonRecordRows:Array.isArray(row.detailLessonRecordRows)?row.detailLessonRecordRows:[],
+      detailPackageOrderRows:Array.isArray(row.detailPackageOrderRows)?row.detailPackageOrderRows:[],
+      packageListRows:Array.isArray(row.packageListRows)?row.packageListRows:[],
+      lastFormalLessonAt:String(row.lastFormalLessonAt||row.detailRecentLessonDate||'').trim(),
+      detailRecentLessonDate:String(row.detailRecentLessonDate||row.lastFormalLessonAt||'').trim(),
+      packageBalanceRemaining:Number(row.packageBalanceRemaining)||0,
+      packageBalanceTotal:Number(row.packageBalanceTotal)||0,
+      packageBalanceText:String(row.packageBalanceText||'').trim(),
+      packageBalancePercent:Number(row.packageBalancePercent)||0,
+      activityStatusLabel:String(row.activityStatusLabel||'').trim(),
+      studentStatusLabel:String(row.studentStatusLabel||'').trim(),
+      packageStatusLabel:String(row.packageStatusLabel||'').trim(),
+      paymentModeLabel:String(row.paymentModeLabel||'').trim(),
+      lessonVolumeLabel:String(row.lessonVolumeLabel||'').trim(),
+      isHistoricalStudentRoster:summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row)||hasFormalAttended||isActiveStudentRoster,
+      isActiveStudentRoster,
       leadDate:String(row.packagePurchaseDate||row.lastFormalLessonAt||row.summaryUpdatedAt||'').trim(),
       createdAt:String(row.summaryUpdatedAt||row.updatedAt||'').trim(),
       hasCourseConversion:String(row.studentStage||'').trim()==='formal',

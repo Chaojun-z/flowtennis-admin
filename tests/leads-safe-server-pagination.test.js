@@ -31,7 +31,7 @@ function makeRes() {
   return { statusCode: 200, body: null };
 }
 
-function createHarness(seedRows) {
+function createHarness(seedRows, extraDeps = {}) {
   const rows = { ...seedRows };
   const calls = { leadScans: 0, puts: 0, dels: 0, tableScans: {} };
   const scanRows = async table => {
@@ -75,6 +75,7 @@ function createHarness(seedRows) {
     buildLeadCourtRecord: rules.buildLeadCourtRecord,
     matchLeadToStudent: rules.matchLeadToStudent,
     matchLeadToCourt: rules.matchLeadToCourt,
+    ...extraDeps,
     T_LEADS: 'ft_leads',
     T_LEAD_FOLLOWUPS: 'ft_lead_followups',
     T_STUDENTS: 'ft_students',
@@ -90,7 +91,9 @@ function createHarness(seedRows) {
     T_FINANCIAL_LEDGER: 'ft_financial_ledger',
     T_PLANS: 'ft_plans',
     T_CLASSES: 'ft_classes',
-    T_FEEDBACKS: 'ft_feedbacks'
+    T_FEEDBACKS: 'ft_feedbacks',
+    T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary',
+    T_COURT_ACCOUNT_LIST_INDEX: 'ft_court_account_list_index'
   });
   return { handle, calls, rows };
 }
@@ -307,6 +310,64 @@ async function main() {
     if (previousPreviewFlag === undefined) delete process.env.DISABLE_HOT_SCAN_PREWARM;
     else process.env.DISABLE_HOT_SCAN_PREWARM = previousPreviewFlag;
   }
+
+  const lightHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-light-active',
+      displayName: '轻链路活跃',
+      wechatName: '轻链路活跃',
+      studentId: 'stu-light-active',
+      leadDate: '2026-08-20',
+      createdAt: '2026-08-20 10:00:00',
+      campus: 'shunyi_mapo'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [{
+      id: 'stu-light-active',
+      studentId: 'stu-light-active',
+      name: '轻链路活跃',
+      displayName: '轻链路活跃',
+      sourceLeadId: 'lead-light-active',
+      hasTrialAttended: false,
+      hasFormalAttended: true,
+      isHistoricalStudentRoster: false,
+      isActiveStudentRoster: false,
+      lastFormalLessonAt: '2026-08-20',
+      detailRecentLessonDate: '2026-08-20',
+      packageBalanceRemaining: 1,
+      packageBalanceTotal: 10,
+      packageBalanceText: '1/10',
+      packageBalancePercent: 10,
+      activityStatusLabel: '近30天活跃',
+      studentStatusLabel: '课包活跃中',
+      packageStatusLabel: '课包有余额',
+      paymentModeLabel: '课包学员',
+      lessonVolumeLabel: '-',
+      detailLessonRecordRows: [{ time: '2026-08-20' }],
+      packageListRows: [{ remainingLessons: 1, totalLessons: 10 }]
+    }],
+    ft_court_account_list_index: []
+  }, {
+    buildCourtAccountListViewFromIndexRows: rows => ({ items: Array.isArray(rows) ? rows : [] })
+  });
+  const lightPage = await request(lightHarness.handle, 'paged=1&page=1&pageSize=15');
+  assert.strictEqual(lightPage.statusCode, 200, '轻链路摘要页应正常返回');
+  assert.strictEqual(lightPage.body.summary.activeStudents, 1, '轻链路在期学员不能再掉成 0');
+  assert.strictEqual(lightPage.body.summary.historicalStudents, 1, '轻链路历史学员应继续按摘要行保持一致');
 
   console.log('leads safe server pagination tests passed');
 }

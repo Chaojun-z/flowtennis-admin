@@ -81,6 +81,20 @@ function makeHandler() {
         hasFormalAttended: false,
         isHistoricalStudentRoster: true,
         isActiveStudentRoster: false
+      },
+      {
+        id: 'stu-active-1',
+        studentId: 'stu-active-1',
+        name: '活跃一',
+        hasTrialAttended: true,
+        hasFormalAttended: true,
+        isHistoricalStudentRoster: false,
+        isActiveStudentRoster: false,
+        lastFormalLessonAt: '2026-08-20',
+        detailRecentLessonDate: '2026-08-20',
+        packageBalanceRemaining: 1,
+        activityStatusLabel: '近30天活跃',
+        studentStatusLabel: '课包活跃中'
       }
     ]
   };
@@ -157,6 +171,11 @@ async function request(queryText = '') {
     res.body.standardLifecycleMetrics.teachingSummary.trialAttendedWithoutFormalCount,
     2,
     '体验未买正式课必须排除未来课、取消课，并等于体验事实人数减体验成交人数'
+  );
+  assert.strictEqual(
+    res.body.standardLifecycleMetrics.teachingSummary.activeStudentCount,
+    1,
+    '在期学员必须能从摘要行里的最近正式课和课包余额字段稳定还原'
   );
   assert.ok(calls.tableScans.ft_schedule > 0, '摘要存在时仍必须读取排课事实完成校准');
 

@@ -318,11 +318,26 @@ function createLeadsRoutes(deps={}){
     return leadSummaryBool(row.hasCourseConversion)||leadSummaryBool(row.isCourseConverted)||!!cleanLeadText(row.studentId);
   }
 
+  function summaryRowIsActiveStudentRoster(row={}){
+    if(leadSummaryBool(row?.isActiveStudentRoster))return true;
+    if((Number(row?.packageBalanceRemaining)||0)>0)return true;
+    const activityLabel=cleanLeadText(row?.activityStatusLabel);
+    if(['近30天活跃','31-90天活跃','课包活跃中','有余额未活跃'].includes(activityLabel))return true;
+    const studentStatusLabel=cleanLeadText(row?.studentStatusLabel);
+    if(['课包活跃中','有余额未活跃'].includes(studentStatusLabel))return true;
+    const packageStatusLabel=cleanLeadText(row?.packageStatusLabel);
+    if(['课包有余额','课包即将耗尽'].includes(packageStatusLabel))return true;
+    const recentLessonAt=cleanLeadText(row?.detailRecentLessonDate||row?.lastFormalLessonAt);
+    if(!recentLessonAt)return false;
+    const days=Math.floor((Date.now()-leadDateMs(recentLessonAt))/86400000);
+    return Number.isFinite(days)&&days>=0&&days<=90;
+  }
+
   function buildLeadListSummary(rows=[]){
     const list=Array.isArray(rows)?rows:[];
     const total=list.length;
     const historicalStudents=list.filter(row=>leadSummaryBool(row.isHistoricalStudentRoster)||leadSummaryTrialAttended(row)||leadSummaryCourseConverted(row)).length;
-    const activeStudents=list.filter(row=>leadSummaryBool(row.isActiveStudentRoster)).length;
+    const activeStudents=list.filter(row=>leadSummaryBool(row.isActiveStudentRoster)||summaryRowIsActiveStudentRoster(row)).length;
     const trialAttended=list.filter(leadSummaryTrialAttended).length;
     const trialAttendedToFormalPurchase=list.filter(row=>leadSummaryBool(row.hasTrialToCourseConversion)||(leadSummaryTrialAttended(row)&&leadSummaryCourseConverted(row))).length;
     return {
@@ -373,26 +388,37 @@ function createLeadsRoutes(deps={}){
         profileNote:cleanLeadText(row?.profileNote||row?.notes||''),
         notes:cleanLeadText(row?.notes||row?.profileNote||''),
         studentStage:cleanLeadText(row?.studentStage||(hasFormalAttended?'formal':(hasTrialAttended?'trial':'student'))),
-        courseDealPath:cleanLeadText(row?.courseDealPath||''),
-        trialStatus:cleanLeadText(row?.trialStatus||''),
-        coursePurchaseCount:Number(row?.coursePurchaseCount)||0,
-        hasCourseRepeatPurchase:leadSummaryBool(row?.hasCourseRepeatPurchase)||cleanLeadText(row?.courseDealPath||'')==='老客续费',
-        hasTrialToCourseConversion:leadSummaryBool(row?.hasTrialToCourseConversion)||cleanLeadText(row?.courseDealPath||'')==='体验转化',
-        courtStage:cleanLeadText(row?.courtStage||'none'),
-        membershipStatus:cleanLeadText(row?.membershipStatus||''),
-        hasTrialExperience:hasTrialAttended,
-        hasTeachingSummarySnapshot:true,
-        isHistoricalStudentRoster:leadSummaryBool(row?.isHistoricalStudentRoster)||hasTrialAttended||hasFormalAttended||leadSummaryBool(row?.isActiveStudentRoster),
-        isActiveStudentRoster:leadSummaryBool(row?.isActiveStudentRoster),
-        hasTrialAttended,
-        hasFormalAttended,
-        hasScheduleRecord:leadSummaryBool(row?.hasScheduleRecord)||hasTrialAttended||hasFormalAttended,
-        hasCourseStudentEntry:leadSummaryBool(row?.hasCourseStudentEntry)||hasTrialAttended||hasFormalAttended,
-        hasFreeCourseFollowup:leadSummaryBool(row?.hasFreeCourseFollowup)||hasTrialAttended||hasFormalAttended,
-        leadDate:cleanLeadText(row?.packagePurchaseDate||row?.lastFormalLessonAt||row?.summaryUpdatedAt||''),
-        createdAt:cleanLeadText(row?.summaryUpdatedAt||row?.updatedAt||''),
-        hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||cleanLeadText(row?.studentStage||'')==='formal',
-        hasBookingConversion:leadSummaryBool(row?.hasBookingConversion),
+      courseDealPath:cleanLeadText(row?.courseDealPath||''),
+      trialStatus:cleanLeadText(row?.trialStatus||''),
+      coursePurchaseCount:Number(row?.coursePurchaseCount)||0,
+      hasCourseRepeatPurchase:leadSummaryBool(row?.hasCourseRepeatPurchase)||cleanLeadText(row?.courseDealPath||'')==='老客续费',
+      hasTrialToCourseConversion:leadSummaryBool(row?.hasTrialToCourseConversion)||cleanLeadText(row?.courseDealPath||'')==='体验转化',
+      courtStage:cleanLeadText(row?.courtStage||'none'),
+      membershipStatus:cleanLeadText(row?.membershipStatus||''),
+      hasTrialExperience:hasTrialAttended,
+      hasTeachingSummarySnapshot:true,
+      isHistoricalStudentRoster:leadSummaryBool(row?.isHistoricalStudentRoster)||hasTrialAttended||hasFormalAttended||leadSummaryBool(row?.isActiveStudentRoster),
+        isActiveStudentRoster:leadSummaryBool(row?.isActiveStudentRoster)||summaryRowIsActiveStudentRoster(row),
+      hasTrialAttended,
+      hasFormalAttended,
+      hasScheduleRecord:leadSummaryBool(row?.hasScheduleRecord)||hasTrialAttended||hasFormalAttended,
+      hasCourseStudentEntry:leadSummaryBool(row?.hasCourseStudentEntry)||hasTrialAttended||hasFormalAttended,
+      hasFreeCourseFollowup:leadSummaryBool(row?.hasFreeCourseFollowup)||hasTrialAttended||hasFormalAttended,
+      lastFormalLessonAt:cleanLeadText(row?.lastFormalLessonAt||row?.detailRecentLessonDate||''),
+      detailRecentLessonDate:cleanLeadText(row?.detailRecentLessonDate||row?.lastFormalLessonAt||''),
+      packageBalanceRemaining:Number(row?.packageBalanceRemaining)||0,
+      packageBalanceTotal:Number(row?.packageBalanceTotal)||0,
+      packageBalanceText:cleanLeadText(row?.packageBalanceText||''),
+      packageBalancePercent:Number(row?.packageBalancePercent)||0,
+      activityStatusLabel:cleanLeadText(row?.activityStatusLabel||''),
+      studentStatusLabel:cleanLeadText(row?.studentStatusLabel||''),
+      packageStatusLabel:cleanLeadText(row?.packageStatusLabel||''),
+      paymentModeLabel:cleanLeadText(row?.paymentModeLabel||''),
+      lessonVolumeLabel:cleanLeadText(row?.lessonVolumeLabel||''),
+      leadDate:cleanLeadText(row?.packagePurchaseDate||row?.lastFormalLessonAt||row?.summaryUpdatedAt||''),
+      createdAt:cleanLeadText(row?.summaryUpdatedAt||row?.updatedAt||''),
+      hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||cleanLeadText(row?.studentStage||'')==='formal',
+      hasBookingConversion:leadSummaryBool(row?.hasBookingConversion),
         hasMembershipConversion:leadSummaryBool(row?.hasMembershipConversion)
       };
     }).filter(Boolean);
@@ -885,7 +911,7 @@ function createLeadsRoutes(deps={}){
     const hiddenLeadIds=hiddenLeadSourceIds(leads);
     let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(visibleLeadSourceRows(leads),followups)),{persist:false});
     let customerLifecycleRows=[];
-    const useLightLifecycleSource=!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
+    const useLightLifecycleSource=!isLocalPreviewFastMode()&&!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
     if(useLightLifecycleSource){
       const [studentSummaryRows,courtIndexRows]=await Promise.all([
         getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]),
