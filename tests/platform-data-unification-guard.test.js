@@ -131,8 +131,8 @@ assert.doesNotMatch(
 
 assert.match(
   fnBody(leadsSource, 'leadStatsData'),
-  /leadServerSummaryData\(\)[\s\S]*leadCustomerCenterSummaryData\(\)[\s\S]*historicalStudentCount[\s\S]*activeStudentCount/,
-  'lead stats should use lead total from the paged lead API and student metrics from the customer-center summary'
+  /leadServerSummaryData\(\)[\s\S]*historicalStudents[\s\S]*activeStudents[\s\S]*trialAttended[\s\S]*trialAttendedToFormalPurchase/,
+  'lead stats should use the paged lead API summary for all top cards'
 );
 
 assert.match(

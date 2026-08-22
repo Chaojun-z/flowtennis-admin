@@ -58,8 +58,8 @@ const packageJson = JSON.parse(read('package.json'));
 
 assert.match(
   functionBody(leadsSource, 'leadStatsData'),
-  /leadServerSummaryData\(\)[\s\S]*leadCustomerCenterSummaryData\(\)[\s\S]*historicalStudentCount[\s\S]*activeStudentCount[\s\S]*trialAttendedStudentCount[\s\S]*trialAttendedToFormalPurchaseCount/,
-  '线索池顶部必须使用 /api/leads 的线索总数 + customer-center-list 的统一学员 summary'
+  /leadServerSummaryData\(\)[\s\S]*historicalStudents[\s\S]*activeStudents[\s\S]*trialAttended[\s\S]*trialAttendedToFormalPurchase/,
+  '线索池顶部必须完全使用 /api/leads 的 summary，不能再读 customer-center-list'
 );
 assert.doesNotMatch(
   functionBody(leadsSource, 'leadStatsData'),

@@ -826,22 +826,25 @@ function leadCustomerCenterSummaryData(){
 function leadStatsData(list){
   const serverSummary=leadServerSummaryData();
   const total=serverSummary?.total??null;
-  const customerSummary=leadCustomerCenterSummaryData();
-  if(!customerSummary)return {...leadStatsLoadingData(),total};
-  const historicalStudents=Number(customerSummary.historicalStudentCount);
-  const activeStudents=Number(customerSummary.activeStudentCount);
-  const trialAttended=Number(customerSummary.trialAttendedStudentCount);
-  const trialAttendedToFormalPurchase=Number(customerSummary.trialAttendedToFormalPurchaseCount);
+  const historicalStudents=serverSummary?.historicalStudents;
+  const activeStudents=serverSummary?.activeStudents;
+  const trialAttended=serverSummary?.trialAttended;
+  const trialAttendedToFormalPurchase=serverSummary?.trialAttendedToFormalPurchase;
+  if([total,historicalStudents,activeStudents,trialAttended,trialAttendedToFormalPurchase].some(value=>value==null))return leadStatsLoadingData();
+  const historical=Number(historicalStudents);
+  const active=Number(activeStudents);
+  const trial=Number(trialAttended);
+  const formal=Number(trialAttendedToFormalPurchase);
   return {
     total,
-    historicalStudents:Number.isFinite(historicalStudents)?historicalStudents:null,
-    historicalStudentRate:Number.isFinite(historicalStudents)?leadCurrentListRateText(historicalStudents,total):'',
-    activeStudents:Number.isFinite(activeStudents)?activeStudents:null,
-    activeStudentRate:Number.isFinite(activeStudents)&&Number.isFinite(historicalStudents)?leadCurrentListRateText(activeStudents,historicalStudents):'',
-    trialAttended:Number.isFinite(trialAttended)?trialAttended:null,
-    trialAttendedRate:Number.isFinite(trialAttended)?leadCurrentListRateText(trialAttended,total):'',
-    trialAttendedToFormalPurchase:Number.isFinite(trialAttendedToFormalPurchase)?trialAttendedToFormalPurchase:null,
-    trialAttendedToFormalPurchaseRate:Number.isFinite(trialAttendedToFormalPurchase)&&Number.isFinite(trialAttended)?leadCurrentListRateText(trialAttendedToFormalPurchase,trialAttended):''
+    historicalStudents:Number.isFinite(historical)?historical:null,
+    historicalStudentRate:Number.isFinite(historical)?leadCurrentListRateText(historical,total):'',
+    activeStudents:Number.isFinite(active)?active:null,
+    activeStudentRate:Number.isFinite(active)&&Number.isFinite(historical)?leadCurrentListRateText(active,historical):'',
+    trialAttended:Number.isFinite(trial)?trial:null,
+    trialAttendedRate:Number.isFinite(trial)?leadCurrentListRateText(trial,total):'',
+    trialAttendedToFormalPurchase:Number.isFinite(formal)?formal:null,
+    trialAttendedToFormalPurchaseRate:Number.isFinite(formal)&&Number.isFinite(trial)?leadCurrentListRateText(formal,trial):''
   };
 }
 function renderLeadStats(list){

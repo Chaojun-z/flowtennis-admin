@@ -274,7 +274,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
   'package-students':['classes','schedule','courts'],
   'trial-students':['classes','schedule','courts'],
-  leads:['customerCenterPage'],
+  leads:[],
   packages:[],
   purchases:[],
   schedule:['classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'],

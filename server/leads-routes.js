@@ -1,6 +1,7 @@
 const { readLeadSourceRows } = require('./lead-source-read-model.js');
 const { buildCustomerLifecycleRows } = require('./read-models/customer-lifecycle.js');
 const { buildLeadPoolRows } = require('./read-models/platform-metrics.js');
+const { buildCourtAccountListViewFromIndexRows } = require('./page-data/court-account-list-index.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
 function createLeadsRoutes(deps={}){
@@ -12,7 +13,7 @@ function createLeadsRoutes(deps={}){
     normalizeLeadFollowupRecord,applyLeadFollowupsSnapshot,applyLeadFollowupSnapshot,normalizeLeadImportRows,
     buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,buildLeadMergePlan,
     buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,isNonPersonLeadName,
-    T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,
+    T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,T_STUDENT_TEACHING_SUMMARY,T_COURT_ACCOUNT_LIST_INDEX,
     T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS,T_ENTITLEMENT_LEDGER,
     T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_FINANCIAL_LEDGER,T_PLANS,T_CLASSES,T_FEEDBACKS
   }=deps;
@@ -335,6 +336,135 @@ function createLeadsRoutes(deps={}){
       trialAttendedToFormalPurchase,
       trialAttendedToFormalPurchaseRate:leadSummaryRate(trialAttendedToFormalPurchase,trialAttended)
     };
+  }
+
+  function leadPoolNameKey(value){
+    return cleanLeadText(value)
+      .replace(/1[3-9]\d{9}/g,'')
+      .toLowerCase()
+      .replace(/\s+/g,'')
+      .replace(/[·.。_\-\/|｜，,;；]/g,'');
+  }
+
+  function buildCustomerCenterSummaryLifecycleRows(summaryRows=[]){
+    return (Array.isArray(summaryRows)?summaryRows:[]).map(row=>{
+      const studentId=cleanLeadText(row?.studentId||row?.id);
+      if(!studentId)return null;
+      const hasTrialAttended=row?.hasTrialAttended===true||String(row?.hasTrialAttended).toLowerCase()==='true'||!!cleanLeadText(row?.trialAttendedAt);
+      return {
+        customerKey:`teaching-summary:${studentId}`,
+        sourceLeadId:cleanLeadText(row?.sourceLeadId||''),
+        leadId:'',
+        studentId,
+        displayName:cleanLeadText(row?.displayName||row?.name||studentId),
+        phone:cleanLeadText(row?.phone||''),
+        source:cleanLeadText(row?.source||''),
+        campus:cleanLeadText(row?.campus||''),
+        owner:cleanLeadText(row?.primaryCoach||''),
+        customerType:cleanLeadText(row?.type||''),
+        demandProduct:'',
+        trialAtRaw:'',
+        trialBookedAt:'',
+        trialAttendedAt:'',
+        courseFirstPurchaseAt:cleanLeadText(row?.packagePurchaseDate||''),
+        conversionAt:cleanLeadText(row?.packagePurchaseDate||''),
+        formalCoach:cleanLeadText(row?.primaryCoach||''),
+        profileNote:cleanLeadText(row?.profileNote||row?.notes||''),
+        notes:cleanLeadText(row?.notes||row?.profileNote||''),
+        studentStage:cleanLeadText(row?.studentStage||'student'),
+        courseDealPath:cleanLeadText(row?.courseDealPath||''),
+        trialStatus:cleanLeadText(row?.trialStatus||''),
+        coursePurchaseCount:Number(row?.coursePurchaseCount)||0,
+        hasCourseRepeatPurchase:cleanLeadText(row?.courseDealPath||'')==='老客续费',
+        hasTrialToCourseConversion:cleanLeadText(row?.courseDealPath||'')==='体验转化',
+        courtStage:'none',
+        membershipStatus:'',
+        hasTrialExperience:hasTrialAttended,
+        hasTeachingSummarySnapshot:true,
+        hasTrialAttended,
+        hasFormalAttended:row?.hasFormalAttended===true||String(row?.hasFormalAttended).toLowerCase()==='true',
+        hasScheduleRecord:true,
+        hasCourseStudentEntry:true,
+        hasFreeCourseFollowup:true,
+        leadDate:cleanLeadText(row?.packagePurchaseDate||row?.lastFormalLessonAt||row?.summaryUpdatedAt||''),
+        createdAt:cleanLeadText(row?.summaryUpdatedAt||row?.updatedAt||''),
+        hasCourseConversion:cleanLeadText(row?.studentStage||'')==='formal',
+        hasBookingConversion:false,
+        hasMembershipConversion:false
+      };
+    }).filter(Boolean);
+  }
+
+  function buildCourtLifecycleRows(items=[],leads=[]){
+    const leadByCourtId=new Map();
+    const leadNameToIds=new Map();
+    (Array.isArray(leads)?leads:[]).forEach(lead=>{
+      const id=cleanLeadText(lead?.id);
+      if(!id)return;
+      const courtId=cleanLeadText(lead?.courtId);
+      if(courtId)leadByCourtId.set(courtId,id);
+      const nameKey=leadPoolNameKey(lead?.displayName||lead?.wechatName||lead?.name);
+      if(!nameKey)return;
+      const ids=leadNameToIds.get(nameKey)||[];
+      ids.push(id);
+      leadNameToIds.set(nameKey,[...new Set(ids)]);
+    });
+    return (Array.isArray(items)?items:[]).map(item=>{
+      const courtId=cleanLeadText(item?.id||item?.courtId);
+      if(!courtId)return null;
+      const nameKey=leadPoolNameKey(item?.displayName||item?.name||item?.linkedStudentSummary);
+      const matchedIds=[
+        cleanLeadText(leadByCourtId.get(courtId)||''),
+        ...(leadNameToIds.get(nameKey)||[])
+      ].filter(Boolean);
+      const sourceLeadId=matchedIds[0]||'';
+      const membershipStatus=cleanLeadText(item?.membershipStatusCode||item?.membershipStatus||'');
+      const hasMembershipConversion=item?.accountType==='会员账户'||!!membershipStatus&& !['voided','cleared','inactive'].includes(membershipStatus);
+      const hasBookingConversion=(Number(item?.bookingCount)||0)>0||(Number(item?.memberBookingCount)||0)>0;
+      return {
+        customerKey:`court:${courtId}`,
+        sourceLeadId,
+        leadId:sourceLeadId,
+        studentId:'',
+        courtId,
+        membershipAccountId:'',
+        displayName:cleanLeadText(item?.displayName||''),
+        phone:cleanLeadText(item?.phone||''),
+        source:'',
+        campus:cleanLeadText(item?.campusCode||item?.campusName||''),
+        owner:cleanLeadText(item?.owner||''),
+        customerType:'',
+        demandProduct:'',
+        trialAtRaw:'',
+        trialBookedAt:'',
+        trialAttendedAt:'',
+        courseFirstPurchaseAt:'',
+        conversionAt:cleanLeadText(item?.lastBookingDate||item?.createdAt||''),
+        formalCoach:'',
+        profileNote:cleanLeadText(item?.notesSummary||item?.linkedStudentSummary||''),
+        notes:cleanLeadText(item?.notesSummary||item?.linkedStudentSummary||''),
+        studentStage:'none',
+        courseDealPath:'',
+        trialStatus:'',
+        coursePurchaseCount:0,
+        hasCourseRepeatPurchase:false,
+        hasTrialToCourseConversion:false,
+        courtStage:hasMembershipConversion?'member':(hasBookingConversion?'booking':'none'),
+        membershipStatus,
+        hasTrialExperience:false,
+        hasTeachingSummarySnapshot:false,
+        hasTrialAttended:false,
+        hasFormalAttended:false,
+        hasScheduleRecord:hasBookingConversion,
+        hasCourseStudentEntry:false,
+        hasFreeCourseFollowup:false,
+        leadDate:cleanLeadText(item?.lastBookingDate||item?.createdAt||item?.indexGeneratedAt||''),
+        createdAt:cleanLeadText(item?.indexGeneratedAt||item?.createdAt||''),
+        hasCourseConversion:false,
+        hasBookingConversion,
+        hasMembershipConversion
+      };
+    }).filter(Boolean);
   }
 
   function visibleLeadSourceRows(rows=[]){
@@ -749,30 +879,33 @@ function createLeadsRoutes(deps={}){
       readCachedLeadSourceRows(),
       readLeadFollowupRows().catch(()=>[])
     ]);
-    const [students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
-      readLeadLifecycleFactRows(T_STUDENTS),
-      readLeadLifecycleFactRows(T_PURCHASES),
-      readLeadLifecycleFactRows(T_ENTITLEMENTS),
-      readLeadLifecycleFactRows(T_SCHEDULE),
-      readLeadLifecycleFactRows(T_COURTS),
-      readLeadLifecycleFactRows(T_MEMBERSHIP_ACCOUNTS),
-      readLeadLifecycleFactRows(T_MEMBERSHIP_ORDERS)
-    ]);
     const hiddenLeadIds=hiddenLeadSourceIds(leads);
     let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(visibleLeadSourceRows(leads),followups)),{persist:false});
-    let customerLifecycleRows=buildCustomerLifecycleRows({
-      leads:mergedLeads,
-      students,
-      purchases,
-      entitlements,
-      schedule,
-      courts,
-      membershipAccounts,
-      membershipOrders
-    });
-    const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows);
-    if(createdLeads.length){
-      mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
+    let customerLifecycleRows=[];
+    const useLightLifecycleSource=!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
+    if(useLightLifecycleSource){
+      const [studentSummaryRows,courtIndexRows]=await Promise.all([
+        getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]),
+        getCachedScan(T_COURT_ACCOUNT_LIST_INDEX).catch(()=>[])
+      ]);
+      const studentLifecycleRows=buildCustomerCenterSummaryLifecycleRows(studentSummaryRows);
+      const courtAccountView=buildCourtAccountListViewFromIndexRows(courtIndexRows||[],{});
+      const courtLifecycleRows=buildCourtLifecycleRows(courtAccountView.items||[],mergedLeads);
+      customerLifecycleRows=[...studentLifecycleRows,...courtLifecycleRows];
+      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows);
+      if(createdLeads.length){
+        mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
+      }
+    }else{
+      const [students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
+        readLeadLifecycleFactRows(T_STUDENTS),
+        readLeadLifecycleFactRows(T_PURCHASES),
+        readLeadLifecycleFactRows(T_ENTITLEMENTS),
+        readLeadLifecycleFactRows(T_SCHEDULE),
+        readLeadLifecycleFactRows(T_COURTS),
+        readLeadLifecycleFactRows(T_MEMBERSHIP_ACCOUNTS),
+        readLeadLifecycleFactRows(T_MEMBERSHIP_ORDERS)
+      ]);
       customerLifecycleRows=buildCustomerLifecycleRows({
         leads:mergedLeads,
         students,
@@ -783,6 +916,20 @@ function createLeadsRoutes(deps={}){
         membershipAccounts,
         membershipOrders
       });
+      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows);
+      if(createdLeads.length){
+        mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
+        customerLifecycleRows=buildCustomerLifecycleRows({
+          leads:mergedLeads,
+          students,
+          purchases,
+          entitlements,
+          schedule,
+          courts,
+          membershipAccounts,
+          membershipOrders
+        });
+      }
     }
     const rows=buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:false})
       .filter(row=>!hiddenLeadIds.has(cleanLeadText(row.id))&&!hiddenLeadIds.has(cleanLeadText(row.sourceLeadId)));

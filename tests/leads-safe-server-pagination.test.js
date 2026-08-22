@@ -151,8 +151,8 @@ async function main() {
   assert.match(routesSource, /buildLeadListFilterState\(query\)[\s\S]*buildLeadListFilterMeta\(visibleRows,filterState\)/, '后端必须用筛选后的完整结果生成下拉计数，不能用当前页 15 条生成');
   assert.match(setDatasetBody, /if\(name==='leads'\)\{[\s\S]*leadListPageData=[\s\S]*summary:data\?\.summary\|\|null/, '线索池应保存后端分页元信息和统计');
   assert.match(setDatasetBody, /filters:data\?\.filters\|\|null/, '线索池应保存后端返回的筛选项计数');
-  assert.match(statsBody, /const total=serverSummary\?\.total\?\?null[\s\S]*leadCustomerCenterSummaryData\(\)/, '线索池顶部只能从 /api/leads 取筛选后线索总数，学员类指标必须走客户中心统一 summary');
-  assert.doesNotMatch(statsBody, /serverSummary\?\.historicalStudents|serverSummary\?\.activeStudents|serverSummary\?\.trialAttended|serverSummary\?\.trialAttendedToFormalPurchase/, '线索池顶部学员类指标不能使用 /api/leads 轻量粗算值');
+  assert.match(statsBody, /const total=serverSummary\?\.total\?\?null[\s\S]*historicalStudents[\s\S]*activeStudents[\s\S]*trialAttended[\s\S]*trialAttendedToFormalPurchase/, '线索池顶部只能从 /api/leads 取筛选后 summary');
+  assert.doesNotMatch(statsBody, /leadCustomerCenterSummaryData\(|leadTeachingSummaryValue\(/, '线索池顶部不能再读 customer center summary');
   assert.match(renderBody, /serverPage\?[\s\S]*total:serverPage\.total[\s\S]*slice:list[\s\S]*standardListSlice/, '线索池列表不应继续只靠本地全量分页');
   assert.match(detailBody, /apiCall\('GET',`\/leads\/\$\{encodeURIComponent\(id\)\}`\)/, '线索详情应按 leadId 回源读取单条完整数据');
   assert.match(openDetailBody, /refreshLeadDetailFromServer\(leadId\)/, '打开线索详情应触发单条详情后台回源');

@@ -89,9 +89,9 @@ assert.match(fnBody('reloadLeadsForCurrentPage'), /if\(showLoading\)\{[\s\S]*if\
 assert.doesNotMatch(leadsSource, /tms-stat-loading|<span class="tms-stat-loading">加载中<\/span>/, 'lead top stats should not render text loading');
 assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should only wait for the paged lead list and campus filter before first paint');
 assert.doesNotMatch(stateSource, /leads:\['campuses','leads','customerCenterPage'\]/, 'leads page should not block first paint on customer center data');
-assert.match(stateSource, /leads:\['customerCenterPage'\]/, 'leads page should refresh the customer center summary in the background for the student metric cards');
-assert.match(fnBody('leadStatsData'), /leadServerSummaryData\(\)[\s\S]*leadCustomerCenterSummaryData\(\)[\s\S]*historicalStudentCount[\s\S]*activeStudentCount[\s\S]*trialAttendedStudentCount[\s\S]*trialAttendedToFormalPurchaseCount/, 'lead student stats should come from the customer center summary');
-assert.doesNotMatch(fnBody('leadStatsData'), /serverSummary\?\.historicalStudents|serverSummary\?\.activeStudents|serverSummary\?\.trialAttended|serverSummary\?\.trialAttendedToFormalPurchase/, 'lead student cards must not use /api/leads lightweight guessed student counts');
+assert.doesNotMatch(stateSource, /leads:\['customerCenterPage'\]/, 'leads page should not background-load customer center data for the top cards');
+assert.match(fnBody('leadStatsData'), /leadServerSummaryData\(\)[\s\S]*historicalStudents[\s\S]*activeStudents[\s\S]*trialAttended[\s\S]*trialAttendedToFormalPurchase/, 'lead student stats should come from the paged /api/leads summary');
+assert.doesNotMatch(fnBody('leadStatsData'), /leadCustomerCenterSummaryData\(|leadTeachingSummaryValue\(/, 'lead student cards must not read customer center data or lifecycle placeholders');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('validLeads'\)/, 'lead count card must not use lifecycle validLeads when list/filter totals use lead rows');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('courseChainStudents'\)|leadStandardMetricValue\('formalStudents'\)/, 'lead stats must not use old normal/formal student metrics for the top student cards');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('trialPathStudents'\)|leadStandardMetricValue\('trialPathDeals'\)|leadStandardMetricValue\('trialPathPending'\)/, 'lead stats must not use old trial-path metrics for top cards');
@@ -262,9 +262,9 @@ assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspa
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.doesNotMatch(stateSource, /leads:\['campuses','leads','purchasesPage'\]/, 'leads page should not block on the full purchases aggregate for standard course-chain stats');
-assert.match(stateSource, /leads:\['customerCenterPage'\]/, 'leads page should background-load only the customer center summary for top student cards');
+assert.doesNotMatch(stateSource, /leads:\['customerCenterPage'\]/, 'leads page should not background-load customer center data for top student cards');
 assert.doesNotMatch(stateSource, /leads:\['lifecycleMetricsPage'\]/, 'leads page should not background-load lifecycle metrics before the first paged list is usable');
-assert.match(fnBody('leadTeachingSummaryValue'), /leadLifecycleMetricsReady\(\)/, 'lead top student cards should not render zero while scoped backend metrics are still refreshing');
+assert.match(fnBody('leadTeachingSummaryValue'), /leadLifecycleMetricsReady\(\)/, 'lead teaching summary helper should still wait for lifecycle metrics when it is used elsewhere');
 assert.match(fnBody('refreshLeadRuntime'), /const base=\['leads'\][\s\S]*if\(waitForMetrics\)base\.push\('lifecycleMetricsPage'\)/, 'lead mutations should allow local lead rows to refresh without waiting for lifecycle metrics');
 assert.match(fnBody('refreshLeadRuntimeInBackground'), /refreshLeadRuntime\(\{\.\.\.options,waitForMetrics:true\}\)/, 'lead lifecycle metrics should still refresh through the background path after lead mutations');
 assert.doesNotMatch(fnBody('refreshLeadRuntime'), /leadFollowups/, 'lead runtime refresh must not reload all followups');

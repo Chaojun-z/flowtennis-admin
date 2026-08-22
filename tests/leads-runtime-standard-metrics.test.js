@@ -63,10 +63,10 @@ context.leadListPageData = {
 };
 context.standardLifecycleMetrics = {
   teachingSummary: {
-    historicalStudentCount: 5,
-    activeStudentCount: 3,
-    trialAttendedStudentCount: 2,
-    trialAttendedToFormalPurchaseCount: 1
+    historicalStudentCount: 999,
+    activeStudentCount: 888,
+    trialAttendedStudentCount: 777,
+    trialAttendedToFormalPurchaseCount: 666
   },
   metrics: {
     validLeads: { value: 5 },
@@ -87,10 +87,10 @@ context.standardLifecycleMetrics = {
 };
 context.teachingStudentViews = {
   summary: {
-    historicalStudentCount: 5,
-    activeStudentCount: 3,
-    trialAttendedStudentCount: 2,
-    trialAttendedToFormalPurchaseCount: 1
+    historicalStudentCount: 999,
+    activeStudentCount: 888,
+    trialAttendedStudentCount: 777,
+    trialAttendedToFormalPurchaseCount: 666
   }
 };
 
@@ -113,14 +113,14 @@ assert.deepStrictEqual(
   },
   {
     total: 10,
-    historicalStudents: 5,
-    historicalStudentRate: '50%',
-    activeStudents: 3,
-    activeStudentRate: '60%',
-    trialAttended: 2,
-    trialAttendedToFormalPurchase: 1
+    historicalStudents: 315,
+    historicalStudentRate: '3150%',
+    activeStudents: 0,
+    activeStudentRate: '0%',
+    trialAttended: 11,
+    trialAttendedToFormalPurchase: 4
   },
-  '线索池顶部学员指标必须使用客户中心统一 summary，不能使用 /api/leads 的轻量粗算学员数'
+  '线索池顶部学员指标必须完全使用 /api/leads 返回的 summary，不能再读 customerCenterPage'
 );
 
 console.log('leads runtime standard metrics tests passed');
