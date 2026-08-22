@@ -350,11 +350,12 @@ function createLeadsRoutes(deps={}){
     return (Array.isArray(summaryRows)?summaryRows:[]).map(row=>{
       const studentId=cleanLeadText(row?.studentId||row?.id);
       if(!studentId)return null;
-      const hasTrialAttended=row?.hasTrialAttended===true||String(row?.hasTrialAttended).toLowerCase()==='true'||!!cleanLeadText(row?.trialAttendedAt);
+      const hasTrialAttended=leadSummaryBool(row?.hasTrialAttended)||!!cleanLeadText(row?.trialAttendedAt);
+      const hasFormalAttended=leadSummaryBool(row?.hasFormalAttended)||!!cleanLeadText(row?.lastFormalLessonAt);
       return {
         customerKey:`teaching-summary:${studentId}`,
         sourceLeadId:cleanLeadText(row?.sourceLeadId||''),
-        leadId:'',
+        leadId:cleanLeadText(row?.leadId||''),
         studentId,
         displayName:cleanLeadText(row?.displayName||row?.name||studentId),
         phone:cleanLeadText(row?.phone||''),
@@ -363,34 +364,36 @@ function createLeadsRoutes(deps={}){
         owner:cleanLeadText(row?.primaryCoach||''),
         customerType:cleanLeadText(row?.type||''),
         demandProduct:'',
-        trialAtRaw:'',
-        trialBookedAt:'',
-        trialAttendedAt:'',
+        trialAtRaw:cleanLeadText(row?.trialAtRaw||''),
+        trialBookedAt:cleanLeadText(row?.trialBookedAt||''),
+        trialAttendedAt:cleanLeadText(row?.trialAttendedAt||''),
         courseFirstPurchaseAt:cleanLeadText(row?.packagePurchaseDate||''),
         conversionAt:cleanLeadText(row?.packagePurchaseDate||''),
         formalCoach:cleanLeadText(row?.primaryCoach||''),
         profileNote:cleanLeadText(row?.profileNote||row?.notes||''),
         notes:cleanLeadText(row?.notes||row?.profileNote||''),
-        studentStage:cleanLeadText(row?.studentStage||'student'),
+        studentStage:cleanLeadText(row?.studentStage||(hasFormalAttended?'formal':(hasTrialAttended?'trial':'student'))),
         courseDealPath:cleanLeadText(row?.courseDealPath||''),
         trialStatus:cleanLeadText(row?.trialStatus||''),
         coursePurchaseCount:Number(row?.coursePurchaseCount)||0,
-        hasCourseRepeatPurchase:cleanLeadText(row?.courseDealPath||'')==='老客续费',
-        hasTrialToCourseConversion:cleanLeadText(row?.courseDealPath||'')==='体验转化',
-        courtStage:'none',
-        membershipStatus:'',
+        hasCourseRepeatPurchase:leadSummaryBool(row?.hasCourseRepeatPurchase)||cleanLeadText(row?.courseDealPath||'')==='老客续费',
+        hasTrialToCourseConversion:leadSummaryBool(row?.hasTrialToCourseConversion)||cleanLeadText(row?.courseDealPath||'')==='体验转化',
+        courtStage:cleanLeadText(row?.courtStage||'none'),
+        membershipStatus:cleanLeadText(row?.membershipStatus||''),
         hasTrialExperience:hasTrialAttended,
         hasTeachingSummarySnapshot:true,
+        isHistoricalStudentRoster:leadSummaryBool(row?.isHistoricalStudentRoster)||hasTrialAttended||hasFormalAttended||leadSummaryBool(row?.isActiveStudentRoster),
+        isActiveStudentRoster:leadSummaryBool(row?.isActiveStudentRoster),
         hasTrialAttended,
-        hasFormalAttended:row?.hasFormalAttended===true||String(row?.hasFormalAttended).toLowerCase()==='true',
-        hasScheduleRecord:true,
-        hasCourseStudentEntry:true,
-        hasFreeCourseFollowup:true,
+        hasFormalAttended,
+        hasScheduleRecord:leadSummaryBool(row?.hasScheduleRecord)||hasTrialAttended||hasFormalAttended,
+        hasCourseStudentEntry:leadSummaryBool(row?.hasCourseStudentEntry)||hasTrialAttended||hasFormalAttended,
+        hasFreeCourseFollowup:leadSummaryBool(row?.hasFreeCourseFollowup)||hasTrialAttended||hasFormalAttended,
         leadDate:cleanLeadText(row?.packagePurchaseDate||row?.lastFormalLessonAt||row?.summaryUpdatedAt||''),
         createdAt:cleanLeadText(row?.summaryUpdatedAt||row?.updatedAt||''),
-        hasCourseConversion:cleanLeadText(row?.studentStage||'')==='formal',
-        hasBookingConversion:false,
-        hasMembershipConversion:false
+        hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||cleanLeadText(row?.studentStage||'')==='formal',
+        hasBookingConversion:leadSummaryBool(row?.hasBookingConversion),
+        hasMembershipConversion:leadSummaryBool(row?.hasMembershipConversion)
       };
     }).filter(Boolean);
   }
