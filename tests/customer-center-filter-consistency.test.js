@@ -38,6 +38,7 @@ const leadsSource = read('public/assets/scripts/pages/leads.js');
 const studentsSource = read('public/assets/scripts/pages/students.js');
 const courtsSource = read('public/assets/scripts/pages/courts.js');
 const matchesSource = read('public/assets/scripts/pages/matches.js');
+const leadsRouteSource = read('server/leads-routes.js');
 const standardShellSource = read('public/assets/scripts/standard/components.js');
 const pagesCss = read('public/assets/styles/pages.css');
 const packageJson = JSON.parse(read('package.json'));
@@ -65,6 +66,14 @@ assert.doesNotMatch(
   functionBody(leadsSource, 'leadStatsData'),
   /FlowTennisPlatformDataStandards\.currentLeadSummary|leadTeachingSummaryValue\(|leadStandardMetricValue\(/,
   '线索池顶部不得在页面内另算一套学员指标'
+);
+assert.ok(
+  leadsRouteSource.includes('const summaryRows=filtered.filter(row=>!row.isLifecycleSynthetic);'),
+  '线索池 summary 必须只统计原始线索，不能把生命周期补出来的合成行算进去'
+);
+assert.ok(
+  leadsRouteSource.includes('summary:buildLeadListSummary(summaryRows)'),
+  '线索池 summary 必须用剔除合成行后的统计集'
 );
 
 assert.match(

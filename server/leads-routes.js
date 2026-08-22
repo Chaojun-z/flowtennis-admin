@@ -1007,7 +1007,8 @@ function createLeadsRoutes(deps={}){
           const rows=await readVisibleLeadRows({expandLifecycleSearch:!!filterState.q});
           const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
           const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
-          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered),filters:buildLeadListFilterMeta(visibleRows,filterState)};
+          const summaryRows=filtered.filter(row=>!row.isLifecycleSynthetic);
+          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(summaryRows),filters:buildLeadListFilterMeta(visibleRows,filterState)};
           if(resultCacheKey)writeLeadFilteredResultCache(resultCacheKey,cachedResult);
         }
         const payload=paging?{...buildLeadListPage(cachedResult.sorted,paging),summary:cachedResult.summary,filters:cachedResult.filters}:cachedResult.sorted;
