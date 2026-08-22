@@ -666,7 +666,7 @@ const handleLeadsRoutes=createLeadsRoutes({
   normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
   normalizeLeadFollowupRecord,applyLeadFollowupsSnapshot,applyLeadFollowupSnapshot,normalizeLeadImportRows,
   buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,buildLeadMergePlan,
-  buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,
+  buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,isNonPersonLeadName,
   T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS,
   T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_FINANCIAL_LEDGER,T_PLANS,T_CLASSES,T_FEEDBACKS
 });
@@ -5839,6 +5839,15 @@ function safeDatabaseUrlHost(value){
   }
 }
 function cleanLeadText(value){return String(value??'').trim();}
+function cleanLeadDisplayText(value){
+  return cleanLeadText(value).replace(/^[\s、，,;；/|｜]+|[\s、，,;；/|｜]+$/g,'').trim();
+}
+function isNonPersonLeadName(value){
+  const name=cleanLeadDisplayText(value).replace(/\s+/g,'');
+  if(!name)return false;
+  if(['随到随学','随到随学小班课','多球课'].includes(name))return true;
+  return /畅打/.test(name);
+}
 function readStandardOrLegacyField(input={},standardKeys=[],legacyAliasKey=''){for(const key of [...(Array.isArray(standardKeys)?standardKeys:[standardKeys]),...businessTaxonomy.legacyAliases(legacyAliasKey)]){if(input[key]!=null&&cleanLeadText(input[key])!=='')return input[key];}return '';}
 function normalizeLeadBoolean(value){const raw=String(value||'').trim();return raw?/^(是|已转化|已报名|true|1|yes)$/i.test(raw):false;}
 function normalizeLeadPriority(value){
@@ -5849,7 +5858,7 @@ function extractLeadPhoneMeta(value){
   const raw=cleanLeadText(value);
   const match=raw.match(/1[3-9]\d{9}/);
   const phone=match?match[0]:'';
-  const wechatName=cleanLeadText(raw.replace(phone,'').replace(/[\/|｜，,;；]+/g,' '));
+  const wechatName=cleanLeadDisplayText(raw.replace(phone,'').replace(/[\/|｜，,;；]+/g,' '));
   return {raw,phone,wechatName};
 }
 function deriveLeadSystemStatus(input={}){
@@ -5923,9 +5932,9 @@ function normalizeLeadRecord(input={},opts={}){
   const next={
     id,
     leadDate:normalizeLeadBusinessDate(input,now),
-    displayName:cleanLeadText(input.displayName??phoneMeta.wechatName??phoneMeta.phone??phoneMeta.raw),
+    displayName:cleanLeadDisplayText(input.displayName??phoneMeta.wechatName??phoneMeta.phone??phoneMeta.raw),
     phone:assertPhone(input.phone??phoneMeta.phone),
-    wechatName:cleanLeadText(input.wechatName??phoneMeta.wechatName),
+    wechatName:cleanLeadDisplayText(input.wechatName??phoneMeta.wechatName),
     level:cleanLeadText(input.level??input['水平']),
     profileNote:cleanLeadText(input.profileNote??input['其他信息（包含年纪等）']),
     source:businessTaxonomy.normalizeLeadSource(input.source??input['线索渠道']),
@@ -6102,7 +6111,7 @@ function normalizeLeadDedupPhone(input={}){
   return extractLeadPhoneMeta(input.displayName||input.wechatName||input.name||input.contactRaw||'').phone;
 }
 function normalizeLeadIdentityName(value){
-  return cleanLeadText(value).replace(/1[3-9]\d{9}/g,'').toLowerCase().replace(/\s+/g,'').replace(/[·.。_\-\/|｜，,;；]/g,'');
+  return cleanLeadDisplayText(value).replace(/1[3-9]\d{9}/g,'').toLowerCase().replace(/\s+/g,'').replace(/[·.。_\-\/|｜，,;；]/g,'');
 }
 function normalizeLeadKeyText(value){
   return cleanLeadText(value).toLowerCase().replace(/\s+/g,'');
@@ -7355,6 +7364,8 @@ module.exports._test={
   deriveLeadDealType,
   deriveLeadConversionType,
   normalizeLeadRecord,
+  cleanLeadDisplayText,
+  isNonPersonLeadName,
   normalizeLeadFollowupRecord,
   applyLeadFollowupSnapshot,
   applyLeadFollowupsSnapshot,

@@ -57,6 +57,21 @@ assert.strictEqual(lead.customerType, '成人');
 assert.strictEqual(lead.demandProduct, '私教课');
 assert.strictEqual(lead.dealType, '');
 assert.strictEqual(lead.conversionType, '');
+const punctLead = rules.normalizeLeadRecord({
+  displayName: '、MZ.、',
+  wechatName: '、MZ、',
+  rawStatus: '跟进中'
+}, { id: 'lead-punct', now: '2026-08-22 00:00:00' });
+assert.strictEqual(punctLead.displayName, 'MZ.', '线索姓名首尾顿号应在入库规范化时清理');
+assert.strictEqual(punctLead.wechatName, 'MZ', '线索微信名首尾顿号应在入库规范化时清理');
+assert.strictEqual(
+  rules.buildLeadDedupKey({ displayName: '、MZ.、', leadDate: '2026-08-22', source: '大众点评', demandProduct: '私教课' }),
+  rules.buildLeadDedupKey({ displayName: 'M.Z', leadDate: '2026-08-22', source: '大众点评', demandProduct: '私教课' }),
+  '首尾顿号清理后应进入同一个姓名去重键，避免再生成重复线索'
+);
+assert.strictEqual(rules.isNonPersonLeadName('、随到随学'), true, '随到随学应识别为非真人线索名');
+assert.strictEqual(rules.isNonPersonLeadName('4人畅打'), true, '畅打类名字应识别为非真人线索名');
+assert.strictEqual(rules.isNonPersonLeadName('M.Z'), false, '真实学员名不能被误判为非真人线索名');
 assert.strictEqual(
   rules.normalizeLeadRecord({ '所属校区': '马坡' }, { id: 'lead-campus', now: '2026-05-08 00:00:00' }).campus,
   'shunyi_mapo'

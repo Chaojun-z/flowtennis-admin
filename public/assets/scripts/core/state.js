@@ -21,7 +21,7 @@ let coachOpsUnifiedView={rows:[]};
 let purchaseUnifiedView={rows:[]};
 let packageUnifiedView={rows:[]};
 let entitlementUnifiedView={rows:[]};
-let leadListPageData={rows:[],total:0,page:1,pageSize:15,pages:1,summary:null};
+let leadListPageData={rows:[],total:0,page:1,pageSize:15,pages:1,summary:null,filters:null};
 let scheduleListPageData={rows:[],total:0,page:1,pageSize:15,pages:1,summary:null,filters:null};
 let studentLessonRecordExpandedState={};
 const loadedPurchaseDetailIds=new Set();
@@ -619,14 +619,15 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='leads'){
     leads=rows;
     leadListPageData=Array.isArray(data)
-      ? {rows,total:rows.length,page:1,pageSize:rows.length||leadPageSize,pages:1,summary:null}
+      ? {rows,total:rows.length,page:1,pageSize:rows.length||leadPageSize,pages:1,summary:null,filters:null}
       : {
         rows,
         total:Number(data?.total)||rows.length,
         page:Number(data?.page)||leadPage||1,
         pageSize:Number(data?.pageSize)||leadPageSize,
         pages:Number(data?.pages)||1,
-        summary:data?.summary||null
+        summary:data?.summary||null,
+        filters:data?.filters||null
       };
   }
   if(name==='leadFollowups')leadFollowups=rows;

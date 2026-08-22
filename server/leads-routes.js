@@ -11,7 +11,7 @@ function createLeadsRoutes(deps={}){
     normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
     normalizeLeadFollowupRecord,applyLeadFollowupsSnapshot,applyLeadFollowupSnapshot,normalizeLeadImportRows,
     buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,buildLeadMergePlan,
-    buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,
+    buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,isNonPersonLeadName,
     T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,
     T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS,T_ENTITLEMENT_LEDGER,
     T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_FINANCIAL_LEDGER,T_PLANS,T_CLASSES,T_FEEDBACKS
@@ -142,6 +142,10 @@ function createLeadsRoutes(deps={}){
     return values.some(v=>String(v||'').toLowerCase().includes(keyword));
   }
 
+  function leadListSearchHit(q,row={}){
+    return leadSearchHit(q,row.displayName,row.wechatName,row.name,row.phone);
+  }
+
   function parseLeadPaging(query){
     const enabled=query?.get('paged')==='1'||query?.get('page')||query?.get('pageSize');
     if(!enabled)return null;
@@ -163,12 +167,73 @@ function createLeadsRoutes(deps={}){
     return cleanLeadText(value).split(',').map(item=>cleanLeadText(item)).filter(Boolean);
   }
 
+  function buildLeadListFilterState(query){
+    return {
+      q:cleanLeadText(query.get('q')).toLowerCase(),
+      source:cleanLeadText(query.get('source')),
+      customerType:cleanLeadText(query.get('customerType')),
+      consultType:cleanLeadText(query.get('consultType')||query.get('demandProduct')),
+      ownerValues:leadCsvValues(query.get('owner')),
+      systemStatus:cleanLeadText(query.get('systemStatus')||query.get('leadStage')),
+      dealType:cleanLeadText(query.get('dealType')),
+      campusValue:cleanLeadText(query.get('campus')),
+      campusName:cleanLeadText(query.get('campusName')),
+      waiting:cleanLeadText(query.get('waiting')),
+      dateFrom:cleanLeadText(query.get('dateFrom')),
+      dateTo:cleanLeadText(query.get('dateTo')),
+      startDate:cleanLeadText(query.get('startDate')),
+      endDate:cleanLeadText(query.get('endDate')),
+      todayStr:new Date().toISOString().slice(0,10)
+    };
+  }
+
   function leadRowFieldText(row,...fields){
     for(const field of fields){
       const value=cleanLeadText(row?.[field]);
       if(value)return value;
     }
     return '';
+  }
+
+  function leadMatchesListFilter(row={},state={},excludeKey=''){
+    if(excludeKey!=='q'&&state.q&&!leadListSearchHit(state.q,row))return false;
+    if(excludeKey!=='source'&&state.source&&leadRowFieldText(row,'source')!==state.source)return false;
+    if(excludeKey!=='customerType'&&state.customerType&&leadRowFieldText(row,'customerType','consultType','demandProduct','profileNote')!==state.customerType)return false;
+    if(excludeKey!=='consultType'&&state.consultType&&leadRowFieldText(row,'demandProduct','consultType')!==state.consultType)return false;
+    if(excludeKey!=='owner'&&state.ownerValues.length&&!state.ownerValues.includes(leadRowFieldText(row,'owner')))return false;
+    if(excludeKey!=='systemStatus'&&state.systemStatus&&leadRowFieldText(row,'leadStage','systemStatus','rawStatus')!==state.systemStatus)return false;
+    if(excludeKey!=='dealType'&&state.dealType&&leadRowFieldText(row,'dealType','conversionType')!==state.dealType)return false;
+    if(excludeKey!=='campus'&&(state.campusValue||state.campusName)&&!leadCampusMatches(row,state.campusValue,state.campusName))return false;
+    const leadDateValue=leadDateOnly(leadBusinessDateValue(row));
+    if(excludeKey!=='date'&&state.dateFrom&&leadDateValue<state.dateFrom)return false;
+    if(excludeKey!=='date'&&state.dateTo&&leadDateValue>state.dateTo)return false;
+    if(excludeKey!=='globalDate'&&state.startDate&&leadGlobalDateValue(row)<state.startDate)return false;
+    if(excludeKey!=='globalDate'&&state.endDate&&leadGlobalDateValue(row)>state.endDate)return false;
+    if(excludeKey!=='waiting'&&state.waiting==='today'&&String(row.nextFollowupAt||'').slice(0,10)!==state.todayStr)return false;
+    if(excludeKey!=='waiting'&&state.waiting==='overdue'&&String(row.nextFollowupAt||'').slice(0,10)>=state.todayStr)return false;
+    return true;
+  }
+
+  function buildLeadListFieldCounts(rows=[],state={},fieldKey='',valueFn=()=>'',excludeKey=fieldKey){
+    const counts={};
+    const scoped=(rows||[]).filter(row=>leadMatchesListFilter(row,state,excludeKey));
+    scoped.forEach(row=>{
+      const value=cleanLeadText(valueFn(row));
+      if(!value)return;
+      counts[value]=(counts[value]||0)+1;
+    });
+    return {total:scoped.length,counts};
+  }
+
+  function buildLeadListFilterMeta(rows=[],state={}){
+    return {
+      source:buildLeadListFieldCounts(rows,state,'source',row=>leadRowFieldText(row,'source')),
+      customerType:buildLeadListFieldCounts(rows,state,'customerType',row=>leadRowFieldText(row,'customerType','consultType','demandProduct','profileNote')),
+      consult:buildLeadListFieldCounts(rows,state,'consultType',row=>leadRowFieldText(row,'demandProduct','consultType')),
+      stage:buildLeadListFieldCounts(rows,state,'systemStatus',row=>leadRowFieldText(row,'leadStage','systemStatus','rawStatus')),
+      dealType:buildLeadListFieldCounts(rows,state,'dealType',row=>leadRowFieldText(row,'dealType','conversionType')),
+      owner:buildLeadListFieldCounts(rows,state,'owner',row=>leadRowFieldText(row,'owner'))
+    };
   }
 
   function leadDateMs(value){
@@ -273,7 +338,12 @@ function createLeadsRoutes(deps={}){
   }
 
   function visibleLeadSourceRows(rows=[]){
-    return (rows||[]).filter(row=>!['merged','voided','deleted'].includes(cleanLeadText(row?.status)));
+    return (rows||[]).filter(row=>{
+      if(['merged','voided','deleted'].includes(cleanLeadText(row?.status)))return false;
+      const name=leadDisplayNameText(row);
+      if(typeof isNonPersonLeadName==='function'&&isNonPersonLeadName(name)&&!cleanLeadText(row?.phone))return false;
+      return true;
+    });
   }
 
   function stableLeadCreateHash(value){
@@ -750,7 +820,7 @@ function createLeadsRoutes(deps={}){
       if(!(method==='GET'&&isLocalPreviewFastMode()))await init();
       if(method!=='GET')await ensureLeadTablesForRequest();
       if(method==='GET'){
-        const q=cleanLeadText(query.get('q')).toLowerCase();
+        const filterState=buildLeadListFilterState(query);
         const paging=parseLeadPaging(query);
         const responseCacheKey=paging?leadPagedResponseCacheKey(query,user):'';
         const cachedResponse=responseCacheKey?readLeadPagedResponseCache(responseCacheKey):null;
@@ -758,44 +828,13 @@ function createLeadsRoutes(deps={}){
         const resultCacheKey=paging?leadFilteredResultCacheKey(query,user):'';
         let cachedResult=resultCacheKey?readLeadFilteredResultCache(resultCacheKey):null;
         if(!cachedResult){
-          const rows=await readVisibleLeadRows({expandLifecycleSearch:!!q});
-          const source=cleanLeadText(query.get('source'));
-          const customerType=cleanLeadText(query.get('customerType'));
-          const consultType=cleanLeadText(query.get('consultType')||query.get('demandProduct'));
-          const ownerValues=leadCsvValues(query.get('owner'));
-          const systemStatus=cleanLeadText(query.get('systemStatus')||query.get('leadStage'));
-          const dealType=cleanLeadText(query.get('dealType'));
-          const campusValue=cleanLeadText(query.get('campus'));
-          const campusName=cleanLeadText(query.get('campusName'));
-          const waiting=cleanLeadText(query.get('waiting'));
-          const dateFrom=cleanLeadText(query.get('dateFrom'));
-          const dateTo=cleanLeadText(query.get('dateTo'));
-          const startDate=cleanLeadText(query.get('startDate'));
-          const endDate=cleanLeadText(query.get('endDate'));
-          const todayStr=new Date().toISOString().slice(0,10);
+          const rows=await readVisibleLeadRows({expandLifecycleSearch:!!filterState.q});
           const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
-          const filtered=visibleRows.filter(row=>{
-            if(q&&!leadSearchHit(q,row.displayName,row.wechatName,row.name,row.phone,row.source,row.customerType,row.demandProduct,row.consultType,row.intentLevel,row.owner,row.profileNote,row.rawStatus,row.systemStatus,row.leadStage,row.studentStage,row.courtStage,row.membershipStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
-            if(source&&leadRowFieldText(row,'source')!==source)return false;
-            if(customerType&&leadRowFieldText(row,'customerType','consultType','demandProduct','profileNote')!==customerType)return false;
-            if(consultType&&leadRowFieldText(row,'demandProduct','consultType')!==consultType)return false;
-            if(ownerValues.length&&!ownerValues.includes(leadRowFieldText(row,'owner')))return false;
-            if(systemStatus&&leadRowFieldText(row,'leadStage','systemStatus','rawStatus')!==systemStatus)return false;
-            if(dealType&&leadRowFieldText(row,'dealType','conversionType')!==dealType)return false;
-            if((campusValue||campusName)&&!leadCampusMatches(row,campusValue,campusName))return false;
-            const leadDateValue=leadDateOnly(leadBusinessDateValue(row));
-            if(dateFrom&&leadDateValue<dateFrom)return false;
-            if(dateTo&&leadDateValue>dateTo)return false;
-            if(startDate&&leadGlobalDateValue(row)<startDate)return false;
-            if(endDate&&leadGlobalDateValue(row)>endDate)return false;
-            if(waiting==='today'&&String(row.nextFollowupAt||'').slice(0,10)!==todayStr)return false;
-            if(waiting==='overdue'&&String(row.nextFollowupAt||'').slice(0,10)>=todayStr)return false;
-            return true;
-          });
-          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered)};
+          const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
+          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered),filters:buildLeadListFilterMeta(visibleRows,filterState)};
           if(resultCacheKey)writeLeadFilteredResultCache(resultCacheKey,cachedResult);
         }
-        const payload=paging?{...buildLeadListPage(cachedResult.sorted,paging),summary:cachedResult.summary}:cachedResult.sorted;
+        const payload=paging?{...buildLeadListPage(cachedResult.sorted,paging),summary:cachedResult.summary,filters:cachedResult.filters}:cachedResult.sorted;
         if(responseCacheKey)writeLeadPagedResponseCache(responseCacheKey,payload);
         return sendJson(res,payload);
       }

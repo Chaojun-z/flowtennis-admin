@@ -24,6 +24,14 @@ vm.createContext(context);
 vm.runInContext(standardSource, context);
 vm.runInContext(source, context);
 
+const getFilteredLeadsBody = source.match(/function getFilteredLeads\([\s\S]*?function renderLeadToolbarFilters/)?.[0] || '';
+const renderLeadToolbarFiltersBody = source.match(/function renderLeadToolbarFilters\([\s\S]*?function leadConverted/)?.[0] || '';
+const leadSearchLine = getFilteredLeadsBody.match(/searchHit\([^\n]+/)?.[0] || '';
+assert.match(leadSearchLine, /searchHit\(q,leadDisplayName\(lead\),lead\?\.phone,lead\?\.wechatName\)/, '线索搜索框只应搜索姓名、手机号和微信名');
+assert.doesNotMatch(leadSearchLine, /lead\?\.owner|leadSourceText\(lead\)|leadCustomerTypeText\(lead\)|leadDemandProductText\(lead\)|lead\?\.profileNote/, '线索搜索框不能命中跟进人、来源、类型、需求或备注');
+assert.match(source, /function leadServerFilterCounts\(\)/, '线索页应读取后端完整结果筛选计数');
+assert.match(renderLeadToolbarFiltersBody, /leadOptionsWithServerCounts\('source'[\s\S]*leadOptionsWithServerCounts\('owner'/, '线索筛选下拉应优先使用后端完整结果计数');
+
 assert.strictEqual(
   context.leadTrialDateText({ trialAtRaw: '5.8 11-12', leadDate: '2026-05-05' }),
   '2026-05-08 11:00-12:00 16天前'

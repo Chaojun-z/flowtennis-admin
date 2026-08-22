@@ -667,7 +667,7 @@ function getFilteredLeads(){
   return leadRows().filter(lead=>{
     if(!leadInDateRange(lead,getLeadDateFilterRange()))return false;
     if(!globalDateWithinRange(leadGlobalDateValue(lead)))return false;
-    if(!searchHit(q,leadDisplayName(lead),lead?.phone,lead?.wechatName,leadSourceText(lead),leadCustomerTypeText(lead),leadDemandProductText(lead),lead?.owner,lead?.profileNote))return false;
+    if(!searchHit(q,leadDisplayName(lead),lead?.phone,lead?.wechatName))return false;
     if(sourceValue&&leadSourceText(lead)!==sourceValue)return false;
     if(customerTypeValue&&leadCustomerTypeText(lead)!==customerTypeValue)return false;
     if(consultValue&&leadConsultText(lead)!==consultValue)return false;
@@ -683,6 +683,22 @@ function getFilteredLeads(){
     if(followupDiff!==0)return followupDiff;
     return String(b?.updatedAt||'').localeCompare(String(a?.updatedAt||''));
   });
+}
+function leadServerFilterCounts(){
+  const filters=typeof leadListPageData==='object'&&leadListPageData?leadListPageData.filters:null;
+  return filters&&typeof filters==='object'?filters:null;
+}
+function leadOptionsWithServerCounts(key,options=[],fallbackOptions=[]){
+  const field=leadServerFilterCounts()?.[key];
+  if(!field||!field.counts)return fallbackOptions.length?fallbackOptions:options;
+  const counts=field.counts||{};
+  const total=Number(field.total)||0;
+  return (options||[]).map(opt=>{
+    const item=typeof opt==='string'?{value:opt,label:opt}:opt;
+    const value=String(item.value||'');
+    const count=value===''?total:(Number(counts[value])||0);
+    return {...item,count};
+  }).filter(opt=>String(opt.value||'')===''||opt.count>0);
 }
 function renderLeadToolbarFilters(){
   const rows=leadRows().filter(lead=>leadInDateRange(lead,getLeadDateFilterRange())&&globalDateWithinRange(leadGlobalDateValue(lead))&&(campus==='all'||sameCampusValue(lead?.campus,campus)));
@@ -700,18 +716,18 @@ function renderLeadToolbarFilters(){
     {key:'dealType',value:dealTypeValue,options:[{value:'',label:'全部',emptyDisplay:'转化类型'},...leadDealTypeOptions().filter(option=>String(option.value||''))],match:(lead,value)=>leadDealTypeText(lead)===String(value)}
   ],rows);
   const configs=[
-    ['leadSourceFilterHost','leadSourceFilter','来源',linked.source.options,linked.source.value],
-    ['leadCustomerTypeFilterHost','leadCustomerTypeFilter','类型',linked.customerType.options,linked.customerType.value],
-    ['leadConsultFilterHost','leadConsultFilter','需求',linked.consult.options,linked.consult.value],
-    ['leadStageFilterHost','leadStageFilter','线索阶段',linked.stage.options,linked.stage.value],
-    ['leadDealTypeFilterHost','leadDealTypeFilter','转化类型',linked.dealType.options,linked.dealType.value]
+    ['leadSourceFilterHost','leadSourceFilter','来源',leadOptionsWithServerCounts('source',[{value:'',label:'全部',emptyDisplay:'来源'},...leadSourceOptions()],linked.source.options),linked.source.value],
+    ['leadCustomerTypeFilterHost','leadCustomerTypeFilter','类型',leadOptionsWithServerCounts('customerType',[{value:'',label:'全部',emptyDisplay:'类型'},...leadCustomerTypeOptions()],linked.customerType.options),linked.customerType.value],
+    ['leadConsultFilterHost','leadConsultFilter','需求',leadOptionsWithServerCounts('consult',[{value:'',label:'全部',emptyDisplay:'需求'},...leadDemandProductOptions()],linked.consult.options),linked.consult.value],
+    ['leadStageFilterHost','leadStageFilter','线索阶段',leadOptionsWithServerCounts('stage',[{value:'',label:'全部',emptyDisplay:'线索阶段'},...leadStageOptions()],linked.stage.options),linked.stage.value],
+    ['leadDealTypeFilterHost','leadDealTypeFilter','转化类型',leadOptionsWithServerCounts('dealType',[{value:'',label:'全部',emptyDisplay:'转化类型'},...leadDealTypeOptions().filter(option=>String(option.value||''))],linked.dealType.options),linked.dealType.value]
   ];
   configs.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onLeadFilterChange');
   });
   const ownerHost=document.getElementById('leadOwnerFilterHost');
-  if(ownerHost)ownerHost.innerHTML=leadOwnerFilterHtml(leadOwnerOptions(),ownerValues);
+  if(ownerHost)ownerHost.innerHTML=leadOwnerFilterHtml(leadOptionsWithServerCounts('owner',leadOwnerOptions(),leadOwnerOptions()),ownerValues);
 }
 function leadConverted(lead){
   return leadConvertedYesNo(lead)==='是';

@@ -174,7 +174,8 @@ assert.deepStrictEqual(
   formalTeachingSummaryRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
   [
     ['ledger', '2026-06-12', '小班课', -6],
-    ['ledger', '2026-06-10', '私教课', -2]
+    ['ledger', '2026-06-10', '私教课', -2],
+    ['schedule', '2026-06-07 10:00', '体验课', -1]
   ],
   '学员教学摘要必须保存和抽屉一致的上课记录，轻量列表不能只有累计数字'
 );

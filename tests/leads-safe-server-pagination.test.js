@@ -147,8 +147,10 @@ async function main() {
   assert.match(routesSource, /function leadFilteredResultCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query,\{includePaging:false\}\)[\s\S]*leadListUserCachePart\(user\)/, '后端翻页应复用同一筛选排序统计结果，不能每页重新全量计算');
   assert.match(routesSource, /function clearLeadListCaches\(\)[\s\S]*leadSourceRowsCache\.rows=null[\s\S]*leadPagedResponseCache\.clear\(\)[\s\S]*leadFilteredResultCache\.clear\(\)/, '线索写操作后应能清理原始行缓存、分页响应缓存和筛选结果缓存');
   assert.match(routesSource, /if\(path==='\/leads'\)\{[\s\S]*if\(!\(method==='GET'&&isLocalPreviewFastMode\(\)\)\)await init\(\);[\s\S]*if\(method!=='GET'\)await ensureLeadTablesForRequest\(\);[\s\S]*if\(method==='GET'\)/, '本地预览线索池只读首屏不应等待初始化和建表检查，写操作仍保留安全检查');
-  assert.match(routesSource, /if\(dateFrom&&leadDateValue<dateFrom\)return false;[\s\S]*cachedResult=\{sorted:sortLeadListRows\(filtered,query\),summary:buildLeadListSummary\(filtered\)\};[\s\S]*buildLeadListPage\(cachedResult\.sorted,paging\)/, '后端必须先完整筛选和列表统计，再分页截取当前页');
+  assert.match(routesSource, /const filtered=visibleRows\.filter\(row=>leadMatchesListFilter\(row,filterState\)\);[\s\S]*summary:buildLeadListSummary\(filtered\)[\s\S]*buildLeadListPage\(cachedResult\.sorted,paging\)/, '后端必须先完整筛选和列表统计，再分页截取当前页');
+  assert.match(routesSource, /buildLeadListFilterState\(query\)[\s\S]*buildLeadListFilterMeta\(visibleRows,filterState\)/, '后端必须用筛选后的完整结果生成下拉计数，不能用当前页 15 条生成');
   assert.match(setDatasetBody, /if\(name==='leads'\)\{[\s\S]*leadListPageData=[\s\S]*summary:data\?\.summary\|\|null/, '线索池应保存后端分页元信息和统计');
+  assert.match(setDatasetBody, /filters:data\?\.filters\|\|null/, '线索池应保存后端返回的筛选项计数');
   assert.match(statsBody, /const total=serverSummary\?\.total\?\?null[\s\S]*leadCustomerCenterSummaryData\(\)/, '线索池顶部只能从 /api/leads 取筛选后线索总数，学员类指标必须走客户中心统一 summary');
   assert.doesNotMatch(statsBody, /serverSummary\?\.historicalStudents|serverSummary\?\.activeStudents|serverSummary\?\.trialAttended|serverSummary\?\.trialAttendedToFormalPurchase/, '线索池顶部学员类指标不能使用 /api/leads 轻量粗算值');
   assert.match(renderBody, /serverPage\?[\s\S]*total:serverPage\.total[\s\S]*slice:list[\s\S]*standardListSlice/, '线索池列表不应继续只靠本地全量分页');
@@ -223,6 +225,8 @@ async function main() {
   assert.strictEqual(firstPage.body.summary.trialAttendedRate, '10%', '顶部体验课比例应返回可展示值');
   assert.strictEqual(firstPage.body.summary.trialAttendedToFormalPurchase, 1, '顶部体验后买正式课应返回当前筛选后的轻量统计');
   assert.strictEqual(firstPage.body.summary.trialAttendedToFormalPurchaseRate, '50%', '顶部体验后买正式课比例应返回可展示值');
+  assert.strictEqual(firstPage.body.filters.source.counts['大众点评'], 18, '来源筛选数量必须按完整筛选结果计算，不能只按当前页 5 条');
+  assert.strictEqual(firstPage.body.filters.source.counts['网球兄弟小红书'], 2, '来源筛选数量必须包含当前页之外的匹配线索');
   assert.deepStrictEqual(firstPage.body.rows.map(row => row.id), ['aug-5', 'aug-4', 'aug-3', 'aug-2', 'aug-1'], '后端必须先按最新线索时间倒序，再分页');
   assert.ok(firstPage.body.rows.every(row => String(row.leadDate).startsWith('2026-08')), '首屏不能回到 5 月旧线索');
   const firstIds = new Set(firstPage.body.rows.map(row => row.id));
@@ -233,7 +237,11 @@ async function main() {
   assert.ok(filtered.body.rows.length > 0, '筛选应能返回匹配线索');
   assert.ok(filtered.body.rows.every(row => row.owner === '吴敌' && String(row.leadDate).startsWith('2026-08')), '后端分页应先应用筛选再分页');
   assert.strictEqual(filtered.body.summary.total, filtered.body.total, '顶部统计总数应与筛选后总量一致');
+  assert.strictEqual(filtered.body.filters.source.counts['网球兄弟小红书'], 2, '筛选计数应按当前 8 月范围和其他筛选条件计算');
   assert.strictEqual(calls.leadScans, 1, '不同筛选条件应复用短时原始行缓存，避免每次筛选重新扫表');
+
+  const ownerSearch = await request(handle, 'paged=1&page=1&pageSize=10&q=mira');
+  assert.strictEqual(ownerSearch.body.total, 0, '搜索 mira 不应命中跟进人 Mira，跟进人必须走单独筛选项');
 
   const filteredAgain = await request(handle, 'paged=1&page=1&pageSize=10&owner=吴敌&campus=shunyi_mapo&dateFrom=2026-08-01&dateTo=2026-08-31');
   assert.deepStrictEqual(filteredAgain.body.rows.map(row => row.id), filtered.body.rows.map(row => row.id), '相同查询条件应命中分页响应缓存');
