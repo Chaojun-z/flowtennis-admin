@@ -68,12 +68,16 @@ assert.doesNotMatch(
   '线索池顶部不得在页面内另算一套学员指标'
 );
 assert.ok(
-  leadsRouteSource.includes('const summaryRows=filtered.filter(row=>!row.isLifecycleSynthetic);'),
-  '线索池 summary 必须只统计原始线索，不能把生命周期补出来的合成行算进去'
+  leadsRouteSource.includes('function leadSummaryCountableRow'),
+  '线索池后端必须有独立的 summary 计数过滤，不能直接统计列表行'
 );
 assert.ok(
-  leadsRouteSource.includes('summary:buildLeadListSummary(summaryRows)'),
-  '线索池 summary 必须用剔除合成行后的统计集'
+  leadsRouteSource.includes("id.startsWith('lead-from-student-')"),
+  '线索池 summary 必须排除已物化的学生补行'
+);
+assert.ok(
+  leadsRouteSource.includes('const summaryRows=filtered.filter(leadSummaryCountableRow);'),
+  '线索池 summary 必须用剔除生命周期补行后的统计集'
 );
 
 assert.match(

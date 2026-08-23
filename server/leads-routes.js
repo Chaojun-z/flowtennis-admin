@@ -353,6 +353,12 @@ function createLeadsRoutes(deps={}){
     };
   }
 
+  function leadSummaryCountableRow(row={}){
+    if(row?.isLifecycleSynthetic)return false;
+    const id=cleanLeadText(row?.id||row?.sourceLeadId||row?.leadId);
+    return !id.startsWith('lead-from-student-');
+  }
+
   function leadPoolNameKey(value){
     return cleanLeadText(value)
       .replace(/1[3-9]\d{9}/g,'')
@@ -1007,7 +1013,7 @@ function createLeadsRoutes(deps={}){
           const rows=await readVisibleLeadRows({expandLifecycleSearch:!!filterState.q});
           const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
           const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
-          const summaryRows=filtered.filter(row=>!row.isLifecycleSynthetic);
+          const summaryRows=filtered.filter(leadSummaryCountableRow);
           cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(summaryRows),filters:buildLeadListFilterMeta(visibleRows,filterState)};
           if(resultCacheKey)writeLeadFilteredResultCache(resultCacheKey,cachedResult);
         }
