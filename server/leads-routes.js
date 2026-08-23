@@ -339,7 +339,7 @@ function createLeadsRoutes(deps={}){
     const historicalStudents=list.filter(row=>leadSummaryBool(row.isHistoricalStudentRoster)||leadSummaryTrialAttended(row)||leadSummaryCourseConverted(row)).length;
     const activeStudents=list.filter(row=>leadSummaryBool(row.isActiveStudentRoster)||summaryRowIsActiveStudentRoster(row)).length;
     const trialAttended=list.filter(leadSummaryTrialAttended).length;
-    const trialAttendedToFormalPurchase=list.filter(row=>leadSummaryBool(row.hasTrialToCourseConversion)||(leadSummaryTrialAttended(row)&&leadSummaryCourseConverted(row))).length;
+    const trialAttendedToFormalPurchase=list.filter(row=>leadSummaryTrialAttended(row)&&(leadSummaryBool(row.hasTrialToCourseConversion)||leadSummaryCourseConverted(row))).length;
     return {
       total,
       historicalStudents,
@@ -351,12 +351,6 @@ function createLeadsRoutes(deps={}){
       trialAttendedToFormalPurchase,
       trialAttendedToFormalPurchaseRate:leadSummaryRate(trialAttendedToFormalPurchase,trialAttended)
     };
-  }
-
-  function leadSummaryCountableRow(row={}){
-    if(row?.isLifecycleSynthetic)return false;
-    const id=cleanLeadText(row?.id||row?.sourceLeadId||row?.leadId);
-    return !id.startsWith('lead-from-student-');
   }
 
   function leadPoolNameKey(value){
@@ -1013,8 +1007,7 @@ function createLeadsRoutes(deps={}){
           const rows=await readVisibleLeadRows({expandLifecycleSearch:!!filterState.q});
           const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
           const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
-          const summaryRows=filtered.filter(leadSummaryCountableRow);
-          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(summaryRows),filters:buildLeadListFilterMeta(visibleRows,filterState)};
+          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered),filters:buildLeadListFilterMeta(visibleRows,filterState)};
           if(resultCacheKey)writeLeadFilteredResultCache(resultCacheKey,cachedResult);
         }
         const payload=paging?{...buildLeadListPage(cachedResult.sorted,paging),summary:cachedResult.summary,filters:cachedResult.filters}:cachedResult.sorted;
