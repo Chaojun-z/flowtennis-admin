@@ -381,6 +381,30 @@ function buildScheduleListViewFromData(data = {}, options = {}) {
   };
 }
 
+function buildScheduleListViewFromItems(items = [], options = {}) {
+  const sampleIds = uniqueIds(options.sampleIds || []);
+  const allItems = (Array.isArray(items) ? items : [])
+    .filter((item) => item && text(item.id))
+    .map((item) => ({ ...item, id: text(item.id) }));
+  const rows = sampleIds.length ? allItems.filter((row) => sampleIds.includes(text(row.id))) : allItems;
+  const filtered = filterItems(rows, options);
+  const sorted = filtered.sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')));
+  const { items: pageItems, pagination } = paginate(sorted, options);
+  return {
+    summary: buildSummary(sorted),
+    filters: buildFilters(allItems),
+    items: pageItems,
+    pagination,
+    meta: {
+      generatedAt: new Date().toISOString(),
+      source: 'schedule-list-read-model-items',
+      sampleIds,
+      sample: text(options.sample),
+      includeDetails: false
+    }
+  };
+}
+
 async function loadSourceData(deps = {}) {
   const {
     getScheduleListRows,
@@ -469,6 +493,7 @@ function createScheduleListCompareLoader(deps = {}) {
 
 module.exports = {
   buildScheduleListViewFromData,
+  buildScheduleListViewFromItems,
   createScheduleListViewLoader,
   createScheduleListCompareLoader
 };

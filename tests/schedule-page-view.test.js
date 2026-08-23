@@ -192,8 +192,8 @@ assert.match(styles, /\.modal\.modal-court \.schedule-time-field\{flex:1 1 auto/
 assert.match(styles, /\.modal\.modal-court \.schedule-repeat-row\{align-items:flex-end;gap:18px\}/, 'schedule repeat controls should have their own row spacing');
 assert.doesNotMatch(fnBody('openScheduleModal'), /上课地点|排课会校验时间冲突|取消勾选的人本次记为缺勤|按周生成多节课/, 'schedule modal should remove the extra notice, separate location section, and old repeat copy');
 assert.match(fnBody('openScheduleModal'), /姓名<\/label>[\s\S]*sch_stuSearch[\s\S]*sch_studentSuggest[\s\S]*sch_selectedStudentTags/, 'schedule modal should use search suggestions and selected student tags');
-assert.match(source, /schedule:\['campuses','students','courts','schedule','coaches','coachProposals'\]/, 'schedule page should render the schedule list before lifecycle student roster finishes');
-assert.match(source, /schedule:\['classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'\]/, 'schedule page should refresh lifecycle student roster in the background after first paint');
+assert.match(source, /schedule:\['campuses','schedule'\]/, 'schedule page first paint should only wait for campuses and the lightweight schedule snapshot');
+assert.match(source, /schedule:\['students','courts','coaches','coachProposals','classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'\]/, 'schedule page should refresh detail/search datasets in the background after first paint');
 assert.match(source, /if\(name==='coachSchedulePage'\)\{[\s\S]*teachingStudentViews=data\.teachingStudentViews\|\|teachingStudentViews/, 'coach schedule calendar should hydrate the same student roster used by schedule search');
 const coachScheduleRouteSource = corePagesSource.slice(
   corePagesSource.indexOf("path==='/page-data/coach-schedule'&&method==='GET'"),

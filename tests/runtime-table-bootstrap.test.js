@@ -32,13 +32,15 @@ assert.deepStrictEqual(
     'ft_court_account_list_index_tasks',
     'ft_court_account_list_snapshot',
     'ft_court_account_list_snapshot_tasks',
+    'ft_schedule_list_snapshot',
+    'ft_schedule_list_snapshot_tasks',
     'ft_membership_plans',
     'ft_membership_accounts',
     'ft_membership_orders',
     'ft_membership_benefit_ledger',
     'ft_membership_account_events'
   ],
-  'runtime ensured tables should cover feedback, course package, secondary index, and membership tables'
+  'runtime ensured tables should cover feedback, course package, secondary index, list snapshots, and membership tables'
 );
 
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');

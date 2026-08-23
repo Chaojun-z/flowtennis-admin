@@ -4,6 +4,7 @@ const { createCourtAccountListViewLoader, createCourtAccountListCompareLoader } 
 const { COURT_ACCOUNT_LIST_INDEX_NOT_READY_CODE } = require('./court-account-list-index.js');
 const { createCourtAccountListSnapshotLoader } = require('./court-account-list-snapshot.js');
 const { createScheduleListViewLoader, createScheduleListCompareLoader } = require('./schedule-list-read-model.js');
+const { createScheduleListSnapshotLoader, SCHEDULE_LIST_SNAPSHOT_NOT_READY_CODE } = require('./schedule-list-snapshot.js');
 const fixedCourtAcceptanceSamples = require('../../docs/performance-governance/15-样板页固定验收样本.json');
 const fixedScheduleAcceptanceSamples = require('../../docs/prd/source/08-具体需求/01-管理后台/02-教学与排课/07-排课管理固定验收样本.json');
 
@@ -18,7 +19,7 @@ function createResidualPageDataRoutes(deps={}){
   const {
     T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,
     T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_USERS,
-    T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT
+    T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT
   }=tables;
   const loadCourtAccountListView=createCourtAccountListViewLoader({
     listCampusesWithDefaults,
@@ -56,6 +57,10 @@ function createResidualPageDataRoutes(deps={}){
       users:T_USERS,
       feedbacks:T_FEEDBACKS
     }
+  });
+  const loadScheduleListSnapshot=createScheduleListSnapshotLoader({
+    getCachedRow,
+    tables:{scheduleListSnapshot:T_SCHEDULE_LIST_SNAPSHOT}
   });
   const loadScheduleListViewCompare=createScheduleListCompareLoader({
     getScheduleListRows,
@@ -128,9 +133,11 @@ function createResidualPageDataRoutes(deps={}){
       await init();
       const ids=String(query?.get('ids')||'').split(',').map(item=>String(item||'').trim()).filter(Boolean);
       const sample=String(query?.get('sample')||'').trim();
-      const load=()=>loadScheduleListView({
+      const forceFresh=query?.get('fresh')==='1'||query?.get('forceFresh')==='1';
+      const load=()=>loadScheduleListSnapshot({
         sampleIds:ids,
         sample,
+        forceFresh,
         all:query?.get('all')==='1',
         page:query?.get('page')||'',
         pageSize:query?.get('pageSize')||'',
@@ -144,7 +151,16 @@ function createResidualPageDataRoutes(deps={}){
         startDate:query?.get('startDate')||query?.get('dateFrom')||'',
         endDate:query?.get('endDate')||query?.get('dateTo')||''
       });
-      const view=timedEndpointMetric?await timedEndpointMetric('pageData.scheduleListView',load):await load();
+      let view=null;
+      try{
+        view=timedEndpointMetric?await timedEndpointMetric('pageData.scheduleListView',load):await load();
+      }catch(err){
+        if(err?.code===SCHEDULE_LIST_SNAPSHOT_NOT_READY_CODE){
+          return sendJson(res,{error:err.message||'排课列表快照未发布',code:err.code},err.statusCode||503);
+        }
+        console.warn('[schedule-list-snapshot] failed:',err?.message||err);
+        return sendJson(res,{error:err.message||'排课列表快照读取失败',code:err.code||'SCHEDULE_LIST_SNAPSHOT_ERROR'},err.statusCode||500);
+      }
       return sendJson(res,view);
     }
     if(path==='/page-data/schedule-list-view-compare'&&method==='GET'){

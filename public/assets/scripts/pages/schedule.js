@@ -86,7 +86,7 @@ async function reloadSchedulesForCurrentPage({showLoading=true}={}){
   scheduleListReloading=true;
   if(showLoading&&typeof renderScheduleTableLoading==='function')renderScheduleTableLoading();
   try{
-    if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['schedule'],{force:true});
+    if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['schedule'],{force:false});
     if(seq===scheduleListReloadSeq)renderSchedule();
     return true;
   }catch(e){

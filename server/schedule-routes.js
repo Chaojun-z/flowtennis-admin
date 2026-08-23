@@ -8,12 +8,21 @@ function createScheduleRoutes(deps={}){
     scheduleStoredValuePaymentAmount,getFastStudentsRead,buildScheduleStoredValueCourtUpdate,
     put,scheduleLessonDelta,applyEntitlementDelta,applySmallGroupFreeAbsences,applyLessonDelta,
     syncScheduleFieldFeeFinancialLedger,persistScheduleStoredValueCourts,syncCoachScheduleIndexes,syncScheduleConflictIndexes=async()=>{},
+    scheduleListSnapshotSync=null,
     del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,scheduleSaveErrorStatus,
     get,withTimeout,scanFeedbacks,assertScheduleEditableAfterFeedback,scan,scheduleEntitlementDeltas,
     restoreSmallGroupFreeAbsenceLedgerRows,parseLessonValue,returnEntitlementFreeAbsence,
     diffScheduleEntitlementDeltas,effectiveScheduleStatus,assertCanDeleteSchedule,
     T_SCHEDULE,T_COACHES,T_USERS,T_ENTITLEMENTS,T_COURTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ACCOUNTS
   }=deps;
+
+  async function syncScheduleListSnapshotDelta(row, options = {}) {
+    if (!scheduleListSnapshotSync || typeof scheduleListSnapshotSync.recordDelta !== 'function') return null;
+    return scheduleListSnapshotSync.recordDelta(row, options).catch((err) => {
+      console.error('schedule list snapshot delta sync failed:', err);
+      return null;
+    });
+  }
 
   return async function handleScheduleRoutes({path,method,body,user,res}){
     if(path==='/schedule'){
@@ -86,6 +95,7 @@ function createScheduleRoutes(deps={}){
             await syncCoachScheduleIndexes(null,r).catch(err=>{
               notification={...(notification||{}),sent:false,indexError:err.message};
             });
+            await syncScheduleListSnapshotDelta(r,{reason:'schedule-create'});
             return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,financialLedger:financialLedger?[financialLedger]:[],courts:storedValueCourts,notification});
           }catch(err){
             await del(T_SCHEDULE,id).catch(()=>null);
@@ -155,6 +165,7 @@ function createScheduleRoutes(deps={}){
               const storedValueCourts=await timed('schedule cancel stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
               await timed('schedule cancel conflict index write',()=>syncScheduleConflictIndexes(ex,r));
               await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule cancel index sync failed:',err));
+              await syncScheduleListSnapshotDelta(r,{reason:'schedule-cancel'});
               return sendJson(res,{schedule:r,entitlements,entitlementLedger,...(lessonUpdate||{}),courts:storedValueCourts,warnings:[]});
             }catch(err){
               await put(T_SCHEDULE,id,ex).catch(()=>null);
@@ -239,6 +250,7 @@ function createScheduleRoutes(deps={}){
             const storedValueCourts=await timed('schedule update stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
             await timed('schedule update conflict index write',()=>syncScheduleConflictIndexes(ex,r));
             await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule update index sync failed:',err));
+            await syncScheduleListSnapshotDelta(r,{reason:'schedule-update'});
             return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,financialLedger:financialLedger?[financialLedger]:[],courts:storedValueCourts,warnings:risk.warnings||[]});
           }catch(err){
             await put(T_SCHEDULE,id,ex).catch(()=>null);
@@ -296,6 +308,7 @@ function createScheduleRoutes(deps={}){
           await del(T_SCHEDULE,id);
           await timed('schedule delete conflict index write',()=>syncScheduleConflictIndexes(ex,null));
           await syncCoachScheduleIndexes(ex,null).catch(err=>console.error('schedule delete index sync failed:',err));
+          await syncScheduleListSnapshotDelta(null,{scheduleId:id,deleted:true,reason:'schedule-delete'});
           return sendJson(res,{success:true,...(lessonUpdate||{}),entitlementLedger:deletedLedger,courts:storedValueCourts});
         }catch(err){
           if(ex)await put(T_SCHEDULE,id,ex).catch(()=>null);
