@@ -302,6 +302,56 @@ function createLeadsRoutes(deps={}){
     return ['true','1','yes','是','已'].includes(text);
   }
 
+  function parseLeadSnapshotArray(value){
+    if(Array.isArray(value))return value;
+    const raw=cleanLeadText(value);
+    if(!raw)return [];
+    try{
+      const parsed=JSON.parse(raw);
+      return Array.isArray(parsed)?parsed:[];
+    }catch{
+      return [];
+    }
+  }
+
+  function summaryRowHasTrialLesson(row={}){
+    return parseLeadSnapshotArray(row.detailLessonRecordRows).some(item=>/体验/.test(cleanLeadText([
+      item?.courseType,
+      item?.standardCourseType,
+      item?.packageName,
+      item?.productName,
+      item?.className,
+      item?.courseName
+    ].filter(Boolean).join(' '))));
+  }
+
+  function summaryRowHasConsumedTrialPackage(row={}){
+    return [...parseLeadSnapshotArray(row.detailPackageOrderRows),...parseLeadSnapshotArray(row.packageListRows)].some(item=>{
+      const label=cleanLeadText([item?.courseType,item?.standardCourseType,item?.packageName,item?.productName].filter(Boolean).join(' '));
+      if(!/体验/.test(label))return false;
+      const total=Number(item?.totalLessons)||0;
+      const used=Number(item?.usedLessons)||0;
+      const remaining=Number(item?.remainingLessons);
+      return used>0||(total>0&&Number.isFinite(remaining)&&remaining<=0)||/已用完|已核销|已消课/.test(cleanLeadText(item?.statusText||item?.status));
+    });
+  }
+
+  function summaryRowIsFormalCourseItem(item={}){
+    const label=cleanLeadText([item?.courseType,item?.standardCourseType,item?.packageName,item?.productName,item?.courseName,item?.className].filter(Boolean).join(' '));
+    return !/体验|陪打/.test(label)&&/私教|小班|课包|正式|成人|青少年|网球/.test(label);
+  }
+
+  function summaryRowHasFormalCourseFact(row={}){
+    if(leadSummaryBool(row?.hasFormalAttended)||cleanLeadText(row?.lastFormalLessonAt||row?.detailRecentLessonDate))return true;
+    if((Number(row?.coursePurchaseCount)||0)>0)return true;
+    if(cleanLeadText(row?.studentStage)==='formal')return true;
+    if(cleanLeadText(row?.packagePurchaseDate))return true;
+    if((Number(row?.cumulativeCoursePaidAmount)||0)>0)return true;
+    if((Number(row?.packageBalanceTotal)||0)>0)return true;
+    return [...parseLeadSnapshotArray(row.detailPackageOrderRows),...parseLeadSnapshotArray(row.packageListRows)]
+      .some(item=>summaryRowIsFormalCourseItem(item)&&(Number(item?.actualAmount||item?.paidAmount||item?.totalAmount||0)>0||Number(item?.totalLessons||0)>0||cleanLeadText(item?.purchaseDate||item?.createdAt)));
+  }
+
   function leadSummaryRate(value,total){
     if(!total)return '0%';
     const percent=(Number(value)||0)*100/(Number(total)||0);
@@ -339,7 +389,7 @@ function createLeadsRoutes(deps={}){
     const historicalStudents=list.filter(row=>leadSummaryBool(row.isHistoricalStudentRoster)||leadSummaryTrialAttended(row)||leadSummaryCourseConverted(row)).length;
     const activeStudents=list.filter(row=>leadSummaryBool(row.isActiveStudentRoster)||summaryRowIsActiveStudentRoster(row)).length;
     const trialAttended=list.filter(leadSummaryTrialAttended).length;
-    const trialAttendedToFormalPurchase=list.filter(row=>leadSummaryTrialAttended(row)&&(leadSummaryBool(row.hasTrialToCourseConversion)||leadSummaryCourseConverted(row))).length;
+    const trialAttendedToFormalPurchase=list.filter(row=>leadSummaryTrialAttended(row)&&leadSummaryBool(row.hasTrialToCourseConversion)).length;
     return {
       total,
       historicalStudents,
@@ -365,8 +415,10 @@ function createLeadsRoutes(deps={}){
     return (Array.isArray(summaryRows)?summaryRows:[]).map(row=>{
       const studentId=cleanLeadText(row?.studentId||row?.id);
       if(!studentId)return null;
-      const hasTrialAttended=leadSummaryBool(row?.hasTrialAttended)||!!cleanLeadText(row?.trialAttendedAt);
+      const hasTrialAttended=leadSummaryBool(row?.hasTrialAttended)||!!cleanLeadText(row?.trialAttendedAt)||summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row);
       const hasFormalAttended=leadSummaryBool(row?.hasFormalAttended)||!!cleanLeadText(row?.lastFormalLessonAt);
+      const hasFormalCourseFact=summaryRowHasFormalCourseFact(row);
+      const hasTrialToCourseConversion=hasTrialAttended&&hasFormalCourseFact;
       return {
         customerKey:`teaching-summary:${studentId}`,
         sourceLeadId:cleanLeadText(row?.sourceLeadId||''),
@@ -392,7 +444,7 @@ function createLeadsRoutes(deps={}){
       trialStatus:cleanLeadText(row?.trialStatus||''),
       coursePurchaseCount:Number(row?.coursePurchaseCount)||0,
       hasCourseRepeatPurchase:leadSummaryBool(row?.hasCourseRepeatPurchase)||cleanLeadText(row?.courseDealPath||'')==='老客续费',
-      hasTrialToCourseConversion:leadSummaryBool(row?.hasTrialToCourseConversion)||cleanLeadText(row?.courseDealPath||'')==='体验转化',
+      hasTrialToCourseConversion,
       courtStage:cleanLeadText(row?.courtStage||'none'),
       membershipStatus:cleanLeadText(row?.membershipStatus||''),
       hasTrialExperience:hasTrialAttended,
@@ -417,7 +469,7 @@ function createLeadsRoutes(deps={}){
       lessonVolumeLabel:cleanLeadText(row?.lessonVolumeLabel||''),
       leadDate:cleanLeadText(row?.packagePurchaseDate||row?.lastFormalLessonAt||row?.summaryUpdatedAt||''),
       createdAt:cleanLeadText(row?.summaryUpdatedAt||row?.updatedAt||''),
-      hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||cleanLeadText(row?.studentStage||'')==='formal',
+      hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||cleanLeadText(row?.studentStage||'')==='formal'||hasFormalCourseFact,
       hasBookingConversion:leadSummaryBool(row?.hasBookingConversion),
         hasMembershipConversion:leadSummaryBool(row?.hasMembershipConversion)
       };

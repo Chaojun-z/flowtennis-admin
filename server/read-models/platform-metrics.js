@@ -1078,6 +1078,33 @@ function teachingSummaryRowHasFormalLesson(row = {}, now = new Date()) {
   return teachingDateOnOrBeforeNow(row.lastFormalLessonAt, now);
 }
 
+function teachingSummaryRowIsFormalCourseItem(item = {}) {
+  const label = text([
+    item.courseType,
+    item.standardCourseType,
+    item.packageName,
+    item.productName,
+    item.courseName,
+    item.className
+  ].filter(Boolean).join(' '));
+  return !/体验|陪打/.test(label) && /私教|小班|课包|正式|成人|青少年|网球/.test(label);
+}
+
+function teachingSummaryRowHasFormalCourseFact(row = {}, now = new Date()) {
+  if (teachingSummaryRowHasFormalLesson(row, now)) return true;
+  if ((Number(row.coursePurchaseCount) || 0) > 0) return true;
+  if (text(row.studentStage) === 'formal') return true;
+  if (text(row.packagePurchaseDate)) return true;
+  if ((Number(row.cumulativeCoursePaidAmount) || 0) > 0) return true;
+  if ((Number(row.packageBalanceTotal) || 0) > 0) return true;
+  return [...arraySnapshotValue(row.detailPackageOrderRows), ...arraySnapshotValue(row.packageListRows)]
+    .some(item => teachingSummaryRowIsFormalCourseItem(item) && (
+      Number(item.actualAmount || item.paidAmount || item.totalAmount || 0) > 0
+      || Number(item.totalLessons || 0) > 0
+      || text(item.purchaseDate || item.createdAt)
+    ));
+}
+
 function buildTeachingStudentSummaryFieldMap(data = {}) {
   const details = new Map();
   (data.teachingStudentSummaryRows || data.studentTeachingSummaries || [])
@@ -1086,6 +1113,7 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
       if (!studentId) return;
       const hasTrialAttended = teachingSummaryRowHasTrialLesson(row) || teachingSummaryRowHasConsumedTrialPackage(row);
       const hasFormalAttended = teachingSummaryRowHasFormalLesson(row, data.now || new Date());
+      const hasFormalCourseFact = teachingSummaryRowHasFormalCourseFact(row, data.now || new Date());
       details.set(studentId, {
         hasTeachingSummarySnapshot: true,
         packageListRows: arraySnapshotValue(row.packageListRows),
@@ -1120,6 +1148,7 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
         isActiveStudentRoster: booleanSnapshotValue(row.isActiveStudentRoster),
         hasTrialAttended: hasTrialAttended ? true : booleanSnapshotValue(row.hasTrialAttended),
         hasFormalAttended: hasFormalAttended ? true : booleanSnapshotValue(row.hasFormalAttended),
+        hasTrialToCourseConversion: hasTrialAttended && hasFormalCourseFact,
         summaryUpdatedAt: text(row.summaryUpdatedAt || row.updatedAt)
       });
     });
@@ -1449,7 +1478,7 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       studentStage: text(lifecycle.studentStage),
       hasTrialExperience: !!lifecycle.hasTrialExperience,
       hasTrialBooked: !!text(lifecycle.trialBookedAt || lifecycle.trialAtRaw || lead.trialBookedAt || lead.trialAtRaw || lead.trialLessonAt || lead.trialAt || lifecycle.trialAttendedAt),
-      hasTrialAttended: !!text(lifecycle.trialAttendedAt || lead.trialAttendedAt),
+      hasTrialAttended: !!lifecycle.hasTrialAttended || !!text(lifecycle.trialAttendedAt || lead.trialAttendedAt),
       hasTrialToCourseConversion: !!lifecycle.hasTrialToCourseConversion,
       courseDealPath: text(lifecycle.courseDealPath),
       courtStage: text(lifecycle.courtStage),
@@ -2108,6 +2137,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
       if (!studentId || byStudentId.has(studentId)) return;
       const hasTrialAttended = teachingSummaryRowHasTrialLesson(row) || teachingSummaryRowHasConsumedTrialPackage(row) || booleanSnapshotValue(row.hasTrialAttended) === true;
       const hasFormalAttended = teachingSummaryRowHasFormalLesson(row, data.now || new Date());
+      const hasFormalCourseFact = teachingSummaryRowHasFormalCourseFact(row, data.now || new Date());
       byStudentId.set(studentId, {
         customerKey: `teaching-summary:${studentId}`,
         sourceLeadId: text(row.sourceLeadId),
@@ -2133,7 +2163,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
         trialStatus: text(row.trialStatus),
         coursePurchaseCount: 0,
         hasCourseRepeatPurchase: false,
-        hasTrialToCourseConversion: false,
+        hasTrialToCourseConversion: hasTrialAttended && hasFormalCourseFact,
         courtStage: 'none',
         membershipStatus: '',
         hasTrialExperience: hasTrialAttended,

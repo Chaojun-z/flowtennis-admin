@@ -41,6 +41,15 @@ const rows = buildCustomerLifecycleRows({
       purchaseDate: '2026-06-05'
     }
   ],
+  schedule: [
+    {
+      id: 'schedule-trial-attended',
+      studentId: 'student-1',
+      courseType: '体验课',
+      status: '已完成',
+      startTime: '2026-06-03 10:00:00'
+    }
+  ],
   courts: [
     {
       id: 'court-1',
@@ -484,6 +493,40 @@ assert.strictEqual(formalPurchaseWithTrialNote.studentStage, 'formal', '正式�
 assert.strictEqual(formalPurchaseWithTrialNote.hasTrialExperience, false, '订单备注不是体验路径事实证据');
 assert.strictEqual(formalPurchaseWithTrialNote.courseDealPath, '直接成交');
 assert.strictEqual(formalPurchaseWithTrialNote.hasTrialToCourseConversion, false);
+
+const formalPurchaseWithTrialBookedOnlyRows = buildCustomerLifecycleRows({
+  students: [
+    {
+      id: 'student-formal-booked-only',
+      name: '只约体验后买课',
+      sourceLeadId: 'lead-formal-booked-only'
+    }
+  ],
+  purchases: [
+    {
+      id: 'purchase-trial-booked-only',
+      studentId: 'student-formal-booked-only',
+      packageName: '体验课',
+      courseType: '体验课',
+      status: 'active',
+      actualAmount: 199,
+      purchaseDate: '2026-04-02'
+    },
+    {
+      id: 'purchase-formal-booked-only',
+      studentId: 'student-formal-booked-only',
+      packageName: '成人私教课 10 节',
+      courseType: '私教课',
+      status: 'active',
+      actualAmount: 6800,
+      purchaseDate: '2026-04-03'
+    }
+  ]
+});
+const formalPurchaseWithTrialBookedOnly = formalPurchaseWithTrialBookedOnlyRows[0];
+assert.strictEqual(formalPurchaseWithTrialBookedOnly.hasTrialExperience, true, '买过体验课只能说明有体验路径');
+assert.strictEqual(formalPurchaseWithTrialBookedOnly.courseDealPath, '直接成交', '没真实上过体验课不能算体验转化');
+assert.strictEqual(formalPurchaseWithTrialBookedOnly.hasTrialToCourseConversion, false, '体验后买正式课必须有真实上过体验课事实');
 
 const repeatRows = buildCustomerLifecycleRows({
   students: [{ id: 'student-repeat', name: '复购学员', sourceLeadId: 'lead-repeat' }],

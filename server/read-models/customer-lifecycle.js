@@ -188,6 +188,13 @@ function studentHasTrialExperience(student = {}, { purchases = [], entitlements 
   return facts.hasTrialBooked;
 }
 
+function studentHasTrialAttended(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
+  const sid = text(student.id || student.studentId);
+  if (!sid) return false;
+  const facts = studentTrialFacts(student, { purchases, entitlements, schedule, feedbacks });
+  return facts.hasTrialAttended;
+}
+
 function studentStage(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
   const sid = text(student.id || student.studentId);
   if (!sid) return 'none';
@@ -216,7 +223,7 @@ function studentCourseDealPath(student = {}, { purchases = [], entitlements = []
   const coursePurchaseCount = studentCoursePurchaseCount(student, { purchases, entitlements, schedule, feedbacks });
   if (!coursePurchaseCount) return '';
   if (coursePurchaseCount > 1) return '老客续费';
-  return studentHasTrialExperience(student, { purchases, entitlements, schedule, feedbacks }) ? '体验转化' : '直接成交';
+  return studentHasTrialAttended(student, { purchases, entitlements, schedule, feedbacks }) ? '体验转化' : '直接成交';
 }
 
 function studentTrialStatus(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
@@ -414,11 +421,12 @@ function buildCustomerLifecycleRows({
     const trialStatus = studentTrialStatus(student, { purchases, entitlements, schedule, feedbacks });
     const trialFacts = studentTrialFacts(student, { purchases, entitlements, schedule, feedbacks });
     const hasTrialExperience = trialFacts.hasTrialBooked;
+    const hasTrialAttended = trialFacts.hasTrialAttended;
     const { formalPurchases, trialRows, courseRows, scheduleRows } = studentRows(student, { purchases, entitlements, schedule, feedbacks });
     const hasScheduleRecord = scheduleRows.length > 0;
     const coursePurchaseCount = studentCoursePurchaseCountFromRows(formalPurchases);
     const hasCourseRepeatPurchase = coursePurchaseCount > 1;
-    const hasTrialToCourseConversion = coursePurchaseCount > 0 && hasTrialExperience;
+    const hasTrialToCourseConversion = coursePurchaseCount > 0 && hasTrialAttended;
     const firstFormal = formalPurchases[0] || null;
     const firstTrial = trialRows[0] || null;
     const firstCourse = courseRows[0] || null;
@@ -659,6 +667,7 @@ module.exports = {
   buildLeadConversionSetsFromLifecycle,
   sourceLeadId,
   studentHasTrialExperience,
+  studentHasTrialAttended,
   studentStage,
   studentCourseDealPath,
   studentTrialStatus,

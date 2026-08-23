@@ -72,8 +72,12 @@ assert.ok(
   '线索池顶部 summary 必须和当前筛选后的列表使用同一批数据'
 );
 assert.ok(
-  leadsRouteSource.includes('leadSummaryTrialAttended(row)&&(leadSummaryBool(row.hasTrialToCourseConversion)||leadSummaryCourseConverted(row))'),
-  '体验后买正式课必须先满足上过体验课，不能大于上过体验课'
+  leadsRouteSource.includes('leadSummaryTrialAttended(row)&&leadSummaryBool(row.hasTrialToCourseConversion)'),
+  '体验后买正式课必须先满足上过体验课，并使用统一读模型转化事实'
+);
+assert.ok(
+  leadsRouteSource.includes('summaryRowHasTrialLesson') && leadsRouteSource.includes('summaryRowHasConsumedTrialPackage') && leadsRouteSource.includes('summaryRowHasFormalCourseFact'),
+  '线索池轻链路必须从教学摘要快照读取体验课和正式课事实，不能回退成标签猜测'
 );
 
 assert.match(

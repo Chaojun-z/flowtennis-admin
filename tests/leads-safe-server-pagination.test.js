@@ -320,6 +320,14 @@ async function main() {
       leadDate: '2026-08-20',
       createdAt: '2026-08-20 10:00:00',
       campus: 'shunyi_mapo'
+    }, {
+      id: 'lead-light-booked-no-attend',
+      displayName: '只约体验后买课',
+      wechatName: '只约体验后买课',
+      studentId: 'stu-light-booked-no-attend',
+      leadDate: '2026-08-21',
+      createdAt: '2026-08-21 10:00:00',
+      campus: 'shunyi_mapo'
     }],
     ft_lead_followups: [],
     ft_students: [],
@@ -342,7 +350,7 @@ async function main() {
       name: '轻链路活跃',
       displayName: '轻链路活跃',
       sourceLeadId: 'lead-light-active',
-      hasTrialAttended: false,
+      hasTrialAttended: true,
       hasFormalAttended: true,
       isHistoricalStudentRoster: false,
       isActiveStudentRoster: false,
@@ -357,8 +365,21 @@ async function main() {
       packageStatusLabel: '课包有余额',
       paymentModeLabel: '课包学员',
       lessonVolumeLabel: '-',
-      detailLessonRecordRows: [{ time: '2026-08-20' }],
-      packageListRows: [{ remainingLessons: 1, totalLessons: 10 }]
+      detailLessonRecordRows: [{ time: '2026-08-20', courseType: '体验课', kind: 'schedule' }],
+      packageListRows: [{ courseType: '私教课', packageName: '正式课包', remainingLessons: 1, totalLessons: 10 }]
+    }, {
+      id: 'stu-light-booked-no-attend',
+      studentId: 'stu-light-booked-no-attend',
+      name: '只约体验后买课',
+      displayName: '只约体验后买课',
+      sourceLeadId: 'lead-light-booked-no-attend',
+      hasTrialAttended: false,
+      hasFormalAttended: false,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: false,
+      studentStage: 'formal',
+      packagePurchaseDate: '2026-08-21',
+      packageListRows: [{ courseType: '私教课', packageName: '正式课包', remainingLessons: 10, totalLessons: 10 }]
     }],
     ft_court_account_list_index: []
   }, {
@@ -367,7 +388,12 @@ async function main() {
   const lightPage = await request(lightHarness.handle, 'paged=1&page=1&pageSize=15');
   assert.strictEqual(lightPage.statusCode, 200, '轻链路摘要页应正常返回');
   assert.strictEqual(lightPage.body.summary.activeStudents, 1, '轻链路在期学员不能再掉成 0');
-  assert.strictEqual(lightPage.body.summary.historicalStudents, 1, '轻链路历史学员应继续按摘要行保持一致');
+  assert.strictEqual(lightPage.body.summary.historicalStudents, 2, '轻链路历史学员应继续按摘要行保持一致');
+  assert.strictEqual(lightPage.body.summary.trialAttended, 1, '轻链路上过体验课必须读取摘要里的体验课事实');
+  assert.strictEqual(lightPage.body.summary.trialAttendedToFormalPurchase, 1, '轻链路体验后买正式课必须同时满足真实体验课和正式课事实');
+  ['ft_students', 'ft_purchases', 'ft_entitlements', 'ft_schedule', 'ft_courts', 'ft_membership_accounts', 'ft_membership_orders'].forEach(table => {
+    assert.strictEqual(lightHarness.calls.tableScans[table] || 0, 0, `轻链路首屏不能扫描事实大表 ${table}`);
+  });
 
   console.log('leads safe server pagination tests passed');
 }
