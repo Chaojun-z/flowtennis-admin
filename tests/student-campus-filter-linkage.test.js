@@ -25,10 +25,14 @@ assert.doesNotMatch(source, /function studentLifecycleStats\(/, 'student page sh
 assert.doesNotMatch(fnBody('studentPageStats'), /studentStatsMatchesPackageCampus/, 'student package stats should not apply a second purchase-campus filter after the list is already filtered');
 
 const root = path.join(__dirname, '..');
+const studentFilterValues = {};
 const context = {
   console,
   window: {},
-  document: { createElement: () => ({ set textContent(value) { this.innerHTML = String(value || ''); } }) },
+  document: {
+    createElement: () => ({ set textContent(value) { this.innerHTML = String(value || ''); } }),
+    getElementById: id => ({ value: studentFilterValues[id] || '' })
+  },
   localStorage: { getItem: () => null, setItem: () => null, removeItem: () => null },
   currentPage: 'package-students',
   campus: 'chaojun',
@@ -37,6 +41,7 @@ const context = {
   customerLifecycleText: value => String(value || '').trim(),
   customerLifecycleByStudentId: () => ({ studentStage: 'formal' }),
   customerLifecycleStudentStage: () => 'formal',
+  globalDateWithinRange: () => true,
   teachingStudentViews: {
     summary: {},
     activeStudents: [
@@ -63,6 +68,7 @@ const context = {
   ],
   standardLifecycleMetrics: { metrics: {} },
   FlowTennisBusinessTaxonomy: {
+    normalizeLeadSource: value => String(value || '').trim(),
     EXPERIENCE_TYPES: ['私教体验课', '小班体验课'],
     PRODUCT_TYPES: ['私教课', '体验课', '小班课', '专项课', '大师课', '陪打']
   },
@@ -73,6 +79,7 @@ const context = {
     { id: 'stu-huang', name: '黄总', campus: 'shunyi_mapo' },
     { id: 'stu-putao', name: '葡萄', campus: 'shunyi_mapo' }
   ],
+  coaches: [],
   purchases: [
     { id: 'pur-17', studentId: 'stu-17', studentName: '一七&zzxxyy', packageId: 'pkg-gold', packageName: '1v1私教课', amountPaid: 5000, status: 'active', campusIds: ['chaojun', 'shunyi_mapo'], courseType: '私教课' },
     { id: 'pur-xd-paid', studentId: 'stu-xd', studentName: '铣大象', packageId: 'pkg-private', packageName: '1v1私教课', amountPaid: 3500, status: 'active', campusIds: ['shunyi_mapo'], courseType: '私教课' },
@@ -105,6 +112,12 @@ assert.strictEqual(
   vm.runInContext('studentPageStats(getStudentBaseList()).total', context),
   5,
   'student top count should use the new active student roster count'
+);
+studentFilterValues.stuSearch = 'misha';
+assert.strictEqual(
+  vm.runInContext('studentPageStats(getFilteredStudents()).total', context),
+  1,
+  'student filtered top count should follow the full filtered unified row set, not the unfiltered backend total'
 );
 
 console.log('student campus filter linkage tests passed');

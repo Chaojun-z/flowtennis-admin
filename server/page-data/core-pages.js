@@ -2,6 +2,7 @@ const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycl
 const { buildTeachingStudentViews, buildCoachMiniStudentRoster, buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics, TEACHING_LESSON_DETAIL_SOURCE_VERSION, teachingSummaryNeedsLessonFacts } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
+const { createStudentRosterIndexReader } = require('./student-roster-index-reader.js');
 const {
   buildCoachOpsUnifiedView,
   buildPurchaseUnifiedView,
@@ -66,162 +67,6 @@ function buildListPage(rows=[],paging=null){
   return {rows:list.slice(start,start+paging.pageSize),total,page,pageSize:paging.pageSize,pages};
 }
 
-function summaryRowHasTrialLesson(row={}){
-  return parseSnapshotArray(row.detailLessonRecordRows).some(item=>/体验/.test(String([
-    item.courseType,
-    item.standardCourseType,
-    item.packageName,
-    item.productName,
-    item.className,
-    item.courseName
-  ].filter(Boolean).join(' '))));
-}
-
-function summaryRowHasConsumedTrialPackage(row={}){
-  return parseSnapshotArray(row.detailPackageOrderRows).concat(parseSnapshotArray(row.packageListRows)).some(item=>{
-    const label=String([
-      item.courseType,
-      item.standardCourseType,
-      item.packageName,
-      item.productName
-    ].filter(Boolean).join(' '));
-    if(!/体验/.test(label))return false;
-    const total=Number(item.totalLessons)||0;
-    const used=Number(item.usedLessons)||0;
-    const remaining=Number(item.remainingLessons);
-    return used>0 || (total>0 && Number.isFinite(remaining) && remaining<=0) || /已用完|已核销|已消课/.test(String(item.statusText||item.status||''));
-  });
-}
-
-function summaryRowExplicitBool(row={},field=''){
-  if(!Object.prototype.hasOwnProperty.call(row,field))return undefined;
-  if(row[field]===true||row[field]===false)return row[field];
-  const raw=String(row[field]||'').trim().toLowerCase();
-  if(raw==='true')return true;
-  if(raw==='false')return false;
-  return undefined;
-}
-
-function summaryRowDateMs(value){
-  const raw=String(value||'').trim().replace(' ','T');
-  const parsed=Date.parse(raw);
-  return Number.isFinite(parsed)?parsed:0;
-}
-
-function summaryRowIsActiveStudentRoster(row={}){
-  if(row.isActiveStudentRoster===true||String(row.isActiveStudentRoster).toLowerCase()==='true')return true;
-  if((Number(row.packageBalanceRemaining)||0)>0)return true;
-  const activityLabel=String(row.activityStatusLabel||'').trim();
-  if(['近30天活跃','31-90天活跃','课包活跃中','有余额未活跃'].includes(activityLabel))return true;
-  const studentStatusLabel=String(row.studentStatusLabel||'').trim();
-  if(['课包活跃中','有余额未活跃'].includes(studentStatusLabel))return true;
-  const packageStatusLabel=String(row.packageStatusLabel||'').trim();
-  if(['课包有余额','课包即将耗尽'].includes(packageStatusLabel))return true;
-  const recentLessonAt=String(row.detailRecentLessonDate||row.lastFormalLessonAt||'').trim();
-  if(!recentLessonAt)return false;
-  const days=Math.floor((Date.now()-summaryRowDateMs(recentLessonAt))/86400000);
-  return Number.isFinite(days)&&days>=0&&days<=90;
-}
-
-function buildCustomerCenterSummaryLifecycleRows(summaryRows=[]){
-  return (Array.isArray(summaryRows)?summaryRows:[]).map(row=>{
-    const studentId=String(row.studentId||row.id||'').trim();
-    if(!studentId)return null;
-    const explicitTrialAttended=summaryRowExplicitBool(row,'hasTrialAttended');
-    const explicitFormalAttended=summaryRowExplicitBool(row,'hasFormalAttended');
-    const hasTrialAttended=explicitTrialAttended!==undefined?explicitTrialAttended:(summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row));
-    const hasFormalAttended=explicitFormalAttended!==undefined?explicitFormalAttended:false;
-    const isActiveStudentRoster=summaryRowIsActiveStudentRoster(row);
-    return {
-      customerKey:`teaching-summary:${studentId}`,
-      sourceLeadId:String(row.sourceLeadId||'').trim(),
-      leadId:'',
-      studentId,
-      displayName:String(row.displayName||row.name||studentId).trim(),
-      phone:String(row.phone||'').trim(),
-      source:String(row.source||'').trim(),
-      campus:String(row.campus||'').trim(),
-      owner:String(row.primaryCoach||'').trim(),
-      customerType:String(row.type||'').trim(),
-      demandProduct:'',
-      trialAtRaw:'',
-      trialBookedAt:'',
-      trialAttendedAt:'',
-      courseFirstPurchaseAt:String(row.packagePurchaseDate||'').trim(),
-      conversionAt:String(row.packagePurchaseDate||'').trim(),
-      formalCoach:String(row.primaryCoach||'').trim(),
-      profileNote:String(row.profileNote||row.notes||'').trim(),
-      notes:String(row.notes||row.profileNote||'').trim(),
-      studentStage:String(row.studentStage||(hasFormalAttended?'formal':(hasTrialAttended?'trial':'student'))).trim(),
-      courseDealPath:String(row.courseDealPath||'').trim(),
-      trialStatus:String(row.trialStatus||'').trim(),
-      coursePurchaseCount:Number(row.coursePurchaseCount)||0,
-      hasCourseRepeatPurchase:String(row.courseDealPath||'').trim()==='老客续费',
-      hasTrialToCourseConversion:String(row.courseDealPath||'').trim()==='体验转化',
-      courtStage:'none',
-      membershipStatus:'',
-      hasTrialExperience:hasTrialAttended,
-      hasTeachingSummarySnapshot:true,
-      hasTrialAttended,
-      hasFormalAttended,
-      hasScheduleRecord:true,
-      hasCourseStudentEntry:true,
-      hasFreeCourseFollowup:true,
-      detailLessonRecordRows:Array.isArray(row.detailLessonRecordRows)?row.detailLessonRecordRows:[],
-      detailPackageOrderRows:Array.isArray(row.detailPackageOrderRows)?row.detailPackageOrderRows:[],
-      packageListRows:Array.isArray(row.packageListRows)?row.packageListRows:[],
-      lastFormalLessonAt:String(row.lastFormalLessonAt||row.detailRecentLessonDate||'').trim(),
-      detailRecentLessonDate:String(row.detailRecentLessonDate||row.lastFormalLessonAt||'').trim(),
-      packageBalanceRemaining:Number(row.packageBalanceRemaining)||0,
-      packageBalanceTotal:Number(row.packageBalanceTotal)||0,
-      packageBalanceText:String(row.packageBalanceText||'').trim(),
-      packageBalancePercent:Number(row.packageBalancePercent)||0,
-      activityStatusLabel:String(row.activityStatusLabel||'').trim(),
-      studentStatusLabel:String(row.studentStatusLabel||'').trim(),
-      packageStatusLabel:String(row.packageStatusLabel||'').trim(),
-      paymentModeLabel:String(row.paymentModeLabel||'').trim(),
-      lessonVolumeLabel:String(row.lessonVolumeLabel||'').trim(),
-      isHistoricalStudentRoster:hasTrialAttended||hasFormalAttended||isActiveStudentRoster,
-      isActiveStudentRoster,
-      leadDate:String(row.packagePurchaseDate||row.lastFormalLessonAt||row.summaryUpdatedAt||'').trim(),
-      createdAt:String(row.summaryUpdatedAt||row.updatedAt||'').trim(),
-      hasCourseConversion:String(row.studentStage||'').trim()==='formal',
-      hasBookingConversion:false,
-      hasMembershipConversion:false
-    };
-  }).filter(Boolean);
-}
-
-function buildCustomerCenterListPayload({summaryRows=[],query}={}){
-  const customerLifecycleRows=buildCustomerCenterSummaryLifecycleRows(summaryRows);
-  const teachingData={teachingStudentSummaryRows:summaryRows};
-  return buildCustomerCenterPagePayload({customerLifecycleRows,teachingData,query});
-}
-
-function buildCustomerCenterListPage(teachingStudentViews={}, query){
-  const paging=parseListPaging(query);
-  const view=String(query?.get('view')||'').trim();
-  const q=String(query?.get('q')||'').trim();
-  const studentRows=Array.isArray(teachingStudentViews[view])?teachingStudentViews[view]:[];
-  const searchableRows=q&&Array.isArray(teachingStudentViews.searchableStudents)?teachingStudentViews.searchableStudents:studentRows;
-  return paging&&view?{view,...buildListPage(searchableRows.filter(row=>textSearchHit(q,row.searchText,row.name,row.phone,row.type,row.source,row.sourceText,row.paymentModeText,row.packageStatusText,row.activityStatusText,row.lifecycleStatusText,row.campus,row.primaryCoach,row.notes,row.profileNote)),paging)}:null;
-}
-
-function buildCustomerCenterPagePayload({customerLifecycleRows=[],teachingData={},query,prebuiltTeachingStudentViews=null,prebuiltStandardLifecycleMetrics=null}={}){
-  const metricScope=pageDataScopeFromQuery(query);
-  const teachingStudentViews=prebuiltTeachingStudentViews||buildTeachingStudentViews(customerLifecycleRows,teachingData);
-  const standardLifecycleMetrics=prebuiltStandardLifecycleMetrics || (hasPageDataScope(metricScope)
-    ? buildScopedStandardLifecycleMetrics({...teachingData,customerLifecycleRows},metricScope)
-    : buildStandardLifecycleMetrics({...teachingData,customerLifecycleRows}));
-  const listPage=buildCustomerCenterListPage(teachingStudentViews,query);
-  return {
-    customerLifecycleRows,
-    teachingStudentViews,
-    standardLifecycleMetrics,
-    listPage
-  };
-}
-
 const PURCHASE_CREATE_STUDENT_PROJECTION_FIELDS=[
   'name',
   'phone',
@@ -258,6 +103,11 @@ function createCorePageDataRoutes(deps={}){
     T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,
     T_MEMBERSHIP_PLANS,T_USERS,T_FEEDBACKS,T_STUDENT_TEACHING_SUMMARY
   }=tables;
+  const studentRosterIndexReader=deps.studentRosterIndexReader||createStudentRosterIndexReader({
+    tableName:T_STUDENT_TEACHING_SUMMARY,
+    getCachedScan,
+    filterLoadAllForUser
+  });
   async function hydrateScheduleRowsByLedgerIds(scheduleRows=[],ledgerRows=[]){
     if(!T_SCHEDULE)return scheduleRows||[];
     const existingIds=new Set((scheduleRows||[]).map(row=>String(row.id||'')).filter(Boolean));
@@ -389,12 +239,7 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/customer-center-list'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const studentTeachingSummaries=T_STUDENT_TEACHING_SUMMARY ? await getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]) : [];
-      const scoped=filterLoadAllForUser({studentTeachingSummaries},user);
-      return sendJson(res,buildCustomerCenterListPayload({
-        summaryRows:scoped.studentTeachingSummaries||[],
-        query
-      }));
+      return sendJson(res,await studentRosterIndexReader.readCustomerCenterList({user,query}));
     }
     if(path==='/page-data/purchase-detail'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

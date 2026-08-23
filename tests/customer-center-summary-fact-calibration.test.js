@@ -141,6 +141,102 @@ function makeHandler() {
   return { handler, calls };
 }
 
+function makeIsolatedRouteHandler() {
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      throw new Error(`首屏路由不允许扫描事实表: ${table}`);
+    },
+    getCachedScan: async table => {
+      throw new Error(`首屏路由不允许直接读取表: ${table}`);
+    },
+    getCachedRow: async table => {
+      throw new Error(`首屏路由不允许直接读取单行: ${table}`);
+    },
+    filterLoadAllForUser: data => data,
+    PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
+    studentRosterIndexReader: {
+      readCustomerCenterList: async () => ({
+        customerLifecycleRows: [],
+        teachingStudentViews: { historicalStudents: [], activeStudents: [], summary: {} },
+        standardLifecycleMetrics: { teachingSummary: { historicalStudentCount: 0, activeStudentCount: 0 }, metrics: {}, funnels: {}, views: {} },
+        listPage: null
+      })
+    },
+    tables: {
+      T_LEADS: 'ft_leads',
+      T_STUDENTS: 'ft_students',
+      T_PURCHASES: 'ft_purchases',
+      T_ENTITLEMENTS: 'ft_entitlements',
+      T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger',
+      T_SCHEDULE: 'ft_schedule',
+      T_FEEDBACKS: 'ft_feedbacks',
+      T_MEMBERSHIP_BENEFIT_LEDGER: 'ft_membership_benefit_ledger',
+      T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary'
+    }
+  });
+  return handler;
+}
+
+function makeBulkSummaryHandler(count = 1200) {
+  const calls = { tableScans: {} };
+  const summaryRows = Array.from({ length: count }, (_, index) => ({
+    id: `bulk-${index}`,
+    studentId: `bulk-${index}`,
+    name: `学员${index}`,
+    displayName: `学员${index}`,
+    source: index % 2 ? '小红书' : '大众点评',
+    campus: index % 3 ? '朝珺私教' : '顺义马坡',
+    type: index % 2 ? '成人' : '青少年',
+    primaryCoach: index % 5 ? 'Mira' : '吴敌',
+    hasTrialAttended: index % 4 === 0,
+    hasFormalAttended: true,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: index % 3 !== 0,
+    packageBalanceRemaining: index % 3 !== 0 ? 3 : 0,
+    activityStatusLabel: index % 3 !== 0 ? '近30天活跃' : '91-180天沉默',
+    packageStatusLabel: index % 3 !== 0 ? '课包有余额' : '课包已用完',
+    studentStatusLabel: index % 3 !== 0 ? '课包活跃中' : '课包待续费',
+    searchText: `学员${index} bulk-${index}`
+  }));
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      throw new Error(`首屏性能测试不允许扫描事实表: ${table}`);
+    },
+    getCachedScan: async table => {
+      calls.tableScans[table] = (calls.tableScans[table] || 0) + 1;
+      if (table === 'ft_student_teaching_summary') return JSON.parse(JSON.stringify(summaryRows));
+      throw new Error(`首屏性能测试不允许读取其他表: ${table}`);
+    },
+    getCachedRow: async () => null,
+    filterLoadAllForUser: data => data,
+    PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
+    tables: {
+      T_LEADS: 'ft_leads',
+      T_STUDENTS: 'ft_students',
+      T_PURCHASES: 'ft_purchases',
+      T_ENTITLEMENTS: 'ft_entitlements',
+      T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger',
+      T_SCHEDULE: 'ft_schedule',
+      T_FEEDBACKS: 'ft_feedbacks',
+      T_MEMBERSHIP_BENEFIT_LEDGER: 'ft_membership_benefit_ledger',
+      T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary'
+    }
+  });
+  return { handler, calls };
+}
+
 async function request(queryText = '') {
   const { handler, calls } = makeHandler();
   const res = {};
@@ -188,6 +284,47 @@ async function request(queryText = '') {
     2,
     '强制 fresh 也不能让首屏回退成扫描事实大表'
   );
+
+  const isolatedHandler = makeIsolatedRouteHandler();
+  const isolatedRes = {};
+  await isolatedHandler({
+    path: '/page-data/customer-center-list',
+    method: 'GET',
+    user: { role: 'admin', name: '管理员' },
+    res: isolatedRes,
+    query: new URLSearchParams()
+  });
+  assert.strictEqual(isolatedRes.statusCode, 200, '首屏路由必须只依赖注入的学员 roster reader');
+
+  const bulk = makeBulkSummaryHandler(1200);
+  const bulkRes = {};
+  const startedAt = Date.now();
+  await bulk.handler({
+    path: '/page-data/customer-center-list',
+    method: 'GET',
+    user: { role: 'admin', name: '管理员' },
+    res: bulkRes,
+    query: new URLSearchParams('view=activeStudents&paged=1&page=1&pageSize=15')
+  });
+  const elapsedMs = Date.now() - startedAt;
+  assert.strictEqual(bulkRes.statusCode, 200);
+  assert.ok(elapsedMs < 1000, `1200 条统一摘要下首屏搜索分页应为秒级，当前 ${elapsedMs}ms`);
+  assert.strictEqual(bulk.calls.tableScans.ft_student_teaching_summary, 1, '秒级首屏只允许读取一次统一摘要索引');
+  assert.strictEqual(bulkRes.body.listPage.rows.length, 15, '默认分页只返回当前页行');
+  assert.ok(
+    bulkRes.body.standardLifecycleMetrics.teachingSummary.activeStudentCount > bulkRes.body.listPage.rows.length,
+    '顶部统计必须来自完整统一集合，不能只统计当前页'
+  );
+  const searchRes = {};
+  await bulk.handler({
+    path: '/page-data/customer-center-list',
+    method: 'GET',
+    user: { role: 'admin', name: '管理员' },
+    res: searchRes,
+    query: new URLSearchParams('view=activeStudents&paged=1&page=1&pageSize=15&q=学员1199')
+  });
+  assert.strictEqual(searchRes.body.listPage.rows.length, 1, '搜索分页只返回当前页命中行');
+  assert.strictEqual(searchRes.body.standardLifecycleMetrics.teachingSummary.activeStudentCount, 1, '搜索后的顶部统计必须来自搜索后的完整统一集合');
 
   console.log('customer center summary fact calibration tests passed');
 })().catch(err => {

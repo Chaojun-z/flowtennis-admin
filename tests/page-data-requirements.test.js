@@ -5,6 +5,7 @@ const path = require('path');
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 const studentsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/students.js'), 'utf8');
 const corePagesSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
+const studentRosterReaderSource = fs.readFileSync(path.join(__dirname, '../server/page-data/student-roster-index-reader.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 
 function fnBodyFrom(sourceText, name) {
@@ -32,10 +33,10 @@ assert.match(source, /workbench:\[\]/, 'coach workbench should open immediately 
 assert.match(source, /postfeedback:\[\]/, 'coach post-class feedback should open immediately and load data in background');
 assert.match(source, /mystudents:\[\]/, 'coach students should open immediately and load data in background');
 assert.match(source, /myclasses:\[\]/, 'coach classes should open immediately and load data in background');
-assert.match(source, /schedule:\['campuses','students','courts','schedule','coaches','coachProposals'\]/, 'schedule page should load its first-screen datasets without blocking on lifecycle, feedback, entitlement, or ledger datasets');
+assert.match(source, /schedule:\['campuses','schedule'\]/, 'schedule page should load only campuses and its lightweight schedule snapshot before first paint');
 assert.match(source, /coachschedule:\['coachSchedulePage'\]/, 'coach schedule calendar should block only on its lightweight calendar read model');
 assert.match(source, /coachops:\['workbenchPage','operationsPage'\]/, 'coach workload should block on the backend unified coach schedule view and operations metrics');
-assert.match(source, /const PAGE_DATA_BACKGROUND_REQUIREMENTS=\{[\s\S]*students:\['classes','schedule','courts'\][\s\S]*'package-students':\['classes','schedule','courts'\][\s\S]*'trial-students':\['classes','schedule','courts'\][\s\S]*leads:\[\][\s\S]*packages:\[\][\s\S]*purchases:\[\][\s\S]*schedule:\['classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'\][\s\S]*coachschedule:\['entitlements','entitlementLedger'\][\s\S]*finance:\['financePage'\][\s\S]*courts:\['courtsPage'\][\s\S]*memberships:\[\][\s\S]*workbench:\['workbenchPage'\][\s\S]*postfeedback:\['workbenchPage'\][\s\S]*mystudents:\['workbenchPage'\][\s\S]*myclasses:\['students','classes'\]/, 'heavy page datasets should move behind first render, and coach students should follow the unified workbench roster');
+assert.match(source, /const PAGE_DATA_BACKGROUND_REQUIREMENTS=\{[\s\S]*students:\['classes','schedule','courts'\][\s\S]*'package-students':\['classes','schedule','courts'\][\s\S]*'trial-students':\['classes','schedule','courts'\][\s\S]*leads:\[\][\s\S]*packages:\[\][\s\S]*purchases:\[\][\s\S]*schedule:\['students','courts','coaches','coachProposals','classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'\][\s\S]*coachschedule:\['entitlements','entitlementLedger'\][\s\S]*finance:\['financePage'\][\s\S]*courts:\['courtsPage'\][\s\S]*memberships:\[\][\s\S]*workbench:\['workbenchPage'\][\s\S]*postfeedback:\['workbenchPage'\][\s\S]*mystudents:\['workbenchPage'\][\s\S]*myclasses:\['students','classes'\]/, 'heavy page datasets should move behind first render, and coach students should follow the unified workbench roster');
 assert.match(source, /const STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\];/, 'student list pages should not automatically pull heavy detail datasets after first paint');
 assert.match(source, /const STUDENT_DETAIL_REQUIREMENTS=\[\];/, 'student detail tabs should not block on extra shared datasets');
 assert.match(studentsSource, /function ensureStudentDetailDatasets\(/, 'student detail should have a lazy detail data loader');
@@ -116,6 +117,7 @@ assert.match(corePagesSource, /path==='\/page-data\/package-center-list'&&method
 assert.match(corePagesSource, /path==='\/page-data\/package-center-list'&&method==='GET'[\s\S]*parseListPaging\(query\)[\s\S]*listPage=\{view, \.\.\.buildListPage\(rows,paging\)\}/, 'package center list endpoint should expose server-side paged list views');
 assert.doesNotMatch(packageCenterRouteSource, /T_ENTITLEMENT_LEDGER/, 'package center list endpoint must not scan lesson ledger rows');
 assert.doesNotMatch(packageCenterRouteSource, /T_SCHEDULE/, 'package center list endpoint must not scan schedule rows');
+assert.match(corePagesSource, /createStudentRosterIndexReader/, 'customer center first-screen route should receive the isolated student roster index reader');
 const coachScheduleRouteSource = corePagesSource.slice(
   corePagesSource.indexOf("path==='/page-data/coach-schedule'&&method==='GET'"),
   corePagesSource.indexOf("path==='/page-data/workbench'&&method==='GET'")
@@ -126,21 +128,24 @@ assert.doesNotMatch(coachScheduleRouteSource, /T_PURCHASES|T_ENTITLEMENTS|T_ENTI
 const customerCenterStart = corePagesSource.indexOf("path==='/page-data/customer-center-list'&&method==='GET'");
 const customerCenterEnd = corePagesSource.indexOf("path==='/page-data/purchase-detail'&&method==='GET'");
 const customerCenterRouteSource = corePagesSource.slice(customerCenterStart, customerCenterEnd);
-assert.match(customerCenterRouteSource, /getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)[\s\S]*return sendJson\(res,buildCustomerCenterListPayload/, 'customer center first screen must read unified student teaching summary read model');
+assert.match(customerCenterRouteSource, /studentRosterIndexReader\.readCustomerCenterList\(\{user,query\}\)/, 'customer center first screen must go through the isolated student roster index reader');
+assert.doesNotMatch(customerCenterRouteSource, /getCachedScan|cappedScan|T_STUDENTS|T_PURCHASES|T_ENTITLEMENTS|T_ENTITLEMENT_LEDGER|T_SCHEDULE|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'customer center first-screen route must not have direct access to slow fact-table reads');
+assert.match(studentRosterReaderSource, /getCachedScan\(tableName\)/, 'student roster index reader must read only its configured roster index table');
+assert.doesNotMatch(studentRosterReaderSource, /cappedScan|T_SCHEDULE|T_ENTITLEMENT_LEDGER|T_PURCHASES|T_ENTITLEMENTS|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'student roster index reader must not import or scan slow fact tables');
 assert.doesNotMatch(customerCenterRouteSource, /loadCustomerCenterFactModel\(user,\{force:true,includeLessonFacts:true\}\)/, 'customer center first screen must not scan live lesson facts');
 assert.doesNotMatch(customerCenterRouteSource, /cappedScan\(T_STUDENTS\)|cappedScan\(T_PURCHASES\)|cappedScan\(T_ENTITLEMENTS\)|cappedScan\(T_ENTITLEMENT_LEDGER|cappedScan\(T_SCHEDULE/, 'customer center first screen must not scan student, purchase, entitlement, ledger, or schedule fact tables');
-assert.match(corePagesSource, /function buildCustomerCenterSummaryLifecycleRows\(summaryRows=\[\]\)\{[\s\S]*summaryRowExplicitBool\(row,'hasTrialAttended'\)[\s\S]*explicitTrialAttended!==undefined\?explicitTrialAttended[\s\S]*summaryRowHasTrialLesson\(row\)[\s\S]*hasTeachingSummarySnapshot:true[\s\S]*hasTrialAttended,[\s\S]*hasFormalAttended,/, 'customer center summary fast path must preserve explicit trial/formal flags and only infer when fields are missing');
-assert.match(corePagesSource, /function summaryRowHasTrialLesson\(row=\{\}\)\{[\s\S]*parseSnapshotArray\(row\.detailLessonRecordRows\)[\s\S]*\/体验\//, 'customer center summary fast path should infer trial attendance from existing summary lesson rows without scanning source fact tables');
-assert.match(corePagesSource, /function summaryRowHasConsumedTrialPackage\(row=\{\}\)\{[\s\S]*detailPackageOrderRows[\s\S]*packageListRows[\s\S]*\/体验\/[\s\S]*used>0[\s\S]*remaining<=0[\s\S]*已用完\|已核销\|已消课/, 'customer center summary fast path should infer trial attendance from consumed trial orders without counting merely booked trial packages');
+assert.match(studentRosterReaderSource, /function buildCustomerCenterSummaryLifecycleRows\(summaryRows = \[\]\) \{[\s\S]*summaryRowExplicitBool\(row, 'hasTrialAttended'\)[\s\S]*explicitTrialAttended !== undefined \? explicitTrialAttended[\s\S]*summaryRowHasTrialLesson\(row\)[\s\S]*hasTeachingSummarySnapshot: true[\s\S]*hasTrialAttended,[\s\S]*hasFormalAttended,/, 'customer center summary fast path must preserve explicit trial/formal flags and only infer when fields are missing');
+assert.match(studentRosterReaderSource, /function summaryRowHasTrialLesson\(row = \{\}\) \{[\s\S]*parseSnapshotArray\(row\.detailLessonRecordRows\)[\s\S]*\/体验\//, 'customer center summary fast path should infer trial attendance from existing summary lesson rows without scanning source fact tables');
+assert.match(studentRosterReaderSource, /function summaryRowHasConsumedTrialPackage\(row = \{\}\) \{[\s\S]*detailPackageOrderRows[\s\S]*packageListRows[\s\S]*\/体验\/[\s\S]*used > 0[\s\S]*remaining <= 0[\s\S]*已用完\|已核销\|已消课/, 'customer center summary fast path should infer trial attendance from consumed trial orders without counting merely booked trial packages');
 const customerCenterSummaryCalibrationPath = customerCenterRouteSource.slice(
   customerCenterRouteSource.indexOf('if(!fresh&&T_STUDENT_TEACHING_SUMMARY)'),
   customerCenterRouteSource.indexOf('const {scoped,customerLifecycleRows}=await loadCustomerCenterFactModel')
 );
 assert.strictEqual(customerCenterSummaryCalibrationPath, '', 'customer center list should not keep the old teaching-summary calibration branch');
-assert.match(corePagesSource, /function buildCustomerCenterPagePayload\([\s\S]*const listPage=buildCustomerCenterListPage\(teachingStudentViews,query\)/, 'customer center list endpoint should expose server-side paged student views through the shared payload builder');
-assert.match(corePagesSource, /function buildCustomerCenterListPage\(teachingStudentViews=\{\}, query\)[\s\S]*return paging&&view\?\{view,\.\.\.buildListPage/, 'customer center cached views should still apply server-side search before pagination');
-assert.match(corePagesSource, /function buildCustomerCenterListPage\(teachingStudentViews=\{\}, query\)[\s\S]*searchableRows=q&&Array\.isArray\(teachingStudentViews\.searchableStudents\)\?teachingStudentViews\.searchableStudents:studentRows/, 'customer center paged search should use the stable lightweight full student search index');
-assert.match(corePagesSource, /textSearchHit\(q,row\.searchText[\s\S]*row\.notes,row\.profileNote/, 'customer center paged search should include backend searchText, notes, and profileNote');
+assert.match(studentRosterReaderSource, /function buildCustomerCenterPagePayload\([\s\S]*const listPage = buildCustomerCenterListPage\(teachingStudentViews, query\)/, 'customer center list endpoint should expose server-side paged student views through the shared payload builder');
+assert.match(studentRosterReaderSource, /function buildCustomerCenterListPage\(teachingStudentViews = \{\}, query\)[\s\S]*return paging && view \? \{ view, \.\.\.buildListPage/, 'customer center cached views should still apply server-side search before pagination');
+assert.match(studentRosterReaderSource, /function buildCustomerCenterListPage\(teachingStudentViews = \{\}, query\)[\s\S]*searchableRows = q && Array\.isArray\(teachingStudentViews\.searchableStudents\) \? teachingStudentViews\.searchableStudents : studentRows/, 'customer center paged search should use the stable lightweight full student search index');
+assert.match(studentRosterReaderSource, /textSearchHit\(q, row\.searchText[\s\S]*row\.notes, row\.profileNote/, 'customer center paged search should include backend searchText, notes, and profileNote');
 assert.match(corePagesSource, /T_STUDENT_TEACHING_SUMMARY \? getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'customer center fact loader may read precomputed student teaching summary rows as auxiliary fields');
 assert.doesNotMatch(customerCenterRouteSource, /const fresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';/, 'customer center list should not let fresh switch re-enable fact-table scans');
 assert.match(corePagesSource, /const needsTeachingFacts = includeLessonFacts \|\| !studentTeachingSummaries\.length/, 'fresh customer center reads and background calibration should include full lesson facts');

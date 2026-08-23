@@ -789,6 +789,12 @@ function studentStandardSummaryForMode(){
     activePackageLowCount:Number(summary.activePackageLowCount)||0
   };
 }
+function studentFilteredSummaryForMode(base=[]){
+  if(typeof FlowTennisPlatformDataStandards==='object'&&typeof FlowTennisPlatformDataStandards.currentStudentSummary==='function'){
+    return FlowTennisPlatformDataStandards.currentStudentSummary(base,studentListViewMode());
+  }
+  return studentStandardSummaryForMode();
+}
 function studentLoadingStatsForMode(){
   if(studentListViewMode()==='trial')return {
     total:null,
@@ -807,6 +813,7 @@ function studentLoadingStatsForMode(){
 }
 function studentPageStats(base){
   if(typeof customerCenterPageReady==='function'&&!customerCenterPageReady())return studentLoadingStatsForMode();
+  if(studentHasActiveSearchOrFilter())return studentFilteredSummaryForMode(base);
   return studentStandardSummaryForMode();
 }
 function studentPercentText(value,total){
@@ -1192,11 +1199,12 @@ function studentLessonRecordDetailSectionText(rows=[],index=0){
   return `[第${startText}${startText===endText?'':`-${endText}`}${unit}]`;
 }
 function studentHasActiveSearchOrFilter(){
-  return !!((document.getElementById('stuSearch')?.value||'').trim()
-    ||document.getElementById('stuTypeFilter')?.value
-    ||document.getElementById('stuSourceFilter')?.value
+  const valueOf=id=>typeof document!=='undefined'&&typeof document.getElementById==='function'?(document.getElementById(id)?.value||''):'';
+  return !!((valueOf('stuSearch')||'').trim()
+    ||valueOf('stuTypeFilter')
+    ||valueOf('stuSourceFilter')
     ||studentTagFilterCount()
-    ||document.getElementById('stuCoachFilter')?.value);
+    ||valueOf('stuCoachFilter'));
 }
 function studentEmptyStateHtml(){
   const filtered=studentHasActiveSearchOrFilter();
