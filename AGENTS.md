@@ -216,6 +216,46 @@
    - [订场用户 / 会员管理 1 秒加载失败复盘与后续禁令](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/performance-governance/18-2026-08-09-订场会员列表索引失败复盘.md)
    - [订场用户 / 会员管理 1 秒加载快照包方案评审](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/performance-governance/19-2026-08-09-订场会员列表快照包方案评审.md)
 
+### 1.3.6 线索池 / 历史学员 / 在期学员口径与性能硬红线
+
+1. 本节覆盖 3 个页面：
+   - 线索池
+   - 历史学员
+   - 在期学员
+2. 3 页顶部共 15 个数字必须同源，不得出现页面 A 一套数、页面 B 一套数、列表底部又一套数：
+   - 线索池：线索数、历史学员、在期学员、上过体验课、体验后买正式课
+   - 历史学员：历史学员、上过体验课、上过正式课、上过体验未上正式课、近 30 天正式课活跃
+   - 在期学员：在期学员、近 30 天正式课活跃、近 90 天正式课活跃、课包有余额、课包即将耗尽
+3. 学员类指标只能读取教学学员统一读模型最终输出；当前快路径是 `ft_student_teaching_summary` 经 `server/read-models/platform-metrics.js` 输出后的最终字段。页面不得直接拿摘要原字段、线索字段或当前页列表自行推导。
+4. 线索池接口和页面禁止自行计算以下学员指标：
+   - `historicalStudents`
+   - `activeStudents`
+   - `trialAttended`
+   - `trialAttendedToFormalPurchase`
+5. 历史学员 / 在期学员首屏、筛选和顶部统计禁止扫描以下大表临时拼结果：
+   - `ft_schedule`
+   - `ft_purchases`
+   - `ft_entitlements`
+   - `ft_entitlement_ledger`
+   - `ft_membership_benefit_ledger`
+   - `ft_feedbacks`
+6. GET 页面接口禁止写库。打开线索池、历史学员、在期学员页面，不得自动补写 `ft_leads`，也不得让一次读取改变线上数据数量。
+7. 筛选后的顶部数字必须基于筛选后的完整集合统计，不得只统计当前页 15 条；历史学员 / 在期学员列表 `total` 必须和对应顶部总数一致。
+8. `hasTrialAttended=false` 是明确事实时，不得被 `detailLessonRecordRows` 里的“体验”文字反推覆盖；只有老摘要缺字段时，才允许走兼容反推。
+9. 摘要重建必须按顺序执行：
+   - 先 dry-run，对齐 3 页 15 个数字
+   - 写入前确认目标实例和线上读取实例一致
+   - 写入后做摘要-only 复核
+   - 报告不得包含生产学员明细并提交到仓库
+10. 触达本节 3 页任一页面时，提交前必须跑完以下门禁；没有跑完不得说“完成、彻底解决、数据正确、速度已达标”：
+   - `node tests/customer-center-summary-fact-calibration.test.js`
+   - `node tests/customer-center-filter-consistency.test.js`
+   - `node tests/leads-safe-server-pagination.test.js`
+   - `node tests/leads-view.test.js`
+   - `node tests/page-data-requirements.test.js`
+   - `node tests/lifecycle-standard-metrics.test.js`
+   - `npm test`
+
 ---
 
 ## 2. 生产与财务红线

@@ -778,6 +778,29 @@ FlowTennis 只保留三类转化观察口径：课程总漏斗、体验课上课
 8. 在期学员页展示 `ACTIVE_STUDENTS`，即历史学员中课包有余额，或近 90 天有正式课上课记录的客户。
 9. 线索池顶部固定展示 `上过体验课` 和 `体验后买正式课`，不再展示容易混淆的 `体验路径学员 / 体验路径成交 / 体验路径未成交`。
 10. 线索池、普通学员、正式学员的列表字段、顶部数据、查看抽屉、编辑抽屉、删除入口、新增入口，必须读取同一个客户生命周期 / 教学学员统一读模型；页面不得再分别扫描 `purchases`、`entitlements`、`entitlement_ledger`、`schedule`、`membership_benefit_ledger`、`feedbacks` 拼出另一套姓名、来源、校区、负责人、课包、上课记录、权益口径。
+11. 线索池、历史学员、在期学员顶部 15 个数字必须读取统一读模型最终输出字段；页面不得拿摘要原字段、线索字段、当前页列表或历史兼容字段自行推导。
+12. 筛选后的顶部数字必须基于筛选后的完整集合，不是当前页 15 条；列表 `total` 必须和对应顶部总数保持一致。
+13. `hasTrialAttended=false` 是明确事实时，不得被 `detailLessonRecordRows` 里的“体验”文字反推为 true；只有老摘要缺字段时，才允许用明细做兼容反推。
+
+三页顶部 15 个数字唯一字段来源：
+
+| 页面 | 展示项 | 唯一字段来源 |
+|---|---|---|
+| 线索池 | 线索数 | `/api/leads` 筛选后完整列表 `total` |
+| 线索池 | 历史学员 | `standardLifecycleMetrics.teachingSummary.historicalStudentCount` |
+| 线索池 | 在期学员 | `standardLifecycleMetrics.teachingSummary.activeStudentCount` |
+| 线索池 | 上过体验课 | `standardLifecycleMetrics.teachingSummary.trialAttendedStudentCount` |
+| 线索池 | 体验后买正式课 | `standardLifecycleMetrics.teachingSummary.trialAttendedToFormalPurchaseCount` |
+| 历史学员 | 历史学员 | `standardLifecycleMetrics.teachingSummary.historicalStudentCount` |
+| 历史学员 | 上过体验课 | `standardLifecycleMetrics.teachingSummary.historicalTrialAttendedCount` |
+| 历史学员 | 上过正式课 | `standardLifecycleMetrics.teachingSummary.historicalFormalAttendedCount` |
+| 历史学员 | 上过体验未上正式课 | `standardLifecycleMetrics.teachingSummary.historicalTrialWithoutFormalCount` |
+| 历史学员 | 近 30 天正式课活跃 | `standardLifecycleMetrics.teachingSummary.historicalFormalLesson30Count` |
+| 在期学员 | 在期学员 | `standardLifecycleMetrics.teachingSummary.activeStudentCount` |
+| 在期学员 | 近 30 天正式课活跃 | `standardLifecycleMetrics.teachingSummary.activeFormalLesson30Count` |
+| 在期学员 | 近 90 天正式课活跃 | `standardLifecycleMetrics.teachingSummary.activeFormalLesson90Count` |
+| 在期学员 | 课包有余额 | `standardLifecycleMetrics.teachingSummary.activePackageBalanceCount` |
+| 在期学员 | 课包即将耗尽 | `standardLifecycleMetrics.teachingSummary.activePackageLowCount` |
 
 线索池页面顶部固定口径：
 
