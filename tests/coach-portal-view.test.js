@@ -365,8 +365,8 @@ assert.match(
 
 assert.match(
   fnBody('renderMyStudents'),
-  /const myStus=students\.filter\(s=>coachName\(s\.primaryCoach\)===cn2\|\|myStudentLessonCount\(s,cn2\)>0\)/,
-  'coach my students should render only assigned students or students actually taught by the coach'
+  /const rosterRows=myStudentRosterRows\(\);[\s\S]*const myStus=rosterRows\.length\?rosterRows:students\.filter\(s=>coachName\(s\.primaryCoach\)===cn2\|\|myStudentLessonCount\(s,cn2\)>0\)/,
+  'coach my students should prefer the unified roster and only fall back to the local filter when needed'
 );
 
 assert.match(

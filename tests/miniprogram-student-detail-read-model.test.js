@@ -349,26 +349,27 @@ const miniRoster = buildCoachMiniStudentRoster({
 assert.deepStrictEqual(
   miniRoster.stats,
   {
-    totalCount: 3,
-    weekActiveCount: 2,
-    monthActiveCount: 2,
-    activeCount: 1,
+    totalCount: 4,
+    weekActiveCount: 3,
+    monthActiveCount: 3,
+    activeCount: 2,
     trialCount: 1,
     endedCount: 1,
-    substituteCount: 1
+    substituteCount: 1,
+    ownedCount: 2
   },
-  'mini roster stats should use owned students and real-time completed schedules only'
+  'mini roster stats should keep trial-only students unassigned while still counting every coach-visible relation'
 );
 
 assert.deepStrictEqual(
   miniRoster.items.map(item => [item.id, item.studentTabKey, item.type, item.relationType, item.packageText]).sort((a, b) => a[0].localeCompare(b[0])),
   [
-    ['owned-active', 'active', '青少年', '归属', '7/10'],
-    ['owned-ended', 'ended', '成人', '归属', '0/10'],
-    ['substitute', 'substitute', '成人', '代课', '5/10'],
-    ['trial-only', 'trial', '青少年', '归属', '']
+    ['owned-active', 'active', '青少年', '归属 / 正式', '7/10'],
+    ['owned-ended', 'ended', '成人', '归属 / 正式', '0/10'],
+    ['substitute', 'active', '成人', '正式 / 代课', '5/10'],
+    ['trial-only', 'trial', '青少年', '体验', '']
   ],
-  'mini roster items should keep student type separate from ownership and show package balance for substitute students'
+  'mini roster items should keep student type separate from ownership, leave trial-only students unassigned, and show package balance for substitute students'
 );
 
 const ownedFallbackRoster = buildCoachMiniStudentRoster({
@@ -408,7 +409,8 @@ assert.deepStrictEqual(
     activeCount: 1,
     trialCount: 0,
     endedCount: 0,
-    substituteCount: 0
+    substituteCount: 0,
+    ownedCount: 1
   },
   'owned students must not fall through the active, trial, and ended tabs'
 );

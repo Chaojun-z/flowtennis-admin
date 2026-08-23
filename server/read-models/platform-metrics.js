@@ -2380,9 +2380,52 @@ function miniRosterOwnedTabKey(row = {}) {
   return 'ended';
 }
 
+function miniRosterHasTrialFact(row = {}) {
+  return text(row.studentStage) === 'trial'
+    || !!row.hasTrialExperience
+    || !!row.hasTrialAttended
+    || !!row.hasTeachingSummarySnapshot && !!booleanSnapshotValue(row.hasTrialAttended)
+    || /体验/.test(text([row.paymentModeLabel, row.trialStatus, row.trialPathLabel, row.courseLabel].filter(Boolean).join(' ')));
+}
+
+function miniRosterHasFormalFact(row = {}) {
+  if (miniRosterHasFormalPackage(row)) return true;
+  if (text(row.studentStage) === 'formal') return true;
+  if (Array.isArray(row.detailLessonRecordRows) && row.detailLessonRecordRows.some(item => !courseRowIsTrial(item) && !courseRowIsCompanion(item))) return true;
+  if (miniRosterHasTrialOnlyContext(row)) return false;
+  return (Number(row.completedLessons) || 0) > 0;
+}
+
+function miniRosterRelationLabels(row = {}, coachName = '', schedule = []) {
+  const labels = [];
+  const owned = miniRosterOwnedByCoach(row, coachName);
+  const trial = miniRosterHasTrialFact(row);
+  const formal = miniRosterHasFormalFact(row);
+  const substitute = !owned && miniRosterStudentHasSubstituteFact(row, coachName, schedule);
+  if (owned) labels.push('归属');
+  if (trial) labels.push('体验');
+  if (formal) labels.push('正式');
+  if (substitute) labels.push('代课');
+  return [...new Set(labels)];
+}
+
+function miniRosterTabKeysForRow(row = {}, coachName = '', schedule = []) {
+  const keys = [];
+  const trial = miniRosterHasTrialFact(row);
+  const formal = miniRosterHasFormalFact(row);
+  const substitute = !miniRosterOwnedByCoach(row, coachName) && miniRosterStudentHasSubstituteFact(row, coachName, schedule);
+  const primary = miniRosterOwnedTabKey(row);
+  if (trial) keys.push('trial');
+  if (primary) keys.push(primary);
+  if (formal && !keys.includes(primary)) keys.push(primary);
+  if (substitute) keys.push('substitute');
+  return [...new Set(keys)].filter(Boolean);
+}
+
 function miniRosterOwnedByCoach(row = {}, coachName = '') {
   const coachKey = miniRosterCoachKey(coachName);
   if (!coachKey) return false;
+  if (miniRosterHasTrialOnlyContext(row)) return false;
   const direct = [
     row.primaryCoach,
     row.ownerCoach,
@@ -2433,6 +2476,7 @@ function miniRosterCurrentMonth(value, now = new Date()) {
 }
 
 function miniRosterStudentHasSubstituteFact(row = {}, coachName = '', schedule = []) {
+  if (miniRosterHasTrialOnlyContext(row)) return false;
   const studentId = text(row.studentId || row.id);
   if (!studentId) return false;
   if ((schedule || []).some(item => miniRosterScheduleTouchedByCoach(item, studentId, coachName))) return true;
@@ -2453,9 +2497,25 @@ function buildCoachMiniStudentRoster({
     const studentId = text(row.studentId || row.id);
     if (!studentId) return;
     const existing = byId.get(studentId) || {};
-    const existingRank = { active: 3, trial: 2, ended: 1, substitute: 0 }[existing.studentTabKey] ?? -1;
-    const nextRank = { active: 3, trial: 2, ended: 1, substitute: 0 }[tabKey] ?? -1;
-    if (!existing.studentTabKey || nextRank >= existingRank) byId.set(studentId, { ...existing, ...row, studentTabKey: tabKey });
+    const next = { ...existing, ...row };
+    const relationSet = new Set(Array.isArray(existing.relationLabels) ? existing.relationLabels : []);
+    const nextRelationLabels = miniRosterRelationLabels(next, coachName, schedule);
+    nextRelationLabels.forEach(label => relationSet.add(label));
+    const keySet = new Set(Array.isArray(existing.studentTabKeys) ? existing.studentTabKeys : []);
+    miniRosterTabKeysForRow(next, coachName, schedule).forEach(key => keySet.add(key));
+    if (tabKey) keySet.add(tabKey);
+    const order = { active: 3, trial: 2, ended: 1, substitute: 0 };
+    const nextRank = Math.max(...[...keySet].map(key => order[key] ?? -1));
+    const currentRank = order[existing.studentTabKey] ?? -1;
+    const primaryKey = nextRank >= currentRank
+      ? [...keySet].sort((a, b) => (order[b] ?? -1) - (order[a] ?? -1))[0] || existing.studentTabKey || tabKey || 'ended'
+      : existing.studentTabKey || tabKey || 'ended';
+    byId.set(studentId, {
+      ...next,
+      relationLabels: [...relationSet],
+      studentTabKeys: [...keySet].filter(Boolean),
+      studentTabKey: primaryKey
+    });
   };
   (teachingStudentViews.activeStudents || []).forEach(row => putRow(row, 'active'));
   (teachingStudentViews.trialAttendedWithoutFormalStudents || []).forEach(row => putRow(row, 'trial'));
@@ -2473,11 +2533,15 @@ function buildCoachMiniStudentRoster({
   ].forEach(row => {
     const studentId = text(row.studentId || row.id);
     if (!studentId || byId.has(studentId)) return;
-    if (miniRosterStudentHasSubstituteFact(row, coachName, schedule) && miniRosterHasDisplayableSubstituteData(row)) putRow(row, 'substitute');
+    const owned = miniRosterOwnedByCoach(row, coachName);
+    const substitute = !owned && miniRosterStudentHasSubstituteFact(row, coachName, schedule);
+    if ((owned || substitute) && miniRosterHasDisplayableSubstituteData(row)) {
+      putRow(row, owned ? miniRosterOwnedTabKey(row) : 'substitute');
+    }
   });
   const items = [...byId.values()].map(row => {
     const owned = miniRosterOwnedByCoach(row, coachName);
-    const tabKey = owned ? miniRosterOwnedTabKey(row) : 'substitute';
+    const tabKey = row.studentTabKey || (Array.isArray(row.studentTabKeys) && row.studentTabKeys[0]) || miniRosterOwnedTabKey(row);
     const packageText = text(row.detailPackageProgressText) !== '-'
       ? text(row.detailPackageProgressText)
       : (text(row.detailPackageBalanceText) !== '-' ? text(row.detailPackageBalanceText) : text(row.packageBalanceText));
@@ -2486,7 +2550,9 @@ function buildCoachMiniStudentRoster({
       : (text(row.detailPackageBalanceText) !== '-' ? text(row.detailPackageBalanceText) : packageText);
     const recentDate = text(row.detailRecentLessonDate || row.lastFormalLessonAt);
     const latestRecord = (Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [])[0] || {};
-    const relationType = owned ? '归属' : '代课';
+    const relationType = Array.isArray(row.relationLabels) && row.relationLabels.length
+      ? row.relationLabels.join(' / ')
+      : (owned ? '归属' : '代课');
     const studentType = miniRosterStudentType(row, studentsById.get(text(row.studentId || row.id)) || {});
     return {
       ...row,
@@ -2509,30 +2575,34 @@ function buildCoachMiniStudentRoster({
       cumulative: miniRosterLessonQty(row.completedLessons),
       detailCumulativeText: miniRosterLessonQty(row.completedLessons),
       detailRecentLessonText: miniRosterDaysAgoText(recentDate, now, { fullDate: true }) || '暂无记录',
-      searchText: [row.name, row.displayName, row.phone, studentType, relationType, row.searchText, miniRosterCourseLabel(row)].map(text).filter(Boolean).join(' ').toLowerCase()
+      searchText: [row.name, row.displayName, row.phone, studentType, relationType, row.searchText, miniRosterCourseLabel(row)].map(text).filter(Boolean).join(' ').toLowerCase(),
+      relationLabels: Array.isArray(row.relationLabels) ? row.relationLabels : [],
+      studentTabKeys: Array.isArray(row.studentTabKeys) && row.studentTabKeys.length ? row.studentTabKeys : [tabKey]
     };
-  }).filter(row => row.studentTabKey === 'substitute' || ['active','trial','ended'].includes(row.studentTabKey));
-  const ownedItems = items.filter(row => row.relationType === '归属');
+  }).filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.length > 0);
+  const ownedItems = items.filter(row => Array.isArray(row.relationLabels) && row.relationLabels.includes('归属'));
   const ownedIds = new Set(ownedItems.map(row => row.studentId));
   const attendedIds = (predicate) => {
     const ids = new Set();
     (schedule || []).filter(row => miniRosterCompletedSchedule(row, now)).forEach(row => {
       const timeValue = row.endTime || row.startTime || row.createdAt;
       if (!predicate(timeValue, now)) return;
+      if (miniRosterCoachKey(row.coach || row.coachName || row.primaryCoach || row.teacher) !== miniRosterCoachKey(coachName)) return;
       teachingScheduleStudentIds(row).forEach(studentId => {
-        if (ownedIds.has(studentId)) ids.add(studentId);
+        if (items.some(item => item.studentId === studentId)) ids.add(studentId);
       });
     });
     return ids.size;
   };
   const stats = {
-    totalCount: ownedItems.length,
+    totalCount: items.length,
     weekActiveCount: attendedIds(miniRosterCurrentWeek),
     monthActiveCount: attendedIds(miniRosterCurrentMonth),
-    activeCount: ownedItems.filter(row => row.studentTabKey === 'active' && (Number(row.packageBalanceRemaining) || 0) > 0).length,
-    trialCount: ownedItems.filter(row => row.studentTabKey === 'trial').length,
-    endedCount: ownedItems.filter(row => row.studentTabKey !== 'trial' && (row.studentTabKey === 'ended' || (Number(row.packageBalanceRemaining) || 0) <= 0)).length,
-    substituteCount: items.filter(row => row.studentTabKey === 'substitute').length
+    activeCount: items.filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.includes('active')).length,
+    trialCount: items.filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.includes('trial')).length,
+    endedCount: items.filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.includes('ended')).length,
+    substituteCount: items.filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.includes('substitute')).length,
+    ownedCount: ownedItems.length
   };
   const order = { active: 0, trial: 1, substitute: 2, ended: 3 };
   return {

@@ -184,6 +184,7 @@ function customerLifecycleMembershipStatus(record={}){
 // 现行业务主链路是 packages -> purchases -> entitlements -> schedule。
 // products / classes / plans 仅保留历史兼容，不应再作为新增功能默认依赖。
 window.coachWorkbenchStats=window.coachWorkbenchStats||{};
+let studentRoster={stats:{},tabs:[],items:[]};
 let adminUsersLoaded=false;
 let modalCleanupTimer=null;
 let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;
@@ -286,7 +287,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   memberships:[],
   workbench:['workbenchPage'],
   postfeedback:['workbenchPage'],
-  mystudents:['campuses','students','classes','schedule','feedbacks','entitlements'],
+  mystudents:['workbenchPage'],
   myclasses:['students','classes']
 };
 const STUDENT_PAGE_DEFERRED_REQUIREMENTS=[];
@@ -655,6 +656,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='matches')matches=rows;
   if(name==='thirdPartySyncCenterData')thirdPartySyncCenterData=data||{summary:{},batches:[],rawRecords:[],prechecks:[],confirmations:[],importResults:[]};
   if(name==='customerLifecycleRows')customerLifecycleRows=rows;
+  if(name==='studentRoster')studentRoster=data&&typeof data==='object'&&!Array.isArray(data)?data:{stats:{},tabs:[],items:[]};
   markDatasetLoaded(name);
   if(persist)persistDatasetCache(name,rows);
 }
@@ -1211,6 +1213,8 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      studentRoster=data.studentRoster||{stats:{},tabs:[],items:[]};
+      window.studentRoster=studentRoster;
       teachingStudentViews=data.teachingStudentViews||teachingStudentViews;
       coachOpsUnifiedView=data.coachOpsUnifiedView||{rows:[]};
       staleCachedDatasets.delete('campuses');

@@ -485,6 +485,7 @@ function buildStudentCards(students = []) {
     packagePercent: Number.isFinite(Number(student.packagePercent)) ? Number(student.packagePercent) : 0,
     courseLabel: firstNonEmpty(student.courseLabel) || '课程',
     studentTabKey: firstNonEmpty(student.studentTabKey) || 'active',
+    studentTabKeys: Array.isArray(student.studentTabKeys) && student.studentTabKeys.length ? student.studentTabKeys : [firstNonEmpty(student.studentTabKey) || 'active'],
     searchText: firstNonEmpty(student.searchText, [student.name, student.displayName, student.phone, student.courseLabel].filter(Boolean).join(' ')).toLowerCase(),
     showPackage: !!student.showPackage,
     lastScheduleId: firstNonEmpty(student.lastScheduleId),
@@ -545,8 +546,11 @@ function buildStudentTabs(stats = {}, currentTab = 'all', backendTabs = []) {
 }
 
 function studentMatchesTab(student = {}, tab = 'all') {
-  if (!tab || tab === 'all') return student.studentTabKey !== 'substitute';
-  return student.studentTabKey === tab;
+  if (!tab || tab === 'all') return true;
+  const keys = Array.isArray(student.studentTabKeys) && student.studentTabKeys.length
+    ? student.studentTabKeys
+    : [student.studentTabKey].filter(Boolean);
+  return keys.includes(tab);
 }
 
 function studentMatchesSearch(student = {}, keyword = '') {
