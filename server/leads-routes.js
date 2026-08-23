@@ -1,6 +1,6 @@
 const { readLeadSourceRows } = require('./lead-source-read-model.js');
 const { buildCustomerLifecycleRows } = require('./read-models/customer-lifecycle.js');
-const { buildLeadPoolRows } = require('./read-models/platform-metrics.js');
+const { buildLeadPoolRows, buildTeachingStudentViews } = require('./read-models/platform-metrics.js');
 const { buildCourtAccountListViewFromIndexRows } = require('./page-data/court-account-list-index.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
@@ -336,6 +336,15 @@ function createLeadsRoutes(deps={}){
     });
   }
 
+  function summaryRowExplicitBool(row={},field=''){
+    if(!Object.prototype.hasOwnProperty.call(row,field))return undefined;
+    if(row[field]===true||row[field]===false)return row[field];
+    const raw=cleanLeadText(row[field]).toLowerCase();
+    if(raw==='true')return true;
+    if(raw==='false')return false;
+    return undefined;
+  }
+
   function summaryRowIsFormalCourseItem(item={}){
     const label=cleanLeadText([item?.courseType,item?.standardCourseType,item?.packageName,item?.productName,item?.courseName,item?.className].filter(Boolean).join(' '));
     return !/体验|陪打/.test(label)&&/私教|小班|课包|正式|成人|青少年|网球/.test(label);
@@ -383,13 +392,68 @@ function createLeadsRoutes(deps={}){
     return Number.isFinite(days)&&days>=0&&days<=90;
   }
 
-  function buildLeadListSummary(rows=[]){
+  function leadListHasStudentMetricScope(state={}){
+    return !!(
+      state.q||
+      state.source||
+      state.customerType||
+      state.consultType||
+      state.ownerValues?.length||
+      state.systemStatus||
+      state.dealType||
+      state.campusValue||
+      state.campusName||
+      state.waiting||
+      state.dateFrom||
+      state.dateTo||
+      state.startDate||
+      state.endDate
+    );
+  }
+
+  function leadListIdentitySets(rows=[]){
+    const sourceLeadIds=new Set();
+    const leadIds=new Set();
+    const studentIds=new Set();
+    (Array.isArray(rows)?rows:[]).forEach(row=>{
+      [row.id,row.leadId,row.sourceLeadId].map(cleanLeadText).filter(Boolean).forEach(id=>{
+        leadIds.add(id);
+        sourceLeadIds.add(id);
+      });
+      const studentId=cleanLeadText(row.studentId);
+      if(studentId)studentIds.add(studentId);
+    });
+    return {sourceLeadIds,leadIds,studentIds};
+  }
+
+  function leadTeachingSummaryRowsForList(rows=[],summaryRows=[],state={}){
+    const list=Array.isArray(summaryRows)?summaryRows:[];
+    if(!leadListHasStudentMetricScope(state))return list;
+    const ids=leadListIdentitySets(rows);
+    return list.filter(row=>{
+      const studentId=cleanLeadText(row?.studentId||row?.id);
+      const sourceLeadId=cleanLeadText(row?.sourceLeadId);
+      const leadId=cleanLeadText(row?.leadId);
+      return studentId&&ids.studentIds.has(studentId)
+        || sourceLeadId&&(ids.sourceLeadIds.has(sourceLeadId)||ids.leadIds.has(sourceLeadId))
+        || leadId&&(ids.sourceLeadIds.has(leadId)||ids.leadIds.has(leadId));
+    });
+  }
+
+  function buildLeadTeachingSummaryFromReadModel(rows=[],summaryRows=[],state={}){
+    const scopedSummaryRows=leadTeachingSummaryRowsForList(rows,summaryRows,state);
+    const customerLifecycleRows=buildCustomerCenterSummaryLifecycleRows(scopedSummaryRows);
+    return buildTeachingStudentViews(customerLifecycleRows,{teachingStudentSummaryRows:scopedSummaryRows}).summary||{};
+  }
+
+  function buildLeadListSummary(rows=[],options={}){
     const list=Array.isArray(rows)?rows:[];
     const total=list.length;
-    const historicalStudents=list.filter(row=>leadSummaryBool(row.isHistoricalStudentRoster)||leadSummaryTrialAttended(row)||leadSummaryCourseConverted(row)).length;
-    const activeStudents=list.filter(row=>leadSummaryBool(row.isActiveStudentRoster)||summaryRowIsActiveStudentRoster(row)).length;
-    const trialAttended=list.filter(leadSummaryTrialAttended).length;
-    const trialAttendedToFormalPurchase=list.filter(row=>leadSummaryTrialAttended(row)&&leadSummaryBool(row.hasTrialToCourseConversion)).length;
+    const teachingSummary=buildLeadTeachingSummaryFromReadModel(list,options.studentTeachingSummaryRows||[],options.filterState||{});
+    const historicalStudents=Number(teachingSummary.historicalStudentCount)||0;
+    const activeStudents=Number(teachingSummary.activeStudentCount)||0;
+    const trialAttended=Number(teachingSummary.trialAttendedStudentCount)||0;
+    const trialAttendedToFormalPurchase=Number(teachingSummary.trialAttendedToFormalPurchaseCount)||0;
     return {
       total,
       historicalStudents,
@@ -415,8 +479,10 @@ function createLeadsRoutes(deps={}){
     return (Array.isArray(summaryRows)?summaryRows:[]).map(row=>{
       const studentId=cleanLeadText(row?.studentId||row?.id);
       if(!studentId)return null;
-      const hasTrialAttended=leadSummaryBool(row?.hasTrialAttended)||!!cleanLeadText(row?.trialAttendedAt)||summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row);
-      const hasFormalAttended=leadSummaryBool(row?.hasFormalAttended)||!!cleanLeadText(row?.lastFormalLessonAt);
+      const explicitTrialAttended=summaryRowExplicitBool(row,'hasTrialAttended');
+      const explicitFormalAttended=summaryRowExplicitBool(row,'hasFormalAttended');
+      const hasTrialAttended=explicitTrialAttended!==undefined?explicitTrialAttended:(!!cleanLeadText(row?.trialAttendedAt)||summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row));
+      const hasFormalAttended=explicitFormalAttended!==undefined?explicitFormalAttended:!!cleanLeadText(row?.lastFormalLessonAt);
       const hasFormalCourseFact=summaryRowHasFormalCourseFact(row);
       const hasTrialToCourseConversion=hasTrialAttended&&hasFormalCourseFact;
       return {
@@ -955,7 +1021,7 @@ function createLeadsRoutes(deps={}){
     return created;
   }
 
-  async function readLeadPoolRows({lifecycleScope='all'}={}){
+  async function readLeadPoolContext({lifecycleScope='all'}={}){
     const [leads,followups]=await Promise.all([
       readCachedLeadSourceRows(),
       readLeadFollowupRows().catch(()=>[])
@@ -963,17 +1029,19 @@ function createLeadsRoutes(deps={}){
     const hiddenLeadIds=hiddenLeadSourceIds(leads);
     let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(visibleLeadSourceRows(leads),followups)),{persist:false});
     let customerLifecycleRows=[];
+    let studentSummaryRows=[];
     const useLightLifecycleSource=!isLocalPreviewFastMode()&&!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
     if(useLightLifecycleSource){
-      const [studentSummaryRows,courtIndexRows]=await Promise.all([
+      const [loadedStudentSummaryRows,courtIndexRows]=await Promise.all([
         getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]),
         getCachedScan(T_COURT_ACCOUNT_LIST_INDEX).catch(()=>[])
       ]);
+      studentSummaryRows=loadedStudentSummaryRows;
       const studentLifecycleRows=buildCustomerCenterSummaryLifecycleRows(studentSummaryRows);
       const courtAccountView=buildCourtAccountListViewFromIndexRows(courtIndexRows||[],{});
       const courtLifecycleRows=buildCourtLifecycleRows(courtAccountView.items||[],mergedLeads);
       customerLifecycleRows=[...studentLifecycleRows,...courtLifecycleRows];
-      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows);
+      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows,{persist:false});
       if(createdLeads.length){
         mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
       }
@@ -997,7 +1065,7 @@ function createLeadsRoutes(deps={}){
         membershipAccounts,
         membershipOrders
       });
-      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows);
+      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows,{persist:false});
       if(createdLeads.length){
         mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
         customerLifecycleRows=buildCustomerLifecycleRows({
@@ -1014,11 +1082,16 @@ function createLeadsRoutes(deps={}){
     }
     const rows=buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:false})
       .filter(row=>!hiddenLeadIds.has(cleanLeadText(row.id))&&!hiddenLeadIds.has(cleanLeadText(row.sourceLeadId)));
-    return rows;
+    return {rows,studentSummaryRows,customerLifecycleRows};
   }
 
   async function readVisibleLeadRows({expandLifecycleSearch=false}={}){
-    return readLeadPoolRows({lifecycleScope:expandLifecycleSearch?'all':'course'});
+    const context=await readLeadPoolContext({lifecycleScope:expandLifecycleSearch?'all':'course'});
+    return context.rows;
+  }
+
+  async function readVisibleLeadContext({expandLifecycleSearch=false}={}){
+    return readLeadPoolContext({lifecycleScope:expandLifecycleSearch?'all':'course'});
   }
 
   async function readFastVisibleLeadRows(){
@@ -1056,10 +1129,11 @@ function createLeadsRoutes(deps={}){
         const resultCacheKey=paging?leadFilteredResultCacheKey(query,user):'';
         let cachedResult=resultCacheKey?readLeadFilteredResultCache(resultCacheKey):null;
         if(!cachedResult){
-          const rows=await readVisibleLeadRows({expandLifecycleSearch:!!filterState.q});
+          const {rows,studentSummaryRows}=await readVisibleLeadContext({expandLifecycleSearch:!!filterState.q});
           const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
           const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
-          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered),filters:buildLeadListFilterMeta(visibleRows,filterState)};
+          const scopedSummaryRows=filterLoadAllForUser({studentTeachingSummaries:studentSummaryRows},user).studentTeachingSummaries||[];
+          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered,{studentTeachingSummaryRows:scopedSummaryRows,filterState}),filters:buildLeadListFilterMeta(visibleRows,filterState)};
           if(resultCacheKey)writeLeadFilteredResultCache(resultCacheKey,cachedResult);
         }
         const payload=paging?{...buildLeadListPage(cachedResult.sorted,paging),summary:cachedResult.summary,filters:cachedResult.filters}:cachedResult.sorted;

@@ -725,8 +725,6 @@ const summaryFastPathRows = [
     displayName: '摘要体验未正式',
     isHistoricalStudentRoster: true,
     isActiveStudentRoster: false,
-    hasTrialAttended: false,
-    hasFormalAttended: false,
     completedLessons: 1,
     detailLessonRecordRows: [
       { kind: 'schedule', time: '2026-07-01 10:00-11:00', courseType: '体验课', lessonDelta: -1 }
@@ -739,8 +737,6 @@ const summaryFastPathRows = [
     displayName: '摘要正式近30天',
     isHistoricalStudentRoster: true,
     isActiveStudentRoster: false,
-    hasTrialAttended: false,
-    hasFormalAttended: false,
     completedLessons: 1,
     lastFormalLessonAt: '2026-07-08',
     detailRecentLessonDate: '2026-07-08',
@@ -755,8 +751,6 @@ const summaryFastPathRows = [
     displayName: '摘要体验后正式近30天',
     isHistoricalStudentRoster: true,
     isActiveStudentRoster: false,
-    hasTrialAttended: false,
-    hasFormalAttended: false,
     completedLessons: 2,
     lastFormalLessonAt: '2026-07-07',
     detailRecentLessonDate: '2026-07-07',
@@ -788,6 +782,32 @@ assert.strictEqual(summaryFastPathStandard.teachingSummary.historicalFormalAtten
 assert.strictEqual(summaryFastPathStandard.teachingSummary.historicalTrialWithoutFormalCount, 1, '摘要首屏体验未正式必须用同一套反推后的体验/正式事实');
 assert.strictEqual(summaryFastPathStandard.teachingSummary.historicalFormalLesson30Count, 2, '摘要首屏近30天正式课活跃不能只信 hasFormalAttended 布尔字段');
 assert.strictEqual(summaryFastPathStandard.teachingSummary.activeFormalLesson30Count, 2, '摘要首屏在期页近30天正式课活跃必须和历史页一致');
+
+const explicitFalseTrialSummaryStandard = buildStandardLifecycleMetrics({
+  teachingStudentSummaryRows: [{
+    id: 'summary-explicit-false-trial',
+    studentId: 'summary-explicit-false-trial',
+    displayName: '显式未体验',
+    isHistoricalStudentRoster: true,
+    hasTrialAttended: false,
+    hasFormalAttended: false,
+    detailLessonRecordRows: [
+      { kind: 'ledger', time: '2026-07-01', courseType: '体验课', lessonDelta: -1 }
+    ]
+  }],
+  customerLifecycleRows: [{
+    customerKey: 'teaching-summary:summary-explicit-false-trial',
+    studentId: 'summary-explicit-false-trial',
+    displayName: '显式未体验',
+    hasTeachingSummarySnapshot: true,
+    hasScheduleRecord: true,
+    hasCourseStudentEntry: true,
+    hasFreeCourseFollowup: true,
+    isHistoricalStudentRoster: true
+  }],
+  now: new Date('2026-07-09 00:00:00')
+});
+assert.strictEqual(explicitFalseTrialSummaryStandard.teachingSummary.historicalTrialAttendedCount, 0, '摘要显式 hasTrialAttended=false 时不能再从明细反推，避免体验课人数膨胀');
 
 const futureScheduleData = {
   students: [{ id: 'student-future-completed', name: '未来已结束误标' }],

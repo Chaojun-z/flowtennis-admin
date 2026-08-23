@@ -153,8 +153,8 @@ async function main() {
   assert.strictEqual(shellStudentLead.studentId, 'student-shell', '已成交课程线索应补齐学员身份，后续才能排课');
   assert.ok(!String(materializedStudentLead.id).startsWith('student:'), '线索池列表不能把 student: 临时 ID 暴露给编辑保存');
   assert.ok(
-    writes.some((item) => item.table === 'ft_leads' && item.id === 'lead-from-student-student-2' && item.row.studentId === 'student-2' && item.row.leadDate === '2026-04-15' && item.row.profileNote === ''),
-    '学员倒推线索进入列表时必须先落成 ft_leads 真实记录'
+    !writes.some((item) => item.table === 'ft_leads' && item.id === 'lead-from-student-student-2'),
+    '线索池 GET 列表只能展示统一读模型补入的学员线索，不能顺手写入 ft_leads 导致线索数越读越多'
   );
   rows.ft_leads.push({
     id: 'lead-polluted',

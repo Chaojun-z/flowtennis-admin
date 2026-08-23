@@ -150,7 +150,7 @@ async function main() {
   assert.match(routesSource, /function leadFilteredResultCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query,\{includePaging:false\}\)[\s\S]*leadListUserCachePart\(user\)/, '后端翻页应复用同一筛选排序统计结果，不能每页重新全量计算');
   assert.match(routesSource, /function clearLeadListCaches\(\)[\s\S]*leadSourceRowsCache\.rows=null[\s\S]*leadPagedResponseCache\.clear\(\)[\s\S]*leadFilteredResultCache\.clear\(\)/, '线索写操作后应能清理原始行缓存、分页响应缓存和筛选结果缓存');
   assert.match(routesSource, /if\(path==='\/leads'\)\{[\s\S]*if\(!\(method==='GET'&&isLocalPreviewFastMode\(\)\)\)await init\(\);[\s\S]*if\(method!=='GET'\)await ensureLeadTablesForRequest\(\);[\s\S]*if\(method==='GET'\)/, '本地预览线索池只读首屏不应等待初始化和建表检查，写操作仍保留安全检查');
-  assert.match(routesSource, /const filtered=visibleRows\.filter\(row=>leadMatchesListFilter\(row,filterState\)\);[\s\S]*summary:buildLeadListSummary\(filtered\)[\s\S]*buildLeadListPage\(cachedResult\.sorted,paging\)/, '后端必须先完整筛选和列表统计，再分页截取当前页');
+  assert.match(routesSource, /const filtered=visibleRows\.filter\(row=>leadMatchesListFilter\(row,filterState\)\);[\s\S]*summary:buildLeadListSummary\(filtered,\{studentTeachingSummaryRows:scopedSummaryRows,filterState\}\)[\s\S]*buildLeadListPage\(cachedResult\.sorted,paging\)/, '后端必须先完整筛选，再用筛选范围读取统一摘要统计，最后分页截取当前页');
   assert.match(routesSource, /buildLeadListFilterState\(query\)[\s\S]*buildLeadListFilterMeta\(visibleRows,filterState\)/, '后端必须用筛选后的完整结果生成下拉计数，不能用当前页 15 条生成');
   assert.match(setDatasetBody, /if\(name==='leads'\)\{[\s\S]*leadListPageData=[\s\S]*summary:data\?\.summary\|\|null/, '线索池应保存后端分页元信息和统计');
   assert.match(setDatasetBody, /filters:data\?\.filters\|\|null/, '线索池应保存后端返回的筛选项计数');
@@ -212,7 +212,46 @@ async function main() {
     ft_financial_ledger: [],
     ft_plans: [],
     ft_classes: [],
-    ft_feedbacks: []
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [{
+      id: 'stu-aug-1',
+      studentId: 'stu-aug-1',
+      sourceLeadId: 'aug-1',
+      displayName: '8月线索1',
+      hasTrialAttended: true,
+      hasFormalAttended: true,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: true,
+      studentStage: 'formal',
+      lastFormalLessonAt: '2026-08-01',
+      detailRecentLessonDate: '2026-08-01',
+      packageBalanceRemaining: 1,
+      detailLessonRecordRows: [{ time: '2026-08-01', courseType: '体验课', kind: 'schedule' }],
+      packageListRows: [{ courseType: '私教课', packageName: '正式课包', remainingLessons: 1, totalLessons: 10 }]
+    }, {
+      id: 'stu-aug-2',
+      studentId: 'stu-aug-2',
+      sourceLeadId: 'aug-2',
+      displayName: '8月线索2',
+      hasTrialAttended: true,
+      hasFormalAttended: false,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: false,
+      detailLessonRecordRows: [{ time: '2026-08-02', courseType: '体验课', kind: 'schedule' }]
+    }, {
+      id: 'stu-aug-3',
+      studentId: 'stu-aug-3',
+      sourceLeadId: 'aug-3',
+      displayName: '8月线索3',
+      hasTrialAttended: false,
+      hasFormalAttended: true,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: false,
+      studentStage: 'formal',
+      lastFormalLessonAt: '2026-01-03',
+      detailRecentLessonDate: '2026-01-03'
+    }],
+    ft_court_account_list_index: []
   });
 
   const firstPage = await request(handle, 'paged=1&page=1&pageSize=5');
@@ -394,6 +433,7 @@ async function main() {
   ['ft_students', 'ft_purchases', 'ft_entitlements', 'ft_schedule', 'ft_courts', 'ft_membership_accounts', 'ft_membership_orders'].forEach(table => {
     assert.strictEqual(lightHarness.calls.tableScans[table] || 0, 0, `轻链路首屏不能扫描事实大表 ${table}`);
   });
+  assert.strictEqual(lightHarness.calls.puts, 0, '线索池 GET 首屏不能顺手写入补线索，避免读页面改变线上数据');
 
   console.log('leads safe server pagination tests passed');
 }

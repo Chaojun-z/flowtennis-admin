@@ -59,7 +59,7 @@ assert.match(platformMetricsSource, /function buildPlatformMetrics\(data = \{\}\
 assert.match(platformMetricsSource, /function buildLeadPoolRows/, 'platform metrics should expose lifecycle search rows without making them operations conversion totals');
 assert.match(platformMetricsSource, /lifecycleScope = 'all'/, 'lead pool rows should support scoped lifecycle expansion');
 assert.match(leadsRouteSource, /buildCustomerLifecycleRows/, 'lead pool route should build lifecycle rows before returning list data');
-assert.match(leadsRouteSource, /readLeadPoolRows\(\{lifecycleScope:expandLifecycleSearch\?'all':'course'\}\)/, 'lead pool route should include course lifecycle rows by default and expand all lifecycle identities only for search');
+assert.match(leadsRouteSource, /readLeadPoolContext\(\{lifecycleScope:expandLifecycleSearch\?'all':'course'\}\)/, 'lead pool route should include course lifecycle rows by default and expand all lifecycle identities only for search');
 assert.match(apiSource, /T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS/, 'lead pool route should receive course and membership fact tables for lifecycle stages');
 
 assert.match(stateSource, /if\(name==='financePage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);/, 'finance aggregate loader should hydrate lifecycle rows');

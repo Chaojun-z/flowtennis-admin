@@ -159,31 +159,34 @@ async function request(queryText = '') {
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(
     res.body.standardLifecycleMetrics.teachingSummary.trialAttendedStudentCount,
-    3,
-    '客户中心顶部上过体验课必须以排课事实为准，不能继续展示漏算的摘要表人数'
+    2,
+    '客户中心顶部上过体验课必须读取统一教学摘要读模型'
   );
   assert.strictEqual(
     res.body.standardLifecycleMetrics.teachingSummary.trialAttendedToFormalPurchaseCount,
     1,
-    '体验后买正式课必须使用同一批体验课排课事实和正式课包购买事实'
+    '体验后买正式课必须读取统一教学摘要读模型里的体验和正式课事实'
   );
   assert.strictEqual(
     res.body.standardLifecycleMetrics.teachingSummary.trialAttendedWithoutFormalCount,
-    2,
-    '体验未买正式课必须排除未来课、取消课，并等于体验事实人数减体验成交人数'
+    1,
+    '体验未买正式课必须由同一批统一教学摘要读模型计算'
   );
   assert.strictEqual(
     res.body.standardLifecycleMetrics.teachingSummary.activeStudentCount,
     1,
     '在期学员必须能从摘要行里的最近正式课和课包余额字段稳定还原'
   );
-  assert.ok(calls.tableScans.ft_schedule > 0, '摘要存在时仍必须读取排课事实完成校准');
+  assert.strictEqual(calls.tableScans.ft_student_teaching_summary, 1, '客户中心首屏必须读取统一教学摘要读模型');
+  ['ft_schedule','ft_entitlement_ledger','ft_membership_benefit_ledger','ft_purchases','ft_entitlements','ft_students'].forEach(table => {
+    assert.strictEqual(calls.tableScans[table] || 0, 0, `客户中心首屏不能扫描事实大表 ${table}`);
+  });
 
   const fresh = await request('fresh=1');
   assert.strictEqual(
     fresh.res.body.standardLifecycleMetrics.teachingSummary.trialAttendedStudentCount,
-    3,
-    '强制 fresh 时也必须保持同一套排课事实口径'
+    2,
+    '强制 fresh 也不能让首屏回退成扫描事实大表'
   );
 
   console.log('customer center summary fact calibration tests passed');

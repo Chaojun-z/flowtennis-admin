@@ -93,6 +93,15 @@ function summaryRowHasConsumedTrialPackage(row={}){
   });
 }
 
+function summaryRowExplicitBool(row={},field=''){
+  if(!Object.prototype.hasOwnProperty.call(row,field))return undefined;
+  if(row[field]===true||row[field]===false)return row[field];
+  const raw=String(row[field]||'').trim().toLowerCase();
+  if(raw==='true')return true;
+  if(raw==='false')return false;
+  return undefined;
+}
+
 function summaryRowDateMs(value){
   const raw=String(value||'').trim().replace(' ','T');
   const parsed=Date.parse(raw);
@@ -118,8 +127,10 @@ function buildCustomerCenterSummaryLifecycleRows(summaryRows=[]){
   return (Array.isArray(summaryRows)?summaryRows:[]).map(row=>{
     const studentId=String(row.studentId||row.id||'').trim();
     if(!studentId)return null;
-    const hasTrialAttended=row.hasTrialAttended===true||String(row.hasTrialAttended).toLowerCase()==='true'||summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row);
-    const hasFormalAttended=row.hasFormalAttended===true||String(row.hasFormalAttended).toLowerCase()==='true';
+    const explicitTrialAttended=summaryRowExplicitBool(row,'hasTrialAttended');
+    const explicitFormalAttended=summaryRowExplicitBool(row,'hasFormalAttended');
+    const hasTrialAttended=explicitTrialAttended!==undefined?explicitTrialAttended:(summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row));
+    const hasFormalAttended=explicitFormalAttended!==undefined?explicitFormalAttended:false;
     const isActiveStudentRoster=summaryRowIsActiveStudentRoster(row);
     return {
       customerKey:`teaching-summary:${studentId}`,
@@ -141,7 +152,7 @@ function buildCustomerCenterSummaryLifecycleRows(summaryRows=[]){
       formalCoach:String(row.primaryCoach||'').trim(),
       profileNote:String(row.profileNote||row.notes||'').trim(),
       notes:String(row.notes||row.profileNote||'').trim(),
-      studentStage:String(row.studentStage||'student').trim(),
+      studentStage:String(row.studentStage||(hasFormalAttended?'formal':(hasTrialAttended?'trial':'student'))).trim(),
       courseDealPath:String(row.courseDealPath||'').trim(),
       trialStatus:String(row.trialStatus||'').trim(),
       coursePurchaseCount:Number(row.coursePurchaseCount)||0,
@@ -170,7 +181,7 @@ function buildCustomerCenterSummaryLifecycleRows(summaryRows=[]){
       packageStatusLabel:String(row.packageStatusLabel||'').trim(),
       paymentModeLabel:String(row.paymentModeLabel||'').trim(),
       lessonVolumeLabel:String(row.lessonVolumeLabel||'').trim(),
-      isHistoricalStudentRoster:summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row)||hasFormalAttended||isActiveStudentRoster,
+      isHistoricalStudentRoster:hasTrialAttended||hasFormalAttended||isActiveStudentRoster,
       isActiveStudentRoster,
       leadDate:String(row.packagePurchaseDate||row.lastFormalLessonAt||row.summaryUpdatedAt||'').trim(),
       createdAt:String(row.summaryUpdatedAt||row.updatedAt||'').trim(),
@@ -378,14 +389,11 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/customer-center-list'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const factModel=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:true});
-      const teachingData={...factModel.scoped,teachingStudentSummaryRows:factModel.scoped.studentTeachingSummaries};
-      return sendJson(res,buildCustomerCenterPagePayload({
-        customerLifecycleRows:factModel.customerLifecycleRows,
-        teachingData,
-        query,
-        prebuiltTeachingStudentViews:factModel.teachingStudentViews,
-        prebuiltStandardLifecycleMetrics:factModel.standardLifecycleMetrics
+      const studentTeachingSummaries=T_STUDENT_TEACHING_SUMMARY ? await getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]) : [];
+      const scoped=filterLoadAllForUser({studentTeachingSummaries},user);
+      return sendJson(res,buildCustomerCenterListPayload({
+        summaryRows:scoped.studentTeachingSummaries||[],
+        query
       }));
     }
     if(path==='/page-data/purchase-detail'&&method==='GET'){

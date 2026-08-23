@@ -1038,6 +1038,18 @@ function booleanSnapshotValue(value) {
   return undefined;
 }
 
+function teachingSummaryTrialAttendedSnapshot(row = {}) {
+  const explicit = booleanSnapshotValue(row.hasTrialAttended);
+  if (explicit !== undefined) return explicit;
+  return teachingSummaryRowHasTrialLesson(row) || teachingSummaryRowHasConsumedTrialPackage(row);
+}
+
+function teachingSummaryFormalAttendedSnapshot(row = {}, now = new Date()) {
+  const explicit = booleanSnapshotValue(row.hasFormalAttended);
+  if (explicit !== undefined) return explicit;
+  return teachingSummaryRowHasFormalLesson(row, now);
+}
+
 function numberSnapshotValue(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -1111,8 +1123,8 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
     .forEach(row => {
       const studentId = text(row.studentId || row.id);
       if (!studentId) return;
-      const hasTrialAttended = teachingSummaryRowHasTrialLesson(row) || teachingSummaryRowHasConsumedTrialPackage(row);
-      const hasFormalAttended = teachingSummaryRowHasFormalLesson(row, data.now || new Date());
+      const hasTrialAttended = teachingSummaryTrialAttendedSnapshot(row);
+      const hasFormalAttended = teachingSummaryFormalAttendedSnapshot(row, data.now || new Date());
       const hasFormalCourseFact = teachingSummaryRowHasFormalCourseFact(row, data.now || new Date());
       details.set(studentId, {
         hasTeachingSummarySnapshot: true,
@@ -1288,7 +1300,7 @@ function leadBusinessDate(row = {}, lead = {}) {
       lead.conversionAt
     );
   }
-  const explicitLeadDate = text(row.leadDate || lead.leadDate || row.leadEnteredAt);
+  const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
   if (explicitLeadDate) return explicitLeadDate;
   return earliestBusinessDateText(
     row.firstTouchAt,
@@ -2135,8 +2147,8 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
     .forEach(row => {
       const studentId = text(row.studentId || row.id);
       if (!studentId || byStudentId.has(studentId)) return;
-      const hasTrialAttended = teachingSummaryRowHasTrialLesson(row) || teachingSummaryRowHasConsumedTrialPackage(row) || booleanSnapshotValue(row.hasTrialAttended) === true;
-      const hasFormalAttended = teachingSummaryRowHasFormalLesson(row, data.now || new Date());
+      const hasTrialAttended = teachingSummaryTrialAttendedSnapshot(row);
+      const hasFormalAttended = teachingSummaryFormalAttendedSnapshot(row, data.now || new Date());
       const hasFormalCourseFact = teachingSummaryRowHasFormalCourseFact(row, data.now || new Date());
       byStudentId.set(studentId, {
         customerKey: `teaching-summary:${studentId}`,
@@ -2158,7 +2170,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
         formalCoach: text(row.primaryCoach),
         profileNote: text(row.profileNote || row.notes),
         notes: text(row.notes || row.profileNote),
-        studentStage: text(row.studentStage || 'student'),
+        studentStage: text(row.studentStage || (hasFormalAttended ? 'formal' : (hasTrialAttended ? 'trial' : 'student'))),
         courseDealPath: text(row.courseDealPath),
         trialStatus: text(row.trialStatus),
         coursePurchaseCount: 0,
@@ -2677,13 +2689,18 @@ function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOStrin
 function buildStudentTeachingSummaryRows(customerLifecycleRows = [], data = {}) {
   const now = data.now || new Date();
   const updatedAt = now instanceof Date ? now.toISOString() : text(now) || new Date().toISOString();
-  const views = buildTeachingStudentViews(customerLifecycleRows, { ...data, teachingStudentSummaryRows: [] });
+  const views = buildTeachingStudentViews(customerLifecycleRows, data);
   return (views.historicalStudents || [])
-    .map(row => teachingStudentSummarySnapshotRow({
-      ...row,
-      hasTrialAttended: teachingStudentTrialLessonFactRows(data, text(row.studentId), now).length > 0,
-      hasFormalAttended: teachingStudentFormalLessonFactRows(data, text(row.studentId), now).length > 0
-    }, updatedAt))
+    .map(row => {
+      const studentId = text(row.studentId);
+      const trialFactRows = teachingStudentTrialLessonFactRows(data, studentId, now);
+      const formalFactRows = teachingStudentFormalLessonFactRows(data, studentId, now);
+      return teachingStudentSummarySnapshotRow({
+        ...row,
+        hasTrialAttended: hasFreshTeachingLessonFacts(data) ? trialFactRows.length > 0 : !!row.hasTrialAttended,
+        hasFormalAttended: hasFreshTeachingLessonFacts(data) ? formalFactRows.length > 0 : !!row.hasFormalAttended
+      }, updatedAt);
+    })
     .filter(Boolean);
 }
 
