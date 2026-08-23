@@ -690,6 +690,7 @@ async function loadScheduleListDeltaSourceData(row={}){
 const scheduleListSnapshotSync=createScheduleListSnapshotSync({getCachedRow,put,mkTable,loadSourceData:loadScheduleListSnapshotSourceData,loadDeltaSourceData:loadScheduleListDeltaSourceData,tables:{
   scheduleListSnapshot:T_SCHEDULE_LIST_SNAPSHOT,scheduleListSnapshotTasks:T_SCHEDULE_LIST_SNAPSHOT_TASKS
 }});
+async function bootstrapScheduleListSnapshot(){return scheduleListSnapshotSync.rebuildFromSourceData(await loadScheduleListSnapshotSourceData(),{dryRun:false,batchId:`bootstrap-${Date.now()}`});}
 const courtAccountListIndexSync=createCourtAccountListIndexSync({listCampusesWithDefaults,getCachedScan,getCachedRow,put,del,mkTable,courtAccountListSnapshotSync,tables:{
   courts:T_COURTS,students:T_STUDENTS,leads:T_LEADS,membershipAccounts:T_MEMBERSHIP_ACCOUNTS,membershipOrders:T_MEMBERSHIP_ORDERS,membershipPlans:T_MEMBERSHIP_PLANS,
   membershipBenefitLedger:T_MEMBERSHIP_BENEFIT_LEDGER,membershipAccountEvents:T_MEMBERSHIP_ACCOUNT_EVENTS,courtAccountListIndex:T_COURT_ACCOUNT_LIST_INDEX,courtAccountListIndexTasks:T_COURT_ACCOUNT_LIST_INDEX_TASKS
@@ -4346,7 +4347,7 @@ const {
 });
 const handleResidualPageDataRoutes=createResidualPageDataRoutes({
   init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,getCachedRow,scanFirstRows,isProductionRuntime,getFinancePageScheduleRows,getScheduleListRows,
-  scanCoachProposals,buildCoachRefs,timedEndpointMetric,
+  scanCoachProposals,buildCoachRefs,timedEndpointMetric,bootstrapScheduleListSnapshot,
   filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
   tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT,T_USERS,T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS}
 });

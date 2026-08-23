@@ -35,11 +35,12 @@ assert.doesNotMatch(scheduleListRoute, /getScheduleListRows\(/, '排课首屏路
 assert.doesNotMatch(scheduleListRoute, /getCachedScan\(/, '排课首屏路由不能扫描学员、教练、反馈等表');
 assert.doesNotMatch(scheduleListRoute, /scanCoachProposals\(/, '排课首屏路由不能扫描课前教案表');
 assert.doesNotMatch(scheduleListRoute, /T_SCHEDULE|T_STUDENTS|T_COACHES|T_FEEDBACKS|T_ENTITLEMENT_LEDGER|T_PURCHASES/, '排课首屏路由不能持有慢表依赖');
-assert.match(scheduleListRoute, /SCHEDULE_LIST_SNAPSHOT_NOT_READY_CODE[\s\S]*503/, '快照未发布时必须 503，不能回扫事实表');
+assert.match(scheduleListRoute, /SCHEDULE_LIST_SNAPSHOT_NOT_READY_CODE[\s\S]*bootstrapScheduleListSnapshot[\s\S]*pageData\.scheduleListView\.bootstrapRetry/, '快照未发布时必须后端首轮发布并重试快照，不能把初始化错误丢给页面');
 
 assert.match(residualSource, /createScheduleListSnapshotLoader/, '残余 page-data 模块必须注入排课快照读取器');
 assert.match(apiSource, /T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot'/, 'API 必须声明排课快照表');
 assert.match(apiSource, /scheduleListSnapshotSync=createScheduleListSnapshotSync/, 'API 必须创建排课快照同步器');
+assert.match(apiSource, /async function bootstrapScheduleListSnapshot\(\)[\s\S]*rebuildFromSourceData\(await loadScheduleListSnapshotSourceData\(\),\{dryRun:false/, 'API 必须提供排课快照首轮自动发布函数');
 assert.match(apiSource, /path==='\/admin\/schedule-list-snapshot\/rebuild'&&method==='POST'[\s\S]*const dryRun=body\?\.dryRun!==false/, '排课快照重建入口默认必须 dry-run');
 assert.match(apiSource, /path==='\/admin\/schedule-list-snapshot\/status'&&method==='GET'/, 'API 必须提供排课快照健康状态接口');
 

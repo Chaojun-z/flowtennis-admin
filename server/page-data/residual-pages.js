@@ -12,7 +12,7 @@ function createResidualPageDataRoutes(deps={}){
   const {
     init,sendJson,listCampusesWithDefaults,getCachedScan,getCachedRow,getFinancePageScheduleRows,getScheduleListRows,
     isProductionRuntime,
-    scanCoachProposals,buildCoachRefs,timedEndpointMetric,
+    scanCoachProposals,buildCoachRefs,timedEndpointMetric,bootstrapScheduleListSnapshot,
     scanFirstRows,filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
     tables={}
   }=deps;
@@ -156,10 +156,20 @@ function createResidualPageDataRoutes(deps={}){
         view=timedEndpointMetric?await timedEndpointMetric('pageData.scheduleListView',load):await load();
       }catch(err){
         if(err?.code===SCHEDULE_LIST_SNAPSHOT_NOT_READY_CODE){
-          return sendJson(res,{error:err.message||'排课列表快照未发布',code:err.code},err.statusCode||503);
+          if(typeof bootstrapScheduleListSnapshot==='function'){
+            try{
+              await bootstrapScheduleListSnapshot();
+              view=timedEndpointMetric?await timedEndpointMetric('pageData.scheduleListView.bootstrapRetry',load):await load();
+            }catch(bootstrapErr){
+              return sendJson(res,{error:bootstrapErr.message||err.message||'排课列表快照未发布',code:bootstrapErr.code||err.code},bootstrapErr.statusCode||err.statusCode||503);
+            }
+          }else{
+            return sendJson(res,{error:err.message||'排课列表快照未发布',code:err.code},err.statusCode||503);
+          }
+        }else{
+          console.warn('[schedule-list-snapshot] failed:',err?.message||err);
+          return sendJson(res,{error:err.message||'排课列表快照读取失败',code:err.code||'SCHEDULE_LIST_SNAPSHOT_ERROR'},err.statusCode||500);
         }
-        console.warn('[schedule-list-snapshot] failed:',err?.message||err);
-        return sendJson(res,{error:err.message||'排课列表快照读取失败',code:err.code||'SCHEDULE_LIST_SNAPSHOT_ERROR'},err.statusCode||500);
       }
       return sendJson(res,view);
     }
