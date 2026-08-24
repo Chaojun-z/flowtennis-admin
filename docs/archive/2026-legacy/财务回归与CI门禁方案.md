@@ -63,7 +63,7 @@
 
 当前基准以：
 
-- [财务基准数字确认表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务基准数字确认表.md)
+- [财务基准数字确认表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/operations/finance/财务基准数字确认表.md)
 
 为准。
 

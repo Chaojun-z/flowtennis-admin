@@ -6,7 +6,7 @@ const root = path.join(__dirname, '..');
 const scriptsRoot = path.join(root, 'public/assets/scripts');
 const pagesRoot = path.join(scriptsRoot, 'pages');
 const coreRoot = path.join(scriptsRoot, 'core');
-const docsPath = path.join(root, 'docs', '全局前端组件标准.md');
+const docsPath = path.join(root, 'docs', 'architecture', '全局前端组件标准.md');
 
 function walk(dir){
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {

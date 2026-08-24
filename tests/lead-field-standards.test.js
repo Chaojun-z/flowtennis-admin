@@ -7,7 +7,7 @@ const api = require('../api/index.js');
 const root = path.join(__dirname, '..');
 const standardSource = fs.readFileSync(path.join(root, 'public/assets/scripts/standard/components.js'), 'utf8');
 const leadsSource = fs.readFileSync(path.join(root, 'public/assets/scripts/pages/leads.js'), 'utf8');
-const dictionaryDoc = fs.readFileSync(path.join(root, 'docs/平台核心数据字典.md'), 'utf8');
+const dictionaryDoc = fs.readFileSync(path.join(root, 'docs/business-rules/平台核心数据字典.md'), 'utf8');
 const rules = api._test;
 
 assert.deepStrictEqual(taxonomy.LEAD_STAGE_OPTIONS.map(item => item.value), [

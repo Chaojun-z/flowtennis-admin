@@ -71,6 +71,31 @@ function evaluateDocumentGovernance({ docs = [], config = {} } = {}) {
   return { ok: errors.length === 0, errors };
 }
 
+function evaluateDocsPlacement({ files = [], config = {} } = {}) {
+  const errors = [];
+  const allowedRootFiles = new Set(config.allowedDocsRootFiles || ['docs/README.md']);
+  const allowedTopLevelDirs = config.allowedDocsTopLevelDirs || [];
+
+  for (const rawFile of files) {
+    const file = normalizeFile(rawFile);
+    if (!file.startsWith('docs/')) continue;
+
+    const parts = file.split('/');
+    if (parts.length === 2) {
+      if (!allowedRootFiles.has(file)) {
+        errors.push(`${file} 不允许放在 docs 根目录；请归类到 governance、business-rules、architecture、operations、prd、reports 或 archive`);
+      }
+      continue;
+    }
+
+    if (!allowedTopLevelDirs.some((prefix) => file.startsWith(prefix))) {
+      errors.push(`${file} 所在 docs 一级目录未登记；请先更新治理目录规范和 allowedDocsTopLevelDirs`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
 function levelRank(level) {
   return Math.max(0, LEVEL_ORDER.indexOf(level));
 }
@@ -139,6 +164,8 @@ function evaluateChangeRecordCoverage({ changedFiles = [], records = [], config 
     const riskMatch = content.match(/##\s+风险等级\s+([\s\S]*?)(?:\n##\s+|$)/);
     const recordLevel = riskMatch?.[1]?.match(/L[1-5]/)?.[0] || '';
 
+    if (!mentionedFiles.length) continue;
+
     if (!missingMeta.length && !missingSections.length && mentionedFiles.length === files.length && levelRank(recordLevel) >= levelRank(risk.maxLevel)) {
       validRecords.push(record);
     }
@@ -154,8 +181,9 @@ function evaluateChangeRecordCoverage({ changedFiles = [], records = [], config 
     }
   }
 
-  if (!validRecords.length && !errors.length) errors.push(`本次 ${risk.maxLevel} 改动没有合格的需求变更记录`);
-  return { ok: validRecords.length > 0 && errors.length === 0, errors, risk };
+  if (validRecords.length) return { ok: true, errors: [], risk };
+  if (!errors.length) errors.push(`本次 ${risk.maxLevel} 改动没有合格的需求变更记录`);
+  return { ok: false, errors, risk };
 }
 
 function evaluatePostReleaseCoverage({ config = {}, apiSmokeChecks = [] } = {}) {
@@ -189,11 +217,15 @@ function inferChangedFiles(root = DEFAULT_ROOT, argv = [], env = process.env) {
 }
 
 function listGovernedDocs(root, config) {
-  const files = runGit(root, ['ls-files', 'docs/README.md', 'docs/governance/*.md', 'docs/governance/change-records/*.md']);
+  const files = runGit(root, ['ls-files', 'docs']);
   const regexes = (config.governedDocGlobs || []).map(globToRegExp);
   return files
     .filter((file) => regexes.some((regex) => regex.test(file)))
     .map((file) => ({ file, content: fs.readFileSync(path.join(root, file), 'utf8') }));
+}
+
+function listTrackedDocs(root) {
+  return runGit(root, ['ls-files', 'docs']);
 }
 
 function listChangeRecords(root) {
@@ -285,10 +317,12 @@ function runGuard({ root = DEFAULT_ROOT, configPath = DEFAULT_CONFIG, argv = pro
   const packageJson = readJson(path.join(root, 'package.json'));
   const changedFiles = inferChangedFiles(root, argv, env);
   const docs = listGovernedDocs(root, config);
+  const trackedDocs = listTrackedDocs(root);
   const records = listChangeRecords(root);
   const smoke = require(path.join(root, 'scripts', 'release-api-smoke.js'));
 
   const errors = [];
+  const placementResult = evaluateDocsPlacement({ files: trackedDocs, config });
   const docResult = evaluateDocumentGovernance({ docs, config });
   const recordResult = evaluateChangeRecordCoverage({ changedFiles, records, config });
   const postReleaseResult = evaluatePostReleaseCoverage({ config, apiSmokeChecks: smoke.buildProtectedChecks ? ['/api/diag', ...smoke.buildProtectedChecks()] : [] });
@@ -298,13 +332,14 @@ function runGuard({ root = DEFAULT_ROOT, configPath = DEFAULT_CONFIG, argv = pro
   if (!packageJson.scripts?.['governance:record']) errors.push('package.json 缺少 governance:record');
   if (!packageJson.scripts?.['guard:post-release']) errors.push('package.json 缺少 guard:post-release');
 
-  errors.push(...docResult.errors, ...recordResult.errors, ...postReleaseResult.errors);
+  errors.push(...placementResult.errors, ...docResult.errors, ...recordResult.errors, ...postReleaseResult.errors);
 
   return {
     ok: errors.length === 0,
     errors,
     changedFiles,
     risk: recordResult.risk || classifyChangedFiles({ changedFiles, config }),
+    docsPlacement: placementResult,
     documentGovernance: docResult,
     changeRecordCoverage: recordResult,
     postReleaseCoverage: postReleaseResult
@@ -341,6 +376,7 @@ if (require.main === module) main();
 module.exports = {
   parseDocMetadata,
   evaluateDocumentGovernance,
+  evaluateDocsPlacement,
   classifyChangedFiles,
   evaluateChangeRecordCoverage,
   evaluatePostReleaseCoverage,

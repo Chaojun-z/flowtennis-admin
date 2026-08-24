@@ -86,7 +86,7 @@
 
 1. 核心原则固定为：**一个事实源 + 一个生命周期口径 + 多个页面只做展示**。
 2. 全平台唯一数据口径文档是：
-   - [FlowTennis 全平台数据口径总表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/FlowTennis全平台数据口径总表.md)
+   - [FlowTennis 全平台数据口径总表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/business-rules/FlowTennis全平台数据口径总表.md)
 3. 原始业务表可以分开存，但客户身份必须通过统一客户生命周期模型串联，分析口径必须由统一读模型计算。
 4. 同一个业务含义只能有：
    - 一个标准字段定义
@@ -105,7 +105,7 @@
    - 充值金额、消费金额、余额、累计消费、订场次数、剩余课时、消课金额
    - 收入、已入账、未入账、渠道占比、转化率
 7. 页面和接口禁止自己定义核心字段含义；必须读统一层：
-   - 数据口径总表：`docs/FlowTennis全平台数据口径总表.md`
+   - 数据口径总表：`docs/business-rules/FlowTennis全平台数据口径总表.md`
    - 客户生命周期：`server/read-models/customer-lifecycle.js`
    - 前端生命周期访问器：`public/assets/scripts/core/state.js` 的 `customerLifecycle*`
    - 财务字段定义：`public/assets/scripts/core/business-taxonomy.js` 的 `FINANCE_FIELD_DEFINITIONS`
@@ -125,9 +125,9 @@
 ### 1.3.1 口径变更开发流程硬规则
 
 1. 任何新需求、页面改动、bug 修复、导入修数或报表调整，只要涉及字段名、指标、筛选、金额、权益、转化、留存、复购、校区、来源、负责人、教练归属，都必须先核对：
-   - `docs/FlowTennis全平台数据口径总表.md`
-   - `docs/平台核心数据字典.md`
-   - `docs/数据口径变更检查清单.md`
+   - `docs/business-rules/FlowTennis全平台数据口径总表.md`
+   - `docs/business-rules/平台核心数据字典.md`
+   - `docs/governance/数据口径变更检查清单.md`
 2. 如果本文档已定义口径，代码必须按统一读模型实现，不得在页面、接口或脚本里重新解释。
 3. 如果本文档未定义口径，必须先补口径文档和字段字典，再写代码。
 4. 每次变更提交前，必须明确确认：
@@ -291,7 +291,7 @@
 11. 已落地的排课管理性能合同必须长期遵守：
     - [排课管理长期性能治理落地合同](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/prd/source/08-具体需求/01-管理后台/02-教学与排课/05-排课管理长期性能治理落地合同.md)
 12. 删除、绕开、降级本节规则，视为破坏核心列表性能治理；不得以“临时修准确性”“先让页面能用”“后面再优化”为理由合并。
-13. 涉及本节页面的后续需求，若要改动快路径、字段来源或统计口径，必须同步更新本文、对应合同和 `docs/FlowTennis全平台数据口径总表.md`；未同步更新前，禁止删除快路径、禁止把顶部和列表改成两套计算、禁止用回扫慢表作为正确性兜底。
+13. 涉及本节页面的后续需求，若要改动快路径、字段来源或统计口径，必须同步更新本文、对应合同和 `docs/business-rules/FlowTennis全平台数据口径总表.md`；未同步更新前，禁止删除快路径、禁止把顶部和列表改成两套计算、禁止用回扫慢表作为正确性兜底。
 
 ---
 
@@ -404,12 +404,12 @@
 8. 任何恢复动作前必须先生成恢复前备份；恢复后必须重新核对业务页、财务接口和财务页面展示。
 9. AI 接手财务相关任务时，必须承认自身无法靠记忆可靠恢复财务数据，必须依赖快照、批次、审计日志和自动校验。
 10. 详细执行方案见：
-   - [财务每日快照与可回溯治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务每日快照与可回溯治理方案.md)
+   - [财务每日快照与可回溯治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/operations/finance/财务每日快照与可回溯治理方案.md)
 
 ### 2.4.1 课程与课包经营可信基线
 
 1. 2026-06-01 已封存一份课程与课包经营可信基线：
-   - [2026-06-01 课程与课包经营可信基线](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/2026-06-01-课程课包经营可信基线.md)
+   - [2026-06-01 课程与课包经营可信基线](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/business-rules/baselines/2026-06-01-课程课包经营可信基线.md)
 2. 该基线只确认：
    - 课程收入：`2,098`
    - 课包收入：`412,213`
@@ -457,9 +457,9 @@
 4. [日常开发与发布治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/日常开发与发布治理方案.md)
 5. [主干清场与分支恢复方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/主干清场与分支恢复方案.md)
 6. [dev-staging-prod环境建设方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/dev-staging-prod环境建设方案.md)
-7. [财务基准数字确认表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务基准数字确认表.md)
-8. [财务回归与CI门禁方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务回归与CI门禁方案.md)
-9. [财务每日快照与可回溯治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务每日快照与可回溯治理方案.md)
+7. [财务基准数字确认表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/operations/finance/财务基准数字确认表.md)
+8. [财务回归与CI门禁方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/archive/2026-legacy/财务回归与CI门禁方案.md)
+9. [财务每日快照与可回溯治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/operations/finance/财务每日快照与可回溯治理方案.md)
 
 ### 如果任务涉及高敏感数据页性能治理
 

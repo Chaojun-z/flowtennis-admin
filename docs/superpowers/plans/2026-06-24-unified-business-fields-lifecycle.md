@@ -266,7 +266,7 @@ finance page and operations overview reuse the same finance read model
 - Modify: `api/index.js`
 - Modify: `public/assets/scripts/pages/leads.js`
 - Modify: `public/assets/scripts/standard/components.js`
-- Modify: `docs/平台核心数据字典.md`
+- Modify: `docs/business-rules/平台核心数据字典.md`
 - Create: `tests/lead-field-standards.test.js`
 
 - [x] **Step 1: 字段字典统一**

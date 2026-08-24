@@ -21,6 +21,7 @@ const guard = require(scriptPath);
 for (const exportName of [
   'parseDocMetadata',
   'evaluateDocumentGovernance',
+  'evaluateDocsPlacement',
   'classifyChangedFiles',
   'evaluateChangeRecordCoverage',
   'evaluatePostReleaseCoverage',
@@ -46,6 +47,23 @@ const brokenDocResult = guard.evaluateDocumentGovernance({
 });
 assert.strictEqual(brokenDocResult.ok, false, '正式治理文档缺少状态头时必须失败');
 assert.match(brokenDocResult.errors.join('\n'), /文档类型|状态|版本|维护人/);
+
+const placementResult = guard.evaluateDocsPlacement({
+  files: [
+    'docs/README.md',
+    'docs/business-rules/FlowTennis全平台数据口径总表.md',
+    'docs/operations/finance/财务每日快照与可回溯治理方案.md'
+  ],
+  config
+});
+assert.strictEqual(placementResult.ok, true, placementResult.errors.join('\n'));
+
+const brokenPlacementResult = guard.evaluateDocsPlacement({
+  files: ['docs/临时方案.md'],
+  config
+});
+assert.strictEqual(brokenPlacementResult.ok, false, 'docs 根目录新增正式文档时必须失败');
+assert.match(brokenPlacementResult.errors.join('\n'), /docs 根目录/);
 
 const riskResult = guard.classifyChangedFiles({
   changedFiles: [
@@ -124,6 +142,34 @@ const coveredRecordResult = guard.evaluateChangeRecordCoverage({
   config
 });
 assert.strictEqual(coveredRecordResult.ok, true, coveredRecordResult.errors.join('\n'));
+
+const unrelatedOldRecord = validRecord.replace('server/read-models/customer-lifecycle.js', 'public/assets/scripts/old-page.js');
+const coveredWithOldRecordResult = guard.evaluateChangeRecordCoverage({
+  changedFiles: ['server/read-models/customer-lifecycle.js'],
+  records: [
+    { file: 'docs/governance/change-records/old.md', content: unrelatedOldRecord },
+    { file: 'docs/governance/change-records/2026-08-24-sample.md', content: validRecord }
+  ],
+  config
+});
+assert.strictEqual(coveredWithOldRecordResult.ok, true, '旧变更记录不应要求覆盖本次改动');
+
+const partialOldRecord = validRecord.replace('## 变更文件\n\n- server/read-models/customer-lifecycle.js', '## 变更文件\n\n- server/read-models/customer-lifecycle.js');
+const coveredWithPartialOldRecordResult = guard.evaluateChangeRecordCoverage({
+  changedFiles: ['server/read-models/customer-lifecycle.js', 'tests/sample.test.js'],
+  records: [
+    { file: 'docs/governance/change-records/partial-old.md', content: partialOldRecord },
+    {
+      file: 'docs/governance/change-records/2026-08-24-complete.md',
+      content: validRecord.replace(
+        '- server/read-models/customer-lifecycle.js',
+        '- server/read-models/customer-lifecycle.js\n- tests/sample.test.js'
+      )
+    }
+  ],
+  config
+});
+assert.strictEqual(coveredWithPartialOldRecordResult.ok, true, '完整的新记录存在时，部分命中的旧记录不应拖失败');
 
 const postReleaseResult = guard.evaluatePostReleaseCoverage({
   config,

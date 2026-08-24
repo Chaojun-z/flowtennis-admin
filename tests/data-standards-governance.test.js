@@ -5,10 +5,10 @@ const path = require('path');
 const repoRoot = path.join(__dirname, '..');
 const agentsPath = path.join(repoRoot, 'AGENTS.md');
 const prTemplatePath = path.join(repoRoot, '.github/PULL_REQUEST_TEMPLATE.md');
-const checklistPath = path.join(repoRoot, 'docs/数据口径变更检查清单.md');
-const metricDocPath = path.join(repoRoot, 'docs/FlowTennis全平台数据口径总表.md');
+const checklistPath = path.join(repoRoot, 'docs/governance/数据口径变更检查清单.md');
+const metricDocPath = path.join(repoRoot, 'docs/business-rules/FlowTennis全平台数据口径总表.md');
 const packagePath = path.join(repoRoot, 'package.json');
-const dictionaryPath = path.join(repoRoot, 'docs/平台核心数据字典.md');
+const dictionaryPath = path.join(repoRoot, 'docs/business-rules/平台核心数据字典.md');
 
 const agentsSource = fs.readFileSync(agentsPath, 'utf8');
 const metricDocSource = fs.readFileSync(metricDocPath, 'utf8');
@@ -29,8 +29,8 @@ const legacyCustomerLabelPattern = new RegExp([
 ].map(parts => `label:'${parts.join('')}'`).join('|'));
 
 assert.match(agentsSource, /口径变更开发流程硬规则/, 'AGENTS should expose a mandatory data-standard development workflow');
-assert.match(agentsSource, /docs\/FlowTennis全平台数据口径总表\.md/, 'AGENTS should point every data-related change to the single metric standard');
-assert.match(agentsSource, /docs\/数据口径变更检查清单\.md/, 'AGENTS should require the new requirement checklist before implementation');
+assert.match(agentsSource, /docs\/business-rules\/FlowTennis全平台数据口径总表\.md/, 'AGENTS should point every data-related change to the single metric standard');
+assert.match(agentsSource, /docs\/governance\/数据口径变更检查清单\.md/, 'AGENTS should require the new requirement checklist before implementation');
 assert.match(agentsSource, /tests\/cross-page-metric-consistency\.test\.js/, 'AGENTS should require cross-page consistency tests for shared metrics');
 assert.match(agentsSource, /读模型缓存与部署生效硬规则/, 'AGENTS should include cache and deployment effectiveness rules');
 assert.match(agentsSource, /不得只靠版本号判断缓存可信/, 'AGENTS should forbid trusting read-model cache by version only');

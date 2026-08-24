@@ -12,8 +12,27 @@
   ],
   "governedDocGlobs": [
     "docs/README.md",
+    "docs/architecture/*.md",
+    "docs/business-rules/*.md",
+    "docs/business-rules/baselines/*.md",
     "docs/governance/*.md",
-    "docs/governance/change-records/*.md"
+    "docs/governance/change-records/*.md",
+    "docs/operations/*.md",
+    "docs/operations/finance/*.md"
+  ],
+  "allowedDocsRootFiles": [
+    "docs/README.md"
+  ],
+  "allowedDocsTopLevelDirs": [
+    "docs/archive/",
+    "docs/architecture/",
+    "docs/business-rules/",
+    "docs/governance/",
+    "docs/operations/",
+    "docs/performance-governance/",
+    "docs/prd/",
+    "docs/reports/",
+    "docs/superpowers/"
   ],
   "stalePhrases": [
     "没有 guard:release",
@@ -75,8 +94,8 @@
       "patterns": [
         "^server/read-models/",
         "^public/assets/scripts/core/",
-        "^docs/FlowTennis全平台数据口径总表\\.md$",
-        "^docs/平台核心数据字典\\.md$",
+        "^docs/business-rules/FlowTennis全平台数据口径总表\\.md$",
+        "^docs/business-rules/平台核心数据字典\\.md$",
         "^docs/核心表关系图\\.md$",
         "^api/index\\.js$"
       ]

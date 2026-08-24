@@ -5,7 +5,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const scriptPath = path.join(root, 'scripts', 'verify-production-deployment-assets.js');
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-const checklist = fs.readFileSync(path.join(root, 'docs', '数据口径变更检查清单.md'), 'utf8');
+const checklist = fs.readFileSync(path.join(root, 'docs', 'governance', '数据口径变更检查清单.md'), 'utf8');
 const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
 
 assert.ok(fs.existsSync(scriptPath), 'production deployment asset verifier should exist');

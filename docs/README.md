@@ -9,247 +9,57 @@
 > 唯一依据：本文只负责导航，不覆盖 `AGENTS.md`、PRD 正本和数据口径正本。
 > 替代文档：无
 
-这是 FlowTennis 项目的交接文档入口。
-
-如果你是第一次接手这个项目，不要乱跳着看，按下面顺序看。
-
----
-
-## 零、先看治理入口
-
-如果你是新 agent / 新开发 / 外部技术负责人，先看这 9 份：
-
-1. [治理总览.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/治理总览.md)
-2. [文档状态清单.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档状态清单.md)
-3. [需求变更流程.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/需求变更流程.md)
-4. [文档维护规范.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档维护规范.md)
-5. [风险分级与门禁矩阵.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/风险分级与门禁矩阵.md)
-6. [测试与发布流程.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/测试与发布流程.md)
-7. [生产数据变更与回滚流程.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/生产数据变更与回滚流程.md)
-8. [自动化治理门禁说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/自动化治理门禁说明.md)
-9. [最终治理收口说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/最终治理收口说明.md)
-
-这些治理文档只做治理分层、流程说明和收口说明，不替代具体业务规则。
-
-当前优先级：
-
-1. 用户最新明确指令。
-2. 根目录 `AGENTS.md`。
-3. 仓库 `AGENTS.md`。
-4. PRD 正本 `docs/prd/source/`。
-5. 数据口径正本 `docs/FlowTennis全平台数据口径总表.md`。
-6. 本文档入口和治理目录。
-
----
-
-## 一、先看什么
-
-### 如果你是新同事 / 运营
-
-按这个顺序看：
-
-1. [平台页面功能总览.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台页面功能总览.md)
-2. [运营使用手册.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/运营使用手册.md)
-3. [平台业务逻辑与字段关系说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台业务逻辑与字段关系说明.md)
-4. [已知限制与风险清单.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/已知限制与风险清单.md)
-
-### 如果你是新 agent / 新开发
-
-按这个顺序看：
-
-1. [FlowTennis全平台数据口径总表.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/FlowTennis全平台数据口径总表.md)
-2. [平台页面功能总览.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台页面功能总览.md)
-3. [平台业务逻辑与字段关系说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台业务逻辑与字段关系说明.md)
-4. [平台核心数据字典.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台核心数据字典.md)
-5. [代码结构与修改入口说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/代码结构与修改入口说明.md)
-6. [已知限制与风险清单.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/已知限制与风险清单.md)
-7. [运营使用手册.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/运营使用手册.md)
-
-如果任务涉及端、入口、PWA、小程序、发布载体，先加看：
-
-7. [2026-05-13-5端与载体边界固化.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/2026-05-13-5端与载体边界固化.md)
-
----
-
-## 二、每份文档是干什么的
-
-### 1. [平台页面功能总览.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台页面功能总览.md)
-
-解决问题：
-
-- 系统有哪些页面
-- 每个页面有什么功能
-- 关键弹窗/子页是什么
-- 页面之间怎么关联
-
-适合：
-
-- 第一次建立全局认知
-
----
-
-### 2. [平台业务逻辑与字段关系说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台业务逻辑与字段关系说明.md)
-
-解决问题：
-
-- 教学线和会员线的主业务逻辑
-- 谁生成谁
-- 谁引用谁
-- 状态怎么流转
-- 自动联动规则是什么
-
-适合：
-
-- 真正理解系统逻辑
-
----
-
-### 3. [平台核心数据字典.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台核心数据字典.md)
-
-解决问题：
-
-- 每张核心表有哪些关键字段
-- 字段是手填、自动生成、快照复制还是系统计算
-- 字段会影响哪里
-
-适合：
-
-- 开发
-- 调试
-- 逻辑核对
-
----
-
-### 3.1 [FlowTennis全平台数据口径总表.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/FlowTennis全平台数据口径总表.md)
-
-解决问题：
-
-- 全平台指标只能按哪套口径计算
-- 转化、留存、复购、订场会员、财务金额等指标如何定义
-- 哪些旧草案口径已经被统一口径覆盖
-
-适合：
-
-- 新增指标
-- 修改经营分析
-- 修改客户中心、线索池、留存与转化、财务中心口径
-
----
-
-### 4. [运营使用手册.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/运营使用手册.md)
-
-解决问题：
-
-- 日常工作去哪个页面
-- 某个操作怎么做
-- 常见问题去哪里查
-
-适合：
-
-- 运营
-- 培训
-- 交接使用
-
----
-
-### 5. [代码结构与修改入口说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/代码结构与修改入口说明.md)
-
-解决问题：
-
-- 代码主要在哪些文件
-- 改页面先看哪里
-- 改业务规则先看哪里
-- 测试应该看哪些文件
-
-适合：
-
-- 新 agent
-- 新开发
-
----
-
-### 6. [已知限制与风险清单.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/已知限制与风险清单.md)
-
-解决问题：
-
-- 当前系统有哪些限制
-- 哪些地方最容易踩坑
-- 哪些对象不能乱改、不能乱删
-
-适合：
-
-- 任何接手的人
-
----
-
-## 三、最短交接路线
-
-如果时间只有 10 分钟：
-
-### 给运营
-
-看这 3 份：
-
-1. [平台页面功能总览.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台页面功能总览.md)
-2. [运营使用手册.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/运营使用手册.md)
-3. [已知限制与风险清单.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/已知限制与风险清单.md)
-
-### 给开发 / agent
-
-看这 4 份：
-
-1. [FlowTennis全平台数据口径总表.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/FlowTennis全平台数据口径总表.md)
-2. [平台页面功能总览.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台页面功能总览.md)
-3. [平台业务逻辑与字段关系说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台业务逻辑与字段关系说明.md)
-4. [平台核心数据字典.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/平台核心数据字典.md)
-5. [代码结构与修改入口说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/代码结构与修改入口说明.md)
-
----
-
-## 四、这套文档解决到什么程度
-
-现在这套文档已经能解决：
-
-- 新人不知道系统有哪些页面
-- 新人不知道两条主业务线怎么走
-- 新人不知道字段归谁管
-- 新人不知道从哪里改代码
-- 新人不知道哪些地方不能乱动
-
-但还是要注意：
-
-- 这套文档能帮助快速接手
-- 不代表可以跳过实际代码阅读和测试验证
-
----
-
-## 五、当前总治理主文档
-
-如果你是外部技术负责人 / 其他 AI，要快速理解当前困境和治理方向，优先看：
-
-1. [治理总览](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/治理总览.md)
-2. [文档状态清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档状态清单.md)
-3. [需求变更流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/需求变更流程.md)
-4. [风险分级与门禁矩阵](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/风险分级与门禁矩阵.md)
-5. [测试与发布流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/测试与发布流程.md)
-6. [生产数据变更与回滚流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/生产数据变更与回滚流程.md)
-7. [全面技术架构与代码诊断报告](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/2026-05-10-全面技术架构与代码诊断报告.md)
-8. [生产数据变更入口清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/生产数据变更入口清单.md)
-9. [核心表关系图](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/核心表关系图.md)
-10. [日常开发与发布治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/日常开发与发布治理方案.md)
-11. [财务基准数字确认表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务基准数字确认表.md)
-12. [财务回归与CI门禁方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务回归与CI门禁方案.md)
-13. [自动化门禁落地方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/自动化门禁落地方案.md)
-14. [api/index.js高危链路解耦实施方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/api-index高危链路解耦实施方案.md)
-
-
-## 六、补充参考
-
-历史思考文档：
-
-- [统一教学履约模型.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/统一教学履约模型.md)
-
-适合什么时候看：
-
-- 当你已经理解当前系统后
-- 想看更偏“为什么这么设计、有哪些历史问题”的时候
+这是 FlowTennis 项目的正式文档入口。GitHub 里的正式文档必须从这里进入，不再默认读取 `docs` 根目录里的散落文件。
+
+## 1. 必读顺序
+
+1. `/Users/shaobaolu/Desktop/FlowTennis/AGENTS.md`
+2. `/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/AGENTS.md`
+3. [治理总览](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/治理总览.md)
+4. [文档状态清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档状态清单.md)
+5. [PRD 正本入口](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/prd/README.md)
+6. [全平台数据口径总表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/business-rules/FlowTennis全平台数据口径总表.md)
+7. [平台核心数据字典](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/business-rules/平台核心数据字典.md)
+
+## 2. 当前目录规范
+
+| 目录 | 用途 | 是否当前规则 |
+| --- | --- | --- |
+| `docs/governance/` | 治理流程、风险分级、发布门禁、变更记录 | 是 |
+| `docs/business-rules/` | 数据口径、业务字典、指标矩阵、页面字段矩阵 | 是 |
+| `docs/prd/` | 产品需求、页面需求、验收标准 | 是 |
+| `docs/architecture/` | 技术架构、前端标准、账号权限方案 | 是 |
+| `docs/operations/` | 财务、发布、修数、回滚、飞书日报等操作流程 | 是 |
+| `docs/performance-governance/` | 核心列表性能专项治理 | 是，后续可继续细分 |
+| `docs/reports/` | 审计报告、导入报告、复盘记录 | 否，只作记录 |
+| `docs/archive/` | 已废弃或被替代的历史方案 | 否，只作历史 |
+| `docs/superpowers/` | 早期计划和标准页规格 | 否，只作参考 |
+
+## 3. 新文档放哪里
+
+1. 规则、流程、门禁、变更记录：放 `docs/governance/`。
+2. 字段、指标、状态、表关系、业务口径：放 `docs/business-rules/`。
+3. 页面需求、验收标准、Roadmap：放 `docs/prd/`。
+4. 技术架构、账号权限、前端标准：放 `docs/architecture/`。
+5. 生产操作、财务快照、回滚、修数、日报：放 `docs/operations/`。
+6. 审计、复盘、一次性报告：放 `docs/reports/`。
+7. 已过期旧方案：放 `docs/archive/`。
+
+`docs` 根目录只允许保留 `README.md`。如果新增正式文档放在 `docs/*.md`，`npm run guard:governance-automation` 和发布门禁会失败。
+
+## 4. 当前关键入口
+
+1. [需求变更流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/需求变更流程.md)
+2. [文档维护规范](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档维护规范.md)
+3. [风险分级与门禁矩阵](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/风险分级与门禁矩阵.md)
+4. [测试与发布流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/测试与发布流程.md)
+5. [生产数据变更与回滚流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/生产数据变更与回滚流程.md)
+6. [自动化治理门禁说明](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/自动化治理门禁说明.md)
+7. [数据口径变更检查清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/数据口径变更检查清单.md)
+
+## 5. 旧文档处理原则
+
+1. 历史方案不删除，先进入 `docs/archive/`。
+2. 审计和复盘不当成当前规则，进入 `docs/reports/`。
+3. 当前规则必须有状态头、维护人、版本和替代关系。
+4. 规则入口以本文和 `docs/governance/文档状态清单.md` 为准。
