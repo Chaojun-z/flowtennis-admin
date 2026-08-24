@@ -7,6 +7,9 @@ node_modules
 docs/
 !/docs/
 /docs/*
+!/docs/README.md
+!/docs/governance/
+!/docs/governance/**
 !/docs/财务每日快照取用手册.md
 !/docs/财务真实操作演练手册.md
 !/docs/财务批次回滚后续方案.md

@@ -1,6 +1,13 @@
 # FlowTennis 财务回归与 CI 门禁方案
 
 > 版本：2026-05-10  
+> 文档类型：执行流程 / 财务门禁方案
+> 状态：部分过期
+> 生效日期：2026-05-10
+> 最后审查日期：2026-08-24
+> 维护人：FlowTennis 项目负责人
+> 唯一依据：财务回归方向仍有效；当前实际 CI 和发布门禁以 `package.json`、`.github/workflows/ci-guard.yml` 和 `config/finance-baseline.v2.json` 为准。
+> 替代文档：`docs/governance/文档状态清单.md`
 > 目标：把“财务不能再被顺手改坏”从口头要求升级成自动化门禁。  
 > 说明：当前阶段不追求复杂 DevOps，只追求最小可行、足以拦住高频事故。
 
