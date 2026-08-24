@@ -34,6 +34,7 @@
 | `docs/reports/` | 审计报告、导入报告、复盘记录 | 否，只作记录 |
 | `docs/archive/` | 已废弃或被替代的历史方案 | 否，只作历史 |
 | `docs/superpowers/` | 早期计划和标准页规格 | 否，只作参考 |
+| `docs/ui-reference/` | UI 参考图、页面规格、视觉参考 | 否，只作参考 |
 
 ## 3. 新文档放哪里
 
@@ -44,6 +45,8 @@
 5. 生产操作、财务快照、回滚、修数、日报：放 `docs/operations/`。
 6. 审计、复盘、一次性报告：放 `docs/reports/`。
 7. 已过期旧方案：放 `docs/archive/`。
+8. 仍有参考价值、但不能直接当当前规则的旧文档：放对应分类下的 `reference/`。
+9. 草案需求：放 `docs/prd/drafts/`。
 
 `docs` 根目录只允许保留 `README.md`。如果新增正式文档放在 `docs/*.md`，`npm run guard:governance-automation` 和发布门禁会失败。
 

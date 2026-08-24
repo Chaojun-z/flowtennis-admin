@@ -32,7 +32,8 @@
     "docs/performance-governance/",
     "docs/prd/",
     "docs/reports/",
-    "docs/superpowers/"
+    "docs/superpowers/",
+    "docs/ui-reference/"
   ],
   "stalePhrases": [
     "没有 guard:release",
@@ -96,7 +97,7 @@
         "^public/assets/scripts/core/",
         "^docs/business-rules/FlowTennis全平台数据口径总表\\.md$",
         "^docs/business-rules/平台核心数据字典\\.md$",
-        "^docs/核心表关系图\\.md$",
+        "^docs/business-rules/reference/核心表关系图\\.md$",
         "^api/index\\.js$"
       ]
     },

@@ -423,7 +423,7 @@
 ### 2.4.2 会员经营可信基线
 
 1. 2026-06-02 已封存一份会员经营可信基线：
-   - [2026-06-02 会员经营可信基线](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/2026-06-02-会员经营可信基线.md)
+   - [2026-06-02 会员经营可信基线](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/business-rules/baselines/2026-06-02-会员经营可信基线.md)
 2. 该基线只确认：
    - 会员充值实收：`137,000`
    - 会员赠送金额：`15,272`
@@ -451,12 +451,12 @@
 
 必须先看：
 
-1. [全面技术架构与代码诊断报告](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/2026-05-10-全面技术架构与代码诊断报告.md)
+1. [全面技术架构与代码诊断报告](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/reports/audits/2026-05-10-全面技术架构与代码诊断报告.md)
 2. [生产数据变更入口清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/生产数据变更入口清单.md)
-3. [核心表关系图](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/核心表关系图.md)
+3. [核心表关系图](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/business-rules/reference/核心表关系图.md)
 4. [日常开发与发布治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/日常开发与发布治理方案.md)
 5. [主干清场与分支恢复方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/主干清场与分支恢复方案.md)
-6. [dev-staging-prod环境建设方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/dev-staging-prod环境建设方案.md)
+6. [dev-staging-prod环境建设方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/architecture/environments/dev-staging-prod环境建设方案.md)
 7. [财务基准数字确认表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/operations/finance/财务基准数字确认表.md)
 8. [财务回归与CI门禁方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/archive/2026-legacy/财务回归与CI门禁方案.md)
 9. [财务每日快照与可回溯治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/operations/finance/财务每日快照与可回溯治理方案.md)

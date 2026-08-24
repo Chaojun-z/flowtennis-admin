@@ -5,10 +5,10 @@
   "purpose": "code_regression_guard",
   "purposeLabel": "代码门禁固定样本",
   "notOperatingTruth": true,
-  "notice": "本文件只用于代码回归门禁，metrics 是固定快照样本值，不是线上经营真实数；会员经营真实基线见 docs/2026-06-02-会员经营可信基线.md。",
+  "notice": "本文件只用于代码回归门禁，metrics 是固定快照样本值，不是线上经营真实数；会员经营真实基线见 docs/business-rules/baselines/2026-06-02-会员经营可信基线.md。",
   "operatingTruthDocs": [
-    "docs/2026-06-02-会员经营可信基线.md",
-    "docs/2026-06-04-订场用户经营可信基线.md"
+    "docs/business-rules/baselines/2026-06-02-会员经营可信基线.md",
+    "docs/business-rules/baselines/2026-06-04-订场用户经营可信基线.md"
   ],
   "previousBaselineId": "finance-baseline-v1",
   "reason": "2026-05-19 私教课 CSV 正式导入完成，并完成全量最终对账",
