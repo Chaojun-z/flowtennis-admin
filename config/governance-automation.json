@@ -1,0 +1,127 @@
+{
+  "version": "2026-08-24",
+  "requiredDocMetadata": [
+    "文档类型",
+    "状态",
+    "版本",
+    "生效日期",
+    "最后审查日期",
+    "维护人",
+    "唯一依据",
+    "替代文档"
+  ],
+  "governedDocGlobs": [
+    "docs/README.md",
+    "docs/governance/*.md",
+    "docs/governance/change-records/*.md"
+  ],
+  "stalePhrases": [
+    "没有 guard:release",
+    "CI 只执行 npm test 和 npm run guard:finance",
+    "没有独立只读真实接口冒烟命令",
+    "flowtennis-mini-match-release 上传"
+  ],
+  "changeRecordRequiredFromLevel": "L2",
+  "requiredChangeRecordSections": [
+    "风险等级",
+    "变更文件",
+    "影响页面",
+    "影响接口",
+    "影响表",
+    "影响指标",
+    "测试映射",
+    "异常豁免",
+    "事故反馈闭环",
+    "发布后核验"
+  ],
+  "requiredProductionSections": [
+    "操作原因",
+    "目标实例",
+    "dry-run",
+    "批次",
+    "操作前快照",
+    "操作后校验",
+    "线上接口",
+    "前端展示",
+    "回滚方案"
+  ],
+  "riskLevels": {
+    "L1": {
+      "requiredChecks": [
+        "npm run guard:governance-automation"
+      ],
+      "patterns": [
+        "^docs/",
+        "^config/",
+        "^\\.github/workflows/ci-guard\\.yml$",
+        "^package\\.json$"
+      ]
+    },
+    "L2": {
+      "requiredChecks": [
+        "npm run guard:test-inventory"
+      ],
+      "patterns": [
+        "^tests/",
+        "^public/",
+        "^server/",
+        "^api/"
+      ]
+    },
+    "L3": {
+      "requiredChecks": [
+        "npm test"
+      ],
+      "patterns": [
+        "^server/read-models/",
+        "^public/assets/scripts/core/",
+        "^docs/FlowTennis全平台数据口径总表\\.md$",
+        "^docs/平台核心数据字典\\.md$",
+        "^docs/核心表关系图\\.md$",
+        "^api/index\\.js$"
+      ]
+    },
+    "L4": {
+      "requiredChecks": [
+        "npm run guard:finance",
+        "npm run guard:release"
+      ],
+      "patterns": [
+        "finance",
+        "membership",
+        "court",
+        "purchase",
+        "entitlement",
+        "schedule",
+        "财务",
+        "会员",
+        "订场",
+        "课包",
+        "权益",
+        "排课"
+      ]
+    },
+    "L5": {
+      "requiredChecks": [
+        "npm run guard:post-release"
+      ],
+      "patterns": [
+        "^scripts/(repair|cleanup|apply|rollback|finalize|archive)-",
+        "^offline-reports/"
+      ]
+    }
+  },
+  "ignoredChangedFilePatterns": [
+    "^docs/governance/change-records/"
+  ],
+  "postReleaseRequiredChecks": [
+    "/api/diag",
+    "/server/page-data/finance",
+    "/server/page-data/workbench",
+    "/server/page-data/courts",
+    "/server/page-data/memberships",
+    "/server/page-data/purchases",
+    "/server/page-data/plans",
+    "/server/page-data/coaches"
+  ]
+}

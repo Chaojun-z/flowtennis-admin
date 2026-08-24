@@ -11,6 +11,7 @@ const releaseGuard = packageJson.scripts['guard:release'];
 const requiredReleaseGuardSteps = [
   'npm test',
   'npm run guard:test-inventory',
+  'npm run guard:governance-automation',
   'npm run guard:deps-security',
   'npm run guard:finance',
   'npm run guard:api-smoke',

@@ -17,7 +17,7 @@
 
 ## 零、先看治理入口
 
-如果你是新 agent / 新开发 / 外部技术负责人，先看这 8 份：
+如果你是新 agent / 新开发 / 外部技术负责人，先看这 9 份：
 
 1. [治理总览.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/治理总览.md)
 2. [文档状态清单.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档状态清单.md)
@@ -26,7 +26,8 @@
 5. [风险分级与门禁矩阵.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/风险分级与门禁矩阵.md)
 6. [测试与发布流程.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/测试与发布流程.md)
 7. [生产数据变更与回滚流程.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/生产数据变更与回滚流程.md)
-8. [最终治理收口说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/最终治理收口说明.md)
+8. [自动化治理门禁说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/自动化治理门禁说明.md)
+9. [最终治理收口说明.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/最终治理收口说明.md)
 
 这些治理文档只做治理分层、流程说明和收口说明，不替代具体业务规则。
 
