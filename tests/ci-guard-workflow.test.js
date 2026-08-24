@@ -10,8 +10,10 @@ const releaseGuard = packageJson.scripts['guard:release'];
 
 const requiredReleaseGuardSteps = [
   'npm test',
+  'npm run guard:test-inventory',
   'npm run guard:deps-security',
   'npm run guard:finance',
+  'npm run guard:api-smoke',
   'node tests/page-data-requirements.test.js',
   'node tests/production-read-path-hotfix.test.js',
   'node tests/memberships-page-data-regression.test.js',
@@ -39,6 +41,6 @@ assert.ok(releaseGuard, 'package.json should expose npm run guard:release');
 for (const step of requiredReleaseGuardSteps) {
   assert.ok(releaseGuard.includes(step), `guard:release should include ${step}`);
 }
-assert.doesNotMatch(releaseGuard, /guard:api-smoke|test:match-real|match-real-link/, 'guard:release should not run online smoke or real database tests');
+assert.doesNotMatch(releaseGuard, /test:match-real|match-real-link/, 'guard:release should not run real database write tests');
 
 console.log('ci guard workflow tests passed');

@@ -23,6 +23,9 @@
 2. [文档状态清单.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档状态清单.md)
 3. [需求变更流程.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/需求变更流程.md)
 4. [文档维护规范.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档维护规范.md)
+5. [风险分级与门禁矩阵.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/风险分级与门禁矩阵.md)
+6. [测试与发布流程.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/测试与发布流程.md)
+7. [生产数据变更与回滚流程.md](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/生产数据变更与回滚流程.md)
 
 这 4 份文档只做治理分层和流程说明，不替代具体业务规则。
 
@@ -225,14 +228,17 @@
 1. [治理总览](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/治理总览.md)
 2. [文档状态清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/文档状态清单.md)
 3. [需求变更流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/需求变更流程.md)
-4. [全面技术架构与代码诊断报告](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/2026-05-10-全面技术架构与代码诊断报告.md)
-5. [生产数据变更入口清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/生产数据变更入口清单.md)
-6. [核心表关系图](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/核心表关系图.md)
-7. [日常开发与发布治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/日常开发与发布治理方案.md)
-8. [财务基准数字确认表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务基准数字确认表.md)
-9. [财务回归与CI门禁方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务回归与CI门禁方案.md)
-10. [自动化门禁落地方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/自动化门禁落地方案.md)
-11. [api/index.js高危链路解耦实施方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/api-index高危链路解耦实施方案.md)
+4. [风险分级与门禁矩阵](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/风险分级与门禁矩阵.md)
+5. [测试与发布流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/测试与发布流程.md)
+6. [生产数据变更与回滚流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/生产数据变更与回滚流程.md)
+7. [全面技术架构与代码诊断报告](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/2026-05-10-全面技术架构与代码诊断报告.md)
+8. [生产数据变更入口清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/生产数据变更入口清单.md)
+9. [核心表关系图](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/核心表关系图.md)
+10. [日常开发与发布治理方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/日常开发与发布治理方案.md)
+11. [财务基准数字确认表](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务基准数字确认表.md)
+12. [财务回归与CI门禁方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/财务回归与CI门禁方案.md)
+13. [自动化门禁落地方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/自动化门禁落地方案.md)
+14. [api/index.js高危链路解耦实施方案](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/api-index高危链路解耦实施方案.md)
 
 
 ## 六、补充参考

@@ -14,7 +14,7 @@ assert.match(
 
 assert.match(
   storageSource,
-  /async function getCachedScan\(t,options=\{\}\)\{[\s\S]*const columns=normalizeProjectionColumns\(options\?\.columns\);[\s\S]*return scan\(t,\{columns\}\);[\s\S]*const cacheKey=hotScanCacheKey\(t,columns\);[\s\S]*const rows=await scan\(t,\{columns\}\);/s,
+  /async function getCachedScan\(t,options=\{\}\)\{[\s\S]*const columns=normalizeProjectionColumns\(options\?\.columns\);[\s\S]*const pageLimit=normalizeScanPageLimit\(options\?\.pageLimit\);[\s\S]*return scan\(t,\{columns\}\);[\s\S]*const cacheKey=hotScanCacheKey\(t,columns,pageLimit\);[\s\S]*const loadPromise=scan\(t,\{columns,pageLimit\}\)\.then\(rows=>\{[\s\S]*hotScanCache\.set\(cacheKey,\{rows:cloneCacheValue\(rows\),expiresAt:Date\.now\(\)\+cfg\.ttlMs\}\);/s,
   'getCachedScan should pass projection columns to scan and isolate hot cache entries by projection'
 );
 

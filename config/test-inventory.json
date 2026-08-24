@@ -1,0 +1,417 @@
+{
+  "version": "2026-08-24",
+  "purpose": "Track every tests/*.test.js file so new tests cannot be silently left out of npm scripts.",
+  "rule": "A test must be referenced by an npm script or listed here with category and reason.",
+  "knownUnreferencedTests": [
+    {
+      "file": "tests/admin-users-page.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/admin-users-rules.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/apply-shunyi_mapo-final-import-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/audit-shunyi_mapo-ledger-cli.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/business-daily-report-business-date-source.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/campuses-anonymous-init-bypass.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/campuses-timeout-fallback.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/cleanup-duplicate-memberships-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/coach-workbench-render-guard.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/coachops-calendar-view.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/coachops-workload-view.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/course-package-five-students-repair-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/course-type-taxonomy.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-account-list-index-performance.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-account-list-index-routes.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-account-list-index.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-account-list-snapshot-performance.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-account-list-snapshot.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-account-performance-governance.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-account-read-model-unified-source.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-account-server-pagination.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-dashboard-summary-rules.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-dashboard-top-stats.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-date-filter-ui.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-date-filter.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-import-export.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/court-page-view.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/court-profile-save-route.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/customer-lifecycle-lead-link-audit.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/entitlement-authorization-rules.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/entitlement-recommend-edit-route.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/feishu-automation-time.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/feishu-confirmed-annotations-repair-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/finance-seed-data.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/finance-standard-ledger.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/frontend-page-helper-split.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/index-asset-split.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/july-three-confirmed-schedules-repair-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/lead-source-read-model.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/leads-convert.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/leads-followup-structure.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/leads-format.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/leads-import.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/leads-link-unlink-routes.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/leads-routes-layer-split.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/leads-rules.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/leads-speed-feedback.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/leads-view.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/match-routes-layer-split.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/membership-detail-auth-expiry.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/membership-finance-summary.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/membership-stat-split-view.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/mini-workbench-refresh-guard.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/miniprogram-schedule-fixes.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/modal-request-debounce.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/official-account-cron-workflows.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/platform-membership-summary.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/platform-metrics.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/repair-lianer-entitlement-allocation-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/repair-misha-huang-package-history-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/repair-shunyi_mapo-court-history-import-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/repair-shunyi_mapo-duplicate-courts-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/repair-yaya-xiaoman-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/rollback-finance-operation-dry-run-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/schedule-delete-cache.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/schedule-save-validation-historical.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/schedule-speed-feedback.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/scoped-top-summary.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/search-placeholder-view.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/shunyi_mapo-finance-import-guard.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/sidebar-scroll-stability.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/small-trial-count-orders-repair-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/standard-mutation-flow.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/student-detail-loading-view.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/student-drawer-view.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/student-list-first-screen-prewarm.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/student-speed-feedback.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/third-party-sync-center-routes.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/third-party-sync-center-runtime.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/thread26-staging-acceptance.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/wechat-user-index-guard.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
+      "file": "tests/xiaoxiao-package-repair-script.test.js",
+      "category": "operation-script",
+      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    }
+  ]
+}
