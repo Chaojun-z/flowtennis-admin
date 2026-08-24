@@ -164,11 +164,6 @@
       "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
     },
     {
-      "file": "tests/feishu-confirmed-annotations-repair-script.test.js",
-      "category": "operation-script",
-      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
-    },
-    {
       "file": "tests/finance-seed-data.test.js",
       "category": "legacy-unwired",
       "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
@@ -187,11 +182,6 @@
       "file": "tests/index-asset-split.test.js",
       "category": "legacy-unwired",
       "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
-    },
-    {
-      "file": "tests/july-three-confirmed-schedules-repair-script.test.js",
-      "category": "operation-script",
-      "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
     },
     {
       "file": "tests/lead-source-read-model.test.js",

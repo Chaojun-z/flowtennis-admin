@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const DEFAULT_ROOT = path.join(__dirname, '..');
 const DEFAULT_CONFIG = path.join(DEFAULT_ROOT, 'config', 'test-inventory.json');
@@ -11,6 +12,18 @@ function readJson(filePath) {
 }
 
 function listTestFiles(root) {
+  const tracked = spawnSync('git', ['ls-files', 'tests/*.test.js'], {
+    cwd: root,
+    encoding: 'utf8'
+  });
+  if (tracked.status === 0) {
+    return tracked.stdout
+      .split(/\r?\n/)
+      .map((file) => file.trim())
+      .filter(Boolean)
+      .sort();
+  }
+
   return fs.readdirSync(path.join(root, 'tests'))
     .filter((file) => file.endsWith('.test.js'))
     .map((file) => `tests/${file}`)

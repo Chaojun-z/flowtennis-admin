@@ -59,4 +59,36 @@ assert.strictEqual(run.status, 0, run.stderr || run.stdout);
 assert.match(run.stdout, /test inventory guard passed/i);
 fs.rmSync(tmpDir, { recursive: true, force: true });
 
+const trackedTmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-inventory-tracked-'));
+fs.mkdirSync(path.join(trackedTmpDir, 'tests'), { recursive: true });
+fs.mkdirSync(path.join(trackedTmpDir, 'config'), { recursive: true });
+fs.writeFileSync(path.join(trackedTmpDir, 'package.json'), JSON.stringify({
+  scripts: {
+    test: 'node tests/a.test.js'
+  }
+}, null, 2));
+fs.writeFileSync(path.join(trackedTmpDir, 'config', 'test-inventory.json'), JSON.stringify({
+  knownUnreferencedTests: []
+}, null, 2));
+fs.writeFileSync(path.join(trackedTmpDir, 'tests', 'a.test.js'), 'console.log("a");\n');
+fs.writeFileSync(path.join(trackedTmpDir, 'tests', 'local-only.test.js'), 'console.log("local only");\n');
+spawnSync('git', ['init'], { cwd: trackedTmpDir, encoding: 'utf8' });
+spawnSync('git', ['add', 'package.json', 'config/test-inventory.json', 'tests/a.test.js'], {
+  cwd: trackedTmpDir,
+  encoding: 'utf8'
+});
+const trackedRun = spawnSync('node', [
+  scriptPath,
+  '--root',
+  trackedTmpDir,
+  '--config',
+  path.join(trackedTmpDir, 'config', 'test-inventory.json')
+], {
+  cwd: trackedTmpDir,
+  encoding: 'utf8'
+});
+assert.strictEqual(trackedRun.status, 0, trackedRun.stderr || trackedRun.stdout);
+assert.doesNotMatch(trackedRun.stdout, /local-only\.test\.js/);
+fs.rmSync(trackedTmpDir, { recursive: true, force: true });
+
 console.log('test inventory guard tests passed');
