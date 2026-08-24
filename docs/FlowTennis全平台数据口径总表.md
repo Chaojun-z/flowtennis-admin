@@ -802,6 +802,12 @@ FlowTennis 只保留三类转化观察口径：课程总漏斗、体验课上课
 | 在期学员 | 课包有余额 | `standardLifecycleMetrics.teachingSummary.activePackageBalanceCount` |
 | 在期学员 | 课包即将耗尽 | `standardLifecycleMetrics.teachingSummary.activePackageLowCount` |
 
+补充硬规则：
+
+1. 上表 15 个数字是线索池、历史学员、在期学员三页的唯一顶部来源，页面、接口、前端筛选、当前页列表都不得自行重算。
+2. 历史学员 / 在期学员的列表 `total` 必须与对应顶部总数一致；若不一致，视为同一批数据口径被拆成了两套。
+3. 任何后续需求若要改这 15 个数字、改快路径来源、删掉快路径或回扫慢表，必须先同步更新本文、对应页面合同和反向测试；没有同步更新前，不允许合并。
+
 线索池页面顶部固定口径：
 
 | 展示项 | 口径 ID | 公式 | 当前生产样例 |
