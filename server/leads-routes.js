@@ -1033,7 +1033,7 @@ function createLeadsRoutes(deps={}){
     const useLightLifecycleSource=!isLocalPreviewFastMode()&&!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
     if(useLightLifecycleSource){
       const [loadedStudentSummaryRows,courtIndexRows]=await Promise.all([
-        getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]),
+        getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}).catch(()=>[]),
         getCachedScan(T_COURT_ACCOUNT_LIST_INDEX).catch(()=>[])
       ]);
       studentSummaryRows=loadedStudentSummaryRows;

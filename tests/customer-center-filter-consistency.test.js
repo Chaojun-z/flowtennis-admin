@@ -76,6 +76,10 @@ assert.ok(
   '体验后买正式课必须来自统一读模型输出'
 );
 assert.ok(
+  leadsRouteSource.includes('getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true})'),
+  '线索池顶部学员指标必须读取最新统一摘要，不能命中旧热缓存'
+);
+assert.ok(
   leadsRouteSource.includes('buildLeadTeachingSummaryFromReadModel') && leadsRouteSource.includes('buildTeachingStudentViews'),
   '线索池学员指标必须从统一教学摘要读模型生成，不能回退成线索行自算'
 );

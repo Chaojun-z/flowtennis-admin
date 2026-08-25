@@ -153,7 +153,7 @@ function createCorePageDataRoutes(deps={}){
         cappedScan(T_STUDENTS),
         cappedScan(T_PURCHASES),
         cappedScan(T_ENTITLEMENTS),
-        T_STUDENT_TEACHING_SUMMARY ? getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(()=>[]) : Promise.resolve([])
+        T_STUDENT_TEACHING_SUMMARY ? getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}).catch(()=>[]) : Promise.resolve([])
       ]);
       const needsTeachingFacts = includeLessonFacts || !studentTeachingSummaries.length;
       const [entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([

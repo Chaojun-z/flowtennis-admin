@@ -294,7 +294,7 @@ function createStudentRosterIndexReader({ tableName, getCachedScan, filterLoadAl
   return {
     async readCustomerCenterList({ user = {}, query } = {}) {
       const studentTeachingSummaries = tableName && typeof getCachedScan === 'function'
-        ? await getCachedScan(tableName).catch(() => [])
+        ? await getCachedScan(tableName, { fresh: true }).catch(() => [])
         : [];
       const scoped = filterLoadAllForUser({ studentTeachingSummaries }, user);
       const summaryRows = filterSummaryRowsForQuery(scoped.studentTeachingSummaries || [], query);

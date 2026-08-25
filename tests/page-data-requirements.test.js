@@ -130,7 +130,7 @@ const customerCenterEnd = corePagesSource.indexOf("path==='/page-data/purchase-d
 const customerCenterRouteSource = corePagesSource.slice(customerCenterStart, customerCenterEnd);
 assert.match(customerCenterRouteSource, /studentRosterIndexReader\.readCustomerCenterList\(\{user,query\}\)/, 'customer center first screen must go through the isolated student roster index reader');
 assert.doesNotMatch(customerCenterRouteSource, /getCachedScan|cappedScan|T_STUDENTS|T_PURCHASES|T_ENTITLEMENTS|T_ENTITLEMENT_LEDGER|T_SCHEDULE|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'customer center first-screen route must not have direct access to slow fact-table reads');
-assert.match(studentRosterReaderSource, /getCachedScan\(tableName\)/, 'student roster index reader must read only its configured roster index table');
+assert.match(studentRosterReaderSource, /getCachedScan\(tableName, \{ fresh: true \}\)/, 'student roster index reader must read only the latest configured roster index table, not a stale hot-cache copy');
 assert.doesNotMatch(studentRosterReaderSource, /cappedScan|T_SCHEDULE|T_ENTITLEMENT_LEDGER|T_PURCHASES|T_ENTITLEMENTS|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'student roster index reader must not import or scan slow fact tables');
 assert.doesNotMatch(customerCenterRouteSource, /loadCustomerCenterFactModel\(user,\{force:true,includeLessonFacts:true\}\)/, 'customer center first screen must not scan live lesson facts');
 assert.doesNotMatch(customerCenterRouteSource, /cappedScan\(T_STUDENTS\)|cappedScan\(T_PURCHASES\)|cappedScan\(T_ENTITLEMENTS\)|cappedScan\(T_ENTITLEMENT_LEDGER|cappedScan\(T_SCHEDULE/, 'customer center first screen must not scan student, purchase, entitlement, ledger, or schedule fact tables');
@@ -146,7 +146,7 @@ assert.match(studentRosterReaderSource, /function buildCustomerCenterPagePayload
 assert.match(studentRosterReaderSource, /function buildCustomerCenterListPage\(teachingStudentViews = \{\}, query\)[\s\S]*return paging && view \? \{ view, \.\.\.buildListPage/, 'customer center cached views should still apply server-side search before pagination');
 assert.match(studentRosterReaderSource, /function buildCustomerCenterListPage\(teachingStudentViews = \{\}, query\)[\s\S]*searchableRows = q && Array\.isArray\(teachingStudentViews\.searchableStudents\) \? teachingStudentViews\.searchableStudents : studentRows/, 'customer center paged search should use the stable lightweight full student search index');
 assert.match(studentRosterReaderSource, /textSearchHit\(q, row\.searchText[\s\S]*row\.notes, row\.profileNote/, 'customer center paged search should include backend searchText, notes, and profileNote');
-assert.match(corePagesSource, /T_STUDENT_TEACHING_SUMMARY \? getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'customer center fact loader may read precomputed student teaching summary rows as auxiliary fields');
+assert.match(corePagesSource, /T_STUDENT_TEACHING_SUMMARY \? getCachedScan\(T_STUDENT_TEACHING_SUMMARY,\{fresh:true\}\)/, 'customer center fact loader must read the latest precomputed student teaching summary rows as auxiliary fields');
 assert.doesNotMatch(customerCenterRouteSource, /const fresh=query\?\.get\('fresh'\)==='1'\|\|query\?\.get\('forceFresh'\)==='1';/, 'customer center list should not let fresh switch re-enable fact-table scans');
 assert.match(corePagesSource, /const needsTeachingFacts = includeLessonFacts \|\| !studentTeachingSummaries\.length/, 'fresh customer center reads and background calibration should include full lesson facts');
 assert.doesNotMatch(
