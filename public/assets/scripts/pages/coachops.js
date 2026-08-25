@@ -1,6 +1,6 @@
 var coachOpsDraggedName='',COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter',coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'',COACH_OPS_DAY_HOUR_HEIGHT=56;
 var COACH_OPS_DAY_COACH_WIDTH=128;
-var COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30;
+var COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30,COACH_OPS_WEEK_TIME_BUFFER_MIN=60;
 var COACH_OPS_MONTH_VISIBLE_COACHES=5;
 var coachOpsAutoScrollDayView=false,coachOpsAutoScrollWeekView=false,coachOpsAutoScrollMonthView=false,coachOpsPendingCreateSlot=null;
 function isCoachSchedulePage(){return currentPage==='coachschedule';}
@@ -435,7 +435,8 @@ function coachOpsDurationBadgeText(s){
 function coachOpsStartTimeFromLineClick(e){
   const rect=e.currentTarget.getBoundingClientRect();
   const cellHeight=e.currentTarget.closest('.coach-ops-week-experiment')?COACH_OPS_WEEK_HOUR_HEIGHT:COACH_OPS_DAY_HOUR_HEIGHT,startHour=7,endHour=22;
-  const y=Math.max(0,Math.min(rect.height-1,e.clientY-rect.top-COACH_OPS_TIME_BUFFER_MIN/60*cellHeight));
+  const bufferMin=e.currentTarget.closest('.coach-ops-week-experiment')?COACH_OPS_WEEK_TIME_BUFFER_MIN:COACH_OPS_TIME_BUFFER_MIN;
+  const y=Math.max(0,Math.min(rect.height-1,e.clientY-rect.top-bufferMin/60*cellHeight));
   const hourIndex=Math.floor(y/cellHeight);
   const hour=Math.min(endHour,startHour+hourIndex);
   const minute=hour>=endHour?0:(y%cellHeight>=cellHeight/2?30:0);
@@ -445,7 +446,7 @@ function coachOpsDayTimeLabelTop(index,totalHours){
   return COACH_OPS_TIME_BUFFER_MIN/60*COACH_OPS_DAY_HOUR_HEIGHT+index*COACH_OPS_DAY_HOUR_HEIGHT/2;
 }
 function coachOpsWeekTimeLabelTop(index,totalHours){
-  return COACH_OPS_TIME_BUFFER_MIN/60*COACH_OPS_WEEK_HOUR_HEIGHT+index*COACH_OPS_WEEK_HOUR_HEIGHT;
+  return COACH_OPS_WEEK_TIME_BUFFER_MIN/60*COACH_OPS_WEEK_HOUR_HEIGHT+index*COACH_OPS_WEEK_HOUR_HEIGHT;
 }
 function coachOpsRowDisplayName(row){
   return coachName(row?.name||row?.coach||row?.coachName||row?.displayName||'');
@@ -475,7 +476,7 @@ function coachOpsDrop(e,targetCoach){
 }
 function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalMin,todayKey){
   const weekDays=Array.from({length:7},(_,i)=>addDays(range.start,i));
-  const bufferH=COACH_OPS_TIME_BUFFER_MIN/60*COACH_OPS_WEEK_HOUR_HEIGHT,dayHeight=opsTotalMin/60*COACH_OPS_WEEK_HOUR_HEIGHT+bufferH*2;
+  const bufferH=COACH_OPS_WEEK_TIME_BUFFER_MIN/60*COACH_OPS_WEEK_HOUR_HEIGHT,dayHeight=opsTotalMin/60*COACH_OPS_WEEK_HOUR_HEIGHT+bufferH*2;
   const nowForWeek=new Date();
   const nowMinutes=(nowForWeek.getHours()-opsStartH)*60+nowForWeek.getMinutes()+nowForWeek.getSeconds()/60;
   const showNowLine=nowMinutes>=0&&nowMinutes<=opsTotalMin;
@@ -488,6 +489,8 @@ function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalM
   return `<div class="coach-ops-week-experiment">${weekDays.map((day,i)=>{
     const ds=dateKey(day);
     const dayName=`周${'一二三四五六日'[i]}`;
+    const dayRows=renderRows.flatMap(row=>(row.rangeRows||[]).filter(s=>coachOpsScheduleDateKey(s)===ds));
+    const lessonCount=lessonUnitsText(sumScheduleLessonUnits(dayRows));
     const base=new Date(day);base.setHours(opsStartH,0,0,0);
     const columns=renderRows.map(row=>{
       const coachLabel=coachOpsRowDisplayName(row);
@@ -508,7 +511,7 @@ function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalM
       }).join('');
       return `<div class="coach-ops-week-coach-col" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(coachLabel)},'${ds}')">${pendingBlock}${blocks}</div>`;
     }).join('');
-    return `<section class="coach-ops-week-day ${ds===todayKey?'is-today':''}"><div class="coach-ops-week-day-label"><div class="coach-ops-week-day-label-fixed"><strong>${dayName}</strong><span>${day.getMonth()+1}/${day.getDate()}</span></div><div class="coach-ops-week-day-label-track"></div></div><div class="coach-ops-week-day-board"><div class="coach-ops-week-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-week-coach-grid" style="height:${dayHeight}px">${columns}</div>${ds===todayKey?nowLineHtml:''}</div></section>`;
+    return `<section class="coach-ops-week-day ${ds===todayKey?'is-today':''}"><div class="coach-ops-week-day-label"><div class="coach-ops-week-day-label-fixed"><strong>${dayName}</strong><span>${day.getMonth()+1}/${day.getDate()}</span></div><div class="coach-ops-week-day-label-track"><span class="coach-ops-week-day-count">共${esc(lessonCount)}节</span></div></div><div class="coach-ops-week-day-board"><div class="coach-ops-week-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-week-coach-grid" style="height:${dayHeight}px">${columns}</div>${ds===todayKey?nowLineHtml:''}</div></section>`;
   }).join('')}</div>`;
 }
 function scrollCoachOpsDayToNow(){

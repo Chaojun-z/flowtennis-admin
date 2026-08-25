@@ -120,8 +120,8 @@ assert.match(
 );
 assert.match(
   pagesCss,
-  /coach-ops-week-coach-grid\{[^}]*background-position-y:20px/,
-  'week view hour rows should start after the 30-minute top buffer so labels align with grid lines'
+  /coach-ops-week-coach-grid\{[^}]*background-position-y:40px/,
+  'week view hour rows should start after the full top blank row so labels align with grid lines'
 );
 assert.match(
   pagesCss,

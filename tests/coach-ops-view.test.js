@@ -40,13 +40,13 @@ assert.match(
 
 assert.match(
   indexHtml,
-  /pages\.css\?v=20260802-course-colors-coachschedule-v1/,
+  /pages\.css\?v=20260825-coachschedule-calendar-ui-v1/,
   'coach schedule month calendar CSS version should force a fresh browser load'
 );
 
 assert.match(
   indexHtml,
-  /coachops\.js\?v=20260806-coachschedule-date-range-v1/,
+  /coachops\.js\?v=20260825-coachschedule-calendar-ui-v1/,
   'coach schedule month calendar JS version should force a fresh browser load'
 );
 
@@ -232,8 +232,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-week-time-axis\{position:sticky;left:0;z-index:65;[^}]*border-right:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\);box-shadow:none\}/,
-  'coach schedule week time axis should stay locked with the shared 0.5px line'
+  /#page-coachschedule \.coach-ops-week-time-axis\{position:sticky;left:0;z-index:65;[^}]*background:#fff;border-right:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\);box-shadow:none\}/,
+  'coach schedule week time axis should stay locked without horizontal grid lines crossing labels'
 );
 
 assert.match(
@@ -316,8 +316,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /var COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30;/,
-  'coach schedule day and week timelines should reserve a 30-minute blank row before 07:00 and after 22:00'
+  /var COACH_OPS_WEEK_HOUR_HEIGHT=40,COACH_OPS_TIME_BUFFER_MIN=30,COACH_OPS_WEEK_TIME_BUFFER_MIN=60;/,
+  'coach schedule week timeline should reserve a full blank row before 07:00 and after 22:00'
 );
 
 assert.match(
@@ -795,7 +795,7 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const bufferH=COACH_OPS_TIME_BUFFER_MIN\/60\*COACH_OPS_WEEK_HOUR_HEIGHT,dayHeight=opsTotalMin\/60\*COACH_OPS_WEEK_HOUR_HEIGHT\+bufferH\*2;/,
+  /const bufferH=COACH_OPS_WEEK_TIME_BUFFER_MIN\/60\*COACH_OPS_WEEK_HOUR_HEIGHT,dayHeight=opsTotalMin\/60\*COACH_OPS_WEEK_HOUR_HEIGHT\+bufferH\*2;/,
   'coach schedule week view should use a compact vertical time scale'
 );
 
@@ -809,6 +809,12 @@ assert.match(
   coachOpsSource,
   /coach-ops-week-day-label-fixed[\s\S]*coach-ops-week-day-label-track/,
   'coach schedule week date labels should split the frozen left label from the horizontal track'
+);
+
+assert.match(
+  coachOpsSource,
+  /coach-ops-week-day-count/,
+  'coach schedule week date labels should show the daily lesson count on the right'
 );
 
 assert.match(
@@ -1173,8 +1179,20 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-more-popover\{width:max-content;min-width:220px;max-width:520px;/,
+  /#page-coachschedule \.coach-ops-more-popover\{display:flex;flex-direction:column;width:max-content;min-width:220px;max-width:520px;max-height:min\(420px,calc\(100vh - 132px\)\);/,
   'coach schedule month more popover should adapt to content width'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-more-list\{display:flex;flex-direction:column;gap:0;flex:1 1 auto;min-height:0;max-height:none;overflow:auto\}/,
+  'coach schedule month more popover should keep long lists scrollable'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-daycell-count\{display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 8px;border:1px solid rgba\(180,83,9,\.18\);border-radius:999px;background:#FFF4E6!important;color:var\(--coach-ops-theme\)!important;font-family:inherit;font-size:10px;font-weight:500;line-height:18px;white-space:nowrap;cursor:pointer;box-sizing:border-box\}/,
+  'coach schedule month lesson count should look like a visible tag'
 );
 
 assert.match(
@@ -1533,7 +1551,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-week-day-label-track\{width:var\(--coach-ops-week-grid-width\);height:30px;box-sizing:border-box;background:#F9FAFB;border-bottom:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\)\}/,
+  /#page-coachschedule \.coach-ops-week-day-label-track\{width:var\(--coach-ops-week-grid-width\);height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;background:#F9FAFB;border-bottom:var\(--coach-ops-calendar-hairline\) solid var\(--coach-ops-calendar-line\)\}/,
   'coach schedule week date label track should scroll with the coach columns using the shared 0.5px line'
 );
 

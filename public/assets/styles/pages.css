@@ -2131,9 +2131,9 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-daycell-empty{display:none}
 #page-coachschedule .coach-ops-more-btn{font-size:10px;font-weight:400!important;color:#9CA3AF!important}
 #page-coachschedule .coach-ops-more-btn:hover{color:#3B82F6!important;background:#EFF6FF!important}
-#page-coachschedule .coach-ops-more-popover{width:max-content;min-width:220px;max-width:520px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;box-shadow:0 10px 15px -3px rgba(0,0,0,.10);padding:12px}
+#page-coachschedule .coach-ops-more-popover{display:flex;flex-direction:column;width:max-content;min-width:220px;max-width:520px;max-height:min(420px,calc(100vh - 132px));box-sizing:border-box;border:1px solid #e5e7eb;border-radius:8px;background:#fff;box-shadow:0 10px 15px -3px rgba(0,0,0,.10);padding:12px;overflow:hidden}
 #page-coachschedule .coach-ops-more-head strong{font-size:12px;font-weight:400;color:#1F2937}
-#page-coachschedule .coach-ops-more-list{gap:0}
+#page-coachschedule .coach-ops-more-list{display:flex;flex-direction:column;gap:0;flex:1 1 auto;min-height:0;max-height:none;overflow:auto}
 #page-coachschedule .coach-ops-more-course{display:flex;align-items:flex-start;gap:6px;width:100%;border:0;background:transparent;border-radius:4px;padding:2px 4px;text-align:left;font-family:inherit;cursor:pointer;white-space:nowrap;overflow:hidden}
 #page-coachschedule .coach-ops-more-course::before{content:"";width:3px;height:14px;border-radius:99px;background:#4F81FF;flex-shrink:0;margin-top:1px}
 #page-coachschedule .coach-ops-more-course:hover{background:#F3F4F6}
@@ -2397,14 +2397,14 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-week-day{border-bottom:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line);background:#fff}
 #page-coachschedule .coach-ops-week-day-label{position:relative;z-index:55;width:calc(72px + var(--coach-ops-week-grid-width));height:30px;box-sizing:border-box;display:grid;grid-template-columns:72px var(--coach-ops-week-grid-width);background:#fff;color:#374151}
 #page-coachschedule .coach-ops-week-day-label-fixed{position:sticky;left:0;z-index:70;width:72px;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:4px;background:#F9FAFB;border-right:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line);border-bottom:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line);box-shadow:none}
-#page-coachschedule .coach-ops-week-day-label-track{width:var(--coach-ops-week-grid-width);height:30px;box-sizing:border-box;background:#F9FAFB;border-bottom:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line)}
-#page-coachschedule .coach-ops-week-day-label strong,#page-coachschedule .coach-ops-week-day-label span{font-size:10px;font-weight:400;line-height:1}
+#page-coachschedule .coach-ops-week-day-label-track{width:var(--coach-ops-week-grid-width);height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;background:#F9FAFB;border-bottom:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line)}
+#page-coachschedule .coach-ops-week-day-label strong,#page-coachschedule .coach-ops-week-day-label span,#page-coachschedule .coach-ops-week-day-count{font-size:10px;font-weight:400;line-height:1}
 #page-coachschedule .coach-ops-week-day.is-today .coach-ops-week-day-label{color:#B45309}
 #page-coachschedule .coach-ops-week-day.is-today .coach-ops-week-day-label-fixed,#page-coachschedule .coach-ops-week-day.is-today .coach-ops-week-day-label-track{background:#FFF4E6}
 #page-coachschedule .coach-ops-week-day-board{position:relative;display:grid;grid-template-columns:72px var(--coach-ops-week-grid-width);min-width:calc(72px + var(--coach-ops-week-grid-width));background:#fff}
 #page-coachschedule .coach-ops-week-time-axis{position:sticky;left:0;z-index:65;width:72px;background:#fff;border-right:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line);box-shadow:none}
 #page-coachschedule .coach-ops-week-time-axis span{position:absolute;left:0;width:100%;transform:translateY(-8px);box-sizing:border-box;text-align:center;color:#6E6259;font-size:10px;font-weight:400;line-height:16px;display:flex;align-items:flex-start;justify-content:center}
-#page-coachschedule .coach-ops-week-coach-grid{position:relative;display:grid;grid-template-columns:repeat(var(--coach-ops-day-coach-count),128px);width:var(--coach-ops-week-grid-width);min-width:var(--coach-ops-week-grid-width);background-position-y:20px;background-image:repeating-linear-gradient(0deg,var(--coach-ops-calendar-line),var(--coach-ops-calendar-line) var(--coach-ops-calendar-hairline),transparent var(--coach-ops-calendar-hairline),transparent 40px)}
+#page-coachschedule .coach-ops-week-coach-grid{position:relative;display:grid;grid-template-columns:repeat(var(--coach-ops-day-coach-count),128px);width:var(--coach-ops-week-grid-width);min-width:var(--coach-ops-week-grid-width);background-position-y:40px;background-image:repeating-linear-gradient(0deg,var(--coach-ops-calendar-line),var(--coach-ops-calendar-line) var(--coach-ops-calendar-hairline),transparent var(--coach-ops-calendar-hairline),transparent 40px)}
 #page-coachschedule .coach-ops-week-coach-col{position:relative;width:128px;border-right:var(--coach-ops-calendar-hairline) solid var(--coach-ops-calendar-line);box-sizing:border-box;background:transparent;cursor:default;overflow:visible}
 #page-coachschedule .coach-ops-week-coach-col:hover{background:transparent!important}
 #page-coachschedule .coach-ops-week-block{position:absolute;left:7px;right:7px;bottom:auto;width:auto;min-width:0;border-radius:8px;border:1px solid #D4E2FF;padding:6px 7px 6px 9px;background:#EFF4FF;box-shadow:0 2px 8px rgba(60,20,0,.05);cursor:pointer;transition:box-shadow .16s,transform .16s,border-color .16s;overflow:hidden}
@@ -2477,8 +2477,8 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-coachschedule .coach-ops-month-overview .coach-ops-daycell-head strong{display:inline-flex;align-items:center;justify-content:center;min-width:0;height:20px;color:#2F241E;font-size:13px;font-weight:500;line-height:20px;white-space:nowrap}
 #page-coachschedule .coach-ops-month-overview .coach-ops-daycell.is-muted .coach-ops-daycell-head strong{color:#9CA3AF}
 #page-coachschedule .coach-ops-month-overview .coach-ops-daycell.is-today .coach-ops-daycell-head strong{min-width:20px;padding:0 5px;border-radius:999px;background:var(--coach-ops-theme);color:#fff;font-size:13px;font-weight:500}
-#page-coachschedule .coach-ops-daycell-count{display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0;border:0;border-radius:4px;background:transparent!important;color:#6B7280;font-family:inherit;font-size:11px;font-weight:500;line-height:20px;white-space:nowrap;cursor:pointer}
-#page-coachschedule .coach-ops-daycell-count:hover{color:var(--coach-ops-theme);background:rgba(180,83,9,.08)!important}
+#page-coachschedule .coach-ops-daycell-count{display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 8px;border:1px solid rgba(180,83,9,.18);border-radius:999px;background:#FFF4E6!important;color:var(--coach-ops-theme)!important;font-family:inherit;font-size:10px;font-weight:500;line-height:18px;white-space:nowrap;cursor:pointer;box-sizing:border-box}
+#page-coachschedule .coach-ops-daycell-count:hover{background:rgba(180,83,9,.14)!important}
 #page-coachschedule .coach-ops-month-coach-list{box-sizing:border-box;padding:8px 8px 8px;overflow:visible}
 #page-coachschedule .coach-ops-month-coach-row{min-height:17px;padding:1px 4px;border-radius:4px;gap:6px;color:#2F241E}
 #page-coachschedule .coach-ops-month-coach-row:hover{background:#F7F8FA}
