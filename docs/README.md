@@ -2,9 +2,9 @@
 
 > 文档类型：文档入口
 > 状态：生效
-> 版本：2026-08-24
-> 生效日期：2026-08-24
-> 最后审查日期：2026-08-24
+> 版本：2026-08-25
+> 生效日期：2026-08-25
+> 最后审查日期：2026-08-25
 > 维护人：FlowTennis 项目负责人
 > 唯一依据：本文只负责导航，不覆盖 `AGENTS.md`、PRD 正本和数据口径正本。
 > 替代文档：无
@@ -30,7 +30,7 @@
 | `docs/prd/` | 产品需求、页面需求、验收标准 | 是 |
 | `docs/architecture/` | 技术架构、前端标准、账号权限方案 | 是 |
 | `docs/operations/` | 财务、发布、修数、回滚、飞书日报等操作流程 | 是 |
-| `docs/performance-governance/` | 核心列表性能专项治理 | 是，后续可继续细分 |
+| `docs/performance-governance/` | 核心列表性能专项治理 | 是，已补入口 `README.md`，`archive/` 只作历史 |
 | `docs/reports/` | 审计报告、导入报告、复盘记录 | 否，只作记录 |
 | `docs/archive/` | 已废弃或被替代的历史方案 | 否，只作历史 |
 | `docs/superpowers/` | 早期计划和标准页规格 | 否，只作参考 |
@@ -59,6 +59,8 @@
 5. [生产数据变更与回滚流程](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/生产数据变更与回滚流程.md)
 6. [自动化治理门禁说明](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/自动化治理门禁说明.md)
 7. [数据口径变更检查清单](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/数据口径变更检查清单.md)
+8. [高敏感页性能治理入口](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/performance-governance/README.md)
+9. [仓库根目录治理](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/governance/仓库根目录治理.md)
 
 ## 5. 旧文档处理原则
 

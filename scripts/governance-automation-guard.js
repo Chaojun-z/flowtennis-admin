@@ -96,6 +96,32 @@ function evaluateDocsPlacement({ files = [], config = {} } = {}) {
   return { ok: errors.length === 0, errors };
 }
 
+function evaluateRepoRootPlacement({ root = DEFAULT_ROOT, config = {} } = {}) {
+  const errors = [];
+  const allowedFiles = new Set(config.allowedRepoRootFiles || []);
+  const allowedDirs = new Set(config.allowedRepoRootDirs || []);
+  const ignoredPatterns = (config.ignoredRepoRootPatterns || []).map((pattern) => new RegExp(pattern));
+  const entries = fs.readdirSync(root, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const name = normalizeFile(entry.name);
+    if (!name || ignoredPatterns.some((pattern) => pattern.test(name))) continue;
+    if (entry.isFile()) {
+      if (!allowedFiles.has(name)) {
+        errors.push(`${name} 不能放在仓库根目录；请移动到已登记目录或登记为根目录文件`);
+      }
+      continue;
+    }
+    if (entry.isDirectory() || entry.isSymbolicLink()) {
+      if (!allowedDirs.has(name)) {
+        errors.push(`${name} 不能作为仓库根目录一级目录；请先登记目录角色`);
+      }
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
 function levelRank(level) {
   return Math.max(0, LEVEL_ORDER.indexOf(level));
 }
@@ -163,17 +189,32 @@ function evaluateChangeRecordCoverage({ changedFiles = [], records = [], config 
     const mentionedFiles = files.filter((file) => recordMentionsFile(content, file));
     const riskMatch = content.match(/##\s+风险等级\s+([\s\S]*?)(?:\n##\s+|$)/);
     const recordLevel = riskMatch?.[1]?.match(/L[1-5]/)?.[0] || '';
+    const decisionSection = extractSection(content, '决策同步');
 
     if (!mentionedFiles.length) continue;
 
     if (!missingMeta.length && !missingSections.length && mentionedFiles.length === files.length && levelRank(recordLevel) >= levelRank(risk.maxLevel)) {
       validRecords.push(record);
+      const exceptionResult = evaluateExceptionApprovalCoverage({ changedFiles: files, records: [record], config });
+      const incidentResult = evaluateIncidentClosureCoverage({ changedFiles: files, records: [record], config });
+      errors.push(...exceptionResult.errors, ...incidentResult.errors);
     }
 
     if (missingMeta.length) errors.push(`${record.file} 缺少文档状态头字段：${missingMeta.join(', ')}`);
     if (missingSections.length) errors.push(`${record.file} 缺少变更记录章节：${missingSections.join(', ')}`);
     if (mentionedFiles.length !== files.length) errors.push(`${record.file} 未覆盖全部变更文件：${files.filter((file) => !mentionedFiles.includes(file)).join(', ')}`);
     if (!recordLevel || levelRank(recordLevel) < levelRank(risk.maxLevel)) errors.push(`${record.file} 风险等级低于自动判定：record=${recordLevel || '未写'}, auto=${risk.maxLevel}`);
+    if (decisionSection) {
+      if (config.decisionSyncTarget && !decisionSection.includes(config.decisionSyncTarget)) {
+        errors.push(`${record.file} 决策同步缺少目标：${config.decisionSyncTarget}`);
+      }
+      if (config.decisionSyncMarker && !decisionSection.includes(config.decisionSyncMarker)) {
+        errors.push(`${record.file} 决策同步缺少标记：${config.decisionSyncMarker}`);
+      }
+      if (config.decisionSyncTarget && !decisionSection.includes('同步目标')) {
+        errors.push(`${record.file} 决策同步缺少同步目标字段`);
+      }
+    }
 
     if (risk.maxLevel === 'L5') {
       const missingProduction = (config.requiredProductionSections || []).filter((section) => !hasSection(content, section) && !content.includes(section));
@@ -190,6 +231,139 @@ function evaluatePostReleaseCoverage({ config = {}, apiSmokeChecks = [] } = {}) 
   const required = config.postReleaseRequiredChecks || [];
   const missing = required.filter((pathname) => !apiSmokeChecks.includes(pathname));
   const errors = missing.map((pathname) => `发布后核验缺少接口：${pathname}`);
+  return { ok: errors.length === 0, errors };
+}
+
+function escapeRegExp(value = '') {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function escapeTableCell(value = '') {
+  return String(value || '').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+}
+
+function formatFileList(files = []) {
+  return files.length ? files.map((file) => `\`${normalizeFile(file)}\``).join('、') : '无';
+}
+
+function extractSection(content = '', title = '') {
+  const lines = String(content || '').split(/\r?\n/);
+  const headerIndex = lines.findIndex((line) => new RegExp(`^##\\s+${escapeRegExp(title)}\\s*$`).test(line));
+  if (headerIndex === -1) return '';
+  const body = [];
+  for (let i = headerIndex + 1; i < lines.length; i += 1) {
+    if (/^##\s+/.test(lines[i])) break;
+    body.push(lines[i]);
+  }
+  return body.join('\n').trim();
+}
+
+function sectionNeedsExceptionApproval(section = '') {
+  const normalized = String(section || '').replace(/\s+/g, '');
+  return normalized && !/^(?:[-*]\s*)?(无|无豁免|不涉及)/.test(normalized);
+}
+
+function upsertDecisionSyncSection(content = '', section = '', marker = 'AUTO-SYNC-PRD-DECISIONS') {
+  const start = `<!-- ${marker}:START -->`;
+  const end = `<!-- ${marker}:END -->`;
+  const normalized = String(content || '');
+  if (normalized.includes(start) && normalized.includes(end)) {
+    return normalized.replace(new RegExp(`${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}`), `${start}\n${section}\n${end}`);
+  }
+  return `${normalized.trimEnd()}\n\n## 3. AUTO-SYNC-PRD-DECISIONS\n\n> \`${marker}\` 区块由 \`npm run governance:record\` 自动维护，禁止手工改写。\n\n${start}\n${section}\n${end}\n`;
+}
+
+function updateDecisionSyncTarget(root, config, { date, recordFile, changedFiles = [], title = '' } = {}) {
+  const target = config.decisionSyncTarget;
+  if (!target) return { ok: true, updated: false, target: '' };
+  const marker = config.decisionSyncMarker || 'AUTO-SYNC-PRD-DECISIONS';
+  const targetPath = path.join(root, target);
+  if (!fs.existsSync(targetPath)) {
+    return { ok: false, updated: false, target, errors: [`决策同步目标不存在：${target}`] };
+  }
+  const current = fs.readFileSync(targetPath, 'utf8');
+  const block = `| 字段 | 内容 |\n| --- | --- |\n| 同步日期 | ${escapeTableCell(date)} |\n| 同步目标 | \`${escapeTableCell(target)}\` |\n| 关联变更记录 | \`${escapeTableCell(recordFile)}\` |\n| 触发文件 | ${formatFileList(changedFiles)} |\n| 决策摘要 | ${escapeTableCell(title || '未命名变更')} |\n| 同步标记 | \`${escapeTableCell(marker)}\` |`;
+  const next = upsertDecisionSyncSection(current, block, marker);
+  if (next !== current) {
+    fs.writeFileSync(targetPath, next);
+  }
+  return { ok: true, updated: next !== current, target };
+}
+
+function evaluateDecisionSyncCoverage({ changedFiles = [], records = [], config = {}, decisionDoc = '' } = {}) {
+  const errors = [];
+  const files = changedFiles.map(normalizeFile).filter((file) => file && !isIgnoredChangedFile(file, config));
+  const risk = classifyChangedFiles({ changedFiles: files, config });
+  const requiresRecord = files.length > 0 && levelRank(risk.maxLevel) >= levelRank(config.changeRecordRequiredFromLevel || 'L2');
+  if (!requiresRecord) return { ok: true, errors, risk };
+
+  const target = normalizeFile(config.decisionSyncTarget || '');
+  const marker = String(config.decisionSyncMarker || '').trim();
+  if (!target) errors.push('缺少决策同步目标：decisionSyncTarget');
+  if (!marker) errors.push('缺少决策同步标记：decisionSyncMarker');
+  if (!decisionDoc) errors.push(`缺少决策同步正本：${target || '未配置'}`);
+  if (decisionDoc && marker && !String(decisionDoc).includes(marker)) {
+    errors.push(`${target} 缺少自动同步标记：${marker}`);
+  }
+
+  const relatedRecord = records.find((record) => files.every((file) => recordMentionsFile(record.content || '', file)));
+  if (!relatedRecord) {
+    errors.push('缺少可用于决策同步的需求变更记录');
+  } else if (decisionDoc) {
+    const expectedSnippets = [
+      normalizeFile(relatedRecord.file),
+      target,
+      ...files
+    ];
+    const missing = expectedSnippets.filter((snippet) => snippet && !String(decisionDoc).includes(snippet));
+    if (missing.length) errors.push(`${target} 未同步以下内容：${missing.join(', ')}`);
+  }
+
+  return { ok: errors.length === 0, errors, risk };
+}
+
+function evaluateExceptionApprovalCoverage({ changedFiles = [], records = [], config = {} } = {}) {
+  const errors = [];
+  const files = changedFiles.map(normalizeFile).filter(Boolean);
+  const relevantRecords = files.length
+    ? records.filter((record) => files.some((file) => recordMentionsFile(record.content || '', file)))
+    : records;
+  for (const record of relevantRecords) {
+    const content = String(record.content || '');
+    const section = extractSection(content, '异常豁免');
+    if (!section) continue;
+    if (!sectionNeedsExceptionApproval(section)) continue;
+    const missing = (config.exceptionApprovalRequiredFields || []).filter((field) => !section.includes(field));
+    if (missing.length) errors.push(`${normalizeFile(record.file)} 异常豁免缺少字段：${missing.join(', ')}`);
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+function evaluateIncidentClosureCoverage({ changedFiles = [], records = [], config = {} } = {}) {
+  const errors = [];
+  const files = changedFiles.map(normalizeFile);
+  const triggerPatterns = config.incidentClosureTriggerPatterns || [];
+  const triggeredByFiles = files.some((file) => matchesAny(file, triggerPatterns));
+  if (!triggeredByFiles) return { ok: true, errors };
+
+  const relevantRecords = files.length
+    ? records.filter((record) => files.some((file) => recordMentionsFile(record.content || '', file)))
+    : records;
+
+  for (const record of relevantRecords) {
+    const content = String(record.content || '');
+    const section = extractSection(content, '事故反馈闭环');
+    if (!section) continue;
+    const hasArtifact = (config.incidentClosureRequiredArtifacts || []).some((artifact) => section.includes(artifact));
+    if (!hasArtifact) {
+      errors.push(`${normalizeFile(record.file)} 事故反馈闭环缺少闭环产物：${(config.incidentClosureRequiredArtifacts || []).join(', ')}`);
+    }
+  }
+
+  if (!relevantRecords.some((record) => extractSection(record.content || '', '事故反馈闭环'))) {
+    errors.push('触发事故闭环的变更缺少事故反馈闭环章节');
+  }
+
   return { ok: errors.length === 0, errors };
 }
 
@@ -248,6 +422,7 @@ function todayIso() {
 function generateChangeRecord({ title = '未命名变更', changedFiles = [], config = {}, date = todayIso() } = {}) {
   const risk = classifyChangedFiles({ changedFiles, config });
   const files = changedFiles.map(normalizeFile).filter(Boolean);
+  const incidentTriggered = files.some((file) => matchesAny(file, config.incidentClosureTriggerPatterns || []));
   return `# ${date} ${title}
 
 > 文档类型：需求变更记录
@@ -287,13 +462,19 @@ ${files.map((file) => `- ${file}`).join('\n') || '- 待补'}
 
 ${risk.requiredChecks.map((check) => `- ${check}`).join('\n') || '- 待补'}
 
+## 决策同步
+
+- 同步目标：\`${config.decisionSyncTarget || '未配置'}\`
+- 同步标记：\`${config.decisionSyncMarker || '未配置'}\`
+- 同步方式：\`npm run governance:record\` 自动更新 PRD 决策记录
+
 ## 异常豁免
 
 - 无
 
 ## 事故反馈闭环
 
-- 本次非线上事故修复
+${incidentTriggered ? '- 待补：新增反例测试、新增规则、新增静态门禁、新增监控规则、新增文档说明、新增架构边界至少一项' : '- 无'}
 
 ## 发布后核验
 
@@ -320,11 +501,16 @@ function runGuard({ root = DEFAULT_ROOT, configPath = DEFAULT_CONFIG, argv = pro
   const trackedDocs = listTrackedDocs(root);
   const records = listChangeRecords(root);
   const smoke = require(path.join(root, 'scripts', 'release-api-smoke.js'));
+  const decisionDoc = docs.find((doc) => normalizeFile(doc.file) === normalizeFile(config.decisionSyncTarget || ''))?.content || '';
 
   const errors = [];
+  const rootPlacementResult = evaluateRepoRootPlacement({ root, config });
   const placementResult = evaluateDocsPlacement({ files: trackedDocs, config });
   const docResult = evaluateDocumentGovernance({ docs, config });
   const recordResult = evaluateChangeRecordCoverage({ changedFiles, records, config });
+  const decisionSyncResult = evaluateDecisionSyncCoverage({ changedFiles, records, config, decisionDoc });
+  const exceptionApprovalResult = evaluateExceptionApprovalCoverage({ changedFiles, records, config });
+  const incidentClosureResult = evaluateIncidentClosureCoverage({ changedFiles, records, config });
   const postReleaseResult = evaluatePostReleaseCoverage({ config, apiSmokeChecks: smoke.buildProtectedChecks ? ['/api/diag', ...smoke.buildProtectedChecks()] : [] });
 
   if (!packageJson.scripts?.['guard:governance-automation']) errors.push('package.json 缺少 guard:governance-automation');
@@ -332,16 +518,29 @@ function runGuard({ root = DEFAULT_ROOT, configPath = DEFAULT_CONFIG, argv = pro
   if (!packageJson.scripts?.['governance:record']) errors.push('package.json 缺少 governance:record');
   if (!packageJson.scripts?.['guard:post-release']) errors.push('package.json 缺少 guard:post-release');
 
-  errors.push(...placementResult.errors, ...docResult.errors, ...recordResult.errors, ...postReleaseResult.errors);
+  errors.push(
+    ...rootPlacementResult.errors,
+    ...placementResult.errors,
+    ...docResult.errors,
+    ...recordResult.errors,
+    ...decisionSyncResult.errors,
+    ...exceptionApprovalResult.errors,
+    ...incidentClosureResult.errors,
+    ...postReleaseResult.errors
+  );
 
   return {
     ok: errors.length === 0,
     errors,
     changedFiles,
     risk: recordResult.risk || classifyChangedFiles({ changedFiles, config }),
+    rootPlacement: rootPlacementResult,
     docsPlacement: placementResult,
     documentGovernance: docResult,
     changeRecordCoverage: recordResult,
+    decisionSyncCoverage: decisionSyncResult,
+    exceptionApprovalCoverage: exceptionApprovalResult,
+    incidentClosureCoverage: incidentClosureResult,
     postReleaseCoverage: postReleaseResult
   };
 }
@@ -359,6 +558,19 @@ function main() {
     const target = path.join(dir, filename);
     fs.writeFileSync(target, generateChangeRecord({ title: args.title, changedFiles, config, date }));
     console.log(`created ${path.relative(args.root, target)}`);
+    const syncResult = updateDecisionSyncTarget(args.root, config, {
+      date,
+      recordFile: path.relative(args.root, target),
+      changedFiles,
+      title: args.title
+    });
+    if (!syncResult.ok) {
+      console.error(syncResult.errors.join('\n'));
+      process.exit(1);
+    }
+    if (syncResult.updated) {
+      console.log(`synced ${syncResult.target}`);
+    }
     return;
   }
 
@@ -376,11 +588,16 @@ if (require.main === module) main();
 module.exports = {
   parseDocMetadata,
   evaluateDocumentGovernance,
+  evaluateRepoRootPlacement,
   evaluateDocsPlacement,
   classifyChangedFiles,
   evaluateChangeRecordCoverage,
   evaluatePostReleaseCoverage,
+  evaluateDecisionSyncCoverage,
+  evaluateExceptionApprovalCoverage,
+  evaluateIncidentClosureCoverage,
   generateChangeRecord,
+  updateDecisionSyncTarget,
   inferChangedFiles,
   runGuard
 };

@@ -213,8 +213,8 @@
    - 翻页。
 6. 如果实测未达到用户明确目标，例如 1 秒内，不得说“已优化完成”，只能说“数据正确但性能未达标”。
 7. 本规则对应事故复盘文档：
-   - [订场用户 / 会员管理 1 秒加载失败复盘与后续禁令](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/performance-governance/18-2026-08-09-订场会员列表索引失败复盘.md)
-   - [订场用户 / 会员管理 1 秒加载快照包方案评审](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/performance-governance/19-2026-08-09-订场会员列表快照包方案评审.md)
+   - [订场用户 / 会员管理 1 秒加载失败复盘与后续禁令](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/performance-governance/archive/18-2026-08-09-订场会员列表索引失败复盘.md)
+   - [订场用户 / 会员管理 1 秒加载快照包方案评审](/Users/shaobaolu/Desktop/FlowTennis/flowtennis-mgmt-main/docs/performance-governance/archive/19-2026-08-09-订场会员列表快照包方案评审.md)
 
 ### 1.3.6 线索池 / 历史学员 / 在期学员口径与性能硬红线
 
@@ -465,7 +465,8 @@
 
 必须先看：
 
-- `docs/performance-governance/` 目录下整套文档
+- `docs/performance-governance/README.md`
+- 如需追溯历史，再看 `docs/performance-governance/archive/`
 
 ### 如果任务涉及后台前端标准页改造
 
@@ -633,3 +634,9 @@
    - `WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET`
 4. `WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET` 是敏感密钥，禁止写入代码、文档或聊天明文；只允许放在 `.env.local`、Vercel 环境变量或阿里云服务器环境文件。
 5. 发送约球/排课服务号测试通知前，先确认代理健康检查返回 `{"ok":true}`，再发送模板消息。
+
+## 10. 仓库根目录治理
+
+1. 仓库根目录新增一级目录、正式入口文件或长期保留目录前，先读并遵守 `docs/governance/仓库根目录治理.md`。
+2. 不允许为了方便把正式文档、临时资料或新业务目录直接堆到仓库根目录。
+3. 新目录如果不属于现有分类，必须先登记再落盘，不能先放后补。

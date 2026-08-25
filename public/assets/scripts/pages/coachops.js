@@ -1392,9 +1392,7 @@ function renderFinanceRecognizedMobileCards(rows){
   const host=document.getElementById('financeRecognizedMobileCards');if(!host)return;
   host.innerHTML=rows.length?rows.map(row=>`<article class="admin-h5-list-card admin-h5-finance-card"><div class="admin-h5-card-head"><div><strong>${esc(row.customer||'-')}</strong><span>${esc(financeDateTimeDisplayText(row))}</span></div><span class="tms-tag">${esc(row.displayBusinessType||row.businessType||'-')}</span></div><div class="admin-h5-card-tags"><span class="tms-tag">${esc(row.normalizedPaymentMethod||row.paymentChannel||row.payMethod||'-')}</span><span class="tms-tag">${esc(row.campusName||'-')}</span></div><div class="admin-h5-card-grid"><span><b>扣减标的</b>${esc(row.debitTarget||'-')}</span><span><b>确认收入</b>${financeSignedAmountText(row.recognizedRevenueDelta)}</span><span><b>操作人</b>${esc(financeOperatorDisplayText(row))}</span><span><b>状态</b>${esc(row.confirmType||'-')}</span></div><p>${esc(financeHumanNote(row.notes)||'暂无备注')}</p></article>`).join(''):'<div class="tms-empty-state"><div class="tms-empty-title">暂无已入账流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div>';
 }
-function renderCoachOpsConsumeReport(){
-  return renderFinanceConsumeReport();
-}
+function renderCoachOpsConsumeReport(){return renderFinanceConsumeReport();}
 function exportCoachOpsRevenueCsv(){
   const rows=financeRevenueRows();
   let csv='交易时间,姓名,业务类型,支付方式,应收,实收,差价,差价说明,校区,操作人,备注\n';
@@ -1425,9 +1423,7 @@ function financeUnifiedRows(){
   }
   return [];
 }
-function financeLedgerBaseRows(){
-  return financeUnifiedRows();
-}
+function financeLedgerBaseRows(){return financeUnifiedRows();}
 function financeLedgerRows(){
   const businessTypeFilter=String(document.getElementById('financeLedgerBusinessTypeFilter')?.value||'').trim();
   const transactionTypeFilter=String(document.getElementById('financeLedgerTransactionTypeFilter')?.value||'').trim();
@@ -1442,9 +1438,7 @@ function financeLedgerRows(){
     return searchHit(q,row.customer,row.displayBusinessType,row.transactionType,row.normalizedPaymentMethod,row.notes,row.campusName);
   }).sort((a,b)=>financeLedgerSortKey(b).localeCompare(financeLedgerSortKey(a))||String(b.id||'').localeCompare(String(a.id||'')));
 }
-function financeLedgerDataReady(){
-  return loadedDatasets.has('financePage');
-}
+function financeLedgerDataReady(){return loadedDatasets.has('financePage');}
 function syncFinanceLedgerLoadingState(){
   const loading=document.getElementById('financeLedgerLoading');
   const ready=document.getElementById('financeLedgerReady');

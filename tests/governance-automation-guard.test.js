@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const repoRoot = path.join(__dirname, '..');
@@ -21,16 +22,27 @@ const guard = require(scriptPath);
 for (const exportName of [
   'parseDocMetadata',
   'evaluateDocumentGovernance',
+  'evaluateRepoRootPlacement',
   'evaluateDocsPlacement',
   'classifyChangedFiles',
   'evaluateChangeRecordCoverage',
   'evaluatePostReleaseCoverage',
-  'generateChangeRecord'
+  'evaluateDecisionSyncCoverage',
+  'evaluateExceptionApprovalCoverage',
+  'evaluateIncidentClosureCoverage',
+  'generateChangeRecord',
+  'updateDecisionSyncTarget'
 ]) {
   assert.ok(guard[exportName], `治理门禁必须导出 ${exportName}`);
 }
 
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const rootPlacementResult = guard.evaluateRepoRootPlacement({
+  root: repoRoot,
+  config
+});
+assert.strictEqual(rootPlacementResult.ok, true, rootPlacementResult.errors.join('\n'));
+
 const currentDoc = fs.readFileSync(path.join(repoRoot, 'docs', 'governance', '治理总览.md'), 'utf8');
 const docResult = guard.evaluateDocumentGovernance({
   docs: [{ file: 'docs/governance/治理总览.md', content: currentDoc }],
@@ -64,6 +76,22 @@ const brokenPlacementResult = guard.evaluateDocsPlacement({
 });
 assert.strictEqual(brokenPlacementResult.ok, false, 'docs 根目录新增正式文档时必须失败');
 assert.match(brokenPlacementResult.errors.join('\n'), /docs 根目录/);
+
+const tempRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'flowtennis-root-placement-'));
+fs.writeFileSync(path.join(tempRepoRoot, '.env.local'), 'TOKEN=1\n');
+const ignoredRootResult = guard.evaluateRepoRootPlacement({
+  root: tempRepoRoot,
+  config
+});
+assert.strictEqual(ignoredRootResult.ok, true, ignoredRootResult.errors.join('\n'));
+
+fs.writeFileSync(path.join(tempRepoRoot, 'notes.md'), '# notes\n');
+const brokenRootResult = guard.evaluateRepoRootPlacement({
+  root: tempRepoRoot,
+  config
+});
+assert.strictEqual(brokenRootResult.ok, false, '仓库根目录新增未登记文件时必须失败');
+assert.match(brokenRootResult.errors.join('\n'), /notes\.md/);
 
 const riskResult = guard.classifyChangedFiles({
   changedFiles: [
@@ -124,6 +152,12 @@ L3
 
 - npm test
 
+## 决策同步
+
+- 同步目标：\`docs/prd/source/14-变更记录与决策记录.md\`
+- 同步标记：\`AUTO-SYNC-PRD-DECISIONS\`
+- 同步方式：\`npm run governance:record\` 自动更新 PRD 决策记录
+
 ## 异常豁免
 
 - 无
@@ -142,6 +176,71 @@ const coveredRecordResult = guard.evaluateChangeRecordCoverage({
   config
 });
 assert.strictEqual(coveredRecordResult.ok, true, coveredRecordResult.errors.join('\n'));
+
+const decisionDoc = fs.readFileSync(path.join(repoRoot, 'docs', 'prd', 'source', '14-变更记录与决策记录.md'), 'utf8');
+const governanceRecord = fs.readFileSync(path.join(repoRoot, 'docs', 'governance', 'change-records', '2026-08-24-governance-automation.md'), 'utf8');
+const decisionSyncResult = guard.evaluateDecisionSyncCoverage({
+  changedFiles: [
+    'config/governance-automation.json',
+    'scripts/governance-automation-guard.js',
+    'tests/governance-automation-guard.test.js',
+    'docs/governance/change-records/2026-08-24-governance-automation.md',
+    'docs/governance/自动化治理门禁说明.md',
+    'docs/governance/测试与发布流程.md',
+    'docs/governance/文档状态清单.md',
+    'docs/governance/最终治理收口说明.md',
+    'docs/prd/source/14-变更记录与决策记录.md'
+  ],
+  records: [{ file: 'docs/governance/change-records/2026-08-24-governance-automation.md', content: governanceRecord }],
+  config,
+  decisionDoc
+});
+assert.strictEqual(decisionSyncResult.ok, true, decisionSyncResult.errors.join('\n'));
+
+const exceptionApprovalResult = guard.evaluateExceptionApprovalCoverage({
+  records: [{
+    file: 'docs/governance/change-records/2026-08-24-sample.md',
+    content: validRecord.replace(
+      '## 异常豁免\n\n- 无',
+      '## 异常豁免\n\n- 审批人：张三\n- 审批单号：EX-001\n- 补验时间：2026-08-25\n- 风险说明：临时豁免'
+    )
+  }],
+  config
+});
+assert.strictEqual(exceptionApprovalResult.ok, true, exceptionApprovalResult.errors.join('\n'));
+
+const incidentClosureResult = guard.evaluateIncidentClosureCoverage({
+  changedFiles: ['scripts/repair-sample.js'],
+  records: [{
+    file: 'docs/governance/change-records/2026-08-24-sample.md',
+    content: `# 2026-08-24 事故修复样例
+
+> 文档类型：需求变更记录
+> 状态：生效
+> 版本：2026-08-24
+> 生效日期：2026-08-24
+> 最后审查日期：2026-08-24
+> 维护人：FlowTennis 项目负责人
+> 唯一依据：样例。
+> 替代文档：无
+
+## 风险等级
+
+L5
+
+## 变更文件
+
+- scripts/repair-sample.js
+
+## 事故反馈闭环
+
+- 新增反例测试
+- 新增规则
+`
+  }],
+  config
+});
+assert.strictEqual(incidentClosureResult.ok, true, incidentClosureResult.errors.join('\n'));
 
 const unrelatedOldRecord = validRecord.replace('server/read-models/customer-lifecycle.js', 'public/assets/scripts/old-page.js');
 const coveredWithOldRecordResult = guard.evaluateChangeRecordCoverage({
@@ -193,6 +292,29 @@ const generated = guard.generateChangeRecord({
 });
 assert.match(generated, /## 影响页面/);
 assert.match(generated, /## 测试映射/);
+assert.match(generated, /## 决策同步/);
 assert.match(generated, /## 发布后核验/);
+
+const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'flowtennis-governance-'));
+const tempDecisionPath = path.join(tempRoot, 'docs', 'prd', 'source', '14-变更记录与决策记录.md');
+fs.mkdirSync(path.dirname(tempDecisionPath), { recursive: true });
+fs.writeFileSync(
+  tempDecisionPath,
+  '# temp\n\n<!-- AUTO-SYNC-PRD-DECISIONS:START -->\n| 字段 | 内容 |\n| --- | --- |\n| 同步日期 | 2026-08-23 |\n| 同步目标 | `docs/prd/source/14-变更记录与决策记录.md` |\n| 关联变更记录 | `docs/governance/change-records/old.md` |\n| 触发文件 | `old.js` |\n| 决策摘要 | 旧记录 |\n| 同步标记 | `AUTO-SYNC-PRD-DECISIONS` |\n<!-- AUTO-SYNC-PRD-DECISIONS:END -->\n'
+);
+const syncResult = guard.updateDecisionSyncTarget(tempRoot, {
+  decisionSyncTarget: 'docs/prd/source/14-变更记录与决策记录.md',
+  decisionSyncMarker: 'AUTO-SYNC-PRD-DECISIONS'
+}, {
+  date: '2026-08-24',
+  recordFile: 'docs/governance/change-records/2026-08-24-sample.md',
+  changedFiles: ['config/governance-automation.json', 'scripts/governance-automation-guard.js'],
+  title: '治理自动化'
+});
+assert.strictEqual(syncResult.ok, true, syncResult.errors?.join('\n') || '');
+assert.match(
+  fs.readFileSync(tempDecisionPath, 'utf8'),
+  /docs\/governance\/change-records\/2026-08-24-sample\.md/
+);
 
 console.log('governance automation guard tests passed');
