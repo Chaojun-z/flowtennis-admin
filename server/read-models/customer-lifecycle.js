@@ -39,7 +39,7 @@ function mergedLeadIds(row = {}) {
 
 function activeStatus(row = {}) {
   const status = text(row.status || row.systemStatus || 'active');
-  return !['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status);
+  return !['merged', 'voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已合并', '已作废', '已删除', '已取消'].includes(status);
 }
 
 function purchaseIsTrial(row = {}) {

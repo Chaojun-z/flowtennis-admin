@@ -5864,7 +5864,7 @@ function cleanLeadDisplayText(value){
 function isNonPersonLeadName(value){
   const name=cleanLeadDisplayText(value).replace(/\s+/g,'');
   if(!name)return false;
-  if(['随到随学','随到随学小班课','多球课'].includes(name))return true;
+  if(['随到随学','随到随学小班课','多球课','零基础'].includes(name))return true;
   return /畅打/.test(name);
 }
 function readStandardOrLegacyField(input={},standardKeys=[],legacyAliasKey=''){for(const key of [...(Array.isArray(standardKeys)?standardKeys:[standardKeys]),...businessTaxonomy.legacyAliases(legacyAliasKey)]){if(input[key]!=null&&cleanLeadText(input[key])!=='')return input[key];}return '';}

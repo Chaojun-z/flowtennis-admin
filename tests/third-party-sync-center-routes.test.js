@@ -639,10 +639,27 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
       recommendedType: 'auto_import',
       needsConfirmation: false,
       suggestedFinalType: '排课占场'
+    },
+    {
+      id: 'dirty-student-name-precheck-3',
+      batchId: 'dirty-student-name-batch',
+      sourceRecordId: 'DIRTY-DROPIN',
+      sourceType: 'lock',
+      date: '2026-08-03',
+      venue: '3号场',
+      startTime: '10:00',
+      endTime: '11:00',
+      customerName: '马坡运营',
+      operatorAccount: '马坡运营',
+      remark: 'siren 随到随学 私教课',
+      recommendedType: 'auto_import',
+      needsConfirmation: false,
+      suggestedFinalType: '排课占场'
     }
   );
   scans.ft_students.push({ id: 'student-dirty-2p', name: '2人', status: 'active' });
   scans.ft_students.push({ id: 'student-dirty-4p', name: '4 人', status: 'active' });
+  scans.ft_students.push({ id: 'student-dirty-dropin', name: '随到随学', status: 'active' });
   const dirtyStudentImportRes = await call(handler, {
     path: '/third-party-sync/import',
     method: 'POST',
@@ -651,7 +668,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(dirtyStudentImportRes.body.result.status, 'paused', 'third-party dirty people-count names should be paused for manual confirmation');
   assert.ok(dirtyStudentImportRes.body.plan.blocked.some(row => row.sourceRecordId === 'DIRTY-2P' && /未识别到真实学员/.test(row.reason)), '2人 must not be treated as a real student');
   assert.ok(dirtyStudentImportRes.body.plan.blocked.some(row => row.sourceRecordId === 'DIRTY-4P' && /未识别到真实学员/.test(row.reason)), '4 人 must not be treated as a real student');
-  assert.ok(!scans.ft_schedule.some(row => ['2人', '4 人'].includes(row.studentName)), 'dirty people-count names must never create schedule students');
+  assert.ok(dirtyStudentImportRes.body.plan.blocked.some(row => row.sourceRecordId === 'DIRTY-DROPIN' && /未识别到真实学员/.test(row.reason)), '随到随学 must not be treated as a real student');
+  assert.ok(!scans.ft_schedule.some(row => ['2人', '4 人', '随到随学'].includes(row.studentName)), 'dirty people-count and product names must never create schedule students');
 
   scans.ft_third_party_sync_batches.push({ id: 'existing-schedule-batch', batchId: 'existing-schedule-batch', status: 'prechecked' });
   scans.ft_third_party_sync_prechecks.push({

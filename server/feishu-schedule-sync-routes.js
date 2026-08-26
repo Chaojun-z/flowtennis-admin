@@ -445,7 +445,8 @@ function clearFeishuStudentNameForAutoLead(rawName=''){
   const key=normalizeStudentNameKey(name);
   if(!key)return false;
   if(/^\d+人?$/.test(key))return false;
-  if(['朋友','家长','学员','多人','待定','未知'].includes(key))return false;
+  if(['朋友','家长','学员','多人','待定','未知','随到随学','随到随学小班课','多球课','零基础'].includes(key))return false;
+  if(/畅打/.test(key))return false;
   if(/[?？]/.test(name))return false;
   if(/[、,，/&]/.test(name))return false;
   return true;

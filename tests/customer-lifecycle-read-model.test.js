@@ -279,6 +279,35 @@ const staleMaterializedFreeLeadRowsWithRawLead = buildLeadPoolRows({
 assert.strictEqual(staleMaterializedFreeLeadRowsWithRawLead[0].leadStage, '跟进中', 'raw lead stage must not override lifecycle facts when the student has no paid purchase');
 assert.strictEqual(staleMaterializedFreeLeadRowsWithRawLead[0].dealType, '', 'raw lead deal type must not override lifecycle facts when the student has no paid purchase');
 
+const hiddenDirtyLeadRows = buildLeadPoolRows({
+  leads: [
+    { id: 'lead-keep', displayName: 'M.Z', status: 'active', leadDate: '2026-08-01' },
+    { id: 'lead-merged-mz', displayName: '、MZ、', status: 'merged', mergedIntoLeadId: 'lead-keep', leadDate: '2026-08-01' },
+    { id: 'lead-activity', displayName: '、随到随学', status: 'active', leadDate: '2026-08-01' }
+  ],
+  customerLifecycleRows: [
+    { customerKey: 'lead:lead-keep', sourceLeadId: 'lead-keep', displayName: 'M.Z', leadDate: '2026-08-01' },
+    { customerKey: 'lead:lead-merged-mz', sourceLeadId: 'lead-merged-mz', displayName: '、MZ、', status: 'merged', leadDate: '2026-08-01' },
+    { customerKey: 'student:dirty-dropin', studentId: 'dirty-dropin', displayName: '随到随学小班课', studentStage: 'trial', leadDate: '2026-08-01' }
+  ],
+  lifecycleScope: 'course'
+});
+assert.deepStrictEqual(
+  hiddenDirtyLeadRows.map(row => row.displayName).sort(),
+  ['M.Z'],
+  '统一线索池读模型不能把已合并线索或非真人学员名重新复活'
+);
+const hiddenDirtyStudentViews = buildTeachingStudentViews([
+  { studentId: 'student-real-mz', displayName: 'M.Z', studentStage: 'formal', isHistoricalStudentRoster: true, isActiveStudentRoster: true },
+  { studentId: 'student-merged-mz', displayName: '、MZ、', status: 'merged', studentStage: 'formal', isHistoricalStudentRoster: true, isActiveStudentRoster: true },
+  { studentId: 'student-dropin', displayName: '随到随学小班课', studentStage: 'trial', isHistoricalStudentRoster: true, isActiveStudentRoster: true }
+]);
+assert.deepStrictEqual(
+  hiddenDirtyStudentViews.searchableStudents.map(row => row.displayName).sort(),
+  ['M.Z'],
+  '学员统一读模型不能把已合并学员或非真人学员名重新复活到搜索/列表'
+);
+
 const linkedStudentDisplayRows = buildCustomerLifecycleRows({
   leads: [
     {

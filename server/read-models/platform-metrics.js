@@ -8,6 +8,21 @@ function text(value) {
   return String(value || '').trim();
 }
 
+function cleanDisplayName(value) {
+  return text(value).replace(/^[\s、，,;；/|｜]+|[\s、，,;；/|｜]+$/g, '').trim();
+}
+
+function nonPersonIdentityName(value) {
+  const name = cleanDisplayName(value).replace(/\s+/g, '');
+  if (!name) return false;
+  if (['随到随学', '随到随学小班课', '多球课', '零基础'].includes(name)) return true;
+  return /畅打/.test(name);
+}
+
+function nonPersonProfile(row = {}) {
+  return !text(row.phone) && nonPersonIdentityName(row.displayName || row.name || row.studentName || row.wechatName);
+}
+
 function hasOwn(row = {}, field = '') {
   return !!row && Object.prototype.hasOwnProperty.call(row, field);
 }
@@ -21,7 +36,8 @@ function hiddenStudentProfile(row = {}) {
   return ['merged', 'archived', 'deleted', 'inactive'].includes(status)
     || !!text(row.mergedIntoStudentId)
     || !!text(row.deletedAt)
-    || !!text(row.archivedAt);
+    || !!text(row.archivedAt)
+    || nonPersonProfile(row);
 }
 
 function campusKey(value) {
@@ -138,7 +154,7 @@ function isConvertedStage(stage = '') {
 
 function activeStatus(row = {}) {
   const status = text(row.status || row.systemStatus || 'active');
-  return !['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status);
+  return !['merged', 'voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已合并', '已作废', '已删除', '已取消'].includes(status);
 }
 
 function rowHasStudent(row = {}, studentId = '') {
@@ -1445,9 +1461,11 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
   const rows = new Map();
 
   (customerLifecycleRows || []).forEach(lifecycle => {
+    if (!activeStatus(lifecycle) || nonPersonProfile(lifecycle)) return;
     if (!lifecycleInScope(lifecycle, lifecycleScope)) return;
     const sourceLeadId = text(lifecycle.sourceLeadId || lifecycle.leadId);
     const existing = sourceLeadId ? leadRows.get(sourceLeadId) : null;
+    if (existing && (!activeStatus(existing) || nonPersonProfile(existing))) return;
     const id = sourceLeadId || text(lifecycle.customerKey || lifecycle.studentId || lifecycle.courtId || lifecycle.membershipAccountId);
     if (!id) return;
     const lead = existing || {};
@@ -1520,6 +1538,7 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
   (leads || []).forEach(lead => {
     const id = rowId(lead);
     if (!id || rows.has(id)) return;
+    if (!activeStatus(lead) || nonPersonProfile(lead)) return;
     const source = businessTaxonomy.normalizeLeadSource(lead.source);
     const orphanMaterialized = isOrphanMaterializedStudentLead(lead);
     rows.set(id, {

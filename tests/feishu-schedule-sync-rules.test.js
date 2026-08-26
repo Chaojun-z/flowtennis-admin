@@ -3028,6 +3028,35 @@ assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'
   assert.match(appliedDirtyTrial[0].error, /人数\/占位文本/, 'dirty trial error should explain why it was not auto-created');
   assert.strictEqual(dirtyTrialCreateCalled, false, '2人 must be blocked before createLead is called');
 
+  let dirtyProductTrialCreateCalled = false;
+  const appliedDirtyProductTrial = await sync.applySyncPlan({
+    actions: [{
+      type: 'create_trial_schedule',
+      sourceKey: 'dirty-trial-product-name-key',
+      candidate: {
+        ...newTrialCandidate,
+        sourceKey: 'dirty-trial-product-name-key',
+        studentNames: ['随到随学'],
+        studentText: '随到随学',
+        resolvedStudents: [],
+        scheduleStudents: []
+      }
+    }]
+  }, {
+    createLead: async () => { dirtyProductTrialCreateCalled = true; return { lead: { id: 'dirty-product-lead' } }; },
+    convertLeadToStudent: async () => ({}),
+    purchasePackage: async () => ({}),
+    createSchedule: async () => ({}),
+    packages: [{ id: 'pkg-trial-adult', courseType: '体验课', price: 239, status: 'active' }],
+    entitlements: [],
+    leads: [],
+    T_FEISHU_SCHEDULE_SYNC: 'ft_feishu_schedule_sync',
+    T_FEISHU_SCHEDULE_TASKS: 'ft_feishu_schedule_tasks'
+  });
+  assert.strictEqual(appliedDirtyProductTrial[0].type, 'error', '随到随学 must remain manual confirmation instead of creating a fake lead');
+  assert.match(appliedDirtyProductTrial[0].error, /人数\/占位文本/, 'dirty product-name trial error should explain why it was not auto-created');
+  assert.strictEqual(dirtyProductTrialCreateCalled, false, '随到随学 must be blocked before createLead is called');
+
   const specialPurchaseBodies = [];
   let specialCreatedBody = null;
   await sync.applySyncPlan({
