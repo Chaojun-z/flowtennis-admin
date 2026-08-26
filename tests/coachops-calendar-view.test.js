@@ -115,6 +115,11 @@ assert.match(
 );
 assert.match(
   pagesCss,
+  /coach-ops-day-coach-col\{[^}]*background-image:repeating-linear-gradient\(0deg,var\(--coach-ops-calendar-line\),var\(--coach-ops-calendar-line\) var\(--coach-ops-calendar-hairline\),transparent var\(--coach-ops-calendar-hairline\),transparent 28px\)[^}]*background-position-y:28px/,
+  'day view coach columns should keep the row grid visible on top of their own backgrounds'
+);
+assert.match(
+  pagesCss,
   /coach-ops-week-coach-grid\{[^}]*background-image:repeating-linear-gradient\(0deg,var\(--coach-ops-calendar-line\),var\(--coach-ops-calendar-line\) var\(--coach-ops-calendar-hairline\),transparent var\(--coach-ops-calendar-hairline\),transparent 40px\)/,
   'week view hour rows should use the same shared 0.5px light line'
 );
@@ -122,6 +127,11 @@ assert.match(
   pagesCss,
   /coach-ops-week-coach-grid\{[^}]*background-position-y:40px/,
   'week view hour rows should start after the full top blank row so labels align with grid lines'
+);
+assert.match(
+  pagesCss,
+  /coach-ops-week-coach-col\{[^}]*background-image:repeating-linear-gradient\(0deg,var\(--coach-ops-calendar-line\),var\(--coach-ops-calendar-line\) var\(--coach-ops-calendar-hairline\),transparent var\(--coach-ops-calendar-hairline\),transparent 40px\)[^}]*background-position-y:40px/,
+  'week view coach columns should keep the row grid visible on top of their own backgrounds'
 );
 assert.match(
   pagesCss,
