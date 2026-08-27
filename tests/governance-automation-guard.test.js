@@ -178,20 +178,18 @@ const coveredRecordResult = guard.evaluateChangeRecordCoverage({
 assert.strictEqual(coveredRecordResult.ok, true, coveredRecordResult.errors.join('\n'));
 
 const decisionDoc = fs.readFileSync(path.join(repoRoot, 'docs', 'prd', 'source', '14-变更记录与决策记录.md'), 'utf8');
-const governanceRecord = fs.readFileSync(path.join(repoRoot, 'docs', 'governance', 'change-records', '2026-08-24-governance-automation.md'), 'utf8');
+const governanceRecord = fs.readFileSync(path.join(repoRoot, 'docs', 'governance', 'change-records', '2026-08-27-数据问题快检与修复机制.md'), 'utf8');
 const decisionSyncResult = guard.evaluateDecisionSyncCoverage({
   changedFiles: [
-    'config/governance-automation.json',
-    'scripts/governance-automation-guard.js',
-    'tests/governance-automation-guard.test.js',
-    'docs/governance/change-records/2026-08-24-governance-automation.md',
-    'docs/governance/自动化治理门禁说明.md',
-    'docs/governance/测试与发布流程.md',
+    'AGENTS.md',
+    'docs/governance/治理总览.md',
+    'docs/governance/生产数据变更与回滚流程.md',
+    'docs/governance/数据问题快检与修复流程.md',
     'docs/governance/文档状态清单.md',
-    'docs/governance/最终治理收口说明.md',
+    'docs/governance/change-records/2026-08-27-数据问题快检与修复机制.md',
     'docs/prd/source/14-变更记录与决策记录.md'
   ],
-  records: [{ file: 'docs/governance/change-records/2026-08-24-governance-automation.md', content: governanceRecord }],
+  records: [{ file: 'docs/governance/change-records/2026-08-27-数据问题快检与修复机制.md', content: governanceRecord }],
   config,
   decisionDoc
 });

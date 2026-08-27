@@ -2,6 +2,7 @@ const { readLeadSourceRows } = require('./lead-source-read-model.js');
 const { buildCustomerLifecycleRows } = require('./read-models/customer-lifecycle.js');
 const { buildLeadPoolRows, buildTeachingStudentViews } = require('./read-models/platform-metrics.js');
 const { buildCourtAccountListViewFromIndexRows } = require('./page-data/court-account-list-index.js');
+const { readReadyStudentTeachingSummaryRows } = require('./read-models/student-teaching-summary-cache.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
 function createLeadsRoutes(deps={}){
@@ -1033,7 +1034,7 @@ function createLeadsRoutes(deps={}){
     const useLightLifecycleSource=!isLocalPreviewFastMode()&&!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
     if(useLightLifecycleSource){
       const [loadedStudentSummaryRows,courtIndexRows]=await Promise.all([
-        getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}).catch(()=>[]),
+        readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan}),
         getCachedScan(T_COURT_ACCOUNT_LIST_INDEX).catch(()=>[])
       ]);
       studentSummaryRows=loadedStudentSummaryRows;
@@ -1129,7 +1130,7 @@ function createLeadsRoutes(deps={}){
         const resultCacheKey=paging?leadFilteredResultCacheKey(query,user):'';
         let cachedResult=resultCacheKey?readLeadFilteredResultCache(resultCacheKey):null;
         if(!cachedResult){
-          const {rows,studentSummaryRows}=await readVisibleLeadContext({expandLifecycleSearch:!!filterState.q});
+          const {rows,studentSummaryRows}=await readVisibleLeadContext({expandLifecycleSearch:false});
           const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
           const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
           const scopedSummaryRows=filterLoadAllForUser({studentTeachingSummaries:studentSummaryRows},user).studentTeachingSummaries||[];

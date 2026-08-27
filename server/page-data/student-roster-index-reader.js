@@ -1,4 +1,5 @@
 const { buildTeachingStudentViews, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
+const { readReadyStudentTeachingSummaryRows } = require('../read-models/student-teaching-summary-cache.js');
 
 function pageDataScopeFromQuery(query) {
   return {
@@ -293,9 +294,7 @@ function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeach
 function createStudentRosterIndexReader({ tableName, getCachedScan, filterLoadAllForUser = data => data } = {}) {
   return {
     async readCustomerCenterList({ user = {}, query } = {}) {
-      const studentTeachingSummaries = tableName && typeof getCachedScan === 'function'
-        ? await getCachedScan(tableName, { fresh: true }).catch(() => [])
-        : [];
+      const studentTeachingSummaries = await readReadyStudentTeachingSummaryRows({ tableName, getCachedScan });
       const scoped = filterLoadAllForUser({ studentTeachingSummaries }, user);
       const summaryRows = filterSummaryRowsForQuery(scoped.studentTeachingSummaries || [], query);
       return buildCustomerCenterPagePayload({

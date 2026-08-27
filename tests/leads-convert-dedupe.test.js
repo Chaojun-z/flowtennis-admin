@@ -172,7 +172,7 @@ async function main() {
 
   const searchRes = makeRes();
   await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: searchRes, query: new URLSearchParams('q=小成') });
-  assert.ok(searchRes.body.find((row) => row.courtId === 'court-1'), '线索池搜索应能扩展到订场用户生命周期');
+  assert.ok(!searchRes.body.find((row) => row.courtId === 'court-1'), '线索池搜索不能扩展到纯订场用户生命周期');
 
   const studentRes = makeRes();
   await handle({ path: '/leads/lead-1/convert-student', method: 'POST', body: {}, user: { role: 'admin' }, res: studentRes, query: new URLSearchParams() });

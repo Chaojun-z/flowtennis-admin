@@ -27,12 +27,26 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value || []));
 }
 
+function readyStudentSummaryRows(rows = []) {
+  return [
+    {
+      id: '__student_teaching_summary_meta__',
+      kind: 'student-teaching-summary-meta',
+      status: 'ready',
+      rowCount: rows.length,
+      generation: 1
+    },
+    ...rows
+  ];
+}
+
 function makeRes() {
   return { statusCode: 200, body: null };
 }
 
 function createHarness(seedRows, extraDeps = {}) {
   const rows = { ...seedRows };
+  rows.ft_student_teaching_summary = readyStudentSummaryRows(rows.ft_student_teaching_summary || []);
   const calls = { leadScans: 0, puts: 0, dels: 0, tableScans: {} };
   const scanRows = async table => {
     calls.tableScans[table] = (calls.tableScans[table] || 0) + 1;
@@ -151,6 +165,7 @@ async function main() {
   assert.match(routesSource, /function clearLeadListCaches\(\)[\s\S]*leadSourceRowsCache\.rows=null[\s\S]*leadPagedResponseCache\.clear\(\)[\s\S]*leadFilteredResultCache\.clear\(\)/, '线索写操作后应能清理原始行缓存、分页响应缓存和筛选结果缓存');
   assert.match(routesSource, /if\(path==='\/leads'\)\{[\s\S]*if\(!\(method==='GET'&&isLocalPreviewFastMode\(\)\)\)await init\(\);[\s\S]*if\(method!=='GET'\)await ensureLeadTablesForRequest\(\);[\s\S]*if\(method==='GET'\)/, '本地预览线索池只读首屏不应等待初始化和建表检查，写操作仍保留安全检查');
   assert.match(routesSource, /const filtered=visibleRows\.filter\(row=>leadMatchesListFilter\(row,filterState\)\);[\s\S]*summary:buildLeadListSummary\(filtered,\{studentTeachingSummaryRows:scopedSummaryRows,filterState\}\)[\s\S]*buildLeadListPage\(cachedResult\.sorted,paging\)/, '后端必须先完整筛选，再用筛选范围读取统一摘要统计，最后分页截取当前页');
+  assert.doesNotMatch(routesSource, /expandLifecycleSearch:!!filterState\.q/, '线索池搜索不能因为有关键词就扩大到订场用户生命周期');
   assert.match(routesSource, /buildLeadListFilterState\(query\)[\s\S]*buildLeadListFilterMeta\(visibleRows,filterState\)/, '后端必须用筛选后的完整结果生成下拉计数，不能用当前页 15 条生成');
   assert.match(setDatasetBody, /if\(name==='leads'\)\{[\s\S]*leadListPageData=[\s\S]*summary:data\?\.summary\|\|null/, '线索池应保存后端分页元信息和统计');
   assert.match(setDatasetBody, /filters:data\?\.filters\|\|null/, '线索池应保存后端返回的筛选项计数');
@@ -284,6 +299,44 @@ async function main() {
 
   const ownerSearch = await request(handle, 'paged=1&page=1&pageSize=10&q=mira');
   assert.strictEqual(ownerSearch.body.total, 0, '搜索 mira 不应命中跟进人 Mira，跟进人必须走单独筛选项');
+
+  const bookingSearchHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-real-booking',
+      displayName: '真实订场咨询',
+      wechatName: '真实订场咨询',
+      demandProduct: '订场',
+      leadStage: '跟进中',
+      leadDate: '2026-08-22',
+      createdAt: '2026-08-22 10:00:00'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [],
+    ft_court_account_list_index: [{
+      id: 'court-index-no-lead',
+      courtId: 'court-no-lead',
+      displayName: '订场用户1888',
+      accountType: '散客',
+      bookingCount: 3,
+      indexStatus: 'published'
+    }]
+  });
+  const bookingSearch = await request(bookingSearchHarness.handle, 'paged=1&page=1&pageSize=10&q=订场');
+  assert.deepStrictEqual(bookingSearch.body.rows.map(row => row.id), ['lead-real-booking'], '线索池搜索订场只能返回真实线索，不能带出纯订场用户');
 
   const filteredAgain = await request(handle, 'paged=1&page=1&pageSize=10&owner=吴敌&campus=shunyi_mapo&dateFrom=2026-08-01&dateTo=2026-08-31');
   assert.deepStrictEqual(filteredAgain.body.rows.map(row => row.id), filtered.body.rows.map(row => row.id), '相同查询条件应命中分页响应缓存');

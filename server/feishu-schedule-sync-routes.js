@@ -138,7 +138,7 @@ function splitFeishuStudentNames(value){
   if(!text)return [];
   const key=normalizeStudentNameKey(text);
   if(key===normalizeStudentNameKey('misha黄总')||key===normalizeStudentNameKey('黄总misha'))return ['misha','黄总'];
-  return text.split(/[、,，/]+/).map(cleanText).filter(Boolean);
+  return text.split(/[、,，/+＋]+/).map(cleanText).filter(Boolean);
 }
 
 function parseSharedPackageStudentCell(raw){

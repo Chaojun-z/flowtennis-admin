@@ -64,6 +64,12 @@ assert.deepStrictEqual(sync.parseStudentCell('misha 黄总（2）').names, ['mis
 assert.deepStrictEqual(sync.parseStudentCell('黄总 misha（4）').names, ['misha', '黄总'], 'confirmed Misha and Huang pair should also support reversed order');
 assert.deepStrictEqual(sync.parseStudentCell('王老板、王老板孩子').names, ['王老板'], 'Wang boss family course should use one canonical student record');
 assert.deepStrictEqual(sync.parseStudentCell('chris').names, ['chris'], 'Chris raw name should remain parseable before alias resolution');
+assert.deepStrictEqual(sync.parseStudentCell('Ethan（3人）、rzwyyy').names, ['Ethan（3人）', 'rzwyyy'], 'confirmed Ethan and rzwyyy course should keep rzwyyy as an independent student');
+assert.deepStrictEqual(sync.parseStudentCell('陈鹭+rzwyyy、goldenz™、艾斯').names, ['陈鹭', 'rzwyyy', 'goldenz™', '艾斯'], 'confirmed Chen Lu plus rzwyyy cell should split into four independent students');
+assert.deepStrictEqual(sync.parseStudentCell('one1、陈鹭、ccz、goldenz™').names, ['one1', '陈鹭', 'ccz', 'goldenz™'], 'confirmed one1 small class should keep four independent students');
+assert.deepStrictEqual(sync.parseStudentCell('朱一龙、chris、rzwyyy、goldenz™').names, ['朱一龙', 'chris', 'rzwyyy', 'goldenz™'], 'confirmed Zhu Yilong class should keep four independent students');
+assert.deepStrictEqual(sync.parseStudentCell('goldenz™、yutong、rzwyyy、陈鹭').names, ['goldenz™', 'yutong', 'rzwyyy', '陈鹭'], 'confirmed Yue June 11 class should keep four independent students');
+assert.deepStrictEqual(sync.parseStudentCell('rzwyyy、christine、陈鹭、李鹏昊').names, ['rzwyyy', 'christine', '陈鹭', '李鹏昊'], 'confirmed June 18 class should keep four independent students');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:00' }, '2026-07-20 12:01'), false, 'courses already started before baseline should be ignored');
 assert.strictEqual(sync.isFutureCourse({ startTime: '2026-07-20 12:30' }, '2026-07-20 12:01'), true, 'future courses after baseline should be sync candidates');
 assert.strictEqual(sync.validDateKey('2026-07-01'), '2026-07-01', 'valid history date query should be accepted');

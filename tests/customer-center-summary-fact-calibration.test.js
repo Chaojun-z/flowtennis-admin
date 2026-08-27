@@ -1,6 +1,19 @@
 const assert = require('assert');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 
+function readyStudentSummaryRows(rows = []) {
+  return [
+    {
+      id: '__student_teaching_summary_meta__',
+      kind: 'student-teaching-summary-meta',
+      status: 'ready',
+      rowCount: rows.length,
+      generation: 1
+    },
+    ...rows
+  ];
+}
+
 function makeHandler() {
   const calls = { tableScans: {} };
   const rows = {
@@ -107,7 +120,7 @@ function makeHandler() {
     ft_schedule: rows.schedule,
     ft_feedbacks: rows.feedbacks,
     ft_membership_benefit_ledger: rows.membershipBenefitLedger,
-    ft_student_teaching_summary: rows.studentSummaries
+    ft_student_teaching_summary: readyStudentSummaryRows(rows.studentSummaries)
   };
   const clone = value => JSON.parse(JSON.stringify(value || []));
   const readTable = async table => {
@@ -216,7 +229,7 @@ function makeBulkSummaryHandler(count = 1200) {
     },
     getCachedScan: async table => {
       calls.tableScans[table] = (calls.tableScans[table] || 0) + 1;
-      if (table === 'ft_student_teaching_summary') return JSON.parse(JSON.stringify(summaryRows));
+      if (table === 'ft_student_teaching_summary') return JSON.parse(JSON.stringify(readyStudentSummaryRows(summaryRows)));
       throw new Error(`首屏性能测试不允许读取其他表: ${table}`);
     },
     getCachedRow: async () => null,

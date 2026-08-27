@@ -224,7 +224,13 @@ function createStorageServices({
     hotGetCache.set(key,{row:cloneCacheValue(row),expiresAt:now+cfg.ttlMs});
     return row;
   }
-  function put(t,id,attrs){if(hotScanTables.has(t))invalidateHotScanCache(t);if(hotGetTables.has(t))invalidateHotGetCache(t,id);onTableWrite(t,{op:'put',id,attrs});return withStorageRetry(()=>runStorageOperation('putRow',{table:t,id},(res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
+  async function put(t,id,attrs){
+    const result=await withStorageRetry(()=>runStorageOperation('putRow',{table:t,id},(res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));
+    if(hotScanTables.has(t))invalidateHotScanCache(t);
+    if(hotGetTables.has(t))invalidateHotGetCache(t,id);
+    onTableWrite(t,{op:'put',id,attrs});
+    return result;
+  }
   function putIfAbsent(t,id,attrs){return withStorageRetry(()=>runStorageOperation('putRowIfAbsent',{table:t,id},(res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.EXPECT_NOT_EXIST,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
   function get(t,id){return withStorageRetry(()=>runStorageOperation('getRow',{table:t,id},(res,rej)=>{gc().getRow({tableName:t,primaryKey:[{id:String(id)}],maxVersions:1},(e,d)=>{if(e)return rej(e);if(!d.row||!d.row.primaryKey)return res(null);const obj={id:d.row.primaryKey[0].value};(d.row.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});res(obj);});}));}
   function scan(t,options={}){
@@ -297,7 +303,13 @@ function createStorageServices({
       f();
     }));
   }
-  function del(t,id){if(hotScanTables.has(t))invalidateHotScanCache(t);if(hotGetTables.has(t))invalidateHotGetCache(t,id);onTableWrite(t,{op:'delete',id});return withStorageRetry(()=>runStorageOperation('deleteRow',{table:t,id},(res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
+  async function del(t,id){
+    const result=await withStorageRetry(()=>runStorageOperation('deleteRow',{table:t,id},(res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));
+    if(hotScanTables.has(t))invalidateHotScanCache(t);
+    if(hotGetTables.has(t))invalidateHotGetCache(t,id);
+    onTableWrite(t,{op:'delete',id});
+    return result;
+  }
   async function clearTables(storage,tables){
     const result={success:true,total:0,tables:[]};
     for(const table of tables){
