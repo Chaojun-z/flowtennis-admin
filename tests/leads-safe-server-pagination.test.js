@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const api = require('../api/index.js');
 const { createLeadsRoutes } = require('../server/leads-routes.js');
+const { buildStudentTeachingSummaryChecksum } = require('../server/read-models/student-teaching-summary-cache.js');
 
 const repoRoot = path.join(__dirname, '..');
 const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/state.js'), 'utf8');
@@ -34,7 +35,11 @@ function readyStudentSummaryRows(rows = []) {
       kind: 'student-teaching-summary-meta',
       status: 'ready',
       rowCount: rows.length,
-      generation: 1
+      generation: 1,
+      batchId: 'test-batch',
+      sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
+      completedAt: '2026-08-27T00:00:01.000Z',
+      checksum: buildStudentTeachingSummaryChecksum(rows)
     },
     ...rows
   ];
@@ -487,6 +492,45 @@ async function main() {
     assert.strictEqual(lightHarness.calls.tableScans[table] || 0, 0, `轻链路首屏不能扫描事实大表 ${table}`);
   });
   assert.strictEqual(lightHarness.calls.puts, 0, '线索池 GET 首屏不能顺手写入补线索，避免读页面改变线上数据');
+
+  const notReadyHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-not-ready',
+      displayName: '未就绪线索',
+      wechatName: '未就绪线索',
+      leadDate: '2026-08-22',
+      createdAt: '2026-08-22 10:00:00',
+      campus: 'shunyi_mapo'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [{
+      id: '__student_teaching_summary_meta__',
+      kind: 'student-teaching-summary-meta',
+      status: 'pending',
+      rowCount: '',
+      batchId: 'pending-batch',
+      sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
+      completedAt: '',
+      checksum: ''
+    }],
+    ft_court_account_list_index: []
+  });
+  const notReadyPage = await request(notReadyHarness.handle, 'paged=1&page=1&pageSize=15');
+  assert.strictEqual(notReadyPage.statusCode, 503, '统一摘要未就绪时线索池必须返回 503，不能继续展示旧数据');
 
   console.log('leads safe server pagination tests passed');
 }

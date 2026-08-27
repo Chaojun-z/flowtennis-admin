@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
-const { requireReadyStudentTeachingSummaryRows } = require('../server/read-models/student-teaching-summary-cache.js');
+const { requireReadyStudentTeachingSummaryRows, buildStudentTeachingSummaryChecksum } = require('../server/read-models/student-teaching-summary-cache.js');
 
 function readyStudentSummaryRows(rows = []) {
   return [
@@ -9,29 +9,28 @@ function readyStudentSummaryRows(rows = []) {
       kind: 'student-teaching-summary-meta',
       status: 'ready',
       rowCount: rows.length,
-      generation: 1
+      generation: 1,
+      batchId: 'test-batch',
+      sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
+      completedAt: '2026-08-27T00:00:01.000Z',
+      checksum: buildStudentTeachingSummaryChecksum(rows)
     },
     ...rows
   ];
 }
 
-assert.deepStrictEqual(
-  requireReadyStudentTeachingSummaryRows([{ id: 'legacy-summary-1', studentId: 'legacy-summary-1', name: '线上旧摘要' }]).map(row => row.id),
-  ['legacy-summary-1'],
-  '线上已有摘要表如果缺少 meta 但有真实摘要行，线索池和学员页不能直接报 missing-meta'
+assert.throws(
+  () => requireReadyStudentTeachingSummaryRows([{ id: 'legacy-summary-1', studentId: 'legacy-summary-1', name: '线上旧摘要' }]),
+  /missing-meta/,
+  '旧摘要缺少发布元数据时必须拒绝展示，不能把旧数字当成正确数字'
 );
 assert.throws(
-  () => requireReadyStudentTeachingSummaryRows([]),
-  /missing-meta/,
-  '摘要表空表仍应拒绝展示，避免页面用空旧数据冒充成功'
-);
-assert.deepStrictEqual(
-  requireReadyStudentTeachingSummaryRows([
+  () => requireReadyStudentTeachingSummaryRows([
     { id: '__student_teaching_summary_meta__', kind: 'student-teaching-summary-meta', status: 'pending', rowCount: '' },
     { id: 'stale-summary-1', studentId: 'stale-summary-1', name: '待刷新期间旧摘要' }
-  ]).map(row => row.id),
-  ['stale-summary-1'],
-  '线上摘要刷新卡在 pending 但仍有旧摘要行时，线索池不能直接加载失败'
+  ]),
+  /pending/,
+  '刷新中的旧摘要必须拒绝展示，不能让三页继续显示旧数字'
 );
 assert.throws(
   () => requireReadyStudentTeachingSummaryRows([
@@ -336,6 +335,54 @@ async function request(queryText = '') {
     query: new URLSearchParams()
   });
   assert.strictEqual(isolatedRes.statusCode, 200, '首屏路由必须只依赖注入的学员 roster reader');
+
+  const notReadyHandler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      throw new Error(`首屏路由不允许扫描事实表: ${table}`);
+    },
+    getCachedScan: async table => {
+      throw new Error(`首屏路由不允许直接读取表: ${table}`);
+    },
+    getCachedRow: async table => {
+      throw new Error(`首屏路由不允许直接读取单行: ${table}`);
+    },
+    filterLoadAllForUser: data => data,
+    PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
+    studentRosterIndexReader: {
+      readCustomerCenterList: async () => {
+        const err = new Error('教学学员统一摘要未就绪，页面拒绝展示旧数据：pending');
+        err.code = 'STUDENT_TEACHING_SUMMARY_NOT_READY';
+        err.statusCode = 503;
+        throw err;
+      }
+    },
+    tables: {
+      T_LEADS: 'ft_leads',
+      T_STUDENTS: 'ft_students',
+      T_PURCHASES: 'ft_purchases',
+      T_ENTITLEMENTS: 'ft_entitlements',
+      T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger',
+      T_SCHEDULE: 'ft_schedule',
+      T_FEEDBACKS: 'ft_feedbacks',
+      T_MEMBERSHIP_BENEFIT_LEDGER: 'ft_membership_benefit_ledger',
+      T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary'
+    }
+  });
+  const notReadyRes = {};
+  await notReadyHandler({
+    path: '/page-data/customer-center-list',
+    method: 'GET',
+    user: { role: 'admin', name: '管理员' },
+    res: notReadyRes,
+    query: new URLSearchParams()
+  });
+  assert.strictEqual(notReadyRes.statusCode, 503, '统一摘要未就绪时客户中心必须返回 503，不能回旧数据');
 
   const bulk = makeBulkSummaryHandler(1200);
   const bulkRes = {};

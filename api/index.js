@@ -358,12 +358,21 @@ const {
   hotGetTables:HOT_GET_TABLES,
   productionPageReadLimits:PRODUCTION_PAGE_READ_LIMITS,
   isProductionRuntime,
-  onTableWrite(t,meta){if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;if(OPERATIONS_SOURCE_TABLES.has(t)){invalidateOperationsSourceCache();invalidateOperationsPageDataCache();}if([T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY].includes(t))customerCenterFactCacheVersion++;queueStudentTeachingSummaryRefresh(t,meta);}
+  async onTableWrite(t,meta){
+    if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;
+    if(OPERATIONS_SOURCE_TABLES.has(t)){
+      invalidateOperationsSourceCache();
+      invalidateOperationsPageDataCache();
+    }
+    if([T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY].includes(t))customerCenterFactCacheVersion++;
+    if(t!==T_STUDENT_TEACHING_SUMMARY)await queueStudentTeachingSummaryRefresh(t,meta);
+  }
 });
-queueStudentTeachingSummaryRefresh=createStudentTeachingSummaryCache({
+const studentTeachingSummaryCache=createStudentTeachingSummaryCache({
   tables:{T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY},
   getCachedScan,mkTable,put,del
-}).queueStudentTeachingSummaryRefresh;
+});
+queueStudentTeachingSummaryRefresh=studentTeachingSummaryCache.queueStudentTeachingSummaryRefresh;
 function getMatchSqlPool(){
   if(!MATCH_DATABASE_URL)throw new Error('缺少 MATCH_DATABASE_URL 或 DATABASE_URL，约球真实数据不能使用 mock 或 TableStore');
   if(!matchSqlPool)matchSqlPool=new Pool({connectionString:MATCH_DATABASE_URL,ssl:process.env.MATCH_DATABASE_SSL==='true'?{rejectUnauthorized:false}:undefined});

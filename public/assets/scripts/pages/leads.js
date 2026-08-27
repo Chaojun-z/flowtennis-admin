@@ -2014,6 +2014,10 @@ async function reloadLeadsForCurrentPage({showLoading=true,refreshStats=true}={}
     return true;
   }catch(e){
     if(seq===leadListReloadSeq){
+      if(typeof isTeachingSummaryNotReadyError==='function'&&isTeachingSummaryNotReadyError(e)&&typeof renderTeachingSummaryNotReadyState==='function'){
+        renderTeachingSummaryNotReadyState('leads');
+        return false;
+      }
       const message=e?.message||'线索加载失败，请稍后重试';
       if(typeof renderLeadTableError==='function')renderLeadTableError(message);
       else if(typeof toast==='function')toast(message,'error');

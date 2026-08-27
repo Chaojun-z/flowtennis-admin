@@ -1122,24 +1122,31 @@ function createLeadsRoutes(deps={}){
       if(!(method==='GET'&&isLocalPreviewFastMode()))await init();
       if(method!=='GET')await ensureLeadTablesForRequest();
       if(method==='GET'){
-        const filterState=buildLeadListFilterState(query);
-        const paging=parseLeadPaging(query);
-        const responseCacheKey=paging?leadPagedResponseCacheKey(query,user):'';
-        const cachedResponse=responseCacheKey?readLeadPagedResponseCache(responseCacheKey):null;
-        if(cachedResponse)return sendJson(res,cachedResponse);
-        const resultCacheKey=paging?leadFilteredResultCacheKey(query,user):'';
-        let cachedResult=resultCacheKey?readLeadFilteredResultCache(resultCacheKey):null;
-        if(!cachedResult){
-          const {rows,studentSummaryRows}=await readVisibleLeadContext({expandLifecycleSearch:false});
-          const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
-          const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
-          const scopedSummaryRows=filterLoadAllForUser({studentTeachingSummaries:studentSummaryRows},user).studentTeachingSummaries||[];
-          cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered,{studentTeachingSummaryRows:scopedSummaryRows,filterState}),filters:buildLeadListFilterMeta(visibleRows,filterState)};
-          if(resultCacheKey)writeLeadFilteredResultCache(resultCacheKey,cachedResult);
+        try{
+          const filterState=buildLeadListFilterState(query);
+          const paging=parseLeadPaging(query);
+          const responseCacheKey=paging?leadPagedResponseCacheKey(query,user):'';
+          const cachedResponse=responseCacheKey?readLeadPagedResponseCache(responseCacheKey):null;
+          if(cachedResponse)return sendJson(res,cachedResponse);
+          const resultCacheKey=paging?leadFilteredResultCacheKey(query,user):'';
+          let cachedResult=resultCacheKey?readLeadFilteredResultCache(resultCacheKey):null;
+          if(!cachedResult){
+            const {rows,studentSummaryRows}=await readVisibleLeadContext({expandLifecycleSearch:false});
+            const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
+            const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
+            const scopedSummaryRows=filterLoadAllForUser({studentTeachingSummaries:studentSummaryRows},user).studentTeachingSummaries||[];
+            cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered,{studentTeachingSummaryRows:scopedSummaryRows,filterState}),filters:buildLeadListFilterMeta(visibleRows,filterState)};
+            if(resultCacheKey)writeLeadFilteredResultCache(resultCacheKey,cachedResult);
+          }
+          const payload=paging?{...buildLeadListPage(cachedResult.sorted,paging),summary:cachedResult.summary,filters:cachedResult.filters}:cachedResult.sorted;
+          if(responseCacheKey)writeLeadPagedResponseCache(responseCacheKey,payload);
+          return sendJson(res,payload);
+        }catch(err){
+          if(err?.code==='STUDENT_TEACHING_SUMMARY_NOT_READY'){
+            return sendJson(res,{error:err.message,code:err.code},err.statusCode||503);
+          }
+          throw err;
         }
-        const payload=paging?{...buildLeadListPage(cachedResult.sorted,paging),summary:cachedResult.summary,filters:cachedResult.filters}:cachedResult.sorted;
-        if(responseCacheKey)writeLeadPagedResponseCache(responseCacheKey,payload);
-        return sendJson(res,payload);
       }
       if(method==='POST'){
         const now=new Date().toISOString();

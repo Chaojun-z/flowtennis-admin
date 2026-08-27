@@ -4,6 +4,14 @@ const { buildMembershipFinanceSummary } = require('../read-models/membership-fin
 const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
 const { createStudentRosterIndexReader } = require('./student-roster-index-reader.js');
 const {
+  STUDENT_TEACHING_SUMMARY_PENDING,
+  STUDENT_TEACHING_SUMMARY_READY,
+  STUDENT_TEACHING_SUMMARY_FAILED,
+  buildStudentTeachingSummaryMetaRow,
+  buildStudentTeachingSummaryChecksum,
+  filterStudentTeachingSummaryDataRows
+} = require('../read-models/student-teaching-summary-cache.js');
+const {
   buildCoachOpsUnifiedView,
   buildPurchaseUnifiedView,
   buildPackageUnifiedView,
@@ -108,6 +116,16 @@ function createCorePageDataRoutes(deps={}){
     getCachedScan,
     filterLoadAllForUser
   });
+  async function sendCustomerCenterTeachingSummary(res,user,query){
+    try{
+      return sendJson(res,await studentRosterIndexReader.readCustomerCenterList({user,query}));
+    }catch(err){
+      if(err?.code==='STUDENT_TEACHING_SUMMARY_NOT_READY'){
+        return sendJson(res,{error:err.message,code:err.code},err.statusCode||503);
+      }
+      throw err;
+    }
+  }
   async function hydrateScheduleRowsByLedgerIds(scheduleRows=[],ledgerRows=[]){
     if(!T_SCHEDULE)return scheduleRows||[];
     const existingIds=new Set((scheduleRows||[]).map(row=>String(row.id||'')).filter(Boolean));
@@ -239,7 +257,7 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/customer-center-list'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      return sendJson(res,await studentRosterIndexReader.readCustomerCenterList({user,query}));
+      return sendCustomerCenterTeachingSummary(res,user,query);
     }
     if(path==='/page-data/purchase-detail'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -418,66 +436,71 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/lifecycle-metrics'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const [leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
-        T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
-        cappedScan(T_STUDENTS),
-        cappedScan(T_PURCHASES),
-        cappedScan(T_ENTITLEMENTS),
-        cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
-        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
-        T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
-        T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
-      ]);
-      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
-      const customerLifecycleRows=buildCustomerLifecycleRows({
-        leads:scoped.leads,
-        students:scoped.students,
-        purchases:scoped.purchases,
-        entitlements:scoped.entitlements,
-        schedule:scoped.schedule,
-        feedbacks:scoped.feedbacks
-      });
-      const metricScope=pageDataScopeFromQuery(query);
-      return sendJson(res,{
-        customerLifecycleRows,
-        teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),
-        standardLifecycleMetrics:hasPageDataScope(metricScope)
-          ? buildScopedStandardLifecycleMetrics({...scoped,customerLifecycleRows},metricScope)
-          : buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})
-      });
+      return sendCustomerCenterTeachingSummary(res,user,query);
     }
     if(path==='/page-data/customer-center-list/rebuild-summary'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       if(!T_STUDENT_TEACHING_SUMMARY||!put||!mkTable)return sendJson(res,{error:'摘要表未配置'},500);
       await init();
-      const [leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
-        T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
-        cappedScan(T_STUDENTS),
-        cappedScan(T_PURCHASES),
-        cappedScan(T_ENTITLEMENTS),
-        cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
-        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
-        T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
-        T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
-      ]);
-      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
-      const customerLifecycleRows=buildCustomerLifecycleRows({
-        leads:scoped.leads,
-        students:scoped.students,
-        purchases:scoped.purchases,
-        entitlements:scoped.entitlements,
-        schedule:scoped.schedule,
-        feedbacks:scoped.feedbacks
-      });
-      const rows=buildStudentTeachingSummaryRows(customerLifecycleRows,scoped);
       await mkTable(T_STUDENT_TEACHING_SUMMARY);
-      const existing=T_STUDENT_TEACHING_SUMMARY?await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}).catch(()=>[]):[];
-      const nextIds=new Set(rows.map(row=>String(row.id||'')).filter(Boolean));
-      for(const row of rows)await put(T_STUDENT_TEACHING_SUMMARY,row.id,row);
-      if(del){
-        for(const row of existing.filter(row=>row?.id&&!nextIds.has(String(row.id))))await del(T_STUDENT_TEACHING_SUMMARY,row.id).catch(()=>null);
+      const sourceSnapshotAt=new Date().toISOString();
+      const batchId=`student-teaching-summary-manual-${Date.now()}`;
+      await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
+        status:STUDENT_TEACHING_SUMMARY_PENDING,
+        batchId,
+        sourceSnapshotAt,
+        sourceTable:'manual-rebuild',
+        sourceOp:'rebuild-summary'
+      }));
+      try{
+        const [leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
+          T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads) : Promise.resolve([]),
+          cappedScan(T_STUDENTS),
+          cappedScan(T_PURCHASES),
+          cappedScan(T_ENTITLEMENTS),
+          cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
+          T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
+          T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER) : Promise.resolve([]),
+          T_FEEDBACKS ? cappedScan(T_FEEDBACKS) : Promise.resolve([])
+        ]);
+        const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
+        const customerLifecycleRows=buildCustomerLifecycleRows({
+          leads:scoped.leads,
+          students:scoped.students,
+          purchases:scoped.purchases,
+          entitlements:scoped.entitlements,
+          schedule:scoped.schedule,
+          feedbacks:scoped.feedbacks
+        });
+        const rows=buildStudentTeachingSummaryRows(customerLifecycleRows,scoped);
+        const existing=filterStudentTeachingSummaryDataRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}));
+        const nextIds=new Set(rows.map(row=>String(row.id||'')).filter(Boolean));
+        for(const row of rows)await put(T_STUDENT_TEACHING_SUMMARY,row.id,row);
+        if(del){
+          for(const row of existing.filter(row=>row?.id&&!nextIds.has(String(row.id))))await del(T_STUDENT_TEACHING_SUMMARY,row.id);
+        }
+        await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
+          status:STUDENT_TEACHING_SUMMARY_READY,
+          batchId,
+          sourceSnapshotAt,
+          completedAt:new Date().toISOString(),
+          rowCount:rows.length,
+          checksum:buildStudentTeachingSummaryChecksum(rows),
+          sourceTable:'manual-rebuild',
+          sourceOp:'rebuild-summary'
+        }));
+        return sendJson(res,{success:true,count:rows.length,updatedAt:new Date().toISOString()});
+      }catch(err){
+        await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
+          status:STUDENT_TEACHING_SUMMARY_FAILED,
+          batchId,
+          sourceSnapshotAt,
+          error:err?.message||String(err),
+          sourceTable:'manual-rebuild',
+          sourceOp:'rebuild-summary'
+        })).catch(()=>null);
+        throw err;
       }
-      return sendJson(res,{success:true,count:rows.length,updatedAt:new Date().toISOString()});
     }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

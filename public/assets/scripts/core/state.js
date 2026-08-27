@@ -777,7 +777,10 @@ function refreshReadModelsInBackground(names=STUDENT_DRAWER_MUTATION_READ_MODELS
   markReadModelsStale(targets);
   ensureDatasetsByName(targets,{force:true}).then(()=>{
     if(typeof after==='function')after();
-  }).catch(e=>console.warn(label,e));
+  }).catch(e=>{
+    if(isTeachingSummaryNotReadyError(e)&&renderTeachingSummaryNotReadyState(currentPage))return;
+    console.warn(label,e);
+  });
 }
 async function refreshStudentDetailDataAfterMutation(studentId){
   const id=String(studentId||'').trim();
@@ -932,7 +935,7 @@ function backgroundDatasetsForPage(pg){
   return PAGE_DATA_BACKGROUND_REQUIREMENTS[pg]||[];
 }
 function missingRequiredDatasetsForPage(pg){
-  return requiredDatasetsForPage(pg).filter(name=>!loadedDatasets.has(name));
+  return requiredDatasetsForPage(pg).filter(name=>!loadedDatasets.has(name)||!datasetHasCurrentRequestKey(name));
 }
 function initialBackgroundDatasetsForPage(pg){
   if(isNonProductionRuntime()&&pg==='finance')return ['financePage'];
@@ -968,6 +971,10 @@ function renderTableSkeletonLoading(id,colspan,text){
   const rowCells=Array.from({length:cellCount},(_,idx)=>`<span class="tms-table-skeleton-line ${idx===0?'is-strong':''}"></span>`).join('');
   const rows=Array.from({length:6},()=>`<div class="tms-table-skeleton-row">${rowCells}</div>`).join('');
   el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" style="--tms-table-skeleton-columns:${cellCount}" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
+}
+function renderStudentStatsLoading(){
+  const host=document.getElementById('studentStatsRow');
+  if(host&&typeof renderStandardSkeletonKpiCards==='function')host.innerHTML=renderStandardSkeletonKpiCards(5);
 }
 function renderStudentTableLoading(){
   renderTableSkeletonLoading('stuTbody',15,'学员数据加载中...');
@@ -1011,10 +1018,62 @@ function renderBlockLoading(id,text){
   const el=document.getElementById(id);
   if(el)el.innerHTML=`<div class="empty"><p>${esc(text)}</p></div>`;
 }
+function isTeachingSummaryNotReadyError(error){
+  const code=String(error?.code||'');
+  const status=Number(error?.statusCode||error?.status||0);
+  const message=String(error?.message||'');
+  return code==='STUDENT_TEACHING_SUMMARY_NOT_READY' || (status===503 && /教学学员统一摘要未就绪/.test(message));
+}
+function clearTeachingSummaryPageState(pg){
+  if(pg==='leads'){
+    leads=[];
+    leadListPageData={rows:[],total:0,page:leadPage||1,pageSize:leadPageSize,pages:1,summary:null,filters:null};
+    loadedDatasets.delete('leads');
+    loadedDatasetRequestKeys.delete('leads');
+    staleCachedDatasets.add('leads');
+    return;
+  }
+  if(isStudentListPage(pg)){
+    customerLifecycleRows=[];
+    teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+    standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
+    loadedDatasets.delete('customerCenterPage');
+    loadedDatasets.delete('lifecycleMetricsPage');
+    loadedDatasets.delete('customerLifecycleRows');
+    loadedDatasetRequestKeys.delete('customerCenterPage');
+    loadedDatasetRequestKeys.delete('lifecycleMetricsPage');
+    staleCachedDatasets.add('customerCenterPage');
+    staleCachedDatasets.add('lifecycleMetricsPage');
+    staleCachedDatasets.add('customerLifecycleRows');
+  }
+}
+function renderTeachingSummaryNotReadyState(pg){
+  clearTeachingSummaryPageState(pg);
+  if(pg==='leads'){
+    if(typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
+    if(typeof renderLeadTableLoading==='function')renderLeadTableLoading();
+    const info=document.getElementById('leadPagerInfo');
+    if(info)info.innerHTML=renderPagerInfoHtml(0);
+    if(typeof renderLeadPagerControls==='function')renderLeadPagerControls(0,1);
+    return true;
+  }
+  if(isStudentListPage(pg)){
+    renderStudentStatsLoading();
+    if(typeof renderStudentTableLoading==='function')renderStudentTableLoading();
+    const info=document.getElementById('stuPagerInfo');
+    if(info)info.innerHTML=renderPagerInfoHtml(0);
+    if(typeof renderStudentPagerControls==='function')renderStudentPagerControls(0,1);
+    return true;
+  }
+  return false;
+}
 function renderPageLoading(pg){
   if(pg==='operations'&&hydrateOperationsPageFromClientCache())return;
   if(typeof renderStandardPageLoading==='function'&&renderStandardPageLoading(pg))return;
-  if(pg==='students')renderStudentTableLoading();
+  if(pg==='students'){
+    renderStudentStatsLoading();
+    renderStudentTableLoading();
+  }
   if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
   if(pg==='coachschedule'){
@@ -1026,7 +1085,10 @@ function renderPageLoading(pg){
       timeline.innerHTML='<div class="coach-ops-day-loading-panel"></div>';
     }
   }
-  if(pg==='leads')renderLeadTableLoading();
+  if(pg==='leads'){
+    if(typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
+    if(typeof renderLeadTableLoading==='function')renderLeadTableLoading();
+  }
   if(pg==='operations'&&typeof renderOperationsLoading==='function')renderOperationsLoading();
   else if(pg==='operations')renderBlockLoading('page-operations','经营分析加载中...');
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');
@@ -1252,6 +1314,7 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
         await ensureDatasetsByName([name],{force});
       }catch(e){
         if(requestVersion!==dataRequestVersion)return;
+        if(isTeachingSummaryNotReadyError(e)&&renderTeachingSummaryNotReadyState(pg))return;
         console.warn('deferred page data load failed',pg,name,e);
       }
     }));
@@ -1268,6 +1331,7 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
         })
         .catch(e=>{
           if(requestVersion!==dataRequestVersion)return;
+          if(isTeachingSummaryNotReadyError(e)&&renderTeachingSummaryNotReadyState(pg))return;
           console.warn('deferred student data load failed',pg,e);
         });
     },1200);
@@ -1415,7 +1479,7 @@ function pageHasUsableLoadedData(pg){
   if(pg==='courts'||pg==='memberships'||pg==='membership-orders'||pg==='membership-ledger'){
     return !!courtAccountListViewData;
   }
-  if(pg==='operations')return !!operationsPageData;
+  if(pg==='operations')return !!operationsPageData&&datasetHasCurrentRequestKey('operationsPage');
   if(pg==='finance')return !!financeOverviewData;
   return requiredDatasetsForPage(pg).every(name=>loadedDatasets.has(name));
 }
@@ -1458,6 +1522,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   }catch(e){
     if(requestVersion!==dataRequestVersion)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+    if(isTeachingSummaryNotReadyError(e)&&renderTeachingSummaryNotReadyState(pg))return;
     if(quiet&&hadUsableDataBeforeLoad){
       console.warn('background page refresh failed:',pg,e);
       return;
@@ -1493,6 +1558,7 @@ function refreshScopedTopSummaryForCurrentPage(){
       renderScopedSummaryPage(pg);
     }).catch(e=>{
       if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+      if(isTeachingSummaryNotReadyError(e)&&renderTeachingSummaryNotReadyState(pg))return;
       console.warn('scoped summary refresh failed',pg,e);
     });
     return false;

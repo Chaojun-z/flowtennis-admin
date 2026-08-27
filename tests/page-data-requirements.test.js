@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
+const leadsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/leads.js'), 'utf8');
 const studentsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/students.js'), 'utf8');
 const corePagesSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const studentRosterReaderSource = fs.readFileSync(path.join(__dirname, '../server/page-data/student-roster-index-reader.js'), 'utf8');
@@ -45,6 +46,9 @@ assert.match(source, /function markStudentDetailDataStale\(studentId\)/, 'studen
 assert.match(source, /function markReadModelsStale\(names=STUDENT_DRAWER_MUTATION_READ_MODELS\)/, 'student drawer mutations should be able to stale global read models without clearing detail caches');
 assert.match(source, /function refreshReadModelsInBackground\(names=STUDENT_DRAWER_MUTATION_READ_MODELS[\s\S]*ensureDatasetsByName\(targets,\{force:true\}\)\.then/, 'student drawer mutations should refresh global read models in the background');
 assert.match(source, /async function refreshStudentDetailDataAfterMutation\(studentId\)[\s\S]*markStudentDetailDataStale\(id\)[\s\S]*ensureStudentDetailData\(id,\{force:true\}\)/, 'student drawer mutations should refresh only one student detail synchronously');
+assert.match(source, /function isTeachingSummaryNotReadyError\(error\)/, 'read-model not-ready errors should be classified centrally');
+assert.match(source, /function renderTeachingSummaryNotReadyState\(pg\)/, 'not-ready teaching summary states should have a dedicated UI clear path');
+assert.match(source, /if\(isTeachingSummaryNotReadyError\(e\)&&renderTeachingSummaryNotReadyState\(pg\)\)return;/, 'background refreshes should clear old teaching-summary data instead of keeping it on screen');
 assert.match(source, /function ensurePurchaseDetailData\(purchaseId/, 'purchase detail should have a per-purchase detail loader');
 assert.match(source, /\/page-data\/purchase-detail\?id=/, 'purchase detail loader should call the per-purchase endpoint');
 assert.match(source, /,purchaseCreatePage:\(\)=>apiCall\('GET','\/page-data\/purchase-create',null,20000\)/, 'purchase create drawer should use a lightweight create endpoint with a shorter timeout');
@@ -74,6 +78,7 @@ assert.match(source, /if\(name==='customerCenterPage'\)\{[\s\S]*setDatasetValue\
 assert.match(source, /if\(name==='lifecycleMetricsPage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);[\s\S]*teachingStudentViews=data\.teachingStudentViews/, 'lifecycle metrics loader should hydrate only lifecycle rows and teaching views');
 assert.match(source, /if\(name==='customerCenterPage'\)\{[\s\S]*staleCachedDatasets\.delete\('customerCenterPage'\)[\s\S]*markDatasetLoaded\('customerCenterPage',requestKey\)/, 'customer center refresh should clear its own stale marker after purchase or schedule mutations');
 assert.match(source, /if\(name==='lifecycleMetricsPage'\)\{[\s\S]*staleCachedDatasets\.delete\('lifecycleMetricsPage'\)[\s\S]*markDatasetLoaded\('lifecycleMetricsPage',requestKey\)/, 'lifecycle metrics refresh should clear its own stale marker after purchase or schedule mutations');
+assert.match(leadsSource, /if\(typeof isTeachingSummaryNotReadyError==='function'&&isTeachingSummaryNotReadyError\(e\)&&typeof renderTeachingSummaryNotReadyState==='function'\)\{[\s\S]*renderTeachingSummaryNotReadyState\('leads'\);[\s\S]*return false;/, 'leads page should clear the current screen when the teaching summary is not ready');
 assert.match(source, /if\(name==='financePage'\)\{[\s\S]*setDatasetValue\('campuses',data\.campuses\|\|\[\]\);[\s\S]*financeOverviewData=data\.financeOverviewData\|\|null;[\s\S]*markDatasetLoaded\('financePage',requestKey\);/, 'finance aggregate loader should only hydrate finance payload fields and not clear unrelated datasets');
 assert.match(source, /if\(name==='courtsPage'\)\{[\s\S]*setDatasetValue\('campuses',data\.campuses\|\|\[\]\);[\s\S]*setDatasetValue\('students',data\.students\|\|\[\]\);[\s\S]*setDatasetValue\('courts',data\.courts\|\|\[\]\);[\s\S]*markDatasetLoaded\('courtsPage',requestKey\);/, 'courts page aggregate loader should only hydrate court first-screen datasets');
 assert.doesNotMatch(source, /if\(name==='membershipsPage'\)\{[\s\S]*membershipOrders[\s\S]*membershipBenefitLedger[\s\S]*membershipFinanceSummary/, 'membership pages must not hydrate raw membership facts from the old aggregate response');
@@ -91,7 +96,8 @@ assert.match(source, /const DATASETS_EXCLUDED_FROM_CACHE=new Set\(\['leads','lea
 assert.match(source, /function missingRequiredDatasetsForPage\(pg\)/, 'state should be able to detect when the current page still lacks blocking datasets');
 assert.match(source, /function missingInitialDatasetsForPage\(pg\)/, 'state should detect empty-shell pages waiting for their first background dataset');
 assert.match(source, /function renderPageLoading\(pg\)/, 'state should render inline loading placeholders instead of empty pages');
-assert.match(source, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should render an inline list loading placeholder');
+assert.match(source, /if\(pg==='students'\)\{[\s\S]*renderStudentStatsLoading\(\);[\s\S]*renderStudentTableLoading\(\);/, 'students page should render an inline loading placeholder');
+assert.match(source, /if\(pg==='leads'\)\{[\s\S]*renderLeadStatsLoading\(\);[\s\S]*renderLeadTableLoading\(\);/, 'leads page should render an inline list loading placeholder');
 assert.doesNotMatch(source, /renderBlockLoading\('coachOpsRevenueStats','财务汇总加载中\.\.\.'\)/, 'finance page should not render a duplicate top loading line above the revenue table');
 assert.match(source, /if\(pageNeedsInlineLoading\(pg\)\)\{[\s\S]*renderPageLoading\(pg\);\s*return;\s*\}/, 'page rendering should show inline loading placeholders until the page has the datasets it needs');
 assert.match(source, /const datasetLoadPromises=new Map\(\);/, 'state should de-duplicate concurrent dataset requests');
@@ -128,7 +134,7 @@ assert.doesNotMatch(coachScheduleRouteSource, /T_PURCHASES|T_ENTITLEMENTS|T_ENTI
 const customerCenterStart = corePagesSource.indexOf("path==='/page-data/customer-center-list'&&method==='GET'");
 const customerCenterEnd = corePagesSource.indexOf("path==='/page-data/purchase-detail'&&method==='GET'");
 const customerCenterRouteSource = corePagesSource.slice(customerCenterStart, customerCenterEnd);
-assert.match(customerCenterRouteSource, /studentRosterIndexReader\.readCustomerCenterList\(\{user,query\}\)/, 'customer center first screen must go through the isolated student roster index reader');
+assert.match(customerCenterRouteSource, /sendCustomerCenterTeachingSummary\(res,user,query\)/, 'customer center first screen must go through the isolated student roster index reader');
 assert.doesNotMatch(customerCenterRouteSource, /getCachedScan|cappedScan|T_STUDENTS|T_PURCHASES|T_ENTITLEMENTS|T_ENTITLEMENT_LEDGER|T_SCHEDULE|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'customer center first-screen route must not have direct access to slow fact-table reads');
 assert.match(studentRosterReaderSource, /readReadyStudentTeachingSummaryRows\(\{ tableName, getCachedScan \}\)/, 'student roster index reader must read only ready summary rows from the configured roster index table');
 assert.doesNotMatch(studentRosterReaderSource, /cappedScan|T_SCHEDULE|T_ENTITLEMENT_LEDGER|T_PURCHASES|T_ENTITLEMENTS|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'student roster index reader must not import or scan slow fact tables');

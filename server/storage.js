@@ -228,7 +228,7 @@ function createStorageServices({
     const result=await withStorageRetry(()=>runStorageOperation('putRow',{table:t,id},(res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));
     if(hotScanTables.has(t))invalidateHotScanCache(t);
     if(hotGetTables.has(t))invalidateHotGetCache(t,id);
-    onTableWrite(t,{op:'put',id,attrs});
+    await Promise.resolve(onTableWrite(t,{op:'put',id,attrs}));
     return result;
   }
   function putIfAbsent(t,id,attrs){return withStorageRetry(()=>runStorageOperation('putRowIfAbsent',{table:t,id},(res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.EXPECT_NOT_EXIST,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
@@ -307,7 +307,7 @@ function createStorageServices({
     const result=await withStorageRetry(()=>runStorageOperation('deleteRow',{table:t,id},(res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));
     if(hotScanTables.has(t))invalidateHotScanCache(t);
     if(hotGetTables.has(t))invalidateHotGetCache(t,id);
-    onTableWrite(t,{op:'delete',id});
+    await Promise.resolve(onTableWrite(t,{op:'delete',id}));
     return result;
   }
   async function clearTables(storage,tables){

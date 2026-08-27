@@ -1,5 +1,6 @@
 const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const { buildStudentTeachingSummaryRows } = require('./platform-metrics.js');
+const crypto = require('crypto');
 
 const STUDENT_TEACHING_SUMMARY_META_ID = '__student_teaching_summary_meta__';
 const STUDENT_TEACHING_SUMMARY_READY = 'ready';
@@ -36,6 +37,25 @@ function normalizeGeneration(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((result, key) => {
+      result[key] = stableValue(value[key]);
+      return result;
+    }, {});
+  }
+  return value;
+}
+
+function buildStudentTeachingSummaryChecksum(rows = []) {
+  const normalizedRows = filterStudentTeachingSummaryDataRows(rows)
+    .slice()
+    .sort((a, b) => String(a?.id || '').localeCompare(String(b?.id || '')))
+    .map(stableValue);
+  return crypto.createHash('sha256').update(JSON.stringify(normalizedRows)).digest('hex');
+}
+
 function buildStudentTeachingSummaryMetaRow({
   status,
   generation = Date.now(),
@@ -43,6 +63,10 @@ function buildStudentTeachingSummaryMetaRow({
   sourceTable = '',
   sourceOp = '',
   sourceId = '',
+  batchId = '',
+  sourceSnapshotAt = '',
+  completedAt = '',
+  checksum = '',
   error = '',
   updatedAt = new Date().toISOString()
 } = {}) {
@@ -55,6 +79,10 @@ function buildStudentTeachingSummaryMetaRow({
     sourceTable: String(sourceTable || ''),
     sourceOp: String(sourceOp || ''),
     sourceId: String(sourceId || ''),
+    batchId: String(batchId || ''),
+    sourceSnapshotAt: String(sourceSnapshotAt || ''),
+    completedAt: String(completedAt || ''),
+    checksum: String(checksum || ''),
     error: String(error || '').slice(0, 500),
     updatedAt
   };
@@ -72,18 +100,22 @@ function studentTeachingSummaryNotReadyError(meta = null, reason = '') {
 function requireReadyStudentTeachingSummaryRows(rows = []) {
   const meta = studentTeachingSummaryMetaRow(rows);
   const dataRows = filterStudentTeachingSummaryDataRows(rows);
-  if (!meta) {
-    if (dataRows.length) return dataRows;
-    throw studentTeachingSummaryNotReadyError(null, 'missing-meta');
-  }
+  if (!meta) throw studentTeachingSummaryNotReadyError(null, 'missing-meta');
   const status = String(meta.status || '');
-  if (status !== STUDENT_TEACHING_SUMMARY_READY) {
-    if ((status === STUDENT_TEACHING_SUMMARY_PENDING || status === STUDENT_TEACHING_SUMMARY_REFRESHING) && dataRows.length) return dataRows;
-    throw studentTeachingSummaryNotReadyError(meta, status || 'unknown');
-  }
+  if (status !== STUDENT_TEACHING_SUMMARY_READY) throw studentTeachingSummaryNotReadyError(meta, status || 'unknown');
   const expectedCount = Number(meta.rowCount);
-  if (Number.isFinite(expectedCount) && expectedCount >= 0 && expectedCount !== dataRows.length) {
+  if (!Number.isSafeInteger(expectedCount) || expectedCount < 0) {
+    throw studentTeachingSummaryNotReadyError(meta, 'invalid-row-count');
+  }
+  if (expectedCount !== dataRows.length) {
     throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${dataRows.length}/${expectedCount}`);
+  }
+  if (!String(meta.batchId || '').trim() || !String(meta.sourceSnapshotAt || '').trim() || !String(meta.completedAt || '').trim()) {
+    throw studentTeachingSummaryNotReadyError(meta, 'incomplete-publish-meta');
+  }
+  const actualChecksum = buildStudentTeachingSummaryChecksum(dataRows);
+  if (!String(meta.checksum || '').trim() || meta.checksum !== actualChecksum) {
+    throw studentTeachingSummaryNotReadyError(meta, 'checksum-mismatch');
   }
   return dataRows;
 }
@@ -164,16 +196,16 @@ function createStudentTeachingSummaryCache({
     return [];
   }
 
-  function queueStudentTeachingSummaryRefresh(table, meta = {}) {
+  async function queueStudentTeachingSummaryRefresh(table, meta = {}) {
     if (!sourceTables.has(table)) return;
     const ids = studentIdsFromWrite(table, meta);
     if (ids.length) ids.forEach(id => pendingIds.add(id));
     else pendingFullRefresh = true;
-    writeMeta(STUDENT_TEACHING_SUMMARY_PENDING, {
+    await writeMeta(STUDENT_TEACHING_SUMMARY_PENDING, {
       sourceTable: table,
       sourceOp: meta?.op || '',
       sourceId: meta?.id || ''
-    }).catch(err => logger.error('[student-teaching-summary] mark pending failed', err));
+    });
     if (pendingTimer) clearTimeout(pendingTimer);
     pendingTimer = setTimeout(() => flushStudentTeachingSummaryRefresh(), 800);
     if (typeof pendingTimer.unref === 'function') pendingTimer.unref();
@@ -182,7 +214,9 @@ function createStudentTeachingSummaryCache({
   async function refreshStudentTeachingSummaryRows(studentIds = []) {
     if (!T_STUDENT_TEACHING_SUMMARY || !getCachedScan || !mkTable || !put) return [];
     await mkTable(T_STUDENT_TEACHING_SUMMARY).catch(() => null);
-    await writeMeta(STUDENT_TEACHING_SUMMARY_REFRESHING, { rowCount: '' });
+    const sourceSnapshotAt = new Date().toISOString();
+    const batchId = `student-teaching-summary-${Date.now()}`;
+    await writeMeta(STUDENT_TEACHING_SUMMARY_REFRESHING, { batchId, sourceSnapshotAt, rowCount: '' });
     try {
       const [leads, students, purchases, entitlements, entitlementLedger, schedule, membershipBenefitLedger, feedbacks] = await Promise.all([
         T_LEADS ? getCachedScan(T_LEADS, { fresh: true }) : Promise.resolve([]),
@@ -209,10 +243,16 @@ function createStudentTeachingSummaryCache({
         for (const row of existing.filter(row => row?.id && !nextIds.has(String(row.id)))) await del(T_STUDENT_TEACHING_SUMMARY, row.id);
       }
       const finalRows = filterStudentTeachingSummaryDataRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }));
-      await writeMeta(STUDENT_TEACHING_SUMMARY_READY, { rowCount: finalRows.length });
+      await writeMeta(STUDENT_TEACHING_SUMMARY_READY, {
+        batchId,
+        sourceSnapshotAt,
+        completedAt: new Date().toISOString(),
+        rowCount: finalRows.length,
+        checksum: buildStudentTeachingSummaryChecksum(finalRows)
+      });
       return targetRows;
     } catch (err) {
-      await writeMeta(STUDENT_TEACHING_SUMMARY_FAILED, { error: err?.message || String(err) }).catch(metaErr => {
+      await writeMeta(STUDENT_TEACHING_SUMMARY_FAILED, { batchId, sourceSnapshotAt, error: err?.message || String(err) }).catch(metaErr => {
         logger.error('[student-teaching-summary] mark failed failed', metaErr);
       });
       throw err;
@@ -250,6 +290,7 @@ module.exports = {
   buildStudentTeachingSummaryMetaRow,
   isStudentTeachingSummaryMetaRow,
   filterStudentTeachingSummaryDataRows,
+  buildStudentTeachingSummaryChecksum,
   requireReadyStudentTeachingSummaryRows,
   readReadyStudentTeachingSummaryRows
 };

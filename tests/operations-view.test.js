@@ -176,6 +176,7 @@ assert.match(operationsSource, /\['overview', 'court', 'conversion', 'coach'\]\.
 assert.match(componentsSource, /globalTopFilterPages\(\)\{[\s\S]*'operations'/, 'operations page should reuse the global top date filter');
 assert.match(componentsSource, /renderStandardTopDropdown\('globalTopCampus'/, 'operations H5 top filter should keep the shared campus icon entry');
 assert.match(componentsSource, /renderStandardTopDropdown\('globalTopDate'/, 'operations H5 top filter should keep the shared date icon entry');
+assert.match(functionBody(bootstrapSource, 'setCampus'), /if\(currentPage==='operations'\)reloadOperationsPageDataWithInlineLoading\(\)/, 'operations page should reload aggregate data when the campus filter changes');
 assert.match(componentsSource, /if\(currentPage==='operations'\)reloadOperationsPageDataWithInlineLoading\(\)/, 'operations page should reload aggregate data through inline skeletons when the global date filter changes');
 assert.match(stateSource, /async function reloadOperationsPageDataWithInlineLoading\(\)/, 'operations page should have a dedicated inline refresh path');
 assert.match(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S]*renderOperationsLoading\(\)[\s\S]*ensureDatasetsByName\(\['operationsPage'\],\{force:true\}\)/, 'operations inline refresh should show local skeleton and refresh only operations data');
@@ -204,6 +205,8 @@ assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*OPERA
 assert.match(stateSource, /function readOperationsPageClientCache\(\)[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should read a cached view model before waiting for the slow aggregate endpoint');
 assert.match(stateSource, /function persistOperationsPageClientCache\([\s\S]*cacheVersion:OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should persist the latest versioned view model for fast repeat entry');
 assert.match(stateSource, /function hydrateOperationsPageFromClientCache\(\)[\s\S]*operationsPageData=data\.operations[\s\S]*renderOperations\(\)/, 'operations should render cached data immediately while fresh data loads in the background');
+assert.match(functionBody(stateSource, 'missingRequiredDatasetsForPage'), /datasetHasCurrentRequestKey\(name\)/, 'operations should treat old campus/date aggregate data as missing after top-filter changes');
+assert.match(functionBody(stateSource, 'pageHasUsableLoadedData'), /pg==='operations'[\s\S]*datasetHasCurrentRequestKey\('operationsPage'\)/, 'operations should not reuse an old aggregate payload after campus or date changes');
 assert.match(stateSource, /if\(pg==='operations'&&hydrateOperationsPageFromClientCache\(\)\)return;/, 'operations loading should skip skeleton when a cached view model is available');
 assert.match(stateSource, /persistOperationsPageClientCache\(data\)/, 'operations refresh should update the client view-model cache after a successful response');
 assert.match(stateSource, /const requestKey=datasetRequestKey\(name\)/, 'dataset request de-duplication should be scoped by request key');

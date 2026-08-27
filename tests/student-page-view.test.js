@@ -249,7 +249,7 @@ assert.match(css, /\.tms-table-skeleton-state\{[^}]*position:relative[^}]*width:
 assert.doesNotMatch(css, /\.tms-table-skeleton-head\{/, 'shared table skeleton should not render a second header below the real table header');
 assert.match(css, /\.tms-table-skeleton-row\{[^}]*height:42px[^}]*background:#FBF7F4/, 'shared table skeleton rows should match the standard row height');
 assert.match(source, /function renderStudentTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'student load failure should render an inline retry state');
-assert.match(source, /if\(pg==='students'\)renderStudentTableLoading\(\);/, 'student page should use the dedicated loading renderer');
+assert.match(source, /if\(pg==='students'\)\{[\s\S]*renderStudentStatsLoading\(\);[\s\S]*renderStudentTableLoading\(\);[\s\S]*\}/, 'student page should use the dedicated loading renderer');
 assert.match(source, /if\(pg==='students'\)renderStudentTableError\(String\(e\.message\|\|e\)\);/, 'student page load failure should render the dedicated error state');
 assert.match(css, /#page-students \.tms-empty-state\{[\s\S]*#page-students \.tms-state-action/, 'student empty, loading, and error states should have scoped standard styles');
 assert.match(source, /function studentCompletedLessonCount\(/, 'student page should expose a cumulative completed lesson helper');
