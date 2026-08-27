@@ -59,7 +59,7 @@ const legacyReadyRows = requireReadyStudentTeachingSummaryRows(legacyReadyStuden
 ]));
 assert.strictEqual(legacyReadyRows.length, 1, '旧 ready 摘要缺少发布元数据时也应可读，避免卡死页面');
 
-function makeHandler({ legacyReady = false } = {}) {
+function makeHandler({ legacyReady = false, mutateSummaryOnWrite = false } = {}) {
   const calls = { tableScans: {} };
   const rows = {
     leads: [],
@@ -172,6 +172,18 @@ function makeHandler({ legacyReady = false } = {}) {
     calls.tableScans[table] = (calls.tableScans[table] || 0) + 1;
     return clone(tableRows[table]);
   };
+  const upsertRow = (table, id, row) => {
+    if (!Array.isArray(tableRows[table])) tableRows[table] = [];
+    const next = clone(row);
+    if (mutateSummaryOnWrite && table === 'ft_student_teaching_summary' && String(id || '') !== '__student_teaching_summary_meta__') {
+      if (typeof next.summaryUpdatedAt === 'string' && next.summaryUpdatedAt) next.summaryUpdatedAt = next.summaryUpdatedAt.replace('T', ' ');
+      if (typeof next.updatedAt === 'string' && next.updatedAt) next.updatedAt = next.updatedAt.replace('T', ' ');
+    }
+    const index = tableRows[table].findIndex(item => String(item.id || '') === String(id || ''));
+    if (index >= 0) tableRows[table][index] = next;
+    else tableRows[table].push(next);
+    return next;
+  };
   const handler = createCorePageDataRoutes({
     init: async () => {},
     sendJson: (res, body, status = 200) => {
@@ -181,9 +193,21 @@ function makeHandler({ legacyReady = false } = {}) {
     },
     cappedScan: readTable,
     getCachedScan: readTable,
-    getCachedRow: async () => null,
+    getCachedRow: async (table, id) => {
+      const list = tableRows[table] || [];
+      const found = list.find(item => String(item.id || '') === String(id || ''));
+      return found ? clone(found) : null;
+    },
     filterLoadAllForUser: data => data,
     PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
+    put: async (table, id, row) => upsertRow(table, id, row),
+    del: async (table, id) => {
+      if (!Array.isArray(tableRows[table])) return;
+      tableRows[table] = tableRows[table].filter(item => String(item.id || '') !== String(id || ''));
+    },
+    mkTable: async table => {
+      if (!Array.isArray(tableRows[table])) tableRows[table] = [];
+    },
     tables: {
       T_LEADS: 'ft_leads',
       T_STUDENTS: 'ft_students',
@@ -196,7 +220,7 @@ function makeHandler({ legacyReady = false } = {}) {
       T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary'
     }
   });
-  return { handler, calls };
+  return { handler, calls, tableRows };
 }
 
 function makeIsolatedRouteHandler() {
@@ -345,6 +369,25 @@ async function request(queryText = '', { legacyReady = false } = {}) {
 
   const legacyReady = await request('', { legacyReady: true });
   assert.strictEqual(legacyReady.res.statusCode, 200, '旧 ready 摘要缺少发布元数据时，客户中心仍应可正常加载');
+
+  const rebuild = makeHandler({ mutateSummaryOnWrite: true });
+  const rebuildRes = {};
+  await rebuild.handler({
+    path: '/page-data/customer-center-list/rebuild-summary',
+    method: 'POST',
+    user: { role: 'admin', name: '管理员' },
+    res: rebuildRes,
+    query: new URLSearchParams()
+  });
+  assert.strictEqual(rebuildRes.statusCode, 200, '手工重建摘要应成功返回');
+  const rebuiltSummaryRows = (rebuild.tableRows.ft_student_teaching_summary || []).filter(row => row.id !== '__student_teaching_summary_meta__');
+  const rebuiltMetaRow = (rebuild.tableRows.ft_student_teaching_summary || []).find(row => row.id === '__student_teaching_summary_meta__');
+  assert.ok(rebuiltMetaRow, '手工重建后必须写回 meta 行');
+  assert.strictEqual(
+    rebuiltMetaRow.checksum,
+    buildStudentTeachingSummaryChecksum(rebuiltSummaryRows),
+    '手工重建写回的 checksum 必须基于落表后的摘要行，而不是写表前的原始对象'
+  );
 
   const isolatedHandler = makeIsolatedRouteHandler();
   const isolatedRes = {};

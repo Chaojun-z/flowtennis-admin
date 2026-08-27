@@ -479,17 +479,18 @@ function createCorePageDataRoutes(deps={}){
         if(del){
           for(const row of existing.filter(row=>row?.id&&!nextIds.has(String(row.id))))await del(T_STUDENT_TEACHING_SUMMARY,row.id);
         }
+        const finalRows=filterStudentTeachingSummaryDataRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}));
         await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
           status:STUDENT_TEACHING_SUMMARY_READY,
           batchId,
           sourceSnapshotAt,
           completedAt:new Date().toISOString(),
-          rowCount:rows.length,
-          checksum:buildStudentTeachingSummaryChecksum(rows),
+          rowCount:finalRows.length,
+          checksum:buildStudentTeachingSummaryChecksum(finalRows),
           sourceTable:'manual-rebuild',
           sourceOp:'rebuild-summary'
         }));
-        return sendJson(res,{success:true,count:rows.length,updatedAt:new Date().toISOString()});
+        return sendJson(res,{success:true,count:finalRows.length,updatedAt:new Date().toISOString()});
       }catch(err){
         await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
           status:STUDENT_TEACHING_SUMMARY_FAILED,
