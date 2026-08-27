@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
+const { requireReadyStudentTeachingSummaryRows } = require('../server/read-models/student-teaching-summary-cache.js');
 
 function readyStudentSummaryRows(rows = []) {
   return [
@@ -13,6 +14,17 @@ function readyStudentSummaryRows(rows = []) {
     ...rows
   ];
 }
+
+assert.deepStrictEqual(
+  requireReadyStudentTeachingSummaryRows([{ id: 'legacy-summary-1', studentId: 'legacy-summary-1', name: '线上旧摘要' }]).map(row => row.id),
+  ['legacy-summary-1'],
+  '线上已有摘要表如果缺少 meta 但有真实摘要行，线索池和学员页不能直接报 missing-meta'
+);
+assert.throws(
+  () => requireReadyStudentTeachingSummaryRows([]),
+  /missing-meta/,
+  '摘要表空表仍应拒绝展示，避免页面用空旧数据冒充成功'
+);
 
 function makeHandler() {
   const calls = { tableScans: {} };

@@ -71,11 +71,14 @@ function studentTeachingSummaryNotReadyError(meta = null, reason = '') {
 
 function requireReadyStudentTeachingSummaryRows(rows = []) {
   const meta = studentTeachingSummaryMetaRow(rows);
-  if (!meta) throw studentTeachingSummaryNotReadyError(null, 'missing-meta');
+  const dataRows = filterStudentTeachingSummaryDataRows(rows);
+  if (!meta) {
+    if (dataRows.length) return dataRows;
+    throw studentTeachingSummaryNotReadyError(null, 'missing-meta');
+  }
   if (String(meta.status || '') !== STUDENT_TEACHING_SUMMARY_READY) {
     throw studentTeachingSummaryNotReadyError(meta, String(meta.status || 'unknown'));
   }
-  const dataRows = filterStudentTeachingSummaryDataRows(rows);
   const expectedCount = Number(meta.rowCount);
   if (Number.isFinite(expectedCount) && expectedCount >= 0 && expectedCount !== dataRows.length) {
     throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${dataRows.length}/${expectedCount}`);
