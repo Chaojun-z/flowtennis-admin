@@ -110,12 +110,17 @@ function requireReadyStudentTeachingSummaryRows(rows = []) {
   if (expectedCount !== dataRows.length) {
     throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${dataRows.length}/${expectedCount}`);
   }
-  if (!String(meta.batchId || '').trim() || !String(meta.sourceSnapshotAt || '').trim() || !String(meta.completedAt || '').trim()) {
-    throw studentTeachingSummaryNotReadyError(meta, 'incomplete-publish-meta');
-  }
   const actualChecksum = buildStudentTeachingSummaryChecksum(dataRows);
   if (!String(meta.checksum || '').trim() || meta.checksum !== actualChecksum) {
     throw studentTeachingSummaryNotReadyError(meta, 'checksum-mismatch');
+  }
+  if (!String(meta.batchId || '').trim() || !String(meta.sourceSnapshotAt || '').trim() || !String(meta.completedAt || '').trim()) {
+    console.warn('[student-teaching-summary] accepting legacy ready meta without publish fields', {
+      rowCount: expectedCount,
+      batchId: String(meta.batchId || ''),
+      sourceSnapshotAt: String(meta.sourceSnapshotAt || ''),
+      completedAt: String(meta.completedAt || '')
+    });
   }
   return dataRows;
 }

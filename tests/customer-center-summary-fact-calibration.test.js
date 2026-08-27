@@ -19,6 +19,20 @@ function readyStudentSummaryRows(rows = []) {
   ];
 }
 
+function legacyReadyStudentSummaryRows(rows = []) {
+  return [
+    {
+      id: '__student_teaching_summary_meta__',
+      kind: 'student-teaching-summary-meta',
+      status: 'ready',
+      rowCount: rows.length,
+      generation: 1,
+      checksum: buildStudentTeachingSummaryChecksum(rows)
+    },
+    ...rows
+  ];
+}
+
 assert.throws(
   () => requireReadyStudentTeachingSummaryRows([{ id: 'legacy-summary-1', studentId: 'legacy-summary-1', name: '线上旧摘要' }]),
   /missing-meta/,
@@ -40,8 +54,12 @@ assert.throws(
   /failed/,
   '摘要刷新明确失败时仍应拒绝展示，避免吞掉真实故障'
 );
+const legacyReadyRows = requireReadyStudentTeachingSummaryRows(legacyReadyStudentSummaryRows([
+  { id: 'legacy-ready-summary-1', studentId: 'legacy-ready-summary-1', name: '旧 ready 摘要' }
+]));
+assert.strictEqual(legacyReadyRows.length, 1, '旧 ready 摘要缺少发布元数据时也应可读，避免卡死页面');
 
-function makeHandler() {
+function makeHandler({ legacyReady = false } = {}) {
   const calls = { tableScans: {} };
   const rows = {
     leads: [],
@@ -147,7 +165,7 @@ function makeHandler() {
     ft_schedule: rows.schedule,
     ft_feedbacks: rows.feedbacks,
     ft_membership_benefit_ledger: rows.membershipBenefitLedger,
-    ft_student_teaching_summary: readyStudentSummaryRows(rows.studentSummaries)
+    ft_student_teaching_summary: legacyReady ? legacyReadyStudentSummaryRows(rows.studentSummaries) : readyStudentSummaryRows(rows.studentSummaries)
   };
   const clone = value => JSON.parse(JSON.stringify(value || []));
   const readTable = async table => {
@@ -277,8 +295,8 @@ function makeBulkSummaryHandler(count = 1200) {
   return { handler, calls };
 }
 
-async function request(queryText = '') {
-  const { handler, calls } = makeHandler();
+async function request(queryText = '', { legacyReady = false } = {}) {
+  const { handler, calls } = makeHandler({ legacyReady });
   const res = {};
   await handler({
     path: '/page-data/customer-center-list',
@@ -324,6 +342,9 @@ async function request(queryText = '') {
     2,
     '强制 fresh 也不能让首屏回退成扫描事实大表'
   );
+
+  const legacyReady = await request('', { legacyReady: true });
+  assert.strictEqual(legacyReady.res.statusCode, 200, '旧 ready 摘要缺少发布元数据时，客户中心仍应可正常加载');
 
   const isolatedHandler = makeIsolatedRouteHandler();
   const isolatedRes = {};
