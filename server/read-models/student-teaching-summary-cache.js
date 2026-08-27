@@ -76,8 +76,10 @@ function requireReadyStudentTeachingSummaryRows(rows = []) {
     if (dataRows.length) return dataRows;
     throw studentTeachingSummaryNotReadyError(null, 'missing-meta');
   }
-  if (String(meta.status || '') !== STUDENT_TEACHING_SUMMARY_READY) {
-    throw studentTeachingSummaryNotReadyError(meta, String(meta.status || 'unknown'));
+  const status = String(meta.status || '');
+  if (status !== STUDENT_TEACHING_SUMMARY_READY) {
+    if ((status === STUDENT_TEACHING_SUMMARY_PENDING || status === STUDENT_TEACHING_SUMMARY_REFRESHING) && dataRows.length) return dataRows;
+    throw studentTeachingSummaryNotReadyError(meta, status || 'unknown');
   }
   const expectedCount = Number(meta.rowCount);
   if (Number.isFinite(expectedCount) && expectedCount >= 0 && expectedCount !== dataRows.length) {

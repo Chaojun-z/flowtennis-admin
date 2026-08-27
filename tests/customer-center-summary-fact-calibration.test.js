@@ -25,6 +25,22 @@ assert.throws(
   /missing-meta/,
   '摘要表空表仍应拒绝展示，避免页面用空旧数据冒充成功'
 );
+assert.deepStrictEqual(
+  requireReadyStudentTeachingSummaryRows([
+    { id: '__student_teaching_summary_meta__', kind: 'student-teaching-summary-meta', status: 'pending', rowCount: '' },
+    { id: 'stale-summary-1', studentId: 'stale-summary-1', name: '待刷新期间旧摘要' }
+  ]).map(row => row.id),
+  ['stale-summary-1'],
+  '线上摘要刷新卡在 pending 但仍有旧摘要行时，线索池不能直接加载失败'
+);
+assert.throws(
+  () => requireReadyStudentTeachingSummaryRows([
+    { id: '__student_teaching_summary_meta__', kind: 'student-teaching-summary-meta', status: 'failed', rowCount: '' },
+    { id: 'failed-summary-1', studentId: 'failed-summary-1', name: '失败摘要' }
+  ]),
+  /failed/,
+  '摘要刷新明确失败时仍应拒绝展示，避免吞掉真实故障'
+);
 
 function makeHandler() {
   const calls = { tableScans: {} };
