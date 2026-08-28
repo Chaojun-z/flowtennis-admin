@@ -3,8 +3,12 @@
 const fs = require('fs');
 const path = require('path');
 const { loadRuntimeEnv } = require('./lib/runtime-env');
-const { createClientFromEnv, scanTable, putRow } = require('./lib/staging-data-store');
+const { createClientFromEnv, scanTable, putRow, deleteRow } = require('./lib/staging-data-store');
 const { parseWriteFlags, assertProductionWriteTarget, assertProductionWriteTrace } = require('./lib/production-write-guard');
+const {
+  STUDENT_TEACHING_SUMMARY_META_ID,
+  buildStudentTeachingSummaryChecksum
+} = require('../server/read-models/student-teaching-summary-cache');
 
 const ROOT = path.join(__dirname, '..');
 const OPERATION_ID = 'repair-lead-pool-visible-dirty-names-20260826';
@@ -18,10 +22,9 @@ const TABLES = {
   purchases: 'ft_purchases',
   entitlements: 'ft_entitlements',
   entitlementLedger: 'ft_entitlement_ledger',
-  schedule: 'ft_schedule'
+  schedule: 'ft_schedule',
+  studentTeachingSummaries: 'ft_student_teaching_summary'
 };
-
-const REFERENCE_TABLES = ['leadFollowups', 'purchases', 'entitlements', 'entitlementLedger', 'schedule'];
 
 function text(value) {
   return String(value ?? '').trim();
@@ -36,11 +39,43 @@ function cleanEdgePunctuation(value) {
   return text(value).replace(/^[\s、，,;；/|｜]+|[\s、，,;；/|｜]+$/g, '').trim();
 }
 
+function splitCompositeName(value) {
+  return cleanEdgePunctuation(value)
+    .split(/[、,，/+＋&]+/)
+    .map(cleanEdgePunctuation)
+    .filter(Boolean);
+}
+
 function identityKey(value) {
   return cleanEdgePunctuation(value)
     .toLowerCase()
     .replace(/\s+/g, '')
     .replace(/[·.。_\-\/|｜，,;；]/g, '');
+}
+
+function stripCompositeNoise(value) {
+  return cleanEdgePunctuation(value)
+    .replace(/[.。]+$/g, '')
+    .replace(/[（(]\s*(?:体验|正式|小班|团课|训练营|集训营|\d+\s*人)\s*[）)]$/g, '')
+    .replace(/(?:等)?\s*\d+\s*人$/g, '')
+    .replace(/等三人$/g, '')
+    .replace(/[.。]+$/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
+function canonicalDirtyName(value) {
+  const parts = splitCompositeName(value);
+  if (!parts.length) return '';
+  return stripCompositeNoise(parts[0]);
+}
+
+function isObviousNoiseName(value) {
+  const raw = cleanEdgePunctuation(value).replace(/\s+/g, '');
+  if (!raw) return true;
+  if (/^[+\-—_~·.。,，、/&]+$/.test(raw)) return true;
+  if (/^(?:朋友|家长|学员|多人|待定|未知|三人|等三人|零基础|随到随学|随到随学小班课|多球课)$/u.test(raw)) return true;
+  return false;
 }
 
 function hasEdgePunctuation(value) {
@@ -105,43 +140,15 @@ function chooseTarget(rows = [], preferredId = '') {
   ))[0] || null;
 }
 
-function rewriteReferences(row, { sourceLeadIds, targetLeadId, sourceStudentIds, targetStudentId, now }) {
-  const leadIds = new Set([...sourceLeadIds].map(text).filter(Boolean));
-  const studentIds = new Set([...sourceStudentIds].map(text).filter(Boolean));
-  let next = { ...row };
-  let changed = false;
-
-  ['leadId', 'sourceLeadId', 'fromLeadId', 'originalLeadId'].forEach(field => {
-    if (targetLeadId && leadIds.has(text(next[field]))) {
-      next[field] = targetLeadId;
-      changed = true;
-    }
-  });
-
-  ['studentId', 'sourceStudentId'].forEach(field => {
-    if (targetStudentId && studentIds.has(text(next[field]))) {
-      next[field] = targetStudentId;
-      changed = true;
-    }
-  });
-
-  ['studentIds', 'expectedStudentIds', 'absentStudentIds'].forEach(field => {
-    if (!targetStudentId) return;
-    const values = parseArray(next[field]);
-    if (!values.length || !values.some(id => studentIds.has(id))) return;
-    const replaced = [...new Set(values.map(id => studentIds.has(id) ? targetStudentId : id).filter(Boolean))];
-    if (!sameJson(values, replaced)) {
-      next[field] = Array.isArray(next[field]) ? replaced : JSON.stringify(replaced);
-      changed = true;
-    }
-  });
-
-  return changed ? trace(next, now, '合并线索池可见脏名字后的业务引用') : null;
-}
-
 function addPut(puts, table, before, after, reason) {
   if (!before || !after || sameJson(before, after)) return;
   puts.push({ table, id: rowId(after), reason, before, after });
+}
+
+function addDelete(deletes, table, before, reason) {
+  const id = rowId(before);
+  if (!id) return;
+  deletes.push({ table, id, reason, before });
 }
 
 function buildNameIndex(rows = []) {
@@ -183,13 +190,15 @@ function mergeStudent({ puts, student, target, now, reason }) {
 function buildPlan(data = {}, now = new Date().toISOString()) {
   const leads = Array.isArray(data.leads) ? data.leads : [];
   const students = Array.isArray(data.students) ? data.students : [];
+  const studentTeachingSummaries = Array.isArray(data.studentTeachingSummaries) ? data.studentTeachingSummaries : [];
   const leadIndex = buildNameIndex(leads.filter(active));
   const studentIndex = buildNameIndex(students.filter(active));
   const puts = [];
+  const deletes = [];
   const mergedLeadIds = new Set();
   const mergedStudentIds = new Set();
-  const renamedLeadIds = new Set();
-  const renamedStudentIds = new Set();
+  const cleanedSummaryIds = new Set();
+  const deletedSummaryIds = new Set();
 
   function handleAlias({ sourceName, targetName, targetLeadId = '', targetStudentId = '', reason }) {
     const sourceKey = identityKey(sourceName);
@@ -225,10 +234,15 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
     const id = rowId(lead);
     if (!active(lead) || mergedLeadIds.has(id)) continue;
     const rawName = displayName(lead);
-    if (!hasEdgePunctuation(rawName)) continue;
-    const cleanName = cleanEdgePunctuation(rawName);
+    const cleanName = canonicalDirtyName(rawName);
+    if (!hasEdgePunctuation(rawName) && cleanName === cleanEdgePunctuation(rawName)) continue;
     if (!cleanName) {
       addPut(puts, TABLES.leads, lead, trace({ ...lead, status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '线索姓名只有分隔符' }, now, '作废只有分隔符的脏线索'), '作废只有分隔符的脏线索');
+      mergedLeadIds.add(id);
+      continue;
+    }
+    if (isObviousNoiseName(cleanName)) {
+      addPut(puts, TABLES.leads, lead, trace({ ...lead, status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '线索姓名是明显的群名或噪声名' }, now, '作废明显群名/噪声线索'), '作废明显群名/噪声线索');
       mergedLeadIds.add(id);
       continue;
     }
@@ -238,7 +252,6 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
       mergedLeadIds.add(id);
     } else {
       addPut(puts, TABLES.leads, lead, trace(namePatch(lead, cleanName), now, '去掉线索姓名前后顿号'), '去掉线索姓名前后顿号');
-      renamedLeadIds.add(id);
     }
   }
 
@@ -246,10 +259,15 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
     const id = rowId(student);
     if (!active(student) || mergedStudentIds.has(id)) continue;
     const rawName = displayName(student);
-    if (!hasEdgePunctuation(rawName)) continue;
-    const cleanName = cleanEdgePunctuation(rawName);
+    const cleanName = canonicalDirtyName(rawName);
+    if (!hasEdgePunctuation(rawName) && cleanName === cleanEdgePunctuation(rawName)) continue;
     if (!cleanName) {
       addPut(puts, TABLES.students, student, trace({ ...student, status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '学员姓名只有分隔符' }, now, '作废只有分隔符的脏学员'), '作废只有分隔符的脏学员');
+      mergedStudentIds.add(id);
+      continue;
+    }
+    if (isObviousNoiseName(cleanName)) {
+      addPut(puts, TABLES.students, student, trace({ ...student, status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '学员姓名是明显的群名或噪声名' }, now, '作废明显群名/噪声学员'), '作废明显群名/噪声学员');
       mergedStudentIds.add(id);
       continue;
     }
@@ -259,52 +277,72 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
       mergedStudentIds.add(id);
     } else {
       addPut(puts, TABLES.students, student, trace(namePatch(student, cleanName), now, '去掉学员姓名前后顿号'), '去掉学员姓名前后顿号');
-      renamedStudentIds.add(id);
     }
   }
 
-  const targetLeadByMergedId = new Map();
-  const targetStudentByMergedId = new Map();
-  puts.forEach(item => {
-    if (item.table === TABLES.leads && text(item.after.status) === 'merged') targetLeadByMergedId.set(text(item.before.id), text(item.after.mergedIntoLeadId));
-    if (item.table === TABLES.students && text(item.after.status) === 'merged') targetStudentByMergedId.set(text(item.before.id), text(item.after.mergedIntoStudentId));
-  });
+  for (const row of studentTeachingSummaries) {
+    const id = rowId(row);
+    if (!id || id === STUDENT_TEACHING_SUMMARY_META_ID || cleanedSummaryIds.has(id)) continue;
+    const rawName = displayName(row);
+    const cleanName = canonicalDirtyName(rawName);
+    if (!hasEdgePunctuation(rawName) && cleanName === cleanEdgePunctuation(rawName)) continue;
+    if (!cleanName || isObviousNoiseName(cleanName)) {
+      addDelete(deletes, TABLES.studentTeachingSummaries, row, '删除教学摘要纯噪声姓名');
+      cleanedSummaryIds.add(id);
+      deletedSummaryIds.add(id);
+      continue;
+    }
+    addPut(
+      puts,
+      TABLES.studentTeachingSummaries,
+      row,
+      trace(namePatch(row, cleanName), now, '清理教学摘要多人拼名'),
+      '清理教学摘要多人拼名'
+    );
+    cleanedSummaryIds.add(id);
+  }
 
-  for (const tableKey of REFERENCE_TABLES) {
-    for (const row of data[tableKey] || []) {
-      let after = null;
-      for (const [sourceLeadId, targetLeadId] of targetLeadByMergedId.entries()) {
-        after = rewriteReferences(after || row, {
-          sourceLeadIds: new Set([sourceLeadId]),
-          targetLeadId,
-          sourceStudentIds: new Set(),
-          targetStudentId: '',
-          now
-        }) || after;
-      }
-      for (const [sourceStudentId, targetStudentId] of targetStudentByMergedId.entries()) {
-        after = rewriteReferences(after || row, {
-          sourceLeadIds: new Set(),
-          targetLeadId: '',
-          sourceStudentIds: new Set([sourceStudentId]),
-          targetStudentId,
-          now
-        }) || after;
-      }
-      if (after) addPut(puts, TABLES[tableKey], row, after, '合并线索池可见脏名字后的业务引用');
+  const summaryPuts = puts.filter(item => item.table === TABLES.studentTeachingSummaries);
+  const summaryDeletes = deletes.filter(item => item.table === TABLES.studentTeachingSummaries);
+  if (summaryPuts.length || summaryDeletes.length) {
+    const meta = studentTeachingSummaries.find(row => rowId(row) === STUDENT_TEACHING_SUMMARY_META_ID);
+    if (meta) {
+      const nextById = new Map(summaryPuts.map(item => [rowId(item.after), item.after]));
+      const deletedIds = new Set(summaryDeletes.map(item => item.id));
+      const finalRows = studentTeachingSummaries
+        .filter(row => rowId(row) !== STUDENT_TEACHING_SUMMARY_META_ID)
+        .filter(row => !deletedIds.has(rowId(row)))
+        .map(row => nextById.get(rowId(row)) || row);
+      addPut(
+        puts,
+        TABLES.studentTeachingSummaries,
+        meta,
+        trace({
+          ...meta,
+          status: 'ready',
+          rowCount: finalRows.length,
+          checksum: buildStudentTeachingSummaryChecksum(finalRows),
+          completedAt: now
+        }, now, '更新教学摘要校验'),
+        '更新教学摘要校验'
+      );
     }
   }
 
   return {
     summary: {
       putCount: puts.length,
+      deleteCount: deletes.length,
       mergedLeadCount: mergedLeadIds.size,
       mergedStudentCount: mergedStudentIds.size,
-      renamedLeadCount: renamedLeadIds.size,
-      renamedStudentCount: renamedStudentIds.size,
-      referenceUpdateCount: puts.filter(item => ![TABLES.leads, TABLES.students].includes(item.table)).length
+      renamedLeadCount: puts.filter(item => item.table === TABLES.leads && text(item.after.status || 'active') !== 'merged').length,
+      renamedStudentCount: puts.filter(item => item.table === TABLES.students && text(item.after.status || 'active') !== 'merged').length,
+      cleanedSummaryCount: cleanedSummaryIds.size,
+      deletedSummaryCount: deletedSummaryIds.size,
+      referenceUpdateCount: 0
     },
-    puts
+    puts,
+    deletes
   };
 }
 
@@ -317,7 +355,7 @@ async function run(argv = process.argv.slice(2)) {
   const client = createClientFromEnv();
   const now = new Date().toISOString();
   const data = {};
-  const scanKeys = ['leads', 'students', ...REFERENCE_TABLES];
+  const scanKeys = ['leads', 'students', 'studentTeachingSummaries'];
   for (const key of scanKeys) {
     data[key] = await scanTable(client, TABLES[key]).catch(() => []);
   }
@@ -331,11 +369,13 @@ async function run(argv = process.argv.slice(2)) {
     generatedAt: now,
     reportPath,
     ...plan.summary,
-    puts: plan.puts
+    puts: plan.puts,
+    deletes: plan.deletes
   };
   fs.mkdirSync(REPORT_DIR, { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
   if (args.write) {
+    for (const item of plan.deletes) await deleteRow(client, item.table, item.id);
     for (const item of plan.puts) await putRow(client, item.table, item.after);
   }
   console.log(JSON.stringify({
@@ -343,10 +383,13 @@ async function run(argv = process.argv.slice(2)) {
     mode: output.mode,
     reportPath,
     putCount: output.putCount,
+    deleteCount: output.deleteCount,
     mergedLeadCount: output.mergedLeadCount,
     mergedStudentCount: output.mergedStudentCount,
     renamedLeadCount: output.renamedLeadCount,
     renamedStudentCount: output.renamedStudentCount,
+    cleanedSummaryCount: output.cleanedSummaryCount,
+    deletedSummaryCount: output.deletedSummaryCount,
     referenceUpdateCount: output.referenceUpdateCount
   }, null, 2));
   return output;
