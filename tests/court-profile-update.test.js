@@ -19,6 +19,20 @@ assert.strictEqual(
   '关联学员这类纯资料更新即使没带流水，也应走保留旧财务字段的分支'
 );
 
+const syntheticHistoryProfileBody = {
+  ...profileBody,
+  history: [
+    { id: 'legacy-deposit-court-zhaojing', type: '充值', amount: 2000, bonusAmount: 0 },
+    { id: 'legacy-stored-spent-court-zhaojing', type: '消费', amount: 624, payMethod: '储值扣款' }
+  ]
+};
+
+assert.strictEqual(
+  isProfileOnlyCourtUpdate(syntheticHistoryProfileBody),
+  true,
+  '轻量会员列表保存资料时即使带临时生成的流水，也不能覆盖真实会员流水'
+);
+
 assert.strictEqual(
   isProfileOnlyCourtUpdate({
     ...profileBody,
@@ -62,5 +76,10 @@ assert.strictEqual(updated.cachedTotalDeposit, 2000);
 assert.strictEqual(updated.cachedTotalSpent, 624);
 assert.strictEqual(updated.cachedTotalReceived, 2000);
 assert.deepStrictEqual(updated.history, previousCourt.history);
+
+const syntheticUpdated = buildCourtProfileUpdate(previousCourt, syntheticHistoryProfileBody, previousCourt.id);
+assert.deepStrictEqual(syntheticUpdated.history, previousCourt.history);
+assert.strictEqual(syntheticUpdated.balance, 1376);
+assert.strictEqual(syntheticUpdated.cachedBalance, 1376);
 
 console.log('court profile update tests passed');

@@ -2,7 +2,8 @@ function isProfileOnlyCourtUpdate(body={}){
   if(!body||typeof body!=='object')return false;
   const allowedKeys=new Set(['id','name','phone','studentId','studentIds','campus','depositAttitude','notes','status','history','operator']);
   if(!Object.keys(body).every(key=>allowedKeys.has(key)))return false;
-  return !Array.isArray(body.history)||body.history.length===0;
+  if(!Array.isArray(body.history)||body.history.length===0)return true;
+  return body.history.every(row=>String(row?.id||'').startsWith('legacy-'));
 }
 function normalizeCourtStudentIds(body={}){
   const studentIds=Array.isArray(body?.studentIds)?body.studentIds:[];
