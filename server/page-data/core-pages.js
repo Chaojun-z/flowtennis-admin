@@ -4,7 +4,6 @@ const { buildMembershipFinanceSummary } = require('../read-models/membership-fin
 const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
 const { createStudentRosterIndexReader } = require('./student-roster-index-reader.js');
 const {
-  STUDENT_TEACHING_SUMMARY_PENDING,
   STUDENT_TEACHING_SUMMARY_READY,
   STUDENT_TEACHING_SUMMARY_FAILED,
   buildStudentTeachingSummaryMetaRow,
@@ -445,13 +444,9 @@ function createCorePageDataRoutes(deps={}){
       await mkTable(T_STUDENT_TEACHING_SUMMARY);
       const sourceSnapshotAt=new Date().toISOString();
       const batchId=`student-teaching-summary-manual-${Date.now()}`;
-      await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
-        status:STUDENT_TEACHING_SUMMARY_PENDING,
-        batchId,
-        sourceSnapshotAt,
-        sourceTable:'manual-rebuild',
-        sourceOp:'rebuild-summary'
-      }));
+      const previousSummaryRows=await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}).catch(()=>[]);
+      const previousMeta=(previousSummaryRows||[]).find(row=>String(row?.id||'')==='__student_teaching_summary_meta__');
+      const hasReadyMeta=String(previousMeta?.status||'')===STUDENT_TEACHING_SUMMARY_READY;
       try{
         const [leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
           T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads) : Promise.resolve([]),
@@ -492,14 +487,16 @@ function createCorePageDataRoutes(deps={}){
         }));
         return sendJson(res,{success:true,count:finalRows.length,updatedAt:new Date().toISOString()});
       }catch(err){
-        await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
-          status:STUDENT_TEACHING_SUMMARY_FAILED,
-          batchId,
-          sourceSnapshotAt,
-          error:err?.message||String(err),
-          sourceTable:'manual-rebuild',
-          sourceOp:'rebuild-summary'
-        })).catch(()=>null);
+        if(!hasReadyMeta){
+          await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
+            status:STUDENT_TEACHING_SUMMARY_FAILED,
+            batchId,
+            sourceSnapshotAt,
+            error:err?.message||String(err),
+            sourceTable:'manual-rebuild',
+            sourceOp:'rebuild-summary'
+          })).catch(()=>null);
+        }
         throw err;
       }
     }

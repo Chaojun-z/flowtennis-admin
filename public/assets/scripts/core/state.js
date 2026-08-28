@@ -1085,10 +1085,8 @@ function renderPageLoading(pg){
       timeline.innerHTML='<div class="coach-ops-day-loading-panel"></div>';
     }
   }
-  if(pg==='leads'){
-    if(typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
-    if(typeof renderLeadTableLoading==='function')renderLeadTableLoading();
-  }
+  if(pg==='leads'&&typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
+  if(pg==='leads')renderLeadTableLoading();
   if(pg==='operations'&&typeof renderOperationsLoading==='function')renderOperationsLoading();
   else if(pg==='operations')renderBlockLoading('page-operations','经营分析加载中...');
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');

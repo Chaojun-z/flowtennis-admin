@@ -206,11 +206,6 @@ function createStudentTeachingSummaryCache({
     const ids = studentIdsFromWrite(table, meta);
     if (ids.length) ids.forEach(id => pendingIds.add(id));
     else pendingFullRefresh = true;
-    await writeMeta(STUDENT_TEACHING_SUMMARY_PENDING, {
-      sourceTable: table,
-      sourceOp: meta?.op || '',
-      sourceId: meta?.id || ''
-    });
     if (pendingTimer) clearTimeout(pendingTimer);
     pendingTimer = setTimeout(() => flushStudentTeachingSummaryRefresh(), 800);
     if (typeof pendingTimer.unref === 'function') pendingTimer.unref();
@@ -221,7 +216,8 @@ function createStudentTeachingSummaryCache({
     await mkTable(T_STUDENT_TEACHING_SUMMARY).catch(() => null);
     const sourceSnapshotAt = new Date().toISOString();
     const batchId = `student-teaching-summary-${Date.now()}`;
-    await writeMeta(STUDENT_TEACHING_SUMMARY_REFRESHING, { batchId, sourceSnapshotAt, rowCount: '' });
+    const existingSummaryRows = await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }).catch(() => []);
+    const hasReadyMeta = String(studentTeachingSummaryMetaRow(existingSummaryRows)?.status || '') === STUDENT_TEACHING_SUMMARY_READY;
     try {
       const [leads, students, purchases, entitlements, entitlementLedger, schedule, membershipBenefitLedger, feedbacks] = await Promise.all([
         T_LEADS ? getCachedScan(T_LEADS, { fresh: true }) : Promise.resolve([]),
@@ -257,9 +253,11 @@ function createStudentTeachingSummaryCache({
       });
       return targetRows;
     } catch (err) {
-      await writeMeta(STUDENT_TEACHING_SUMMARY_FAILED, { batchId, sourceSnapshotAt, error: err?.message || String(err) }).catch(metaErr => {
-        logger.error('[student-teaching-summary] mark failed failed', metaErr);
-      });
+      if (!hasReadyMeta) {
+        await writeMeta(STUDENT_TEACHING_SUMMARY_FAILED, { batchId, sourceSnapshotAt, error: err?.message || String(err) }).catch(metaErr => {
+          logger.error('[student-teaching-summary] mark failed failed', metaErr);
+        });
+      }
       throw err;
     }
   }
