@@ -29,6 +29,9 @@ const renderLeadToolbarFiltersBody = source.match(/function renderLeadToolbarFil
 const leadSearchLine = getFilteredLeadsBody.match(/searchHit\([^\n]+/)?.[0] || '';
 assert.match(leadSearchLine, /searchHit\(q,leadDisplayName\(lead\),lead\?\.phone,lead\?\.wechatName\)/, '线索搜索框只应搜索姓名、手机号和微信名');
 assert.doesNotMatch(leadSearchLine, /lead\?\.owner|leadSourceText\(lead\)|leadCustomerTypeText\(lead\)|leadDemandProductText\(lead\)|lead\?\.profileNote/, '线索搜索框不能命中跟进人、来源、类型、需求或备注');
+assert.match(source, /function leadDeleteTargetId\(lead\)/, '线索删除应先解析真实目标 ID');
+assert.match(source, /leadStandardField\(lead,'sourceLeadId'\)/, '线索删除应优先使用生命周期里的真实来源线索 ID');
+assert.match(source, /confirmDel\(targetId,leadDisplayName\(lead\),'lead'\)/, '线索删除不应直接把显示行 ID 传给后端');
 assert.match(source, /function leadServerFilterCounts\(\)/, '线索页应读取后端完整结果筛选计数');
 assert.match(renderLeadToolbarFiltersBody, /leadOptionsWithServerCounts\('source'[\s\S]*leadOptionsWithServerCounts\('owner'/, '线索筛选下拉应优先使用后端完整结果计数');
 

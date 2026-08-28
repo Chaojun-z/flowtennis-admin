@@ -149,6 +149,11 @@ function leadFollowupRows(leadRef){
 function leadById(leadId){
   return leadRows().find(item=>String(item?.id||'')===String(leadId))||leadRawRows().find(item=>String(item?.id||'')===String(leadId))||null;
 }
+function leadDeleteTargetId(lead){
+  const sourceId=leadStandardField(lead,'sourceLeadId')||String(lead?.sourceLeadId||lead?.leadId||lead?.fromLeadId||'').trim();
+  const id=String(lead?.id||'').trim();
+  return sourceId&&sourceId!==id?sourceId:id;
+}
 function leadDisplayName(lead){
   return String(lead?.displayName||lead?.name||lead?.wechatName||lead?.phone||'未命名线索').trim();
 }
@@ -1051,7 +1056,9 @@ async function saveLeadBasicFromDrawer(leadId){
 function openLeadDeleteConfirm(leadId){
   const lead=leadById(leadId);
   if(!lead){toast('线索不存在，请刷新后重试','warn');return;}
-  confirmDel(lead.id,leadDisplayName(lead),'lead');
+  const targetId=leadDeleteTargetId(lead);
+  if(!targetId){toast('线索不存在，请刷新后重试','warn');return;}
+  confirmDel(targetId,leadDisplayName(lead),'lead');
 }
 function leadDetailBasicTabHtml(lead){
   const editing=leadDetailEditingSection==='basic';

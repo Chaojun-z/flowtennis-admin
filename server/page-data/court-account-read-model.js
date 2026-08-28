@@ -276,10 +276,24 @@ function buildCourtAccountType(account, finance) {
 }
 
 function leadOwnerForCourt(court, leads = []) {
-  const courtId = courtText(court?.id);
-  if (!courtId) return '';
-  const lead = (leads || []).find((row) => courtText(row?.courtId) === courtId);
+  const lead = leadForCourt(court, leads);
   return courtText(lead?.owner);
+}
+
+function leadForCourt(court, leads = []) {
+  const courtId = courtText(court?.id);
+  const sourceLeadId = courtText(court?.sourceLeadId || court?.leadId || court?.fromLeadId);
+  if (sourceLeadId) {
+    const bySourceId = (leads || []).find((row) => courtText(row?.id || row?.leadId) === sourceLeadId);
+    if (bySourceId) return bySourceId;
+  }
+  if (!courtId) return null;
+  return (leads || []).find((row) => courtText(row?.courtId) === courtId) || null;
+}
+
+function leadNameForCourt(court, leads = []) {
+  const lead = leadForCourt(court, leads);
+  return courtText(lead?.displayName || lead?.wechatName || lead?.name);
 }
 
 function isInactiveMembershipStatus(value) {
@@ -440,6 +454,7 @@ function buildLegacyItem(court, ctx) {
     history: normalizeCourtHistory(court?.history),
     displayName: displayName(court, studentSummary),
     phone: String(court?.phone || '').trim(),
+    sourceLeadName: leadNameForCourt(court, ctx.leads),
     campusCode,
     campusName: ctx.campusMap.get(campusCode) || displayCampusName(campusCode) || '-',
     owner: leadOwnerForCourt(court, ctx.leads),
@@ -777,7 +792,7 @@ function filterCourtAccountItems(items = [], options = {}) {
     if (owner && String(item.owner || '').trim() !== owner) return false;
     if (accountType && String(item.accountType || '').trim() !== accountType) return false;
     if (membershipTier && String(item.membershipTierLabel || '').trim() !== membershipTier) return false;
-    return textSearchHit(q, item.displayName, item.phone, item.campusName, item.owner, item.depositAttitude, item.notesSummary, item.balance, item.totalDeposit, item.totalSpent, item.totalReceived, item.linkedStudentSummary, item.membershipTierLabel, item.membershipStatus);
+    return textSearchHit(q, item.displayName, item.sourceLeadName, item.phone, item.campusName, item.owner, item.depositAttitude, item.notesSummary, item.balance, item.totalDeposit, item.totalSpent, item.totalReceived, item.linkedStudentSummary, item.membershipTierLabel, item.membershipStatus);
   });
 }
 

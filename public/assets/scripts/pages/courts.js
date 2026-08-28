@@ -1144,7 +1144,7 @@ function getCurrentCourtAccountRows(){
     if(campus!=='all'&&!sameCampusValue(item.campusCode,campus))return false;
     if(courtOwnerFilterValue&&String(item.owner||'').trim()!==courtOwnerFilterValue)return false;
     if(courtAccountTypeFilterValue&&courtAccountStateLabel(item)!==courtAccountTypeFilterValue)return false;
-    return searchHit(q,item.displayName,item.phone,item.campusName,item.owner,item.depositAttitude,item.notesSummary,item.balance,item.totalDeposit,item.totalSpent,item.totalReceived,item.linkedStudentSummary,item.membershipTierLabel,item.membershipStatus);
+    return searchHit(q,item.displayName,item.sourceLeadName,item.phone,item.campusName,item.owner,item.depositAttitude,item.notesSummary,item.balance,item.totalDeposit,item.totalSpent,item.totalReceived,item.linkedStudentSummary,item.membershipTierLabel,item.membershipStatus);
   });
 }
 function renderCourtAccountListView(){

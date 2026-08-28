@@ -21,7 +21,7 @@ async function main() {
       cachedTotalReceived: 1080,
       updatedAt: '2026-06-03'
     }]],
-    ['leads', [{ id: 'lead-1', courtId: 'court-1', owner: '线索跟进人' }]],
+    ['leads', [{ id: 'lead-1', courtId: 'court-1', owner: '线索跟进人', displayName: '王先生（nono）' }]],
     ['membershipAccounts', [{
       id: 'acc-1',
       courtId: 'court-1',
@@ -95,6 +95,7 @@ async function main() {
   });
   const item = view.items[0];
   assert.strictEqual(item.owner, '线索跟进人', '跟进人必须读取线索池 owner');
+  assert.strictEqual(item.sourceLeadName, '王先生（nono）', '订场用户应保留来源线索名');
   assert.strictEqual(item.accountType, '会员账户');
   assert.strictEqual(item.firstOpenDate, '2026-06-01');
   assert.strictEqual(item.membershipTierLabel, '黄金卡');
@@ -104,6 +105,10 @@ async function main() {
   assert.strictEqual(item.bookingRows, undefined, '默认列表不应夹带订场明细');
   assert.strictEqual(item.exportRow.displayName, '张三');
   assert.strictEqual(item.exportRow.totalReceived, 1080);
+
+  const searchView = await loader({ q: '王先生（nono）' });
+  assert.strictEqual(searchView.items.length, 1, '订场用户列表应支持按来源线索名搜索');
+  assert.strictEqual(searchView.items[0].id, 'court-1', '按来源线索名搜索应命中正确订场用户');
 
   const detailView = await loader({ sampleIds: ['court-1'], includeDetails: true });
   const detailItem = detailView.items[0];
