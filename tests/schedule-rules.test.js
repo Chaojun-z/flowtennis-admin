@@ -321,9 +321,9 @@ assert.doesNotThrow(
   'confirmed Xiaozhu single-student small group lesson should be allowed'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertScheduleEntitlementRequired({
-    id: 'sch-small-group-too-few',
+    id: 'sch-small-group-one',
     status: '已排课',
     settlementType: 'package',
     courseType: '小班课',
@@ -333,8 +333,7 @@ assert.throws(
     studentName: '普通学员',
     actualStudentCount: 1
   }),
-  /小班课至少 2 人到场/,
-  'ordinary one-student small group lessons should still require operations confirmation'
+  'ordinary one-student small group lessons should be allowed'
 );
 
 assert.throws(
@@ -2319,6 +2318,25 @@ assert.deepStrictEqual(
   'small group drop-in schedule should allow each student to consume their own single or drop-in package'
 );
 
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas({
+    id: 'sch-small-mixed-formal-trial',
+    status: '已排课',
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    lessonCount: 1,
+    studentIds: ['stu-formal', 'stu-trial']
+  }, [
+    { id: 'ent-formal', studentId: 'stu-formal', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 3 },
+    { id: 'ent-trial', studentId: 'stu-trial', status: 'active', courseType: '体验课', experienceType: '小班体验课', totalLessons: 1, remainingLessons: 1 }
+  ]),
+  [
+    { studentId: 'stu-formal', entitlementId: 'ent-formal', delta: 1 },
+    { studentId: 'stu-trial', entitlementId: 'ent-trial', delta: 1 }
+  ],
+  'small group schedules should allow formal and trial entitlements to mix in one class'
+);
+
 assert.throws(
   () => rules.validateEntitlementForSchedule(
     { id: 'ent-bootcamp-mismatch', studentId: 'stu-1', status: 'active', courseType: '小班课', smallClassType: 'single', totalLessons: 1, remainingLessons: 1 },
@@ -2362,7 +2380,7 @@ assert.strictEqual(
   'small group four-person lesson should consume two lesson units'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertSmallGroupScheduleRules({
     courseType: '小班课',
     smallClassType: 'bootcamp',
@@ -2370,8 +2388,7 @@ assert.throws(
     expectedStudentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'],
     status: '已排课'
   }),
-  /小班课至少 2 人到场才能开课/,
-  'small group bootcamp should reject opening class with only one attendee'
+  'small group bootcamp should allow opening class with only one attendee'
 );
 
 assert.doesNotThrow(

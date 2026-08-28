@@ -181,7 +181,7 @@ assert.match(fnBody('syncScheduleSmallClassType'), /sch_repeatEnabled[\s\S]*week
 assert.match(fnBody('scheduleLessonUnitsFromFields'), /durMin\(start,end\)[\s\S]*Math\.round\(\(mins\/60\)\*10\)\/10/, 'scheduled lesson hours should follow the real start-end duration');
 assert.match(fnBody('saveSchedule'), /smallClassType:/, 'schedule save should persist small group subtype');
 assert.match(fnBody('saveSchedule'), /actualStudentCount:/, 'schedule save should persist actual attendance count');
-assert.match(fnBody('saveSchedule'), /selectedSmallClassType!=='family'[\s\S]*studentIds\.length<2/, 'non-family small group lessons should still require two selected students');
+assert.doesNotMatch(fnBody('saveSchedule'), /studentIds\.length<2/, 'schedule save should not hardcode a two-person minimum for small group lessons');
 assert.match(fnBody('openScheduleModal'), /设置迟到/, 'schedule modal should expose late settings beside coach');
 assert.match(fnBody('openScheduleModal'), /renderScheduleDetailFormCard\('设置迟到',lateSettings\)/, 'late settings should render as a separate drawer card');
 assert.doesNotMatch(fnBody('openScheduleModal'), /schedule-late-field">\$\{lateSettings\}/, 'late settings should not expand inside the coach row field');

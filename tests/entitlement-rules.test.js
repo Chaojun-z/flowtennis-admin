@@ -454,7 +454,7 @@ const smallGroupBootcampPackage = {
   timeBand: '黄金时段',
   maxStudents: 4,
   fixedStudentCount: 4,
-  minAttendStudents: 2,
+  minAttendStudents: 1,
   freeAbsenceLimit: 1
 };
 
@@ -543,7 +543,7 @@ assert.deepStrictEqual(
     packagePrice: 1888,
     maxStudents: 4,
     fixedStudentCount: 0,
-    minAttendStudents: 2,
+    minAttendStudents: 1,
     freeAbsenceLimit: 1
   },
   'small group purchase should keep the bootcamp rule snapshot without fixed class size'
@@ -572,7 +572,7 @@ assert.deepStrictEqual(
     totalLessons: 10,
     freeAbsenceLimit: 1,
     freeAbsenceUsed: 0,
-    minAttendStudents: 2
+    minAttendStudents: 1
   },
   'small group entitlement should initialize free absence counters'
 );
@@ -609,6 +609,41 @@ const smallTrialSchedule = {
 assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule(smallTrialEntitlement, smallTrialSchedule),
   'small group trial lesson should validate against one remaining package count even when scheduled for 1.5 hours'
+);
+
+assert.doesNotThrow(
+  () => rules.validateEntitlementForSchedule(
+    {
+      ...entitlement,
+      id: 'ent-special-trial',
+      studentId: 'stu-special-trial',
+      courseType: '体验课',
+      experienceType: '私教体验课',
+      packageName: '发接发与实战练习 · 2次 · 全天',
+      specialTopic: '发接发与实战练习',
+      courseDisplayName: '发接发与实战练习',
+      totalLessons: 2,
+      usedLessons: 0,
+      remainingLessons: 2,
+      maxStudents: 1,
+      minAttendStudents: 1
+    },
+    {
+      id: 'sch-special-formal',
+      studentIds: ['stu-special-trial'],
+      courseType: '专项课',
+      specialTopic: '发接发与实战练习',
+      courseDisplayName: '发接发与实战练习',
+      entitlementId: 'ent-special-trial',
+      settlementType: 'package',
+      startTime: '2026-06-04 14:00',
+      endTime: '2026-06-04 15:30',
+      campus: 'shunyi_mapo',
+      lessonCount: 1,
+      status: '已排课'
+    }
+  ),
+  'special course trial entitlement should validate against a formal special course schedule'
 );
 
 assert.deepStrictEqual(

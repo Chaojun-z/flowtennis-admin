@@ -28,6 +28,7 @@ assert.match(fnBody('saveSchedule'), /standardCourseType:/, 'schedule save shoul
 assert.match(fnBody('saveSchedule'), /actualStudentCount:/, 'schedule save should persist actual attendance count for family small group lessons');
 assert.match(fnBody('savePackage'), /courseTypeLevel2:/, 'package save should persist the standard course subtype');
 assert.match(fnBody('savePackage'), /standardCourseType:/, 'package save should persist the standard display course type');
+assert.match(fnBody('savePackage'), /minAttendStudents:courseType==='小班课'\?1:0/, 'package save should default small group minimum attendance to 1');
 assert.match(fnBody('syncScheduleFilterOptions'), /STANDARD_COURSE_TYPE_OPTIONS/, 'schedule course type filter should expose standard subtype options');
 assert.match(fnBody('getFilteredSchedules'), /standardCourseTypeFilterValue\(s\)!==tf/, 'schedule filtering should match full standard course type values');
 assert.match(fnBody('syncPackageFilterOptions'), /STANDARD_COURSE_TYPE_OPTIONS/, 'package course type filter should expose standard subtype options');

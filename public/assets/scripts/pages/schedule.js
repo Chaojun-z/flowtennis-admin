@@ -1185,9 +1185,7 @@ async function saveSchedule(){
   const selectedCourseType=normalizeCourseType(document.getElementById('sch_courseType').value);
   const selectedExperienceType=selectedCourseType==='体验课'?normalizeExperienceType(document.getElementById('sch_experienceType')?.value):'',selectedSmallClassType=selectedCourseType==='小班课'?(document.getElementById('sch_smallClassType')?.value||'single'):'';
   const actualStudentCount=parseInt(document.getElementById('sch_actualStudentCount')?.value)||studentIds.length;
-  if(selectedCourseType==='小班课'&&selectedSmallClassType==='family'&&actualStudentCount<2){toast('亲子课至少 2 人到场','warn');return;}
   if(selectedCourseType==='小班课'&&selectedSmallClassType==='family'&&actualStudentCount>4){toast('小班课最多 4 人','warn');return;}
-  if(selectedCourseType==='小班课'&&selectedSmallClassType!=='family'&&studentIds.length<2){toast('小班课至少 2 人到场才能开课','warn');return;}
   if(selectedCourseType==='小班课'&&studentIds.length>4){toast('小班课最多选择 4 名学员','warn');return;}
   const coachLateFree=!!document.getElementById('sch_coachLateFree')?.checked;
   const lateReason=document.getElementById('sch_lateReason')?.value.trim()||'';

@@ -589,6 +589,10 @@ function isSmallTrialCourse(row={}){
 function isCountBasedCourse(row={}){
   return isSmallGroupCourse(row)||isSmallTrialCourse(row)||String(row.courseType||row.type||'').trim()==='专项课';
 }
+function scheduleCourseTypeCompatibleWithEntitlement(schedule={},entitlement={}){
+  const st=String(schedule.courseType||schedule.type||'').trim(),et=String(entitlement.courseType||entitlement.type||'').trim(); if(!st||!et||st===et)return true; if(et!=='体验课')return false;
+  const text=[entitlement.experienceType,entitlement.courseTypeLevel2,entitlement.specialTopic,entitlement.courseDisplayName,entitlement.packageName,entitlement.productName,entitlement.name].filter(Boolean).join(' '),topic=String(schedule.specialTopic||schedule.courseDisplayName||'').trim(); return st==='小班课'?/小班|1v4/.test(text):(st==='专项课'&&!!topic&&text.includes(topic));
+}
 function normalizeSmallClassType(value='',fallback='single'){
   const raw=String(value||'').trim();
   if(SMALL_CLASS_TYPES.includes(raw))return raw;
@@ -630,9 +634,8 @@ function smallGroupRuleSnapshot(source={}){
   const smallClassType=inferSmallClassType(source,parseInt(source.lessons||source.totalLessons||source.packageLessons)===6?'bootcamp':'single');
   const maxStudents=parseInt(source.maxStudents)||4;
   const fixedStudentCount=0;
-  const minAttendStudents=smallClassType==='bootcamp'?2:(parseInt(source.minAttendStudents)||2);
-  const freeAbsenceLimit=smallClassType==='bootcamp'?1:(parseInt(source.freeAbsenceLimit)||0);
-  return {smallClassType,maxStudents,fixedStudentCount,minAttendStudents,freeAbsenceLimit};
+  const minAttendStudents=smallClassType==='bootcamp'?1:(parseInt(source.minAttendStudents)||1);
+  const freeAbsenceLimit=smallClassType==='bootcamp'?1:(parseInt(source.freeAbsenceLimit)||0); return {smallClassType,maxStudents,fixedStudentCount,minAttendStudents,freeAbsenceLimit};
 }
 const packageRules=createPackageRules({
   uuidv4,
@@ -1116,8 +1119,6 @@ function assertSmallGroupScheduleRules(rec){
     return;
   }
   if(actual.length>4)throw new Error('小班课最多 4 人');
-  if(actual.length>0&&actual.length<2&&confirmedSingleStudentSmallGroupSchedule(rec))return;
-  if(actual.length>0&&actual.length<2)throw new Error('小班课至少 2 人到场才能开课');
 }
 async function writePurchaseAndEntitlementAtomic(store,purchaseTable,entitlementTable,purchase,entitlement,options={}){
   const benefitTable=options.benefitTable||'';
@@ -1267,7 +1268,7 @@ function validateEntitlementForSchedule(entitlement,schedule,options={}){
     const auth=entitlementAuthorizedUseContext(entitlement,schedule,options.authorizations||[]);
     if(!auth||String(auth.packageOwnerStudentId||'')!==String(entitlement.studentId||'')||!studentIds.includes(String(auth.usedByStudentId||'')))throw new Error('课包所属学员不匹配');
   }
-  if(entitlement.courseType&&schedule.courseType&&entitlement.courseType!==schedule.courseType)throw new Error('课程类型不匹配');
+  if(!scheduleCourseTypeCompatibleWithEntitlement(schedule,entitlement))throw new Error('课程类型不匹配');
   const trialExperienceTypesCompatible=(a,b)=>{
     const left=String(a||'').trim(),right=String(b||'').trim();
     if(!left||!right||left===right)return true;
