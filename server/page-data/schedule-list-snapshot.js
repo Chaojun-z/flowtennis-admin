@@ -215,7 +215,13 @@ function createScheduleListSnapshotSync(deps = {}) {
   async function ensureSnapshotTables() {
     if (typeof mkTable !== 'function') return;
     if (tables.scheduleListSnapshot) await mkTable(tables.scheduleListSnapshot);
-    if (tables.scheduleListSnapshotTasks) await mkTable(tables.scheduleListSnapshotTasks);
+    if (tables.scheduleListSnapshotTasks) {
+      try {
+        await mkTable(tables.scheduleListSnapshotTasks);
+      } catch (err) {
+        console.warn('[schedule-list-snapshot] tasks table ensure skipped:', err?.message || err);
+      }
+    }
   }
 
   async function recordTask(id, attrs = {}) {

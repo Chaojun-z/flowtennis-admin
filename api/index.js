@@ -691,7 +691,7 @@ const courtAccountListSnapshotSync=createCourtAccountListSnapshotSync({getCached
   courtAccountListSnapshot:T_COURT_ACCOUNT_LIST_SNAPSHOT,courtAccountListSnapshotTasks:T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS
 }});
 async function loadScheduleListSnapshotSourceData(){
-  const [schedule,students,coaches,users,feedbacks,coachProposals]=await Promise.all([getScheduleListRows(),getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[]),getCachedScan(T_FEEDBACKS).catch(()=>[]),scanCoachProposals().catch(()=>[])]);
+  const [schedule,students,coaches,users,feedbacks,coachProposals]=await Promise.all([scan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}),getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[]),getCachedScan(T_FEEDBACKS).catch(()=>[]),scanCoachProposals().catch(()=>[])]);
   return {schedule,students,coaches,users,feedbacks,coachProposals,coachRefs:buildCoachRefs({coaches,users})};
 }
 async function loadScheduleListDeltaSourceData(row={}){

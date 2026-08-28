@@ -41,6 +41,7 @@ assert.match(residualSource, /createScheduleListSnapshotLoader/, '残余 page-da
 assert.match(apiSource, /T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot'/, 'API 必须声明排课快照表');
 assert.match(apiSource, /scheduleListSnapshotSync=createScheduleListSnapshotSync/, 'API 必须创建排课快照同步器');
 assert.match(apiSource, /async function bootstrapScheduleListSnapshot\(\)[\s\S]*rebuildFromSourceData\(await loadScheduleListSnapshotSourceData\(\),\{dryRun:false/, 'API 必须提供排课快照首轮自动发布函数');
+assert.match(apiSource, /async function loadScheduleListSnapshotSourceData\(\)\{[\s\S]*scan\(T_SCHEDULE,\{columns:SCHEDULE_LIST_PROJECTION_FIELDS\}\)[\s\S]*getCachedScan\(T_STUDENTS\)\.catch\(\(\)=>\[\]\)/, '排课快照源数据读取必须直接扫排课事实表，不能吞错返回空数组');
 assert.match(apiSource, /path==='\/admin\/schedule-list-snapshot\/rebuild'&&method==='POST'[\s\S]*const dryRun=body\?\.dryRun!==false/, '排课快照重建入口默认必须 dry-run');
 assert.match(apiSource, /path==='\/admin\/schedule-list-snapshot\/status'&&method==='GET'/, 'API 必须提供排课快照健康状态接口');
 

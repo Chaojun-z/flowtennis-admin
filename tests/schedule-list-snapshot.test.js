@@ -149,6 +149,26 @@ async function main() {
   assert.strictEqual(rebuild.total, sourceData.schedule.length, '正式重建应写完整快照');
   assert.ok(writes.some((row) => row.id === SNAPSHOT_ACTIVE_META_ID && row.row.status === 'published'), '正式重建最后才发布 active meta');
 
+  const writesWithTaskTableFailure = [];
+  const tolerantSync = createScheduleListSnapshotSync({
+    getCachedRow: async () => null,
+    mkTable: async (table) => {
+      writesWithTaskTableFailure.push({ op: 'mkTable', table });
+      if (table === 'snapshotTasks') throw new Error('task table timeout');
+    },
+    put: async (table, id, row) => {
+      writesWithTaskTableFailure.push({ op: 'put', table, id, row });
+      return row;
+    },
+    tables: { scheduleListSnapshot: 'snapshot', scheduleListSnapshotTasks: 'snapshotTasks' }
+  });
+  const tolerantRebuild = await tolerantSync.rebuildFromSourceData(sourceData, { dryRun: false, batchId: 'task-table-failure' });
+  assert.strictEqual(tolerantRebuild.total, sourceData.schedule.length, '任务表失败时主快照重建仍应完成');
+  assert.ok(
+    writesWithTaskTableFailure.some((row) => row.op === 'put' && row.id === SNAPSHOT_ACTIVE_META_ID),
+    '任务表失败时仍应写出 active meta'
+  );
+
   const deltaWrites = [];
   const deltaSync = createScheduleListSnapshotSync({
     getCachedRow: async () => ({ upserts: [], deletes: [] }),
