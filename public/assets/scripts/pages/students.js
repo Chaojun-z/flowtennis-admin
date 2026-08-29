@@ -1647,6 +1647,9 @@ async function saveStudent(){
       renderStudents();
       if(savedEditId){editId=null;studentDetailEditingSection='';studentDetailEditingStudentId='';openStudentDetail(savedEditId);}
       else closeModal();
+      if(typeof ensureDatasetsByName==='function'){
+        ensureDatasetsByName(['students'],{force:true}).catch(err=>console.error('student dataset refresh failed:',err));
+      }
       if(typeof refreshReadModelsInBackground==='function'){
         refreshReadModelsInBackground(['customerCenterPage','lifecycleMetricsPage','packageCenterPage','purchasesPage'],'student save background refresh',()=>{
           renderStudents();

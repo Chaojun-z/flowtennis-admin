@@ -79,6 +79,7 @@ assert.match(fnBody('getStudentDuplicateCandidates'), /isHiddenStudentProfile\(s
 assert.match(source, /发现可能重复的学员：/, 'student save flow should warn operators about possible duplicates');
 assert.match(fnBody('saveStudent'), /await appConfirm\(/, 'student duplicate warning should use the app modal instead of browser confirm');
 assert.doesNotMatch(fnBody('saveStudent'), /confirm\(/, 'student duplicate warning should not use the browser confirm dialog');
+assert.match(fnBody('saveStudent'), /ensureDatasetsByName\(\['students'\],\{force:true\}\)/, 'student save should refresh the shared students dataset so schedule search can see the new student');
 assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTennis_学员_'\+today\(\)\+'.csv'/, 'student csv export should use current filtered result set');
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
