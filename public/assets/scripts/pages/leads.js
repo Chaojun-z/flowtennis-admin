@@ -255,7 +255,19 @@ function leadDateInputValue(lead){
   return leadDateOnly(lead?.leadDate||lead?.leadEnteredAt||lead?.createdAt||lead?.updatedAt,lead)||today();
 }
 function leadBusinessDateValue(lead={}){
-  return lead?.firstTouchAt||lead?.trialAtRaw||lead?.trialBookedAt||lead?.trialAttendedAt||lead?.courseFirstPurchaseAt||lead?.conversionAt||lead?.enrollAtRaw||lead?.formalSignupAt||lead?.leadDate||lead?.leadEnteredAt||lead?.createdAt||lead?.updatedAt||lead?.lastFollowupAt;
+  return leadStandardField(lead,'firstTouchAt')
+    || leadStandardField(lead,'trialAtRaw')
+    || leadStandardField(lead,'trialBookedAt')
+    || leadStandardField(lead,'trialAttendedAt')
+    || leadStandardField(lead,'courseFirstPurchaseAt')
+    || leadStandardField(lead,'conversionAt')
+    || leadStandardField(lead,'enrollAtRaw')
+    || leadStandardField(lead,'formalSignupAt')
+    || leadStandardField(lead,'leadDate')
+    || leadStandardField(lead,'leadEnteredAt')
+    || leadStandardField(lead,'createdAt')
+    || leadStandardField(lead,'updatedAt')
+    || leadStandardField(lead,'lastFollowupAt');
 }
 function leadDateDisplayText(lead){
   return leadDateOnly(leadBusinessDateValue(lead),lead)||'-';

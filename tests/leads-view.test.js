@@ -177,11 +177,20 @@ const leadDateHelpersSource = leadsSource.slice(
   leadsSource.indexOf('function leadFallbackYear('),
   leadsSource.indexOf('function leadDateRangeForPreset(')
 );
-const leadDateHelpersContext = { today: () => '2026-08-29' };
+const leadDateHelpersContext = {
+  today: () => '2026-08-29',
+  customerLifecycleForRecord: record => record?.id === 'lead-lifecycle-first-touch'
+    ? { firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
+    : null,
+  leadStandardField: (lead, key) => {
+    const lifecycle = leadDateHelpersContext.customerLifecycleForRecord(lead);
+    return String((lifecycle && lifecycle[key]) || lead?.[key] || '').trim();
+  }
+};
 vm.createContext(leadDateHelpersContext);
 vm.runInContext(leadDateHelpersSource, leadDateHelpersContext, { filename: 'leads-date-helpers.js' });
 assert.strictEqual(
-  leadDateHelpersContext.leadDateDisplayText({ leadDate: '2026-08-29', firstTouchAt: '2026-04-15' }),
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-lifecycle-first-touch', leadDate: '2026-08-29', createdAt: '2026-08-29' }),
   '2026-04-15',
   'lead list and detail should prefer the earliest business fact over imported processing time'
 );

@@ -32,6 +32,9 @@ const context = {
     querySelectorAll: selector => selector === '.lead-owner-filter-cb:checked' ? context.checkedOwnerBoxes : []
   },
   checkedOwnerBoxes: [],
+  lifecycleMap: {
+    'lead-lifecycle-first-touch': { firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
+  },
   FlowTennisBusinessTaxonomy: {
     normalizeLeadSource: value => String(value || '').trim(),
     normalizeLeadCustomerType: value => String(value || '').trim(),
@@ -44,7 +47,11 @@ const context = {
       : []
   },
   activeCoachNames: () => ['Mira', '张教练'],
-  customerLifecycleForRecord: () => null,
+  customerLifecycleForRecord: record => context.lifecycleMap[record?.id] || null,
+  leadStandardField: (lead, key) => {
+    const lifecycle = context.customerLifecycleForRecord(lead);
+    return String((lifecycle && lifecycle[key]) || lead?.[key] || '').trim();
+  },
   leadDateOnly: value => String(value || '').slice(0, 10),
   today: () => '2026-07-10',
   globalDateWithinRange: () => true,
@@ -87,6 +94,11 @@ assert.strictEqual(
   vm.runInContext("leadStageDisplayText(leads.find(lead => lead.id === 'lead-deal-type-only'))", context),
   '跟进中',
   'deal type alone should not force the displayed lead stage to 已成交'
+);
+assert.strictEqual(
+  vm.runInContext("leadDateDisplayText({ id: 'lead-lifecycle-first-touch', leadDate: '2026-08-29', createdAt: '2026-08-29' })", context),
+  '2026-04-15',
+  'lead date display should prefer lifecycle first-touch evidence over imported processing time'
 );
 
 const priorityEmpty = vm.runInContext('renderLeadPriorityCell({ followupPriority: "" })', context);
