@@ -90,6 +90,22 @@ assert.strictEqual(
   'channel small group trial products should use count unit even when only productType is present'
 );
 
+assert.strictEqual(
+  context.packageLessonUnitLabel({
+    packageName: '小班训练营 · 10次 · 黄金'
+  }),
+  '次',
+  'historical small group package names should still resolve to count unit'
+);
+
+assert.strictEqual(
+  context.packageBalanceUnitLabel({
+    packageName: '小班训练营 · 10次 · 黄金'
+  }),
+  '次',
+  'historical small group ledgers should still resolve to count unit'
+);
+
 const staleDropinPackage = {
   id: 'pkg-stale-dropin',
   courseType: '小班课',

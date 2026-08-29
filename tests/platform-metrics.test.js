@@ -428,8 +428,8 @@ assert.ok(smallClassPackageStudent, 'small class package student should enter fo
 assert.strictEqual(smallClassPackageStudent.completedLessons, 1, 'small class package lessons should count as formal completed lessons');
 assert.strictEqual(
   smallClassPackageStudent.detailLessonRecordRows.find(row => row.scheduleId === 'schedule-small-class')?.lessonSectionText,
-  '[第01节]',
-  'small class package lessons should show the current package section number'
+  '[第1次]',
+  'small class package lessons should show the current package count label'
 );
 
 const freeTrialLessonPlatform = buildPlatformMetrics({

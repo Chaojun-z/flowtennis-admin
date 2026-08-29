@@ -310,10 +310,16 @@ function scheduleConsumedLessonText(schedule = {}, entitlementLedger = []) {
   const consumed = scheduleLedgerRows(schedule, entitlementLedger)
     .filter(item => Number(item.lessonDelta) < 0)
     .reduce((sum, item) => sum + Math.abs(Number(item.lessonDelta) || 0), 0);
-  if (consumed > 0) return `${lessonUnitsText(Math.max(consumed, scheduleLessonUnits(schedule)))} 节`;
+  const unit = scheduleLessonDisplayUnit(schedule);
+  if (consumed > 0) return `${lessonUnitsText(Math.max(consumed, scheduleLessonUnits(schedule)))} ${unit}`;
   return scheduleEntitlements(schedule, []).length || schedule.entitlementId || studentIdsOf({ studentIds: schedule.entitlementIds }).length
-    ? `${lessonUnitsText(scheduleLessonUnits(schedule))} 节`
+    ? `${lessonUnitsText(scheduleLessonUnits(schedule))} ${unit}`
     : '未关联课包';
+}
+
+function scheduleLessonDisplayUnit(item = {}) {
+  const type = String(item.courseType || item.type || item.title || '').trim();
+  return /小班/.test(type) ? '次' : '节';
 }
 
 function scheduleDurationLessonUnits(item = {}) {
@@ -900,7 +906,7 @@ function buildDetailData(selectedClass, context = {}) {
   const linkedEntitlements = scheduleEntitlements(selectedClass, entitlements);
   const entitlementBalance = entitlementSummary(linkedEntitlements);
   const consumedLessons = scheduleConsumedLessonText(selectedClass, entitlementLedger);
-  const remainingLessons = linkedEntitlements.length ? `${lessonUnitsText(entitlementBalance.remaining)} 节` : '-';
+  const remainingLessons = linkedEntitlements.length ? `${lessonUnitsText(entitlementBalance.remaining)} ${scheduleLessonDisplayUnit(selectedClass)}` : '-';
   const studentRemark = buildNoticeField(firstNonEmpty(scheduleStudentRemarkText(selectedClass, students), student && student.remark), true);
   const historyIssue = buildNoticeField(firstNonEmpty(student && student.historyIssue));
   const focusNote = buildNoticeField(firstNonEmpty(
@@ -1536,7 +1542,7 @@ function studentScheduleMeta(item = {}, linkedClass = null) {
   return [
     item.className || item.classNo || (linkedClass && (linkedClass.className || linkedClass.classNo)),
     item.venue || item.loc || item.locationText,
-    `共 ${lessonUnitsText(scheduleLessonUnits(item))} 节`
+    `共 ${lessonUnitsText(scheduleLessonUnits(item))} ${scheduleLessonDisplayUnit(item)}`
   ].filter(Boolean);
 }
 

@@ -1325,6 +1325,30 @@ assert.strictEqual(coachAttendanceParityYang?.teachingStudentCount, 6, 'coach at
 assert.strictEqual(coachAttendanceParityYang?.teachingUniqueStudentCount, 5, 'coach unique student count should remain available as a separate diagnostic field');
 assert.strictEqual(coachAttendanceParityYang?.courseMix.find(item => item.type === '陪打')?.hours, 0.5, 'coach course mix should still show companion workload hours');
 
+const smallGroupHoursMetrics = buildOperationsMetrics({
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
+  coaches: [{ id: 'small-group', name: '小班教练', status: 'active' }],
+  students: [],
+  schedule: [
+    { id: 'small-group-2h', coach: '小班教练', studentIds: ['stu-1', 'stu-2'], studentName: '学员A、学员B', startTime: '2026-07-20 10:00:00', endTime: '2026-07-20 12:00:00', status: '已结束', courseType: '小班课', campus: 'shunyi_mapo', lessonCount: 1 }
+  ],
+  purchases: [],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-07-21 00:00:00'),
+  dateRange: { startDate: '2026-07-20', endDate: '2026-07-20' }
+});
+const smallGroupHoursCoach = smallGroupHoursMetrics.coach.rows.find(row => row.coach === '小班教练');
+assert.strictEqual(smallGroupHoursCoach?.usedHours, 2, 'small group coach workload should use the real class duration');
+assert.strictEqual(smallGroupHoursCoach?.teachingHours, 2, 'small group teaching hours should use the real class duration');
+assert.strictEqual(smallGroupHoursCoach?.courseMix.find(item => item.type === '小班课')?.hours, 2, 'small group course mix should use the real class duration');
+
 assert.deepStrictEqual(
   coachDashboardMetrics.coach.utilizationBands.map(row => `${row.band} ${row.label} ${row.color}`),
   ['0%-20% 闲置 #E05252', '20%-40% 偏低 #D89135', '40%-60% 观察 #8EA0B8', '60%-80% 健康 #7CBF8A', '80%-100% 高效 #2E8B6D'],

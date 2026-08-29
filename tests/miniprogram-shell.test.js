@@ -269,6 +269,9 @@ assert.match(scheduleJs, /studentScheduleRaw/, 'mini program should keep a stude
 assert.match(scheduleJs, /function scheduleDurationLessonUnits[\s\S]*Math\.round\(\(end - start\) \/ 360000\) \/ 10/, 'mini program lesson units should derive a precise duration fallback from start and end time');
 assert.match(scheduleJs, /function scheduleLessonUnits[\s\S]*Math\.max\(count,\s*durationUnits\)/, 'mini program lesson units should not let a stale lower lessonCount override a longer real lesson duration');
 assert.match(scheduleJs, /function studentScheduleMeta[\s\S]*scheduleLessonUnits\(item\)/, 'student lesson record meta should display normalized lesson units');
+assert.match(scheduleJs, /function scheduleLessonDisplayUnit\([\s\S]*小班[\s\S]*次/, 'mini program should expose a count unit helper for small group lessons');
+assert.match(scheduleJs, /function scheduleConsumedLessonText[\s\S]*scheduleLessonDisplayUnit\(schedule\)[\s\S]*return `\$\{lessonUnitsText\(Math\.max\(consumed, scheduleLessonUnits\(schedule\)\)\)\} \$\{unit\}`/, 'mini program schedule detail should show count-based deductions with the correct unit');
+assert.match(scheduleJs, /function studentScheduleMeta[\s\S]*scheduleLessonDisplayUnit\(item\)/, 'student lesson record meta should show the correct unit for small group lessons');
 assert.doesNotMatch(buildStudentCardsBody, /buildStudentLessonRecords/, 'mini program student cards should not rebuild lesson records locally');
 assert.match(scheduleJs, /packagePercent:\s*Number\.isFinite\(Number\(student\.packagePercent\)\)/, 'student cards should display backend package progress percent');
 assert.match(scheduleJs, /const studentsRaw = studentRosterItems\(studentRoster\);[\s\S]*const studentsList = buildStudentCards\(studentsRaw\)/, 'student cards should consume backend roster items only');

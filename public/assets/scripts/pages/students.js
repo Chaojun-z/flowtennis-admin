@@ -1180,12 +1180,16 @@ function studentLessonRecordDetailSectionText(rows=[],index=0){
   const marker=typeof studentLessonSectionMarker==='function'?studentLessonSectionMarker:(value=>String(value));
   if(row.lessonSectionText)return row.lessonSectionText;
   const entitlementId=String(row.entitlementId||row.purchaseId||row.packageName||'').trim();
-  const unit=String(row.unit||'节').trim();
-  if(!entitlementId||unit==='次'||/体验/.test(String(row.courseType||row.packageName||'')))return '';
+  const unit=typeof packageBalanceUnitLabel==='function'
+    ? packageBalanceUnitLabel({...row,packageName:row.packageName||'',courseType:row.courseType||''})
+    : String(row.unit||'节').trim();
+  if(!entitlementId||/体验/.test(String(row.courseType||row.packageName||'')))return '';
   const packageRows=(Array.isArray(rows)?rows:[])
     .filter(item=>String(item.entitlementId||item.purchaseId||item.packageName||'').trim()===entitlementId)
     .filter(item=>Number(item.lessonDelta)<0)
-    .filter(item=>String(item.unit||'').trim()!=='次')
+    .filter(item=>String(typeof packageBalanceUnitLabel==='function'
+      ? packageBalanceUnitLabel({...item,packageName:item.packageName||'',courseType:item.courseType||''})
+      : item.unit||'节').trim()===unit)
     .filter(item=>!/体验/.test(String(item.courseType||item.packageName||'')));
   const usedBefore=packageRows
     .filter(item=>String(item.sortTime||item.time||'')<String(row.sortTime||row.time||''))
@@ -1194,8 +1198,9 @@ function studentLessonRecordDetailSectionText(rows=[],index=0){
   if(!count)return '';
   const startNo=usedBefore+1;
   const endNo=usedBefore+count;
-  const startText=marker(startNo);
-  const endText=marker(endNo);
+  const formatSection=value=>unit==='次'?String(Number(value)||0).replace(/\.0$/,''):marker(value);
+  const startText=formatSection(startNo);
+  const endText=formatSection(endNo);
   return `[第${startText}${startText===endText?'':`-${endText}`}${unit}]`;
 }
 function studentHasActiveSearchOrFilter(){

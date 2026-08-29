@@ -260,7 +260,7 @@ assert.strictEqual(
 assert.strictEqual(
   shiRow.detailLessonRecordRows.find(item => String(item.scheduleId) === 'shi-sch-19')?.lessonSectionText,
   '[第09节]',
-  'lesson section labels should be numbered inside the current package'
+  'lesson section labels should remain numbered inside the current package'
 );
 
 const rosterViews = buildTeachingStudentViews([{

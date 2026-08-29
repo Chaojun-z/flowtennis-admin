@@ -260,6 +260,8 @@ function scheduleDurationLessonUnits(row = {}) {
 }
 
 function scheduleLessonUnits(row = {}) {
+  const lessonText = [row.courseType, row.standardCourseType, row.packageCourseType, row.type, row.experienceType, row.courseTypeLevel2, row.packageName, row.productName, row.name].filter(Boolean).join(' ');
+  if (/小班|1v4/.test(lessonText)) return 1;
   const count = Number(row.lessonCount);
   const durationUnits = scheduleDurationLessonUnits(row);
   if (Number.isFinite(count) && count > 0) return Math.max(count, durationUnits);
@@ -429,7 +431,10 @@ function courseTypeText(row = {}) {
 
 function packageUnitLabel(row = {}) {
   const unit = text(row.unit || row.balanceUnit || row.lessonUnit);
-  return unit || '节';
+  if (unit) return unit;
+  const lessonText = [row.courseType, row.standardCourseType, row.packageCourseType, row.type, row.experienceType, row.courseTypeLevel2, row.packageName, row.productName, row.name].filter(Boolean).join(' ');
+  if (/小班|1v4/.test(lessonText)) return '次';
+  return '节';
 }
 
 function packageStatusText(row = {}, purchase = {}) {
@@ -761,8 +766,9 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     .forEach(row => {
       if (!ledgersByScheduleId.has(text(row.scheduleId))) ledgersByScheduleId.set(text(row.scheduleId), row);
     });
-  const lessonSectionMarker = value => {
+  const lessonSectionMarker = (value, unit = '节') => {
     const num = Number(value) || 0;
+    if (unit === '次') return Number.isInteger(num) ? String(num) : String(round(num, 1)).replace(/\.0$/, '');
     if (Number.isInteger(num)) return String(num).padStart(2, '0');
     const fixed = String(Math.round(num * 10) / 10);
     const [whole, decimal] = fixed.split('.');
@@ -882,7 +888,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           hasFeedback: lessonHasFeedback(scheduleId, row),
           lessonDelta: pending ? 0 : -Math.abs(scheduleLessonUnits(row)),
           countAsCompletedLesson: pending ? false : true,
-          unit: '节',
+          unit: packageUnitLabel(row),
           status: pending ? '待上课' : '已结束',
           statusClass: pending ? 'detail-tag-success' : 'detail-tag-muted',
           feedbackStatusText: pending ? '' : undefined,
@@ -942,7 +948,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     const packageRows = rows
       .filter(row => Number(row.lessonDelta) < 0)
       .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
-      .filter(row => text(row.entitlementId) && String(row.unit || '').trim() !== '次')
+      .filter(row => text(row.entitlementId))
       .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)));
     const usedBeforeByPackage = new Map();
     packageRows.forEach(row => {
@@ -953,7 +959,8 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       if (!count) return;
       const startNo = usedBefore + 1;
       const endNo = usedBefore + count;
-      row.lessonSectionText = `[第${lessonSectionMarker(startNo)}${startNo === endNo ? '' : `-${lessonSectionMarker(endNo)}`}${row.unit || '节'}]`;
+      const unit = row.unit || '节';
+      row.lessonSectionText = `[第${lessonSectionMarker(startNo, unit)}${startNo === endNo ? '' : `-${lessonSectionMarker(endNo, unit)}`}${unit}]`;
       usedBeforeByPackage.set(packageKey, endNo);
     });
     rowsByStudent.set(studentId, rows.map(row => ({ ...row, lessonSectionText: row.lessonSectionText || '' })));

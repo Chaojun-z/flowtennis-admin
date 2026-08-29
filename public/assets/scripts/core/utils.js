@@ -268,9 +268,14 @@ function packageStatusText(p={}){
 }
 function packageLessonUnitLabel(p={}){
   const courseType=normalizeCourseType(p.courseType||p.packageCourseType||p.type||p.productType||'');
-  if(courseType==='小班课')return '次';
-  if(courseType==='专项课')return '次';
-  if(courseType==='体验课'&&packageExperienceTypeLabel(p)==='小班体验课')return '次';
+  const inferredCourseType=courseType||(
+    typeof FlowTennisBusinessTaxonomy==='object'&&FlowTennisBusinessTaxonomy?.normalizeCourseType
+      ? (FlowTennisBusinessTaxonomy.normalizeCourseType(p)?.level1||'')
+      : ''
+  );
+  if(inferredCourseType==='小班课')return '次';
+  if(inferredCourseType==='专项课')return '次';
+  if(inferredCourseType==='体验课'&&packageExperienceTypeLabel(p)==='小班体验课')return '次';
   return '课时';
 }
 function packageBalanceUnitLabel(p={}){
@@ -1396,11 +1401,11 @@ function studentCumulativeLessonSectionText(row,ent={}){
   if(!studentId||Number(row.lessonDelta)>=0||!entitlementId)return '';
   const currentTime=studentEntitlementLedgerTimeText(row,findScheduleForEntitlementLedgerRow(row,students.find(s=>s.id===studentId)||{}));
   const unit=packageBalanceUnitLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''});
-  if(unit==='次'||courseRowIsTrial(row)||courseRowIsTrial(ent))return '';
+  if(courseRowIsTrial(row)||courseRowIsTrial(ent))return '';
   const samePackageRows=studentEntitlementLedgerRows({id:studentId})
     .filter(item=>String(item.entitlementId||'').trim()===entitlementId)
     .filter(item=>Number(item.lessonDelta)<0)
-    .filter(item=>packageBalanceUnitLabel({...ent,...item,packageName:ent.packageName||item?.packageName||row?.packageName||''})!=='次')
+    .filter(item=>packageBalanceUnitLabel({...ent,...item,packageName:ent.packageName||item?.packageName||row?.packageName||''})===unit)
     .sort((a,b)=>studentEntitlementLedgerTimeText(a,findScheduleForEntitlementLedgerRow(a,students.find(s=>s.id===(a?.studentId||studentId))||{})).localeCompare(studentEntitlementLedgerTimeText(b,findScheduleForEntitlementLedgerRow(b,students.find(s=>s.id===(b?.studentId||studentId))||{}))));
   const earlierDelta=samePackageRows
     .filter(item=>studentEntitlementLedgerTimeText(item,findScheduleForEntitlementLedgerRow(item,students.find(s=>s.id===(item?.studentId||studentId))||{}))<currentTime)
@@ -1410,8 +1415,8 @@ function studentCumulativeLessonSectionText(row,ent={}){
   if(!usedAfter)return '';
   const usedBefore=earlierDelta;
   const startNo=Number.isInteger(usedBefore)?usedBefore+1:usedBefore;
-  const startText=studentLessonSectionMarker(startNo);
-  const endText=studentLessonSectionMarker(usedAfter);
+  const startText=studentLessonSectionMarker(startNo,unit);
+  const endText=studentLessonSectionMarker(usedAfter,unit);
   return `[第${startText}${startText===endText?'':`-${endText}`}${unit}]`;
 }
 function studentLessonRecordSectionText(row,ent={}){
@@ -1419,8 +1424,9 @@ function studentLessonRecordSectionText(row,ent={}){
   const cumulativeText=studentCumulativeLessonSectionText(row,ent);
   return cumulativeText||'';
 }
-function studentLessonSectionMarker(value){
+function studentLessonSectionMarker(value,unit='节'){
   const num=Number(value)||0;
+  if(unit==='次')return Number.isInteger(num)?String(num):String(Math.round(num*10)/10).replace(/\.0$/,'');
   if(Number.isInteger(num))return String(num).padStart(2,'0');
   const fixed=String(Math.round(num*10)/10);
   const [whole,decimal]=fixed.split('.');
