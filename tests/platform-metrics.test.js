@@ -432,6 +432,60 @@ assert.strictEqual(
   'small class package lessons should show the current package count label'
 );
 
+const specialCoursePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-special-course', name: '专项课学员' }],
+  purchases: [
+    { id: 'purchase-special-course', studentId: 'student-special-course', packageName: '专项课 · 【零基础】初阶专项课 · 1次 · 全天', courseType: '专项课', actualAmount: 199, status: 'active', purchaseDate: '2026-06-01' }
+  ],
+  entitlements: [
+    { id: 'ent-special-course', studentId: 'student-special-course', purchaseId: 'purchase-special-course', packageName: '专项课 · 【零基础】初阶专项课 · 1次 · 全天', courseType: '专项课', totalLessons: 1, remainingLessons: 0, usedLessons: 1, status: 'depleted' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-special-course', studentId: 'student-special-course', entitlementId: 'ent-special-course', purchaseId: 'purchase-special-course', scheduleId: 'schedule-special-course', lessonDelta: -1, relatedDate: '2026-06-10', reason: '专项课消耗' }
+  ],
+  schedule: [
+    { id: 'schedule-special-course', studentId: 'student-special-course', startTime: '2026-06-10 10:00:00', endTime: '2026-06-10 11:15:00', status: '已结束', courseType: '专项课', standardCourseType: '专项课', coach: '林铭教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-06-30 00:00:00')
+});
+const specialCourseStudent = specialCoursePlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-special-course');
+assert.ok(specialCourseStudent, 'special course student should enter formal view');
+assert.strictEqual(
+  specialCourseStudent.detailLessonRecordRows.find(row => row.scheduleId === 'schedule-special-course')?.lessonSectionText,
+  '[第1次]',
+  'special course lesson records should use the count label'
+);
+
+const smallClassNoEntitlementPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-small-no-entitlement', name: '无权益小班学员' }],
+  purchases: [
+    { id: 'purchase-small-no-entitlement', studentId: 'student-small-no-entitlement', packageName: '小班训练营 · 10次 · 黄金', courseType: '小班课', actualAmount: 1499, status: 'active', purchaseDate: '2026-06-01' }
+  ],
+  entitlements: [
+    { id: 'ent-small-no-entitlement', studentId: 'student-small-no-entitlement', purchaseId: 'purchase-small-no-entitlement', packageName: '小班训练营 · 10次 · 黄金', courseType: '小班课', totalLessons: 10, remainingLessons: 9, usedLessons: 1, status: 'active' }
+  ],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-small-no-entitlement', studentId: 'student-small-no-entitlement', purchaseId: 'purchase-small-no-entitlement', startTime: '2026-06-10 10:00:00', endTime: '2026-06-10 12:00:00', status: '已结束', courseType: '小班课', coach: '林铭教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-06-30 00:00:00')
+});
+const smallClassNoEntitlementStudent = smallClassNoEntitlementPlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-small-no-entitlement');
+assert.ok(smallClassNoEntitlementStudent, 'small class student without entitlement id should enter formal view');
+assert.strictEqual(
+  smallClassNoEntitlementStudent.detailLessonRecordRows.find(row => row.scheduleId === 'schedule-small-no-entitlement')?.lessonSectionText,
+  '[第1次]',
+  'small class lesson records without entitlement id should still show the count label'
+);
+
 const freeTrialLessonPlatform = buildPlatformMetrics({
   leads: [],
   students: [{ id: 'student-free-trial', name: '免费体验课学员' }],
@@ -534,6 +588,20 @@ assert.strictEqual(
   trialWordInReasonSummaryPlatform.teachingStudentViews.summary.trialAttendedStudentCount,
   0,
   'summary fast path must not count a formal lesson as trial just because the note mentions trial'
+);
+assert.strictEqual(
+  teachingSummaryNeedsLessonFacts({
+    id: 'student-bad-count-label',
+    studentId: 'student-bad-count-label',
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    completedLessons: 2,
+    detailLessonRecordRows: [
+      { kind: 'schedule', time: '2026-06-20 10:00-11:15', courseType: '专项课', lessonDelta: -1, lessonSectionText: '[第1节]' },
+      { kind: 'schedule', time: '2026-06-21 14:00-16:00', courseType: '小班课', lessonDelta: -1, lessonSectionText: '', purchaseId: 'purchase-small-missing-entitlement' }
+    ]
+  }, new Date('2026-08-10 00:00:00')),
+  true,
+  'count-based lesson rows with missing or wrong labels must force a fresh lesson fact read'
 );
 
 const textOnlyPackagePlatform = buildPlatformMetrics({

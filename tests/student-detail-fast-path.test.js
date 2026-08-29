@@ -43,7 +43,7 @@ async function requestStudentDetail({ fresh = false } = {}) {
             { purchaseId: 'pur-1', packageName: '私教课', remainingLessons: 9, totalLessons: 10, statusText: '正常' }
           ],
           detailLessonRecordRows: [
-            { kind: 'ledger', time: '2026-07-01 10:00-11:00', courseType: '私教课', lessonDelta: -1 }
+            { kind: 'ledger', time: '2026-07-01 10:00-11:00', courseType: '私教课', lessonDelta: -1, lessonSectionText: '[第1节]' }
           ],
           detailBenefitRows: []
         };
@@ -243,45 +243,83 @@ async function requestLegacyVersionSmallClassStudentDetail() {
     T_FEEDBACKS: 'feedbacks'
   };
   const tableRows = {
-    purchases: [{
-      id: 'pur-small',
-      studentId: 'stu-1',
-      packageName: '小班训练营 · 10次 · 黄金',
-      status: 'active',
-      actualAmount: 1499,
-      purchaseDate: '2026-06-10'
-    }],
+    purchases: [
+      {
+        id: 'pur-special',
+        studentId: 'stu-1',
+        packageName: '专项课 · 【零基础】初阶专项课 · 1次 · 全天',
+        courseType: '专项课',
+        status: 'active',
+        actualAmount: 199,
+        purchaseDate: '2026-06-20'
+      },
+      {
+        id: 'pur-small',
+        studentId: 'stu-1',
+        packageName: '小班训练营 · 10次 · 黄金',
+        status: 'active',
+        actualAmount: 1499,
+        purchaseDate: '2026-06-10'
+      }
+    ],
     packages: [],
-    entitlements: [{
-      id: 'ent-small',
-      purchaseId: 'pur-small',
-      studentId: 'stu-1',
-      packageName: '小班训练营 · 10次 · 黄金',
-      courseType: '小班课',
-      totalLessons: 10,
-      usedLessons: 3,
-      remainingLessons: 7,
-      status: 'active'
-    }],
+    entitlements: [
+      {
+        id: 'ent-special',
+        purchaseId: 'pur-special',
+        studentId: 'stu-1',
+        packageName: '专项课 · 【零基础】初阶专项课 · 1次 · 全天',
+        courseType: '专项课',
+        totalLessons: 1,
+        usedLessons: 1,
+        remainingLessons: 0,
+        status: 'depleted'
+      },
+      {
+        id: 'ent-small',
+        purchaseId: 'pur-small',
+        studentId: 'stu-1',
+        packageName: '小班训练营 · 10次 · 黄金',
+        courseType: '小班课',
+        totalLessons: 10,
+        usedLessons: 3,
+        remainingLessons: 7,
+        status: 'active'
+      }
+    ],
     entitlement_ledger: [{
-      id: 'ledger-small',
-      entitlementId: 'ent-small',
-      purchaseId: 'pur-small',
+      id: 'ledger-special',
+      entitlementId: 'ent-special',
+      purchaseId: 'pur-special',
       studentId: 'stu-1',
-      scheduleId: 'sch-small',
+      scheduleId: 'sch-special',
       lessonDelta: -1,
-      relatedDate: '2026-06-28'
+      relatedDate: '2026-06-20'
     }],
-    schedule: [{
-      id: 'sch-small',
-      studentId: 'stu-1',
-      startTime: '2026-06-28 14:00:00',
-      endTime: '2026-06-28 16:00:00',
-      status: '已结束',
-      courseType: '小班课',
-      coach: '林铭教练',
-      lessonCount: 1
-    }],
+    schedule: [
+      {
+        id: 'sch-special',
+        studentId: 'stu-1',
+        startTime: '2026-06-20 10:00:00',
+        endTime: '2026-06-20 11:15:00',
+        status: '已结束',
+        courseType: '专项课',
+        standardCourseType: '专项课',
+        coach: '林铭教练',
+        lessonCount: 1
+      },
+      {
+        id: 'sch-small',
+        studentId: 'stu-1',
+        purchaseId: 'pur-small',
+        startTime: '2026-06-28 14:00:00',
+        endTime: '2026-06-28 16:00:00',
+        status: '已结束',
+        courseType: '小班课',
+        coach: '林铭教练',
+        lessonCount: 1
+      }
+    ],
     membership_benefit_ledger: [],
     feedbacks: []
   };
@@ -306,7 +344,7 @@ async function requestLegacyVersionSmallClassStudentDetail() {
           id: 'stu-1',
           studentId: 'stu-1',
           name: '文大妞',
-          teachingLessonDetailSourceVersion: 'lesson-record-v2',
+          teachingLessonDetailSourceVersion: 'lesson-record-v3',
           activityStatusLabel: '近30天活跃',
           completedLessons: 3,
           detailPackageOrderRows: [{
@@ -316,13 +354,25 @@ async function requestLegacyVersionSmallClassStudentDetail() {
             usedLessons: 3,
             remainingLessons: 7
           }],
-          detailLessonRecordRows: [{
-            kind: 'ledger',
-            time: '2026-06-28 14:00-16:00',
-            courseType: '小班课',
-            lessonDelta: -1,
-            lessonSectionText: '[第01节]'
-          }],
+          detailLessonRecordRows: [
+            {
+              kind: 'ledger',
+              scheduleId: 'sch-special',
+              time: '2026-06-20 10:00-11:15',
+              courseType: '专项课',
+              lessonDelta: -1,
+              lessonSectionText: '[第1节]'
+            },
+            {
+              kind: 'schedule',
+              scheduleId: 'sch-small',
+              time: '2026-06-28 14:00-16:00',
+              courseType: '小班课',
+              lessonDelta: -1,
+              purchaseId: 'pur-small',
+              lessonSectionText: ''
+            }
+          ],
           detailBenefitRows: []
         };
       }
@@ -376,9 +426,14 @@ async function requestLegacyVersionSmallClassStudentDetail() {
   assert.strictEqual(legacyVersion.res.statusCode, 200);
   assert.ok(legacyVersion.calls.cappedScan > 0, 'legacy lesson summary version must force a fresh fact read');
   assert.strictEqual(
+    legacyVersion.res.body.detailStudentView.detailLessonRecordRows.find(row => row.scheduleId === 'sch-special')?.lessonSectionText,
+    '[第1次]',
+    'legacy lesson summary rows must rebuild special course records to the count-based label'
+  );
+  assert.strictEqual(
     legacyVersion.res.body.detailStudentView.detailLessonRecordRows.find(row => row.scheduleId === 'sch-small')?.lessonSectionText,
     '[第1次]',
-    'legacy lesson summary rows must be rebuilt to the count-based small class label'
+    'legacy lesson summary rows must rebuild small class records without entitlement ids to the count-based label'
   );
   console.log('student detail fast path tests passed');
 })().catch(err => {

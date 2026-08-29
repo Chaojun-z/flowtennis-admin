@@ -2,7 +2,7 @@ const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
 
-const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v3';
+const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v4';
 
 function text(value) {
   return String(value || '').trim();
@@ -434,6 +434,7 @@ function packageUnitLabel(row = {}) {
   if (unit) return unit;
   const lessonText = [row.courseType, row.standardCourseType, row.packageCourseType, row.type, row.experienceType, row.courseTypeLevel2, row.packageName, row.productName, row.name].filter(Boolean).join(' ');
   if (/小班|1v4/.test(lessonText)) return '次';
+  if (/专项课/.test(lessonText)) return '次';
   return '节';
 }
 
@@ -835,7 +836,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           purchaseId: text(row.purchaseId || entitlement.purchaseId),
           sortTime,
           time: displayTime,
-          packageName: teachingPackageName(entitlement, purchase),
+          packageName: teachingPackageName(entitlement, purchase) || text(row.packageName || row.className || row.courseName || row.standardCourseType || row.courseType),
           lessonRelationText: ledgerRelationText({ currentStudentId: studentId, actualStudentIds: studentIds, ownerStudentId, studentsById }),
           packageOwnerStudentId: ownerStudentId,
           packageOwnerName: studentDisplayNameById(ownerStudentId, studentsById),
@@ -879,7 +880,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           purchaseId,
           sortTime,
           time: dateTimeText(row),
-          packageName: '',
+          packageName: teachingPackageName(row, row),
           courseType: courseTypeText(row),
           className: text(row.className || row.courseName),
           campus: text(row.campus || row.campusName),
@@ -948,7 +949,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     const packageRows = rows
       .filter(row => Number(row.lessonDelta) < 0)
       .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
-      .filter(row => text(row.entitlementId))
+      .filter(row => text(row.entitlementId || row.purchaseId || row.packageName))
       .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)));
     const usedBeforeByPackage = new Map();
     packageRows.forEach(row => {
@@ -1864,6 +1865,14 @@ function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
   const lessonRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : parseArr(row.detailLessonRecordRows);
   const packageRows = Array.isArray(row.detailPackageOrderRows) ? row.detailPackageOrderRows : parseArr(row.detailPackageOrderRows);
   if ((Number(row.completedLessons) || 0) === 0 && lessonRows.length === 0 && packageRows.length === 0) return true;
+  const countBasedLessonRows = lessonRows.filter(item => Number(item?.lessonDelta) < 0 && !courseRowIsTrial(item) && !courseRowIsCompanion(item));
+  const hasMissingOrWrongCountLabel = countBasedLessonRows.some(item => {
+    const label = text(item?.lessonSectionText);
+    if (!label) return true;
+    const courseType = text(item?.courseType);
+    return /小班课|专项课/.test(courseType) && !/次/.test(label);
+  });
+  if (hasMissingOrWrongCountLabel) return true;
   const hasFutureRecentLesson = !!dateOnly(row.detailRecentLessonDate || row.lastFormalLessonAt)
     && !teachingDateOnOrBeforeNow(row.detailRecentLessonDate || row.lastFormalLessonAt, now);
   const hasFutureLessonRow = lessonRows.some(item => {
