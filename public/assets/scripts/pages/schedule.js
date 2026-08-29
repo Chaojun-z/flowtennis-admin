@@ -586,6 +586,12 @@ function openScheduleModal(id,seed={}){
         toast('排课编辑数据加载失败，请重试','error');
       }
     }
+    try{
+      if(typeof ensureDatasetsByName==='function')await ensureDatasetsByName(['students'],{force:true});
+    }catch(e){
+      console.warn('schedule student preload failed:',e);
+      toast('排课学员数据加载失败，请重试','error');
+    }
     editId=id;
     const s=id?schedules.find(x=>x.id===id):(seed||null);
     if(id&&!s){toast('排课不存在','warn');return;}
