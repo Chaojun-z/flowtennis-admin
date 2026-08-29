@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js');
-const { buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildTeachingStudentViews, teachingSummaryNeedsLessonFacts } = require('../server/read-models/platform-metrics.js');
+const { buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildTeachingStudentViews, teachingSummaryNeedsLessonFacts, TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 const { buildOperationsMetrics } = require('../server/metrics/operations-metrics.js');
 
 const sample = {
@@ -167,7 +167,7 @@ const teachingSummaryRows = buildStudentTeachingSummaryRows(customerLifecycleRow
 const formalTeachingSummaryRow = teachingSummaryRows.find(row => row.studentId === 'student-real-trial-deal');
 assert.strictEqual(
   formalTeachingSummaryRow?.teachingLessonDetailSourceVersion,
-  'lesson-record-v2',
+  TEACHING_LESSON_DETAIL_SOURCE_VERSION,
   '学员教学摘要必须标记新版过去已发生上课记录口径，避免列表继续读取旧摘要'
 );
 assert.deepStrictEqual(

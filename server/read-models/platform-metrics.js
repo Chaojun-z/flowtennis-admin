@@ -2,7 +2,7 @@ const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
 
-const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v2';
+const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v3';
 
 function text(value) {
   return String(value || '').trim();

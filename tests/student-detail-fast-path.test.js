@@ -229,6 +229,113 @@ async function requestEmptySummaryWithTrialFactsStudentDetail() {
   return { res, calls };
 }
 
+async function requestLegacyVersionSmallClassStudentDetail() {
+  const calls = { cappedScan: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const tableRows = {
+    purchases: [{
+      id: 'pur-small',
+      studentId: 'stu-1',
+      packageName: '小班训练营 · 10次 · 黄金',
+      status: 'active',
+      actualAmount: 1499,
+      purchaseDate: '2026-06-10'
+    }],
+    packages: [],
+    entitlements: [{
+      id: 'ent-small',
+      purchaseId: 'pur-small',
+      studentId: 'stu-1',
+      packageName: '小班训练营 · 10次 · 黄金',
+      courseType: '小班课',
+      totalLessons: 10,
+      usedLessons: 3,
+      remainingLessons: 7,
+      status: 'active'
+    }],
+    entitlement_ledger: [{
+      id: 'ledger-small',
+      entitlementId: 'ent-small',
+      purchaseId: 'pur-small',
+      studentId: 'stu-1',
+      scheduleId: 'sch-small',
+      lessonDelta: -1,
+      relatedDate: '2026-06-28'
+    }],
+    schedule: [{
+      id: 'sch-small',
+      studentId: 'stu-1',
+      startTime: '2026-06-28 14:00:00',
+      endTime: '2026-06-28 16:00:00',
+      status: '已结束',
+      courseType: '小班课',
+      coach: '林铭教练',
+      lessonCount: 1
+    }],
+    membership_benefit_ledger: [],
+    feedbacks: []
+  };
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      return tableRows[table] || [];
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-1') {
+        return { id: 'stu-1', name: '文大妞', phone: '13800000000', campus: 'shunyi_mapo', type: '青少年' };
+      }
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === 'stu-1') {
+        return {
+          id: 'stu-1',
+          studentId: 'stu-1',
+          name: '文大妞',
+          teachingLessonDetailSourceVersion: 'lesson-record-v2',
+          activityStatusLabel: '近30天活跃',
+          completedLessons: 3,
+          detailPackageOrderRows: [{
+            packageName: '小班训练营 · 10次 · 黄金',
+            courseType: '小班课',
+            totalLessons: 10,
+            usedLessons: 3,
+            remainingLessons: 7
+          }],
+          detailLessonRecordRows: [{
+            kind: 'ledger',
+            time: '2026-06-28 14:00-16:00',
+            courseType: '小班课',
+            lessonDelta: -1,
+            lessonSectionText: '[第01节]'
+          }],
+          detailBenefitRows: []
+        };
+      }
+      return null;
+    },
+    PRODUCTION_PAGE_READ_LIMITS: { entitlementLedger: 100, schedule: 100, leads: 100 },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-1') });
+  return { res, calls };
+}
+
 (async () => {
   const { res, calls } = await requestStudentDetail();
   assert.strictEqual(res.statusCode, 200);
@@ -263,6 +370,15 @@ async function requestEmptySummaryWithTrialFactsStudentDetail() {
   assert.ok(
     emptySummary.res.body.detailStudentView.detailPackageOrderRows.some(row => String(row.packageName || '').includes('体验课') || String(row.entitlementId || row.id || '').includes('trial-ent-1')),
     'student detail should show the trial package from entitlement facts'
+  );
+
+  const legacyVersion = await requestLegacyVersionSmallClassStudentDetail();
+  assert.strictEqual(legacyVersion.res.statusCode, 200);
+  assert.ok(legacyVersion.calls.cappedScan > 0, 'legacy lesson summary version must force a fresh fact read');
+  assert.strictEqual(
+    legacyVersion.res.body.detailStudentView.detailLessonRecordRows.find(row => row.scheduleId === 'sch-small')?.lessonSectionText,
+    '[第1次]',
+    'legacy lesson summary rows must be rebuilt to the count-based small class label'
   );
   console.log('student detail fast path tests passed');
 })().catch(err => {
