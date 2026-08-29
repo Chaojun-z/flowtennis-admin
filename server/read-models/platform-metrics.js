@@ -1056,8 +1056,10 @@ function booleanSnapshotValue(value) {
 
 function teachingSummaryTrialAttendedSnapshot(row = {}) {
   const explicit = booleanSnapshotValue(row.hasTrialAttended);
-  if (explicit !== undefined) return explicit;
-  return teachingSummaryRowHasTrialLesson(row) || teachingSummaryRowHasConsumedTrialPackage(row);
+  if (explicit === true) return true;
+  if (teachingSummaryRowHasConsumedTrialPackage(row)) return true;
+  if (explicit === false) return false;
+  return teachingSummaryRowHasTrialLesson(row);
 }
 
 function teachingSummaryFormalAttendedSnapshot(row = {}, now = new Date()) {
@@ -1299,26 +1301,7 @@ function earliestBusinessDateText(...values) {
 }
 
 function leadBusinessDate(row = {}, lead = {}) {
-  const materializedStudentLead = /^lead-from-student-/.test(text(lead.id || lead.leadId || row.sourceLeadId || row.leadId));
-  if (materializedStudentLead) {
-    return earliestBusinessDateText(
-      row.firstTouchAt,
-      row.trialAtRaw,
-      row.trialBookedAt,
-      row.trialAttendedAt,
-      row.courseFirstPurchaseAt,
-      row.conversionAt,
-      lead.firstTouchAt,
-      lead.trialAtRaw,
-      lead.trialBookedAt,
-      lead.trialAttendedAt,
-      lead.courseFirstPurchaseAt,
-      lead.conversionAt
-    );
-  }
-  const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
-  if (explicitLeadDate) return explicitLeadDate;
-  return earliestBusinessDateText(
+  const businessFacts = [
     row.firstTouchAt,
     row.trialAtRaw,
     row.trialBookedAt,
@@ -1330,10 +1313,22 @@ function leadBusinessDate(row = {}, lead = {}) {
     lead.trialBookedAt,
     lead.trialAttendedAt,
     lead.courseFirstPurchaseAt,
-    lead.conversionAt,
-    lead.createdAt,
-    lead.updatedAt
-  );
+    lead.conversionAt
+  ];
+  const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
+  const businessDate = earliestBusinessDateText(...businessFacts);
+  if (businessDate) return businessDate;
+  if (explicitLeadDate && ![
+    text(lead.createdAt),
+    text(lead.updatedAt),
+    text(lead.leadEnteredAt),
+    text(row.createdAt),
+    text(row.updatedAt),
+    text(row.leadEnteredAt)
+  ].includes(explicitLeadDate)) {
+    return explicitLeadDate;
+  }
+  return '';
 }
 
 function visibleLeadProfileNote(lead = {}) {
@@ -1887,10 +1882,8 @@ function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
 }
 
 function teachingStudentHasTrialAttendedFact(data = {}, row = {}, now = new Date()) {
+  if (row.hasTeachingSummarySnapshot) return teachingSummaryTrialAttendedSnapshot(row);
   if (teachingStudentTrialLessonFactRows(data, text(row.studentId), now).length > 0) return true;
-  if (!hasFreshTeachingLessonFacts(data) && row.hasTeachingSummarySnapshot) {
-    return booleanSnapshotValue(row.hasTrialAttended) === true;
-  }
   return false;
 }
 
@@ -2714,9 +2707,10 @@ function buildStudentTeachingSummaryRows(customerLifecycleRows = [], data = {}) 
       const studentId = text(row.studentId);
       const trialFactRows = teachingStudentTrialLessonFactRows(data, studentId, now);
       const formalFactRows = teachingStudentFormalLessonFactRows(data, studentId, now);
+      const hasTrialAttended = teachingStudentHasTrialAttendedFact(data, row, now);
       return teachingStudentSummarySnapshotRow({
         ...row,
-        hasTrialAttended: hasFreshTeachingLessonFacts(data) ? trialFactRows.length > 0 : !!row.hasTrialAttended,
+        hasTrialAttended: hasFreshTeachingLessonFacts(data) ? trialFactRows.length > 0 : hasTrialAttended,
         hasFormalAttended: hasFreshTeachingLessonFacts(data) ? formalFactRows.length > 0 : !!row.hasFormalAttended
       }, updatedAt);
     })

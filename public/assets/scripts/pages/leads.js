@@ -1058,7 +1058,7 @@ function openLeadDeleteConfirm(leadId){
   if(!lead){toast('线索不存在，请刷新后重试','warn');return;}
   const targetId=leadDeleteTargetId(lead);
   if(!targetId){toast('线索不存在，请刷新后重试','warn');return;}
-  confirmDel(targetId,leadDisplayName(lead),'lead');
+  confirmDel(lead.id,leadDisplayName(lead),'lead');
 }
 function leadDetailBasicTabHtml(lead){
   const editing=leadDetailEditingSection==='basic';

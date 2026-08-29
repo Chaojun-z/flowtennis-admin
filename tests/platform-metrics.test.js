@@ -502,6 +502,11 @@ const consumedTrialSummaryPlatform = buildPlatformMetrics({
   now: new Date('2026-08-10 00:00:00')
 });
 assert.strictEqual(
+  consumedTrialSummaryPlatform.teachingStudentViews.courseStudents[0]?.hasTrialAttended,
+  true,
+  'summary fast path should mark consumed trial orders as attended trials even when stale hasTrialAttended is false'
+);
+assert.strictEqual(
   consumedTrialSummaryPlatform.teachingStudentViews.summary.trialAttendedStudentCount,
   1,
   'summary fast path should count consumed trial orders as attended trials even when stale hasTrialAttended is false'

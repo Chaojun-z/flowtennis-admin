@@ -1003,6 +1003,32 @@ function createLeadsRoutes(deps={}){
     return rows.length?applyLeadFollowupsSnapshot(lead,rows):lead;
   }
 
+  async function applyLeadDisplaySnapshot(lead,options={}){
+    const leadId=cleanLeadText(options.leadId||lead?.id||lead?.sourceLeadId||lead?.leadId);
+    if(!leadId)return lead;
+    try{
+      const context=await readVisibleLeadContext({expandLifecycleSearch:true});
+      const visible=(context?.rows||[]).find(row=>{
+        const rowId=cleanLeadText(row?.id);
+        const sourceLeadId=cleanLeadText(row?.sourceLeadId||row?.leadId);
+        return rowId===leadId||sourceLeadId===leadId;
+      });
+      if(!visible)return lead;
+      const visibleLeadDate=cleanLeadText(visible.leadDate||visible.leadEnteredAt||visible.firstTouchAt);
+      const leadDate=visibleLeadDate||cleanLeadText(lead?.leadDate||lead?.leadEnteredAt||lead?.firstTouchAt);
+      return {
+        ...lead,
+        id:lead?.id||visible.id||leadId,
+        leadDate,
+        leadEnteredAt:leadDate||cleanLeadText(lead?.leadEnteredAt||''),
+        firstTouchAt:cleanLeadText(visible.firstTouchAt||lead?.firstTouchAt||'')
+      };
+    }catch(error){
+      console.warn('lead display snapshot skipped',error?.message||error);
+      return lead;
+    }
+  }
+
   async function materializeStudentLifecycleLeads(mergedLeads=[],customerLifecycleRows=[],options={}){
     const existingIds=new Set((mergedLeads||[]).map(row=>cleanLeadText(row.id)).filter(Boolean));
     const existingStudentIds=new Set((mergedLeads||[]).map(row=>cleanLeadText(row.studentId)).filter(Boolean));
@@ -1229,7 +1255,8 @@ function createLeadsRoutes(deps={}){
         const raw=await get(T_LEADS,leadId).catch(()=>null);
         if(!raw)return sendJson(res,{error:'线索不存在'},404);
         const snapshot=await applyPersistedLeadSnapshot(raw);
-        const scopedRaw=filterLoadAllForUser({leads:[snapshot]},user).leads||[];
+        const displayLead=await applyLeadDisplaySnapshot(snapshot,{leadId});
+        const scopedRaw=filterLoadAllForUser({leads:[displayLead]},user).leads||[];
         if(!scopedRaw.length)return sendJson(res,{error:'线索不存在'},404);
         return sendJson(res,scopedRaw[0]);
       }
@@ -1242,8 +1269,9 @@ function createLeadsRoutes(deps={}){
         const next=await applyPersistedLeadSnapshot(normalized);
         const materialized=await materializeLeadConversionIdentities(next,{now});
         if(!materialized.changed)await put(T_LEADS,leadId,next);
+        const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId});
         clearLeadListCaches();
-        return sendJson(res,materialized.lead);
+        return sendJson(res,displayLead);
       }
       if(method==='DELETE'){
         await init();
@@ -1377,16 +1405,17 @@ function createLeadsRoutes(deps={}){
       const leadId=leadConvertStudentM[1];
       const lead=await get(T_LEADS,leadId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
-      if(lead.studentId){
-        const now=new Date().toISOString();
-        let student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
-        if(student)student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
-        const materialized=await materializeLeadConversionIdentities(lead,{now,studentId:lead.studentId});
-        clearLeadListCaches();
-        return sendJson(res,{lead:materialized.lead,student,created:false});
-      }
-      let student=body.studentId?await get(T_STUDENTS,body.studentId).catch(()=>null):null;
-      if(!student){
+        if(lead.studentId){
+          const now=new Date().toISOString();
+          let student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
+          if(student)student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
+          const materialized=await materializeLeadConversionIdentities(lead,{now,studentId:lead.studentId});
+          clearLeadListCaches();
+          const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId});
+          return sendJson(res,{lead:displayLead,student,created:false});
+        }
+        let student=body.studentId?await get(T_STUDENTS,body.studentId).catch(()=>null):null;
+        if(!student){
         const studentMatch=matchLeadToStudent?matchLeadToStudent(lead,await scan(T_STUDENTS).catch(()=>[])):{matchType:'none',record:null};
         student=studentMatch.record||null;
         if(!student){
@@ -1399,8 +1428,9 @@ function createLeadsRoutes(deps={}){
       const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,membershipAccountId:lead.membershipAccountId||'',updatedAt:now,createdAt:lead.createdAt},{id:lead.id,now});
       const materialized=await materializeLeadConversionIdentities(nextLead,{now,studentId:student.id});
       if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId});
       clearLeadListCaches();
-      return sendJson(res,{lead:materialized.lead,student,created:!body.studentId});
+      return sendJson(res,{lead:displayLead,student,created:!body.studentId});
     }
     const leadConvertCourtM=path.match(/^\/leads\/([^/]+)\/convert-court$/);
     if(leadConvertCourtM&&method==='POST'){
@@ -1416,7 +1446,8 @@ function createLeadsRoutes(deps={}){
         if(court)court=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
         const materialized=await materializeLeadConversionIdentities(lead,{now,courtId:lead.courtId});
         clearLeadListCaches();
-        return sendJson(res,{lead:materialized.lead,court,created:false});
+        const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId});
+        return sendJson(res,{lead:displayLead,court,created:false});
       }
       let court=body.courtId?await get(T_COURTS,body.courtId).catch(()=>null):null;
       if(!court){
@@ -1433,8 +1464,9 @@ function createLeadsRoutes(deps={}){
       const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,updatedAt:now,createdAt:lead.createdAt},{id:lead.id,now});
       const materialized=await materializeLeadConversionIdentities(nextLead,{now,courtId:court.id});
       if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId});
       clearLeadListCaches();
-      return sendJson(res,{lead:materialized.lead,court,created:!body.courtId});
+      return sendJson(res,{lead:displayLead,court,created:!body.courtId});
     }
     const leadLinkStudentM=path.match(/^\/leads\/([^/]+)\/link-student$/);
     if(leadLinkStudentM&&method==='POST'){
@@ -1450,8 +1482,9 @@ function createLeadsRoutes(deps={}){
       const nextLead=normalizeLeadRecord({...lead,studentId:linkedStudent.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now});
       const materialized=await materializeLeadConversionIdentities(nextLead,{now,studentId:linkedStudent.id});
       if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId});
       clearLeadListCaches();
-      return sendJson(res,{lead:materialized.lead,student:linkedStudent});
+      return sendJson(res,{lead:displayLead,student:linkedStudent});
     }
     const leadLinkCourtM=path.match(/^\/leads\/([^/]+)\/link-court$/);
     if(leadLinkCourtM&&method==='POST'){
@@ -1468,8 +1501,9 @@ function createLeadsRoutes(deps={}){
       const nextLead=normalizeLeadRecord({...lead,courtId:linkedCourt.id,membershipAccountId:membershipAccount?.id||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now});
       const materialized=await materializeLeadConversionIdentities(nextLead,{now,courtId:linkedCourt.id});
       if(!materialized.changed)await put(T_LEADS,lead.id,nextLead);
+      const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId});
       clearLeadListCaches();
-      return sendJson(res,{lead:materialized.lead,court:linkedCourt,membershipAccount:materialized.membershipAccount||membershipAccount});
+      return sendJson(res,{lead:displayLead,court:linkedCourt,membershipAccount:materialized.membershipAccount||membershipAccount});
     }
     const leadUnlinkStudentM=path.match(/^\/leads\/([^/]+)\/unlink-student$/);
     if(leadUnlinkStudentM&&method==='POST'){
@@ -1487,8 +1521,9 @@ function createLeadsRoutes(deps={}){
         nextStudent={...student,sourceLeadId:'',leadId:'',fromLeadId:'',updatedAt:now};
         await put(T_STUDENTS,nextStudent.id,nextStudent);
       }
+      const displayLead=await applyLeadDisplaySnapshot(nextLead,{leadId});
       clearLeadListCaches();
-      return sendJson(res,{lead:nextLead,student:nextStudent});
+      return sendJson(res,{lead:displayLead,student:nextStudent});
     }
     const leadUnlinkCourtM=path.match(/^\/leads\/([^/]+)\/unlink-court$/);
     if(leadUnlinkCourtM&&method==='POST'){
@@ -1506,8 +1541,9 @@ function createLeadsRoutes(deps={}){
         nextCourt={...court,sourceLeadId:'',leadId:'',fromLeadId:'',updatedAt:now};
         await put(T_COURTS,nextCourt.id,nextCourt);
       }
+      const displayLead=await applyLeadDisplaySnapshot(nextLead,{leadId});
       clearLeadListCaches();
-      return sendJson(res,{lead:nextLead,court:nextCourt});
+      return sendJson(res,{lead:displayLead,court:nextCourt});
     }
     return false;
   };

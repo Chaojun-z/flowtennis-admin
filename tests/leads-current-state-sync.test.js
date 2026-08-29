@@ -51,6 +51,20 @@ async function main() {
       isCourseConverted: true,
       createdAt: '2026-07-01',
       updatedAt: '2026-07-01'
+    }, {
+      id: 'lead-date-polluted',
+      displayName: '日期污染',
+      wechatName: '日期污染',
+      leadStage: '已成交',
+      systemStatus: '已成交',
+      rawStatus: '已成交',
+      dealType: '',
+      conversionType: '',
+      studentId: 'student-date',
+      isCourseConverted: false,
+      leadDate: '2026-06-26 03:37:16',
+      createdAt: '2026-06-26 03:37:16',
+      updatedAt: '2026-06-26 03:37:16'
     }],
     ft_lead_followups: [{
       id: 'fu-wly',
@@ -71,13 +85,23 @@ async function main() {
       createdAt: '2026-07-10',
       updatedAt: '2026-07-10'
     }],
-    ft_students: [],
-    ft_purchases: [],
+    ft_purchases: [{
+      id: 'purchase-date',
+      studentId: 'student-date',
+      packageName: '正式课包',
+      status: 'active',
+      purchaseDate: '2026-04-15'
+    }],
     ft_entitlements: [],
     ft_schedule: [],
     ft_courts: [],
     ft_membership_accounts: [],
-    ft_membership_orders: []
+    ft_membership_orders: [],
+    ft_students: [{
+      id: 'student-date',
+      name: '日期污染',
+      sourceLeadId: 'lead-date-polluted'
+    }]
   };
   const writes = [];
 
@@ -133,6 +157,10 @@ async function main() {
   assert.strictEqual(downgradedRow.dealType, '', '最新跟进不是已成交时，线索池不能继续保留旧成交类型');
   assert.strictEqual(downgradedRow.isCourseConverted, false, '最新跟进不是已成交时，旧课程成交快照必须失效');
 
+  const dateFixedRow = listRes.body.find(row => row.id === 'lead-date-polluted');
+  assert.ok(dateFixedRow, '有业务事实的线索仍应在线索池可见');
+  assert.strictEqual(dateFixedRow.leadDate, '2026-04-15', '线索池必须展示最早业务时间，不得回退到落表时间');
+
   const updateRes = makeRes();
   await handle({
     path: '/leads/lead-wly',
@@ -149,6 +177,17 @@ async function main() {
     writes.some(item => item.table === 'ft_leads' && item.id === 'lead-wly' && item.row.dealType === '课程'),
     '基础信息保存必须把统一后的当前线索状态写回主表'
   );
+
+  const detailRes = makeRes();
+  await handle({
+    path: '/leads/lead-date-polluted',
+    method: 'GET',
+    body: {},
+    user: { role: 'admin' },
+    res: detailRes,
+    query: new URLSearchParams()
+  });
+  assert.strictEqual(detailRes.body.leadDate, '2026-04-15', '线索详情必须展示最早业务时间，不得回退到落表时间');
 
   const downgradeUpdateRes = makeRes();
   await handle({
