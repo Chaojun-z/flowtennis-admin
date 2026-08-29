@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const publicDir = path.join(__dirname, '../public');
 const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
@@ -172,6 +173,23 @@ assert.match(fnBody('leadDateDisplayText'), /return leadDateOnly\(leadBusinessDa
 assert.doesNotMatch(fnBody('leadDateDisplayText'), /\$\{date\} \$\{String\(time\[1\]\)/, 'lead list and detail should not append hour and minute to lead time');
 assert.match(fnBody('leadBasicInfoReadonlyHtml'), /leadDetailFieldHtml\('线索时间',leadDateDisplayText\(lead\)\)/, 'lead detail basic tab should format lead time instead of showing raw ISO values');
 assert.doesNotMatch(fnBody('leadBasicInfoReadonlyHtml'), /leadDetailFieldHtml\('线索时间',lead\?\.leadDate\|\|'-'\)/, 'lead detail basic tab should not render raw leadDate');
+const leadDateHelpersSource = leadsSource.slice(
+  leadsSource.indexOf('function leadFallbackYear('),
+  leadsSource.indexOf('function leadDateRangeForPreset(')
+);
+const leadDateHelpersContext = { today: () => '2026-08-29' };
+vm.createContext(leadDateHelpersContext);
+vm.runInContext(leadDateHelpersSource, leadDateHelpersContext, { filename: 'leads-date-helpers.js' });
+assert.strictEqual(
+  leadDateHelpersContext.leadDateDisplayText({ leadDate: '2026-08-29', firstTouchAt: '2026-04-15' }),
+  '2026-04-15',
+  'lead list and detail should prefer the earliest business fact over imported processing time'
+);
+assert.strictEqual(
+  leadDateHelpersContext.leadDateInputValue({ leadDate: '2026-08-29', firstTouchAt: '2026-04-15' }),
+  '2026-08-29',
+  'lead edit form should keep the stored lead time value instead of forcing the display fallback'
+);
 assert.match(fnBody('leadDetailBasicTabHtml'), /openLeadMergeModal\('\$\{lead\.id\}'\)[\s\S]*合并重复线索/, 'lead merge entry should live in the current lead detail drawer');
 assert.match(fnBody('leadDetailBasicTabHtml'), /openLeadDeleteConfirm\('\$\{lead\.id\}'\)[\s\S]*删除线索/, 'lead delete entry should live in the lead detail drawer');
 assert.match(fnBody('openLeadDeleteConfirm'), /confirmDel\(lead\.id,leadDisplayName\(lead\),'lead'\)/, 'lead delete confirmation should resolve the lead name before opening the shared confirm dialog');

@@ -252,10 +252,10 @@ function leadDateOnly(value,lead={}){
   return `${parts.year}-${String(parts.month).padStart(2,'0')}-${String(parts.day).padStart(2,'0')}`;
 }
 function leadDateInputValue(lead){
-  return leadDateOnly(leadBusinessDateValue(lead),lead)||today();
+  return leadDateOnly(lead?.leadDate||lead?.leadEnteredAt||lead?.createdAt||lead?.updatedAt,lead)||today();
 }
 function leadBusinessDateValue(lead={}){
-  return lead?.leadDate||lead?.leadEnteredAt||lead?.firstTouchAt||lead?.trialAtRaw||lead?.trialBookedAt||lead?.trialAttendedAt||lead?.courseFirstPurchaseAt||lead?.conversionAt||lead?.enrollAtRaw||lead?.formalSignupAt||lead?.createdAt||lead?.updatedAt||lead?.lastFollowupAt;
+  return lead?.firstTouchAt||lead?.trialAtRaw||lead?.trialBookedAt||lead?.trialAttendedAt||lead?.courseFirstPurchaseAt||lead?.conversionAt||lead?.enrollAtRaw||lead?.formalSignupAt||lead?.leadDate||lead?.leadEnteredAt||lead?.createdAt||lead?.updatedAt||lead?.lastFollowupAt;
 }
 function leadDateDisplayText(lead){
   return leadDateOnly(leadBusinessDateValue(lead),lead)||'-';
