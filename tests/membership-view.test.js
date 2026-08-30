@@ -102,6 +102,7 @@ assert.doesNotMatch(fnBody('courtBookingDrawerHtml'), /renderDetailDrawerCard\('
 assert.match(html, /function courtBookingRecordsTableHtml/, 'booking records should render as a table');
 assert.match(fnBody('courtBookingRecordsTableHtml'), /label:'订场日期'[\s\S]*label:'时间'[\s\S]*label:'场地'[\s\S]*label:'类型'[\s\S]*label:'支付方式'[\s\S]*label:'金额'[\s\S]*label:'备注'/, 'booking records table should use the requested columns');
 assert.doesNotMatch(fnBody('courtBookingRecordsTableHtml'), /录入时间|recordedAt|createdAt/, 'booking records table should not show recorded time');
+assert.doesNotMatch(fnBody('courtBookingRecordsTableHtml'), /filter\(h=>String\(h\.category\|\|h\.businessTypeLevel2\|\|''\)\.includes\('订场'\)/, 'booking records table should not drop booking rows already selected by the unified read model');
 assert.match(fnBody('courtBookingRecordsTableHtml'), /minWidth:'660px'[\s\S]*label:'订场日期'[\s\S]*width:'90px'[\s\S]*label:'时间'[\s\S]*width:'150px'[\s\S]*label:'场地'[\s\S]*width:'70px'[\s\S]*label:'类型'[\s\S]*width:'80px'[\s\S]*label:'支付方式'[\s\S]*width:'80px'[\s\S]*label:'金额'[\s\S]*width:'70px'[\s\S]*label:'备注'[\s\S]*width:'120px'/, 'booking records table should use compact widths and a 150px booking time column');
 assert.match(fnBody('courtBookingRecordsTableHtml'), /cellClassName:'membership-booking-note-cell'/, 'booking record notes should support horizontal overflow for long notes');
 assert.match(html, /function courtBookingHumanNote/, 'booking records should filter system-generated notes');

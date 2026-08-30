@@ -242,6 +242,39 @@ async function main() {
   assert.strictEqual(sortDetailView.items.length, 1, '详情读模型仍应支持按单个用户 ID 回源');
   assert.ok(Array.isArray(sortDetailView.items[0].bookingRows) && sortDetailView.items[0].bookingRows.length === 1, '详情抽屉仍应拿完整订场历史');
 
+  const staleCachedBalanceDatasets = {
+    campuses: [{ code: 'shunyi_mapo', name: '马坡' }],
+    students: [],
+    leads: [],
+    courts: [{
+      id: 'court-stale-cached-balance',
+      name: '缓存余额错的会员',
+      campus: 'shunyi_mapo',
+      cachedBalance: 0,
+      cachedTotalDeposit: 0,
+      cachedTotalSpent: 0,
+      cachedTotalReceived: 0,
+      history: [
+        { type: '充值', amount: 2000, bonusAmount: 0, date: '2026-08-01' },
+        { type: '消费', amount: 300, payMethod: '储值扣款', category: '订场', date: '2026-08-20', startTime: '10:00', endTime: '11:00', venue: '1号场' }
+      ]
+    }],
+    membershipAccounts: [{ id: 'ma-stale', courtId: 'court-stale-cached-balance', status: 'active', tierCode: '白银卡' }],
+    membershipOrders: [],
+    membershipPlans: [],
+    membershipBenefitLedger: [],
+    membershipAccountEvents: []
+  };
+  const loadStaleCachedBalanceView = createCourtAccountListViewLoader({
+    listCampusesWithDefaults: async () => staleCachedBalanceDatasets.campuses,
+    getCachedScan: async (tableName) => staleCachedBalanceDatasets[tableName] || [],
+    tables
+  });
+  const staleCachedBalanceView = await loadStaleCachedBalanceView({ page: 1, pageSize: 15, sortKey: 'lastBookingDate', sortDir: 'desc' });
+  assert.strictEqual(staleCachedBalanceView.items[0].balance, 1700, '缓存余额为 0 但流水能算出真实余额时，会员余额不能继续显示 0');
+  assert.strictEqual(staleCachedBalanceView.items[0].totalDeposit, 2000, '缓存充值为 0 但流水有充值时，应回源用流水充值金额');
+  assert.strictEqual(staleCachedBalanceView.items[0].totalSpent, 300, '缓存消费为 0 但流水有消费时，应回源用流水消费金额');
+
   const membershipSortDatasets = {
     ...sortDatasets,
     courts: [

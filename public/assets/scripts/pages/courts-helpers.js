@@ -62,7 +62,7 @@ async function createCourtCompanionSchedule(court,record,companionCoach){
   });
 }
 function courtBookingRecordsTableHtml(hist){
-  const rows=(Array.isArray(hist)?hist:[]).filter(h=>String(h.category||h.businessTypeLevel2||'').includes('订场')||h.category==='内部占用');
+  const rows=Array.isArray(hist)?hist:[];
   return renderDetailDrawerTable({
     minWidth:'660px',
     columns:[

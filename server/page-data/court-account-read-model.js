@@ -421,6 +421,14 @@ function bookingRowsForCourt(court) {
     }));
 }
 
+function cachedFinanceOrLegacy(cachedValue, legacyValue) {
+  if (cachedValue === '' || cachedValue == null) return money(legacyValue);
+  const cached = money(cachedValue);
+  const legacy = money(legacyValue);
+  if (cached === 0 && legacy > 0) return legacy;
+  return cached;
+}
+
 function membershipAccountPayload(account) {
   if (!account) return null;
   return {
@@ -500,10 +508,10 @@ function buildReadModelItem(court, ctx) {
   const ledgerRows = ledgerRowsForAccount(account, ctx.membershipBenefitLedger);
   const bookingRows = bookingRowsForCourt(court);
   const firstOpenDate = rechargeRows.map((row) => String(row.purchaseDate || '').slice(0, 10)).filter(Boolean).sort()[0] || account?.cycleStartDate || account?.createdAt || '';
-  const balance = court?.cachedBalance === '' || court?.cachedBalance == null ? legacy.balance : money(court?.cachedBalance);
-  const totalDeposit = court?.cachedTotalDeposit === '' || court?.cachedTotalDeposit == null ? legacy.totalDeposit : money(court?.cachedTotalDeposit);
-  const totalSpent = court?.cachedTotalSpent === '' || court?.cachedTotalSpent == null ? legacy.totalSpent : money(court?.cachedTotalSpent);
-  const totalReceived = court?.cachedTotalReceived === '' || court?.cachedTotalReceived == null ? legacy.totalReceived : money(court?.cachedTotalReceived);
+  const balance = cachedFinanceOrLegacy(court?.cachedBalance, legacy.balance);
+  const totalDeposit = cachedFinanceOrLegacy(court?.cachedTotalDeposit, legacy.totalDeposit);
+  const totalSpent = cachedFinanceOrLegacy(court?.cachedTotalSpent, legacy.totalSpent);
+  const totalReceived = cachedFinanceOrLegacy(court?.cachedTotalReceived, legacy.totalReceived);
   const item = {
     ...legacy,
     membershipAccount: membershipAccountPayload(account),
