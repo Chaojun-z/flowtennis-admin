@@ -85,6 +85,34 @@ assert.strictEqual(manualDateLead?.leadStage, '已成交', '手工填写线索�
 const systemDateLead = manualDatePlatform.leadPoolRows.find(row => row.id === 'lead-system-date');
 assert.strictEqual(systemDateLead?.leadDate, '2026-05-03 10:00:00', '没有手工线索时间的机制化新建线索必须回到最早业务时间');
 
+const namedRegressionPlatform = buildPlatformMetrics({
+  leads: [
+    { id: 'lead-lian', displayName: '莲儿', wechatName: '莲儿', studentId: 'student-lian', source: '大众点评', leadStage: '已成交', systemStatus: '已成交', dealType: '课程', leadDate: '2026-04-23', leadDateSource: 'manual', createdAt: '2026-08-28 09:00:00' }
+  ],
+  students: [
+    { id: 'student-lian', name: '莲儿（连女士）', sourceLeadId: 'lead-lian', source: '大众点评', campus: 'shunyi_mapo', createdAt: '2026-05-01 00:00:00' },
+    { id: 'student-shi-duohao', name: '史多灏', campus: 'shunyi_mapo', createdAt: '2026-08-28 09:00:00' }
+  ],
+  purchases: [
+    { id: 'purchase-lian', studentId: 'student-lian', packageName: '成人正式课包', actualAmount: 4000, status: 'active', purchaseDate: '2026-04-23' }
+  ],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-lian', studentId: 'student-lian', startTime: '2026-06-22 17:30:00', endTime: '2026-06-22 18:30:00', status: '已结束', courseType: '私教课', coach: 'Siren', lessonCount: 1 },
+    { id: 'schedule-shi-1', studentId: 'student-shi-duohao', startTime: '2026-04-03 10:00:00', endTime: '2026-04-03 11:00:00', status: '已结束', courseType: '私教课', coach: '宋教练', lessonCount: 1 },
+    { id: 'schedule-shi-2', studentId: 'student-shi-duohao', startTime: '2026-05-03 10:00:00', endTime: '2026-05-03 11:00:00', status: '已结束', courseType: '私教课', coach: '宋教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: []
+});
+const namedRegressionLead = namedRegressionPlatform.leadPoolRows.find(row => row.id === 'lead-lian');
+assert.strictEqual(namedRegressionLead?.leadDate, '2026-04-23', '莲儿（连女士）手工录入的线索时间不能被后续业务事实覆盖');
+const namedRegressionShi = namedRegressionPlatform.leadPoolRows.find(row => row.studentId === 'student-shi-duohao');
+assert.strictEqual(namedRegressionShi?.leadDate, '2026-04-03 10:00:00', '史多灏这种只有排课记录的学员应显示最早业务发生时间');
+assert.strictEqual(namedRegressionShi?.leadStage, '跟进中', '史多灏这种只有排课记录的学员不能被误判为已成交');
+
 const notConvertedPlatform = buildPlatformMetrics({
   leads: [
     { id: 'lead-not-converted', displayName: '未转化线索', leadStage: '跟进中', systemStatus: '跟进中', dealType: '未转化', conversionType: '未转化', leadDate: '2026-06-09' }

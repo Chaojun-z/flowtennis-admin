@@ -197,6 +197,47 @@ const freePrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: freePriva
 assert.strictEqual(freePrivateLeadRows[0].leadStage, '跟进中', 'free class follow-up should not become 已约体验 or 已成交');
 assert.strictEqual(freePrivateLeadRows[0].demandProduct, '私教课');
 
+const shiDuohaoRows = buildCustomerLifecycleRows({
+  students: [
+    {
+      id: 'student-shi-duohao',
+      name: '史多灏',
+      type: '青少年',
+      campus: 'shunyi_mapo',
+      createdAt: '2026-08-28 09:00:00'
+    }
+  ],
+  schedule: [
+    {
+      id: 'schedule-shi-duohao-1',
+      studentId: 'student-shi-duohao',
+      courseType: '私教课',
+      coach: '宋教练',
+      status: '已结束',
+      startTime: '2026-04-03 10:00:00'
+    },
+    {
+      id: 'schedule-shi-duohao-2',
+      studentId: 'student-shi-duohao',
+      courseType: '私教课',
+      coach: '宋教练',
+      status: '已结束',
+      startTime: '2026-05-03 10:00:00'
+    },
+    {
+      id: 'schedule-shi-duohao-3',
+      studentId: 'student-shi-duohao',
+      courseType: '私教课',
+      coach: '宋教练',
+      status: '已结束',
+      startTime: '2026-06-03 10:00:00'
+    }
+  ]
+});
+const shiDuohao = shiDuohaoRows[0];
+assert.strictEqual(shiDuohao.leadDate, '', '史多灏只有多次上课记录时不能把录入时间当线索时间');
+assert.strictEqual(shiDuohao.firstTouchAt, '2026-04-03 10:00:00', '史多灏应按最早业务发生时间展示');
+
 const trialFeedbackRows = buildCustomerLifecycleRows({
   students: [
     {
@@ -278,6 +319,59 @@ const staleMaterializedFreeLeadRowsWithRawLead = buildLeadPoolRows({
 });
 assert.strictEqual(staleMaterializedFreeLeadRowsWithRawLead[0].leadStage, '跟进中', 'raw lead stage must not override lifecycle facts when the student has no paid purchase');
 assert.strictEqual(staleMaterializedFreeLeadRowsWithRawLead[0].dealType, '', 'raw lead deal type must not override lifecycle facts when the student has no paid purchase');
+
+const lianRows = buildCustomerLifecycleRows({
+  leads: [
+    {
+      id: 'lead-lian',
+      displayName: '莲儿',
+      wechatName: '莲儿',
+      studentName: '莲儿（连女士）',
+      studentId: 'student-lian',
+      source: '大众点评',
+      campus: 'shunyi_mapo',
+      leadDate: '2026-04-23',
+      leadDateSource: 'manual',
+      createdAt: '2026-08-28 09:00:00',
+      isCourseConverted: true
+    }
+  ],
+  students: [
+    {
+      id: 'student-lian',
+      name: '莲儿（连女士）',
+      sourceLeadId: 'lead-lian',
+      source: '大众点评',
+      campus: 'shunyi_mapo',
+      createdAt: '2026-05-01 00:00:00'
+    }
+  ],
+  purchases: [
+    {
+      id: 'purchase-lian',
+      studentId: 'student-lian',
+      studentName: '莲儿（连女士）',
+      packageName: '成人1v1 黄金时间10课时',
+      status: 'active',
+      purchaseDate: '2026-04-23',
+      amountPaid: 4000
+    }
+  ],
+  schedule: [
+    {
+      id: 'schedule-lian',
+      studentIds: ['student-lian'],
+      studentName: '莲儿（连女士）',
+      courseType: '私教课',
+      status: '已结束',
+      startTime: '2026-06-22 17:30:00'
+    }
+  ]
+});
+const lian = lianRows.find(row => row.studentId === 'student-lian' || row.sourceLeadId === 'lead-lian');
+assert.ok(lian, '莲儿（连女士） should stay on the unified lifecycle row');
+assert.strictEqual(lian.displayName, '莲儿（连女士）', '莲儿（连女士） should prefer the real student name over the alias');
+assert.strictEqual(lian.leadDate, '2026-04-23', '莲儿（连女士）手工录入的线索时间不能被后续排课或购课覆盖');
 
 const hiddenDirtyLeadRows = buildLeadPoolRows({
   leads: [
