@@ -39,6 +39,29 @@ const source = {
 };
 
 const platform = buildPlatformMetrics(source);
+const manualDatePlatform = buildPlatformMetrics({
+  leads: [
+    { id: 'lead-manual-date', displayName: '手工线索时间', leadStage: '已成交', systemStatus: '已成交', dealType: '课程', studentId: 'student-manual-date', leadDate: '2026-04-01', createdAt: '2026-08-28 09:00:00' },
+    { id: 'lead-system-date', displayName: '系统线索时间', leadStage: '已成交', systemStatus: '已成交', dealType: '课程', studentId: 'student-system-date', createdAt: '2026-08-28 09:00:00' }
+  ],
+  students: [
+    { id: 'student-manual-date', name: '手工线索时间', sourceLeadId: 'lead-manual-date', createdAt: '2026-04-02 10:00:00' },
+    { id: 'student-system-date', name: '系统线索时间', sourceLeadId: 'lead-system-date', createdAt: '2026-04-02 10:00:00' }
+  ],
+  purchases: [
+    { id: 'purchase-manual-date', studentId: 'student-manual-date', packageName: '正式课包', actualAmount: 1000, status: 'active', purchaseDate: '2026-05-20' },
+    { id: 'purchase-system-date', studentId: 'student-system-date', packageName: '正式课包', actualAmount: 1000, status: 'active', purchaseDate: '2026-05-20' }
+  ],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-manual-date', studentId: 'student-manual-date', startTime: '2026-05-03 10:00:00', endTime: '2026-05-03 11:00:00', status: '已结束', courseType: '私教课', coach: '王教练', lessonCount: 1 },
+    { id: 'schedule-system-date', studentId: 'student-system-date', startTime: '2026-05-03 10:00:00', endTime: '2026-05-03 11:00:00', status: '已结束', courseType: '私教课', coach: '王教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: []
+});
 const manualConvertedPlatform = buildPlatformMetrics({
   leads: [
     { id: 'manual-lead-1', displayName: '手动成交线索', leadStage: '已成交', systemStatus: '已成交', dealType: '课程', studentId: 'manual-student-1', isCourseConverted: true, leadDate: '2026-06-08' }
@@ -56,6 +79,11 @@ const manualConvertedPlatform = buildPlatformMetrics({
 const manualConvertedLead = manualConvertedPlatform.leadPoolRows.find(row => row.id === 'manual-lead-1');
 assert.strictEqual(manualConvertedLead?.leadStage, '已成交', 'lead pool should keep manually converted course leads as converted before package purchase');
 assert.strictEqual(manualConvertedLead?.systemStatus, '已成交', 'lead pool systemStatus should align with the displayed converted stage');
+const manualDateLead = manualDatePlatform.leadPoolRows.find(row => row.id === 'lead-manual-date');
+assert.strictEqual(manualDateLead?.leadDate, '2026-04-01', '手工填写线索时间的线索不能被后来的业务事实覆盖');
+assert.strictEqual(manualDateLead?.leadStage, '已成交', '手工填写线索时间不应影响成交阶段');
+const systemDateLead = manualDatePlatform.leadPoolRows.find(row => row.id === 'lead-system-date');
+assert.strictEqual(systemDateLead?.leadDate, '2026-05-03 10:00:00', '没有手工线索时间的机制化新建线索必须回到最早业务时间');
 
 const notConvertedPlatform = buildPlatformMetrics({
   leads: [

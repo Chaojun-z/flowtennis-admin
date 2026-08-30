@@ -254,7 +254,19 @@ function leadDateOnly(value,lead={}){
 function leadDateInputValue(lead){
   return leadDateOnly(lead?.leadDate||lead?.leadEnteredAt||lead?.createdAt||lead?.updatedAt,lead)||today();
 }
+function leadDateLooksManual(lead={}){
+  const source=leadStandardField(lead,'leadDateSource');
+  if(source==='manual')return true;
+  if(source==='system')return false;
+  const explicit=String(leadStandardField(lead,'leadDate')||lead?.leadDate||leadStandardField(lead,'leadEnteredAt')||lead?.leadEnteredAt||'').trim();
+  if(!explicit)return false;
+  const createdAt=String(leadStandardField(lead,'createdAt')||lead?.createdAt||'').trim();
+  const enteredAt=String(leadStandardField(lead,'leadEnteredAt')||lead?.leadEnteredAt||'').trim();
+  if(explicit===createdAt||(enteredAt&&explicit===enteredAt))return false;
+  return true;
+}
 function leadBusinessDateValue(lead={}){
+  if(leadDateLooksManual(lead))return leadStandardField(lead,'leadDate')||lead?.leadDate||leadStandardField(lead,'leadEnteredAt')||lead?.leadEnteredAt||'';
   return leadStandardField(lead,'firstTouchAt')
     || leadStandardField(lead,'trialAtRaw')
     || leadStandardField(lead,'trialBookedAt')
@@ -263,11 +275,7 @@ function leadBusinessDateValue(lead={}){
     || leadStandardField(lead,'conversionAt')
     || leadStandardField(lead,'enrollAtRaw')
     || leadStandardField(lead,'formalSignupAt')
-    || leadStandardField(lead,'leadDate')
-    || leadStandardField(lead,'leadEnteredAt')
-    || leadStandardField(lead,'createdAt')
-    || leadStandardField(lead,'updatedAt')
-    || leadStandardField(lead,'lastFollowupAt');
+    || leadStandardField(lead,'leadDate');
 }
 function leadDateDisplayText(lead){
   return leadDateOnly(leadBusinessDateValue(lead),lead)||'-';

@@ -33,7 +33,8 @@ const context = {
   },
   checkedOwnerBoxes: [],
   lifecycleMap: {
-    'lead-lifecycle-first-touch': { firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
+    'lead-manual-date': { leadDateSource: 'manual', firstTouchAt: '2026-04-15', leadDate: '2026-08-29' },
+    'lead-system-date': { leadDateSource: 'system', firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
   },
   FlowTennisBusinessTaxonomy: {
     normalizeLeadSource: value => String(value || '').trim(),
@@ -96,9 +97,14 @@ assert.strictEqual(
   'deal type alone should not force the displayed lead stage to 已成交'
 );
 assert.strictEqual(
-  vm.runInContext("leadDateDisplayText({ id: 'lead-lifecycle-first-touch', leadDate: '2026-08-29', createdAt: '2026-08-29' })", context),
+  vm.runInContext("leadDateDisplayText({ id: 'lead-manual-date', leadDate: '2026-08-29', createdAt: '2026-08-29' })", context),
+  '2026-08-29',
+  'manual lead time should keep the stored lead date instead of being replaced by later business facts'
+);
+assert.strictEqual(
+  vm.runInContext("leadDateDisplayText({ id: 'lead-system-date', createdAt: '2026-08-29' })", context),
   '2026-04-15',
-  'lead date display should prefer lifecycle first-touch evidence over imported processing time'
+  'system-generated leads without a manual lead time should still fall back to the earliest business fact'
 );
 
 const priorityEmpty = vm.runInContext('renderLeadPriorityCell({ followupPriority: "" })', context);

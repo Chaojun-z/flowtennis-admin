@@ -179,8 +179,10 @@ const leadDateHelpersSource = leadsSource.slice(
 );
 const leadDateHelpersContext = {
   today: () => '2026-08-29',
-  customerLifecycleForRecord: record => record?.id === 'lead-lifecycle-first-touch'
-    ? { firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
+  customerLifecycleForRecord: record => record?.id === 'lead-manual-date'
+    ? { leadDateSource: 'manual', firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
+    : record?.id === 'lead-system-date'
+      ? { leadDateSource: 'system', firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
     : null,
   leadStandardField: (lead, key) => {
     const lifecycle = leadDateHelpersContext.customerLifecycleForRecord(lead);
@@ -190,9 +192,14 @@ const leadDateHelpersContext = {
 vm.createContext(leadDateHelpersContext);
 vm.runInContext(leadDateHelpersSource, leadDateHelpersContext, { filename: 'leads-date-helpers.js' });
 assert.strictEqual(
-  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-lifecycle-first-touch', leadDate: '2026-08-29', createdAt: '2026-08-29' }),
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-manual-date', leadDate: '2026-08-29', createdAt: '2026-08-29' }),
+  '2026-08-29',
+  'lead list and detail should keep a manual lead time even when later business facts exist'
+);
+assert.strictEqual(
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-system-date', createdAt: '2026-08-29' }),
   '2026-04-15',
-  'lead list and detail should prefer the earliest business fact over imported processing time'
+  'lead list and detail should still fall back to the earliest business fact for system-generated leads'
 );
 assert.strictEqual(
   leadDateHelpersContext.leadDateInputValue({ leadDate: '2026-08-29', firstTouchAt: '2026-04-15' }),

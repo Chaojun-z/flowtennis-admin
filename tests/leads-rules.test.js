@@ -57,6 +57,15 @@ assert.strictEqual(lead.customerType, '成人');
 assert.strictEqual(lead.demandProduct, '私教课');
 assert.strictEqual(lead.dealType, '');
 assert.strictEqual(lead.conversionType, '');
+assert.strictEqual(lead.leadDateSource, 'manual', '手工填写线索时间的线索必须标记为手工来源');
+assert.strictEqual(
+  rules.normalizeLeadRecord({
+    displayName: '系统新建线索',
+    rawStatus: '跟进中'
+  }, { id: 'lead-system', now: '2026-06-11 00:00:00' }).leadDateSource,
+  'system',
+  '没有手工线索时间的机制化新建线索必须标记为系统来源'
+);
 const punctLead = rules.normalizeLeadRecord({
   displayName: '、MZ.、',
   wechatName: '、MZ、',

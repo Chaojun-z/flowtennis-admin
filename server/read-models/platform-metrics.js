@@ -1308,6 +1308,22 @@ function earliestBusinessDateText(...values) {
     .sort((a, b) => a.parsed - b.parsed)[0]?.value || '';
 }
 
+function leadDateSourceValue(row = {}, lead = {}) {
+  return text(lead.leadDateSource || lead.leadDateKind || lead.leadDateOrigin || row.leadDateSource || row.leadDateKind || row.leadDateOrigin);
+}
+
+function leadDateIsManual(row = {}, lead = {}) {
+  const source = leadDateSourceValue(row, lead).toLowerCase();
+  if (source === 'manual') return true;
+  if (source === 'system') return false;
+  const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
+  if (!explicitLeadDate) return false;
+  const createdAt = text(lead.createdAt || row.createdAt);
+  const enteredAt = text(lead.leadEnteredAt || row.leadEnteredAt);
+  if (explicitLeadDate === createdAt || explicitLeadDate === enteredAt) return false;
+  return true;
+}
+
 function leadBusinessDate(row = {}, lead = {}) {
   const businessFacts = [
     row.firstTouchAt,
@@ -1324,7 +1340,9 @@ function leadBusinessDate(row = {}, lead = {}) {
     lead.conversionAt
   ];
   const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
+  const manualLeadDate = leadDateIsManual(row, lead);
   const businessDate = earliestBusinessDateText(...businessFacts);
+  if (manualLeadDate && explicitLeadDate) return explicitLeadDate;
   if (businessDate) return businessDate;
   if (explicitLeadDate && ![
     text(lead.createdAt),
@@ -1499,6 +1517,8 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       conversionAt: text(lead.conversionAt || lifecycle.conversionAt),
       formalCoach: text(lead.formalCoach || lifecycle.formalCoach),
       profileNote: visibleLeadProfileNote(lead),
+      leadEnteredAt: text(lifecycle.leadEnteredAt || lead.leadEnteredAt || lead.createdAt),
+      leadDateSource: leadDateSourceValue(lifecycle, lead) || (leadDateIsManual(lifecycle, lead) ? 'manual' : 'system'),
       dealType,
       conversionType: dealType,
       studentId: realStudentId || text(lifecycle.studentId),
@@ -1549,7 +1569,9 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       id,
       sourceLeadId: id,
       source,
+      leadDateSource: leadDateSourceValue({}, lead) || (leadDateIsManual({}, lead) ? 'manual' : 'system'),
       leadDate: leadBusinessDate({}, lead),
+      leadEnteredAt: text(lead.leadEnteredAt || lead.createdAt || ''),
       dealType: orphanMaterialized ? '' : text(lead.dealType || lead.conversionType),
       conversionType: orphanMaterialized ? '' : text(lead.conversionType || lead.dealType),
       leadStage: orphanMaterialized ? '跟进中' : lifecycleLeadStage({}, lead),
@@ -2213,6 +2235,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
         hasScheduleRecord: true,
         hasCourseStudentEntry: true,
         hasFreeCourseFollowup: true,
+        leadDateSource: text(row.leadDateSource || '') || 'system',
         leadDate: text(row.packagePurchaseDate || row.lastFormalLessonAt || row.summaryUpdatedAt),
         createdAt: text(row.summaryUpdatedAt || row.updatedAt),
         hasCourseConversion: text(row.studentStage) === 'formal',

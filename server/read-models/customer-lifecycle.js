@@ -21,6 +21,23 @@ function sourceLeadId(row = {}) {
   return text(row.sourceLeadId || row.leadId || row.fromLeadId);
 }
 
+function leadDateSource(row = {}) {
+  return text(row.leadDateSource || row.leadDateKind || row.leadDateOrigin || row['线索时间来源']);
+}
+
+function resolveLeadDateSource(row = {}) {
+  const source = leadDateSource(row).toLowerCase();
+  if (source === 'manual' || source === 'system') return source;
+  const hasExplicitLeadDate = Object.prototype.hasOwnProperty.call(row, 'leadDate') || Object.prototype.hasOwnProperty.call(row, '线索时间');
+  const explicitLeadDate = text(row.leadDate || row['线索时间']);
+  if (!hasExplicitLeadDate || !explicitLeadDate) return 'system';
+  const createdAt = text(row.createdAt);
+  const updatedAt = text(row.updatedAt);
+  const enteredAt = text(row.leadEnteredAt);
+  if (explicitLeadDate === createdAt || explicitLeadDate === updatedAt || (enteredAt && explicitLeadDate === enteredAt)) return 'system';
+  return 'manual';
+}
+
 function leadId(row = {}) {
   return text(row.id || row.leadId);
 }
@@ -281,6 +298,7 @@ function makeEmptyRow(key) {
     courseFirstPurchaseAt: '',
     conversionAt: '',
     leadEnteredAt: '',
+    leadDateSource: '',
     firstTouchAt: '',
     bookingFirstAt: '',
     membershipFirstAt: '',
@@ -371,6 +389,11 @@ function buildCustomerLifecycleRows({
   (leads || []).forEach(lead => {
     const id = leadId(lead);
     const row = rowFor(id, `lead:${id || text(lead.displayName || lead.name)}`);
+    const source = resolveLeadDateSource(lead);
+    const explicitLeadDate = text(lead.leadDate || lead['线索时间']);
+    const leadDateValue = source === 'manual'
+      ? explicitLeadDate
+      : firstValue(lead.leadDate, materializedStudentLead(lead) ? '' : lead.createdAt);
     mergeIntoRow(row, {
       sourceLeadId: id,
       leadId: id,
@@ -388,11 +411,12 @@ function buildCustomerLifecycleRows({
       conversionAt: firstValue(lead.conversionAt, lead.courseFirstPurchaseAt, lead.enrollAtRaw, lead.formalSignupAt, lead.enrollAt),
       formalCoach: firstValue(lead.formalCoach, lead.dealCoach, lead.conversionCoach),
       profileNote: firstValue(lead.profileNote, lead.notes),
-      leadDate: firstValue(lead.leadDate, materializedStudentLead(lead) ? '' : lead.createdAt),
-      leadEnteredAt: firstValue(lead.leadDate, materializedStudentLead(lead) ? '' : lead.createdAt),
+      leadDate: leadDateValue,
+      leadDateSource: source,
+      leadEnteredAt: firstValue(lead.leadEnteredAt, lead.createdAt, lead.leadDate),
       hasCourseStudentEntry: leadHasCourseStudentEntry(lead),
       firstTouchAt: firstDate(
-        lead.leadDate,
+        source === 'manual' ? explicitLeadDate : '',
         lead.trialAtRaw,
         lead.trialLessonAt,
         lead.trialAt,
@@ -401,7 +425,7 @@ function buildCustomerLifecycleRows({
         lead.formalSignupAt,
         lead.enrollAt,
         lead.conversionAt,
-        materializedStudentLead(lead) ? '' : lead.createdAt
+        source === 'system' ? '' : (materializedStudentLead(lead) ? '' : lead.createdAt)
       ),
       createdAt: firstValue(lead.createdAt, lead.leadDate)
     });
@@ -415,8 +439,8 @@ function buildCustomerLifecycleRows({
     studentsById.set(sid, student);
     const sourceId = resolveLeadSourceId(sourceLeadId(student) || leadByStudentId.get(sid) || '')
       || resolveLeadSourceIdByName(student.displayName, student.wechatName, student.name);
-    const row = rowFor(sourceId, `student:${sid}`);
-    const stage = studentStage(student, { purchases, entitlements, schedule, feedbacks });
+      const row = rowFor(sourceId, `student:${sid}`);
+      const stage = studentStage(student, { purchases, entitlements, schedule, feedbacks });
     const courseDealPath = studentCourseDealPath(student, { purchases, entitlements, schedule, feedbacks });
     const trialStatus = studentTrialStatus(student, { purchases, entitlements, schedule, feedbacks });
     const trialFacts = studentTrialFacts(student, { purchases, entitlements, schedule, feedbacks });
@@ -435,8 +459,7 @@ function buildCustomerLifecycleRows({
       trialFacts.bookedAt,
       trialFacts.attendedAt,
       firstCourse ? businessDate(firstCourse) : '',
-      firstFormal ? businessDate(firstFormal) : '',
-      student.createdAt
+      firstFormal ? businessDate(firstFormal) : ''
     );
     const demandProduct = firstFormal
       ? demandFromCourseRow(firstFormal)
@@ -455,7 +478,7 @@ function buildCustomerLifecycleRows({
     ) : '';
     const campus = firstValue(student.campus, student.campusName);
     const studentDisplayName = firstValue(student.name, student.studentName);
-    mergeIntoRow(row, {
+      mergeIntoRow(row, {
       sourceLeadId: sourceId,
       studentId: sid,
       displayName: studentDisplayName,
@@ -484,6 +507,7 @@ function buildCustomerLifecycleRows({
       hasScheduleRecord,
       leadDate: firstValue(student.leadDate),
       leadEnteredAt: firstValue(student.leadDate),
+      leadDateSource: 'system',
       firstTouchAt,
       createdAt: firstValue(student.createdAt, student.leadDate)
     });
@@ -511,6 +535,7 @@ function buildCustomerLifecycleRows({
       formalCoach: firstValue(item.coach, item.coachName),
       conversionAt: firstValue(item.startTime, item.createdAt),
       firstTouchAt: firstDate(item.startTime, item.createdAt),
+      leadDateSource: 'system',
       createdAt: firstValue(item.createdAt, item.startTime)
     });
     row.hasScheduleRecord = true;
@@ -537,6 +562,7 @@ function buildCustomerLifecycleRows({
       courtStage: stage,
       leadDate: firstValue(court.leadDate),
       leadEnteredAt: firstValue(court.leadDate),
+      leadDateSource: 'system',
       bookingFirstAt: firstValue(court.firstBookingAt, court.bookingAt, court.lastBookingAt, court.createdAt),
       firstTouchAt: firstDate(court.leadDate, court.firstBookingAt, court.bookingAt, court.lastBookingAt, court.createdAt),
       createdAt: firstValue(court.createdAt, court.leadDate)
@@ -564,6 +590,7 @@ function buildCustomerLifecycleRows({
       membershipStatus: text(account.status),
       leadDate: firstValue(court.leadDate),
       leadEnteredAt: firstValue(court.leadDate),
+      leadDateSource: 'system',
       bookingFirstAt: firstValue(court.firstBookingAt, court.bookingAt, court.lastBookingAt, court.createdAt),
       membershipFirstAt: firstValue(account.createdAt),
       firstTouchAt: firstDate(
@@ -605,6 +632,8 @@ function buildCustomerLifecycleRows({
   return [...byKey.values()].map(row => {
     const lead = leadsById.get(row.sourceLeadId) || {};
     const ignoreSystemCreatedAtAsBusinessDate = materializedLifecycleSource(row);
+    const isStudentOnlySyntheticRow = !text(row.sourceLeadId) && !!text(row.studentId) && !text(row.courtId) && !text(row.membershipAccountId);
+    const source = resolveLeadDateSource(row);
     if (lead && lead.id) {
       mergeIntoRow(row, {
         displayName: firstValue(lead.displayName, lead.wechatName, lead.name),
@@ -619,21 +648,39 @@ function buildCustomerLifecycleRows({
         courseFirstPurchaseAt: firstValue(lead.courseFirstPurchaseAt, lead.enrollAtRaw, lead.formalSignupAt, lead.enrollAt),
         conversionAt: firstValue(lead.conversionAt, lead.courseFirstPurchaseAt, lead.enrollAtRaw, lead.formalSignupAt, lead.enrollAt),
         formalCoach: firstValue(lead.formalCoach, lead.dealCoach, lead.conversionCoach),
-        profileNote: firstValue(lead.profileNote, lead.notes)
+        profileNote: firstValue(lead.profileNote, lead.notes),
+        leadDateSource: resolveLeadDateSource(lead)
       });
     }
     row.owner = ownerForCampus(row.campus, row.owner);
-    row.leadEnteredAt = firstValue(row.leadEnteredAt, row.leadDate);
-    row.leadDate = row.leadEnteredAt;
+    row.leadDateSource = source;
+    row.leadEnteredAt = firstValue(row.leadEnteredAt, row.createdAt, row.leadDate);
+    const systemFallbackValues = ignoreSystemCreatedAtAsBusinessDate ? [] : [row.leadEnteredAt, row.createdAt];
+    if (source !== 'manual') {
+      row.leadDate = isStudentOnlySyntheticRow
+        ? ''
+        : firstDate(
+            row.firstTouchAt,
+            row.leadDate,
+            row.trialBookedAt,
+            row.trialAttendedAt,
+            row.courseFirstPurchaseAt,
+            row.bookingFirstAt,
+            row.membershipFirstAt,
+            ...systemFallbackValues
+          );
+    } else {
+      row.leadDate = firstValue(row.leadDate, row.leadEnteredAt);
+    }
     row.firstTouchAt = firstDate(
       row.firstTouchAt,
-      row.leadEnteredAt,
+      row.leadDate,
       row.trialBookedAt,
       row.trialAttendedAt,
       row.courseFirstPurchaseAt,
       row.bookingFirstAt,
       row.membershipFirstAt,
-      ignoreSystemCreatedAtAsBusinessDate ? '' : row.createdAt
+      ...systemFallbackValues
     );
     row.hasCourseConversion = row.hasCourseConversion || row.studentStage === 'formal';
     row.hasTrialExperience = !!row.hasTrialExperience;

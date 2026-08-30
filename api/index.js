@@ -5926,28 +5926,22 @@ function earliestLeadBusinessDate(...values){
     })
     .sort((a,b)=>a.parsed-b.parsed)[0]?.value||'';
 }
-
+function normalizeLeadDateSource(input={},now=''){
+  const source=cleanLeadText(input.leadDateSource||input.leadDateKind||input.leadDateOrigin||input['线索时间来源']);
+  if(source==='manual'||source==='system')return source;
+  const hasExplicitLeadDate=Object.prototype.hasOwnProperty.call(input,'leadDate')||Object.prototype.hasOwnProperty.call(input,'线索时间');
+  const explicitLeadDate=cleanLeadText(input.leadDate??input['线索时间']);
+  if(!hasExplicitLeadDate||!explicitLeadDate)return 'system';
+  const createdAt=cleanLeadText(input.createdAt||now),updatedAt=cleanLeadText(input.updatedAt),enteredAt=cleanLeadText(input.leadEnteredAt);
+  return explicitLeadDate===createdAt||explicitLeadDate===updatedAt||(enteredAt&&explicitLeadDate===enteredAt)?'system':'manual';
+}
 function normalizeLeadBusinessDate(input={},now=''){
   const explicit=cleanLeadText(input.leadDate??input['线索时间']);
-  if(explicit)return explicit;
-  return earliestLeadBusinessDate(
-    input.firstTouchAt,
-    input.leadEnteredAt,
-    input.trialAtRaw,
-    input.trialLessonAt,
-    input.trialAt,
-    input['体验课时间'],
-    input.courseFirstPurchaseAt,
-    input.conversionAt,
-    input.enrollAtRaw,
-    input.enrollAt,
-    input.formalSignupAt,
-    input['正式课报名时间'],
-    input.createdAt,
-    now
-  );
+  if(normalizeLeadDateSource(input,now)==='manual'&&explicit)return explicit;
+  const businessDate=earliestLeadBusinessDate(input.firstTouchAt,input.leadEnteredAt,input.trialAtRaw,input.trialLessonAt,input.trialAt,input['体验课时间'],input.courseFirstPurchaseAt,input.conversionAt,input.enrollAtRaw,input.enrollAt,input.formalSignupAt,input['正式课报名时间'],input.createdAt,now);
+  if(businessDate)return businessDate;
+  return explicit||'';
 }
-
 function normalizeLeadRecord(input={},opts={}){
   const now=opts.now||new Date().toISOString();
   const id=input.id||opts.id||uuidv4();
@@ -5957,10 +5951,12 @@ function normalizeLeadRecord(input={},opts={}){
   const concern=cleanLeadText(input.latestConcern??input['用户顾虑点']),conclusion=cleanLeadText(input.latestConclusion??input['沟通情况和方案建议']),rawStatus=cleanLeadText(input.rawStatus??input['跟进状态']);
   const demandProductInput=readStandardOrLegacyField(input,['demandProduct','需求产品','consultType'],'leadDemandProduct');
   const customerTypeInput=input.customerType??input['客户类型']??input.consultType??(demandProductInput||input.profileNote||input['其他信息（包含年纪等）']);
-  const customerType=businessTaxonomy.normalizeLeadCustomerType(customerTypeInput),demandProduct=businessTaxonomy.normalizeLeadDemandProduct(demandProductInput);
+  const customerType=businessTaxonomy.normalizeLeadCustomerType(customerTypeInput),demandProduct=businessTaxonomy.normalizeLeadDemandProduct(demandProductInput),leadDateSource=normalizeLeadDateSource(input,now),leadDate=normalizeLeadBusinessDate(input,now),leadEnteredAt=cleanLeadText(input.leadEnteredAt||input.createdAt||now);
   const next={
     id,
-    leadDate:normalizeLeadBusinessDate(input,now),
+    leadDate,
+    leadDateSource,
+    leadEnteredAt,
     displayName:cleanLeadDisplayText(input.displayName??phoneMeta.wechatName??phoneMeta.phone??phoneMeta.raw),
     phone:assertPhone(input.phone??phoneMeta.phone),
     wechatName:cleanLeadDisplayText(input.wechatName??phoneMeta.wechatName),
@@ -6185,7 +6181,7 @@ function mergeLeadRows(rows=[]){
     String(b.updatedAt||b.lastFollowupAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.lastFollowupAt||a.createdAt||''))
   );
   const merged={...primary};
-  const preserve=new Set(['id','createdAt','leadDate']);
+  const preserve=new Set(['id','createdAt','leadDate','leadDateSource','leadEnteredAt']);
   latest.reverse().forEach(row=>{
     Object.entries(row).forEach(([key,value])=>{
       if(preserve.has(key))return;
