@@ -15,7 +15,8 @@ const matchKeepaliveWorkflowPath = path.join(__dirname, '../.github/workflows/ma
 assert.strictEqual(config.crons, undefined, 'Vercel 不配置 Cron，定时任务统一走 GitHub Actions');
 assert.strictEqual(fs.existsSync(matchKeepaliveWorkflowPath), true, '约球 Supabase 保活应由 GitHub Actions 定时触发，不使用 Vercel Cron');
 
-assert.match(feishuDailyWorkflow, /cron: '5 12 \* \* \*'/, '飞书排课日报应由 GitHub Actions 定时触发');
+assert.match(feishuDailyWorkflow, /workflow_dispatch:/, '飞书排课日报应保留手动触发入口');
+assert.doesNotMatch(feishuDailyWorkflow, /cron:/, '飞书排课日报不应再使用 GitHub Actions 定时触发');
 assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-coach-reminders/, '服务号教练课前提醒应由 GitHub Actions 单独触发');
 assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-student-reminders/, '服务号学员课前提醒应由 GitHub Actions 单独触发');
 assert.doesNotMatch(officialRemindersWorkflow, /\/api\/cron\/official-account-feedback-reminders/, '服务号课前提醒 workflow 不应被课后反馈提醒拖慢');

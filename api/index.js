@@ -48,7 +48,7 @@ const { createFeedbackRoutes } = require('../server/feedbacks-routes');
 const { createCoachProposalRoutes } = require('../server/coach-proposals-routes');
 const { LEAD_SOURCE_READ_LIMIT } = require('../server/lead-source-read-model.js');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
-const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
+const { buildNotificationCenterSnapshot, resolveEveningReportTargetDate } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
 const { buildCoachDailyDigestPosterPng, uploadFeishuImage, sendFeishuBotImageMessage, sendFeishuCoachDigestPosterMessage } = require('../server/feishu-coach-digest-poster.js');
 
@@ -3942,7 +3942,7 @@ async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,
   result.success=result.failed===0;
   return result;
 }
-async function sendFeishuDailyScheduleReport({now=new Date(),webhook=FEISHU_DAILY_REPORT_WEBHOOK}={}){
+async function sendFeishuDailyScheduleReport({now=new Date(),webhook=FEISHU_DAILY_REPORT_WEBHOOK,targetDate=''}={}){
   const targetWebhook=String(webhook||'').trim();
   if(!targetWebhook)throw new Error('缺少环境变量 FEISHU_DAILY_REPORT_WEBHOOK');
   const [scheduleRows,coaches,campuses]=await Promise.all([
@@ -3954,7 +3954,7 @@ async function sendFeishuDailyScheduleReport({now=new Date(),webhook=FEISHU_DAIL
     scheduleRows,
     coaches,
     campuses,
-    targetDate:toChinaDateKey(now),
+    targetDate:targetDate||resolveEveningReportTargetDate(now),
     now,
     generatedAt:new Date(now).toISOString()
   });
@@ -7207,7 +7207,7 @@ module.exports = async (req, res) => {
         return sendJson(res,{error:'无权限'},403);
       }
       await init();
-      return sendJson(res,await sendFeishuDailyScheduleReport());
+      return sendJson(res,await sendFeishuDailyScheduleReport({targetDate:query.get('date')||query.get('targetDate')||''}));
     }
     if(path==='/cron/feishu-coach-daily-digests'&&method==='GET'){
       const ua=String(req.headers['user-agent']||'');

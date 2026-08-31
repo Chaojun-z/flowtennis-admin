@@ -1,7 +1,19 @@
 const assert = require('assert');
 const path = require('path');
 
-const { buildNotificationCenterSnapshot } = require(path.join(__dirname, '..', 'scripts', 'lib', 'notification-center-export'));
+const { buildNotificationCenterSnapshot, resolveEveningReportTargetDate } = require(path.join(__dirname, '..', 'scripts', 'lib', 'notification-center-export'));
+
+assert.strictEqual(
+  resolveEveningReportTargetDate(new Date('2026-08-29T12:05:00.000Z')),
+  '2026-08-29',
+  '北京时间 20:05 正常执行时，排课日报应使用当天作为基准，推送次日排课'
+);
+
+assert.strictEqual(
+  resolveEveningReportTargetDate(new Date('2026-08-29T16:50:00.000Z')),
+  '2026-08-29',
+  '北京时间次日 00:50 延迟执行时，排课日报仍应使用原计划当天作为基准，避免跳过当天课程'
+);
 
 const snapshot = buildNotificationCenterSnapshot({
   targetDate: '2026-05-25',

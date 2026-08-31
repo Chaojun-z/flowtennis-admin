@@ -64,7 +64,7 @@ assert.doesNotMatch(
 
 assert.match(
   stateSource,
-  /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/,
+  /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/,
   'coach schedule calendar should recover schedule.js dependencies if the browser keeps old broken scripts'
 );
 
@@ -1461,7 +1461,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-mode-segment\{display:flex;align-items:center;justify-content:center;width:240px;height:34px;box-sizing:border-box;padding:3px;border:1px solid #DDE1E7;border-radius:8px;background:#fff;box-shadow:none\}/,
+  /#page-coachschedule \.coach-ops-mode-segment\{display:flex;align-items:center;justify-content:center;width:200px;height:34px;box-sizing:border-box;padding:3px;border:1px solid #DDE1E7;border-radius:8px;background:#fff;box-shadow:none\}/,
   'coach schedule day week month switch container should center the active block vertically'
 );
 

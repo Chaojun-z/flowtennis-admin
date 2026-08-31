@@ -210,5 +210,25 @@ assert.match(
   /#page-coachschedule \.coach-ops-period-summary\{[^}]*white-space:nowrap/,
   'period lesson summary should stay as one compact toolbar item'
 );
+assert.match(
+  pagesCss,
+  /#page-coachschedule \.coach-ops-mode-segment\{[^}]*width:200px/,
+  'coach schedule mode selector should be 200px wide'
+);
+assert.match(
+  pagesCss,
+  /#page-coachschedule \.coach-ops-nav,#page-coachschedule \.coach-date-btn\{[^}]*font-size:13px/,
+  'today and date controls should use 13px text'
+);
+assert.match(
+  pagesCss,
+  /#page-coachschedule \.coach-date-btn\{[^}]*font-size:13px[^}]*font-weight:400/,
+  'date selector should use lighter 13px text'
+);
+assert.match(
+  pagesCss,
+  /#page-coachschedule \.coach-ops-period-summary\{[^}]*font-size:13px[^}]*font-weight:400/,
+  'period lesson summary should use lighter 13px text'
+);
 
 console.log('coachops calendar view tests passed');

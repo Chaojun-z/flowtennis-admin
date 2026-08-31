@@ -82,6 +82,12 @@ function addDays(dateKey, amount) {
   return toChinaDateKey(base);
 }
 
+function resolveEveningReportTargetDate(now = new Date()) {
+  const today = toChinaDateKey(now);
+  const hour = Number(toChinaParts(now).hour || 0);
+  return hour < 5 ? addDays(today, -1) : today;
+}
+
 function maskStudentLabel(name) {
   const text = String(name || '').trim();
   if (!text) return '';
@@ -176,7 +182,7 @@ function buildNotificationCenterSnapshot({
   now = new Date(),
   generatedAt = new Date().toISOString()
 } = {}) {
-  const today = targetDate || toChinaDateKey(now);
+  const today = targetDate || resolveEveningReportTargetDate(now);
   const tomorrow = addDays(today, 1);
   const campusMap = new Map();
   (campuses || []).forEach((row) => {
@@ -223,5 +229,6 @@ module.exports = {
   buildNotificationCenterSnapshot,
   effectiveStatus,
   maskStudentLabel,
+  resolveEveningReportTargetDate,
   toChinaDateKey
 };

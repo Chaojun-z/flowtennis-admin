@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadRuntimeEnv, resolveAppEnv } = require('./lib/runtime-env');
 const { createClientFromEnv, scanTable } = require('./lib/staging-data-store');
-const { buildNotificationCenterSnapshot, toChinaDateKey } = require('./lib/notification-center-export');
+const { buildNotificationCenterSnapshot, resolveEveningReportTargetDate } = require('./lib/notification-center-export');
 
 const root = path.join(__dirname, '..');
 const defaultOutputPath = path.join(root, 'standalone-services', 'daily-report-data.json');
@@ -24,7 +24,7 @@ function writeSnapshotFile(outPath, snapshot) {
 async function main() {
   const appEnv = resolveAppEnv(process.env);
   loadRuntimeEnv({ appEnv, entry: 'export-schedule-report-json' });
-  const targetDate = readArg('--date', toChinaDateKey(new Date()));
+  const targetDate = readArg('--date', resolveEveningReportTargetDate(new Date()));
   const outPath = path.resolve(readArg('--out', defaultOutputPath));
   const client = createClientFromEnv(process.env);
   const [scheduleRows, coaches, campuses] = await Promise.all([

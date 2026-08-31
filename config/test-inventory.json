@@ -384,6 +384,11 @@
       "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
     },
     {
+      "file": "tests/student-save-fast-duplicate.test.js",
+      "category": "legacy-unwired",
+      "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
+    },
+    {
       "file": "tests/third-party-sync-center-routes.test.js",
       "category": "legacy-unwired",
       "reason": "历史测试未接入默认脚本，先登记为基线；后续触达对应功能时必须接入 npm test、专项脚本或更新本登记。"
