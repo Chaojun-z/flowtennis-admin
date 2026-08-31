@@ -51,7 +51,6 @@ const businessTaxonomy = require('../public/assets/scripts/core/business-taxonom
 const { buildNotificationCenterSnapshot, resolveEveningReportTargetDate } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
 const { buildCoachDailyDigestPosterPng, uploadFeishuImage, sendFeishuBotImageMessage, sendFeishuCoachDigestPosterMessage } = require('../server/feishu-coach-digest-poster.js');
-
 const JWT_SECRET = process.env.JWT_SECRET;
 const TS_ENDPOINT = process.env.TS_ENDPOINT;
 const TS_INSTANCE = String(process.env.TS_INSTANCE || '').trim();
@@ -102,7 +101,6 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'legacy-coach-tianhao',name:'天昊'},
   {id:'老吴',name:'刘润扬教练'}
 ];
-
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_AUTHORIZATIONS='ft_entitlement_authorizations',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_COURT_ACCOUNT_LIST_INDEX='ft_court_account_list_index',T_COURT_ACCOUNT_LIST_INDEX_TASKS='ft_court_account_list_index_tasks',T_COURT_ACCOUNT_LIST_SNAPSHOT='ft_court_account_list_snapshot',T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS='ft_court_account_list_snapshot_tasks',T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot',T_SCHEDULE_LIST_SNAPSHOT_TASKS='ft_schedule_list_snapshot_tasks',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
@@ -196,6 +194,7 @@ const SCHEDULE_LIST_PROJECTION_FIELDS=[
   'studentIds',
   'studentId',
   'studentName',
+  'studentSettlementRows',
   'expectedStudentIds',
   'absentStudentIds',
   'courseType',
@@ -319,7 +318,6 @@ const PRODUCTION_PAGE_READ_LIMITS={
   adminUsers:200
 };
 let financeSnapshotCache=null;
-
 const wechatAccessTokenCacheByApp = new Map();
 const wechatAccessTokenCache = wechatAccessTokenCacheByApp;
 const feishuTenantAccessTokenCacheByApp = new Map();
@@ -563,6 +561,7 @@ const {
   isDirectPaidSchedule,
   isScheduleLessonCharged,
   scheduleLessonDelta,
+  normalizeStudentSettlementRows,
   effectiveScheduleStatus,
   scheduleLessonChargeStatus,
   assertCanWriteSchedule,
@@ -1311,6 +1310,8 @@ function scheduleEntitlementDeltas(rec){
   if(!rec||!isScheduleLessonCharged(rec))return[];
   const lessonCount=isCountBasedCourse(rec)?1:parseLessonValue(rec.lessonCount,1);
   if(lessonCount<=0)return[];
+  const settlementRows=normalizeStudentSettlementRows(rec);
+  if(settlementRows.length)return settlementRows.filter(row=>row.settlementType==='package'&&row.entitlementId).map(row=>({studentId:row.studentId,entitlementId:row.entitlementId,delta:lessonCount}));
   const ids=parseArr(rec.entitlementIds).filter(Boolean);
   if(ids.length)return ids.map(entitlementId=>({entitlementId,delta:lessonCount}));
   if(rec.entitlementId)return[{entitlementId:rec.entitlementId,delta:lessonCount}];
@@ -1383,6 +1384,18 @@ function recommendEntitlements(entitlements,schedule){
   return {recommended:clean.find(o=>o.selectable)||null,options:clean};
 }
 function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
+  const settlementRows=normalizeStudentSettlementRows(rec);
+  if(settlementRows.length){
+    const lessonCount=isCountBasedCourse(rec)?1:parseLessonValue(rec.lessonCount,1);
+    if(lessonCount<=0)return [];
+    const packageRows=settlementRows.filter(row=>row.settlementType==='package');
+    if(packageRows.length){
+      const deltas=packageRows.map(row=>row.entitlementId?{studentId:row.studentId,entitlementId:row.entitlementId,delta:lessonCount}:((({recommended})=>recommended?{studentId:row.studentId,entitlementId:recommended.entitlementId,delta:lessonCount}:null)(recommendEntitlements((entitlements||[]).filter(e=>e.studentId===row.studentId),{...rec,studentIds:[row.studentId]})))).filter(Boolean);
+      if(deltas.length<packageRows.length)throw new Error('有学员没有可用课包');
+      return deltas;
+    }
+    return [];
+  }
   const explicit=scheduleEntitlementDeltas(rec);
   if(explicit.length)return explicit;
   if(!rec||!isBillableSchedule(rec)||!isPackageSettlementSchedule(rec))return[];
@@ -4530,13 +4543,10 @@ function getFinancePageSnapshotIfCached(){
 function isProductionRuntime(){
   return RUNTIME_STAGE==='production';
 }
-
 scheduleInitInBackground();
-
 async function ensureLeadTables(){
   for(const table of [T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES])await mkTable(table);
 }
-
 function sendJson(res,body,code=200){
   applyCorsHeaders(res.req,res);
   res.status(code).json(body);
@@ -5521,7 +5531,6 @@ async function adminTransferMatchReplacement(matchId,operatorId,input={}){
       previousSplit=splitRes.rows[0]||null;
       if(!previousSplit)throw new Error('原报名人的账单不存在');
     }
-
     const replacementRegistrationId=uuidv4();
     await client.query(
       "UPDATE match_registrations SET registrationStatus='cancelled',cancelledAt=NOW(),financialResponsibility='transferred',withdrawalReason=$1,withdrawalHandledBy=$2,withdrawalHandledAt=NOW() WHERE id=$3",
@@ -5532,7 +5541,6 @@ async function adminTransferMatchReplacement(matchId,operatorId,input={}){
       [replacementRegistrationId,matchId,replacementUserId,'replacement',transfer.transferNote||'']
     );
     await client.query('DELETE FROM match_attendance WHERE matchId=$1 AND userId=$2',[matchId,replacementUserId]);
-
     let replacementSplitId='';
     let originalSplitStatus='';
     if(previousSplit){
@@ -5558,7 +5566,6 @@ async function adminTransferMatchReplacement(matchId,operatorId,input={}){
       financeSync.refund=!isPrepay&&originalSplitStatus==='refunded'?{needed:true}:null;
       financeSync.paid=!isPrepay&&transfer.replacementPayStatus==='paid'?{needed:true,userId:replacementUserId}:null;
     }
-
     const replacementRowId=uuidv4();
     await client.query(
       'INSERT INTO match_replacements(id,matchId,fromUserId,toUserId,operatorUserId,originalSplitAmount,originalSplitRefundedAmount,replacementSplitAmount,replacementPayStatus,reason,note,createdAt,updatedAt) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())',
@@ -6793,7 +6800,6 @@ function buildStudentCascadeDeletePlan(studentId,data={},now=new Date().toISOStr
   const entitlementIds=new Set((data.entitlements||[]).filter(row=>String(row?.studentId||'')===id||purchaseIds.has(String(row?.purchaseId||''))).map(row=>String(row.id||'')).filter(Boolean));
   const deletedScheduleIds=new Set();
   const studentNameById=new Map((data.students||[]).map(row=>[String(row?.id||''),String(row?.name||row?.studentName||'').trim()]));
-
   (data.classes||[]).forEach(row=>{
     const ids=parseArr(row?.studentIds).filter(Boolean);
     if(!ids.includes(id))return;
@@ -7037,7 +7043,6 @@ function parseLegacyCourtNotes(notes){
   const changed=nextNotes!==raw||Object.keys(updates).length>0;
   return {notes:nextNotes,updates,changed};
 }
-
 module.exports = async (req, res) => {
   const path=(req.url||'').replace(/^\/api/,'').split('?')[0];
   const method=req.method;
@@ -7390,7 +7395,6 @@ module.exports = async (req, res) => {
     return sendJson(res,{error:'Not found'},404);
   }catch(e){console.error('API error:',e);return sendJson(res,{error:e.message},500);}
 };
-
 module.exports._test={
   MEMBERSHIP_TABLES,
   TEST_DATA_RESET_TABLES,

@@ -187,6 +187,7 @@ function createFinanceSnapshotHelpers(deps = {}) {
   }
 
   function buildVerifiedFinanceWithImportIncrements(verifiedFinance = {}, source = {}) {
+    const normalizeStudentSettlementRows = row => parseArr(row?.studentSettlementRows || '[]');
     const purchaseRows = (source.purchases || []).filter(isFinanceImportIncrementRow);
     const purchaseIds = new Set(purchaseRows.map(row => String(row.id || '')).filter(Boolean));
     const entitlementRows = (source.entitlements || []).filter(row => isFinanceImportIncrementRow(row) || purchaseIds.has(String(row.purchaseId || '')));
@@ -194,7 +195,12 @@ function createFinanceSnapshotHelpers(deps = {}) {
     const ledgerRows = (source.entitlementLedger || []).filter(row => isFinanceImportIncrementRow(row) || purchaseIds.has(String(row.purchaseId || '')) || entitlementIds.has(String(row.entitlementId || '')));
     const membershipOrderRows = (source.membershipOrders || []).filter(isFinanceMembershipImportIncrementOrder);
     const courtRows = (source.courts || []).map(courtWithFinanceImportHistory).filter(row => normalizeCourtHistory(row.history).length);
-    const directScheduleRows = (source.schedule || []).filter(row => (isDirectPaidSchedule(row) && !isStoredValuePayMethod(row.payMethod || row.paymentChannel) && roundMoney(row.paidAmount || row.paymentAmount) > 0) || roundMoney(row.fieldFeeAmount) > 0);
+    const directScheduleRows = (source.schedule || []).filter(row => {
+      const studentRows = normalizeStudentSettlementRows(row);
+      const hasStudentDirect = studentRows.some(item => String(item?.settlementType || '').trim() === 'direct' && !isStoredValuePayMethod(item?.payMethod) && roundMoney(item?.amount || item?.paidAmount) > 0);
+      const hasStudentFieldFee = studentRows.some(item => String(item?.fieldFeeMode || '').trim() === 'separate' && !isStoredValuePayMethod(item?.fieldFeePayMethod) && roundMoney(item?.fieldFeeAmount) > 0);
+      return hasStudentDirect || hasStudentFieldFee || ((isDirectPaidSchedule(row) && !isStoredValuePayMethod(row.payMethod || row.paymentChannel) && roundMoney(row.paidAmount || row.paymentAmount) > 0) || roundMoney(row.fieldFeeAmount) > 0);
+    });
     const incrementRows = buildFinanceUnifiedRows({
       campuses: source.campuses || [],
       students: source.students || [],

@@ -493,6 +493,49 @@ async function main() {
   });
   assert.strictEqual(lightHarness.calls.puts, 0, '线索池 GET 首屏不能顺手写入补线索，避免读页面改变线上数据');
 
+  const tombstoneHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-dirty-tombstone',
+      displayName: 'Ethan（3人）、rzwyyy',
+      studentId: 'stu-dirty-tombstone',
+      status: 'voided',
+      voidedAt: '2026-08-28T00:00:00.000Z'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [{
+      id: 'stu-dirty-tombstone',
+      studentId: 'stu-dirty-tombstone',
+      displayName: 'Ethan（3人）、rzwyyy',
+      name: 'Ethan（3人）、rzwyyy',
+      hasTrialAttended: true,
+      hasFormalAttended: false,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: false,
+      studentStage: 'trial'
+    }],
+    ft_court_account_list_index: []
+  }, {
+    buildCourtAccountListViewFromIndexRows: rows => ({ items: Array.isArray(rows) ? rows : [] })
+  });
+  const tombstonePage = await request(tombstoneHarness.handle, 'paged=1&page=1&pageSize=15');
+  assert.strictEqual(tombstonePage.statusCode, 200, '有墓碑的摘要回流不应该触发 503');
+  assert.strictEqual(tombstonePage.body.total, 0, '已作废线索绑定的学员身份不能从教学摘要重新回流成线索');
+  assert.deepStrictEqual(tombstonePage.body.rows, [], '线索池列表不能显示已被墓碑禁止回流的脏名字');
+
   const notReadyHarness = createHarness({
     ft_leads: [{
       id: 'lead-not-ready',

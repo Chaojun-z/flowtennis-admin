@@ -35,6 +35,7 @@ assert.strictEqual(rows.length, 2);
 assert.strictEqual(rows[0].studentId, 's1');
 assert.strictEqual(rows[0].settlementType, 'direct');
 assert.strictEqual(rows[0].custom, true);
+assert.strictEqual(rows[0].fieldFeeMode, 'none');
 assert.strictEqual(rows[1].studentId, 's2');
 assert.strictEqual(rows[1].settlementType, 'package');
 assert.strictEqual(rows[1].custom, false);
@@ -51,8 +52,24 @@ assert.strictEqual(defaultChangedRows[0].settlementType, 'direct', 'custom row s
 assert.strictEqual(defaultChangedRows[1].settlementType, 'direct', 'non-custom row should follow the new default');
 
 assert.deepStrictEqual(serializeStudentSettlementRows(defaultChangedRows), [
-  { studentId: 's1', settlementType: 'direct', payMethod: '微信', amount: 120, note: '' },
-  { studentId: 's2', settlementType: 'direct', payMethod: '微信', amount: 0, note: '' }
+  { studentId: 's1', settlementType: 'direct', payMethod: '微信', amount: 120, fieldFeeMode: 'none', fieldFeePayMethod: '', fieldFeeAmount: 0, entitlementId: '', note: '' },
+  { studentId: 's2', settlementType: 'direct', payMethod: '微信', amount: 0, fieldFeeMode: 'none', fieldFeePayMethod: '', fieldFeeAmount: 0, entitlementId: '', note: '' }
 ]);
+
+assert.deepStrictEqual(
+  serializeStudentSettlementRows(normalizeStudentSettlementRows({
+    studentIds: ['s1', 's2'],
+    defaultSettlementType: 'package',
+    existingRows: [
+      { studentId: 's1', settlementType: 'package', fieldFeeMode: 'separate', fieldFeePayMethod: '微信', fieldFeeAmount: 30 },
+      { studentId: 's2', settlementType: 'direct', payMethod: '现金', amount: 150, fieldFeeMode: 'separate', fieldFeePayMethod: '储值扣款', fieldFeeAmount: 20 }
+    ]
+  })),
+  [
+    { studentId: 's1', settlementType: 'package', payMethod: '', amount: 0, fieldFeeMode: 'separate', fieldFeePayMethod: '微信', fieldFeeAmount: 30, entitlementId: '', note: '' },
+    { studentId: 's2', settlementType: 'direct', payMethod: '现金', amount: 150, fieldFeeMode: 'separate', fieldFeePayMethod: '储值扣款', fieldFeeAmount: 20, entitlementId: '', note: '' }
+  ],
+  'small group settlement should keep a full payment and field-fee set per student'
+);
 
 console.log('schedule settlement helper tests passed');

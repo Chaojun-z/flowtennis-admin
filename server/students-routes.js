@@ -29,7 +29,7 @@ function createStudentRoutes(deps={}){
     return '';
   }
   async function findStudentDuplicate(input,editingId=''){
-    const rows=await scan(T_STUDENTS);
+    const rows=await getFastStudentsRead().catch(()=>[]);
     return rows.map(row=>({row,reason:studentDuplicateReason(input,row)}))
       .find(item=>item.reason&&String(item.row.id||'')!==String(editingId||''))||null;
   }
@@ -57,8 +57,10 @@ function createStudentRoutes(deps={}){
       }
       if(method==='POST'){
         assertStudentWriteAccess(user);
-        const duplicate=await findStudentDuplicate(body);
-        if(duplicate)return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
+        if(!body.skipDuplicateCheck){
+          const duplicate=await findStudentDuplicate(body);
+          if(duplicate)return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
+        }
         const id=uuidv4();
         const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         await put(T_STUDENTS,id,r);

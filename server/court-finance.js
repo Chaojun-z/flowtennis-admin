@@ -13,6 +13,19 @@ function normalizeStoredValuePhone(value){
   if(phone.startsWith('86')&&phone.length>11)phone=phone.slice(2);
   return phone;
 }
+function normalizeStudentSettlementRows(schedule){
+  return fallbackParseArr(schedule?.studentSettlementRows).map(row=>({
+    studentId:cleanStoredValueText(row?.studentId),
+    studentName:cleanStoredValueText(row?.studentName),
+    settlementType:cleanStoredValueText(row?.settlementType)||'package',
+    payMethod:cleanStoredValueText(row?.payMethod),
+    amount:Math.round((Number(row?.amount||row?.paidAmount||0)||0)*100)/100,
+    fieldFeeMode:cleanStoredValueText(row?.fieldFeeMode)||'none',
+    fieldFeePayMethod:cleanStoredValueText(row?.fieldFeePayMethod),
+    fieldFeeAmount:Math.round((Number(row?.fieldFeeAmount||0)||0)*100)/100,
+    entitlementId:cleanStoredValueText(row?.entitlementId)
+  })).filter(row=>row.studentId);
+}
 
 function createCourtFinanceRules(deps={}){
   const uuidv4=deps.uuidv4||DEFAULT_ID_FACTORY;
@@ -61,6 +74,52 @@ function createCourtFinanceRules(deps={}){
 
 function scheduleStoredValueChargeSpecs(schedule){
   if(!isBillableSchedule(schedule))return [];
+  const studentRows=normalizeStudentSettlementRows(schedule);
+  if(studentRows.length){
+    const charges=[];
+    studentRows.forEach(row=>{
+      const courseLabel=schedule?.courseType==='体验课'?(schedule.experienceType||'体验课'):(schedule?.courseType||'课程');
+      if(row.settlementType==='direct'&&isStoredValuePayMethod(row.payMethod)&&row.amount>0){
+        charges.push({
+          key:`lesson:${row.studentId}`,
+          studentId:row.studentId,
+          studentName:row.studentName||'',
+          amount:row.amount,
+          courtIdField:`storedValueCourtId_${row.studentId}`,
+          amountField:`storedValueAmount_${row.studentId}`,
+          category:`排课${courseLabel}`,
+          sourceCategory:'排课储值卡扣款',
+          sourceProject:`${courseLabel} ${String(schedule?.startTime||'').replace('T',' ').slice(0,16)}`,
+          defaultNote:'排课产生的储值卡扣款',
+          consumeNote:'排课产生的储值卡扣款',
+          returnNote:'取消排课退回储值卡',
+          returnOriginalNote:'编辑排课退回原储值卡扣款',
+          consumeDiffNote:'编辑排课补扣储值卡',
+          returnDiffNote:'编辑排课退回储值卡差额'
+        });
+      }
+      if(row.fieldFeeMode==='separate'&&isStoredValuePayMethod(row.fieldFeePayMethod)&&row.fieldFeeAmount>0){
+        charges.push({
+          key:`fieldFee:${row.studentId}`,
+          studentId:row.studentId,
+          studentName:row.studentName||'',
+          amount:row.fieldFeeAmount,
+          courtIdField:`storedValueFieldFeeCourtId_${row.studentId}`,
+          amountField:`storedValueFieldFeeAmount_${row.studentId}`,
+          category:'课程订场',
+          sourceCategory:'排课场地费储值卡扣款',
+          sourceProject:`排课场地费 ${String(schedule?.startTime||'').replace('T',' ').slice(0,16)}`,
+          defaultNote:'排课场地费储值卡扣款',
+          consumeNote:'场地费储值卡扣款',
+          returnNote:'取消排课退回场地费储值卡扣款',
+          returnOriginalNote:'编辑排课退回原场地费储值卡扣款',
+          consumeDiffNote:'编辑排课补扣场地费',
+          returnDiffNote:'编辑排课退回场地费差额'
+        });
+      }
+    });
+    return charges;
+  }
   const charges=[];
   const lessonAmount=roundMoney(schedule?.paidAmount||schedule?.paymentAmount||0);
   if(isDirectPaidSchedule(schedule)&&isStoredValuePayMethod(schedule?.payMethod||schedule?.paymentChannel)&&lessonAmount>0){
@@ -136,12 +195,12 @@ function storedValueCourtMatchScore(court,{studentId='',studentPhone='',studentN
   return score;
 }
 function resolveScheduleStoredValueCourt(schedule,courts=[],students=[],charge={},membershipAccounts=[]){
-  const storedCourtId=String(schedule?.[charge.courtIdField||'storedValueCourtId']||'').trim();
+  const storedCourtId=String(schedule?.[charge.courtIdField||'storedValueCourtId']||charge?.storedValueCourtId||'').trim();
   if(storedCourtId){
     const court=(courts||[]).find(item=>String(item?.id||'')===storedCourtId&&activeCourtForStoredValue(item));
     if(court)return court;
   }
-  const studentIds=parseArr(schedule?.studentIds).filter(Boolean);
+  const studentIds=charge?.studentId?[String(charge.studentId).trim()]:parseArr(schedule?.studentIds).filter(Boolean);
   if(studentIds.length!==1)throw new Error('储值卡扣款请只选择 1 名学员');
   const studentId=studentIds[0];
   const student=(students||[]).find(item=>String(item?.id||'')===String(studentId))||{};
@@ -180,8 +239,8 @@ function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount
     sourceDocument:`排课 ${schedule.id}`,
     sourceProject,
     scheduleId:schedule.id,
-    studentId:parseArr(schedule?.studentIds)[0]||'',
-    studentName:schedule?.studentName||'',
+    studentId:charge?.studentId||parseArr(schedule?.studentIds)[0]||'',
+    studentName:charge?.studentName||schedule?.studentName||'',
     payMethod:'储值卡',
     normalizedPaymentMethod:businessTaxonomy.normalizePaymentMethod('储值卡'),
     amount:roundMoney(amount),
@@ -205,11 +264,13 @@ function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule
   if(next.storedValueAmount===undefined)next.storedValueAmount=0;
   if(next.storedValueFieldFeeCourtId===undefined)next.storedValueFieldFeeCourtId='';
   if(next.storedValueFieldFeeAmount===undefined)next.storedValueFieldFeeAmount=0;
+  if(next.storedValueChargeRows===undefined)next.storedValueChargeRows=[];
   if(!keys.length){
     next.storedValueCourtId='';
     next.storedValueAmount=0;
     next.storedValueFieldFeeCourtId='';
     next.storedValueFieldFeeAmount=0;
+    next.storedValueChargeRows=[];
     return {schedule:next,court:null,courts:[],originalCourts:[],historyRows:[]};
   }
   const updates=new Map();
@@ -234,9 +295,19 @@ function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule
     if(nextCharge&&nextCourt){
       next[nextCharge.courtIdField]=nextCourt.id;
       next[nextCharge.amountField]=nextAmount;
+      next.storedValueChargeRows=[...(next.storedValueChargeRows||[]).filter(row=>String(row?.key||'')!==String(nextCharge.key||'')),{
+        key:nextCharge.key,
+        studentId:nextCharge.studentId||'',
+        studentName:nextCharge.studentName||'',
+        courtId:nextCourt.id,
+        amount:nextAmount,
+        paymentChannel:nextCharge.key.startsWith('fieldFee:')?String(nextSchedule?.fieldFeePayMethod||'').trim():String(nextSchedule?.payMethod||'').trim(),
+        fieldFee:nextCharge.key.startsWith('fieldFee:')
+      }];
     }else if(charge){
       next[charge.courtIdField]='';
       next[charge.amountField]=0;
+      next.storedValueChargeRows=(next.storedValueChargeRows||[]).filter(row=>String(row?.key||'')!==String(charge.key||''));
     }
     if(previousAmount&&(!nextAmount||previousCourt.id!==nextCourt.id)){
       addRow(previousCourt,buildScheduleStoredValueHistoryRow(previousSchedule,{

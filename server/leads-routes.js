@@ -692,11 +692,16 @@ function createLeadsRoutes(deps={}){
     return earliestDuplicateLead(lead,rows)||findUniqueLeadByName(lead,rows);
   }
 
-  function hiddenLeadSourceIds(rows=[]){
-    return new Set((rows||[])
+  function hiddenLeadIdentitySets(rows=[]){
+    const ids=new Set();
+    const studentIds=new Set();
+    (rows||[])
       .filter(row=>['merged','voided','deleted'].includes(cleanLeadText(row?.status)))
-      .map(row=>cleanLeadText(row?.id))
-      .filter(Boolean));
+      .forEach(row=>{
+        [row?.id,row?.sourceLeadId,row?.leadId].map(cleanLeadText).filter(Boolean).forEach(id=>ids.add(id));
+        [row?.studentId,row?.formalStudentId,row?.courseStudentId].map(cleanLeadText).filter(Boolean).forEach(id=>studentIds.add(id));
+      });
+    return {ids,studentIds};
   }
 
   async function readLeadMergeData(){
@@ -1053,7 +1058,7 @@ function createLeadsRoutes(deps={}){
       readCachedLeadSourceRows(),
       readLeadFollowupRows().catch(()=>[])
     ]);
-    const hiddenLeadIds=hiddenLeadSourceIds(leads);
+    const hiddenLeadIdentities=hiddenLeadIdentitySets(leads);
     let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(visibleLeadSourceRows(leads),followups)),{persist:false});
     let customerLifecycleRows=[];
     let studentSummaryRows=[];
@@ -1108,7 +1113,12 @@ function createLeadsRoutes(deps={}){
       }
     }
     const rows=buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:false})
-      .filter(row=>!hiddenLeadIds.has(cleanLeadText(row.id))&&!hiddenLeadIds.has(cleanLeadText(row.sourceLeadId)));
+      .filter(row=>!hiddenLeadIdentities.ids.has(cleanLeadText(row.id))&&!hiddenLeadIdentities.ids.has(cleanLeadText(row.sourceLeadId)))
+      .filter(row=>{
+        const sourceLeadId=cleanLeadText(row.sourceLeadId);
+        if(sourceLeadId&&!/^lead-from-student-/.test(sourceLeadId))return true;
+        return !hiddenLeadIdentities.studentIds.has(cleanLeadText(row.studentId));
+      });
     return {rows,studentSummaryRows,customerLifecycleRows};
   }
 

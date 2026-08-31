@@ -36,9 +36,31 @@ function scheduleSettlementType(rec){
 }
 function isPackageSettlementSchedule(rec){return scheduleSettlementType(rec)==='package';}
 function isDirectPaidSchedule(rec){return scheduleSettlementType(rec)==='direct';}
-function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree&&isPackageSettlementSchedule(rec);}
+function normalizeStudentSettlementRows(rec){
+  return parseArr(rec?.studentSettlementRows).map(row=>({
+    studentId:String(row?.studentId||'').trim(),
+    settlementType:String(row?.settlementType||'').trim()||scheduleSettlementType(rec),
+    payMethod:String(row?.payMethod||'').trim(),
+    amount:parseLessonValue(row?.amount||row?.paidAmount||0),
+    fieldFeeMode:String(row?.fieldFeeMode||'').trim()||'none',
+    fieldFeePayMethod:String(row?.fieldFeePayMethod||'').trim(),
+    fieldFeeAmount:parseLessonValue(row?.fieldFeeAmount||0),
+    note:String(row?.note||'').trim()
+  })).filter(row=>row.studentId);
+}
+function scheduleStudentSettlementTypeForStudent(rec,studentId){
+  const row=normalizeStudentSettlementRows(rec).find(item=>String(item.studentId)===String(studentId));
+  return String(row?.settlementType||'').trim()||scheduleSettlementType(rec);
+}
+function scheduleHasPackageStudentSettlementRows(rec){
+  const rows=normalizeStudentSettlementRows(rec);
+  if(!rows.length)return isPackageSettlementSchedule(rec);
+  return rows.some(row=>row.settlementType==='package');
+}
+function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree&&scheduleHasPackageStudentSettlementRows(rec);}
 function scheduleLessonDelta(rec){
-  if(!rec||!rec.classId||!isScheduleLessonCharged(rec))return null;
+  if(!rec||!rec.classId||!isBillableSchedule(rec)||rec.coachLateFree)return null;
+  if(!scheduleHasPackageStudentSettlementRows(rec))return null;
   const lessonCount=parseLessonValue(rec.lessonCount);
   if(lessonCount<=0)return null;
   return {classId:rec.classId,delta:lessonCount};
@@ -58,6 +80,11 @@ function effectiveScheduleStatus(rec,now=new Date()){
 function scheduleLessonChargeStatus(rec,ledger=[]){
   if(!rec||effectiveScheduleStatus(rec)==='已取消')return '不扣课';
   if(rec.coachLateFree)return '迟到免费';
+  if(!scheduleHasPackageStudentSettlementRows(rec)){
+    if(isDirectPaidSchedule(rec))return '直接收款';
+    if(scheduleSettlementType(rec)==='gift')return '赠送免费';
+    return '不扣课';
+  }
   if(isDirectPaidSchedule(rec))return '直接收款';
   if(scheduleSettlementType(rec)==='gift')return '赠送免费';
   if(parseLessonValue(rec.lessonCount)<=0)return '不扣课';
@@ -179,6 +206,7 @@ function createScheduleRules({normalizeCourtHistory,campusDisplayName,normalizeC
     isDirectPaidSchedule,
     isScheduleLessonCharged,
     scheduleLessonDelta,
+    normalizeStudentSettlementRows,
     effectiveScheduleStatus,
     scheduleLessonChargeStatus,
     assertCanWriteSchedule,
@@ -204,6 +232,7 @@ module.exports={
   isDirectPaidSchedule,
   isScheduleLessonCharged,
   scheduleLessonDelta,
+  normalizeStudentSettlementRows,
   effectiveScheduleStatus,
   scheduleLessonChargeStatus,
   assertCanWriteSchedule,

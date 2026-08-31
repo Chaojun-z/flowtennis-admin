@@ -29,6 +29,10 @@
         settlementType,
         payMethod: settlementType === 'direct' ? trimText(existing.payMethod) || '微信' : '',
         amount: settlementType === 'direct' ? Number(existing.amount || existing.paidAmount || 0) || 0 : 0,
+        fieldFeeMode: trimText(existing.fieldFeeMode) === 'separate' ? 'separate' : 'none',
+        fieldFeePayMethod: trimText(existing.fieldFeeMode) === 'separate' ? trimText(existing.fieldFeePayMethod) || '微信' : '',
+        fieldFeeAmount: trimText(existing.fieldFeeMode) === 'separate' ? Number(existing.fieldFeeAmount || 0) || 0 : 0,
+        entitlementId: trimText(existing.entitlementId),
         note: trimText(existing.note),
         defaultSettlementType: defaultType,
         custom
@@ -43,8 +47,10 @@
     if (type === 'direct') {
       const method = trimText(row.payMethod) || '收款';
       const amount = Number(row.amount || row.paidAmount || 0) || 0;
-      return `直接收款 · ${method} ¥${amount}`;
+      const fieldFee = trimText(row.fieldFeeMode) === 'separate' ? `；场地费 ${trimText(row.fieldFeePayMethod) || '收款'} ¥${Number(row.fieldFeeAmount || 0) || 0}` : '';
+      return `直接收款 · ${method} ¥${amount}${fieldFee}`;
     }
+    if (trimText(row.fieldFeeMode) === 'separate') return `${type === 'gift' ? '赠送/免费' : '课包扣减'}；场地费 ${trimText(row.fieldFeePayMethod) || '收款'} ¥${Number(row.fieldFeeAmount || 0) || 0}`;
     if (type === 'gift') return '赠送/免费';
     return '课包扣减';
   }
@@ -84,6 +90,10 @@
       settlementType: trimText(row.settlementType) || 'package',
       payMethod: trimText(row.settlementType) === 'direct' ? trimText(row.payMethod) || '微信' : '',
       amount: trimText(row.settlementType) === 'direct' ? Number(row.amount || row.paidAmount || 0) || 0 : 0,
+      fieldFeeMode: trimText(row.fieldFeeMode) === 'separate' ? 'separate' : 'none',
+      fieldFeePayMethod: trimText(row.fieldFeeMode) === 'separate' ? trimText(row.fieldFeePayMethod) || '微信' : '',
+      fieldFeeAmount: trimText(row.fieldFeeMode) === 'separate' ? Number(row.fieldFeeAmount || 0) || 0 : 0,
+      entitlementId: trimText(row.entitlementId),
       note: trimText(row.note)
     }));
   }
@@ -96,16 +106,31 @@
     ];
   }
 
-  function scheduleStudentSettlementRowHtml({ row = {}, studentName = '', payMethodOptions = [] } = {}) {
+  function scheduleStudentFieldFeeModeOptions() {
+    return [
+      { value: 'none', label: '不单独收场地费' },
+      { value: 'separate', label: '单独支付场地费' }
+    ];
+  }
+
+  function dropdownHtml(id, label, options, value, onchange) {
+    if (typeof renderStandardDropdownHtml === 'function') return renderStandardDropdownHtml(id, label, options, value, true, onchange);
+    const handler = onchange ? `${onchange}()` : '';
+    return `<select class="finput tms-form-control" id="${escapeHtml(id)}" onchange="${escapeHtml(handler)}">${(options || []).map(opt => `<option value="${escapeHtml(opt.value)}"${trimText(value) === trimText(opt.value) ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`).join('')}</select>`;
+  }
+
+  function scheduleStudentSettlementRowHtml({ row = {}, studentName = '', packageText = '', payMethodOptions = [] } = {}) {
     const studentId = trimText(row.studentId);
     if (!studentId) return '';
     const safeName = escapeHtml(studentName || studentId);
     const selectedType = trimText(row.settlementType) || 'package';
-    const payMethodOptionsHtml = (payMethodOptions || []).map(opt => `<option value="${escapeHtml(opt.value)}"${trimText(row.payMethod) === trimText(opt.value) ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`).join('');
-    const typeOptionsHtml = scheduleStudentSettlementTypeOptions().map(opt => `<option value="${escapeHtml(opt.value)}"${selectedType === opt.value ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`).join('');
     const directDisplay = selectedType === 'direct' ? '' : 'none';
+    const fieldFeeMode = trimText(row.fieldFeeMode) === 'separate' ? 'separate' : 'none';
+    const fieldFeeDisplay = fieldFeeMode === 'separate' ? '' : 'none';
     const amountValue = Number(row.amount || 0) || 0;
-    return `<div class="schedule-student-settlement-row" data-student-id="${escapeHtml(studentId)}"><div class="schedule-student-settlement-head"><div class="schedule-student-settlement-name">${safeName}</div><div class="schedule-student-settlement-row-summary" id="sch_studentSettlementRowSummary_${escapeHtml(studentId)}">${escapeHtml(settlementRowLabel(row))}</div></div><div class="tms-form-row schedule-student-settlement-grid"><div class="tms-form-item"><label class="tms-form-label">结算方式</label><select class="finput tms-form-control" id="sch_studentSettlementType_${escapeHtml(studentId)}" onchange="onScheduleStudentSettlementTypeChange(${jsStringArg(studentId)})">${typeOptionsHtml}</select></div><div class="tms-form-row schedule-student-settlement-direct" id="sch_studentSettlementDirect_${escapeHtml(studentId)}" style="display:${directDisplay}"><div class="tms-form-item"><label class="tms-form-label">支付方式</label><select class="finput tms-form-control" id="sch_studentSettlementPayMethod_${escapeHtml(studentId)}" onchange="syncScheduleStudentSettlementRows()">${payMethodOptionsHtml}</select></div><div class="tms-form-item"><label class="tms-form-label">金额</label><input class="finput tms-form-control" id="sch_studentSettlementAmount_${escapeHtml(studentId)}" type="number" min="0" step="0.01" value="${escapeHtml(amountValue)}" oninput="syncScheduleStudentSettlementRows()"></div></div></div></div>`;
+    const packageDisplay = selectedType === 'package' ? '' : 'none';
+    const safePackageText = escapeHtml(packageText || '按该学员可用课包自动匹配');
+    return `<div class="schedule-student-settlement-row" data-student-id="${escapeHtml(studentId)}"><div class="schedule-student-settlement-head"><div class="schedule-student-settlement-name">${safeName}</div><div class="schedule-student-settlement-row-summary" id="sch_studentSettlementRowSummary_${escapeHtml(studentId)}">${escapeHtml(settlementRowLabel(row))}</div></div><div class="tms-form-row schedule-student-settlement-grid"><div class="tms-form-item"><label class="tms-form-label">结算方式</label>${dropdownHtml(`sch_studentSettlementType_${studentId}`,'结算方式',scheduleStudentSettlementTypeOptions(),selectedType,'syncScheduleStudentSettlementRows')}</div><div class="schedule-student-settlement-package" id="sch_studentSettlementPackage_${escapeHtml(studentId)}" style="display:${packageDisplay}"><label class="tms-form-label">扣减课包</label><div class="schedule-student-settlement-package-text" title="${safePackageText}">${safePackageText}</div></div><div class="tms-form-row schedule-student-settlement-direct" id="sch_studentSettlementDirect_${escapeHtml(studentId)}" style="display:${directDisplay}"><div class="tms-form-item"><label class="tms-form-label">课时费支付</label>${dropdownHtml(`sch_studentSettlementPayMethod_${studentId}`,'课时费支付',payMethodOptions,trimText(row.payMethod)||'微信','syncScheduleStudentSettlementRows')}</div><div class="tms-form-item"><label class="tms-form-label">课时费</label><input class="finput tms-form-control" id="sch_studentSettlementAmount_${escapeHtml(studentId)}" type="number" min="0" step="0.01" value="${escapeHtml(amountValue)}" oninput="syncScheduleStudentSettlementRows()"></div></div><div class="tms-form-item"><label class="tms-form-label">场地费</label>${dropdownHtml(`sch_studentSettlementFieldFeeMode_${studentId}`,'场地费',scheduleStudentFieldFeeModeOptions(),fieldFeeMode,'syncScheduleStudentSettlementRows')}</div><div class="tms-form-row schedule-student-settlement-field-fee" id="sch_studentSettlementFieldFee_${escapeHtml(studentId)}" style="display:${fieldFeeDisplay}"><div class="tms-form-item"><label class="tms-form-label">场地费支付</label>${dropdownHtml(`sch_studentSettlementFieldFeePayMethod_${studentId}`,'场地费支付',payMethodOptions,trimText(row.fieldFeePayMethod)||'微信','syncScheduleStudentSettlementRows')}</div><div class="tms-form-item"><label class="tms-form-label">场地费金额</label><input class="finput tms-form-control" id="sch_studentSettlementFieldFeeAmount_${escapeHtml(studentId)}" type="number" min="0" step="0.01" value="${escapeHtml(Number(row.fieldFeeAmount || 0) || 0)}" oninput="syncScheduleStudentSettlementRows()"></div></div></div></div>`;
   }
 
   function scheduleStudentSettlementPanelHtml({ expanded = false, summary = '', rowsHtml = '' } = {}) {
@@ -131,6 +156,7 @@
     settlementTypeLabel,
     settlementRowLabel,
     scheduleStudentSettlementTypeOptions,
+    scheduleStudentFieldFeeModeOptions,
     scheduleStudentSettlementRowHtml,
     scheduleStudentSettlementPanelHtml,
     scheduleQuickStudentFormHtml,

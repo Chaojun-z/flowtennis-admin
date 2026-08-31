@@ -16,6 +16,7 @@ const pageScriptFiles = [
   'leads.js',
   'students.js',
   'schedule-helpers.js',
+  'schedule-settlement.js',
   'schedule.js',
   'products.js',
   'packages.js',

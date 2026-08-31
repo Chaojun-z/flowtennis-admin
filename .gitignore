@@ -1,9 +1,14 @@
 node_modules
 .vercel
 .env
+.env.vercel.production
 .DS_Store
 .npm-cache
 .vercel-home
+offline-reports/
+scripts/repair-*.js
+scripts/audit-*.js
+tests/*repair-script.test.js
 docs/
 !/docs/
 /docs/*

@@ -274,71 +274,153 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       debitTarget:entitlement.packageName||purchase.packageName||'课包'
     };
   }).filter(Boolean);
-  const directScheduleRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&isDirectPaidSchedule(item)&&!isStoredValuePayMethod(item.payMethod||item.paymentChannel)&&roundMoney(item.paidAmount||item.paymentAmount)>0).map(item=>{
-    const amount=roundMoney(item.paidAmount||item.paymentAmount);
-    const payMethod=String(item.payMethod||item.paymentChannel||'').trim()||'—';
-    const businessDate=financeBusinessDateTime(item.startTime,item.paidAt,item.paymentTime,item.createdAt);
-    const courseLabel=item.courseType==='体验课'?(item.experienceType||'体验课'):(item.courseType||'课程');
-    const operator=operatorText(item.operator,item.createdBy,item.updatedBy);
-    return {
-      id:`schedule-direct-${item.id}`,
-      businessDate,
-      weekdayText:financeWeekdayText(item.startTime||item.createdAt),
-      timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
-      customer:item.studentName||'—',
-      campusName:campusName.fromValue(item.campus)||'—',
-      businessType:'课程',
-      action:'收款',
-      cashDelta:amount,
-      recognizedRevenueDelta:amount,
-      deferredRevenueDelta:0,
-      paymentChannel:payMethod,
-      sourceDocument:`排课 ${item.id}`,
-      notes:item.notes||'',
-      incomeType:courseLabel,
-      packageName:'',
-      collector:operator,
-      operator,
-      differenceReason:'',
-      systemStatus:'正常',
-      totalLessons:Number(item.lessonCount)||0,
-      usedLessons:Number(item.lessonCount)||0,
-      remainingLessons:0,
-      sourceProject:`${courseLabel} ${financeDateTimeText(item.startTime)}`,
-      debitTarget:'直接收款'
-    };
+  const directScheduleRows=(schedule||[]).flatMap(item=>{
+    if(!isBillableSchedule(item))return [];
+    const studentRows=parseArr(item.studentSettlementRows||'[]');
+    if(studentRows.length){
+      return studentRows.filter(row=>String(row?.settlementType||'').trim()==='direct'&&!isStoredValuePayMethod(row?.payMethod)&&roundMoney(row?.amount||row?.paidAmount)>0).map(row=>{
+        const amount=roundMoney(row.amount||row.paidAmount);
+        const payMethod=String(row.payMethod||'').trim()||'—';
+        const businessDate=financeBusinessDateTime(item.startTime,item.paidAt,item.paymentTime,item.createdAt);
+        const courseLabel=item.courseType==='体验课'?(item.experienceType||'体验课'):(item.courseType||'课程');
+        const operator=operatorText(item.operator,item.createdBy,item.updatedBy);
+        const student=studentMap.get(String(row.studentId||''))||{};
+        return {
+          id:`schedule-direct-${item.id}-${row.studentId}`,
+          businessDate,
+          weekdayText:financeWeekdayText(item.startTime||item.createdAt),
+          timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
+          customer:row.studentName||student.name||item.studentName||'—',
+          campusName:campusName.fromValue(item.campus)||'—',
+          businessType:'课程',
+          action:'收款',
+          cashDelta:amount,
+          recognizedRevenueDelta:amount,
+          deferredRevenueDelta:0,
+          paymentChannel:payMethod,
+          sourceDocument:`排课 ${item.id}`,
+          notes:item.notes||'',
+          incomeType:courseLabel,
+          packageName:'',
+          collector:operator,
+          operator,
+          differenceReason:'',
+          systemStatus:'正常',
+          totalLessons:Number(item.lessonCount)||0,
+          usedLessons:Number(item.lessonCount)||0,
+          remainingLessons:0,
+          sourceProject:`${courseLabel} ${financeDateTimeText(item.startTime)}`,
+          debitTarget:'直接收款'
+        };
+      });
+    }
+    if(isDirectPaidSchedule(item)&&!isStoredValuePayMethod(item.payMethod||item.paymentChannel)&&roundMoney(item.paidAmount||item.paymentAmount)>0){
+      const amount=roundMoney(item.paidAmount||item.paymentAmount);
+      const payMethod=String(item.payMethod||item.paymentChannel||'').trim()||'—';
+      const businessDate=financeBusinessDateTime(item.startTime,item.paidAt,item.paymentTime,item.createdAt);
+      const courseLabel=item.courseType==='体验课'?(item.experienceType||'体验课'):(item.courseType||'课程');
+      const operator=operatorText(item.operator,item.createdBy,item.updatedBy);
+      return [{
+        id:`schedule-direct-${item.id}`,
+        businessDate,
+        weekdayText:financeWeekdayText(item.startTime||item.createdAt),
+        timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
+        customer:item.studentName||'—',
+        campusName:campusName.fromValue(item.campus)||'—',
+        businessType:'课程',
+        action:'收款',
+        cashDelta:amount,
+        recognizedRevenueDelta:amount,
+        deferredRevenueDelta:0,
+        paymentChannel:payMethod,
+        sourceDocument:`排课 ${item.id}`,
+        notes:item.notes||'',
+        incomeType:courseLabel,
+        packageName:'',
+        collector:operator,
+        operator,
+        differenceReason:'',
+        systemStatus:'正常',
+        totalLessons:Number(item.lessonCount)||0,
+        usedLessons:Number(item.lessonCount)||0,
+        remainingLessons:0,
+        sourceProject:`${courseLabel} ${financeDateTimeText(item.startTime)}`,
+        debitTarget:'直接收款'
+      }];
+    }
+    return [];
   });
-  const scheduleFieldFeeRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&!isStoredValuePayMethod(item.fieldFeePayMethod)&&roundMoney(item.fieldFeeAmount)>0).map(item=>{
-    const amount=roundMoney(item.fieldFeeAmount);
-    const businessDate=financeBusinessDateTime(item.startTime,item.fieldFeePaidAt,item.fieldFeePaymentTime,item.paidAt,item.paymentTime,item.createdAt);
-    const operator=operatorText(item.fieldFeeOperator,item.operator,item.createdBy,item.updatedBy);
-    return {
-      id:`schedule-field-fee-${item.id}`,
-      businessDate,
-      weekdayText:financeWeekdayText(item.startTime||item.createdAt),
-      timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
-      customer:item.studentName||'—',
-      campusName:campusName.fromValue(item.campus)||'—',
-      businessType:'课程订场',
-      action:'收款',
-      cashDelta:amount,
-      recognizedRevenueDelta:amount,
-      deferredRevenueDelta:0,
-      paymentChannel:item.fieldFeePayMethod||'—',
-      sourceDocument:`排课 ${item.id}`,
-      notes:item.fieldFeeNote||item.fieldFeeReason||'排课场地费',
-      incomeType:'课程订场',
-      packageName:item.packageName||'',
-      collector:operator,
-      operator,
-      differenceReason:'',
-      systemStatus:'正常',
-      totalLessons:0,
-      usedLessons:0,
-      remainingLessons:0,
-      sourceProject:`排课场地费 ${financeDateTimeText(item.startTime)}`,
-      debitTarget:'场地费'
-    };
+  const scheduleFieldFeeRows=(schedule||[]).flatMap(item=>{
+    if(!isBillableSchedule(item))return [];
+    const studentRows=parseArr(item.studentSettlementRows||'[]');
+    if(studentRows.length){
+      return studentRows.filter(row=>String(row?.fieldFeeMode||'').trim()==='separate'&&!isStoredValuePayMethod(row?.fieldFeePayMethod)&&roundMoney(row?.fieldFeeAmount)>0).map(row=>{
+        const amount=roundMoney(row.fieldFeeAmount);
+        const businessDate=financeBusinessDateTime(item.startTime,item.fieldFeePaidAt,item.fieldFeePaymentTime,item.paidAt,item.paymentTime,item.createdAt);
+        const operator=operatorText(item.fieldFeeOperator,item.operator,item.createdBy,item.updatedBy);
+        const student=studentMap.get(String(row.studentId||''))||{};
+        return {
+          id:`schedule-field-fee-${item.id}-${row.studentId}`,
+          businessDate,
+          weekdayText:financeWeekdayText(item.startTime||item.createdAt),
+          timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
+          customer:row.studentName||student.name||item.studentName||'—',
+          campusName:campusName.fromValue(item.campus)||'—',
+          businessType:'课程订场',
+          action:'收款',
+          cashDelta:amount,
+          recognizedRevenueDelta:amount,
+          deferredRevenueDelta:0,
+          paymentChannel:row.fieldFeePayMethod||'—',
+          sourceDocument:`排课 ${item.id}`,
+          notes:item.fieldFeeNote||item.fieldFeeReason||'排课场地费',
+          incomeType:'课程订场',
+          packageName:item.packageName||'',
+          collector:operator,
+          operator,
+          differenceReason:'',
+          systemStatus:'正常',
+          totalLessons:0,
+          usedLessons:0,
+          remainingLessons:0,
+          sourceProject:`排课场地费 ${financeDateTimeText(item.startTime)}`,
+          debitTarget:'场地费'
+        };
+      });
+    }
+    if(!isStoredValuePayMethod(item.fieldFeePayMethod)&&roundMoney(item.fieldFeeAmount)>0){
+      const amount=roundMoney(item.fieldFeeAmount);
+      const businessDate=financeBusinessDateTime(item.startTime,item.fieldFeePaidAt,item.fieldFeePaymentTime,item.paidAt,item.paymentTime,item.createdAt);
+      const operator=operatorText(item.fieldFeeOperator,item.operator,item.createdBy,item.updatedBy);
+      return [{
+        id:`schedule-field-fee-${item.id}`,
+        businessDate,
+        weekdayText:financeWeekdayText(item.startTime||item.createdAt),
+        timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
+        customer:item.studentName||'—',
+        campusName:campusName.fromValue(item.campus)||'—',
+        businessType:'课程订场',
+        action:'收款',
+        cashDelta:amount,
+        recognizedRevenueDelta:amount,
+        deferredRevenueDelta:0,
+        paymentChannel:item.fieldFeePayMethod||'—',
+        sourceDocument:`排课 ${item.id}`,
+        notes:item.fieldFeeNote||item.fieldFeeReason||'排课场地费',
+        incomeType:'课程订场',
+        packageName:item.packageName||'',
+        collector:operator,
+        operator,
+        differenceReason:'',
+        systemStatus:'正常',
+        totalLessons:0,
+        usedLessons:0,
+        remainingLessons:0,
+        sourceProject:`排课场地费 ${financeDateTimeText(item.startTime)}`,
+        debitTarget:'场地费'
+      }];
+    }
+    return [];
   });
   const courtRows=(courts||[]).flatMap(court=>{
     const baseCampusName=campusName.fromHints(court.campus,court.campusName,court.name,court.notes);

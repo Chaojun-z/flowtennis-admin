@@ -2362,6 +2362,29 @@ assert.throws(
   'package-settled small group schedules should not silently save when an attendee has no matching package'
 );
 
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas({
+    id: 'sch-small-mixed-settlement',
+    status: '已排课',
+    courseType: '小班课',
+    smallClassType: 'dropin',
+    lessonCount: 2,
+    studentIds: ['stu-has-package', 'stu-direct-pay'],
+    expectedStudentIds: ['stu-has-package', 'stu-direct-pay'],
+    settlementType: 'package',
+    studentSettlementRows: [
+      { studentId: 'stu-has-package', settlementType: 'package' },
+      { studentId: 'stu-direct-pay', settlementType: 'direct', payMethod: '微信', amount: 180 }
+    ]
+  }, [
+    { id: 'ent-has-package', studentId: 'stu-has-package', status: 'active', courseType: '小班课', smallClassType: 'dropin', totalLessons: 6, remainingLessons: 3 }
+  ]),
+  [
+    { studentId: 'stu-has-package', entitlementId: 'ent-has-package', delta: 1 }
+  ],
+  'mixed small group settlement should only deduct packages for students whose row is package settlement'
+);
+
 assert.strictEqual(
   rules.smallGroupLessonCountForStudentCount(2),
   1,

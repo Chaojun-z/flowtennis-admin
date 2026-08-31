@@ -1626,7 +1626,7 @@ function openStudentModal(id='',mode='edit'){
 }
 async function saveStudent(){
   const name=document.getElementById('s_name').value.trim();if(!name){toast('请输入姓名','warn');return;}
-  const phone=document.getElementById('s_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
+  const phone=document.getElementById('s_phone').value.trim();if(phone&&!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
   const btn=document.getElementById('studentSaveBtn');
   const data={name,phone,primaryCoach:document.getElementById('s_primaryCoach')?.value||'',type:document.getElementById('s_type').value,source:FlowTennisBusinessTaxonomy.normalizeLeadSource(document.getElementById('s_source').value),campus:document.getElementById('s_campus').value,notes:document.getElementById('s_notes').value.trim(),updatedBy:currentUser?.name||''};
   const duplicates=getStudentDuplicateCandidates(data,editId);

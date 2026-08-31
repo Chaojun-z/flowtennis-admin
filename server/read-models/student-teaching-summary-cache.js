@@ -7,6 +7,7 @@ const STUDENT_TEACHING_SUMMARY_READY = 'ready';
 const STUDENT_TEACHING_SUMMARY_PENDING = 'pending';
 const STUDENT_TEACHING_SUMMARY_REFRESHING = 'refreshing';
 const STUDENT_TEACHING_SUMMARY_FAILED = 'failed';
+const STUDENT_TEACHING_SUMMARY_VERSION_PREFIX = '__student_teaching_summary_version__:';
 
 function parseArr(v) {
   if (Array.isArray(v)) return v;
@@ -24,12 +25,56 @@ function isStudentTeachingSummaryMetaRow(row = {}) {
   return String(row?.id || '').trim() === STUDENT_TEACHING_SUMMARY_META_ID;
 }
 
+function isVersionedStudentTeachingSummaryRow(row = {}) {
+  return String(row?.id || '').trim().startsWith(STUDENT_TEACHING_SUMMARY_VERSION_PREFIX);
+}
+
+function studentTeachingSummaryLogicalRow(row = {}) {
+  if (!isVersionedStudentTeachingSummaryRow(row)) return row;
+  const next = { ...row };
+  next.id = String(row.publishedRowId || row.studentId || row.id || '').trim();
+  delete next.publishedRowId;
+  delete next.publishVersion;
+  return next;
+}
+
 function filterStudentTeachingSummaryDataRows(rows = []) {
-  return (Array.isArray(rows) ? rows : []).filter(row => row && !isStudentTeachingSummaryMetaRow(row));
+  return (Array.isArray(rows) ? rows : [])
+    .filter(row => row && !isStudentTeachingSummaryMetaRow(row) && !isVersionedStudentTeachingSummaryRow(row));
 }
 
 function studentTeachingSummaryMetaRow(rows = []) {
   return (Array.isArray(rows) ? rows : []).find(isStudentTeachingSummaryMetaRow) || null;
+}
+
+function filterStudentTeachingSummaryPublishedRows(rows = [], meta = null) {
+  const activeVersion = String(meta?.activeVersion || '').trim();
+  if (!activeVersion) return filterStudentTeachingSummaryDataRows(rows);
+  return (Array.isArray(rows) ? rows : [])
+    .filter(row => row && !isStudentTeachingSummaryMetaRow(row))
+    .filter(row => String(row.publishVersion || '').trim() === activeVersion)
+    .map(studentTeachingSummaryLogicalRow);
+}
+
+function buildVersionedStudentTeachingSummaryRow(row = {}, publishVersion = '') {
+  const version = String(publishVersion || '').trim();
+  const logicalId = String(row.id || row.studentId || '').trim();
+  if (!version || !logicalId) return row;
+  return {
+    ...row,
+    id: `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${version}:${logicalId}`,
+    publishedRowId: logicalId,
+    publishVersion: version
+  };
+}
+
+function studentTeachingSummaryRowsToDeleteAfterPublish(rows = [], activeVersion = '') {
+  const version = String(activeVersion || '').trim();
+  return (Array.isArray(rows) ? rows : []).filter(row => {
+    if (!row || isStudentTeachingSummaryMetaRow(row)) return false;
+    if (!isVersionedStudentTeachingSummaryRow(row)) return true;
+    return String(row.publishVersion || '').trim() !== version;
+  });
 }
 
 function normalizeGeneration(value) {
@@ -49,7 +94,9 @@ function stableValue(value) {
 }
 
 function buildStudentTeachingSummaryChecksum(rows = []) {
-  const normalizedRows = filterStudentTeachingSummaryDataRows(rows)
+  const normalizedRows = (Array.isArray(rows) ? rows : [])
+    .filter(row => row && !isStudentTeachingSummaryMetaRow(row))
+    .map(studentTeachingSummaryLogicalRow)
     .slice()
     .sort((a, b) => String(a?.id || '').localeCompare(String(b?.id || '')))
     .map(stableValue);
@@ -64,6 +111,7 @@ function buildStudentTeachingSummaryMetaRow({
   sourceOp = '',
   sourceId = '',
   batchId = '',
+  activeVersion = '',
   sourceSnapshotAt = '',
   completedAt = '',
   checksum = '',
@@ -80,6 +128,7 @@ function buildStudentTeachingSummaryMetaRow({
     sourceOp: String(sourceOp || ''),
     sourceId: String(sourceId || ''),
     batchId: String(batchId || ''),
+    activeVersion: String(activeVersion || ''),
     sourceSnapshotAt: String(sourceSnapshotAt || ''),
     completedAt: String(completedAt || ''),
     checksum: String(checksum || ''),
@@ -99,8 +148,8 @@ function studentTeachingSummaryNotReadyError(meta = null, reason = '') {
 
 function requireReadyStudentTeachingSummaryRows(rows = []) {
   const meta = studentTeachingSummaryMetaRow(rows);
-  const dataRows = filterStudentTeachingSummaryDataRows(rows);
   if (!meta) throw studentTeachingSummaryNotReadyError(null, 'missing-meta');
+  const dataRows = filterStudentTeachingSummaryPublishedRows(rows, meta);
   const status = String(meta.status || '');
   if (status !== STUDENT_TEACHING_SUMMARY_READY) throw studentTeachingSummaryNotReadyError(meta, status || 'unknown');
   const expectedCount = Number(meta.rowCount);
@@ -232,26 +281,29 @@ function createStudentTeachingSummaryCache({
       const data = { leads, students, purchases, entitlements, entitlementLedger, schedule, membershipBenefitLedger, feedbacks };
       const customerLifecycleRows = buildCustomerLifecycleRows(data);
       const rows = buildStudentTeachingSummaryRows(customerLifecycleRows, data);
-      const wantedIds = new Set(uniqueStudentIds(studentIds));
-      const targetRows = wantedIds.size ? rows.filter(row => wantedIds.has(String(row.studentId || row.id || ''))) : rows;
-      for (const row of targetRows) await put(T_STUDENT_TEACHING_SUMMARY, row.id, row);
-      if (wantedIds.size) {
-        const writtenIds = new Set(targetRows.map(row => String(row.id || '')).filter(Boolean));
-        for (const id of [...wantedIds].filter(id => !writtenIds.has(id))) await del(T_STUDENT_TEACHING_SUMMARY, id);
-      } else if (del) {
-        const existing = filterStudentTeachingSummaryDataRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }));
-        const nextIds = new Set(rows.map(row => String(row.id || '')).filter(Boolean));
-        for (const row of existing.filter(row => row?.id && !nextIds.has(String(row.id)))) await del(T_STUDENT_TEACHING_SUMMARY, row.id);
+      for (const row of rows) {
+        const versioned = buildVersionedStudentTeachingSummaryRow(row, batchId);
+        await put(T_STUDENT_TEACHING_SUMMARY, versioned.id, versioned);
       }
-      const finalRows = filterStudentTeachingSummaryDataRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }));
+      const publishedRows = filterStudentTeachingSummaryPublishedRows(
+        await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }),
+        { activeVersion: batchId }
+      );
       await writeMeta(STUDENT_TEACHING_SUMMARY_READY, {
         batchId,
+        activeVersion: batchId,
         sourceSnapshotAt,
         completedAt: new Date().toISOString(),
-        rowCount: finalRows.length,
-        checksum: buildStudentTeachingSummaryChecksum(finalRows)
+        rowCount: publishedRows.length,
+        checksum: buildStudentTeachingSummaryChecksum(publishedRows)
       });
-      return targetRows;
+      if (del) {
+        const existing = await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true });
+        for (const row of studentTeachingSummaryRowsToDeleteAfterPublish(existing, batchId)) {
+          if (row?.id) await del(T_STUDENT_TEACHING_SUMMARY, row.id);
+        }
+      }
+      return publishedRows;
     } catch (err) {
       if (!hasReadyMeta) {
         await writeMeta(STUDENT_TEACHING_SUMMARY_FAILED, { batchId, sourceSnapshotAt, error: err?.message || String(err) }).catch(metaErr => {
@@ -293,6 +345,9 @@ module.exports = {
   buildStudentTeachingSummaryMetaRow,
   isStudentTeachingSummaryMetaRow,
   filterStudentTeachingSummaryDataRows,
+  filterStudentTeachingSummaryPublishedRows,
+  buildVersionedStudentTeachingSummaryRow,
+  studentTeachingSummaryRowsToDeleteAfterPublish,
   buildStudentTeachingSummaryChecksum,
   requireReadyStudentTeachingSummaryRows,
   readReadyStudentTeachingSummaryRows
