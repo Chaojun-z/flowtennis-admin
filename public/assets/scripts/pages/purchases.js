@@ -10,6 +10,9 @@ function purchaseSelectedInPeriodFilter(){
 function purchaseSelectedPayStatusFilter(){
   return purPayStatusFilterValue||document.getElementById('purPayStatusFilter')?.value||'';
 }
+function purchaseFilterRows(){
+  return purchaseUnifiedRows().filter(isMeaningfulPurchaseRecord);
+}
 function onPurchaseSearchChange(){
   purPage=standardListFirstPage();
   renderPurchases();
@@ -45,6 +48,39 @@ function purchaseGiftLessonsText(p={}){
   const value=Number(p.giftLessons||purchaseDisplayPackageMeta(p).giftLessons||0)||0;
   return value>0?lessonQty(value):'0';
 }
+function purchaseCourseTypeTagClass(value=''){
+  const text=String(value||'').trim();
+  if(text==='私教课')return 'tms-tag-course-private';
+  if(text==='体验课 / 私教体验课')return 'tms-tag-tier-blue';
+  if(text==='体验课 / 小班体验课')return 'tms-tag-tier-teal';
+  if(text==='小班课 / 单次')return 'tms-tag-course-small';
+  if(text==='小班课 / 训练营')return 'tms-tag-tier-gold';
+  if(text==='小班课 / 随到随学')return 'tms-tag-tier-slate';
+  if(text==='小班课 / 亲子课')return 'tms-tag-business-demand-court';
+  if(text==='专项课')return 'tms-tag-business-demand-member';
+  if(text==='大师课')return 'tms-tag-business-stage-won';
+  if(text==='陪打')return 'tms-tag-course-partner';
+  return standardBusinessTagClass('demandProduct',text);
+}
+function purchaseUserTypeTagClass(value=''){
+  return standardBusinessTagClass('type',value);
+}
+function purchaseInPeriodStatusTagClass(value=''){
+  const text=String(value||'').trim();
+  if(text==='在期')return 'tms-tag-green';
+  if(text==='已用完-续课')return 'tms-tag-tier-gold';
+  if(text==='已用完-未续课')return 'tms-tag-red';
+  return 'tms-tag-tier-slate';
+}
+function purchasePaidStatusTagClass(value=''){
+  const text=String(value||'').trim();
+  if(text==='首次')return 'tms-tag-tier-blue';
+  if(text==='续报')return 'tms-tag-tier-teal';
+  return 'tms-tag-tier-slate';
+}
+function renderPurchaseTag(value,className){
+  return `<span class="tms-tag ${esc(className||'')}">${esc(renderStandardEmptyText(value))}</span>`;
+}
 function purchasePaidStatusText(p={}){
   const raw=String(p.paidStatus||'').trim();
   if(raw)return renderStandardEmptyText(raw);
@@ -59,11 +95,11 @@ function purchaseInPeriodStatusText(p={}){
   return p.hasRenewal?'已用完-续课':'已用完-未续课';
 }
 function purchaseCourseTypeOptions(){
-  const rows=purchases.filter(isMeaningfulPurchaseRecord);
+  const rows=purchaseFilterRows();
   return withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'课程类型'},...STANDARD_COURSE_TYPE_OPTIONS],rows,(p,value)=>purchaseCourseTypeText(p)===value);
 }
 function purchaseInPeriodStatusOptions(){
-  const rows=purchases.filter(isMeaningfulPurchaseRecord);
+  const rows=purchaseFilterRows();
   return withStandardFilterCounts([
     {value:'',label:'全部',emptyDisplay:'在期状态'},
     {value:'在期',label:'在期'},
@@ -72,7 +108,7 @@ function purchaseInPeriodStatusOptions(){
   ],rows,(p,value)=>purchaseInPeriodStatusText(p)===value);
 }
 function purchasePayStatusOptions(){
-  const rows=purchases.filter(isMeaningfulPurchaseRecord);
+  const rows=purchaseFilterRows();
   return withStandardFilterCounts([
     {value:'',label:'全部',emptyDisplay:'付费状态'},
     {value:'首次',label:'首次'},
@@ -305,7 +341,7 @@ function renderPurchaseMobileCards(list){
   host.innerHTML=list.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id);
     const balanceStatus=purchaseInPeriodStatusText(p);
-    const balanceTagClass=p.status==='voided'?'tms-tag-tier-slate':Number(ent?.remainingLessons||p.remainingLessons||0)>0?'tms-tag-green':'tms-tag-tier-gold';
+    const balanceTagClass=p.status==='voided'?'tms-tag-tier-slate':purchaseInPeriodStatusTagClass(balanceStatus);
     const total=Number(ent?.totalLessons)||0;
     const remaining=Number(ent?.remainingLessons)||Number(p.remainingLessons)||0;
     const balanceText=ent?`${lessonQty(remaining)}/${lessonQty(total)}`:'-';
@@ -315,13 +351,13 @@ function renderPurchaseMobileCards(list){
         <div><strong>${esc(renderStandardEmptyText(p.studentName))}</strong><span>${esc(p.purchaseDate||'-')}</span></div>
         <span class="tms-tag ${balanceTagClass}">${esc(balanceStatus)}</span>
       </div>
-      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(purchaseCourseTypeText(p)||'-')}</span><span class="tms-tag">${esc(purchaseUserTypeText(p)||'-')}</span><span class="tms-tag">${esc(purchaseClassSizeText(p)||'-')}</span></div>
+      <div class="admin-h5-card-tags">${renderPurchaseTag(purchaseCourseTypeText(p),purchaseCourseTypeTagClass(purchaseCourseTypeText(p)))}${renderPurchaseTag(purchaseUserTypeText(p),purchaseUserTypeTagClass(purchaseUserTypeText(p)))}${renderPurchaseTag(purchaseClassSizeText(p),'tms-tag-tier-slate')}</div>
       <div class="admin-h5-card-grid">
         <span><b>报名课时</b>${esc(lessonQty(Number(p.packageLessons)||0))}</span>
         <span><b>报名费用</b>¥${esc(fmt(purchaseActualAmount(p)))}</span>
         <span><b>赠送课时</b>${esc(purchaseGiftLessonsText(p))}</span>
         <span><b>归属教练</b>${esc(coachName(p.ownerCoach)||'-')}</span>
-        <span><b>付费状态</b>${esc(purchasePaidStatusText(p)||'-')}</span>
+        <span><b>付费状态</b>${renderPurchaseTag(purchasePaidStatusText(p),purchasePaidStatusTagClass(purchasePaidStatusText(p)))}</span>
         <span><b>课包余额</b>${esc(balanceText)}</span>
       </div>
       <p>${esc(p.notes||'暂无备注')}</p>
@@ -344,8 +380,8 @@ function renderPurchases(){
   document.getElementById('purchaseTbody').innerHTML=slice.length?slice.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id);
     const balanceStatus=purchaseInPeriodStatusText(p);
-    const balanceTagClass=p.status==='voided'?'tms-tag-tier-slate':Number(ent?.remainingLessons||p.remainingLessons||0)>0?'tms-tag-green':'tms-tag-tier-gold';
-    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.studentName,false)}</td><td>${renderStandardCellText(purchaseCourseTypeText(p),false)}</td><td>${renderStandardCellText(purchaseUserTypeText(p),false)}</td><td>${renderStandardCellText(purchaseClassSizeText(p),false)}</td><td><span class="tms-tag ${balanceTagClass}">${esc(balanceStatus)}</span></td><td>${renderStandardCellText(purchasePaidStatusText(p),false)}</td><td>${renderStandardCellText(p.purchaseDate,false)}</td><td>${renderStandardCellText(lessonQty(Number(p.packageLessons)||0),false)}</td><td><div class="tms-cell-text">¥${fmt(purchaseActualAmount(p))}</div></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(purchaseGiftLessonsText(p),false)}</td><td>${purchaseEntitlementMiniBar(ent)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
+    const balanceTagClass=p.status==='voided'?'tms-tag-tier-slate':purchaseInPeriodStatusTagClass(balanceStatus);
+    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.studentName,false)}</td><td>${renderPurchaseTag(purchaseCourseTypeText(p),purchaseCourseTypeTagClass(purchaseCourseTypeText(p)))}</td><td>${renderPurchaseTag(purchaseUserTypeText(p),purchaseUserTypeTagClass(purchaseUserTypeText(p)))}</td><td>${renderStandardCellText(purchaseClassSizeText(p),false)}</td><td>${renderPurchaseTag(balanceStatus,balanceTagClass)}</td><td>${renderPurchaseTag(purchasePaidStatusText(p),purchasePaidStatusTagClass(purchasePaidStatusText(p)))}</td><td>${renderStandardCellText(p.purchaseDate,false)}</td><td>${renderStandardCellText(lessonQty(Number(p.packageLessons)||0),false)}</td><td><div class="tms-cell-text">¥${fmt(purchaseActualAmount(p))}</div></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(purchaseGiftLessonsText(p),false)}</td><td>${purchaseEntitlementMiniBar(ent)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
   }).join(''):purchaseEmptyStateHtml();
   renderPurchaseMobileCards(slice);
 }
