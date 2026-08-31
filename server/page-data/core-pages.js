@@ -8,7 +8,9 @@ const {
   STUDENT_TEACHING_SUMMARY_FAILED,
   buildStudentTeachingSummaryMetaRow,
   buildStudentTeachingSummaryChecksum,
-  filterStudentTeachingSummaryDataRows
+  filterStudentTeachingSummaryPublishedRows,
+  buildVersionedStudentTeachingSummaryRow,
+  studentTeachingSummaryRowsToDeleteAfterPublish
 } = require('../read-models/student-teaching-summary-cache.js');
 const {
   buildCoachOpsUnifiedView,
@@ -241,7 +243,7 @@ function createCorePageDataRoutes(deps={}){
       if(paging){
         const q=String(query?.get('q')||'').trim();
         if(view==='purchases'){
-          const rows=(purchaseUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.studentName,row.packageName,row.productName,row.courseType,row.ownerCoach,row.payMethod,row.purchaseDate,row.amountPaid));
+          const rows=(purchaseUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.studentName,row.packageName,row.productName,row.courseType,row.userType,row.classSizeLabel,row.paidStatus,row.inPeriodStatus,row.ownerCoach,row.payMethod,row.purchaseDate,row.amountPaid));
           listPage={view, ...buildListPage(rows,paging)};
         }else if(view==='packages'){
           const rows=(packageUnifiedView.rows||[]).filter(row=>textSearchHit(q,row.name,row.packageName,row.productName,row.courseType,row.ownerCoach,row.price,row.lessons));
@@ -468,24 +470,32 @@ function createCorePageDataRoutes(deps={}){
           feedbacks:scoped.feedbacks
         });
         const rows=buildStudentTeachingSummaryRows(customerLifecycleRows,scoped);
-        const existing=filterStudentTeachingSummaryDataRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}));
-        const nextIds=new Set(rows.map(row=>String(row.id||'')).filter(Boolean));
-        for(const row of rows)await put(T_STUDENT_TEACHING_SUMMARY,row.id,row);
-        if(del){
-          for(const row of existing.filter(row=>row?.id&&!nextIds.has(String(row.id))))await del(T_STUDENT_TEACHING_SUMMARY,row.id);
+        for(const row of rows){
+          const versioned=buildVersionedStudentTeachingSummaryRow(row,batchId);
+          await put(T_STUDENT_TEACHING_SUMMARY,versioned.id,versioned);
         }
-        const finalRows=filterStudentTeachingSummaryDataRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}));
+        const publishedRows=filterStudentTeachingSummaryPublishedRows(
+          await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}),
+          {activeVersion:batchId}
+        );
         await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
           status:STUDENT_TEACHING_SUMMARY_READY,
           batchId,
+          activeVersion:batchId,
           sourceSnapshotAt,
           completedAt:new Date().toISOString(),
-          rowCount:finalRows.length,
-          checksum:buildStudentTeachingSummaryChecksum(finalRows),
+          rowCount:publishedRows.length,
+          checksum:buildStudentTeachingSummaryChecksum(publishedRows),
           sourceTable:'manual-rebuild',
           sourceOp:'rebuild-summary'
         }));
-        return sendJson(res,{success:true,count:finalRows.length,updatedAt:new Date().toISOString()});
+        if(del){
+          const existing=await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true});
+          for(const row of studentTeachingSummaryRowsToDeleteAfterPublish(existing,batchId)){
+            if(row?.id)await del(T_STUDENT_TEACHING_SUMMARY,row.id);
+          }
+        }
+        return sendJson(res,{success:true,count:publishedRows.length,updatedAt:new Date().toISOString()});
       }catch(err){
         if(!hasReadyMeta){
           await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({

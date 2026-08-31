@@ -255,9 +255,8 @@ assert.match(fnBody('coursePackageDropdownOptions'), /dedupeCoursePackageDropdow
 assert.doesNotMatch(fnBody('coursePackageBusinessDedupeKey'), /coachName\(p\.ownerCoach\)|packageListStatusValue\(p\)/, 'course package picker dedupe should treat same course specs as one option instead of splitting by owner coach or status');
 assert.match(fnBody('openPurchaseModal'), /renderCoursePackagePickerDropdownHtml\('pur_packageId'[\s\S]*includeCoach:true/, 'purchase create package picker should use the searchable grouped package dropdown');
 assert.match(fnBody('openPurchaseEditModal'), /renderCoursePackagePickerDropdownHtml\('pur_edit_packageId'[\s\S]*includeCoach:true/, 'purchase edit package picker should use the searchable grouped package dropdown');
-assert.match(fnBody('refreshPurchaseFilters'), /renderCoursePackagePickerDropdownHtml\('purPackageFilter'[\s\S]*showAllOption:true[\s\S]*includeCoach:true/, 'purchase record package filter should use the searchable grouped package dropdown');
-assert.match(fnBody('refreshPurchaseFilters'), /selectedValue:packageValue/, 'purchase package filter should preserve the selected package id even when duplicate package options are deduped');
-assert.match(fnBody('refreshPurchaseFilters'), /closeStandardDropdowns\(\)[\s\S]*host\.innerHTML=renderCoursePackagePickerDropdownHtml[\s\S]*closeStandardDropdowns\(\)/, 'purchase package filter refresh should close stale package dropdowns before and after rerendering');
+assert.match(fnBody('refreshPurchaseFilters'), /renderStandardDropdownHtml\('purCourseTypeFilter'[\s\S]*课程类型[\s\S]*renderStandardDropdownHtml\('purInPeriodFilter'[\s\S]*在期状态[\s\S]*renderStandardDropdownHtml\('purPayStatusFilter'[\s\S]*付费状态/, 'purchase record filters should render course type, in-period status, and paid status dropdowns');
+assert.match(fnBody('refreshPurchaseFilters'), /closeStandardDropdowns\(\)[\s\S]*host1\.innerHTML=renderStandardDropdownHtml[\s\S]*closeStandardDropdowns\(\)/, 'purchase filter refresh should close stale dropdowns before and after rerendering');
 assert.match(fnBody('openPackageMergeModal'), /renderCoursePackagePickerDropdownHtml\('pkg_merge_master'[\s\S]*renderCoursePackagePickerDropdownHtml\('pkg_merge_source'/, 'package merge modal should use the searchable grouped package dropdown for both package selectors');
 assert.match(html, /function purchaseStudentPickerHtml\(/, 'purchase modal should expose a searchable student picker helper');
 assert.match(html, /function selectPurchaseStudent\(/, 'purchase modal should allow selecting a student from search results');
@@ -274,10 +273,13 @@ assert.match(readModelSource, /filter\(rowActive\)/, 'package unified view shoul
 assert.match(fnBody('purchaseMatchesPackage'), /coursePackageEquivalentIds\(packageId\)[\s\S]*purchaseIdsByEntitlement[\s\S]*packageIds\.has\(String\(p\.packageId\|\|''\)\)/, 'package order count should match equivalent duplicate package ids and entitlement-linked purchases');
 assert.doesNotMatch(fnBody('packagePurchaseCount'), /packageName|productName|originalPackageName/, 'package order count should not count by package or product names');
 assert.match(html, /function purchaseMatchesPackage\(/, 'purchase filtering should share the package matching rule used by package order counts');
-assert.match(fnBody('getFilteredPurchases'), /purchaseMatchesPackage\(p,packageId\)/, 'purchase package filter should include the same purchases counted on package cards');
+assert.match(fnBody('getFilteredPurchases'), /purchaseMatchesPackage\(p,packageId\)/, 'purchase package drilldown should include the same purchases counted on package cards');
+assert.match(fnBody('getFilteredPurchases'), /purchaseCourseTypeText\(p\)/, 'purchase filters should include course type');
+assert.match(fnBody('getFilteredPurchases'), /purchaseInPeriodStatusText\(p\)/, 'purchase filters should include in-period status');
+assert.match(fnBody('getFilteredPurchases'), /purchasePaidStatusText\(p\)/, 'purchase filters should include paid status');
 assert.match(fnBody('getFilteredPurchases'), /purchaseMatchesCampus\(p,campus\)/, 'purchase filters should follow the top campus selector');
 assert.match(fnBody('getFilteredPurchases'), /activePurchaseDateRange\(\)[\s\S]*purchaseDateWithinRange/, 'purchase filters should follow the top time selector');
-assert.match(html, /let purPackageFilterValue=''/, 'purchase package filter should keep a page-level value before the dropdown exists');
+assert.match(html, /let purPackageFilterValue='',[^\\n]*purOwnerCoachFilterValue='',[^\\n]*purCourseTypeFilterValue='',[^\\n]*purInPeriodFilterValue='',[^\\n]*purPayStatusFilterValue=''/, 'purchase page should keep the hidden drilldown and visible filter values');
 assert.match(html, /let purDateRangeFilterValue='全部'/, 'purchase page should keep a top time filter value');
 assert.match(html, /function renderPurchaseTopFilters\([\s\S]*purchaseTopCampus[\s\S]*purchaseTopDate/, 'purchase page should render top campus and time filters');
 assert.match(packageShellConfig, /onclick="goPage\(\\'purchases\\'\)">购买记录/, 'package product toolbar should provide a purchase records entry');
@@ -285,7 +287,8 @@ assert.match(fnBody('buildCampusTabs'), /currentPage==='purchases'[\s\S]*renderP
 assert.match(html, /function selectPurchaseTopCampus\([\s\S]*refreshPurchaseTopFilters\(\)[\s\S]*renderPurchases\(\)/, 'purchase top campus selector should refresh orders');
 assert.match(html, /function onPurchaseDateRangeFilterChange\([\s\S]*purDateRangeFilterValue=value[\s\S]*renderPurchases\(\)/, 'purchase top time selector should refresh orders');
 assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/, 'purchase filtering should not depend only on the rendered dropdown input');
-assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
+assert.match(fnBody('onPurchaseSearchChange'), /purPage=standardListFirstPage\(\)[\s\S]*renderPurchases\(\)/, 'purchase search should reset pagination through the standard list flow');
+assert.match(fnBody('focusPurchaseByPackage'), /clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'[\s\S]*purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*purOwnerCoachFilterValue=coachName\(ownerCoach\|\|''\)/, 'package order drilldown should keep the hidden package and owner coach filters after navigation');
 assert.match(fnBody('focusPurchaseByPackage'), /purOwnerCoachFilterValue=coachName\(ownerCoach\|\|''\)/, 'package order drilldown should keep the package owner coach filter');
 assert.match(fnBody('getFilteredPurchases'), /purOwnerCoachFilterValue[\s\S]*coachName\(p\.ownerCoach\)!==ownerCoachFilter/, 'purchase drilldown should filter by order owner coach when provided');
 assert.match(fnBody('packagePurchaseCount'), /purchaseCountByOwnerCoach/, 'package card order count should read owner-coach count from unified package view');
@@ -355,7 +358,7 @@ assert.doesNotMatch(purchaseShellConfig, /purDateFrom/, 'purchase page should re
 assert.doesNotMatch(purchaseShellConfig, /purDateTo/, 'purchase page should remove end date filter');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /openPurchaseEntryModal\(\)">课包购买/, 'purchase page should expose a direct package purchase entry button');
-assert.match(purchaseShellConfig, /label:'支付日期',style:'width:100px;padding-left:20px'[\s\S]*label:'姓名',style:'width:80px'[\s\S]*label:'课包',style:'width:260px'[\s\S]*label:'实收',style:'width:70px'[\s\S]*label:'余额',style:'width:80px'[\s\S]*label:'状态',style:'width:64px'[\s\S]*label:'归属教练',style:'width:78px'[\s\S]*label:'支付方式',style:'width:78px'/, 'purchase table should widen package column and compact secondary columns');
+assert.match(purchaseShellConfig, /label:'姓名',style:'width:96px;padding-left:20px'[\s\S]*label:'课程类型',style:'width:110px'[\s\S]*label:'用户类型',style:'width:86px'[\s\S]*label:'上课人数',style:'width:86px'[\s\S]*label:'在期状态',style:'width:108px'[\s\S]*label:'付费状态',style:'width:74px'[\s\S]*label:'报名时间',style:'width:100px'[\s\S]*label:'报名课时',style:'width:74px'[\s\S]*label:'报名费用',style:'width:84px'[\s\S]*label:'归属教练',style:'width:90px'[\s\S]*label:'赠送课时',style:'width:74px'[\s\S]*label:'课包余额',style:'width:92px'/, 'purchase table should follow the new purchase record columns');
 assert.doesNotMatch(html, /购买记录用于查账和追溯/, 'purchase page should remove the long audit explanation');
 assert.doesNotMatch(fnBody('purchasePackageListLabel'), /replace\(\s*\/\^1v\\d私教课/, 'purchase package column should keep the 1v1/1v2 prefix');
 assert.match(fnBody('purchasePackageListLabel'), /replace\([^)]*已停售/, 'purchase package column should only remove stopped-sale copy from the package label');

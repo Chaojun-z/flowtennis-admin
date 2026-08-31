@@ -29,7 +29,7 @@ function fnBody(source, name) {
   ['students', 'stu', 'Student', 'renderStudents', 'onStudentFilterChange', 'cycleStudentSort'],
   ['schedule', 'sch', 'Schedule', 'renderSchedule', 'onScheduleFilterChange', null],
   ['leads', 'lead', 'Lead', 'renderLeads', 'onLeadFilterChange', 'cycleLeadSort'],
-  ['purchases', 'pur', 'Purchase', 'renderPurchases', 'onPurchaseFilterChange', null],
+  ['purchases', 'pur', 'Purchase', 'renderPurchases', 'onPurchaseSearchChange', null],
   ['prices', 'price', 'Price', 'renderPrices', 'onPriceFilterChange', null],
   ['admin-users', 'adminUser', 'AdminUser', 'renderAdminUsers', 'onAdminUserFilterChange', null]
 ].forEach(([file, prefix, title, renderFn, filterFn, sortFn]) => {

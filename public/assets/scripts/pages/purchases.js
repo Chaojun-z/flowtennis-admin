@@ -1,11 +1,83 @@
 function purchaseSelectedPackageFilter(){
-  return purPackageFilterValue||document.getElementById('purPackageFilter')?.value||'';
+  return purPackageFilterValue||'';
 }
-function onPurchaseFilterChange(){
-  purPackageFilterValue=document.getElementById('purPackageFilter')?.value||'';
-  purOwnerCoachFilterValue='';
+function purchaseSelectedCourseTypeFilter(){
+  return purCourseTypeFilterValue||document.getElementById('purCourseTypeFilter')?.value||'';
+}
+function purchaseSelectedInPeriodFilter(){
+  return purInPeriodFilterValue||document.getElementById('purInPeriodFilter')?.value||'';
+}
+function purchaseSelectedPayStatusFilter(){
+  return purPayStatusFilterValue||document.getElementById('purPayStatusFilter')?.value||'';
+}
+function onPurchaseSearchChange(){
   purPage=standardListFirstPage();
   renderPurchases();
+}
+function onPurchaseCourseTypeFilterChange(){
+  purCourseTypeFilterValue=document.getElementById('purCourseTypeFilter')?.value||'';
+  purPage=standardListFirstPage();
+  renderPurchases();
+}
+function onPurchaseInPeriodFilterChange(){
+  purInPeriodFilterValue=document.getElementById('purInPeriodFilter')?.value||'';
+  purPage=standardListFirstPage();
+  renderPurchases();
+}
+function onPurchasePayStatusFilterChange(){
+  purPayStatusFilterValue=document.getElementById('purPayStatusFilter')?.value||'';
+  purPage=standardListFirstPage();
+  renderPurchases();
+}
+function purchaseCourseTypeText(p={}){
+  return renderStandardEmptyText(String(p.courseType||p.packageCourseType||purchaseDisplayPackageMeta(p).courseType||'').trim());
+}
+function purchaseUserTypeText(p={}){
+  return renderStandardEmptyText(String(p.userType||p.type||p.audience||purchaseDisplayPackageMeta(p).userType||'').trim());
+}
+function purchaseClassSizeText(p={}){
+  const raw=String(p.classSizeLabel||'').trim();
+  if(raw)return renderStandardEmptyText(raw);
+  const value=Number(p.maxStudents||purchaseDisplayPackageMeta(p).maxStudents||0)||0;
+  return value>0?`1v${value}`:'-';
+}
+function purchaseGiftLessonsText(p={}){
+  const value=Number(p.giftLessons||purchaseDisplayPackageMeta(p).giftLessons||0)||0;
+  return value>0?lessonQty(value):'0';
+}
+function purchasePaidStatusText(p={}){
+  const raw=String(p.paidStatus||'').trim();
+  if(raw)return renderStandardEmptyText(raw);
+  if(p.status==='voided')return '已作废';
+  return (Number(p.purchaseOrderIndex)||0)<=1?'首次':'续报';
+}
+function purchaseInPeriodStatusText(p={}){
+  const raw=String(p.inPeriodStatus||'').trim();
+  if(raw)return renderStandardEmptyText(raw);
+  if(p.status==='voided')return '已作废';
+  if((Number(p.remainingLessons)||0)>0)return '在期';
+  return p.hasRenewal?'已用完-续课':'已用完-未续课';
+}
+function purchaseCourseTypeOptions(){
+  const rows=purchases.filter(isMeaningfulPurchaseRecord);
+  return withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'课程类型'},...STANDARD_COURSE_TYPE_OPTIONS],rows,(p,value)=>purchaseCourseTypeText(p)===value);
+}
+function purchaseInPeriodStatusOptions(){
+  const rows=purchases.filter(isMeaningfulPurchaseRecord);
+  return withStandardFilterCounts([
+    {value:'',label:'全部',emptyDisplay:'在期状态'},
+    {value:'在期',label:'在期'},
+    {value:'已用完-续课',label:'已用完-续课'},
+    {value:'已用完-未续课',label:'已用完-未续课'}
+  ],rows,(p,value)=>purchaseInPeriodStatusText(p)===value);
+}
+function purchasePayStatusOptions(){
+  const rows=purchases.filter(isMeaningfulPurchaseRecord);
+  return withStandardFilterCounts([
+    {value:'',label:'全部',emptyDisplay:'付费状态'},
+    {value:'首次',label:'首次'},
+    {value:'续报',label:'续报'}
+  ],rows,(p,value)=>purchasePaidStatusText(p)===value);
 }
 function purchaseTopCampusOptions(){
   const campusSource=typeof accessibleCampusRows==='function'?accessibleCampusRows():(Array.isArray(campuses)?campuses:[]);
@@ -63,11 +135,15 @@ function onPurchaseDateRangeFilterChange(value,event){
 }
 function refreshPurchaseFilters(){
   if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
-  const packageValue=purchaseSelectedPackageFilter();
-  const purchaseRows=purchases.filter(isMeaningfulPurchaseRecord);
-  const packageOptions=withStandardFilterCounts(coursePackageDropdownOptions(packages,{showAllOption:true,allLabel:'全部课包',includeCoach:true,selectedValue:packageValue}),purchaseRows,(p,value)=>purchaseMatchesPackage(p,value));
-  const host=document.getElementById('purPackageFilterHost');
-  if(host)host.innerHTML=renderCoursePackagePickerDropdownHtml('purPackageFilter','全部课包',packages,packageValue,{showAllOption:true,allLabel:'全部课包',includeCoach:true,isForm:false,onchange:'onPurchaseFilterChange',options:packageOptions});
+  const courseTypeValue=purchaseSelectedCourseTypeFilter();
+  const inPeriodValue=purchaseSelectedInPeriodFilter();
+  const payStatusValue=purchaseSelectedPayStatusFilter();
+  const host1=document.getElementById('purCourseTypeFilterHost');
+  const host2=document.getElementById('purInPeriodFilterHost');
+  const host3=document.getElementById('purPayStatusFilterHost');
+  if(host1)host1.innerHTML=renderStandardDropdownHtml('purCourseTypeFilter','课程类型',purchaseCourseTypeOptions(),courseTypeValue,false,'onPurchaseCourseTypeFilterChange');
+  if(host2)host2.innerHTML=renderStandardDropdownHtml('purInPeriodFilter','在期状态',purchaseInPeriodStatusOptions(),inPeriodValue,false,'onPurchaseInPeriodFilterChange');
+  if(host3)host3.innerHTML=renderStandardDropdownHtml('purPayStatusFilter','付费状态',purchasePayStatusOptions(),payStatusValue,false,'onPurchasePayStatusFilterChange');
   if(typeof closeStandardDropdowns==='function')closeStandardDropdowns();
 }
 function purchaseDateWithinRange(value,range={}){
@@ -111,12 +187,18 @@ function isMeaningfulPurchaseRecord(p){
 function getFilteredPurchases(){
   const q=(document.getElementById('purSearch')?.value||'').toLowerCase();
   const packageId=purchaseSelectedPackageFilter();
+  const courseTypeFilter=purchaseSelectedCourseTypeFilter();
+  const inPeriodFilter=purchaseSelectedInPeriodFilter();
+  const payStatusFilter=purchaseSelectedPayStatusFilter();
   const ownerCoachFilter=purOwnerCoachFilterValue||'';
   const dateRange=activePurchaseDateRange();
   return purchaseUnifiedRows().filter(p=>{
     if(!isMeaningfulPurchaseRecord(p))return false;
-    if(!searchHit(q,p.studentName,purchasePackageListLabel(p),purchaseActualAmount(p),purchasePayMethodText(p.payMethod),p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
+    if(!searchHit(q,p.studentName,purchasePackageListLabel(p),purchaseActualAmount(p),purchasePayMethodText(p.payMethod),p.purchaseDate,p.productName,p.courseType,p.userType,p.classSizeLabel,p.paidStatus,p.inPeriodStatus,p.ownerCoach))return false;
     if(packageId&&!purchaseMatchesPackage(p,packageId))return false;
+    if(courseTypeFilter&&purchaseCourseTypeText(p)!==courseTypeFilter)return false;
+    if(inPeriodFilter&&purchaseInPeriodStatusText(p)!==inPeriodFilter)return false;
+    if(payStatusFilter&&purchasePaidStatusText(p)!==payStatusFilter)return false;
     if(ownerCoachFilter&&coachName(p.ownerCoach)!==ownerCoachFilter)return false;
     if(!purchaseMatchesCampus(p,campus))return false;
     if(!purchaseDateWithinRange(p.purchaseDate||p.createdAt,dateRange))return false;
@@ -204,13 +286,13 @@ function purchaseEntitlementMiniBar(ent){
   return `<div class="tms-mini-bar student-package-mini" title="${esc(title)}"><div class="tms-mini-bar-bg" style="width:100%"></div><div class="tms-mini-bar-fill" style="width:${pct}%"></div><div class="tms-mini-bar-text">${text}</div></div>`;
 }
 function purchaseHasActiveSearchOrFilter(){
-  return !!((document.getElementById('purSearch')?.value||'').trim()||purchaseSelectedPackageFilter()||(campus&&campus!=='all')||(purDateRangeFilterValue&&purDateRangeFilterValue!=='全部'));
+  return !!((document.getElementById('purSearch')?.value||'').trim()||purchaseSelectedPackageFilter()||purchaseSelectedCourseTypeFilter()||purchaseSelectedInPeriodFilter()||purchaseSelectedPayStatusFilter()||purOwnerCoachFilterValue||(campus&&campus!=='all')||(purDateRangeFilterValue&&purDateRangeFilterValue!=='全部'));
 }
 function purchaseEmptyStateHtml(){
   const filtered=purchaseHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的购买记录':'暂无购买记录';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角课包购买开始录入';
-  return `<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="13"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderPurchaseMobileCards(list){
   const host=document.getElementById('purchaseMobileCards');
@@ -222,10 +304,10 @@ function renderPurchaseMobileCards(list){
   }
   host.innerHTML=list.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id);
-    const balanceStatus=ent?entitlementStatusText(ent):(p.status==='voided'?'已作废':'未生成');
-    const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
+    const balanceStatus=purchaseInPeriodStatusText(p);
+    const balanceTagClass=p.status==='voided'?'tms-tag-tier-slate':Number(ent?.remainingLessons||p.remainingLessons||0)>0?'tms-tag-green':'tms-tag-tier-gold';
     const total=Number(ent?.totalLessons)||0;
-    const remaining=Number(ent?.remainingLessons)||0;
+    const remaining=Number(ent?.remainingLessons)||Number(p.remainingLessons)||0;
     const balanceText=ent?`${lessonQty(remaining)}/${lessonQty(total)}`:'-';
     const voidAction=p.status==='voided'?'':`<button type="button" onclick="openPurchaseVoidModal('${p.id}')">作废</button>`;
     return `<article class="admin-h5-list-card admin-h5-purchase-card">
@@ -233,14 +315,14 @@ function renderPurchaseMobileCards(list){
         <div><strong>${esc(renderStandardEmptyText(p.studentName))}</strong><span>${esc(p.purchaseDate||'-')}</span></div>
         <span class="tms-tag ${balanceTagClass}">${esc(balanceStatus)}</span>
       </div>
-      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(purchasePayMethodText(p.payMethod)||'-')}</span><span class="tms-tag">${esc(coachName(p.ownerCoach)||'-')}</span></div>
+      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(purchaseCourseTypeText(p)||'-')}</span><span class="tms-tag">${esc(purchaseUserTypeText(p)||'-')}</span><span class="tms-tag">${esc(purchaseClassSizeText(p)||'-')}</span></div>
       <div class="admin-h5-card-grid">
-        <span><b>课包</b>${esc(purchasePackageListLabel(p))}</span>
-        <span><b>应收</b>¥${esc(fmt(purchaseReceivableAmount(p)))}</span>
-        <span><b>实收</b>¥${esc(fmt(purchaseActualAmount(p)))}</span>
-        <span><b>差价</b>¥${esc(fmt(purchasePriceDiffAmount(p)))}</span>
-        <span><b>余额</b>${esc(balanceText)}</span>
-        <span><b>状态</b>${esc(balanceStatus)}</span>
+        <span><b>报名课时</b>${esc(lessonQty(Number(p.packageLessons)||0))}</span>
+        <span><b>报名费用</b>¥${esc(fmt(purchaseActualAmount(p)))}</span>
+        <span><b>赠送课时</b>${esc(purchaseGiftLessonsText(p))}</span>
+        <span><b>归属教练</b>${esc(coachName(p.ownerCoach)||'-')}</span>
+        <span><b>付费状态</b>${esc(purchasePaidStatusText(p)||'-')}</span>
+        <span><b>课包余额</b>${esc(balanceText)}</span>
       </div>
       <p>${esc(p.notes||'暂无备注')}</p>
       <div class="admin-h5-card-actions"><button type="button" onclick="openPurchaseDetailModal('${p.id}')">查看</button>${voidAction}</div>
@@ -261,9 +343,9 @@ function renderPurchases(){
   renderPurchasePagerControls(total,pages);
   document.getElementById('purchaseTbody').innerHTML=slice.length?slice.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id);
-    const balanceStatus=ent?entitlementStatusText(ent):(p.status==='voided'?'已作废':'未生成');
-    const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
-    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderStandardEmptyText(p.studentName))}</div></td><td><div class="tms-text-primary">${esc(purchasePackageListLabel(p))}</div></td><td><div class="tms-cell-text">¥${fmt(purchaseReceivableAmount(p))}</div></td><td><div class="tms-cell-text">¥${fmt(purchaseActualAmount(p))}</div></td><td><div class="tms-cell-text">¥${fmt(purchasePriceDiffAmount(p))}</div></td><td>${purchaseEntitlementMiniBar(ent)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(purchasePayMethodText(p.payMethod),false)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
+    const balanceStatus=purchaseInPeriodStatusText(p);
+    const balanceTagClass=p.status==='voided'?'tms-tag-tier-slate':Number(ent?.remainingLessons||p.remainingLessons||0)>0?'tms-tag-green':'tms-tag-tier-gold';
+    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.studentName,false)}</td><td>${renderStandardCellText(purchaseCourseTypeText(p),false)}</td><td>${renderStandardCellText(purchaseUserTypeText(p),false)}</td><td>${renderStandardCellText(purchaseClassSizeText(p),false)}</td><td><span class="tms-tag ${balanceTagClass}">${esc(balanceStatus)}</span></td><td>${renderStandardCellText(purchasePaidStatusText(p),false)}</td><td>${renderStandardCellText(p.purchaseDate,false)}</td><td>${renderStandardCellText(lessonQty(Number(p.packageLessons)||0),false)}</td><td><div class="tms-cell-text">¥${fmt(purchaseActualAmount(p))}</div></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(purchaseGiftLessonsText(p),false)}</td><td>${purchaseEntitlementMiniBar(ent)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
   }).join(''):purchaseEmptyStateHtml();
   renderPurchaseMobileCards(slice);
 }
@@ -956,24 +1038,25 @@ async function savePurchase(){
   });
 }
 function focusPurchaseByPackage(packageId,ownerCoach=''){
-  purPackageFilterValue=String(packageId||'');
-  purOwnerCoachFilterValue=coachName(ownerCoach||'');
   clearPurchasePageFiltersForPackageFocus();
   goPage('purchases');
-  const pkg=packages.find(p=>String(p.id||'')===String(packageId||''));
-  setStandardDropdownValue('purPackageFilter',packageId,standardPackageLabel(pkg||{},true)||pkg?.name||packageId);
+  purPackageFilterValue=String(packageId||'');
+  purOwnerCoachFilterValue=coachName(ownerCoach||'');
   purPage=standardListFirstPage();
   renderPurchases();
 }
 function clearPurchasePageFiltersForPackageFocus(){
   const search=document.getElementById('purSearch');
-  const dateFrom=document.getElementById('purDateFrom');
-  const dateTo=document.getElementById('purDateTo');
+  const courseType=document.getElementById('purCourseTypeFilter');
+  const inPeriod=document.getElementById('purInPeriodFilter');
+  const payStatus=document.getElementById('purPayStatusFilter');
   if(search)search.value='';
-  if(dateFrom)dateFrom.value='';
-  if(dateTo)dateTo.value='';
-  syncDateButton('purDateFrom','purDateFromBtn','开始日期');
-  syncDateButton('purDateTo','purDateToBtn','结束日期');
+  purCourseTypeFilterValue='';
+  purInPeriodFilterValue='';
+  purPayStatusFilterValue='';
+  if(courseType)courseType.value='';
+  if(inPeriod)inPeriod.value='';
+  if(payStatus)payStatus.value='';
 }
 function exportPurchaseCSV(){
   const list=getFilteredPurchases();

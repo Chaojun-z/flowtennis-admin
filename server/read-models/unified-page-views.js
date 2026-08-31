@@ -328,7 +328,7 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
     ledgerByPurchase.set(key, list);
   });
 
-  const rows = (purchases || []).map(row => {
+  const baseRows = (purchases || []).map(row => {
     const packageId = text(row.packageId || row.originalPackageId);
     const pkg = packageById.get(packageId) || {};
     const student = studentById.get(text(row.studentId)) || {};
@@ -339,11 +339,18 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
     const remainingLessons = purchaseEntitlements.reduce((sum, ent) => sum + (Number(ent.remainingLessons) || 0), 0);
     const usedLessons = purchaseEntitlements.reduce((sum, ent) => sum + (Number(ent.usedLessons) || 0), 0);
     const ledgerCount = purchaseLedgerRows.length || Number(row.ledgerCount || row.entitlementLedgerCount || 0) || 0;
+    const maxStudents = Number(row.maxStudents ?? pkg.maxStudents) || 0;
+    const classSizeLabel = maxStudents > 0 ? `1v${maxStudents}` : '';
+    const purchaseDateSortText = text(row.purchaseDate || row.createdAt || row.updatedAt || row.id);
     return {
       ...row,
       studentName: text(row.studentName || student.name),
       packageId,
       packageName: text(row.packageName || pkg.name || pkg.packageName),
+      courseType: text(row.courseType || pkg.courseType || pkg.packageCourseType || row.packageCourseType),
+      userType: text(row.userType || row.type || student.type || lifecycle.type || lifecycle.customerType),
+      maxStudents,
+      classSizeLabel,
       campus: text(lifecycle.campus || row.campus || student.campus || parseArr(row.campusIds)[0] || parseArr(pkg.campusIds)[0]),
       ownerCoach: text(row.ownerCoach || pkg.ownerCoach || lifecycle.formalCoach || lifecycle.owner),
       amountPaid: money(row.finalAmount ?? row.amountPaid ?? row.actualAmount ?? row.paidAmount ?? row.amount),
@@ -353,7 +360,43 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
       ledgerCount,
       hasLedger: ledgerCount > 0 || usedLessons > 0,
       ledgerRows: purchaseLedgerRows,
-      meaningful: !!(text(row.purchaseDate || row.studentName || row.packageName || row.payMethod || row.ownerCoach) || Number(row.amountPaid) > 0 || packageLessons > 0)
+      meaningful: !!(text(row.purchaseDate || row.studentName || row.packageName || row.payMethod || row.ownerCoach) || Number(row.amountPaid) > 0 || packageLessons > 0),
+      _purchaseDateSortText: purchaseDateSortText
+    };
+  });
+
+  const rowsByStudentId = new Map();
+  baseRows
+    .filter(row => row.meaningful && row.status !== 'voided')
+    .sort((a, b) => String(a._purchaseDateSortText || '').localeCompare(String(b._purchaseDateSortText || '')) || String(a.id || '').localeCompare(String(b.id || '')))
+    .forEach(row => {
+      const key = text(row.studentId);
+      if (!key) return;
+      const list = rowsByStudentId.get(key) || [];
+      list.push(row);
+      rowsByStudentId.set(key, list);
+    });
+
+  const rows = baseRows.map(row => {
+    const studentRows = rowsByStudentId.get(text(row.studentId)) || [];
+    const activeRows = studentRows.filter(item => item.status !== 'voided');
+    const activeIndex = activeRows.findIndex(item => text(item.id) === text(row.id));
+    const hasLaterRenewal = activeIndex >= 0 && activeIndex < activeRows.length - 1;
+    const purchasedTimes = activeRows.length;
+    const paidStatus = row.status === 'voided' ? '已作废' : (activeIndex <= 0 ? '首次' : '续报');
+    const inPeriodStatus = row.status === 'voided'
+      ? '已作废'
+      : (Number(row.remainingLessons) > 0
+        ? '在期'
+        : (hasLaterRenewal ? '已用完-续课' : '已用完-未续课'));
+    return {
+      ...row,
+      purchaseOrderIndex: activeIndex >= 0 ? activeIndex + 1 : 0,
+      purchaseOrderCount: purchasedTimes,
+      hasRenewal: hasLaterRenewal,
+      paidStatus,
+      inPeriodStatus,
+      _purchaseDateSortText: undefined
     };
   });
 

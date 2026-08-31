@@ -5,7 +5,7 @@ let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='lastLesson',s
 let membershipPage=1,membershipPageSize=15,membershipSortKey='firstOpenDate',membershipSortDir='desc';
 let membershipOrderAuditPage=1,membershipOrderAuditPageSize=15,membershipLedgerAuditPage=1,membershipLedgerAuditPageSize=15;
 let membershipTierFilterValue='';
-let purPackageFilterValue='',purOwnerCoachFilterValue='';
+let purPackageFilterValue='',purOwnerCoachFilterValue='',purCourseTypeFilterValue='',purInPeriodFilterValue='',purPayStatusFilterValue='';
 let purDateRangeFilterValue='全部',purDateRangeStart='',purDateRangeEnd='';
 let coachOpsMode='week',coachOpsPickerMonth=null,financePanel='ledger';
 
