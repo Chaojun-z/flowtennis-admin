@@ -9,7 +9,7 @@ assert.match(html, /assets\/styles\/base\.css/, 'index.html should load base.css
 assert.match(html, /assets\/styles\/components\.css/, 'index.html should load components.css');
 assert.match(html, /assets\/styles\/pages\.css/, 'index.html should load pages.css');
 assert.match(html, /assets\/styles\/pages\.css\?v=/, 'index.html should version pages.css to bust stale modal styles');
-assert.match(html, /assets\/styles\/pages\.css\?v=20260825-coachschedule-calendar-ui-v1/, 'index.html should bust stale cached pages.css after coach calendar UI fixes');
+assert.match(html, /assets\/styles\/pages\.css\?v=20260831-per-student-settlement-block-v1/, 'index.html should bust stale cached pages.css after settlement block UI fixes');
 assert.match(html, /assets\/scripts\/core\/constants\.js/, 'index.html should load constants.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js/, 'index.html should load utils.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js\?v=20260802-course-colors-coachschedule-v1/, 'index.html should bust stale cached utils.js after coach operations split changes');
@@ -52,7 +52,7 @@ assert.match(components, /goPage\('leads',this\)[\s\S]*线索池/, 'components.j
 assert.match(components, /function renderTopbarShell\(/, 'components.js should render the shared topbar');
 assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=/, 'index.html should version schedule.js to avoid stale modal behavior');
-assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=20260831-per-student-settlement-ui-v1/, 'index.html should bust stale cached schedule.js after student settlement fixes');
+assert.match(html, /assets\/scripts\/pages\/schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*assets\/scripts\/pages\/schedule\.js\?v=20260831-per-student-settlement-block-v1/, 'index.html should bust stale cached schedule assets after student settlement block fixes');
 
 assert.doesNotMatch(html, /<style>[\s\S]*<\/style>/, 'index.html should no longer keep inline style blocks');
 assert.doesNotMatch(html, /<script>[\s\S]*<\/script>/, 'index.html should no longer keep one giant inline script block');

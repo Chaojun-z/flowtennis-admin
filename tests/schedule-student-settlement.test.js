@@ -37,7 +37,7 @@ assert.strictEqual(rows.length, 4);
 assert.strictEqual(rows[1].payMethod, '微信');
 assert.strictEqual(summarizeStudentSettlementRows(rows), '3人课包扣减 / 1人直接收款');
 
-assert.match(indexHtml, /schedule-settlement\.js\?v=20260830-schedule-student-settlement-v1[\s\S]*schedule\.js\?v=/, 'settlement helper should load before schedule.js');
+assert.match(indexHtml, /schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*schedule\.js\?v=20260831-per-student-settlement-block-v1/, 'settlement helper should load before schedule.js');
 assert.match(fnBody('renderScheduleStudentSuggestions'), /没有匹配到学员[\s\S]*schedule-student-suggest-create-link[\s\S]*openScheduleStudentQuickCreateModal[\s\S]*新建学员并排课/, 'no-result search should expose quick student creation as text');
 assert.match(scheduleSource, /function closeScheduleStudentQuickCreateModal\(/, 'quick-create modal should have its own close function');
 assert.doesNotMatch(fnBody('openScheduleStudentQuickCreateModal'), /openStandardModal\(/, 'quick-create modal must not replace the open schedule drawer');
@@ -58,14 +58,15 @@ assert.match(fnBody('openScheduleModal'), /packageField\}<div id="sch_studentSet
 assert.match(fnBody('scheduleUsesPerStudentSettlementCourse'), /\['小班课','专项课'\]/, 'small group and special schedules should use per-student settlement');
 assert.match(fnBody('refreshScheduleStudentSettlementSection'), /!scheduleUsesPerStudentSettlementCourse\(\)\|\|!ids\.length/, 'student settlement rows should show for selected students in per-student settlement courses');
 assert.match(fnBody('toggleScheduleSettlementFields'), /row\.style\.display=scheduleUsesPerStudentSettlementCourse\(\)\?'none':'flex'/, 'public settlement controls should hide for small group and special schedules');
+assert.match(fnBody('openScheduleModal'), /usePerStudentSettlementInitial[\s\S]*schedule-settlement-row" style="display:\$\{usePerStudentSettlementInitial\?'none':'flex'\}/, 'public settlement controls should be hidden from initial render for per-student settlement courses');
 assert.match(fnBody('refreshScheduleStudentSettlementSection'), /summarizeStudentSettlementRows\(normalized\)/, 'collapsed settlement section should show a compact summary');
-assert.match(settlementSource, /function scheduleStudentSettlementRowHtml[\s\S]*settlementType[\s\S]*payMethod[\s\S]*amount[\s\S]*fieldFeeMode[\s\S]*fieldFeePayMethod[\s\S]*fieldFeeAmount/, 'each student row should support settlement type, payment method, amount, and field fee');
+assert.match(settlementSource, /function scheduleStudentSettlementRowHtml[\s\S]*settlementType[\s\S]*fieldFeeMode[\s\S]*payMethod[\s\S]*amount[\s\S]*fieldFeePayMethod[\s\S]*fieldFeeAmount/, 'each student row should support settlement type, payment method, amount, and field fee');
 assert.match(scheduleStudentSettlementRowHtml({
   row: { studentId: 's1', settlementType: 'direct', payMethod: '微信', amount: 120, fieldFeeMode: 'separate', fieldFeePayMethod: '现金', fieldFeeAmount: 30 },
   studentName: '学员A',
   packageText: '小班课包 · 剩余3次',
   payMethodOptions: [{ value: '微信', label: '微信' }, { value: '现金', label: '现金' }]
-}), /学员A[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*小班课包 · 剩余3次[\s\S]*场地费[\s\S]*场地费支付[\s\S]*sch_studentSettlementFieldFeeAmount_s1/, 'small group row should show one complete settlement set per student');
+}), /学员A[\s\S]*结算方式[\s\S]*场地费[\s\S]*扣减课包[\s\S]*小班课包 · 剩余3次[\s\S]*课时费支付[\s\S]*场地费支付[\s\S]*sch_studentSettlementFieldFeeAmount_s1/, 'small group row should show one complete settlement set per student');
 assert.match(fnBody('renderScheduleStudentEntitlementRows'), /schedule-student-entitlement-action/, 'package matching rows should expose a direct-payment action for each student');
 assert.match(fnBody('renderScheduleStudentEntitlementRows'), /setScheduleStudentSettlementType\([\s\S]*'direct'\)/, 'package matching rows should switch one student to direct payment');
 assert.match(scheduleSource, /function setScheduleStudentSettlementType\(/, 'schedule page should expose a helper for switching one student to direct payment');
@@ -79,6 +80,8 @@ assert.match(apiSource, /SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'studentSettle
 
 assert.match(styles, /\.schedule-quick-student-overlay/, 'quick-create stacked overlay should have scoped styles');
 assert.match(styles, /\.schedule-student-settlement-panel/, 'student settlement section should have scoped panel styles');
+assert.match(styles, /schedule-student-settlement-grid\{display:grid;grid-template-columns:repeat\(2,232px\)/, 'student settlement blocks should reuse the original two-column settlement layout width');
+assert.match(styles, /schedule-student-settlement-direct[\s\S]*grid-template-columns:repeat\(2,232px\)/, 'student direct payment fields should not overflow the drawer');
 assert.match(styles, /\.schedule-quick-student-modal \.schedule-detail-action\.primary/, 'quick-create modal should use app modal button styling');
 assert.match(styles, /\.schedule-quick-student-modal \.mbody\{padding:16px 20px;overflow:visible\}/, 'quick-create modal body should not clip dropdown menus');
 
