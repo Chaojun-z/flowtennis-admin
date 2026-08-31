@@ -11,10 +11,10 @@ const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'pa
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
-assert.match(indexHtml, /state\.js\?v=20260817-schedule-helper-recovery-v1/, 'state script version should force a fresh browser load for schedule helper recovery fixes');
-assert.match(indexHtml, /schedule\.js\?v=20260807-button-stability-v1/, 'schedule script version should force a fresh browser load after button stability fixes');
-assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
-assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
+assert.match(indexHtml, /state\.js\?v=20260830-schedule-settlement-recovery-v1/, 'state script version should force a fresh browser load for schedule settlement recovery fixes');
+assert.match(indexHtml, /schedule\.js\?v=20260830-schedule-student-settlement-v2/, 'schedule script version should force a fresh browser load after student settlement fixes');
+assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
+assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
 assert.match(source, /await recoverMissingPageRenderer\(pg\);[\s\S]*renderLoadedCurrentPage\(pg\)/, 'page data loader should reload a missing page renderer before rendering');
 assert.match(stateSource, /function scheduleListPageDataUrl\(/, 'schedule page should build a scoped list URL for server-side pagination');
@@ -206,7 +206,7 @@ assert.match(source, /function scheduleStudentRosterRows\([\s\S]*teachingStudent
 assert.match(fnBody('renderScheduleStudentSuggestions'), /const searchRows=scheduleStudentSearchRows\(selectedIds\)[\s\S]*searchRows\.filter/, 'schedule student suggestions should search the lifecycle roster instead of the raw students table');
 assert.match(fnBody('scheduleStudentSearchRows'), /scheduleStudentRosterRows\(\)[\s\S]*students\.find/, 'schedule student search should keep a raw-student fallback only for already selected legacy schedule students');
 assert.match(fnBody('scheduleStudentRosterRows'), /teachingStudentViews\?\.searchableStudents/, 'schedule student search should include searchableStudents so history-only students can be found from the schedule drawer');
-assert.match(fnBody('openScheduleModal'), /ensureDatasetsByName\(\['students'\],\{force:true\}\)/, 'opening the schedule modal should refresh the shared students dataset before searching');
+assert.doesNotMatch(fnBody('openScheduleModal'), /ensureDatasetsByName\(\['students'\],\{force:false\}\)/, 'opening the schedule modal should not preload the whole students dataset');
 assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*\$\{campus\}｜\$\{last\}\$\{last\.endsWith\('有课'\)\?'':'上课'\}/, 'schedule student metadata should use compact campus and last lesson copy');
 assert.match(fnBody('scheduleStudentLastLessonBrief'), /effectiveScheduleStatus\(s\)!=='已取消'/, 'schedule student latest lesson should ignore cancelled schedules');
 assert.match(fnBody('scheduleStudentLastLessonBrief'), /if\(diffDays>0\)return diffDays===1\?'明天有课':`\$\{diffDays\}天后有课`;/, 'schedule student latest lesson should label future schedules instead of showing today');
