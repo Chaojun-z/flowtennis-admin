@@ -55,7 +55,9 @@ assert.doesNotMatch(fnBody('saveScheduleStudentQuickCreate'), /renderStudents\(\
 
 assert.match(fnBody('openScheduleModal'), /id="sch_studentSettlementRows"/, 'schedule modal should keep hidden settlement rows');
 assert.match(fnBody('openScheduleModal'), /packageField\}<div id="sch_studentSettlementSectionHost"><\/div><div class="tms-form-row schedule-time-row"/, 'student settlement section should stay inside the basic schedule form');
-assert.match(fnBody('refreshScheduleStudentSettlementSection'), /type!=='小班课'\|\|ids\.length<=1/, 'student settlement rows should only show for multi-student small group schedules');
+assert.match(fnBody('scheduleUsesPerStudentSettlementCourse'), /\['小班课','专项课'\]/, 'small group and special schedules should use per-student settlement');
+assert.match(fnBody('refreshScheduleStudentSettlementSection'), /!scheduleUsesPerStudentSettlementCourse\(\)\|\|!ids\.length/, 'student settlement rows should show for selected students in per-student settlement courses');
+assert.match(fnBody('toggleScheduleSettlementFields'), /row\.style\.display=scheduleUsesPerStudentSettlementCourse\(\)\?'none':'flex'/, 'public settlement controls should hide for small group and special schedules');
 assert.match(fnBody('refreshScheduleStudentSettlementSection'), /summarizeStudentSettlementRows\(normalized\)/, 'collapsed settlement section should show a compact summary');
 assert.match(settlementSource, /function scheduleStudentSettlementRowHtml[\s\S]*settlementType[\s\S]*payMethod[\s\S]*amount[\s\S]*fieldFeeMode[\s\S]*fieldFeePayMethod[\s\S]*fieldFeeAmount/, 'each student row should support settlement type, payment method, amount, and field fee');
 assert.match(scheduleStudentSettlementRowHtml({

@@ -354,7 +354,8 @@ function removeScheduleStudent(studentId){
 }
 function currentScheduleStudentSettlementRows(){return parseArr(document.getElementById('sch_studentSettlementRows')?.value||'[]');}function setScheduleStudentSettlementRows(rows=[]){const hidden=document.getElementById('sch_studentSettlementRows');if(hidden)hidden.value=JSON.stringify(Array.isArray(rows)?rows:[]);}
 function scheduleStudentSettlementPayMethodOptions(){return courseSurchargePayMethodOptions();}
-function scheduleUsesStudentSettlementRows(){const ids=parseArr(document.getElementById('sch_stuIds')?.value||'[]');return normalizeCourseType(document.getElementById('sch_courseType')?.value||'')==='小班课'&&ids.length>1;}
+function scheduleUsesPerStudentSettlementCourse(){return ['小班课','专项课'].includes(normalizeCourseType(document.getElementById('sch_courseType')?.value||''));}
+function scheduleUsesStudentSettlementRows(){return scheduleUsesPerStudentSettlementCourse()&&parseArr(document.getElementById('sch_stuIds')?.value||'[]').length>0;}
 function scheduleSelectableEntitlementForStudent(studentId){const rows=schStudentEntitlementOptionsByStudent.get(String(studentId||''))||[];return rows.find(option=>option.selectable)||null;}
 function captureScheduleStudentSettlementRows(){const defaultType=currentScheduleSettlementType(),next=currentScheduleStudentSettlementRows().map(row=>{const studentId=String(row?.studentId||'').trim();if(!studentId)return row;const settlementType=document.getElementById(`sch_studentSettlementType_${studentId}`)?.value||row.settlementType||'package',payMethod=settlementType==='direct'?(document.getElementById(`sch_studentSettlementPayMethod_${studentId}`)?.value||'微信'):'',amount=settlementType==='direct'?(parseFloat(document.getElementById(`sch_studentSettlementAmount_${studentId}`)?.value||'0')||0):0,fieldFeeMode=document.getElementById(`sch_studentSettlementFieldFeeMode_${studentId}`)?.value||row.fieldFeeMode||'none',fieldFeePayMethod=fieldFeeMode==='separate'?(document.getElementById(`sch_studentSettlementFieldFeePayMethod_${studentId}`)?.value||'微信'):'',fieldFeeAmount=fieldFeeMode==='separate'?(parseFloat(document.getElementById(`sch_studentSettlementFieldFeeAmount_${studentId}`)?.value||'0')||0):0,selected=settlementType==='package'?scheduleSelectableEntitlementForStudent(studentId):null;return {...row,settlementType,payMethod,amount,fieldFeeMode,fieldFeePayMethod,fieldFeeAmount,entitlementId:selected?.entitlementId||row.entitlementId||'',note:String(row.note||'').trim(),custom:row.custom===true||settlementType!==defaultType};});setScheduleStudentSettlementRows(next);return next;}
 function syncScheduleStudentSettlementRows(){const rows=captureScheduleStudentSettlementRows(),summary=document.getElementById('sch_studentSettlementSummary');if(summary)summary.textContent=summarizeStudentSettlementRows(rows);rows.forEach(row=>{const directHost=document.getElementById(`sch_studentSettlementDirect_${row.studentId}`);if(directHost)directHost.style.display=row.settlementType==='direct'?'':'none';const packageHost=document.getElementById(`sch_studentSettlementPackage_${row.studentId}`);if(packageHost)packageHost.style.display=row.settlementType==='package'?'':'none';const fieldFeeHost=document.getElementById(`sch_studentSettlementFieldFee_${row.studentId}`);if(fieldFeeHost)fieldFeeHost.style.display=row.fieldFeeMode==='separate'?'':'none';const rowSummary=document.getElementById(`sch_studentSettlementRowSummary_${row.studentId}`);if(rowSummary)rowSummary.textContent=settlementRowLabel(row);});refreshSchedulePaymentFields();}
@@ -362,7 +363,7 @@ function toggleScheduleStudentSettlementRows(){const body=document.getElementByI
 function onScheduleStudentSettlementTypeChange(studentId){const directHost=document.getElementById(`sch_studentSettlementDirect_${studentId}`),type=document.getElementById(`sch_studentSettlementType_${studentId}`)?.value||'package';if(directHost)directHost.style.display=type==='direct'?'':'none';setScheduleStudentSettlementRows(currentScheduleStudentSettlementRows().map(row=>String(row?.studentId||'')===String(studentId)?{...row,custom:true}:row));syncScheduleStudentSettlementRows();}
 function scheduleStudentSettlementPackageText(studentId){const rows=schStudentEntitlementOptionsByStudent.get(String(studentId||''))||[];const selected=rows.find(option=>option.selectable);return selected?scheduleEntitlementLabel(selected):scheduleEntitlementUnavailableReason(rows);}
 function renderScheduleStudentSettlementRow(row={},student={}){const studentId=String(row.studentId||student?.id||'').trim();return scheduleStudentSettlementRowHtml({row:{...row,studentId},studentName:scheduleStudentDisplayName(student)||student.name||student.studentName||studentId,packageText:scheduleStudentSettlementPackageText(studentId),payMethodOptions:scheduleStudentSettlementPayMethodOptions()});}
-function refreshScheduleStudentSettlementSection(){const host=document.getElementById('sch_studentSettlementSectionHost');if(!host)return;const ids=parseArr(document.getElementById('sch_stuIds')?.value||'[]'),type=normalizeCourseType(document.getElementById('sch_courseType')?.value||'');if(type!=='小班课'||ids.length<=1){host.innerHTML='';setScheduleStudentSettlementRows([]);return;}const expanded=host.querySelector('#sch_studentSettlementBody')?.style.display==='none'?false:true,normalized=normalizeStudentSettlementRows({studentIds:ids,defaultSettlementType:currentScheduleSettlementType(),existingRows:currentScheduleStudentSettlementRows()});setScheduleStudentSettlementRows(normalized);const rowsHtml=normalized.map(row=>renderScheduleStudentSettlementRow(row,students.find(s=>String(s.id||'')===String(row.studentId||''))||{})).join('');host.innerHTML=scheduleStudentSettlementPanelHtml({expanded,summary:summarizeStudentSettlementRows(normalized),rowsHtml});setTimeout(syncScheduleStudentSettlementRows,0);}
+function refreshScheduleStudentSettlementSection(){const host=document.getElementById('sch_studentSettlementSectionHost');if(!host)return;const ids=parseArr(document.getElementById('sch_stuIds')?.value||'[]');if(!scheduleUsesPerStudentSettlementCourse()||!ids.length){host.innerHTML='';setScheduleStudentSettlementRows([]);return;}const expanded=host.querySelector('#sch_studentSettlementBody')?.style.display==='none'?false:true,normalized=normalizeStudentSettlementRows({studentIds:ids,defaultSettlementType:currentScheduleSettlementType(),existingRows:currentScheduleStudentSettlementRows()});setScheduleStudentSettlementRows(normalized);const rowsHtml=normalized.map(row=>renderScheduleStudentSettlementRow(row,students.find(s=>String(s.id||'')===String(row.studentId||''))||{})).join('');host.innerHTML=scheduleStudentSettlementPanelHtml({expanded,summary:summarizeStudentSettlementRows(normalized),rowsHtml});setTimeout(syncScheduleStudentSettlementRows,0);}
 function closeScheduleStudentQuickCreateModal(){document.getElementById('scheduleQuickStudentOverlay')?.remove();}
 function openScheduleStudentQuickCreateModal(){const taxonomy=window.FlowTennisBusinessTaxonomy||{},campus=document.getElementById('sch_campus')?.value||'',campusOptions=[{value:'',label:'— 选择 —'},...(Array.isArray(campuses)?campuses:[]).map(c=>({value:c.code||c.id,label:campusOptionLabel(c)}))],sourceOptions=[{value:'',label:'— 选择 —'},...(typeof taxonomy.optionList==='function'?taxonomy.optionList('leadSources'):[])],source=typeof taxonomy.normalizeLeadSource==='function'?taxonomy.normalizeLeadSource('排课快速建档'):'未知',body=scheduleQuickStudentFormHtml({campus,source,campusOptions,sourceOptions}),actions=`<button type="button" class="schedule-detail-action muted" onclick="closeScheduleStudentQuickCreateModal()">取消</button><button type="button" class="schedule-detail-action primary" id="schQuickStudentSaveBtn" onclick="saveScheduleStudentQuickCreate()">保存并加入排课</button>`;closeScheduleStudentQuickCreateModal();document.body.insertAdjacentHTML('beforeend',scheduleQuickStudentOverlayHtml({body,actions}));setTimeout(()=>document.getElementById('sch_quickStudentName')?.focus(),0);}
 async function saveScheduleStudentQuickCreate(){
@@ -464,8 +465,7 @@ function handleScheduleCourseTypeChange(){
   syncScheduleExperienceType();
   syncScheduleSmallClassType();
   refreshScheduleTimeDerivedFields();
-  refreshScheduleCountFields();
-  refreshSchEntitlementOptions();
+  toggleScheduleSettlementFields();
 }
 function handleScheduleExperienceTypeChange(){
   syncScheduleExperienceType();
@@ -510,8 +510,7 @@ function handleScheduleStandardCourseTypeChange(){
   syncScheduleExperienceType();
   syncScheduleSmallClassType();
   refreshScheduleTimeDerivedFields();
-  refreshScheduleCountFields();
-  refreshSchEntitlementOptions();
+  toggleScheduleSettlementFields();
 }
 function syncScheduleSmallClassType(){
   const type=normalizeCourseType(document.getElementById('sch_courseType')?.value||'');
@@ -555,9 +554,9 @@ function handleScheduleSettlementTypeChange(value){setStandardDropdownValue('sch
 function refreshSchedulePaymentFields(){
   const type=currentScheduleSettlementType(),fieldFeeMode=currentScheduleFieldFeeMode();
   const packageItem=document.getElementById('sch_packageSettlementItem'),paymentRow=document.getElementById('sch_paymentRow'),payMethodItem=document.getElementById('sch_paymentMethodItem'),fieldFeePayMethodItem=document.getElementById('sch_fieldFeePayMethodItem');
-  const useStudentRows=scheduleUsesStudentSettlementRows();
+  const useStudentRows=scheduleUsesPerStudentSettlementCourse();
   const lessonItem=document.getElementById('sch_lessonPaidItem'),fieldFeeItem=document.getElementById('sch_fieldFeeAmountItem'),hasLessonPayment=!useStudentRows&&type==='direct',hasFieldFee=!useStudentRows&&fieldFeeMode==='separate',needsPayMethod=hasLessonPayment||hasFieldFee;
-  if(packageItem)packageItem.style.display=type==='package'?'':'none';
+  if(packageItem)packageItem.style.display=!useStudentRows&&type==='package'?'':'none';
   if(paymentRow)paymentRow.style.display=needsPayMethod?'grid':'none';
   if(payMethodItem)payMethodItem.style.display=hasLessonPayment?'':'none';
   if(fieldFeePayMethodItem)fieldFeePayMethodItem.style.display=hasFieldFee?'':'none';
@@ -569,7 +568,7 @@ function toggleScheduleSettlementFields(){
   const type=currentScheduleSettlementType();
   const row=document.querySelector('.schedule-settlement-row');
   if(type!=='package'){setScheduleCourseTypeReadonly(false);setScheduleSmallClassTypeReadonly(false);}
-  if(row)row.classList.toggle('has-field-fee',currentScheduleFieldFeeMode()==='separate');
+  if(row){row.style.display=scheduleUsesPerStudentSettlementCourse()?'none':'flex';row.classList.toggle('has-field-fee',currentScheduleFieldFeeMode()==='separate');}
   refreshScheduleCountFields();
   refreshSchEntitlementOptions();
   refreshSchedulePaymentFields();
