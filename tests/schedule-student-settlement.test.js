@@ -54,6 +54,9 @@ assert.match(fnBody('openScheduleModal'), /packageField\}<div id="sch_studentSet
 assert.match(fnBody('refreshScheduleStudentSettlementSection'), /type!=='小班课'\|\|ids\.length<=1/, 'student settlement rows should only show for multi-student small group schedules');
 assert.match(fnBody('refreshScheduleStudentSettlementSection'), /summarizeStudentSettlementRows\(normalized\)/, 'collapsed settlement section should show a compact summary');
 assert.match(settlementSource, /function scheduleStudentSettlementRowHtml[\s\S]*settlementType[\s\S]*payMethod[\s\S]*amount/, 'each student row should support settlement type, payment method, and amount');
+assert.match(fnBody('renderScheduleStudentEntitlementRows'), /schedule-student-entitlement-action/, 'package matching rows should expose a direct-payment action for each student');
+assert.match(fnBody('renderScheduleStudentEntitlementRows'), /setScheduleStudentSettlementType\([\s\S]*'direct'\)/, 'package matching rows should switch one student to direct payment');
+assert.match(scheduleSource, /function setScheduleStudentSettlementType\(/, 'schedule page should expose a helper for switching one student to direct payment');
 assert.match(fnBody('onScheduleStudentSettlementTypeChange'), /custom:true/, 'manually changed student rows should be treated as overrides');
 assert.match(fnBody('handleScheduleSettlementTypeChange'), /refreshScheduleStudentSettlementSection\(\)/, 'changing the default settlement type should refresh per-student rows');
 assert.match(fnBody('saveSchedule'), /studentSettlementRows=serializeStudentSettlementRows/, 'saving should serialize per-student settlement rows');

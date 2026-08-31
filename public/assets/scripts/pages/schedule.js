@@ -446,7 +446,7 @@ function renderScheduleStudentEntitlementRows(options=[],ids=[]){
     const rows=(options||[]).filter(option=>String(option.studentId||'')===String(studentId));
     const selected=rows.find(option=>option.selectable);
     const text=selected?scheduleEntitlementLabel(selected):scheduleEntitlementUnavailableReason(rows);
-    return `<div class="schedule-student-entitlement-row ${selected?'':'is-missing'}" title="${esc(`${name}：${text}`)}"><span class="schedule-student-entitlement-name">${esc(name)}</span><span class="schedule-student-entitlement-package">${esc(text)}</span></div>`;
+    return `<div class="schedule-student-entitlement-row ${selected?'':'is-missing'}" title="${esc(`${name}：${text}`)}"><span class="schedule-student-entitlement-name">${esc(name)}</span><span class="schedule-student-entitlement-package">${esc(text)}</span><button type="button" class="schedule-student-entitlement-action" onclick="setScheduleStudentSettlementType('${esc(studentId)}','direct')">直接收款</button></div>`;
   }).join('')}</div>`;
 }
 function refreshScheduleStudentEntitlementRows(res={},ids=[]){
@@ -454,6 +454,24 @@ function refreshScheduleStudentEntitlementRows(res={},ids=[]){
   if(!host)return;
   const options=Array.isArray(res?.options)?res.options:[];
   host.innerHTML=renderScheduleStudentEntitlementRows(options,ids);
+}
+function setScheduleStudentSettlementType(studentId,settlementType='direct'){
+  const sid=String(studentId||'').trim();
+  if(!sid)return;
+  const nextType=String(settlementType||'').trim()||'direct';
+  const current=currentScheduleStudentSettlementRows();
+  const nextRows=current.some(row=>String(row?.studentId||'')===sid)
+    ?current.map(row=>{
+      if(String(row?.studentId||'')!==sid)return row;
+      const amount=nextType==='direct'?(Number(row.amount||row.paidAmount||0)||0):0;
+      return {...row,settlementType:nextType,payMethod:nextType==='direct'?(String(row.payMethod||'').trim()||'微信'):'',amount,custom:true};
+    })
+    :[...current,{studentId:sid,settlementType:nextType,payMethod:nextType==='direct'?'微信':'',amount:0,note:'',defaultSettlementType:currentScheduleSettlementType(),custom:true}];
+  setScheduleStudentSettlementRows(nextRows);
+  refreshScheduleStudentSettlementSection();
+  syncScheduleStudentSettlementRows();
+  const panel=document.getElementById('sch_studentSettlementSectionHost');
+  panel?.scrollIntoView?.({behavior:'smooth',block:'start'});
 }
 function syncScheduleExperienceType(){
   const type=normalizeCourseType(document.getElementById('sch_courseType')?.value||'');
