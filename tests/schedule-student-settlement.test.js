@@ -80,8 +80,8 @@ assert.match(apiSource, /SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'studentSettle
 
 assert.match(styles, /\.schedule-quick-student-overlay/, 'quick-create stacked overlay should have scoped styles');
 assert.match(styles, /\.schedule-student-settlement-panel/, 'student settlement section should have scoped panel styles');
-assert.match(styles, /schedule-student-settlement-grid\{display:grid;grid-template-columns:repeat\(2,232px\)/, 'student settlement blocks should reuse the original two-column settlement layout width');
-assert.match(styles, /schedule-student-settlement-direct[\s\S]*grid-template-columns:repeat\(2,232px\)/, 'student direct payment fields should not overflow the drawer');
+assert.match(styles, /schedule-student-settlement-grid\{display:grid;grid-template-columns:repeat\(2,210px\)/, 'student settlement block controls should fit inside the drawer');
+assert.match(styles, /schedule-student-settlement-direct[\s\S]*grid-template-columns:repeat\(2,210px\)/, 'student direct payment fields should not overflow the drawer');
 assert.match(styles, /\.schedule-quick-student-modal \.schedule-detail-action\.primary/, 'quick-create modal should use app modal button styling');
 assert.match(styles, /\.schedule-quick-student-modal \.mbody\{padding:16px 20px;overflow:visible\}/, 'quick-create modal body should not clip dropdown menus');
 
