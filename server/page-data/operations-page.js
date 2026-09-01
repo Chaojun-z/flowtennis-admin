@@ -151,29 +151,32 @@ async function handleOperationsPageData({
   const load = () => loadOperationsSnapshot({
     user,
     scope,
-    forceFresh: query?.get?.('fresh') === '1' || query?.get?.('forceFresh') === '1'
+    forceFresh: query?.get?.('fresh') === '1' || query?.get?.('forceFresh') === '1',
+    allowRefreshing: true
   });
   try {
     const payload = timedEndpointMetric
       ? await timedEndpointMetric('pageData.operationsSnapshot', load)
       : await load();
+    if (payload?.snapshot?.refreshing && operationsSnapshotSync?.queueRebuildScope) {
+      operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'stale-page-hit' }).catch(() => null);
+    }
     return sendJson(res, payload);
   } catch (err) {
     if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) {
-      if (operationsSnapshotSync?.rebuildScope) {
-        try {
-          const rebuild = () => operationsSnapshotSync.rebuildScope({ user, scope, reason: 'page-miss' });
-          if (timedEndpointMetric) await timedEndpointMetric('pageData.operationsSnapshot.bootstrap', rebuild);
-          else await rebuild();
-          const payload = timedEndpointMetric
-            ? await timedEndpointMetric('pageData.operationsSnapshot.bootstrapRetry', load)
-            : await load();
-          return sendJson(res, payload);
-        } catch (bootstrapErr) {
-          return sendJson(res, { error: bootstrapErr.message || err.message || '经营分析快照初始化失败', code: bootstrapErr.code || err.code }, bootstrapErr.statusCode || err.statusCode || 503);
-        }
+      if (operationsSnapshotSync?.queueRebuildScope) {
+        operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'page-miss' }).catch(() => null);
       }
-      return sendJson(res, { error: err.message || '经营分析快照未发布', code: err.code }, err.statusCode || 503);
+      return sendJson(res, {
+        campuses: [],
+        operations: null,
+        snapshot: {
+          source: 'operations-snapshot',
+          refreshing: true,
+          code: err.code,
+          message: err.message || '经营分析快照正在生成'
+        }
+      }, 202);
     }
     console.warn('[operations-snapshot] failed:', err?.message || err);
     return sendJson(res, { error: err.message || '经营分析快照读取失败', code: err.code || 'OPERATIONS_SNAPSHOT_ERROR' }, err.statusCode || 500);

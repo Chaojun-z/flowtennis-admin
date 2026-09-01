@@ -17,6 +17,8 @@ let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSum
 let financePrepaidView={rows:[],summary:{}};
 let membershipFinanceSummary=null;
 let operationsPageData=null;
+let operationsPageSnapshotMeta=null;
+let operationsPageSnapshotRetryTimer=null;
 let coachOpsUnifiedView={rows:[]};
 let purchaseUnifiedView={rows:[]};
 let packageUnifiedView={rows:[]};
@@ -479,6 +481,7 @@ function hydrateOperationsPageFromClientCache(){
   if(!operationsPageCachePayloadIsCompatible(data))return false;
   setDatasetValue('campuses',data.campuses||[],{persist:false});
   operationsPageData=data.operations;
+  operationsPageSnapshotMeta=data.snapshot||null;
   if(currentPage==='operations'&&typeof renderOperations==='function')renderOperations();
   return true;
 }
@@ -508,7 +511,16 @@ function markDatasetLoaded(name,requestKey=datasetRequestKey(name)){
 function loadOperationsPageDataset(){
   const url=operationsPageDataUrl();
   const requestKey='operationsPage:'+url;
-  return apiCall('GET',url).then(data=>({...data,__operationsRequestKey:requestKey}));
+  return apiCall('GET',url).then(data=>{
+    if(data?.snapshot?.refreshing){
+      if(operationsPageSnapshotRetryTimer)clearTimeout(operationsPageSnapshotRetryTimer);
+      operationsPageSnapshotRetryTimer=setTimeout(()=>{
+        operationsPageSnapshotRetryTimer=null;
+        if(currentPage==='operations')refreshOperationsPageDataInBackground();
+      },3000);
+    }
+    return {...data,__operationsRequestKey:requestKey};
+  });
 }
 const DATASET_LOADERS={
   leads:()=>apiCall('GET',leadListPageDataUrl()),
@@ -1212,6 +1224,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('campuses',data.campuses||[]);
       staleCachedDatasets.delete('campuses');
       operationsPageData=data.operations||null;
+      operationsPageSnapshotMeta=data.snapshot||null;
       persistOperationsPageClientCache(data);
       markDatasetLoaded('operationsPage',requestKey);
       return;
@@ -1354,7 +1367,7 @@ function clearLoadedData(){
   leads=[];leadFollowups=[];courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
-  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];financePrepaidView={rows:[],summary:{}};membershipFinanceSummary=null;operationsPageData=null;
+  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];financePrepaidView={rows:[],summary:{}};membershipFinanceSummary=null;operationsPageData=null;operationsPageSnapshotMeta=null;
   coachOpsUnifiedView={rows:[]};purchaseUnifiedView={rows:[]};packageUnifiedView={rows:[]};entitlementUnifiedView={rows:[]};
   customerLifecycleRows=[];teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};studentDetailViewCache.clear();standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;

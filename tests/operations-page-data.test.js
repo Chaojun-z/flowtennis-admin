@@ -100,6 +100,8 @@ assert.match(residualSource, /require\('\.\/operations-page\.js'\)/, 'residual p
 assert.match(residualSource, /path==='\/page-data\/operations'&&method==='GET'/, 'residual page-data routes should own /page-data/operations');
 assert.match(residualSource, /handleOperationsPageData/, 'residual page-data routes should delegate the operations route');
 assert.match(residualSource, /loadOperationsSnapshot:operationsSnapshotSync\.loadSnapshot|loadOperationsSnapshot/, 'residual operations route should pass the operations snapshot loader');
+assert.match(operationsPageSource, /queueRebuildScope\(\{ user, scope, reason: 'page-miss' \}\)/, 'operations page should queue snapshot rebuilds on miss without blocking the page request');
+assert.doesNotMatch(operationsPageSource, /pageData\.operationsSnapshot\.bootstrap/, 'operations page request must not synchronously bootstrap slow snapshots');
 assert.doesNotMatch(apiSource, /\/page-data\/operations[\s\S]{0,300}buildOperationsMetrics/, 'api/index.js should not inline operations calculations');
 assert.match(apiSource, /T_OPERATIONS_SNAPSHOT='ft_operations_snapshot'/, 'API must declare the operations snapshot table');
 assert.match(apiSource, /\[T_OPERATIONS_SNAPSHOT,\{ttlMs:60000\}\]/, 'operations snapshot should use hot row cache for 1s reads');

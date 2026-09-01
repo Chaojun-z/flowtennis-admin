@@ -42,7 +42,7 @@ function checksumPayload(payload) {
 function normalizeScope(user = {}, scope = {}) {
   const dateRange = scope.dateRange || scope || {};
   return {
-    user: JSON.parse(getOperationsRowsCacheKey(user)),
+    userScope: JSON.parse(getOperationsRowsCacheKey({ ...user, id: '', userId: '', username: '' })),
     campus: text(scope.campus),
     campusName: text(scope.campusName),
     startDate: text(dateRange.startDate).slice(0, 10),
@@ -148,7 +148,7 @@ function createOperationsSnapshotLoader(deps = {}) {
     }
   }
 
-  return async function loadOperationsSnapshot({ user = {}, scope = {}, forceFresh = false } = {}) {
+  return async function loadOperationsSnapshot({ user = {}, scope = {}, forceFresh = false, allowRefreshing = false } = {}) {
     const key = scopeKey(user, scope);
     const [meta, sourceMarker] = await Promise.all([
       readRow(metaIdForScopeKey(key)),
@@ -160,7 +160,8 @@ function createOperationsSnapshotLoader(deps = {}) {
     if (meta?.status !== 'published' || meta?.snapshotVersion !== OPERATIONS_SNAPSHOT_VERSION || meta.scopeKey !== key || !meta.bundleId || !meta.batchId || !meta.completedAt || !meta.sourceSnapshotAt || !meta.checksum) {
       throw snapshotNotReadyError('经营分析快照未发布或契约不完整');
     }
-    if (sourceChangedAfterSnapshot(sourceMarker, meta)) {
+    const refreshing = sourceChangedAfterSnapshot(sourceMarker, meta);
+    if (refreshing && !allowRefreshing) {
       throw snapshotNotReadyError('经营分析快照正在刷新，请稍后重试');
     }
     const cacheKey = `${meta.bundleId}:${meta.checksum}`;
@@ -186,6 +187,7 @@ function createOperationsSnapshotLoader(deps = {}) {
         snapshotVersion: OPERATIONS_SNAPSHOT_VERSION,
         batchId: meta.batchId,
         scopeKey: key,
+        refreshing,
         completedAt: meta.completedAt,
         sourceSnapshotAt: meta.sourceSnapshotAt,
         checksum: meta.checksum
@@ -247,7 +249,7 @@ function createOperationsSnapshotSync(deps = {}) {
     const current = await readSnapshotRow(SNAPSHOT_SCOPE_INDEX_ID);
     const scopes = Array.isArray(current?.scopes) ? current.scopes : [];
     const byKey = new Map(scopes.map((item) => [text(item.scopeKey), item]).filter(([itemKey]) => itemKey));
-    byKey.set(key, { scopeKey: key, user: normalized.user, scope: storedScope, updatedAt: new Date().toISOString() });
+    byKey.set(key, { scopeKey: key, user: normalized.userScope, scope: storedScope, updatedAt: new Date().toISOString() });
     const next = { id: SNAPSHOT_SCOPE_INDEX_ID, type: 'scope-index', scopes: [...byKey.values()] };
     await put(tables.operationsSnapshot, SNAPSHOT_SCOPE_INDEX_ID, next);
     return next;

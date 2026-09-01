@@ -59,8 +59,10 @@ async function main() {
   const view = await loader({ user, scope: augustScope });
   assert.strictEqual(view.snapshot.source, 'operations-snapshot', '经营页必须从快照读取');
   assert.strictEqual(view.operations.coach.rows[0].coachName, '朝珺', '教练人效数据应来自当前范围快照');
+  const sharedAdminView = await loader({ user: { id: 'admin-2', role: 'admin', dataScope: '', campusIds: [] }, scope: augustScope });
+  assert.strictEqual(sharedAdminView.operations.coach.rows[0].coachName, '朝珺', '同权限管理员应共享同一份经营快照，不能每人首次打开都重建');
   assert.deepStrictEqual(
-    calls.map((call) => call.id),
+    calls.slice(0, 3).map((call) => call.id),
     [augustBuilt.meta.id, SNAPSHOT_SOURCE_MARKER_ID, augustBuilt.bundle.id],
     '首屏只能按固定 id 读 meta/source/bundle，不能扫大表'
   );
@@ -82,6 +84,9 @@ async function main() {
     (err) => err.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE,
     '源数据比快照新时不能展示旧教练人效'
   );
+  const refreshingView = await loader({ user, scope: augustScope, allowRefreshing: true });
+  assert.strictEqual(refreshingView.operations.coach.rows[0].coachName, '朝珺', '源数据更新后允许页面快速展示已发布快照');
+  assert.strictEqual(refreshingView.snapshot.refreshing, true, '源数据更新后应标记后台刷新中');
 
   const writes = [];
   const sync = createOperationsSnapshotSync({

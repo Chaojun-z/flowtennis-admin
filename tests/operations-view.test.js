@@ -196,6 +196,8 @@ assert.match(functionBody(stateSource, 'hydrateOperationsPageFromClientCache'), 
 assert.match(stateSource, /function operationsPageDataUrl\(\)/, 'state loader should build an operations endpoint URL with date range params');
 assert.match(functionBody(stateSource, 'operationsPageDataUrl'), /scopedPageDataUrl\('\/page-data\/operations'\)/, 'operations dashboard should request operations data with the same campus and date scope as lifecycle metrics');
 assert.match(stateSource, /function loadOperationsPageDataset\(\)[\s\S]*const url=operationsPageDataUrl\(\)[\s\S]*apiCall\('GET',url\)/, 'state loader should call the operations aggregate endpoint with the selected date range');
+assert.match(functionBody(stateSource, 'loadOperationsPageDataset'), /data\?\.snapshot\?\.refreshing[\s\S]*setTimeout\([\s\S]*refreshOperationsPageDataInBackground\(\)/, 'operations snapshot refreshing state should auto retry instead of leaving the skeleton stuck');
+assert.match(stateSource, /let operationsPageSnapshotMeta=null/, 'operations page should track snapshot status separately from the metric payload');
 assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 'operations dataset loader should use the date-aware loader');
 assert.match(stateSource, /function operationsPageDatasetRequestKey\(\)/, 'operations requests should use a date-aware request key');
 assert.match(stateSource, /operationsPageDatasetRequestKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations request key should include the active date range URL');
@@ -214,6 +216,7 @@ assert.match(stateSource, /datasetLoadPromises\.has\(requestKey\)/, 'in-flight o
 assert.match(stateSource, /if\(name==='operationsPage'\)[\s\S]*operationsPageRequestSeq/, 'operations refresh should only accept the latest response');
 assert.match(stateSource, /operations:\['operationsPage'\]/, 'operations page should rely on the aggregate endpoint only');
 assert.match(stateSource, /markDatasetLoaded\('operationsPage',requestKey\)/, 'operations aggregate data should be tracked as loaded');
+assert.match(operationsSource, /operationsPageSnapshotMeta\?\.refreshing[\s\S]*正在生成经营分析数据/, 'operations page should render a clear refreshing state when the snapshot is being generated');
 assert.match(chartsSource, /echarts\.init/, 'only the standard chart wrapper should initialize ECharts');
 assert.match(chartsSource, /renderStandardChart/, 'standard chart wrapper should expose renderStandardChart');
 assert.match(chartsSource, /buildStandardPieChartOption/, 'standard chart wrapper should expose a reusable pie chart option builder');

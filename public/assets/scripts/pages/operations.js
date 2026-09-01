@@ -1383,6 +1383,10 @@ function renderOperations() {
   if (!host) return;
   const data = operationsPageData || {};
   if (!data.overview) {
+    if (operationsPageSnapshotMeta?.refreshing) {
+      host.innerHTML = `<div class="tms-empty-state"><div class="tms-empty-title">正在生成经营分析数据</div><div class="tms-empty-desc">系统会自动刷新当前校区和时间范围</div></div>`;
+      return;
+    }
     host.innerHTML = `<div class="tms-empty-state"><div class="tms-empty-title">暂无经营分析数据</div></div>`;
     return;
   }
