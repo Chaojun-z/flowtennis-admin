@@ -103,8 +103,8 @@ assert.strictEqual(
 );
 assert.strictEqual(
   vm.runInContext("leadDateDisplayText({ id: 'lead-system-date', createdAt: '2026-08-29' })", context),
-  '2026-08-29',
-  'real lead created time should be used before later business facts'
+  '2026-04-15',
+  'earliest business fact should be used before later created time'
 );
 assert.strictEqual(
   vm.runInContext("leadDateDisplayText({ id: 'lead-system-date', updatedAt: '2026-08-29' })", context),
@@ -112,7 +112,7 @@ assert.strictEqual(
   'system repair time should never be used as lead time'
 );
 assert.strictEqual(
-  vm.runInContext("leadDateDisplayText({ id: 'lead-system-date', leadDate: '2026-08-29', createdAt: '2026-08-29', updatedAt: '2026-08-29' })", context),
+  vm.runInContext("leadDateDisplayText({ id: 'lead-system-date', hasTeachingSummarySnapshot: true, trialAttendedAt: '2026-08-20', lastFormalLessonAt: '2026-08-30', leadDate: '2026-08-29', createdAt: '2026-08-29', updatedAt: '2026-08-29' })", context),
   '2026-04-15',
   'polluted lead date and created time should not override earlier business facts'
 );

@@ -1341,7 +1341,7 @@ function leadDateIsManual(row = {}, lead = {}) {
 }
 
 function trustedRealLeadCreatedAt(row = {}, lead = {}, businessDate = '') {
-  if (!rowId(lead) || isOrphanMaterializedStudentLead(lead)) return '';
+  if (!rowId(lead) || row.hasTeachingSummarySnapshot || isOrphanMaterializedStudentLead(lead)) return '';
   const createdAt = text(lead.createdAt);
   if (!createdAt) return '';
   const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt);
@@ -1377,8 +1377,8 @@ function leadBusinessDate(row = {}, lead = {}) {
   const businessDate = earliestBusinessDateText(...businessFacts);
   const realLeadCreatedAt = trustedRealLeadCreatedAt(row, lead, businessDate);
   if (manualLeadDate && explicitLeadDate) return explicitLeadDate;
-  if (realLeadCreatedAt) return realLeadCreatedAt;
   if (businessDate) return businessDate;
+  if (realLeadCreatedAt) return realLeadCreatedAt;
   if (source !== 'system' && explicitLeadDate && ![
     text(lead.createdAt),
     text(lead.updatedAt),

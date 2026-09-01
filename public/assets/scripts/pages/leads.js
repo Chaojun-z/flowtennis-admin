@@ -272,7 +272,7 @@ function leadBusinessDateCompareValue(value,lead={}){
 }
 function leadTrustedCreatedAtValue(lead={},businessDate=''){
   const id=String(lead?.id||lead?.leadId||lead?.sourceLeadId||'').trim();
-  if(!id||lead?.isLifecycleSynthetic||/^lead-from-student-/.test(id))return '';
+  if(!id||lead?.isLifecycleSynthetic||lead?.hasTeachingSummarySnapshot||/^lead-from-student-/.test(id))return '';
   const createdAt=String(lead?.createdAt||'').trim();
   if(!createdAt)return '';
   const explicit=String(lead?.leadDate||lead?.leadEnteredAt||'').trim();
@@ -299,8 +299,9 @@ function leadBusinessDateValue(lead={}){
   if(leadDateLooksManual(lead))return leadStandardField(lead,'leadDate')||lead?.leadDate||leadStandardField(lead,'leadEnteredAt')||lead?.leadEnteredAt||'';
   const source=leadStandardField(lead,'leadDateSource');
   const businessDate=leadEarliestBusinessDateValue(lead);
-  return leadTrustedCreatedAtValue(lead,businessDate)
-    || businessDate
+  const summarySnapshot=Boolean(lead?.hasTeachingSummarySnapshot||leadStandardField(lead,'hasTeachingSummarySnapshot'));
+  return businessDate
+    || (summarySnapshot?'':leadTrustedCreatedAtValue(lead,businessDate))
     || (source==='system'?'':leadStandardField(lead,'leadDate'));
 }
 function leadDateDisplayText(lead){

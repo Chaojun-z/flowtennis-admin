@@ -581,8 +581,57 @@ async function main() {
   const summaryFactPage = await request(summaryFactHarness.handle, 'paged=1&page=1&pageSize=15');
   assert.strictEqual(summaryFactPage.statusCode, 200, '摘要事实线索应正常返回');
   assert.strictEqual(summaryFactPage.body.total, 1, '摘要事实线索应保留一条最终结果');
-  assert.strictEqual(summaryFactPage.body.rows[0].leadDate, '2026-08-18T10:00:00.000Z', '最终结果应优先展示真实线索创建时间');
+  assert.strictEqual(summaryFactPage.body.rows[0].leadDate, '2026-08-20', '最终结果应优先展示真实业务事实时间');
   assert.notStrictEqual(summaryFactPage.body.rows[0].leadDate, '2026-09-01T10:00:00.000Z', '摘要更新时间不能冒充线索时间');
+
+  const summarySnapshotHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-summary-snapshot',
+      displayName: '摘要快照用户',
+      wechatName: '摘要快照用户',
+      leadDate: '',
+      leadDateSource: 'system',
+      hasTeachingSummarySnapshot: true,
+      trialAttendedAt: '2026-08-20',
+      lastFormalLessonAt: '2026-08-30',
+      createdAt: '2026-09-01T10:00:00.000Z',
+      updatedAt: '2026-09-01T10:00:00.000Z'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [{
+      id: 'summary-snapshot-meta',
+      studentId: 'summary-snapshot-meta',
+      sourceLeadId: 'lead-summary-snapshot',
+      displayName: '摘要快照用户',
+      hasTrialAttended: true,
+      hasFormalAttended: true,
+      trialAttendedAt: '2026-08-20',
+      lastFormalLessonAt: '2026-08-30',
+      summaryUpdatedAt: '2026-09-01T10:00:00.000Z',
+      studentStage: 'formal',
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: false
+    }],
+    ft_court_account_list_index: []
+  });
+  const summarySnapshotPage = await request(summarySnapshotHarness.handle, 'paged=1&page=1&pageSize=15');
+  assert.strictEqual(summarySnapshotPage.statusCode, 200, '摘要快照线索应正常返回');
+  assert.strictEqual(summarySnapshotPage.body.rows[0].leadDate, '2026-08-20', '摘要快照行不能用摘要更新时间冒充线索时间');
+  assert.notStrictEqual(summarySnapshotPage.body.rows[0].leadDate, '2026-09-01T10:00:00.000Z', '摘要快照行不能显示修复时间');
 
   const notReadyHarness = createHarness({
     ft_leads: [{

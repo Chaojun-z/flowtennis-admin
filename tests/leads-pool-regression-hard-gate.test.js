@@ -103,7 +103,7 @@ const businessRows = buildLeadPoolRows({
     updatedAt: '2026-09-01T10:00:00.000Z'
   }]
 });
-assert.strictEqual(businessRows[0].leadDate, '2026-04-10T10:00:00.000Z', '无人工线索时间时必须优先取真实线索创建时间');
+assert.strictEqual(businessRows[0].leadDate, '2026-04-15', '无人工线索时间时必须优先取最早业务事实时间');
 assert.notStrictEqual(businessRows[0].leadDate, '2026-09-01T10:00:00.000Z', '系统修复时间不能冒充线索时间');
 
 const summaryFactRows = buildLeadPoolRows({

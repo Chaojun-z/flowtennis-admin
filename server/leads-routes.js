@@ -255,7 +255,7 @@ function createLeadsRoutes(deps={}){
     const systemLeadDate=cleanLeadText(row?.leadDateSource).toLowerCase()==='system';
     const storedLeadDate=systemLeadDate?'':(row?.leadDate||row?.leadEnteredAt);
     const businessDate=leadEarliestDateValue(row?.firstTouchAt,row?.trialAtRaw,row?.trialBookedAt,row?.trialAttendedAt,row?.packagePurchaseDate,row?.courseFirstPurchaseAt,row?.lastFormalLessonAt,row?.detailRecentLessonDate,row?.conversionAt,row?.enrollAtRaw,row?.formalSignupAt);
-    return storedLeadDate||leadTrustedCreatedAtValue(row,businessDate)||businessDate;
+    return storedLeadDate||businessDate||leadTrustedCreatedAtValue(row,businessDate);
   }
 
   function leadEarliestDateValue(...values){
@@ -268,7 +268,7 @@ function createLeadsRoutes(deps={}){
 
   function leadTrustedCreatedAtValue(row={},businessDate=''){
     const id=cleanLeadText(row?.id||row?.leadId||row?.sourceLeadId);
-    if(!id||row?.isLifecycleSynthetic||/^lead-from-student-/.test(id))return '';
+    if(!id||row?.isLifecycleSynthetic||row?.hasTeachingSummarySnapshot||/^lead-from-student-/.test(id))return '';
     const createdAt=cleanLeadText(row?.createdAt);
     if(!createdAt)return '';
     const explicitLeadDate=cleanLeadText(row?.leadDate||row?.leadEnteredAt);

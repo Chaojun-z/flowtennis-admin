@@ -205,8 +205,8 @@ assert.strictEqual(
 );
 assert.strictEqual(
   leadDateHelpersContext.leadDateDisplayText({ id: 'lead-created-date', createdAt: '2026-04-10T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }),
-  '2026-04-10',
-  'lead list and detail should use the real lead created time before later business facts'
+  '2026-04-15',
+  'lead list and detail should keep the earliest business fact before later created time'
 );
 assert.strictEqual(
   leadDateHelpersContext.leadDateDisplayText({ id: 'lead-system-date', leadDate: '2026-08-29', createdAt: '2026-08-29', updatedAt: '2026-08-29' }),
@@ -214,7 +214,7 @@ assert.strictEqual(
   'lead list and detail should reject polluted created time when earlier business facts exist'
 );
 assert.strictEqual(
-  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-summary-fact', trialAttendedAt: '2026-08-20', lastFormalLessonAt: '2026-08-30', summaryUpdatedAt: '2026-09-01T10:00:00.000Z' }),
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-summary-fact', hasTeachingSummarySnapshot: true, trialAttendedAt: '2026-08-20', lastFormalLessonAt: '2026-08-30', createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }),
   '2026-08-20',
   'lead list and detail should prefer the earliest real business fact, not the summary refresh time'
 );
