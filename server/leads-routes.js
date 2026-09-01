@@ -1112,7 +1112,7 @@ function createLeadsRoutes(deps={}){
         });
       }
     }
-    const rows=buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:false})
+    const rows=buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:true})
       .filter(row=>!hiddenLeadIdentities.ids.has(cleanLeadText(row.id))&&!hiddenLeadIdentities.ids.has(cleanLeadText(row.sourceLeadId)))
       .filter(row=>{
         const sourceLeadId=cleanLeadText(row.sourceLeadId);

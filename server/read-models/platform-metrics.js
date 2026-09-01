@@ -92,13 +92,10 @@ function leadDedupPhone(row = {}) {
 }
 
 function leadCanonicalNameKey(row = {}) {
-  const carrier = row.isLifecycleSynthetic
-    ? (text(row.courtId) ? 'court' : text(row.studentId) ? 'student' : text(row.membershipAccountId) ? 'membership' : 'synthetic')
-    : 'lead';
   const phone = leadDedupPhone(row);
-  if (phone) return `${carrier}|phone:${phone}`;
+  if (phone) return `phone:${phone}`;
   const name = leadIdentityName(row.wechatName || row.displayName || row.name);
-  return name ? `${carrier}|name:${name}` : `${carrier}|id:${rowId(row)}`;
+  return name ? `name:${name}` : `id:${rowId(row)}`;
 }
 
 function leadDateMs(value) {
@@ -123,6 +120,7 @@ function mergeLeadPoolGroup(rows = []) {
   const list = rows.filter(Boolean);
   if (!list.length) return null;
   const primary = [...list].sort((a, b) => (
+    Number(!!a.isLifecycleSynthetic) - Number(!!b.isLifecycleSynthetic) ||
     leadDateMs(a.leadDate || a.createdAt) - leadDateMs(b.leadDate || b.createdAt) ||
     text(a.id).localeCompare(text(b.id))
   ))[0];
@@ -130,6 +128,23 @@ function mergeLeadPoolGroup(rows = []) {
   const bestStage = [...list].sort((a, b) => leadStageRank(b.leadStage) - leadStageRank(a.leadStage))[0];
   const bestDeal = list.map(row => text(row.dealType || row.conversionType)).find(Boolean);
   merged._mergedLeadIds = [...new Set(list.map(row => text(row.id || row.sourceLeadId || row.leadId)).filter(Boolean))];
+  list.forEach(row => {
+    Object.entries(row).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return;
+      if (key === 'id' || key === 'sourceLeadId' || key === 'leadId' || key === 'createdAt') return;
+      if (typeof value === 'boolean') {
+        merged[key] = !!merged[key] || value;
+        return;
+      }
+      if (typeof value === 'number') {
+        merged[key] = Math.max(Number(merged[key]) || 0, value);
+        return;
+      }
+      if (!text(merged[key]) || text(merged[key]) === '未知' || text(merged[key]) === 'none') {
+        merged[key] = value;
+      }
+    });
+  });
   merged.leadStage = text(bestStage?.leadStage || merged.leadStage);
   merged.systemStatus = text(bestStage?.systemStatus || merged.systemStatus || merged.leadStage);
   merged.dealType = bestDeal || text(merged.dealType);
