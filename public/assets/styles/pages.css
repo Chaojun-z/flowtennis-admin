@@ -251,6 +251,7 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-purchases .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-purchases .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-purchases .tms-text-primary,#page-purchases .tms-cell-text,#page-purchases .tms-text-remark{font-size:12px}
+#page-purchases .purchase-name-cell .tms-cell-text{font-weight:700}
 #page-purchases .tms-action-link{font-size:12px}
 #page-membership-plans .tms-table th.tms-sticky-l{position:sticky;top:0;left:0;z-index:140;background-color:#F1E9E2}
 #page-membership-plans .tms-table td.tms-sticky-l{position:sticky;left:0;z-index:40;background-color:#FBF7F4}

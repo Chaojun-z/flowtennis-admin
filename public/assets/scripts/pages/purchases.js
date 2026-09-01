@@ -33,10 +33,13 @@ function onPurchasePayStatusFilterChange(){
   renderPurchases();
 }
 function purchaseCourseTypeText(p={}){
-  return renderStandardEmptyText(String(p.courseType||p.packageCourseType||purchaseDisplayPackageMeta(p).courseType||'').trim());
+  return renderStandardEmptyText(standardCourseTypeFilterValue(purchaseDisplayPackageMeta(p)));
 }
 function purchaseUserTypeText(p={}){
-  return renderStandardEmptyText(String(p.userType||p.type||p.audience||purchaseDisplayPackageMeta(p).userType||'').trim());
+  const meta=purchaseDisplayPackageMeta(p);
+  const exact=[p.userType,p.studentType,p.audience,meta.userType,meta.audience,p.type,meta.type].map(v=>String(v||'').trim()).find(v=>v==='成人'||v==='青少年');
+  if(exact)return exact;
+  return renderStandardEmptyText(packageAudienceLabelFromText([p.userType,p.studentType,p.audience,meta.userType,meta.audience,p.type,meta.type,p.packageName,meta.packageName,p.productName]));
 }
 function purchaseClassSizeText(p={}){
   const raw=String(p.classSizeLabel||'').trim();
@@ -81,13 +84,18 @@ function purchasePaidStatusTagClass(value=''){
 function renderPurchaseTag(value,className){
   return `<span class="tms-tag ${esc(className||'')}">${esc(renderStandardEmptyText(value))}</span>`;
 }
+function purchaseIsPrivateCourse(p={}){
+  return purchaseCourseTypeText(p)==='私教课';
+}
 function purchasePaidStatusText(p={}){
+  if(!purchaseIsPrivateCourse(p))return '-';
   const raw=String(p.paidStatus||'').trim();
   if(raw)return renderStandardEmptyText(raw);
   if(p.status==='voided')return '已作废';
   return (Number(p.purchaseOrderIndex)||0)<=1?'首次':'续报';
 }
 function purchaseInPeriodStatusText(p={}){
+  if(!purchaseIsPrivateCourse(p))return '-';
   const raw=String(p.inPeriodStatus||'').trim();
   if(raw)return renderStandardEmptyText(raw);
   if(p.status==='voided')return '已作废';
@@ -192,6 +200,20 @@ function purchaseDateWithinRange(value,range={}){
   if(end&&raw>end)return false;
   return true;
 }
+function purchaseSortValue(p={}){
+  return String(p.purchaseDate||p.createdAt||'');
+}
+function cyclePurchaseSort(){
+  purchaseSortDir=purchaseSortDir==='desc'?'asc':'desc';
+  purPage=standardListFirstPage();
+  renderPurchases();
+}
+function updatePurchaseSortHeaders(){
+  document.querySelectorAll('#page-purchases [data-purchase-sort]').forEach(btn=>{
+    btn.classList.toggle('asc',purchaseSortDir==='asc');
+    btn.classList.toggle('desc',purchaseSortDir==='desc');
+  });
+}
 function purchaseCampusValues(p={}){
   const ent=entitlements.find(e=>e.purchaseId===p.id)||{};
   const pkg=packages.find(row=>String(row.id||'')===String(p.packageId||p.originalPackageId||''))||{};
@@ -239,7 +261,10 @@ function getFilteredPurchases(){
     if(!purchaseMatchesCampus(p,campus))return false;
     if(!purchaseDateWithinRange(p.purchaseDate||p.createdAt,dateRange))return false;
     return true;
-  }).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
+  }).sort((a,b)=>{
+    const dir=purchaseSortDir==='asc'?1:-1;
+    return purchaseSortValue(a).localeCompare(purchaseSortValue(b))*dir||String(a.id||'').localeCompare(String(b.id||''))*dir;
+  });
 }
 function renderPurchasePagerControls(total,pages){
   const pageSizeHost=document.getElementById('purPageSize');
@@ -381,8 +406,9 @@ function renderPurchases(){
     const ent=entitlements.find(e=>e.purchaseId===p.id);
     const balanceStatus=purchaseInPeriodStatusText(p);
     const balanceTagClass=p.status==='voided'?'tms-tag-tier-slate':purchaseInPeriodStatusTagClass(balanceStatus);
-    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.studentName,false)}</td><td>${renderPurchaseTag(purchaseCourseTypeText(p),purchaseCourseTypeTagClass(purchaseCourseTypeText(p)))}</td><td>${renderPurchaseTag(purchaseUserTypeText(p),purchaseUserTypeTagClass(purchaseUserTypeText(p)))}</td><td>${renderStandardCellText(purchaseClassSizeText(p),false)}</td><td>${renderPurchaseTag(balanceStatus,balanceTagClass)}</td><td>${renderPurchaseTag(purchasePaidStatusText(p),purchasePaidStatusTagClass(purchasePaidStatusText(p)))}</td><td>${renderStandardCellText(p.purchaseDate,false)}</td><td>${renderStandardCellText(lessonQty(Number(p.packageLessons)||0),false)}</td><td><div class="tms-cell-text">¥${fmt(purchaseActualAmount(p))}</div></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(purchaseGiftLessonsText(p),false)}</td><td>${purchaseEntitlementMiniBar(ent)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
+    return `<tr><td class="purchase-name-cell" style="padding-left:20px">${renderStandardCellText(p.studentName,false)}</td><td>${renderStandardCellText(p.purchaseDate,false)}</td><td>${renderPurchaseTag(purchaseCourseTypeText(p),purchaseCourseTypeTagClass(purchaseCourseTypeText(p)))}</td><td>${renderPurchaseTag(purchaseUserTypeText(p),purchaseUserTypeTagClass(purchaseUserTypeText(p)))}</td><td>${renderStandardCellText(purchaseClassSizeText(p),false)}</td><td>${renderPurchaseTag(balanceStatus,balanceTagClass)}</td><td>${renderPurchaseTag(purchasePaidStatusText(p),purchasePaidStatusTagClass(purchasePaidStatusText(p)))}</td><td>${renderStandardCellText(lessonQty(Number(p.packageLessons)||0),false)}</td><td><div class="tms-cell-text">¥${fmt(purchaseActualAmount(p))}</div></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(purchaseGiftLessonsText(p),false)}</td><td>${purchaseEntitlementMiniBar(ent)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
   }).join(''):purchaseEmptyStateHtml();
+  updatePurchaseSortHeaders();
   renderPurchaseMobileCards(slice);
 }
 

@@ -34,6 +34,6 @@ const deleteBody = fnBodyFrom(bootstrapSource, 'doDelete');
 assert.match(deleteBody, /else if\(currentDelType==='schedule'\)\{schedules=schedules\.filter\(u=>u\.id!==currentDelId\);[\s\S]*noteScheduleLocalMutation\(\)[\s\S]*setDatasetValue\('schedule',schedules\)/, 'schedule delete should update the local schedule dataset immediately');
 assert.match(deleteBody, /if\(currentDelType==='schedule'\)\{[\s\S]*renderAfterScheduleMutation\(\)[\s\S]*return;\s*\}\s*if\(!result\?\.purchaseVoid\)renderAll\(\);/, 'schedule delete should return before the full app render path');
 
-assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260807-schedule-speed-feedback-v1/, 'index should bust stale cached bootstrap.js after schedule speed feedback fixes');
+assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260831-purchase-records-v1/, 'index should bust stale cached bootstrap.js after schedule speed feedback fixes');
 
 console.log('schedule speed feedback tests passed');

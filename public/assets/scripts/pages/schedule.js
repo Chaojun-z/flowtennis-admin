@@ -466,6 +466,7 @@ function handleScheduleCourseTypeChange(){
   syncScheduleSmallClassType();
   refreshScheduleTimeDerivedFields();
   toggleScheduleSettlementFields();
+  refreshSchEntitlementOptions();
 }
 function handleScheduleExperienceTypeChange(){
   syncScheduleExperienceType();
@@ -511,6 +512,7 @@ function handleScheduleStandardCourseTypeChange(){
   syncScheduleSmallClassType();
   refreshScheduleTimeDerivedFields();
   toggleScheduleSettlementFields();
+  refreshSchEntitlementOptions();
 }
 function syncScheduleSmallClassType(){
   const type=normalizeCourseType(document.getElementById('sch_courseType')?.value||'');

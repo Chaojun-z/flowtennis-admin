@@ -9,7 +9,7 @@ assert.match(html, /assets\/styles\/base\.css/, 'index.html should load base.css
 assert.match(html, /assets\/styles\/components\.css/, 'index.html should load components.css');
 assert.match(html, /assets\/styles\/pages\.css/, 'index.html should load pages.css');
 assert.match(html, /assets\/styles\/pages\.css\?v=/, 'index.html should version pages.css to bust stale modal styles');
-assert.match(html, /assets\/styles\/pages\.css\?v=20260831-per-student-settlement-width-v1/, 'index.html should bust stale cached pages.css after settlement width fixes');
+assert.match(html, /assets\/styles\/pages\.css\?v=20260831-purchase-records-v1/, 'index.html should bust stale cached pages.css after settlement width fixes');
 assert.match(html, /assets\/scripts\/core\/constants\.js/, 'index.html should load constants.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js/, 'index.html should load utils.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js\?v=20260802-course-colors-coachschedule-v1/, 'index.html should bust stale cached utils.js after coach operations split changes');
@@ -23,7 +23,7 @@ assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api
 assert.match(html, /assets\/scripts\/core\/state\.js/, 'index.html should load state.js');
 assert.match(html, /assets\/scripts\/core\/shell\.js/, 'index.html should load shell.js');
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js/, 'index.html should load bootstrap.js');
-assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260807-schedule-speed-feedback-v1/, 'index.html should bust stale cached bootstrap.js after schedule delete speed feedback fixes');
+assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260831-purchase-records-v1/, 'index.html should bust stale cached bootstrap.js after schedule delete speed feedback fixes');
 assert.match(html, /assets\/scripts\/pages\/admin-users\.js/, 'index.html should load admin-users page module');
 assert.match(html, /assets\/scripts\/pages\/coaches\.js/, 'index.html should load coaches page module');
 assert.match(html, /assets\/scripts\/pages\/campusmgr\.js/, 'index.html should load campusmgr page module');
@@ -52,7 +52,7 @@ assert.match(components, /goPage\('leads',this\)[\s\S]*线索池/, 'components.j
 assert.match(components, /function renderTopbarShell\(/, 'components.js should render the shared topbar');
 assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=/, 'index.html should version schedule.js to avoid stale modal behavior');
-assert.match(html, /assets\/scripts\/pages\/schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*assets\/scripts\/pages\/schedule\.js\?v=20260831-per-student-settlement-block-v1/, 'index.html should bust stale cached schedule assets after student settlement block fixes');
+assert.match(html, /assets\/scripts\/pages\/schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*assets\/scripts\/pages\/schedule\.js\?v=20260831-purchase-records-v1/, 'index.html should bust stale cached schedule assets after student settlement block fixes');
 
 assert.doesNotMatch(html, /<style>[\s\S]*<\/style>/, 'index.html should no longer keep inline style blocks');
 assert.doesNotMatch(html, /<script>[\s\S]*<\/script>/, 'index.html should no longer keep one giant inline script block');

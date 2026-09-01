@@ -1,7 +1,45 @@
 const { effectiveScheduleStatus } = require('../schedule.js');
+const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function text(value) {
   return String(value || '').trim();
+}
+
+function standardCourseTypeText(row = {}) {
+  const direct = text(row.standardCourseType);
+  if ((businessTaxonomy.STANDARD_COURSE_TYPE_OPTIONS || []).some(option => option.value === direct)) return direct;
+  const normalized = businessTaxonomy.normalizeCourseType(row || {});
+  if (!normalized?.level1) return '';
+  return normalized.level2 ? `${normalized.level1} / ${normalized.level2}` : normalized.level1;
+}
+
+function purchaseCourseTypeText(row = {}, pkg = {}) {
+  const rowDirect = text(row.standardCourseType);
+  const pkgDirect = text(pkg.standardCourseType);
+  const standardValues = businessTaxonomy.STANDARD_COURSE_TYPE_OPTIONS || [];
+  if (standardValues.some(option => option.value === rowDirect)) return rowDirect;
+  if (standardValues.some(option => option.value === pkgDirect)) return pkgDirect;
+  return standardCourseTypeText(row) || standardCourseTypeText(pkg) || '私教课';
+}
+
+function purchaseUserTypeText(row = {}, pkg = {}, student = {}, lifecycle = {}) {
+  const values = [
+    row.userType,
+    row.audience,
+    student.type,
+    lifecycle.type,
+    lifecycle.customerType,
+    pkg.audience,
+    pkg.type,
+    row.type
+  ];
+  for (const value of values) {
+    const raw = text(value);
+    if (raw === '成人' || raw === '青少年') return raw;
+    if (raw.includes('青少年')) return '青少年';
+    if (raw.includes('成人')) return '成人';
+  }
+  return '';
 }
 
 function round(value, digits = 1) {
@@ -347,8 +385,8 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
       studentName: text(row.studentName || student.name),
       packageId,
       packageName: text(row.packageName || pkg.name || pkg.packageName),
-      courseType: text(row.courseType || pkg.courseType || pkg.packageCourseType || row.packageCourseType),
-      userType: text(row.userType || row.type || student.type || lifecycle.type || lifecycle.customerType),
+      courseType: purchaseCourseTypeText(row, pkg),
+      userType: purchaseUserTypeText(row, pkg, student, lifecycle),
       maxStudents,
       classSizeLabel,
       campus: text(lifecycle.campus || row.campus || student.campus || parseArr(row.campusIds)[0] || parseArr(pkg.campusIds)[0]),
@@ -367,7 +405,7 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
 
   const rowsByStudentId = new Map();
   baseRows
-    .filter(row => row.meaningful && row.status !== 'voided')
+    .filter(row => row.meaningful && row.status !== 'voided' && row.courseType === '私教课')
     .sort((a, b) => String(a._purchaseDateSortText || '').localeCompare(String(b._purchaseDateSortText || '')) || String(a.id || '').localeCompare(String(b.id || '')))
     .forEach(row => {
       const key = text(row.studentId);
@@ -383,12 +421,13 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
     const activeIndex = activeRows.findIndex(item => text(item.id) === text(row.id));
     const hasLaterRenewal = activeIndex >= 0 && activeIndex < activeRows.length - 1;
     const purchasedTimes = activeRows.length;
-    const paidStatus = row.status === 'voided' ? '已作废' : (activeIndex <= 0 ? '首次' : '续报');
-    const inPeriodStatus = row.status === 'voided'
+    const isPrivateCourse = row.courseType === '私教课';
+    const paidStatus = !isPrivateCourse ? '-' : (row.status === 'voided' ? '已作废' : (activeIndex <= 0 ? '首次' : '续报'));
+    const inPeriodStatus = !isPrivateCourse ? '-' : (row.status === 'voided'
       ? '已作废'
       : (Number(row.remainingLessons) > 0
         ? '在期'
-        : (hasLaterRenewal ? '已用完-续课' : '已用完-未续课'));
+        : (hasLaterRenewal ? '已用完-续课' : '已用完-未续课')));
     return {
       ...row,
       purchaseOrderIndex: activeIndex >= 0 ? activeIndex + 1 : 0,

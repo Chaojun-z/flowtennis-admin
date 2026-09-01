@@ -40,7 +40,7 @@ assert.match(
 
 assert.match(
   indexHtml,
-  /pages\.css\?v=20260825-coachschedule-calendar-ui-v1/,
+  /pages\.css\?v=20260831-purchase-records-v1/,
   'coach schedule month calendar CSS version should force a fresh browser load'
 );
 
