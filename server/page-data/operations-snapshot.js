@@ -8,6 +8,7 @@ const SNAPSHOT_SCOPE_INDEX_ID = 'active:scope-index';
 const SNAPSHOT_SOURCE_MARKER_ID = 'active:source-marker';
 const SNAPSHOT_LAST_REBUILD_TASK_ID = '__last_operations_snapshot_rebuild__';
 const SNAPSHOT_REBUILD_TASK_PREFIX = 'pending:scope:';
+const SNAPSHOT_BUNDLE_INLINE_LIMIT = 1500 * 1000;
 
 function text(value) {
   return String(value || '').trim();
@@ -63,6 +64,10 @@ function bundleIdForScopeKey(key, batchId) {
   return `scope:${key}:bundle:${batchId}`;
 }
 
+function chunkIdForBundle(bundleId, index) {
+  return `${bundleId}:chunk:${String(index).padStart(4, '0')}`;
+}
+
 function taskIdForScopeKey(key) {
   return `${SNAPSHOT_REBUILD_TASK_PREFIX}${key}`;
 }
@@ -85,18 +90,35 @@ function buildOperationsSnapshot({ payload, user, scope, batchId, completedAt, s
   const finalBatchId = text(batchId) || `operations-snapshot:${now.replace(/[^0-9A-Za-z]/g, '')}`;
   const bundleId = bundleIdForScopeKey(key, finalBatchId);
   const checksum = checksumPayload(payload);
+  const encodedPayload = encodePayload(payload);
+  const chunkIds = [];
+  for (let index = 0; encodedPayload.length > SNAPSHOT_BUNDLE_INLINE_LIMIT && index * SNAPSHOT_BUNDLE_INLINE_LIMIT < encodedPayload.length; index += 1) {
+    chunkIds.push(chunkIdForBundle(bundleId, index));
+  }
   const bundle = {
     id: bundleId,
     type: 'bundle',
     snapshotVersion: OPERATIONS_SNAPSHOT_VERSION,
     codec: 'gzip-base64-json',
     scopeKey: key,
-    payload: encodePayload(payload),
+    payload: chunkIds.length ? '' : encodedPayload,
+    chunkIds,
+    chunkCount: chunkIds.length,
     checksum,
     batchId: finalBatchId,
     completedAt: now,
     sourceSnapshotAt: sourceSnapshotAt || now
   };
+  const chunks = chunkIds.map((id, index) => ({
+    id,
+    type: 'bundle-chunk',
+    snapshotVersion: OPERATIONS_SNAPSHOT_VERSION,
+    codec: 'gzip-base64-json',
+    scopeKey: key,
+    bundleId,
+    index,
+    payload: encodedPayload.slice(index * SNAPSHOT_BUNDLE_INLINE_LIMIT, (index + 1) * SNAPSHOT_BUNDLE_INLINE_LIMIT)
+  }));
   const meta = {
     id: metaIdForScopeKey(key),
     type: 'meta',
@@ -112,7 +134,7 @@ function buildOperationsSnapshot({ payload, user, scope, batchId, completedAt, s
     publishedAt: now,
     sourceSnapshotAt: sourceSnapshotAt || now
   };
-  return { meta, bundle, scopeKey: key, payload };
+  return { meta, bundle, chunks, scopeKey: key, payload };
 }
 
 function storedScopeForNormalized(normalized = {}) {
@@ -189,10 +211,21 @@ function createOperationsSnapshotLoader(deps = {}) {
       payload = memory.get(cacheKey);
     } else {
       const bundle = await readRow(meta.bundleId);
-      if (!bundle?.payload || bundle?.codec !== 'gzip-base64-json' || bundle.scopeKey !== key) {
+      if ((!bundle?.payload && !Array.isArray(bundle?.chunkIds)) || bundle?.codec !== 'gzip-base64-json' || bundle.scopeKey !== key) {
         throw snapshotNotReadyError('经营分析快照包无效');
       }
-      payload = decodePayload(bundle.payload);
+      let encodedPayload = bundle.payload || '';
+      if (!encodedPayload) {
+        const chunkRows = await Promise.all((bundle.chunkIds || []).map((id) => readRow(id)));
+        if (chunkRows.length !== Number(bundle.chunkCount || 0) || chunkRows.some((row) => !row?.payload || row.bundleId !== bundle.id || row.scopeKey !== key)) {
+          throw snapshotNotReadyError('经营分析快照分片不完整');
+        }
+        encodedPayload = chunkRows
+          .sort((left, right) => Number(left.index || 0) - Number(right.index || 0))
+          .map((row) => row.payload)
+          .join('');
+      }
+      payload = decodePayload(encodedPayload);
       const actualChecksum = checksumPayload(payload);
       if (actualChecksum !== meta.checksum) {
         throw snapshotNotReadyError('经营分析快照 checksum 校验失败');
@@ -319,6 +352,7 @@ function createOperationsSnapshotSync(deps = {}) {
         });
         if (dryRun) return { dryRun: true, scopeKey: built.scopeKey, checksum: built.meta.checksum, batchId: built.meta.batchId };
         await ensureSnapshotTables();
+        for (const chunk of built.chunks) await put(tables.operationsSnapshot, chunk.id, chunk);
         await put(tables.operationsSnapshot, built.bundle.id, built.bundle);
         await put(tables.operationsSnapshot, built.meta.id, built.meta);
         await rememberScope(user, scope);
@@ -427,12 +461,14 @@ module.exports = {
   SNAPSHOT_SOURCE_MARKER_ID,
   SNAPSHOT_LAST_REBUILD_TASK_ID,
   SNAPSHOT_REBUILD_TASK_PREFIX,
+  SNAPSHOT_BUNDLE_INLINE_LIMIT,
   buildOperationsSnapshot,
   checksumPayload,
   createOperationsSnapshotLoader,
   createOperationsSnapshotSync,
   decodePayload,
   encodePayload,
+  chunkIdForBundle,
   metaIdForScopeKey,
   scopeKey,
   taskIdForScopeKey,

@@ -7263,20 +7263,6 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendFeishuCoachDailyDigests({targetCoach:query.get('coach')||query.get('coachName')||query.get('coachId')||'',markSent:query.get('markSent')!=='false',force:query.get('force')==='true',phoneOverrides:req.headers['x-feishu-coach-digest-phone-overrides']||FEISHU_COACH_DIGEST_PHONE_OVERRIDES,openIdOverrides:req.headers['x-feishu-coach-digest-open-id-overrides']||FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES}));
     }
-    if(path==='/cron/operations-snapshot/rebuild'&&method==='GET'){
-      const ua=String(req.headers['user-agent']||'');
-      if(process.env.CRON_SECRET){
-        const auth=String(req.headers.authorization||'');
-        if(auth!==`Bearer ${process.env.CRON_SECRET}`)return sendJson(res,{error:'无权限'},403);
-      }else if(!/vercel-cron/i.test(ua))return sendJson(res,{error:'无权限'},403);
-      await init();const systemUser={id:'system-operations-snapshot',role:'admin',dataScope:'',campusIds:[]};
-      const limit=Math.max(1,Math.min(parseInt(query.get('limit')||'3',10)||3,10));
-      const result=await operationsSnapshotSync.processQueuedRebuilds({limit});
-      if(query.get('includeDefault')!=='false'){const scope=getOperationsPageScope(new URLSearchParams());
-        return sendJson(res,{...result,defaultScope:await operationsSnapshotSync.rebuildScope({user:systemUser,scope,reason:'cron-default'})});
-      }
-      return sendJson(res,result);
-    }
     if(path==='/cron/third-party-sync-center'&&await handleThirdPartySyncCenterRoutes({path,method,body,req,res,query}))return;if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
     if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;
     if(await handleMatchRoutes({path,method,body,req,res,query}))return;

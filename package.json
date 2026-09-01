@@ -9,6 +9,7 @@
     "guard:finance": "node scripts/finance-regression.js",
     "verify:deployment-assets": "node scripts/verify-production-deployment-assets.js",
     "snapshot:finance": "node scripts/create-finance-daily-snapshot.js",
+    "snapshot:operations": "node scripts/rebuild-operations-snapshot.js",
     "finance:latest-snapshot": "node scripts/finance-latest-snapshot.js",
     "validate:finance-operation": "node scripts/validate-finance-operation.js",
     "verify:finance-page": "node scripts/verify-finance-page-authenticated.js",

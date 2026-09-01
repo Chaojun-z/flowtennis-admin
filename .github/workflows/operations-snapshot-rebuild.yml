@@ -14,15 +14,21 @@ jobs:
     timeout-minutes: 10
     env:
       TZ: Asia/Shanghai
-      CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
-      TARGET_URL: https://www.flowtennis.cn/api/cron/operations-snapshot/rebuild
+      TS_ENDPOINT: ${{ secrets.FLOWTENNIS_TS_ENDPOINT }}
+      TS_INSTANCE: ${{ secrets.FLOWTENNIS_TS_INSTANCE }}
+      ALIBABA_CLOUD_ACCESS_KEY_ID: ${{ secrets.FLOWTENNIS_ALIYUN_ACCESS_KEY_ID }}
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${{ secrets.FLOWTENNIS_ALIYUN_ACCESS_KEY_SECRET }}
+      DIAG_TOKEN: ${{ secrets.DIAG_TOKEN || secrets.FLOWTENNIS_ADMIN_TOKEN }}
 
     steps:
-      - name: Trigger operations snapshot rebuild
-        shell: bash
-        run: |
-          curl_args=(-fsS -X GET "$TARGET_URL" -H "User-Agent: vercel-cron")
-          if [ -n "${CRON_SECRET:-}" ]; then
-            curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
-          fi
-          curl "${curl_args[@]}"
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Rebuild operations snapshot
+        run: node scripts/rebuild-operations-snapshot.js --write --process-queued --limit 20

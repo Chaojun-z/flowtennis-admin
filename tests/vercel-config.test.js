@@ -31,8 +31,8 @@ assert.match(apiSource, /x-feishu-coach-digest-open-id-overrides/, '飞书教练
 assert.match(feishuScheduleSyncWorkflow, /cron:\s*'0 0,10 \* \* \*'/, '飞书排课表同步应在北京时间 08:00、18:00 各触发一次');
 assert.match(feishuScheduleSyncWorkflow, /\/api\/cron\/feishu-schedule-sync/, '飞书排课表同步应由 GitHub Actions 触发');
 assert.match(operationsSnapshotWorkflow, /cron: '5,20,35,50 \* \* \* \*'/, '经营分析快照应由 GitHub Actions 高频重建');
-assert.match(operationsSnapshotWorkflow, /\/api\/cron\/operations-snapshot\/rebuild/, '经营分析快照 workflow 应调用专用 cron 入口');
-assert.match(operationsSnapshotWorkflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, '经营分析快照 workflow should reuse FLOWTENNIS_ADMIN_TOKEN when CRON_SECRET is not configured');
+assert.match(operationsSnapshotWorkflow, /node scripts\/rebuild-operations-snapshot\.js --write --process-queued --limit 20/, '经营分析快照 workflow 应在 Actions Runner 里直连重建，不能依赖 Vercel 长请求');
+assert.match(operationsSnapshotWorkflow, /DIAG_TOKEN:\s*\$\{\{\s*secrets\.DIAG_TOKEN\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, '经营分析快照 workflow should reuse FLOWTENNIS_ADMIN_TOKEN when DIAG_TOKEN is not configured');
 const matchKeepaliveWorkflow = fs.readFileSync(matchKeepaliveWorkflowPath, 'utf8');
 assert.match(matchKeepaliveWorkflow, /cron: '0 2 \* \* \*'/, '约球 Supabase 保活应每天北京时间 10:00 触发');
 assert.match(matchKeepaliveWorkflow, /\/api\/match-diag/, '约球 Supabase 保活应访问会执行 SELECT 1 的 match-diag 接口');
@@ -45,7 +45,7 @@ assert.match(apiSource, /\/cron\/official-account-student-reminders/, 'API 应�
 assert.match(apiSource, /\/cron\/official-account-feedback-reminders/, 'API 应提供服务号课后反馈提醒入口');
 assert.match(apiSource, /\/cron\/official-account-reminders/, 'API 应保留服务号课前提醒兼容入口');
 assert.match(apiSource, /\/cron\/feishu-coach-daily-digests/, 'API 应提供飞书教练私发次日排课入口');
-assert.match(apiSource, /\/cron\/operations-snapshot\/rebuild/, 'API 应提供经营分析快照重建入口');
+assert.doesNotMatch(apiSource, /\/cron\/operations-snapshot\/rebuild/, 'API 不应提供会超时的经营分析快照重建入口');
 assert.match(apiSource, /handleFeishuScheduleSyncRoutes/, 'API 应挂载飞书排课表同步路由');
 assert.match(feishuScheduleSyncSource, /\/cron\/feishu-schedule-sync/, 'API 应提供飞书排课表同步入口');
 

@@ -1,7 +1,9 @@
 const assert = require('assert');
+const crypto = require('crypto');
 
 const {
   OPERATIONS_SNAPSHOT_NOT_READY_CODE,
+  SNAPSHOT_BUNDLE_INLINE_LIMIT,
   SNAPSHOT_SOURCE_MARKER_ID,
   buildOperationsSnapshot,
   createOperationsSnapshotLoader,
@@ -88,6 +90,29 @@ async function main() {
   const refreshingView = await loader({ user, scope: augustScope, allowRefreshing: true });
   assert.strictEqual(refreshingView.operations.coach.rows[0].coachName, '朝珺', '源数据更新后允许页面快速展示已发布快照');
   assert.strictEqual(refreshingView.snapshot.refreshing, true, '源数据更新后应标记后台刷新中');
+
+  const largePayload = {
+    campuses: payload.campuses,
+    operations: {
+      overview: { kpis: [] },
+      coach: { rows: [{ coachName: '朝珺', raw: crypto.randomBytes(SNAPSHOT_BUNDLE_INLINE_LIMIT + 300000).toString('base64') }] }
+    }
+  };
+  const largeBuilt = buildOperationsSnapshot({
+    payload: largePayload,
+    user,
+    scope: augustScope,
+    batchId: 'large-batch',
+    completedAt: '2026-09-01T00:00:03.000Z',
+    sourceSnapshotAt: '2026-09-01T00:00:03.000Z'
+  });
+  assert.ok(largeBuilt.bundle.chunkCount > 1, '超过 TableStore 单列上限的大快照必须分片');
+  assert.ok(largeBuilt.chunks.every(chunk => chunk.payload.length <= SNAPSHOT_BUNDLE_INLINE_LIMIT), '每个快照分片必须小于安全写入上限');
+  tableRows.set(largeBuilt.meta.id, largeBuilt.meta);
+  tableRows.set(largeBuilt.bundle.id, largeBuilt.bundle);
+  largeBuilt.chunks.forEach(chunk => tableRows.set(chunk.id, chunk));
+  const largeView = await loader({ user, scope: augustScope, forceFresh: true });
+  assert.strictEqual(largeView.operations.coach.rows[0].coachName, '朝珺', '分片快照读取后仍应还原正确教练数据');
 
   const writes = [];
   const sync = createOperationsSnapshotSync({
