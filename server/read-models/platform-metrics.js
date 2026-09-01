@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
@@ -1804,6 +1805,67 @@ function teachingScheduleStudentName(row = {}, index = 0) {
   return names[index] || text(row.studentName || row.displayName || row.name);
 }
 
+function teachingScheduleStudentNames(row = {}) {
+  const names = parseArr(row.studentNames).map(cleanDisplayName).filter(Boolean);
+  if (names.length) return names;
+  const raw = cleanDisplayName(row.studentName || row.displayName || row.name);
+  if (!raw) return [];
+  return raw.split(/[、，;；]/).map(cleanDisplayName).filter(Boolean);
+}
+
+function syntheticScheduleStudentId(name = '') {
+  const key = leadIdentityName(name);
+  if (!key) return '';
+  return `schedule-name-${crypto.createHash('sha1').update(key).digest('hex').slice(0, 16)}`;
+}
+
+function buildTeachingStudentIdentityIndex(data = {}, customerLifecycleRows = []) {
+  const idsByName = new Map();
+  const add = (id, ...names) => {
+    const studentId = text(id);
+    if (!studentId) return;
+    names.map(leadIdentityName).filter(Boolean).forEach(key => {
+      const ids = idsByName.get(key) || new Set();
+      ids.add(studentId);
+      idsByName.set(key, ids);
+    });
+  };
+  (data.students || []).forEach(row => add(row.id || row.studentId, row.name, row.studentName, row.displayName));
+  (customerLifecycleRows || []).forEach(row => add(row.studentId, row.displayName, row.name, row.studentName));
+  return {
+    resolve(name = '') {
+      const key = leadIdentityName(name);
+      if (!key) return '';
+      const ids = idsByName.get(key);
+      return ids && ids.size === 1 ? [...ids][0] : syntheticScheduleStudentId(name);
+    }
+  };
+}
+
+function normalizeTeachingScheduleRows(data = {}, customerLifecycleRows = []) {
+  const index = buildTeachingStudentIdentityIndex(data, customerLifecycleRows);
+  return (data.schedule || []).map(row => {
+    if (teachingScheduleStudentIds(row).length) return row;
+    if (text(row.scheduleSource) === '线索陪打') return row;
+    const names = teachingScheduleStudentNames(row).filter(name => !nonPersonIdentityName(name));
+    const studentIds = [...new Set(names.map(name => index.resolve(name)).filter(Boolean))];
+    if (!studentIds.length) return row;
+    return {
+      ...row,
+      studentId: studentIds.length === 1 ? studentIds[0] : text(row.studentId),
+      studentIds,
+      studentNames: parseArr(row.studentNames).length ? parseArr(row.studentNames) : names
+    };
+  });
+}
+
+function normalizeTeachingStudentData(data = {}, customerLifecycleRows = []) {
+  return {
+    ...data,
+    schedule: normalizeTeachingScheduleRows(data, customerLifecycleRows)
+  };
+}
+
 function teachingStudentScheduleRows(data = {}, studentId = '', predicate = () => true) {
   return (data.schedule || [])
     .filter(row => activeStatus(row) && rowHasStudent(row, studentId) && predicate(row));
@@ -2262,6 +2324,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
 }
 
 function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
+  data = normalizeTeachingStudentData(data, customerLifecycleRows);
   const studentRows = buildTeachingStudentSourceRows(customerLifecycleRows, data)
     .filter(row => !hiddenStudentProfile(row));
   const now = data.now || new Date();
@@ -2753,6 +2816,7 @@ function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOStrin
 }
 
 function buildStudentTeachingSummaryRows(customerLifecycleRows = [], data = {}) {
+  data = normalizeTeachingStudentData(data, customerLifecycleRows);
   const now = data.now || new Date();
   const updatedAt = now instanceof Date ? now.toISOString() : text(now) || new Date().toISOString();
   const views = buildTeachingStudentViews(customerLifecycleRows, data);

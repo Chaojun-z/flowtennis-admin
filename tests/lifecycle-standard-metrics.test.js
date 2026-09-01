@@ -248,6 +248,61 @@ assert.ok(
     && !searchIndexViews.activeStudents.some(row => row.studentId === 'student-li-dong'),
   '全量搜索索引不能改变历史学员和在期学员顶部统计口径'
 );
+const nameOnlyScheduleData = {
+  leads: [],
+  students: [],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [{
+    id: 'schedule-name-only-s',
+    studentName: 'S',
+    courseType: '私教课',
+    startTime: '2026-06-18 09:00:00',
+    endTime: '2026-06-18 10:00:00',
+    status: '已结束',
+    settlementType: 'single',
+    coach: 'Mira',
+    campus: 'shunyi_mapo',
+    venue: '1号场'
+  }],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  membershipBenefitLedger: []
+};
+const nameOnlyScheduleStandard = buildStandardLifecycleMetrics({
+  ...nameOnlyScheduleData,
+  customerLifecycleRows: buildCustomerLifecycleRows(nameOnlyScheduleData),
+  now: new Date('2026-07-09 00:00:00')
+});
+const nameOnlyScheduleViews = buildTeachingStudentViews(
+  buildCustomerLifecycleRows(nameOnlyScheduleData),
+  { ...nameOnlyScheduleData, now: new Date('2026-07-09 00:00:00') }
+);
+const nameOnlyScheduleHistoricalRow = nameOnlyScheduleStandard.views.historicalStudents.find(row => row.name === 'S');
+assert.ok(
+  nameOnlyScheduleHistoricalRow,
+  '只有 studentName、没有 studentIds 的已上正式课排课，也必须进入历史学员'
+);
+assert.match(
+  nameOnlyScheduleHistoricalRow.searchText,
+  /S/,
+  'name-only 排课进入历史学员后必须可按姓名搜索'
+);
+assert.ok(
+  nameOnlyScheduleViews.searchableStudents.some(row => row.studentId === nameOnlyScheduleHistoricalRow.studentId && row.name === 'S'),
+  'name-only 排课生成的历史学员必须同步进入学员搜索索引'
+);
+const nameOnlyScheduleSummaryRows = buildStudentTeachingSummaryRows(
+  buildCustomerLifecycleRows(nameOnlyScheduleData),
+  { ...nameOnlyScheduleData, now: new Date('2026-07-09 00:00:00') }
+);
+assert.ok(
+  nameOnlyScheduleSummaryRows.some(row => row.studentId === nameOnlyScheduleHistoricalRow.studentId && row.name === 'S' && row.hasFormalAttended),
+  '历史学员缓存摘要重建时也必须保留 name-only 排课学员，避免线上搜索缓存漏人'
+);
 const staleEmptyLessonSummaryRow = staleEmptyLessonSummaryStandard.views.formalStudents.find(row => row.studentId === 'student-real-trial-deal');
 assert.deepStrictEqual(
   staleEmptyLessonSummaryRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
