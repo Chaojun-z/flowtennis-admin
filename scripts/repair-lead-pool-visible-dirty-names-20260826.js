@@ -26,6 +26,15 @@ const TABLES = {
   studentTeachingSummaries: 'ft_student_teaching_summary'
 };
 
+const SOURCE_NAME_FIELDS = {
+  leads: ['displayName', 'wechatName', 'name', 'studentName'],
+  students: ['displayName', 'wechatName', 'name', 'studentName'],
+  purchases: ['studentName'],
+  entitlements: ['studentName'],
+  entitlementLedger: ['studentName', 'customerName'],
+  schedule: ['studentName', 'sourceLeadName']
+};
+
 function text(value) {
   return String(value ?? '').trim();
 }
@@ -95,6 +104,19 @@ function sameJson(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function shouldCleanCompositeName(value) {
+  const raw = cleanEdgePunctuation(value);
+  if (!raw) return false;
+  const cleanName = canonicalDirtyName(raw);
+  return hasEdgePunctuation(raw) || cleanName !== raw || isObviousNoiseName(cleanName);
+}
+
+function cleanNameValue(value) {
+  const cleanName = canonicalDirtyName(value);
+  if (!cleanName || isObviousNoiseName(cleanName)) return '';
+  return cleanName;
+}
+
 function parseArray(value) {
   if (Array.isArray(value)) return value.map(text).filter(Boolean);
   const raw = text(value);
@@ -126,6 +148,54 @@ function namePatch(row = {}, cleanName = '') {
   next.name = cleanName;
   next.studentName = cleanName;
   return next;
+}
+
+function rowReferenceIds(row = {}) {
+  return [
+    rowId(row),
+    row.studentId,
+    row.sourceLeadId,
+    row.leadId,
+    row.fromLeadId,
+    ...parseArray(row.studentIds),
+    ...parseArray(row.expectedStudentIds),
+    ...parseArray(row.absentStudentIds)
+  ].map(text).filter(Boolean);
+}
+
+function rowReferencesAny(row = {}, ids = new Set()) {
+  return rowReferenceIds(row).some(id => ids.has(id));
+}
+
+function removeIds(value, ids = new Set()) {
+  return parseArray(value).filter(id => !ids.has(id));
+}
+
+function sourceNamePatch(row = {}, fields = [], now = '', reason = '') {
+  const next = { ...row };
+  fields.forEach(field => {
+    if (!Object.prototype.hasOwnProperty.call(row, field)) return;
+    if (!shouldCleanCompositeName(row[field])) return;
+    next[field] = cleanNameValue(row[field]);
+  });
+  return trace(next, now, reason);
+}
+
+function sourceScheduleNoisePatch(row = {}, dirtyIds = new Set(), now = '') {
+  const nextStudentIds = removeIds(row.studentIds, dirtyIds);
+  const next = sourceNamePatch(row, SOURCE_NAME_FIELDS.schedule, now, '清理排课源头纯噪声姓名');
+  return trace({
+    ...next,
+    status: '已取消',
+    state: '已取消',
+    systemStatus: '已取消',
+    confirmStatus: '已取消',
+    cancelReason: text(row.cancelReason) || '线索池脏数据治理：纯噪声学员排课取消，避免摘要回流',
+    studentId: dirtyIds.has(text(row.studentId)) ? '' : text(row.studentId),
+    studentIds: nextStudentIds,
+    expectedStudentIds: removeIds(row.expectedStudentIds, dirtyIds),
+    absentStudentIds: removeIds(row.absentStudentIds, dirtyIds)
+  }, now, '取消纯噪声学员排课并清理学员引用');
 }
 
 function chooseTarget(rows = [], preferredId = '') {
@@ -164,8 +234,9 @@ function buildNameIndex(rows = []) {
 
 function mergeLead({ puts, lead, target, now, reason }) {
   if (!lead || !target || rowId(lead) === rowId(target)) return;
+  const cleanName = displayName(target) || cleanNameValue(displayName(lead));
   addPut(puts, TABLES.leads, lead, trace({
-    ...lead,
+    ...namePatch(lead, cleanName),
     status: 'merged',
     mergedIntoLeadId: rowId(target),
     mergedIntoLeadName: displayName(target),
@@ -176,8 +247,9 @@ function mergeLead({ puts, lead, target, now, reason }) {
 
 function mergeStudent({ puts, student, target, now, reason }) {
   if (!student || !target || rowId(student) === rowId(target)) return;
+  const cleanName = displayName(target) || cleanNameValue(displayName(student));
   addPut(puts, TABLES.students, student, trace({
-    ...student,
+    ...namePatch(student, cleanName),
     status: 'merged',
     mergedIntoStudentId: rowId(target),
     mergedIntoStudentName: displayName(target),
@@ -199,6 +271,7 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
   const mergedStudentIds = new Set();
   const cleanedSummaryIds = new Set();
   const deletedSummaryIds = new Set();
+  const dirtySummaryStudentIds = new Set();
 
   function handleAlias({ sourceName, targetName, targetLeadId = '', targetStudentId = '', reason }) {
     const sourceKey = identityKey(sourceName);
@@ -237,12 +310,12 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
     const cleanName = canonicalDirtyName(rawName);
     if (!hasEdgePunctuation(rawName) && cleanName === cleanEdgePunctuation(rawName)) continue;
     if (!cleanName) {
-      addPut(puts, TABLES.leads, lead, trace({ ...lead, status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '线索姓名只有分隔符' }, now, '作废只有分隔符的脏线索'), '作废只有分隔符的脏线索');
+      addPut(puts, TABLES.leads, lead, trace({ ...namePatch(lead, ''), status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '线索姓名只有分隔符' }, now, '作废只有分隔符的脏线索'), '作废只有分隔符的脏线索');
       mergedLeadIds.add(id);
       continue;
     }
     if (isObviousNoiseName(cleanName)) {
-      addPut(puts, TABLES.leads, lead, trace({ ...lead, status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '线索姓名是明显的群名或噪声名' }, now, '作废明显群名/噪声线索'), '作废明显群名/噪声线索');
+      addPut(puts, TABLES.leads, lead, trace({ ...namePatch(lead, ''), status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '线索姓名是明显的群名或噪声名' }, now, '作废明显群名/噪声线索'), '作废明显群名/噪声线索');
       mergedLeadIds.add(id);
       continue;
     }
@@ -262,12 +335,12 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
     const cleanName = canonicalDirtyName(rawName);
     if (!hasEdgePunctuation(rawName) && cleanName === cleanEdgePunctuation(rawName)) continue;
     if (!cleanName) {
-      addPut(puts, TABLES.students, student, trace({ ...student, status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '学员姓名只有分隔符' }, now, '作废只有分隔符的脏学员'), '作废只有分隔符的脏学员');
+      addPut(puts, TABLES.students, student, trace({ ...namePatch(student, ''), status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '学员姓名只有分隔符' }, now, '作废只有分隔符的脏学员'), '作废只有分隔符的脏学员');
       mergedStudentIds.add(id);
       continue;
     }
     if (isObviousNoiseName(cleanName)) {
-      addPut(puts, TABLES.students, student, trace({ ...student, status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '学员姓名是明显的群名或噪声名' }, now, '作废明显群名/噪声学员'), '作废明显群名/噪声学员');
+      addPut(puts, TABLES.students, student, trace({ ...namePatch(student, ''), status: 'voided', voidedAt: now, voidedBy: 'Codex', voidReason: '学员姓名是明显的群名或噪声名' }, now, '作废明显群名/噪声学员'), '作废明显群名/噪声学员');
       mergedStudentIds.add(id);
       continue;
     }
@@ -286,6 +359,7 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
     const rawName = displayName(row);
     const cleanName = canonicalDirtyName(rawName);
     if (!hasEdgePunctuation(rawName) && cleanName === cleanEdgePunctuation(rawName)) continue;
+    dirtySummaryStudentIds.add(text(row.studentId || id));
     if (!cleanName || isObviousNoiseName(cleanName)) {
       addDelete(deletes, TABLES.studentTeachingSummaries, row, '删除教学摘要纯噪声姓名');
       cleanedSummaryIds.add(id);
@@ -300,6 +374,23 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
       '清理教学摘要多人拼名'
     );
     cleanedSummaryIds.add(id);
+  }
+
+  for (const [key, fields] of Object.entries(SOURCE_NAME_FIELDS)) {
+    const table = TABLES[key];
+    if (!table) continue;
+    for (const row of data[key] || []) {
+      const id = rowId(row);
+      if (!id || !rowReferencesAny(row, dirtySummaryStudentIds)) continue;
+      if (puts.some(item => item.table === table && item.id === id)) continue;
+      const dirtyFields = fields.filter(field => Object.prototype.hasOwnProperty.call(row, field) && shouldCleanCompositeName(row[field]));
+      if (!dirtyFields.length) continue;
+      const allNoise = dirtyFields.every(field => isObviousNoiseName(cleanNameValue(row[field])) || !cleanNameValue(row[field]));
+      const after = key === 'schedule' && allNoise
+        ? sourceScheduleNoisePatch(row, dirtySummaryStudentIds, now)
+        : sourceNamePatch(row, fields, now, '清理业务源头姓名字段，避免线索池摘要回流');
+      addPut(puts, table, row, after, key === 'schedule' && allNoise ? '取消纯噪声排课源头' : '清理业务源头姓名字段，避免线索池摘要回流');
+    }
   }
 
   const summaryPuts = puts.filter(item => item.table === TABLES.studentTeachingSummaries);
@@ -340,6 +431,7 @@ function buildPlan(data = {}, now = new Date().toISOString()) {
       cleanedSummaryCount: cleanedSummaryIds.size,
       deletedSummaryCount: deletedSummaryIds.size,
       referenceUpdateCount: 0
+        + puts.filter(item => ![TABLES.leads, TABLES.students, TABLES.studentTeachingSummaries].includes(item.table)).length
     },
     puts,
     deletes
@@ -355,7 +447,7 @@ async function run(argv = process.argv.slice(2)) {
   const client = createClientFromEnv();
   const now = new Date().toISOString();
   const data = {};
-  const scanKeys = ['leads', 'students', 'studentTeachingSummaries'];
+  const scanKeys = ['leads', 'students', 'purchases', 'entitlements', 'entitlementLedger', 'schedule', 'studentTeachingSummaries'];
   for (const key of scanKeys) {
     data[key] = await scanTable(client, TABLES[key]).catch(() => []);
   }

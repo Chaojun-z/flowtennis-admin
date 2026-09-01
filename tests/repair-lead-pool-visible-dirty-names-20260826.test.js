@@ -55,6 +55,19 @@ const currentDirtyPlan = buildPlan({
     { id: 'lead-noise-dirty', displayName: '+++++（3人）', status: 'active', createdAt: '2026-08-27' }
   ],
   students: [],
+  purchases: [
+    { id: 'purchase-seed', studentId: 'seed-student-034', studentName: '小林、德德', status: 'active' }
+  ],
+  entitlements: [
+    { id: 'ent-seed', studentId: 'seed-student-034', studentName: '小林/德德', status: 'active' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-seed', studentId: 'seed-student-034', studentName: '小林/德德', customerName: '小林/德德' }
+  ],
+  schedule: [
+    { id: 'schedule-ethan', studentIds: ['05954eae-0601-4b90-ad1f-7b2117f9193a'], studentName: 'Ethan（3人）、rzwyyy', sourceLeadName: 'Ethan（3人）', status: '已排课' },
+    { id: 'schedule-noise', studentId: '1ab4ff8e-d4f9-42df-b1e3-1fd0df62a619', studentIds: ['1ab4ff8e-d4f9-42df-b1e3-1fd0df62a619'], studentName: '+++++（3人）', sourceLeadName: '+++++（3人）', status: '已排课' }
+  ],
   studentTeachingSummaries: [
     {
       id: '__student_teaching_summary_meta__',
@@ -78,6 +91,13 @@ const currentDirtyPlan = buildPlan({
       status: 'active'
     },
     {
+      id: 'seed-student-034',
+      studentId: 'seed-student-034',
+      displayName: '小林/德德',
+      name: '小林/德德',
+      status: 'merged'
+    },
+    {
       id: '1ab4ff8e-d4f9-42df-b1e3-1fd0df62a619',
       studentId: '1ab4ff8e-d4f9-42df-b1e3-1fd0df62a619',
       displayName: '+++++（3人）',
@@ -88,6 +108,10 @@ const currentDirtyPlan = buildPlan({
 });
 
 const currentDirtyLeadPuts = currentDirtyPlan.puts.filter(item => item.table === 'ft_leads');
+const currentDirtyPurchasePuts = currentDirtyPlan.puts.filter(item => item.table === 'ft_purchases');
+const currentDirtyEntitlementPuts = currentDirtyPlan.puts.filter(item => item.table === 'ft_entitlements');
+const currentDirtyLedgerPuts = currentDirtyPlan.puts.filter(item => item.table === 'ft_entitlement_ledger');
+const currentDirtySchedulePuts = currentDirtyPlan.puts.filter(item => item.table === 'ft_schedule');
 const summaryPuts = currentDirtyPlan.puts.filter(item => item.table === 'ft_student_teaching_summary');
 const summaryDeletes = currentDirtyPlan.deletes.filter(item => item.table === 'ft_student_teaching_summary');
 assert.ok(currentDirtyLeadPuts.some(item => item.before.id === 'lead-one1-dirty' && item.after.status === 'merged' && item.after.mergedIntoLeadId === 'lead-one1'), 'one1 dirty lead should merge into one1');
@@ -99,7 +123,13 @@ assert.ok(currentDirtyLeadPuts.some(item => item.before.id === 'lead-reese-dirty
 assert.ok(currentDirtyLeadPuts.some(item => item.before.id === 'lead-noise-dirty' && item.after.status === 'voided'), '+++++（3人） should be voided as obvious noise');
 assert.ok(summaryPuts.some(item => item.before.id === '05954eae-0601-4b90-ad1f-7b2117f9193a' && item.after.displayName === 'Ethan'), 'dirty Ethan teaching summary should be cleaned');
 assert.ok(summaryPuts.some(item => item.before.id === 'new-lead-cce87d10b3fa' && item.after.displayName === 'one1'), 'dirty one1 teaching summary should be cleaned');
+assert.ok(summaryPuts.some(item => item.before.id === 'seed-student-034' && item.after.displayName === '小林'), 'dirty Xiaolin teaching summary should be cleaned');
 assert.ok(summaryDeletes.some(item => item.before.id === '1ab4ff8e-d4f9-42df-b1e3-1fd0df62a619'), 'noise teaching summary should be deleted');
 assert.ok(summaryPuts.some(item => item.before.id === '__student_teaching_summary_meta__' && item.after.checksum !== 'old-checksum'), 'summary meta checksum should be refreshed');
+assert.ok(currentDirtyPurchasePuts.some(item => item.before.id === 'purchase-seed' && item.after.studentName === '小林'), 'dirty purchase studentName should be cleaned at source');
+assert.ok(currentDirtyEntitlementPuts.some(item => item.before.id === 'ent-seed' && item.after.studentName === '小林'), 'dirty entitlement studentName should be cleaned at source');
+assert.ok(currentDirtyLedgerPuts.some(item => item.before.id === 'ledger-seed' && item.after.studentName === '小林' && item.after.customerName === '小林'), 'dirty ledger display names should be cleaned at source');
+assert.ok(currentDirtySchedulePuts.some(item => item.before.id === 'schedule-ethan' && item.after.studentName === 'Ethan' && item.after.sourceLeadName === 'Ethan'), 'dirty schedule names should be cleaned at source');
+assert.ok(currentDirtySchedulePuts.some(item => item.before.id === 'schedule-noise' && item.after.status === '已取消' && item.after.studentId === '' && item.after.studentIds.length === 0), 'pure noise schedule should be cancelled and detached from fake student id');
 
 console.log('repair lead pool visible dirty names tests passed');

@@ -4,6 +4,11 @@ const {
   createClientFromEnv
 } = require('./lib/staging-data-store.js');
 const {
+  parseWriteFlags,
+  assertExplicitWrite,
+  assertProductionWriteTarget
+} = require('./lib/production-write-guard.js');
+const {
   STUDENT_TEACHING_SUMMARY_META_ID,
   STUDENT_TEACHING_SUMMARY_READY,
   isStudentTeachingSummaryMetaRow,
@@ -17,10 +22,6 @@ const PRODUCTION_INSTANCE = 'flowtennis-ue';
 const SCAN_LIMIT = 20;
 const PAGE_TIMEOUT_MS = 30000;
 const DELETE_TIMEOUT_MS = 15000;
-
-function argSet(argv = []) {
-  return new Set(argv.map(item => String(item || '').trim()).filter(Boolean));
-}
 
 function assertProductionTarget(env = process.env) {
   const endpoint = String(env.TS_ENDPOINT || '').trim();
@@ -147,9 +148,12 @@ function verifyCleanupResult(rows = []) {
 }
 
 async function run(argv = process.argv.slice(2), env = process.env) {
-  const args = argSet(argv);
-  const write = args.has('--write');
-  if (write) assertProductionTarget(env);
+  const args = parseWriteFlags(argv);
+  const write = args.write;
+  if (write) {
+    assertExplicitWrite({ write, scriptName: '摘要旧版本清场' });
+    await assertProductionWriteTarget({ env });
+  }
   const client = createClientFromEnv(env);
   const beforeRows = await scanSummaryRows(client);
   const plan = buildCleanupPlan(beforeRows);
