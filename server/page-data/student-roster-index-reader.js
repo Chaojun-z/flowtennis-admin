@@ -108,7 +108,7 @@ function summaryRowMatchesToolbar(row = {}, query) {
 
 function summaryRowMatchesSearch(row = {}, query) {
   const q = normalizedText(query?.get('q'));
-  return textSearchHit(q, row.searchText, row.name, row.displayName, row.phone, row.type, row.source, row.paymentModeLabel, row.packageStatusLabel, row.activityStatusLabel, row.studentStatusLabel, row.lessonVolumeLabel, row.campus, row.primaryCoach, row.notes, row.profileNote);
+  return textSearchHit(q, row.name, row.displayName, row.studentName, row.wechatName, row.nickName, row.nickname, row.phone);
 }
 
 function filterSummaryRowsForQuery(rows = [], query) {
@@ -270,8 +270,7 @@ function buildCustomerCenterListPage(teachingStudentViews = {}, query) {
   const view = String(query?.get('view') || '').trim();
   const q = String(query?.get('q') || '').trim();
   const studentRows = Array.isArray(teachingStudentViews[view]) ? teachingStudentViews[view] : [];
-  const searchableRows = q && Array.isArray(teachingStudentViews.searchableStudents) ? teachingStudentViews.searchableStudents : studentRows;
-  return paging && view ? { view, ...buildListPage(searchableRows.filter(row => textSearchHit(q, row.searchText, row.name, row.phone, row.type, row.source, row.sourceText, row.paymentModeText, row.packageStatusText, row.activityStatusText, row.lifecycleStatusText, row.campus, row.primaryCoach, row.notes, row.profileNote)), paging) } : null;
+  return paging && view ? { view, ...buildListPage(studentRows.filter(row => textSearchHit(q, row.name, row.displayName, row.studentName, row.wechatName, row.nickName, row.nickname, row.phone)), paging) } : null;
 }
 
 function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeachingStudentViews = null, prebuiltStandardLifecycleMetrics = null } = {}) {

@@ -478,6 +478,28 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(searchRes.body.listPage.rows.length, 1, '搜索分页只返回当前页命中行');
   assert.strictEqual(searchRes.body.standardLifecycleMetrics.teachingSummary.activeStudentCount, 1, '搜索后的顶部统计必须来自搜索后的完整统一集合');
 
+  const inactiveNameSearchRes = {};
+  await bulk.handler({
+    path: '/page-data/customer-center-list',
+    method: 'GET',
+    user: { role: 'admin', name: '管理员' },
+    res: inactiveNameSearchRes,
+    query: new URLSearchParams('view=activeStudents&paged=1&page=1&pageSize=15&q=学员1197')
+  });
+  assert.strictEqual(inactiveNameSearchRes.body.listPage.total, 0, '在期学员后端搜索必须锁在在期集合内，不能搜出历史学员');
+  assert.strictEqual(inactiveNameSearchRes.body.standardLifecycleMetrics.teachingSummary.activeStudentCount, 0, '在期学员搜索后的顶部统计不能大于在期搜索结果集合');
+
+  const ownerSearchRes = {};
+  await bulk.handler({
+    path: '/page-data/customer-center-list',
+    method: 'GET',
+    user: { role: 'admin', name: '管理员' },
+    res: ownerSearchRes,
+    query: new URLSearchParams('view=activeStudents&paged=1&page=1&pageSize=15&q=Mira')
+  });
+  assert.strictEqual(ownerSearchRes.body.listPage.total, 0, '学员搜索 Mira 不能命中负责教练/归属人为 Mira 的学员');
+  assert.strictEqual(ownerSearchRes.body.standardLifecycleMetrics.teachingSummary.activeStudentCount, 0, '负责人字段命中的 Mira 不能进入在期顶部统计');
+
   console.log('customer center summary fact calibration tests passed');
 })().catch(err => {
   console.error(err);

@@ -44,9 +44,10 @@ assert.match(source, /function entitlementAuthorizationSaveErrorText\([\s\S]*授
 assert.match(fnBody('saveEntitlementAuthorization'), /refreshStudentDetailDataAfterMutation\(currentStudentId\)[\s\S]*studentDetailActiveTab='orders'[\s\S]*openStudentDetail\(currentStudentId\)/, 'authorization save should refresh and reopen the current student package detail');
 assert.match(fnBody('saveEntitlementAuthorization'), /refreshReadModelsInBackground\(\['packageCenterPage','customerCenterPage','purchasesPage'\]/, 'authorization save should refresh global package read models in the background');
 assert.match(source, /function getFilteredStudents\(/, 'student page should centralize filtered student list calculation');
-assert.match(fnBody('studentUnifiedViewRows'), /includeSearchIndex[\s\S]*teachingStudentViews\?\.searchableStudents/, 'student keyword search should use the lightweight full student search index instead of switching search tables');
+assert.doesNotMatch(fnBody('studentUnifiedViewRows'), /teachingStudentViews\?\.searchableStudents/, 'student keyword search must stay inside the current student view instead of expanding to all roster rows');
 assert.match(fnBody('studentUnifiedViewRows'), /studentHasNotes[\s\S]*const notes=studentHasNotes\?student\.notes/, 'student unified rows should preserve intentionally empty student notes instead of falling back to system notes');
-assert.match(fnBody('studentSearchText'), /s\?\.searchText[\s\S]*s\?\.notes[\s\S]*s\?\.profileNote/, 'student keyword search must include backend searchText, notes, and profileNote');
+assert.match(fnBody('studentSearchText'), /s\?\.name[\s\S]*s\?\.displayName[\s\S]*s\?\.studentName[\s\S]*s\?\.wechatName[\s\S]*s\?\.phone/, 'student keyword search should only include student identity fields');
+assert.doesNotMatch(fnBody('studentSearchText'), /s\?\.searchText|s\?\.notes|s\?\.profileNote|studentPrimaryCoachText|studentSourceText|cn\(s\?\.campus\)/, 'student keyword search must not match cached broad search text, notes, coach, source, or campus');
 assert.match(fnBody('searchHit'), /compactKeyword=keyword\.replace\(\//, 'global keyword search should build a compact keyword');
 assert.match(fnBody('searchHit'), /text\.replace\(\//, 'global keyword search should compare against compact text');
 assert.match(fnBody('searchHit'), /includes\(compactKeyword\)/, 'global keyword search should ignore spaces between names');
@@ -153,9 +154,8 @@ assert.doesNotMatch(officialStudentColumns, /label:'电话'|课时\/课包/, 'of
 assert.match(source, /function studentIsHistoricalRosterRow\(/, 'historical student list should use a dedicated historical roster rule');
 assert.match(source, /function studentIsActiveRosterRow\(/, 'active student list should use a dedicated active roster rule');
 assert.match(fnBody('getStudentBaseList'), /studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student base list should switch between historical and active roster rules');
-assert.match(fnBody('getStudentBaseList'), /includeAllRoster[\s\S]*return true[\s\S]*studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student search should be able to find students across active and trial rosters');
-assert.match(fnBody('getFilteredStudents'), /getStudentBaseList\(\{includeAllRoster:!!q\.trim\(\)\}\)/, 'student keyword search should broaden the base roster');
-assert.match(fnBody('getStudentBaseList'), /studentUnifiedViewRows\(\{includeSearchIndex:includeAllRoster\}\)/, 'student keyword search should broaden through the stable lightweight search index');
+assert.doesNotMatch(fnBody('getStudentBaseList'), /includeAllRoster|return true|includeSearchIndex/, 'student search must not broaden across active and historical rosters');
+assert.match(fnBody('getFilteredStudents'), /getStudentBaseList\(\)\.filter/, 'student keyword search should filter only the current base roster');
 assert.match(fnBody('getStudentBaseList'), /isHiddenStudentProfile\(s\)/, 'student base list should hide merged and archived student profiles');
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 15, 50, and 100 row page sizes');

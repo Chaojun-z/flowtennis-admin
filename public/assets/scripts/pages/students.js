@@ -68,14 +68,12 @@ function studentMatchesListPage(stu){
   const hasPackage=studentHasNonTrialPackage(stu);
   return studentListViewMode()==='trial'?studentHasTrialPath(stu)||hasPackage:hasPackage;
 }
-function studentUnifiedViewRows({includeSearchIndex=false}={}){
+function studentUnifiedViewRows(){
   const rows=typeof teachingStudentViewRows==='function'?teachingStudentViewRows(studentListViewMode()):[];
-  const searchRows=includeSearchIndex&&Array.isArray(teachingStudentViews?.searchableStudents)?teachingStudentViews.searchableStudents:[];
   const baseRows=Array.isArray(rows)?rows:[];
-  const sourceRows=searchRows.length?baseRows.concat(searchRows):baseRows;
-  if(!sourceRows.length)return [];
+  if(!baseRows.length)return [];
   const seen=new Set();
-  return sourceRows.map(row=>{
+  return baseRows.map(row=>{
     const student=students.find(item=>String(item.id||'')===String(row.studentId||row.id||''))||{};
     const studentHasNotes=Object.prototype.hasOwnProperty.call(student,'notes');
     const rowHasNotes=Object.prototype.hasOwnProperty.call(row,'notes');
@@ -695,33 +693,24 @@ function studentMatchesCampusForList(stu){
   if(!campus||campus==='all')return true;
   return studentCampusValuesForList(stu).some(value=>sameCampusValue(value,campus)||sameCampusValue(cn(value),cn(campus))||value===cn(campus));
 }
-function getStudentBaseList({includeAllRoster=false}={}){
-  const viewRows=studentUnifiedViewRows({includeSearchIndex:includeAllRoster});
+function getStudentBaseList(){
+  const viewRows=studentUnifiedViewRows();
   const base=viewRows.length?viewRows:students;
   return base.filter(s=>{
     if(isHiddenStudentProfile(s))return false;
     if(!studentMatchesCampusForList(s))return false;
-    if(includeAllRoster)return true;
     return studentListViewMode()==='trial'?studentIsHistoricalRosterRow(s):studentIsActiveRosterRow(s);
   });
 }
 function studentSearchText(s){
   return [
-    s?.searchText,
     s?.name,
     s?.displayName,
-    s?.phone,
-    s?.type,
-    studentSourceText(s),
-    studentPaymentModeText(s),
-    studentPackageStatusText(s),
-    studentActivityStatusText(s),
-    studentLessonVolumeText(s),
-    studentLifecycleStatusText(s),
-    s?.notes,
-    s?.profileNote,
-    cn(s?.campus),
-    studentPrimaryCoachText(s)
+    s?.studentName,
+    s?.wechatName,
+    s?.nickName,
+    s?.nickname,
+    s?.phone
   ].filter(Boolean).join(' ');
 }
 function studentGlobalDateValue(s){
@@ -732,9 +721,8 @@ function getFilteredStudents(){
   const tf=document.getElementById('stuTypeFilter')?.value||'';
   const sf=document.getElementById('stuSourceFilter')?.value||'';
   const coachFilter=document.getElementById('stuCoachFilter')?.value||'';
-  return getStudentBaseList({includeAllRoster:!!q.trim()}).filter(s=>{
-    const accountText=courtsForStudent(s).map(c=>`${c.name} ${c.phone||''}`).join(' ');
-    if(!searchHit(q,studentSearchText(s),accountText))return false;
+  return getStudentBaseList().filter(s=>{
+    if(!searchHit(q,studentSearchText(s)))return false;
     if(!globalDateWithinRange(studentGlobalDateValue(s)))return false;
     if(tf&&s.type!==tf)return false;
     if(sf&&studentSourceText(s)!==sf)return false;
