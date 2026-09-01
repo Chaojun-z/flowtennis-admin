@@ -252,7 +252,7 @@ function createLeadsRoutes(deps={}){
   }
 
   function leadBusinessDateValue(row={}){
-    return row?.leadDate||row?.leadEnteredAt||row?.firstTouchAt||row?.trialAtRaw||row?.trialBookedAt||row?.trialAttendedAt||row?.courseFirstPurchaseAt||row?.conversionAt||row?.enrollAtRaw||row?.formalSignupAt||row?.createdAt||row?.updatedAt||row?.lastFollowupAt;
+    return row?.leadDate||row?.firstTouchAt||row?.trialAtRaw||row?.trialBookedAt||row?.trialAttendedAt||row?.packagePurchaseDate||row?.courseFirstPurchaseAt||row?.lastFormalLessonAt||row?.detailRecentLessonDate||row?.conversionAt||row?.enrollAtRaw||row?.formalSignupAt;
   }
 
   function leadSortMetric(row,key){
@@ -534,7 +534,7 @@ function createLeadsRoutes(deps={}){
       packageStatusLabel:cleanLeadText(row?.packageStatusLabel||''),
       paymentModeLabel:cleanLeadText(row?.paymentModeLabel||''),
       lessonVolumeLabel:cleanLeadText(row?.lessonVolumeLabel||''),
-      leadDate:cleanLeadText(row?.packagePurchaseDate||row?.lastFormalLessonAt||row?.summaryUpdatedAt||''),
+      leadDate:cleanLeadText(row?.firstTouchAt||row?.trialAtRaw||row?.trialBookedAt||row?.trialAttendedAt||row?.packagePurchaseDate||row?.courseFirstPurchaseAt||row?.lastFormalLessonAt||row?.detailRecentLessonDate||row?.conversionAt||''),
       createdAt:cleanLeadText(row?.summaryUpdatedAt||row?.updatedAt||''),
       hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||cleanLeadText(row?.studentStage||'')==='formal'||hasFormalCourseFact,
       hasBookingConversion:leadSummaryBool(row?.hasBookingConversion),

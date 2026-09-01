@@ -536,6 +536,54 @@ async function main() {
   assert.strictEqual(tombstonePage.body.total, 0, '已作废线索绑定的学员身份不能从教学摘要重新回流成线索');
   assert.deepStrictEqual(tombstonePage.body.rows, [], '线索池列表不能显示已被墓碑禁止回流的脏名字');
 
+  const summaryFactHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-summary-fact',
+      displayName: '摘要事实用户',
+      wechatName: '摘要事实用户',
+      leadDate: '',
+      createdAt: '2026-09-01T10:00:00.000Z',
+      updatedAt: '2026-09-01T10:00:00.000Z'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [{
+      id: 'stu-summary-fact',
+      studentId: 'stu-summary-fact',
+      sourceLeadId: 'lead-summary-fact',
+      displayName: '摘要事实用户',
+      hasTrialAttended: true,
+      hasFormalAttended: true,
+      trialAttendedAt: '2026-08-20',
+      lastFormalLessonAt: '2026-08-30',
+      summaryUpdatedAt: '2026-09-01T10:00:00.000Z',
+      studentStage: 'formal',
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: false
+    }],
+    ft_court_account_list_index: []
+  }, {
+    buildCourtAccountListViewFromIndexRows: rows => ({ items: Array.isArray(rows) ? rows : [] })
+  });
+  const summaryFactPage = await request(summaryFactHarness.handle, 'paged=1&page=1&pageSize=15');
+  assert.strictEqual(summaryFactPage.statusCode, 200, '摘要事实线索应正常返回');
+  assert.strictEqual(summaryFactPage.body.total, 1, '摘要事实线索应保留一条最终结果');
+  assert.strictEqual(summaryFactPage.body.rows[0].leadDate, '2026-08-20', '最终结果应优先展示真实业务事实时间');
+  assert.notStrictEqual(summaryFactPage.body.rows[0].leadDate, '2026-09-01T10:00:00.000Z', '摘要更新时间不能冒充线索时间');
+
   const notReadyHarness = createHarness({
     ft_leads: [{
       id: 'lead-not-ready',

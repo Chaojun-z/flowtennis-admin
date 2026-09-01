@@ -1346,13 +1346,19 @@ function leadBusinessDate(row = {}, lead = {}) {
     row.trialAtRaw,
     row.trialBookedAt,
     row.trialAttendedAt,
+    row.packagePurchaseDate,
     row.courseFirstPurchaseAt,
+    row.lastFormalLessonAt,
+    row.detailRecentLessonDate,
     row.conversionAt,
     lead.firstTouchAt,
     lead.trialAtRaw,
     lead.trialBookedAt,
     lead.trialAttendedAt,
+    lead.packagePurchaseDate,
     lead.courseFirstPurchaseAt,
+    lead.lastFormalLessonAt,
+    lead.detailRecentLessonDate,
     lead.conversionAt
   ];
   const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);

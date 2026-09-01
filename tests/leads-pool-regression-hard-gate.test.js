@@ -100,6 +100,27 @@ const businessRows = buildLeadPoolRows({
 assert.strictEqual(businessRows[0].leadDate, '2026-04-15', '无人工线索时间时必须取最早业务事实时间');
 assert.notStrictEqual(businessRows[0].leadDate, '2026-09-01T10:00:00.000Z', '系统修复时间不能冒充线索时间');
 
+const summaryFactRows = buildLeadPoolRows({
+  leads: [{
+    id: 'lead-summary-fact',
+    displayName: '摘要事实用户',
+    createdAt: '2026-09-01T10:00:00.000Z',
+    updatedAt: '2026-09-01T10:00:00.000Z'
+  }],
+  customerLifecycleRows: [{
+    customerKey: 'teaching-summary:summary-fact',
+    studentId: 'summary-fact',
+    displayName: '摘要事实用户',
+    trialAttendedAt: '2026-08-20',
+    lastFormalLessonAt: '2026-08-30',
+    summaryUpdatedAt: '2026-09-01T10:00:00.000Z',
+    hasTrialAttended: true,
+    hasFormalAttended: true,
+    studentStage: 'formal'
+  }]
+});
+assert.strictEqual(summaryFactRows[0].leadDate, '2026-08-20', '摘要虚拟线索必须优先展示真实业务事实，不能用摘要更新时间或更晚的修复时间');
+
 const syntheticRows = buildLeadPoolRows({
   leads: [],
   customerLifecycleRows: [{

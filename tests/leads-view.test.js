@@ -202,6 +202,11 @@ assert.strictEqual(
   'lead list and detail should still fall back to the earliest business fact for system-generated leads'
 );
 assert.strictEqual(
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-summary-fact', trialAttendedAt: '2026-08-20', lastFormalLessonAt: '2026-08-30', summaryUpdatedAt: '2026-09-01T10:00:00.000Z' }),
+  '2026-08-20',
+  'lead list and detail should prefer the earliest real business fact, not the summary refresh time'
+);
+assert.strictEqual(
   leadDateHelpersContext.leadDateInputValue({ leadDate: '2026-08-29', firstTouchAt: '2026-04-15' }),
   '2026-08-29',
   'lead edit form should keep the stored lead time value instead of forcing the display fallback'
