@@ -11,7 +11,7 @@ const { recordPerfMetric } = require('../server/lib/perf-metrics');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const { buildMembershipFinanceSummary } = require('../server/read-models/membership-finance-summary.js');
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
-const { invalidateOperationsPageDataCache } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
+const { buildOperationsPagePayload, invalidateOperationsPageDataCache, getOperationsPageScope } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js'), { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
 const { createStudentTeachingSummaryCache } = require('../server/read-models/student-teaching-summary-cache.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
@@ -22,6 +22,7 @@ const { createAuthRoutes } = require('../server/auth-routes');
 const { createCourtAccountListIndexSync } = require('../server/page-data/court-account-list-index.js');
 const { createCourtAccountListSnapshotSync } = require('../server/page-data/court-account-list-snapshot.js');
 const { createScheduleListSnapshotSync } = require('../server/page-data/schedule-list-snapshot.js');
+const { createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
 const { createBootstrapRuntime, buildBootstrapSafetyFlags, readBooleanEnv, logBlockedAutoWrite } = require('../server/bootstrap');
 const { createScheduleRules } = require('../server/schedule');
 const { activeEntitlementAuthorizationForSchedule, entitlementAuthorizedUseContext, scheduleEntitlementUsageContext } = require('../server/entitlement-authorization');
@@ -101,12 +102,12 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'legacy-coach-tianhao',name:'天昊'},
   {id:'老吴',name:'刘润扬教练'}
 ];
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_AUTHORIZATIONS='ft_entitlement_authorizations',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_COURT_ACCOUNT_LIST_INDEX='ft_court_account_list_index',T_COURT_ACCOUNT_LIST_INDEX_TASKS='ft_court_account_list_index_tasks',T_COURT_ACCOUNT_LIST_SNAPSHOT='ft_court_account_list_snapshot',T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS='ft_court_account_list_snapshot_tasks',T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot',T_SCHEDULE_LIST_SNAPSHOT_TASKS='ft_schedule_list_snapshot_tasks',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_AUTHORIZATIONS='ft_entitlement_authorizations',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_COURT_ACCOUNT_LIST_INDEX='ft_court_account_list_index',T_COURT_ACCOUNT_LIST_INDEX_TASKS='ft_court_account_list_index_tasks',T_COURT_ACCOUNT_LIST_SNAPSHOT='ft_court_account_list_snapshot',T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS='ft_court_account_list_snapshot_tasks',T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot',T_SCHEDULE_LIST_SNAPSHOT_TASKS='ft_schedule_list_snapshot_tasks',T_OPERATIONS_SNAPSHOT='ft_operations_snapshot',T_OPERATIONS_SNAPSHOT_TASKS='ft_operations_snapshot_tasks',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS,T_SCHEDULE_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT_TASKS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS,T_SCHEDULE_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT_TASKS,T_OPERATIONS_SNAPSHOT,T_OPERATIONS_SNAPSHOT_TASKS,...MEMBERSHIP_TABLES];
 const HOT_SCAN_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -125,6 +126,8 @@ const HOT_SCAN_TABLES=new Map([
   [T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS,{ttlMs:600000}],
   [T_SCHEDULE_LIST_SNAPSHOT,{ttlMs:600000}],
   [T_SCHEDULE_LIST_SNAPSHOT_TASKS,{ttlMs:600000}],
+  [T_OPERATIONS_SNAPSHOT,{ttlMs:600000}],
+  [T_OPERATIONS_SNAPSHOT_TASKS,{ttlMs:600000}],
   [T_MEMBERSHIP_ORDERS,{ttlMs:60000}],
   [T_MEMBERSHIP_BENEFIT_LEDGER,{ttlMs:60000}],
   [T_MEMBERSHIP_ACCOUNT_EVENTS,{ttlMs:60000}],
@@ -151,6 +154,7 @@ const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
   T_CAMPUSES
 ]);
 const OPERATIONS_SOURCE_TABLES=new Set([T_LEADS,T_LEAD_FOLLOWUPS,T_SCHEDULE,T_COURTS,T_PURCHASES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_COACHES,T_CAMPUSES]);
+const OPERATIONS_SNAPSHOT_INTERNAL_TABLES=new Set([T_OPERATIONS_SNAPSHOT,T_OPERATIONS_SNAPSHOT_TASKS]);
 const LEAD_LIST_PROJECTION_FIELDS=[
   'displayName','name','wechatName','phone','level','leadDate','source','campus','customerType','demandProduct','consultType','intentLevel','profileNote','owner',
   'systemStatus','rawStatus','trialAtRaw','enrollAtRaw','convertedFlag','nextFollowupAt','lastFollowupAt','latestConcern','latestConclusion','nextAction','followupPriority','formalCoach',
@@ -305,6 +309,8 @@ const HOT_GET_TABLES=new Map([
   [T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS,{ttlMs:60000}],
   [T_SCHEDULE_LIST_SNAPSHOT,{ttlMs:60000}],
   [T_SCHEDULE_LIST_SNAPSHOT_TASKS,{ttlMs:60000}],
+  [T_OPERATIONS_SNAPSHOT,{ttlMs:60000}],
+  [T_OPERATIONS_SNAPSHOT_TASKS,{ttlMs:60000}],
   [T_PRICE_PLANS,{ttlMs:60000}],
   [T_LEADS,{ttlMs:60000}],
   [T_LEAD_IMPORT_BATCHES,{ttlMs:60000}]
@@ -324,6 +330,7 @@ const feishuTenantAccessTokenCacheByApp = new Map();
 let matchSqlPool;
 let queueStudentTeachingSummaryRefresh=()=>{};
 let customerCenterFactCacheVersion=0;
+let operationsSnapshotSync=null;
 const {
   gc,
   isTransientStorageError,
@@ -361,9 +368,10 @@ const {
     if(OPERATIONS_SOURCE_TABLES.has(t)){
       invalidateOperationsSourceCache();
       invalidateOperationsPageDataCache();
+      if(operationsSnapshotSync?.recordSourceChange)await operationsSnapshotSync.recordSourceChange({...meta,sourceTable:t}).catch(err=>console.warn('[operations-snapshot] source marker failed:',err?.message||err));
     }
     if([T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY].includes(t))customerCenterFactCacheVersion++;
-    if(t!==T_STUDENT_TEACHING_SUMMARY)await queueStudentTeachingSummaryRefresh(t,meta);
+    if(t!==T_STUDENT_TEACHING_SUMMARY&&!OPERATIONS_SNAPSHOT_INTERNAL_TABLES.has(t))await queueStudentTeachingSummaryRefresh(t,meta);
   }
 });
 const studentTeachingSummaryCache=createStudentTeachingSummaryCache({
@@ -4368,11 +4376,41 @@ const {
   parseLessonValue,
   computeCourtFinance
 });
+async function buildOperationsSnapshotPayload({user,scope}){
+  return buildOperationsPagePayload({
+    scope,
+    dateRange:scope?.dateRange||{},
+    user,
+    listCampusesWithDefaults,
+    getCachedScan,
+    scanFirstRows,
+    getScheduleListRows,
+    isProductionRuntime,
+    filterLoadAllForUser,
+    mergeDuplicateLeadRows,
+    buildFinancePageSnapshot,
+    getFinancePageSnapshot,
+    getFinancePageSnapshotIfCached,
+    tables:{T_LEADS,T_LEAD_FOLLOWUPS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_COACHES,T_USERS,T_SCHEDULE,T_FEEDBACKS}
+  });
+}
+operationsSnapshotSync=createOperationsSnapshotSync({getCachedRow,put,mkTable,buildPayload:buildOperationsSnapshotPayload,tables:{
+  operationsSnapshot:T_OPERATIONS_SNAPSHOT,operationsSnapshotTasks:T_OPERATIONS_SNAPSHOT_TASKS
+}});
+function operationsSnapshotScopeFromRequest(query,body={}){
+  const params=new URLSearchParams();
+  ['campus','campusName','startDate','endDate'].forEach(key=>{
+    const value=body?.[key]??query?.get?.(key);
+    if(value!==undefined&&value!==null&&value!=='')params.set(key,String(value));
+  });
+  return getOperationsPageScope(params);
+}
 const handleResidualPageDataRoutes=createResidualPageDataRoutes({
   init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,getCachedRow,scanFirstRows,isProductionRuntime,getFinancePageScheduleRows,getScheduleListRows,
   scanCoachProposals,buildCoachRefs,timedEndpointMetric,bootstrapScheduleListSnapshot,
+  loadOperationsSnapshot:operationsSnapshotSync.loadSnapshot,operationsSnapshotSync,
   filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
-  tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT,T_USERS,T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS}
+  tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT,T_OPERATIONS_SNAPSHOT,T_USERS,T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE,T_FEEDBACKS}
 });
 function parseSimpleCsv(text=''){
   const rows=[];
@@ -7264,6 +7302,14 @@ module.exports = async (req, res) => {
       const health=await scheduleListSnapshotSync.readSnapshotStatus();
       if(health.mergeAllowed)scheduleListSnapshotSync.autoMergeIfNeeded('status-check').catch(()=>null);
       return sendJson(res,health);
+    }
+    if(path==='/admin/operations-snapshot/rebuild'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const dryRun=body?.dryRun!==false;
+      return sendJson(res,await operationsSnapshotSync.rebuildScope({user,scope:operationsSnapshotScopeFromRequest(query,body),dryRun,reason:'manual'}));
+    }
+    if(path==='/admin/operations-snapshot/status'&&method==='GET'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();
+      return sendJson(res,await operationsSnapshotSync.readSnapshotStatus({user,scope:operationsSnapshotScopeFromRequest(query)}));
     }
     if(path==='/admin/replace-courts'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

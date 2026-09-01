@@ -4,9 +4,7 @@ const {
   getOperationsRowsCacheKey,
   getOperationsBaseRows
 } = require('../read-models/operations-source.js');
-
-const OPERATIONS_RESULT_CACHE_TTL_MS = 60 * 1000;
-const operationsResultCache = new Map();
+const { OPERATIONS_SNAPSHOT_NOT_READY_CODE } = require('./operations-snapshot.js');
 
 function getOperationsDateRange(query) {
   return {
@@ -39,14 +37,6 @@ function getOperationsResultCacheKey(user = {}, scope = {}) {
     startDate: dateRange.startDate || '',
     endDate: dateRange.endDate || ''
   });
-}
-
-function readOperationsResultCache(resultCacheKey) {
-  const cachedOperations = operationsResultCache.get(resultCacheKey);
-  if (cachedOperations && Date.now() - cachedOperations.createdAt < OPERATIONS_RESULT_CACHE_TTL_MS) {
-    return cachedOperations.payload;
-  }
-  return null;
 }
 
 async function buildOperationsPagePayload({
@@ -127,7 +117,6 @@ async function buildOperationsPagePayload({
 }
 
 function invalidateOperationsPageDataCache() {
-  operationsResultCache.clear();
 }
 
 async function handleOperationsPageData({
@@ -148,34 +137,43 @@ async function handleOperationsPageData({
   getFinancePageSnapshot,
   getFinancePageSnapshotIfCached,
   FINANCE_PAGE_COURT_PROJECTION_FIELDS,
+  loadOperationsSnapshot,
+  operationsSnapshotSync,
+  timedEndpointMetric,
   tables
 }) {
   if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
   await init();
   const scope = getOperationsPageScope(query);
-  const dateRange = scope.dateRange;
-  const resultCacheKey = getOperationsResultCacheKey(user, scope);
-  const cachedPayload = readOperationsResultCache(resultCacheKey);
-  if (cachedPayload) return sendJson(res, cachedPayload);
-  const buildPayload = () => buildOperationsPagePayload({
-    scope,
-    dateRange,
+  if (typeof loadOperationsSnapshot !== 'function') {
+    return sendJson(res, { error: '经营分析快照未配置', code: OPERATIONS_SNAPSHOT_NOT_READY_CODE }, 503);
+  }
+  const load = () => loadOperationsSnapshot({
     user,
-    listCampusesWithDefaults,
-    getCachedScan,
-    scanFirstRows,
-    getScheduleListRows,
-    isProductionRuntime,
-    filterLoadAllForUser,
-    mergeDuplicateLeadRows,
-    buildFinancePageSnapshot,
-    getFinancePageSnapshot,
-    getFinancePageSnapshotIfCached,
-    tables
+    scope,
+    forceFresh: query?.get?.('fresh') === '1' || query?.get?.('forceFresh') === '1'
   });
-  const payload = await buildPayload();
-  operationsResultCache.set(resultCacheKey, { createdAt: Date.now(), payload });
-  return sendJson(res, payload);
+  try {
+    const payload = timedEndpointMetric
+      ? await timedEndpointMetric('pageData.operationsSnapshot', load)
+      : await load();
+    return sendJson(res, payload);
+  } catch (err) {
+    if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) {
+      if (operationsSnapshotSync?.queueRebuildScope) {
+        operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'page-miss' }).catch(() => null);
+      }
+      return sendJson(res, { error: err.message || '经营分析快照未发布', code: err.code }, err.statusCode || 503);
+    }
+    console.warn('[operations-snapshot] failed:', err?.message || err);
+    return sendJson(res, { error: err.message || '经营分析快照读取失败', code: err.code || 'OPERATIONS_SNAPSHOT_ERROR' }, err.statusCode || 500);
+  }
 }
 
-module.exports = { handleOperationsPageData, invalidateOperationsPageDataCache };
+module.exports = {
+  buildOperationsPagePayload,
+  getOperationsPageScope,
+  getOperationsResultCacheKey,
+  handleOperationsPageData,
+  invalidateOperationsPageDataCache
+};

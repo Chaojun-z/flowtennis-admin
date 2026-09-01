@@ -1,5 +1,5 @@
 {
-  "maxLines": 7700,
+  "maxLines": 7760,
   "extractedModules": [
     "server/auth.js",
     "server/auth-routes.js",
@@ -28,6 +28,7 @@
     "server/page-data/core-pages.js",
     "server/page-data/residual-pages.js",
     "server/page-data/operations-page.js",
+    "server/page-data/operations-snapshot.js",
     "server/metrics/operations-metrics.js",
     "server/page-data/finance-page.js",
     "server/page-data/finance-snapshot.js",

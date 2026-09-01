@@ -34,6 +34,8 @@ assert.deepStrictEqual(
     'ft_court_account_list_snapshot_tasks',
     'ft_schedule_list_snapshot',
     'ft_schedule_list_snapshot_tasks',
+    'ft_operations_snapshot',
+    'ft_operations_snapshot_tasks',
     'ft_membership_plans',
     'ft_membership_accounts',
     'ft_membership_orders',
