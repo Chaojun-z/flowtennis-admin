@@ -160,8 +160,18 @@ async function handleOperationsPageData({
     return sendJson(res, payload);
   } catch (err) {
     if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) {
-      if (operationsSnapshotSync?.queueRebuildScope) {
-        operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'page-miss' }).catch(() => null);
+      if (operationsSnapshotSync?.rebuildScope) {
+        try {
+          const rebuild = () => operationsSnapshotSync.rebuildScope({ user, scope, reason: 'page-miss' });
+          if (timedEndpointMetric) await timedEndpointMetric('pageData.operationsSnapshot.bootstrap', rebuild);
+          else await rebuild();
+          const payload = timedEndpointMetric
+            ? await timedEndpointMetric('pageData.operationsSnapshot.bootstrapRetry', load)
+            : await load();
+          return sendJson(res, payload);
+        } catch (bootstrapErr) {
+          return sendJson(res, { error: bootstrapErr.message || err.message || '经营分析快照初始化失败', code: bootstrapErr.code || err.code }, bootstrapErr.statusCode || err.statusCode || 503);
+        }
       }
       return sendJson(res, { error: err.message || '经营分析快照未发布', code: err.code }, err.statusCode || 503);
     }
