@@ -10,7 +10,8 @@ const {
   buildStudentTeachingSummaryChecksum,
   filterStudentTeachingSummaryPublishedRows,
   buildVersionedStudentTeachingSummaryRow,
-  studentTeachingSummaryRowsToDeleteAfterPublish
+  studentTeachingSummaryRowsToDeleteAfterPublish,
+  rollbackStudentTeachingSummaryPublish
 } = require('../read-models/student-teaching-summary-cache.js');
 const {
   buildCoachOpsUnifiedView,
@@ -497,6 +498,20 @@ function createCorePageDataRoutes(deps={}){
         }
         return sendJson(res,{success:true,count:publishedRows.length,updatedAt:new Date().toISOString()});
       }catch(err){
+        try{
+          await rollbackStudentTeachingSummaryPublish({
+            tableName:T_STUDENT_TEACHING_SUMMARY,
+            previousRows:previousSummaryRows,
+            hasReadyMeta:String(previousMeta?.status||'')===STUDENT_TEACHING_SUMMARY_READY,
+            batchId,
+            getCachedScan,
+            put,
+            del,
+            logger:console
+          });
+        }catch(rollbackErr){
+          console.error('[student-teaching-summary] manual rollback failed',rollbackErr);
+        }
         if(!hasReadyMeta){
           await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
             status:STUDENT_TEACHING_SUMMARY_FAILED,

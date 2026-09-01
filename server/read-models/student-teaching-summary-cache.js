@@ -77,6 +77,66 @@ function studentTeachingSummaryRowsToDeleteAfterPublish(rows = [], activeVersion
   });
 }
 
+function cloneStudentTeachingSummaryRows(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map(row => JSON.parse(JSON.stringify(row || {})));
+}
+
+async function rollbackStudentTeachingSummaryPublish({
+  tableName,
+  previousRows = [],
+  hasReadyMeta = false,
+  batchId = '',
+  getCachedScan,
+  put,
+  del,
+  logger = console
+} = {}) {
+  if (!tableName || typeof put !== 'function' || typeof del !== 'function') return;
+  try {
+    const currentRows = typeof getCachedScan === 'function'
+      ? await getCachedScan(tableName, { fresh: true }).catch(() => [])
+      : [];
+    const currentMeta = studentTeachingSummaryMetaRow(currentRows);
+    const previousMeta = studentTeachingSummaryMetaRow(previousRows);
+    const previousBatchId = String(previousMeta?.batchId || '').trim();
+    const currentBatchId = String(currentMeta?.batchId || '').trim();
+    const shouldRestoreSnapshot = hasReadyMeta && (
+      String(currentMeta?.status || '') !== STUDENT_TEACHING_SUMMARY_READY ||
+      !currentBatchId ||
+      currentBatchId !== previousBatchId
+    );
+    if (shouldRestoreSnapshot) {
+      for (const row of Array.isArray(currentRows) ? currentRows : []) {
+        const id = String(row?.id || '').trim();
+        if (!id || id === STUDENT_TEACHING_SUMMARY_META_ID) continue;
+        await del(tableName, id);
+      }
+      for (const row of cloneStudentTeachingSummaryRows(previousRows)) {
+        const id = String(row?.id || '').trim();
+        if (!id) continue;
+        await put(tableName, id, row);
+      }
+      return;
+    }
+    const batchVersion = String(batchId || '').trim();
+    for (const row of Array.isArray(currentRows) ? currentRows : []) {
+      const id = String(row?.id || '').trim();
+      if (!id || id === STUDENT_TEACHING_SUMMARY_META_ID) continue;
+      if (batchVersion && String(row.publishVersion || '').trim() === batchVersion) {
+        await del(tableName, id);
+        continue;
+      }
+      if (String(row.id || '').includes(`${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${batchVersion}:`)) {
+        await del(tableName, id);
+      }
+    }
+  } catch (rollbackErr) {
+    if (typeof logger?.error === 'function') {
+      logger.error('[student-teaching-summary] rollback failed', rollbackErr);
+    }
+  }
+}
+
 function normalizeGeneration(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -265,8 +325,8 @@ function createStudentTeachingSummaryCache({
     await mkTable(T_STUDENT_TEACHING_SUMMARY).catch(() => null);
     const sourceSnapshotAt = new Date().toISOString();
     const batchId = `student-teaching-summary-${Date.now()}`;
-    const existingSummaryRows = await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }).catch(() => []);
-    const hasReadyMeta = String(studentTeachingSummaryMetaRow(existingSummaryRows)?.status || '') === STUDENT_TEACHING_SUMMARY_READY;
+    const previousRows = cloneStudentTeachingSummaryRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }).catch(() => []));
+    const hasReadyMeta = String(studentTeachingSummaryMetaRow(previousRows)?.status || '') === STUDENT_TEACHING_SUMMARY_READY;
     try {
       const [leads, students, purchases, entitlements, entitlementLedger, schedule, membershipBenefitLedger, feedbacks] = await Promise.all([
         T_LEADS ? getCachedScan(T_LEADS, { fresh: true }) : Promise.resolve([]),
@@ -305,6 +365,20 @@ function createStudentTeachingSummaryCache({
       }
       return publishedRows;
     } catch (err) {
+      try {
+        await rollbackStudentTeachingSummaryPublish({
+          tableName: T_STUDENT_TEACHING_SUMMARY,
+          previousRows,
+          hasReadyMeta,
+          batchId,
+          getCachedScan,
+          put,
+          del,
+          logger
+        });
+      } catch (rollbackErr) {
+        logger.error('[student-teaching-summary] rollback failed', rollbackErr);
+      }
       if (!hasReadyMeta) {
         await writeMeta(STUDENT_TEACHING_SUMMARY_FAILED, { batchId, sourceSnapshotAt, error: err?.message || String(err) }).catch(metaErr => {
           logger.error('[student-teaching-summary] mark failed failed', metaErr);
@@ -348,6 +422,7 @@ module.exports = {
   filterStudentTeachingSummaryPublishedRows,
   buildVersionedStudentTeachingSummaryRow,
   studentTeachingSummaryRowsToDeleteAfterPublish,
+  rollbackStudentTeachingSummaryPublish,
   buildStudentTeachingSummaryChecksum,
   requireReadyStudentTeachingSummaryRows,
   readReadyStudentTeachingSummaryRows
