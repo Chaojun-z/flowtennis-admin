@@ -183,6 +183,8 @@ const leadDateHelpersContext = {
     ? { leadDateSource: 'manual', firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
     : record?.id === 'lead-system-date'
       ? { leadDateSource: 'system', firstTouchAt: '2026-04-15', leadDate: '2026-08-29' }
+    : record?.id === 'lead-created-date'
+      ? { leadDateSource: 'system', firstTouchAt: '2026-04-15', leadDate: '' }
     : null,
   leadStandardField: (lead, key) => {
     const lifecycle = leadDateHelpersContext.customerLifecycleForRecord(lead);
@@ -197,9 +199,19 @@ assert.strictEqual(
   'lead list and detail should keep a manual lead time even when later business facts exist'
 );
 assert.strictEqual(
-  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-system-date', createdAt: '2026-08-29' }),
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-system-date', updatedAt: '2026-08-29' }),
   '2026-04-15',
-  'lead list and detail should still fall back to the earliest business fact for system-generated leads'
+  'lead list and detail should fall back to the earliest business fact instead of system repair time'
+);
+assert.strictEqual(
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-created-date', createdAt: '2026-04-10T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }),
+  '2026-04-10',
+  'lead list and detail should use the real lead created time before later business facts'
+);
+assert.strictEqual(
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-system-date', leadDate: '2026-08-29', createdAt: '2026-08-29', updatedAt: '2026-08-29' }),
+  '2026-04-15',
+  'lead list and detail should reject polluted created time when earlier business facts exist'
 );
 assert.strictEqual(
   leadDateHelpersContext.leadDateDisplayText({ id: 'lead-summary-fact', trialAttendedAt: '2026-08-20', lastFormalLessonAt: '2026-08-30', summaryUpdatedAt: '2026-09-01T10:00:00.000Z' }),

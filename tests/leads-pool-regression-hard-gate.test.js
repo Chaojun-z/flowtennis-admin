@@ -7,6 +7,7 @@ const repoRoot = path.join(__dirname, '..');
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
 const routesSource = fs.readFileSync(path.join(repoRoot, 'server/leads-routes.js'), 'utf8');
 const metricsSource = fs.readFileSync(path.join(repoRoot, 'server/read-models/platform-metrics.js'), 'utf8');
+const studentRosterIndexSource = fs.readFileSync(path.join(repoRoot, 'server/page-data/student-roster-index-reader.js'), 'utf8');
 
 function testIsInNpmTest(file) {
   assert.match(
@@ -45,6 +46,11 @@ assert.match(
   /Number\(\!\!a\.isLifecycleSynthetic\) - Number\(\!\!b\.isLifecycleSynthetic\)/,
   '同一身份合并时必须优先保留真实线索，不能让摘要虚拟线索抢主记录'
 );
+assert.doesNotMatch(
+  [routesSource, metricsSource, studentRosterIndexSource].join('\n'),
+  /leadDate:[^\n]*summaryUpdatedAt/,
+  '任何线索池、历史学员、在期学员最终模型都不能用摘要更新时间冒充线索时间'
+);
 
 const manualRows = buildLeadPoolRows({
   leads: [{
@@ -82,7 +88,7 @@ const businessRows = buildLeadPoolRows({
   leads: [{
     id: 'lead-business-fact',
     displayName: '业务事实用户',
-    createdAt: '2026-09-01T10:00:00.000Z',
+    createdAt: '2026-04-10T10:00:00.000Z',
     updatedAt: '2026-09-01T10:00:00.000Z'
   }],
   customerLifecycleRows: [{
@@ -97,14 +103,14 @@ const businessRows = buildLeadPoolRows({
     updatedAt: '2026-09-01T10:00:00.000Z'
   }]
 });
-assert.strictEqual(businessRows[0].leadDate, '2026-04-15', '无人工线索时间时必须取最早业务事实时间');
+assert.strictEqual(businessRows[0].leadDate, '2026-04-10T10:00:00.000Z', '无人工线索时间时必须优先取真实线索创建时间');
 assert.notStrictEqual(businessRows[0].leadDate, '2026-09-01T10:00:00.000Z', '系统修复时间不能冒充线索时间');
 
 const summaryFactRows = buildLeadPoolRows({
   leads: [{
     id: 'lead-summary-fact',
     displayName: '摘要事实用户',
-    createdAt: '2026-09-01T10:00:00.000Z',
+    createdAt: '2026-08-18T10:00:00.000Z',
     updatedAt: '2026-09-01T10:00:00.000Z'
   }],
   customerLifecycleRows: [{
@@ -119,7 +125,7 @@ const summaryFactRows = buildLeadPoolRows({
     studentStage: 'formal'
   }]
 });
-assert.strictEqual(summaryFactRows[0].leadDate, '2026-08-20', '摘要虚拟线索必须优先展示真实业务事实，不能用摘要更新时间或更晚的修复时间');
+assert.strictEqual(summaryFactRows[0].leadDate, '2026-08-18T10:00:00.000Z', '真实线索创建时间必须排在摘要业务事实前面');
 
 const syntheticRows = buildLeadPoolRows({
   leads: [],

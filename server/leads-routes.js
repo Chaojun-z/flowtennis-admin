@@ -252,7 +252,29 @@ function createLeadsRoutes(deps={}){
   }
 
   function leadBusinessDateValue(row={}){
-    return row?.leadDate||row?.firstTouchAt||row?.trialAtRaw||row?.trialBookedAt||row?.trialAttendedAt||row?.packagePurchaseDate||row?.courseFirstPurchaseAt||row?.lastFormalLessonAt||row?.detailRecentLessonDate||row?.conversionAt||row?.enrollAtRaw||row?.formalSignupAt;
+    const systemLeadDate=cleanLeadText(row?.leadDateSource).toLowerCase()==='system';
+    const storedLeadDate=systemLeadDate?'':(row?.leadDate||row?.leadEnteredAt);
+    const businessDate=leadEarliestDateValue(row?.firstTouchAt,row?.trialAtRaw,row?.trialBookedAt,row?.trialAttendedAt,row?.packagePurchaseDate,row?.courseFirstPurchaseAt,row?.lastFormalLessonAt,row?.detailRecentLessonDate,row?.conversionAt,row?.enrollAtRaw,row?.formalSignupAt);
+    return storedLeadDate||leadTrustedCreatedAtValue(row,businessDate)||businessDate;
+  }
+
+  function leadEarliestDateValue(...values){
+    return values
+      .map(cleanLeadText)
+      .filter(Boolean)
+      .map(value=>({value,ms:leadDateMs(value)}))
+      .sort((a,b)=>(a.ms||Number.MAX_SAFE_INTEGER)-(b.ms||Number.MAX_SAFE_INTEGER))[0]?.value||'';
+  }
+
+  function leadTrustedCreatedAtValue(row={},businessDate=''){
+    const id=cleanLeadText(row?.id||row?.leadId||row?.sourceLeadId);
+    if(!id||row?.isLifecycleSynthetic||/^lead-from-student-/.test(id))return '';
+    const createdAt=cleanLeadText(row?.createdAt);
+    if(!createdAt)return '';
+    const explicitLeadDate=cleanLeadText(row?.leadDate||row?.leadEnteredAt);
+    const updatedAt=cleanLeadText(row?.updatedAt);
+    if(businessDate&&explicitLeadDate===createdAt&&(!updatedAt||updatedAt===createdAt)&&leadDateMs(createdAt)>leadDateMs(businessDate))return '';
+    return createdAt;
   }
 
   function leadSortMetric(row,key){

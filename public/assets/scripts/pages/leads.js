@@ -258,27 +258,50 @@ function leadDateLooksManual(lead={}){
   const source=leadStandardField(lead,'leadDateSource');
   if(source==='manual')return true;
   if(source==='system')return false;
-  const explicit=String(leadStandardField(lead,'leadDate')||lead?.leadDate||leadStandardField(lead,'leadEnteredAt')||lead?.leadEnteredAt||'').trim();
+  const explicit=String(lead?.leadDate||lead?.leadEnteredAt||'').trim();
   if(!explicit)return false;
   const createdAt=String(leadStandardField(lead,'createdAt')||lead?.createdAt||'').trim();
   const enteredAt=String(leadStandardField(lead,'leadEnteredAt')||lead?.leadEnteredAt||'').trim();
   if(explicit===createdAt||(enteredAt&&explicit===enteredAt))return false;
   return true;
 }
+function leadBusinessDateCompareValue(value,lead={}){
+  const date=leadDateOnly(value,lead);
+  const parsed=Date.parse(date||String(value||'').replace(' ','T'));
+  return Number.isFinite(parsed)?parsed:Number.MAX_SAFE_INTEGER;
+}
+function leadTrustedCreatedAtValue(lead={},businessDate=''){
+  const id=String(lead?.id||lead?.leadId||lead?.sourceLeadId||'').trim();
+  if(!id||lead?.isLifecycleSynthetic||/^lead-from-student-/.test(id))return '';
+  const createdAt=String(lead?.createdAt||'').trim();
+  if(!createdAt)return '';
+  const explicit=String(lead?.leadDate||lead?.leadEnteredAt||'').trim();
+  const updatedAt=String(lead?.updatedAt||'').trim();
+  if(businessDate&&explicit===createdAt&&(!updatedAt||updatedAt===createdAt)&&leadBusinessDateCompareValue(createdAt,lead)>leadBusinessDateCompareValue(businessDate,lead))return '';
+  return createdAt;
+}
+function leadEarliestBusinessDateValue(lead={}){
+  return [
+    leadStandardField(lead,'firstTouchAt'),
+    leadStandardField(lead,'trialAtRaw'),
+    leadStandardField(lead,'trialBookedAt'),
+    leadStandardField(lead,'trialAttendedAt'),
+    leadStandardField(lead,'packagePurchaseDate'),
+    leadStandardField(lead,'courseFirstPurchaseAt'),
+    leadStandardField(lead,'lastFormalLessonAt'),
+    leadStandardField(lead,'detailRecentLessonDate'),
+    leadStandardField(lead,'conversionAt'),
+    leadStandardField(lead,'enrollAtRaw'),
+    leadStandardField(lead,'formalSignupAt')
+  ].filter(Boolean).sort((a,b)=>leadBusinessDateCompareValue(a,lead)-leadBusinessDateCompareValue(b,lead))[0]||'';
+}
 function leadBusinessDateValue(lead={}){
   if(leadDateLooksManual(lead))return leadStandardField(lead,'leadDate')||lead?.leadDate||leadStandardField(lead,'leadEnteredAt')||lead?.leadEnteredAt||'';
-  return leadStandardField(lead,'firstTouchAt')
-    || leadStandardField(lead,'trialAtRaw')
-    || leadStandardField(lead,'trialBookedAt')
-    || leadStandardField(lead,'trialAttendedAt')
-    || leadStandardField(lead,'packagePurchaseDate')
-    || leadStandardField(lead,'courseFirstPurchaseAt')
-    || leadStandardField(lead,'lastFormalLessonAt')
-    || leadStandardField(lead,'detailRecentLessonDate')
-    || leadStandardField(lead,'conversionAt')
-    || leadStandardField(lead,'enrollAtRaw')
-    || leadStandardField(lead,'formalSignupAt')
-    || leadStandardField(lead,'leadDate');
+  const source=leadStandardField(lead,'leadDateSource');
+  const businessDate=leadEarliestBusinessDateValue(lead);
+  return leadTrustedCreatedAtValue(lead,businessDate)
+    || businessDate
+    || (source==='system'?'':leadStandardField(lead,'leadDate'));
 }
 function leadDateDisplayText(lead){
   return leadDateOnly(leadBusinessDateValue(lead),lead)||'-';

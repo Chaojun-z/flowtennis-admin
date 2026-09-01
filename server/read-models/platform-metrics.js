@@ -1332,12 +1332,22 @@ function leadDateIsManual(row = {}, lead = {}) {
   const source = leadDateSourceValue(row, lead).toLowerCase();
   if (source === 'manual') return true;
   if (source === 'system') return false;
-  const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
+  const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt);
   if (!explicitLeadDate) return false;
   const createdAt = text(lead.createdAt || row.createdAt);
   const enteredAt = text(lead.leadEnteredAt || row.leadEnteredAt);
   if (explicitLeadDate === createdAt || explicitLeadDate === enteredAt) return false;
   return true;
+}
+
+function trustedRealLeadCreatedAt(row = {}, lead = {}, businessDate = '') {
+  if (!rowId(lead) || isOrphanMaterializedStudentLead(lead)) return '';
+  const createdAt = text(lead.createdAt);
+  if (!createdAt) return '';
+  const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt);
+  const updatedAt = text(lead.updatedAt);
+  if (businessDate && explicitLeadDate === createdAt && (!updatedAt || updatedAt === createdAt) && leadDateMs(createdAt) > leadDateMs(businessDate)) return '';
+  return createdAt;
 }
 
 function leadBusinessDate(row = {}, lead = {}) {
@@ -1363,10 +1373,13 @@ function leadBusinessDate(row = {}, lead = {}) {
   ];
   const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
   const manualLeadDate = leadDateIsManual(row, lead);
+  const source = leadDateSourceValue(row, lead).toLowerCase();
   const businessDate = earliestBusinessDateText(...businessFacts);
+  const realLeadCreatedAt = trustedRealLeadCreatedAt(row, lead, businessDate);
   if (manualLeadDate && explicitLeadDate) return explicitLeadDate;
+  if (realLeadCreatedAt) return realLeadCreatedAt;
   if (businessDate) return businessDate;
-  if (explicitLeadDate && ![
+  if (source !== 'system' && explicitLeadDate && ![
     text(lead.createdAt),
     text(lead.updatedAt),
     text(lead.leadEnteredAt),
@@ -2319,7 +2332,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
         hasCourseStudentEntry: true,
         hasFreeCourseFollowup: true,
         leadDateSource: text(row.leadDateSource || '') || 'system',
-        leadDate: text(row.packagePurchaseDate || row.lastFormalLessonAt || row.summaryUpdatedAt),
+        leadDate: text(row.trialAtRaw || row.trialBookedAt || row.trialAttendedAt || row.packagePurchaseDate || row.courseFirstPurchaseAt || row.lastFormalLessonAt || row.detailRecentLessonDate || row.conversionAt),
         createdAt: text(row.summaryUpdatedAt || row.updatedAt),
         hasCourseConversion: text(row.studentStage) === 'formal',
         hasBookingConversion: false,

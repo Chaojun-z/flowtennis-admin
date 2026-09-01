@@ -103,8 +103,18 @@ assert.strictEqual(
 );
 assert.strictEqual(
   vm.runInContext("leadDateDisplayText({ id: 'lead-system-date', createdAt: '2026-08-29' })", context),
+  '2026-08-29',
+  'real lead created time should be used before later business facts'
+);
+assert.strictEqual(
+  vm.runInContext("leadDateDisplayText({ id: 'lead-system-date', updatedAt: '2026-08-29' })", context),
   '2026-04-15',
-  'system-generated leads without a manual lead time should still fall back to the earliest business fact'
+  'system repair time should never be used as lead time'
+);
+assert.strictEqual(
+  vm.runInContext("leadDateDisplayText({ id: 'lead-system-date', leadDate: '2026-08-29', createdAt: '2026-08-29', updatedAt: '2026-08-29' })", context),
+  '2026-04-15',
+  'polluted lead date and created time should not override earlier business facts'
 );
 
 const priorityEmpty = vm.runInContext('renderLeadPriorityCell({ followupPriority: "" })', context);

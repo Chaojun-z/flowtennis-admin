@@ -542,7 +542,7 @@ async function main() {
       displayName: '摘要事实用户',
       wechatName: '摘要事实用户',
       leadDate: '',
-      createdAt: '2026-09-01T10:00:00.000Z',
+      createdAt: '2026-08-18T10:00:00.000Z',
       updatedAt: '2026-09-01T10:00:00.000Z'
     }],
     ft_lead_followups: [],
@@ -581,7 +581,7 @@ async function main() {
   const summaryFactPage = await request(summaryFactHarness.handle, 'paged=1&page=1&pageSize=15');
   assert.strictEqual(summaryFactPage.statusCode, 200, '摘要事实线索应正常返回');
   assert.strictEqual(summaryFactPage.body.total, 1, '摘要事实线索应保留一条最终结果');
-  assert.strictEqual(summaryFactPage.body.rows[0].leadDate, '2026-08-20', '最终结果应优先展示真实业务事实时间');
+  assert.strictEqual(summaryFactPage.body.rows[0].leadDate, '2026-08-18T10:00:00.000Z', '最终结果应优先展示真实线索创建时间');
   assert.notStrictEqual(summaryFactPage.body.rows[0].leadDate, '2026-09-01T10:00:00.000Z', '摘要更新时间不能冒充线索时间');
 
   const notReadyHarness = createHarness({

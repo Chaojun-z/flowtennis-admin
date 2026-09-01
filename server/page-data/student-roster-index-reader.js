@@ -256,7 +256,7 @@ function buildCustomerCenterSummaryLifecycleRows(summaryRows = []) {
       lessonVolumeLabel: String(row.lessonVolumeLabel || '').trim(),
       isHistoricalStudentRoster: hasTrialAttended || hasFormalAttended || isActiveStudentRoster,
       isActiveStudentRoster,
-      leadDate: String(row.packagePurchaseDate || row.lastFormalLessonAt || row.summaryUpdatedAt || '').trim(),
+      leadDate: String(row.trialAtRaw || row.trialBookedAt || row.trialAttendedAt || row.packagePurchaseDate || row.courseFirstPurchaseAt || row.lastFormalLessonAt || row.detailRecentLessonDate || row.conversionAt || '').trim(),
       createdAt: String(row.summaryUpdatedAt || row.updatedAt || '').trim(),
       hasCourseConversion: String(row.studentStage || '').trim() === 'formal',
       hasBookingConversion: false,
