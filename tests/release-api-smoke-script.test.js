@@ -9,9 +9,16 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json
 
 assert.ok(fs.existsSync(scriptPath), '必须提供发布前真实接口冒烟脚本');
 assert.ok(packageJson.scripts['guard:api-smoke'], 'package.json 必须提供 guard:api-smoke');
+assert.ok(packageJson.scripts['guard:post-release'], 'package.json 必须提供 guard:post-release');
+assert.ok(packageJson.scripts['guard:lead-pool-health'], 'package.json 必须提供 guard:lead-pool-health');
 assert.ok(
   packageJson.scripts['guard:release'].includes('npm run guard:api-smoke'),
   'guard:release 必须包含接口冒烟门禁'
+);
+assert.ok(
+  packageJson.scripts['guard:post-release'].includes('node scripts/release-api-smoke.js')
+    && packageJson.scripts['guard:post-release'].includes('npm run guard:lead-pool-health'),
+  'guard:post-release 必须同时执行接口冒烟和线索池健康检查'
 );
 
 const smoke = require(scriptPath);

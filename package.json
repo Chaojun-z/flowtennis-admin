@@ -18,7 +18,7 @@
     "guard:test-inventory": "node scripts/check-test-inventory.js",
     "guard:governance-automation": "node scripts/governance-automation-guard.js",
     "governance:record": "node scripts/governance-automation-guard.js --create-record",
-    "guard:post-release": "node scripts/release-api-smoke.js",
+    "guard:post-release": "node scripts/release-api-smoke.js && npm run guard:lead-pool-health",
     "guard:api-smoke": "node scripts/release-api-smoke.js --allow-missing-config",
     "guard:api-smoke:required": "node scripts/release-api-smoke.js",
     "guard:lead-pool-health": "node scripts/lead-pool-health-check.js"
