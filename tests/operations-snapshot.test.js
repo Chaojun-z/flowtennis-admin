@@ -7,7 +7,8 @@ const {
   createOperationsSnapshotLoader,
   createOperationsSnapshotSync,
   metaIdForScopeKey,
-  scopeKey
+  scopeKey,
+  taskIdForScopeKey
 } = require('../server/page-data/operations-snapshot.js');
 
 const user = { id: 'admin-1', role: 'admin', dataScope: '', campusIds: [] };
@@ -97,6 +98,7 @@ async function main() {
       tableRows.set(id, row);
       return row;
     },
+    scanByIdPrefix: async (table, prefix) => [...tableRows.values()].filter(row => String(row.id || '').startsWith(prefix)),
     buildPayload: async ({ scope }) => ({
       campuses: [],
       operations: { coach: { rows: [{ coachName: '朝珺', range: scope.dateRange.startDate }] } },
@@ -111,6 +113,19 @@ async function main() {
   const julyKey = scopeKey(user, julyScope);
   assert.ok(tableRows.get(metaIdForScopeKey(julyKey)), '正式重建应写当前校区和日期范围的 active meta');
   assert.ok(writes.some((row) => row.id === 'active:scope-index'), '正式重建应登记范围索引，源数据变化后可自动刷新');
+
+  const queued = await sync.enqueueRebuildTask({ user, scope: augustScope, reason: 'page-miss' });
+  assert.strictEqual(queued.taskId, taskIdForScopeKey(scopeKey(user, augustScope)), '缺失快照必须按当前范围生成稳定任务 id');
+  assert.strictEqual(tableRows.get(queued.taskId).status, 'pending', '排队动作必须先把待处理任务写入任务表');
+  const processed = await sync.processQueuedRebuilds({ limit: 1 });
+  assert.strictEqual(processed.processed, 1, 'cron 处理器必须能消费待处理经营快照任务');
+  assert.strictEqual(tableRows.get(queued.taskId).status, 'done', '待处理任务跑完后必须标记完成，避免页面一直卡在生成中');
+
+  await sync.recordSourceChange({ sourceTable: 'ft_schedule', op: 'put', id: 'schedule-1' });
+  assert.ok(
+    writes.some(row => row.id === taskIdForScopeKey(julyKey) && row.row.status === 'pending'),
+    '源数据变化必须落待处理任务，不能只依赖 serverless 响应后的后台 Promise'
+  );
 }
 
 main()

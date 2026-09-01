@@ -216,7 +216,8 @@ assert.match(stateSource, /datasetLoadPromises\.has\(requestKey\)/, 'in-flight o
 assert.match(stateSource, /if\(name==='operationsPage'\)[\s\S]*operationsPageRequestSeq/, 'operations refresh should only accept the latest response');
 assert.match(stateSource, /operations:\['operationsPage'\]/, 'operations page should rely on the aggregate endpoint only');
 assert.match(stateSource, /markDatasetLoaded\('operationsPage',requestKey\)/, 'operations aggregate data should be tracked as loaded');
-assert.match(operationsSource, /operationsPageSnapshotMeta\?\.refreshing[\s\S]*正在生成经营分析数据/, 'operations page should render a clear refreshing state when the snapshot is being generated');
+assert.match(operationsSource, /operationsPageSnapshotMeta\?\.refreshing[\s\S]*renderOperationsLoading\(\)/, 'operations page should keep the original skeleton while the snapshot is being generated');
+assert.doesNotMatch(operationsSource, /正在生成经营分析数据/, 'operations page should not replace the skeleton with a text-only loading card');
 assert.match(chartsSource, /echarts\.init/, 'only the standard chart wrapper should initialize ECharts');
 assert.match(chartsSource, /renderStandardChart/, 'standard chart wrapper should expose renderStandardChart');
 assert.match(chartsSource, /buildStandardPieChartOption/, 'standard chart wrapper should expose a reusable pie chart option builder');

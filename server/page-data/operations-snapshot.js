@@ -7,6 +7,7 @@ const OPERATIONS_SNAPSHOT_NOT_READY_CODE = 'OPERATIONS_SNAPSHOT_NOT_READY';
 const SNAPSHOT_SCOPE_INDEX_ID = 'active:scope-index';
 const SNAPSHOT_SOURCE_MARKER_ID = 'active:source-marker';
 const SNAPSHOT_LAST_REBUILD_TASK_ID = '__last_operations_snapshot_rebuild__';
+const SNAPSHOT_REBUILD_TASK_PREFIX = 'pending:scope:';
 
 function text(value) {
   return String(value || '').trim();
@@ -62,6 +63,10 @@ function bundleIdForScopeKey(key, batchId) {
   return `scope:${key}:bundle:${batchId}`;
 }
 
+function taskIdForScopeKey(key) {
+  return `${SNAPSHOT_REBUILD_TASK_PREFIX}${key}`;
+}
+
 function timestampMs(value) {
   const time = Date.parse(text(value));
   return Number.isFinite(time) ? time : 0;
@@ -108,6 +113,20 @@ function buildOperationsSnapshot({ payload, user, scope, batchId, completedAt, s
     sourceSnapshotAt: sourceSnapshotAt || now
   };
   return { meta, bundle, scopeKey: key, payload };
+}
+
+function storedScopeForNormalized(normalized = {}) {
+  return {
+    campus: normalized.campus || '',
+    campusName: normalized.campusName || '',
+    dateRange: { startDate: normalized.startDate || '', endDate: normalized.endDate || '' },
+    metricScope: {
+      campus: normalized.campus || '',
+      campusName: normalized.campusName || '',
+      startDate: normalized.startDate || '',
+      endDate: normalized.endDate || ''
+    }
+  };
 }
 
 function snapshotHealth(meta = null, sourceMarker = null, task = null) {
@@ -197,7 +216,7 @@ function createOperationsSnapshotLoader(deps = {}) {
 }
 
 function createOperationsSnapshotSync(deps = {}) {
-  const { getCachedRow, put, mkTable, buildPayload, tables = {} } = deps;
+  const { getCachedRow, put, mkTable, buildPayload, scanByIdPrefix, tables = {} } = deps;
   const loadSnapshot = createOperationsSnapshotLoader({ getCachedRow, tables });
   const rebuildPromises = new Map();
 
@@ -226,6 +245,11 @@ function createOperationsSnapshotSync(deps = {}) {
       status: attrs.status || 'pending',
       reason: attrs.reason || '',
       error: text(attrs.error).slice(0, 500),
+      scopeKey: attrs.scopeKey || '',
+      user: attrs.user || null,
+      scope: attrs.scope || null,
+      startedAt: attrs.startedAt || '',
+      completedAt: attrs.completedAt || '',
       updatedAt: now,
       createdAt: attrs.createdAt || now
     }).catch(() => null);
@@ -235,17 +259,7 @@ function createOperationsSnapshotSync(deps = {}) {
     if (!tables.operationsSnapshot || typeof put !== 'function') return null;
     const key = scopeKey(user, scope);
     const normalized = normalizeScope(user, scope);
-    const storedScope = {
-      campus: normalized.campus,
-      campusName: normalized.campusName,
-      dateRange: { startDate: normalized.startDate, endDate: normalized.endDate },
-      metricScope: {
-        campus: normalized.campus,
-        campusName: normalized.campusName,
-        startDate: normalized.startDate,
-        endDate: normalized.endDate
-      }
-    };
+    const storedScope = storedScopeForNormalized(normalized);
     const current = await readSnapshotRow(SNAPSHOT_SCOPE_INDEX_ID);
     const scopes = Array.isArray(current?.scopes) ? current.scopes : [];
     const byKey = new Map(scopes.map((item) => [text(item.scopeKey), item]).filter(([itemKey]) => itemKey));
@@ -255,13 +269,44 @@ function createOperationsSnapshotSync(deps = {}) {
     return next;
   }
 
-  async function rebuildScope({ user = {}, scope = {}, dryRun = false, batchId = '', reason = 'manual' } = {}) {
+  async function updateTaskStatus(id, attrs = {}) {
+    const taskId = text(id);
+    if (taskId) await recordTask(taskId, attrs);
+    await recordTask(SNAPSHOT_LAST_REBUILD_TASK_ID, attrs);
+  }
+
+  async function enqueueRebuildTask({ user = {}, scope = {}, reason = 'queued' } = {}) {
+    const key = scopeKey(user, scope);
+    const normalized = normalizeScope(user, scope);
+    const taskId = taskIdForScopeKey(key);
+    await ensureSnapshotTables();
+    await recordTask(taskId, {
+      status: 'pending',
+      reason,
+      error: '',
+      scopeKey: key,
+      user: normalized.userScope,
+      scope: storedScopeForNormalized(normalized)
+    });
+    return { queued: true, scopeKey: key, taskId };
+  }
+
+  async function rebuildScope({ user = {}, scope = {}, dryRun = false, batchId = '', reason = 'manual', taskId = '' } = {}) {
     if (typeof buildPayload !== 'function') throw new Error('缺少经营快照重建数据源');
     const key = scopeKey(user, scope);
     if (rebuildPromises.has(key)) return rebuildPromises.get(key);
     const startedAt = new Date().toISOString();
+    const normalized = normalizeScope(user, scope);
+    const taskAttrs = {
+      reason,
+      scopeKey: key,
+      user: normalized.userScope,
+      scope: storedScopeForNormalized(normalized),
+      startedAt,
+      createdAt: startedAt
+    };
     const run = (async () => {
-      if (!dryRun) await recordTask(SNAPSHOT_LAST_REBUILD_TASK_ID, { status: 'running', reason, error: '' });
+      if (!dryRun) await updateTaskStatus(taskId, { ...taskAttrs, status: 'running', error: '' });
       try {
         const payload = await buildPayload({ user, scope });
         const built = buildOperationsSnapshot({
@@ -277,10 +322,10 @@ function createOperationsSnapshotSync(deps = {}) {
         await put(tables.operationsSnapshot, built.bundle.id, built.bundle);
         await put(tables.operationsSnapshot, built.meta.id, built.meta);
         await rememberScope(user, scope);
-        await recordTask(SNAPSHOT_LAST_REBUILD_TASK_ID, { status: 'done', reason, error: '' });
+        await updateTaskStatus(taskId, { ...taskAttrs, status: 'done', error: '', completedAt: built.meta.completedAt });
         return { dryRun: false, scopeKey: built.scopeKey, checksum: built.meta.checksum, batchId: built.meta.batchId, bundleId: built.bundle.id };
       } catch (err) {
-        if (!dryRun) await recordTask(SNAPSHOT_LAST_REBUILD_TASK_ID, { status: 'failed', reason, error: err?.message || err });
+        if (!dryRun) await updateTaskStatus(taskId, { ...taskAttrs, status: 'failed', error: err?.message || err });
         throw err;
       } finally {
         rebuildPromises.delete(key);
@@ -290,11 +335,44 @@ function createOperationsSnapshotSync(deps = {}) {
     return run;
   }
 
-  function queueRebuildScope(args = {}) {
-    return rebuildScope({ ...args, dryRun: false }).catch((err) => {
+  async function queueRebuildScope(args = {}) {
+    const queued = await enqueueRebuildTask(args);
+    rebuildScope({ ...args, dryRun: false, taskId: queued.taskId }).catch((err) => {
       console.warn('[operations-snapshot] rebuild failed:', err?.message || err);
       return null;
     });
+    return queued;
+  }
+
+  async function processQueuedRebuilds({ limit = 3, includeFailed = true, now = Date.now() } = {}) {
+    if (!tables.operationsSnapshotTasks || typeof scanByIdPrefix !== 'function') {
+      return { processed: 0, skipped: 0, tasks: [] };
+    }
+    await ensureSnapshotTables();
+    const rows = await scanByIdPrefix(tables.operationsSnapshotTasks, SNAPSHOT_REBUILD_TASK_PREFIX).catch(() => []);
+    const staleRunningCutoff = now - 5 * 60 * 1000;
+    const candidates = (rows || []).filter((row) => {
+      const status = text(row.status);
+      if (status === 'pending') return true;
+      if (includeFailed && status === 'failed') return true;
+      if (status === 'running') return timestampMs(row.updatedAt) < staleRunningCutoff;
+      return false;
+    }).slice(0, Math.max(1, Math.min(parseInt(limit, 10) || 3, 10)));
+    const tasks = [];
+    for (const row of candidates) {
+      try {
+        const result = await rebuildScope({
+          user: row.user || {},
+          scope: row.scope || {},
+          reason: row.reason || 'queued',
+          taskId: row.id
+        });
+        tasks.push({ id: row.id, status: 'done', scopeKey: result.scopeKey, batchId: result.batchId });
+      } catch (err) {
+        tasks.push({ id: row.id, status: 'failed', error: text(err?.message || err).slice(0, 500) });
+      }
+    }
+    return { processed: candidates.length, skipped: Math.max(0, (rows || []).length - candidates.length), tasks };
   }
 
   async function readSnapshotStatus({ user = {}, scope = {} } = {}) {
@@ -322,16 +400,18 @@ function createOperationsSnapshotSync(deps = {}) {
     await put(tables.operationsSnapshot, SNAPSHOT_SOURCE_MARKER_ID, marker);
     const index = await readSnapshotRow(SNAPSHOT_SCOPE_INDEX_ID);
     const scopes = Array.isArray(index?.scopes) ? index.scopes : [];
-    scopes.forEach((item) => {
-      if (!item?.scope?.user) return;
-      queueRebuildScope({ user: item.scope.user, scope: item.scope, reason: 'source-change' });
-    });
+    await Promise.all(scopes.map((item) => {
+      if (!item?.user) return null;
+      return queueRebuildScope({ user: item.user, scope: item.scope, reason: 'source-change' });
+    }));
     return marker;
   }
 
   return {
+    enqueueRebuildTask,
     ensureSnapshotTables,
     loadSnapshot,
+    processQueuedRebuilds,
     queueRebuildScope,
     readSnapshotStatus,
     rebuildScope,
@@ -346,6 +426,7 @@ module.exports = {
   SNAPSHOT_SCOPE_INDEX_ID,
   SNAPSHOT_SOURCE_MARKER_ID,
   SNAPSHOT_LAST_REBUILD_TASK_ID,
+  SNAPSHOT_REBUILD_TASK_PREFIX,
   buildOperationsSnapshot,
   checksumPayload,
   createOperationsSnapshotLoader,
@@ -354,6 +435,7 @@ module.exports = {
   encodePayload,
   metaIdForScopeKey,
   scopeKey,
+  taskIdForScopeKey,
   snapshotHealth,
   snapshotNotReadyError
 };

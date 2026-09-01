@@ -159,13 +159,13 @@ async function handleOperationsPageData({
       ? await timedEndpointMetric('pageData.operationsSnapshot', load)
       : await load();
     if (payload?.snapshot?.refreshing && operationsSnapshotSync?.queueRebuildScope) {
-      operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'stale-page-hit' }).catch(() => null);
+      await operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'stale-page-hit' }).catch(() => null);
     }
     return sendJson(res, payload);
   } catch (err) {
     if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) {
       if (operationsSnapshotSync?.queueRebuildScope) {
-        operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'page-miss' }).catch(() => null);
+        await operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'page-miss' }).catch(() => null);
       }
       return sendJson(res, {
         campuses: [],

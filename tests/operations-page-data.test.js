@@ -106,6 +106,9 @@ assert.doesNotMatch(apiSource, /\/page-data\/operations[\s\S]{0,300}buildOperati
 assert.match(apiSource, /T_OPERATIONS_SNAPSHOT='ft_operations_snapshot'/, 'API must declare the operations snapshot table');
 assert.match(apiSource, /\[T_OPERATIONS_SNAPSHOT,\{ttlMs:60000\}\]/, 'operations snapshot should use hot row cache for 1s reads');
 assert.match(apiSource, /\/admin\/operations-snapshot\/rebuild/, 'API should expose an admin rebuild endpoint for operations snapshots');
+assert.match(apiSource, /\/cron\/operations-snapshot\/rebuild/, 'API should expose a cron rebuild endpoint for operations snapshots');
+assert.match(apiSource, /createOperationsSnapshotSync\(\{getCachedRow,put,mkTable,scanByIdPrefix/, 'operations snapshot sync must be able to scan queued rebuild tasks by id prefix');
+assert.match(apiSource, /processQueuedRebuilds\(\{limit\}/, 'operations snapshot cron endpoint must process durable queued tasks');
 assert.match(apiSource, /T_LEADS/, 'api/index.js should pass lead tables into extracted page-data routes');
 assert.match(apiSource, /getFinancePageSnapshot/, 'api/index.js should pass the full finance snapshot accessor into extracted page-data routes');
 assert.match(apiSource, /scanFirstRows/, 'api/index.js should pass projected read support into extracted page-data routes');
