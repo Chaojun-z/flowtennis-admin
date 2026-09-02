@@ -85,6 +85,15 @@ async function main() {
     dailyScopes.some((row) => row.campus === 'shunyi_mapo' && row.startDate === '2026-09-03' && row.endDate === '2026-09-03'),
     '教练日快照必须覆盖校区维度，校区 + 自定义日期筛选不能等待现场生成'
   );
+  const aliasDailyScopes = buildDailyScopeArgs(
+    { write: true, view: 'coach', dailyScopes: true },
+    { startDate: '2026-09-01', endDate: '2026-09-01' },
+    [{ id: 'mabao', name: '马坡' }]
+  );
+  assert.ok(
+    aliasDailyScopes.some((row) => row.campus === 'shunyi_mapo' && row.campusName === '顺义马坡'),
+    '生产历史校区别名必须规范成前端筛选使用的标准校区编码'
+  );
   const payload = {
     campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
     operations: {

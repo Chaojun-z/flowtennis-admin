@@ -18,6 +18,7 @@ const { createStorageServices } = require('../server/storage.js');
 const { DEFAULT_CAMPUSES } = require('../server/bootstrap.js');
 const { buildOperationsPagePayload, getOperationsPageScope } = require('../server/page-data/operations-page.js');
 const { createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
+const { normalizeCampusValue, displayCampusName } = require('../public/assets/scripts/core/campus.js');
 
 const TABLES = {
   T_LEADS: 'ft_leads',
@@ -141,8 +142,8 @@ async function inferDailySnapshotBounds({ args = {}, storage } = {}) {
 }
 
 function normalizedCampusScope(campus = {}) {
-  const id = String(campus.id || campus.code || campus.campus || '').trim();
-  const name = String(campus.name || campus.campusName || '').trim();
+  const id = normalizeCampusValue(campus.id || campus.code || campus.campus || campus.name || '');
+  const name = displayCampusName(campus.name || campus.campusName || id);
   if (!id && !name) return null;
   return { campus: id, campusName: name };
 }
