@@ -56,6 +56,9 @@ function parseArgs(argv = []) {
     endDate: value('--endDate'),
     view: value('--view'),
     commonScopes: argv.includes('--common-scopes'),
+    dailyScopes: argv.includes('--daily-scopes'),
+    dailyFrom: value('--daily-from'),
+    dailyTo: value('--daily-to'),
     processQueued: argv.includes('--process-queued'),
     limit: Math.max(1, Math.min(parseInt(value('--limit') || '1', 10) || 1, 5)),
     shardCount: Math.max(1, Math.min(parseInt(value('--shard-count') || '1', 10) || 1, 20)),
@@ -100,6 +103,40 @@ function weekBounds(dateKey) {
   return { startDate: start, endDate: addDays(start, 6) };
 }
 
+function validDateKey(value) {
+  const text = String(value || '').trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : '';
+}
+
+function enumerateDays(startDate, endDate) {
+  const start = validDateKey(startDate);
+  const end = validDateKey(endDate);
+  if (!start || !end || end < start) return [];
+  const days = [];
+  for (let day = start; day && day <= end; day = addDays(day, 1)) days.push(day);
+  return days;
+}
+
+function sourceDay(row = {}) {
+  return validDateKey(row.startTime || row.date || row.businessDate || row.purchaseDate || row.createdAt || row.updatedAt);
+}
+
+async function inferDailySnapshotBounds({ args = {}, storage } = {}) {
+  const explicitFrom = validDateKey(args.dailyFrom);
+  const explicitTo = validDateKey(args.dailyTo);
+  if (explicitFrom && explicitTo) return { startDate: explicitFrom, endDate: explicitTo };
+  const [scheduleRows, purchaseRows] = await Promise.all([
+    storage.getCachedScan(TABLES.T_SCHEDULE, { columns: ['startTime', 'date', 'createdAt', 'updatedAt'] }).catch(() => []),
+    storage.getCachedScan(TABLES.T_PURCHASES, { columns: ['purchaseDate', 'createdAt', 'updatedAt'] }).catch(() => [])
+  ]);
+  const days = [...scheduleRows, ...purchaseRows].map(sourceDay).filter(Boolean).sort();
+  const today = chinaDateKey(new Date());
+  const startDate = explicitFrom || days[0] || today;
+  const latestSourceDay = days[days.length - 1] || today;
+  const endDate = explicitTo || [latestSourceDay, today, addDays(today, 90)].sort()[2];
+  return { startDate, endDate };
+}
+
 function normalizedCampusScope(campus = {}) {
   const id = String(campus.id || campus.code || campus.campus || '').trim();
   const name = String(campus.name || campus.campusName || '').trim();
@@ -122,6 +159,36 @@ function buildCommonScopeArgs(args = {}, now = new Date(), campuses = []) {
     campuses.map(normalizedCampusScope).filter(Boolean).forEach((campus) => campusScopes.push(campus));
   }
   const scopes = campusScopes.flatMap((campusScope) => dateScopes.map((dateScope) => ({ ...args, ...campusScope, ...dateScope })));
+  const seen = new Set();
+  const uniqueScopes = scopes.filter((item) => {
+    const key = [item.campus || '', item.campusName || '', item.startDate || '', item.endDate || '', item.view || ''].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const shardCount = Math.max(1, parseInt(args.shardCount || '1', 10) || 1);
+  const shardIndex = Math.max(0, parseInt(args.shardIndex || '0', 10) || 0);
+  if (shardCount <= 1) return uniqueScopes;
+  return uniqueScopes.filter((_, index) => index % shardCount === shardIndex % shardCount);
+}
+
+function buildDailyScopeArgs(args = {}, bounds = {}, campuses = []) {
+  if (!args.dailyScopes) return [];
+  const days = enumerateDays(bounds.startDate, bounds.endDate);
+  const campusScopes = [{ campus: args.campus || '', campusName: args.campusName || '' }];
+  if (!args.campus && !args.campusName) {
+    campuses.map(normalizedCampusScope).filter(Boolean).forEach((campus) => campusScopes.push(campus));
+  }
+  return campusScopes.flatMap((campusScope) => days.map(day => ({
+    ...args,
+    ...campusScope,
+    startDate: day,
+    endDate: day,
+    view: 'coach'
+  })));
+}
+
+function shardScopeArgs(scopes = [], args = {}) {
   const seen = new Set();
   const uniqueScopes = scopes.filter((item) => {
     const key = [item.campus || '', item.campusName || '', item.startDate || '', item.endDate || '', item.view || ''].join('|');
@@ -204,8 +271,12 @@ async function run(options = {}) {
     tables: { operationsSnapshot: T_OPERATIONS_SNAPSHOT, operationsSnapshotTasks: T_OPERATIONS_SNAPSHOT_TASKS }
   });
   const rebuilt = [];
-  const campusRows = args.commonScopes && !args.campus && !args.campusName ? await listCampusesWithDefaults() : [];
-  const scopeArgsList = buildCommonScopeArgs(args, new Date(), campusRows);
+  const campusRows = (args.commonScopes || args.dailyScopes) && !args.campus && !args.campusName ? await listCampusesWithDefaults() : [];
+  const dailyBounds = args.dailyScopes ? await inferDailySnapshotBounds({ args, storage }) : null;
+  const scopeArgsList = shardScopeArgs([
+    ...buildCommonScopeArgs({ ...args, shardCount: 1, shardIndex: 0 }, new Date(), campusRows),
+    ...buildDailyScopeArgs(args, dailyBounds || {}, campusRows)
+  ], args);
   console.error(`[operations-snapshot] rebuilding ${scopeArgsList.length} scope(s), shard ${args.shardIndex + 1}/${args.shardCount}`);
   for (const scopeArgs of scopeArgsList) {
     console.error(`[operations-snapshot] scope campus=${scopeArgs.campus || 'all'} start=${scopeArgs.startDate || 'all'} end=${scopeArgs.endDate || 'all'} view=${scopeArgs.view || 'all'}`);
@@ -235,7 +306,9 @@ if (require.main === module) {
 
 module.exports = {
   buildCommonScopeArgs,
+  buildDailyScopeArgs,
   buildScope,
+  enumerateDays,
   parseArgs,
   run
 };

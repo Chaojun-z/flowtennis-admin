@@ -6,6 +6,7 @@ const {
   getOperationsCoachBaseRows
 } = require('../read-models/operations-source.js');
 const { OPERATIONS_SNAPSHOT_NOT_READY_CODE } = require('./operations-snapshot.js');
+const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
 
 function getOperationsDateRange(query) {
   return {
@@ -54,6 +55,22 @@ function getOperationsResultCacheKey(user = {}, scope = {}) {
     startDate: dateRange.startDate || '',
     endDate: dateRange.endDate || ''
   });
+}
+
+function buildOperationsFinanceScope(scope = {}, campuses = []) {
+  const dateRange = scope.dateRange || {};
+  const financeScope = {
+    campus: String(scope.campus || '').trim(),
+    campusName: String(scope.campusName || '').trim(),
+    startDate: String(dateRange.startDate || '').trim(),
+    endDate: String(dateRange.endDate || '').trim()
+  };
+  if (financeScope.campus && financeScope.campus !== 'all') {
+    const campusKey = normalizeCampusValue(financeScope.campus);
+    const campusRow = (campuses || []).find(row => [row?.code, row?.id, row?.name].map(normalizeCampusValue).includes(campusKey));
+    if (campusRow) financeScope.campusName = String(campusRow.name || campusRow.code || campusRow.id || financeScope.campusName).trim();
+  }
+  return financeScope;
 }
 
 async function buildOperationsPagePayload({
@@ -108,6 +125,7 @@ async function buildOperationsPagePayload({
   }, user);
   const customerLifecycleRows=buildCustomerLifecycleRows(scoped);
 
+  const financeScope = buildOperationsFinanceScope(scope, scoped.campuses || []);
   const scopedFinanceSnapshot = fullFinanceSnapshot || baseRows.cachedFinanceSnapshot || buildFinancePageSnapshot({
     campuses: scoped.campuses,
     students: scoped.students,
@@ -116,7 +134,7 @@ async function buildOperationsPagePayload({
     membershipOrders: scoped.membershipOrders,
     membershipAccounts: scoped.membershipAccounts,
     schedule: scoped.schedule
-  });
+  }, financeScope);
   const financeOverviewData = fullFinanceSnapshot || baseRows.cachedFinanceSnapshot
     ? scopedFinanceSnapshot.financeOverviewData
     : { ...(scopedFinanceSnapshot.financeOverviewData || {}), __partial: true };

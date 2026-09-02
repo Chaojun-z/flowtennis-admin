@@ -14,7 +14,8 @@ const {
 const { buildLeadPoolRows, buildRawLeadConversionMetrics, buildTeachingStudentViews, buildStandardLifecycleMetrics, buildScopedLifecycleSource } = require('../read-models/platform-metrics.js');
 const {
   buildFinanceOverviewSummaryFromRows,
-  buildFinanceOverviewSummaryFromData
+  buildFinanceOverviewSummaryFromData,
+  financeRowsInScope
 } = require('../read-models/finance-summary.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue, displayCampusName, buildCampusNameMap } = require('../../public/assets/scripts/core/campus.js');
@@ -73,6 +74,54 @@ function dateWithinRange(value, range = {}) {
   if (startDate && day < startDate) return false;
   if (endDate && day > endDate) return false;
   return true;
+}
+
+function campusScopeKeys(scope = {}, campuses = []) {
+  const rawValues = [scope.campus, scope.campusName, scope.campusCode]
+    .map(value => String(value || '').trim())
+    .filter(value => value && value !== 'all');
+  if (!rawValues.length) return new Set();
+  const keys = new Set(rawValues.map(normalizeCampusValue).filter(Boolean));
+  (campuses || []).forEach(row => {
+    const rowKeys = [row.id, row.code, row.name, row.campus, row.campusName]
+      .map(normalizeCampusValue)
+      .filter(Boolean);
+    if (rowKeys.some(key => keys.has(key))) rowKeys.forEach(key => keys.add(key));
+  });
+  return keys;
+}
+
+function rowCampusKeys(row = {}) {
+  return [
+    row.campus,
+    row.campusName,
+    row.campusCode,
+    row.sourceCampus,
+    row.sourceLocation,
+    row.location,
+    row.venue,
+    row.sourceVenue,
+    ...(parseArr(row.campusIds) || [])
+  ].map(normalizeCampusValue).filter(Boolean);
+}
+
+function rowMatchesCampusScope(row = {}, scopeKeys = new Set()) {
+  if (!scopeKeys || !scopeKeys.size) return true;
+  const keys = rowCampusKeys(row);
+  return keys.some(key => scopeKeys.has(key));
+}
+
+function scopeOperationsDataByCampus(data = {}, scope = {}, campuses = []) {
+  const keys = campusScopeKeys(scope, campuses);
+  if (!keys.size) return data;
+  const scoped = { ...data };
+  ['leads', 'students', 'purchases', 'membershipOrders', 'entitlementLedger', 'leadFollowups', 'schedule', 'courts', 'membershipAccounts'].forEach(key => {
+    if (Array.isArray(scoped[key])) scoped[key] = scoped[key].filter(row => rowMatchesCampusScope(row, keys));
+  });
+  if (Array.isArray(scoped.financeNormalizedRows)) {
+    scoped.financeNormalizedRows = financeRowsInScope(scoped.financeNormalizedRows, scope);
+  }
+  return scoped;
 }
 
 function dateRangeThroughDay(range = {}, day = '') {
@@ -962,6 +1011,10 @@ function isActiveScheduleForOperations(row = {}) {
   return !/取消|cancel|void|delete/i.test(String(row.status || row.systemStatus || row.state || ''));
 }
 
+function isPlannedCoachScheduleForOperations(row = {}) {
+  return isActiveScheduleForOperations(row) && !!scheduleCoachName(row);
+}
+
 function activeBusinessRow(row = {}) {
   const status = String(row.status || row.systemStatus || 'active').trim();
   return !['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status);
@@ -1244,6 +1297,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
   const period = coachPeriodInfo({ schedule, purchases: periodPurchases, dateRange, now });
   const availableHours = period.days ? coachAvailableHours({ days: period.days, now }) : selectedCoachAvailableHours(dateRange, now);
   const completedSchedule = (schedule || []).filter(row => isCompletedScheduleForOperations(row, now));
+  const plannedSchedule = (schedule || []).filter(isPlannedCoachScheduleForOperations);
   const trialCohorts = buildCoachTrialCohorts(completedSchedule, now);
   const grouped = new Map(activeCoaches
     .map(row => ({
@@ -1278,7 +1332,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
         { type: '陪打', hours: 0 }
       ]
     }]));
-  completedSchedule.forEach(row => {
+  plannedSchedule.forEach(row => {
     const coach = scheduleCoachName(row);
     if (!isBusinessCoachName(coach)) return;
     if (!grouped.has(coach)) grouped.set(coach, {
@@ -1319,12 +1373,18 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
     const mixType = normalizeCoachCourseType(row);
     const mix = current.courseMix.find(item => item.type === mixType);
     if (mix) mix.hours = normalizePreciseHours(mix.hours + hours);
+    const scheduleCampus = campusLabel(row.campus || row.campusName, campusLabels);
+    if (scheduleCampus) current.campusHours.set(scheduleCampus, normalizePreciseHours((current.campusHours.get(scheduleCampus) || 0) + hours));
+  });
+  completedSchedule.forEach(row => {
+    const coach = scheduleCoachName(row);
+    if (!isBusinessCoachName(coach) || !grouped.has(coach)) return;
+    if (isCoachOccupancySchedule(row)) return;
     if (isCoachFeedbackRequiredSchedule(row)) {
+      const current = grouped.get(coach);
       current.feedbackRequired += 1;
       if (scheduleHasFeedbackRecord(row, feedbacks)) current.feedbackCompleted += 1;
     }
-    const scheduleCampus = campusLabel(row.campus || row.campusName, campusLabels);
-    if (scheduleCampus) current.campusHours.set(scheduleCampus, normalizePreciseHours((current.campusHours.get(scheduleCampus) || 0) + hours));
   });
   (purchases || []).filter(isValidCoursePurchase).forEach(row => {
     const coach = purchaseCoachName(row);
@@ -2921,17 +2981,20 @@ function buildCourtMetricsForRange(data = {}, rangedData = {}, range = {}, now =
 function buildOperationsMetrics(data = {}, options = {}) {
   const now = options.now || new Date();
   const dateRange = normalizeDateRange(options.dateRange || {});
+  const metricScope = options.metricScope || {};
   const reportingDateRange = futureSafeDateRange(dateRange, now);
   const trendDateRange = operationsTrendDateRange(reportingDateRange, now);
   const selectedDateRangeActive = isDateRangeActive(reportingDateRange);
+  const selectedMetricScopeActive = campusScopeKeys(metricScope, data.campuses || []).size > 0;
   const previousRange = previousDateRange(reportingDateRange, now);
-  const rangedData = buildRangedOperationsData(data, reportingDateRange);
-  const trendRangedData = isDateRangeActive(trendDateRange) ? buildRangedOperationsData(data, trendDateRange) : rangedData;
-  const previousRangedData = previousRange ? buildRangedOperationsData(data, previousRange) : null;
+  const rangedData = scopeOperationsDataByCampus(buildRangedOperationsData(data, reportingDateRange), metricScope, data.campuses || []);
+  const coachReportingDateRange = isDateRangeActive(dateRange) ? dateRange : reportingDateRange;
+  const coachRangedData = scopeOperationsDataByCampus(buildRangedOperationsData(data, coachReportingDateRange), metricScope, data.campuses || []);
+  const trendRangedData = isDateRangeActive(trendDateRange) ? scopeOperationsDataByCampus(buildRangedOperationsData(data, trendDateRange), metricScope, data.campuses || []) : rangedData;
+  const previousRangedData = previousRange ? scopeOperationsDataByCampus(buildRangedOperationsData(data, previousRange), metricScope, data.campuses || []) : null;
   const canComparePrevious = !!(previousRange && previousRangedData && rangeHasAnyActivity(previousRangedData, previousRange));
   const financeOverviewData = rangedData.financeOverviewData || {};
   const customerLifecycleRows = lifecycleRowsForData(data);
-  const metricScope = options.metricScope || {};
   const metricLifecycleSource = buildScopedLifecycleSource({
     ...rangedData,
     customerLifecycleRows
@@ -2974,13 +3037,13 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const allCoachFinancePurchases = financeRowsAsCoachPurchases(data.financeNormalizedRows || [], coachFinanceAttributionContext);
   const coachRows = buildCoachRows({
     coaches: data.coaches || [],
-    schedule: rangedData.schedule || [],
+    schedule: coachRangedData.schedule || [],
     feedbacks: data.feedbacks || [],
     purchases: coachFinancePurchases,
     allPurchases: allCoachFinancePurchases,
     periodPurchases: rangedData.purchases || [],
     customerLifecycleRows,
-    dateRange: reportingDateRange,
+    dateRange: coachReportingDateRange,
     campuses: data.campuses || [],
     now
   });
@@ -3010,7 +3073,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const financeOverviewValues = selectFinanceOverviewValues({
     financeRowsOverview,
     financeOverviewData,
-    selectedDateRangeActive
+    selectedDateRangeActive: selectedDateRangeActive || selectedMetricScopeActive
   });
   const totalIncome = financeOverviewValues.totalIncome;
   const recognizedRevenue = financeOverviewValues.recognizedRevenue;
@@ -3024,9 +3087,9 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const coachTrialConverted = coachRows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
   const coachOldCustomerBase = coachRows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
   const coachRenewalCount = coachRows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
-  const coachPeriod = coachRows.find(row => row.period)?.period || coachPeriodInfo({ schedule: rangedData.schedule || [], purchases: rangedData.purchases || [], dateRange: reportingDateRange, now });
+  const coachPeriod = coachRows.find(row => row.period)?.period || coachPeriodInfo({ schedule: coachRangedData.schedule || [], purchases: rangedData.purchases || [], dateRange: coachReportingDateRange, now });
   const financeSnapshotOverview = buildFinanceOverviewSummaryFromData(financeOverviewData);
-  const useRowsRevenueMix = selectedDateRangeActive || (financeRowsOverview.hasRows && (financeOverviewData.__partial || !financeSnapshotOverview.hasRows));
+  const useRowsRevenueMix = selectedDateRangeActive || selectedMetricScopeActive || (financeRowsOverview.hasRows && (financeOverviewData.__partial || !financeSnapshotOverview.hasRows));
   const revenueMix = (useRowsRevenueMix ? [
     { name: '课程收入', value: financeOverviewValues.courseIncome },
     { name: '订场收入', value: financeOverviewValues.bookingIncome },

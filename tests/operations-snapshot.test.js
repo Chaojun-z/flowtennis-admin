@@ -6,6 +6,8 @@ const {
   SNAPSHOT_BUNDLE_INLINE_LIMIT,
   SNAPSHOT_SOURCE_MARKER_ID,
   buildOperationsSnapshot,
+  cloneDailyScope,
+  composeCoachSnapshotPayloads,
   createOperationsSnapshotLoader,
   createOperationsSnapshotSync,
   metaIdForScopeKey,
@@ -13,7 +15,7 @@ const {
   taskIdForScopeKey
 } = require('../server/page-data/operations-snapshot.js');
 const { getOperationsRowsCacheKey } = require('../server/read-models/operations-source.js');
-const { buildCommonScopeArgs } = require('../scripts/rebuild-operations-snapshot.js');
+const { buildCommonScopeArgs, buildDailyScopeArgs } = require('../scripts/rebuild-operations-snapshot.js');
 
 const user = { id: 'admin-1', role: 'admin', dataScope: '', campusIds: [] };
 const augustScope = {
@@ -69,6 +71,19 @@ async function main() {
     shardA.length + shardB.length,
     commonCampusScopes.length,
     '校区日期快照必须能分片并行生成，避免单个定时任务串行超时'
+  );
+  const dailyScopes = buildDailyScopeArgs(
+    { write: true, view: 'coach', dailyScopes: true },
+    { startDate: '2026-09-01', endDate: '2026-09-03' },
+    [{ id: 'shunyi_mapo', name: '顺义马坡' }]
+  );
+  assert.ok(
+    dailyScopes.some((row) => row.startDate === '2026-09-02' && row.endDate === '2026-09-02' && row.view === 'coach'),
+    '定时快照必须能生成教练日快照，支撑任意日期段 1s 组合返回'
+  );
+  assert.ok(
+    dailyScopes.some((row) => row.campus === 'shunyi_mapo' && row.startDate === '2026-09-03' && row.endDate === '2026-09-03'),
+    '教练日快照必须覆盖校区维度，校区 + 自定义日期筛选不能等待现场生成'
   );
   const payload = {
     campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
@@ -133,6 +148,71 @@ async function main() {
     (err) => err.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE,
     '7 月没有对应快照时不能返回 8 月朝珺数据'
   );
+
+  const septemberRangeScope = {
+    ...augustCoachScope,
+    dateRange: { startDate: '2026-09-01', endDate: '2026-09-02' },
+    metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-09-01', endDate: '2026-09-02' }
+  };
+  [
+    {
+      day: '2026-09-01',
+      usedHours: 2,
+      revenue: 1000
+    },
+    {
+      day: '2026-09-02',
+      usedHours: 3,
+      revenue: 1500
+    }
+  ].forEach(item => {
+    const dailyScope = cloneDailyScope(septemberRangeScope, item.day);
+    const dailyBuilt = buildOperationsSnapshot({
+      payload: {
+        campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
+        operations: {
+          overview: { cards: { totalIncome: { title: '总收入', value: item.revenue, unit: '元' }, recognizedRevenue: { title: '已入账', value: 0, unit: '元' }, pendingRevenue: { title: '未入账', value: item.revenue, unit: '元' }, tradeCount: { title: '成交笔数', value: 1, unit: '笔' } } },
+          coach: {
+            rows: [{
+              coach: '朝珺教练',
+              campus: '顺义马坡',
+              usedHours: item.usedHours,
+              teachingHours: item.usedHours,
+              teachingStudentCount: item.usedHours,
+              availableHours: 6.9,
+              revenue: item.revenue,
+              trialBase: 0,
+              trialConverted: 0,
+              feedbackRequired: 0,
+              feedbackCompleted: 0,
+              oldCustomerBase: 0,
+              renewalCount: 0,
+              courseMix: [{ type: '私教课', hours: item.usedHours }],
+              campusDistribution: [{ campusName: '顺义马坡', hours: item.usedHours }]
+            }]
+          }
+        },
+        generatedAt: `${item.day}T00:00:00.000Z`
+      },
+      user,
+      scope: dailyScope,
+      batchId: `daily-${item.day}`,
+      completedAt: `${item.day}T00:00:00.000Z`,
+      sourceSnapshotAt: `${item.day}T00:00:00.000Z`
+    });
+    tableRows.set(dailyBuilt.meta.id, dailyBuilt.meta);
+    tableRows.set(dailyBuilt.bundle.id, dailyBuilt.bundle);
+  });
+  const composedView = await loader({ user, scope: septemberRangeScope });
+  assert.strictEqual(composedView.snapshot.source, 'operations-coach-daily-snapshot', '自定义日期段缺少精确范围快照时必须走教练日快照组合');
+  assert.strictEqual(composedView.operations.coach.cards.usedHours.value, 5, '日快照组合后的课时必须等于所选日期内每天已排课时之和');
+  assert.strictEqual(composedView.operations.overview.cards.totalIncome.value, 2500, '顶部数据必须随筛选日期范围由日快照组合');
+
+  const directComposed = composeCoachSnapshotPayloads([
+    { operations: { overview: { cards: { totalIncome: { value: 1 } } }, coach: { rows: [{ coach: 'A教练', usedHours: 1, teachingHours: 1, availableHours: 6.9, revenue: 10, courseMix: [{ type: '私教课', hours: 1 }] }] } } },
+    { operations: { overview: { cards: { totalIncome: { value: 2 } } }, coach: { rows: [{ coach: 'A教练', usedHours: 2, teachingHours: 2, availableHours: 6.9, revenue: 20, courseMix: [{ type: '私教课', hours: 2 }] }] } } }
+  ], septemberRangeScope);
+  assert.strictEqual(directComposed.operations.coach.rows[0].usedHours, 3, '教练日快照组合函数必须按教练合并课时');
 
   tableRows.set(augustBuilt.meta.id, {
     ...augustBuilt.meta,

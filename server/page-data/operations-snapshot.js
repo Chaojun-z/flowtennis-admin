@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const zlib = require('zlib');
 const { getOperationsRowsCacheKey } = require('../read-models/operations-source.js');
 
-const OPERATIONS_SNAPSHOT_VERSION = 'operations-page-snapshot-v1';
+const OPERATIONS_SNAPSHOT_VERSION = 'operations-page-snapshot-v2';
 const OPERATIONS_SNAPSHOT_NOT_READY_CODE = 'OPERATIONS_SNAPSHOT_NOT_READY';
 const SNAPSHOT_SCOPE_INDEX_ID = 'active:scope-index';
 const SNAPSHOT_SOURCE_MARKER_ID = 'active:source-marker';
@@ -77,6 +77,255 @@ function taskIdForScopeKey(key) {
 function timestampMs(value) {
   const time = Date.parse(text(value));
   return Number.isFinite(time) ? time : 0;
+}
+
+function dateKey(value) {
+  const textValue = text(value);
+  return /^\d{4}-\d{2}-\d{2}/.test(textValue) ? textValue.slice(0, 10) : '';
+}
+
+function dateKeyUtcMs(day) {
+  const match = String(day || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function addUtcDays(day, offset) {
+  const ms = dateKeyUtcMs(day);
+  if (ms == null) return '';
+  return new Date(ms + offset * 86400000).toISOString().slice(0, 10);
+}
+
+function dateRangeDays(range = {}) {
+  const startDate = dateKey(range.startDate || range.start);
+  const endDate = dateKey(range.endDate || range.end);
+  if (!startDate || !endDate) return [];
+  const start = dateKeyUtcMs(startDate);
+  const end = dateKeyUtcMs(endDate);
+  if (start == null || end == null || end < start) return [];
+  const count = Math.floor((end - start) / 86400000) + 1;
+  return Array.from({ length: count }, (_, index) => addUtcDays(startDate, index));
+}
+
+function cloneDailyScope(scope = {}, day = '') {
+  const daily = {
+    ...scope,
+    view: 'coach',
+    dateRange: { startDate: day, endDate: day },
+    metricScope: {
+      ...(scope.metricScope || {}),
+      startDate: day,
+      endDate: day
+    }
+  };
+  if (scope.campus) daily.metricScope.campus = scope.campus;
+  if (scope.campusName) daily.metricScope.campusName = scope.campusName;
+  return daily;
+}
+
+function canComposeCoachDailyScope(scope = {}) {
+  const range = scope.dateRange || scope || {};
+  return text(scope.view) === 'coach' && dateRangeDays(range).length > 1;
+}
+
+function emptyCoachCard(title, unit, value = 0) {
+  return { title, value, unit };
+}
+
+function roundMetric(value, digits = 1) {
+  const base = 10 ** digits;
+  return Math.round((Number(value) || 0) * base) / base;
+}
+
+function moneyMetric(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function rateMetric(numerator, denominator) {
+  return denominator ? roundMetric((Number(numerator) || 0) * 100 / denominator, 1) : 0;
+}
+
+function mergeCourseMix(target = [], source = []) {
+  const byType = new Map((target || []).map(row => [row.type, { ...row, hours: Number(row.hours) || 0 }]));
+  (source || []).forEach(row => {
+    const type = text(row.type);
+    if (!type) return;
+    const current = byType.get(type) || { type, hours: 0 };
+    current.hours = roundMetric((Number(current.hours) || 0) + (Number(row.hours) || 0), 2);
+    byType.set(type, current);
+  });
+  return [...byType.values()];
+}
+
+function mergeCampusDistribution(target = [], source = []) {
+  const byCampus = new Map((target || []).map(row => [row.campusName, { ...row, hours: Number(row.hours) || 0 }]));
+  (source || []).forEach(row => {
+    const campusName = text(row.campusName);
+    if (!campusName) return;
+    const current = byCampus.get(campusName) || { campusName, hours: 0 };
+    current.hours = roundMetric((Number(current.hours) || 0) + (Number(row.hours) || 0), 2);
+    byCampus.set(campusName, current);
+  });
+  return [...byCampus.values()].sort((a, b) => b.hours - a.hours || a.campusName.localeCompare(b.campusName, 'zh-Hans-CN'));
+}
+
+function utilizationBandForRate(rateValue) {
+  const value = Number(rateValue) || 0;
+  if (value < 20) return { band: '0%-20%', label: '闲置', color: '#E05252' };
+  if (value < 40) return { band: '20%-40%', label: '偏低', color: '#D89135' };
+  if (value < 60) return { band: '40%-60%', label: '观察', color: '#8EA0B8' };
+  if (value < 80) return { band: '60%-80%', label: '健康', color: '#7CBF8A' };
+  return { band: '80%-100%', label: '高效', color: '#2E8B6D' };
+}
+
+const COACH_UTILIZATION_BANDS = [
+  { band: '0%-20%', label: '闲置', color: '#E05252' },
+  { band: '20%-40%', label: '偏低', color: '#D89135' },
+  { band: '40%-60%', label: '观察', color: '#8EA0B8' },
+  { band: '60%-80%', label: '健康', color: '#7CBF8A' },
+  { band: '80%-100%', label: '高效', color: '#2E8B6D' }
+];
+
+function composeCoachSnapshotPayloads(payloads = [], scope = {}) {
+  const first = payloads.find(Boolean) || {};
+  const byCoach = new Map();
+  (payloads || []).forEach(payload => {
+    ((payload?.operations?.coach?.rows) || []).forEach(row => {
+      const coach = text(row.coach || row.coachName);
+      if (!coach) return;
+      const current = byCoach.get(coach) || {
+        ...row,
+        coach,
+        usedHours: 0,
+        teachingHours: 0,
+        teachingAttendanceCount: 0,
+        teachingStudentCount: 0,
+        teachingUniqueStudentCount: 0,
+        lessonCount: 0,
+        availableHours: 0,
+        revenue: 0,
+        trialBase: 0,
+        trialConverted: 0,
+        feedbackCompleted: 0,
+        feedbackRequired: 0,
+        oldCustomerBase: 0,
+        renewalCount: 0,
+        courseMix: [],
+        campusDistribution: []
+      };
+      current.usedHours = roundMetric(current.usedHours + (Number(row.usedHours) || 0), 2);
+      current.teachingHours = roundMetric(current.teachingHours + (Number(row.teachingHours) || 0), 2);
+      current.teachingAttendanceCount += Number(row.teachingAttendanceCount ?? row.teachingStudentCount) || 0;
+      current.teachingStudentCount += Number(row.teachingStudentCount ?? row.teachingAttendanceCount) || 0;
+      current.teachingUniqueStudentCount += Number(row.teachingUniqueStudentCount) || 0;
+      current.lessonCount += Number(row.lessonCount) || 0;
+      current.availableHours = roundMetric(current.availableHours + (Number(row.availableHours) || 0), 2);
+      current.revenue = moneyMetric(current.revenue + (Number(row.revenue) || 0));
+      current.trialBase += Number(row.trialBase) || 0;
+      current.trialConverted += Number(row.trialConverted) || 0;
+      current.feedbackCompleted += Number(row.feedbackCompleted) || 0;
+      current.feedbackRequired += Number(row.feedbackRequired) || 0;
+      current.oldCustomerBase += Number(row.oldCustomerBase) || 0;
+      current.renewalCount += Number(row.renewalCount) || 0;
+      current.courseMix = mergeCourseMix(current.courseMix, row.courseMix || []);
+      current.campusDistribution = mergeCampusDistribution(current.campusDistribution, row.campusDistribution || []);
+      byCoach.set(coach, current);
+    });
+  });
+  const rows = [...byCoach.values()].map(row => {
+    const usedHours = roundMetric(row.usedHours, 1);
+    const availableHours = roundMetric(row.availableHours, 1);
+    const courseMix = (row.courseMix || []).map(item => ({ ...item, hours: roundMetric(item.hours, 1), share: rateMetric(item.hours, usedHours) }));
+    const campusDistribution = row.campusDistribution || [];
+    const utilizationRate = availableHours ? rateMetric(usedHours, availableHours) : 0;
+    return {
+      ...row,
+      usedHours,
+      teachingHours: roundMetric(row.teachingHours, 1),
+      availableHours,
+      revenue: moneyMetric(row.revenue),
+      feedbackCompletionRate: rateMetric(row.feedbackCompleted, row.feedbackRequired),
+      utilizationRate,
+      trialConversionRate: rateMetric(row.trialConverted, row.trialBase),
+      renewalRate: rateMetric(row.renewalCount, row.oldCustomerBase),
+      courseMix,
+      campusDistribution,
+      campusDistributionText: campusDistribution.length ? campusDistribution.map(item => `${item.campusName} ${Number.isInteger(item.hours) ? item.hours : roundMetric(item.hours, 1)}`).join(' | ') : '-',
+      utilizationBand: utilizationBandForRate(utilizationRate)
+    };
+  }).sort((a, b) => (Number(a.sortOrder) || 9999) - (Number(b.sortOrder) || 9999) || b.revenue - a.revenue || b.usedHours - a.usedHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
+  const usedHours = roundMetric(rows.reduce((sum, row) => sum + (Number(row.usedHours) || 0), 0), 1);
+  const availableHours = roundMetric(rows.reduce((sum, row) => sum + (Number(row.availableHours) || 0), 0), 1);
+  const revenue = moneyMetric(rows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0));
+  const trialBase = rows.reduce((sum, row) => sum + (Number(row.trialBase) || 0), 0);
+  const trialConverted = rows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
+  const oldCustomerBase = rows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
+  const renewalCount = rows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
+  let cumulativeRevenue = 0;
+  const revenueParetoRows = rows.map(row => {
+    cumulativeRevenue = moneyMetric(cumulativeRevenue + (Number(row.revenue) || 0));
+    return {
+      coach: row.coach,
+      revenue: row.revenue,
+      revenueShare: rateMetric(row.revenue, revenue),
+      cumulativeShare: rateMetric(cumulativeRevenue, revenue)
+    };
+  });
+  const overviewCards = (payloads || []).map(payload => payload?.operations?.overview?.cards || {});
+  const sumOverviewCard = (key, title, unit) => emptyCoachCard(title, unit, moneyMetric(overviewCards.reduce((sum, cards) => sum + (Number(cards?.[key]?.value) || 0), 0)));
+  return {
+    campuses: first.campuses || [],
+    operations: {
+      overview: {
+        cards: {
+          totalIncome: sumOverviewCard('totalIncome', '总收入', '元'),
+          recognizedRevenue: sumOverviewCard('recognizedRevenue', '已入账', '元'),
+          pendingRevenue: sumOverviewCard('pendingRevenue', '未入账', '元'),
+          tradeCount: emptyCoachCard('成交笔数', '笔', overviewCards.reduce((sum, cards) => sum + (Number(cards?.tradeCount?.value) || 0), 0))
+        }
+      },
+      coach: {
+        metricSource: 'standard-course-lifecycle',
+        cards: {
+          activeCoaches: emptyCoachCard('在岗教练', '人', rows.length),
+          availableHoursThisWeek: emptyCoachCard('本周可排工时', '小时', availableHours),
+          usedHours: emptyCoachCard('已排课时', '小时', usedHours),
+          utilizationRate: emptyCoachCard('工时利用率', '%', availableHours ? rateMetric(usedHours, availableHours) : 0),
+          revenue: emptyCoachCard('归属课程实收', '元', revenue),
+          trialConversionRate: emptyCoachCard('体验转化率', '%', rateMetric(trialConverted, trialBase)),
+          renewalRate: emptyCoachCard('老客续费率', '%', rateMetric(renewalCount, oldCustomerBase))
+        },
+        rows,
+        period: { dateRange: scope.dateRange || {}, days: dateRangeDays(scope.dateRange || {}).length },
+        trends: payloads.flatMap(payload => payload?.operations?.coach?.trends || []).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))),
+        trendMeta: { source: 'daily-snapshot-compose' },
+        trendDiagnostics: [],
+        trendComparisons: {},
+        utilizationBands: COACH_UTILIZATION_BANDS.map(band => ({ ...band, count: rows.filter(row => row.utilizationBand?.band === band.band).length })),
+        revenueParetoRows,
+        courseMixRows: rows.map(row => ({
+          coach: row.coach,
+          trialHours: row.courseMix.find(item => item.type === '体验课')?.hours || 0,
+          privateHours: row.courseMix.find(item => item.type === '私教课')?.hours || 0,
+          smallGroupHours: row.courseMix.find(item => item.type === '小班课')?.hours || 0,
+          specialHours: row.courseMix.find(item => item.type === '专项课')?.hours || 0,
+          companionHours: row.courseMix.find(item => item.type === '陪打')?.hours || 0
+        })),
+        capabilityRows: rows.map(row => ({
+          coach: row.coach,
+          trialConversionRate: row.trialConversionRate,
+          trialBase: row.trialBase,
+          trialConverted: row.trialConverted,
+          renewalRate: row.renewalRate,
+          oldCustomerBase: row.oldCustomerBase,
+          renewalCount: row.renewalCount,
+          revenue: row.revenue
+        })),
+        alerts: []
+      }
+    },
+    generatedAt: new Date().toISOString()
+  };
 }
 
 function sourceChangedAfterSnapshot(sourceMarker, meta) {
@@ -198,48 +447,77 @@ function createOperationsSnapshotLoader(deps = {}) {
 
   return async function loadOperationsSnapshot({ user = {}, scope = {}, forceFresh = false, allowRefreshing = false } = {}) {
     const key = scopeKey(user, scope);
-    const meta = await readRow(metaIdForScopeKey(key));
-    const sourceMarker = meta?.sourceChangedAt ? null : await readRow(SNAPSHOT_SOURCE_MARKER_ID).catch((err) => {
-        if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) return null;
-        throw err;
-      });
-    if (meta?.status !== 'published' || meta?.snapshotVersion !== OPERATIONS_SNAPSHOT_VERSION || meta.scopeKey !== key || !meta.bundleId || !meta.batchId || !meta.completedAt || !meta.sourceSnapshotAt || !meta.checksum) {
-      throw snapshotNotReadyError('经营分析快照未发布或契约不完整');
-    }
-    const refreshing = sourceChangedAfterSnapshot(sourceMarker, meta);
-    if (refreshing && !allowRefreshing) {
-      throw snapshotNotReadyError('经营分析快照正在刷新，请稍后重试');
-    }
-    const cacheKey = `${meta.bundleId}:${meta.checksum}`;
-    let payload = null;
-    if (!forceFresh && memory.has(cacheKey)) {
-      payload = memory.get(cacheKey);
-    } else {
-      let encodedPayload = meta.inlinePayload || '';
-      if (!encodedPayload) {
-        const bundle = await readRow(meta.bundleId);
-        if ((!bundle?.payload && !Array.isArray(bundle?.chunkIds)) || bundle?.codec !== 'gzip-base64-json' || bundle.scopeKey !== key) {
-          throw snapshotNotReadyError('经营分析快照包无效');
-        }
-        encodedPayload = bundle.payload || '';
+    const readPublishedPayload = async (targetScope, targetKey) => {
+      const meta = await readRow(metaIdForScopeKey(targetKey));
+      const sourceMarker = meta?.sourceChangedAt ? null : await readRow(SNAPSHOT_SOURCE_MARKER_ID).catch((err) => {
+          if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) return null;
+          throw err;
+        });
+      if (meta?.status !== 'published' || meta?.snapshotVersion !== OPERATIONS_SNAPSHOT_VERSION || meta.scopeKey !== targetKey || !meta.bundleId || !meta.batchId || !meta.completedAt || !meta.sourceSnapshotAt || !meta.checksum) {
+        throw snapshotNotReadyError('经营分析快照未发布或契约不完整');
+      }
+      const refreshing = sourceChangedAfterSnapshot(sourceMarker, meta);
+      if (refreshing && !allowRefreshing) {
+        throw snapshotNotReadyError('经营分析快照正在刷新，请稍后重试');
+      }
+      const cacheKey = `${meta.bundleId}:${meta.checksum}`;
+      let payload = null;
+      if (!forceFresh && memory.has(cacheKey)) {
+        payload = memory.get(cacheKey);
+      } else {
+        let encodedPayload = meta.inlinePayload || '';
         if (!encodedPayload) {
-          const chunkRows = await Promise.all((bundle.chunkIds || []).map((id) => readRow(id)));
-          if (chunkRows.length !== Number(bundle.chunkCount || 0) || chunkRows.some((row) => !row?.payload || row.bundleId !== bundle.id || row.scopeKey !== key)) {
-            throw snapshotNotReadyError('经营分析快照分片不完整');
+          const bundle = await readRow(meta.bundleId);
+          if ((!bundle?.payload && !Array.isArray(bundle?.chunkIds)) || bundle?.codec !== 'gzip-base64-json' || bundle.scopeKey !== targetKey) {
+            throw snapshotNotReadyError('经营分析快照包无效');
           }
-          encodedPayload = chunkRows
-            .sort((left, right) => Number(left.index || 0) - Number(right.index || 0))
-            .map((row) => row.payload)
-            .join('');
+          encodedPayload = bundle.payload || '';
+          if (!encodedPayload) {
+            const chunkRows = await Promise.all((bundle.chunkIds || []).map((id) => readRow(id)));
+            if (chunkRows.length !== Number(bundle.chunkCount || 0) || chunkRows.some((row) => !row?.payload || row.bundleId !== bundle.id || row.scopeKey !== targetKey)) {
+              throw snapshotNotReadyError('经营分析快照分片不完整');
+            }
+            encodedPayload = chunkRows
+              .sort((left, right) => Number(left.index || 0) - Number(right.index || 0))
+              .map((row) => row.payload)
+              .join('');
+          }
         }
+        payload = decodePayload(encodedPayload);
+        const actualChecksum = checksumPayload(payload);
+        if (actualChecksum !== meta.checksum) {
+          throw snapshotNotReadyError('经营分析快照 checksum 校验失败');
+        }
+        memory.set(cacheKey, payload);
       }
-      payload = decodePayload(encodedPayload);
-      const actualChecksum = checksumPayload(payload);
-      if (actualChecksum !== meta.checksum) {
-        throw snapshotNotReadyError('经营分析快照 checksum 校验失败');
-      }
-      memory.set(cacheKey, payload);
+      return { meta, payload, refreshing };
+    };
+    let loaded;
+    try {
+      loaded = await readPublishedPayload(scope, key);
+    } catch (err) {
+      if (err?.code !== OPERATIONS_SNAPSHOT_NOT_READY_CODE || !canComposeCoachDailyScope(scope)) throw err;
+      const days = dateRangeDays(scope.dateRange || {});
+      const dailyPayloads = await Promise.all(days.map(async day => {
+        const dailyScope = cloneDailyScope(scope, day);
+        const dailyKey = scopeKey(user, dailyScope);
+        return (await readPublishedPayload(dailyScope, dailyKey)).payload;
+      }));
+      return {
+        ...composeCoachSnapshotPayloads(dailyPayloads, scope),
+        snapshot: {
+          source: 'operations-coach-daily-snapshot',
+          snapshotVersion: OPERATIONS_SNAPSHOT_VERSION,
+          batchId: `daily-compose:${days[0]}:${days[days.length - 1]}`,
+          scopeKey: key,
+          refreshing: false,
+          completedAt: new Date().toISOString(),
+          sourceSnapshotAt: '',
+          checksum: checksumPayload(dailyPayloads)
+        }
+      };
     }
+    const { meta, payload, refreshing } = loaded;
     return {
       ...(payload || {}),
       snapshot: {
@@ -474,7 +752,10 @@ module.exports = {
   SNAPSHOT_REBUILD_TASK_PREFIX,
   SNAPSHOT_BUNDLE_INLINE_LIMIT,
   buildOperationsSnapshot,
+  canComposeCoachDailyScope,
   checksumPayload,
+  cloneDailyScope,
+  composeCoachSnapshotPayloads,
   createOperationsSnapshotLoader,
   createOperationsSnapshotSync,
   decodePayload,

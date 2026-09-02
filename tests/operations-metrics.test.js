@@ -926,18 +926,18 @@ const coachDashboardMetrics = buildOperationsMetrics({
 const coachA = coachDashboardMetrics.coach.rows.find(row => row.coach === 'A教练');
 const coachB = coachDashboardMetrics.coach.rows.find(row => row.coach === 'B教练');
 assert.strictEqual(coachDashboardMetrics.coach.rows.some(row => row.coach === 'C教练'), false, 'coach dashboard should exclude inactive coaches');
-assert.strictEqual(coachA.availableHours, 27.4, 'coach available hours should use the real selected period up to today');
-assert.strictEqual(coachA.usedHours, 3, 'coach utilization should only include completed effective services in the selected period');
-assert.strictEqual(coachA.teachingHours, 3, 'coach teaching hours should only include completed non-companion lessons');
-assert.strictEqual(coachA.teachingStudentCount, 2, 'coach detail rows should expose selected-period unique teaching students');
+assert.strictEqual(coachA.availableHours, 48, 'coach available hours should use the full selected period for planned schedule utilization');
+assert.strictEqual(coachA.usedHours, 5.5, 'coach scheduled hours should match active planned lessons in the selected period, including future arranged lessons');
+assert.strictEqual(coachA.teachingHours, 5.5, 'coach teaching hours should match active planned non-occupancy lessons in the selected period');
+assert.strictEqual(coachA.teachingStudentCount, 5, 'coach detail rows should expose selected-period planned lesson attendances');
 assert.strictEqual(coachA.feedbackCompleted, 1, 'coach detail rows should count completed feedback by schedule record');
-assert.strictEqual(coachA.feedbackRequired, 2, 'coach detail rows should count one required feedback per completed valid schedule record');
+assert.strictEqual(coachA.feedbackRequired, 2, 'coach feedback denominator should only include completed feedback-required teaching schedules');
 assert.deepStrictEqual(
   coachA.usedHoursComparison,
-  { mode: 'previous_period', currentValue: 3, previousValue: 1, changeValue: 2, changeRate: 200 },
+  { mode: 'previous_period', currentValue: 5.5, previousValue: 1, changeValue: 4.5, changeRate: 450 },
   'coach detail rows should expose previous-period work-hour comparison for the table'
 );
-assert.strictEqual(coachA.utilizationRate, 10.9, 'coach utilization should divide completed work hours by the real selected-period available hours');
+assert.strictEqual(coachA.utilizationRate, 11.5, 'coach utilization should divide planned scheduled hours by the full selected-period available hours');
 assert.strictEqual(coachA.revenue, 6200, 'coach revenue should use standard finance course receipts inside the selected period');
 assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion should read the unified lifecycle rows');
 assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
@@ -949,8 +949,8 @@ assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalNumerat
 assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalDenominator, 2, 'conversion renewal should expose selected-period paid-student denominator');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '体验课')?.hours, 1, 'coach course mix should include trial lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '私教课')?.hours, 2, 'coach course mix should include private lesson hours');
-assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 0, 'coach course mix should exclude pending group lesson hours');
-assert.strictEqual(coachA.courseMix.find(row => row.type === '陪打')?.hours, 0, 'coach course mix should exclude not-yet-ended companion work');
+assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 1.5, 'coach course mix should include selected-period planned group lesson hours');
+assert.strictEqual(coachA.courseMix.find(row => row.type === '陪打')?.hours, 1, 'coach workload course mix should include selected-period planned companion work');
 assert.strictEqual(coachDashboardMetrics.conversion.cards.convertedLeads.value, 1, 'companion lead should count as converted lead');
 assert.strictEqual(coachDashboardMetrics.conversion.courseFunnel[1].count, 3, 'companion lead should not increase the existing course-chain student count');
 assert.strictEqual(coachB.revenue, 0, 'coach revenue should exclude receipts after today');
@@ -958,6 +958,7 @@ assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6200, 'coach
 assert.ok(Array.isArray(coachDashboardMetrics.coach.trends), 'coach dashboard should expose selected-period KPI trends');
 assert.strictEqual(coachDashboardMetrics.coach.trends.length, 4, 'coach KPI trends should cover each real selected day up to today');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 9.7, 'coach utilization trend should use cumulative selected-period utilization through the trend day');
+assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.utilizationRate, 11.9, 'coach utilization trend should include same-day planned schedules while keeping future dates out of the trend window');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use the real day bucket finance course receipts');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-01')?.activeCoaches, 0, 'coach active trend should count coaches with real daily work or receipts, not all roster coaches');
 const externalCampusCoachMetrics = buildOperationsMetrics({
@@ -1282,12 +1283,12 @@ const selectedWeekCoachCompletionMetrics = buildOperationsMetrics({
   dateRange: { startDate: '2026-07-27', endDate: '2026-08-02' }
 });
 const selectedWeekSiren = selectedWeekCoachCompletionMetrics.coach.rows.find(row => row.coach === 'Siren 教练');
-assert.strictEqual(selectedWeekSiren?.usedHours, 4.25, 'coach workload must include completed teaching and companion services while excluding occupancy and without rounding lesson decimals');
-assert.strictEqual(selectedWeekSiren?.teachingHours, 4.25, 'coach lesson hours must include completed companion services and exclude occupancy, future, and not-yet-ended schedules without rounding lesson decimals');
-assert.strictEqual(selectedWeekSiren?.teachingStudentCount, 4, 'coach lesson student count must use completed lesson attendance including companion services');
+assert.strictEqual(selectedWeekSiren?.usedHours, 7.75, 'coach workload must include all selected-period planned teaching and companion services while excluding occupancy');
+assert.strictEqual(selectedWeekSiren?.teachingHours, 7.75, 'coach lesson hours must include planned companion services and future schedules while excluding occupancy');
+assert.strictEqual(selectedWeekSiren?.teachingStudentCount, 6, 'coach lesson student count must use selected-period planned lesson attendances');
 assert.strictEqual(selectedWeekSiren?.feedbackRequired, 3, 'coach feedback denominator must only include completed feedback-required teaching schedules');
 assert.strictEqual(selectedWeekSiren?.feedbackCompleted, 1, 'coach feedback numerator must only count submitted feedback on completed schedules');
-assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '私教课')?.hours, 1, 'coach private course mix must not include later-today or future schedules');
+assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '私教课')?.hours, 4.5, 'coach private course mix must include later-today and future schedules in the selected period');
 assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '专项课')?.hours, 1.25, 'coach course mix must keep special courses as an independent teaching type without rounding lesson decimals');
 assert.strictEqual(selectedWeekSiren?.courseMix.find(item => item.type === '陪打')?.hours, 1, 'coach workload course mix should keep completed companion services');
 assert.strictEqual(selectedWeekSiren?.courseMix.some(item => item.type === '占场'), false, 'coach occupancy must not appear in course mix');
@@ -1451,6 +1452,43 @@ assert.strictEqual(
 assert.deepStrictEqual(rangedSnapshotGuardMetrics.overview.trends.map(row => row.date), ['2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19', '2026-06-20', '2026-06-21', '2026-06-22'], 'future selected dates should be clipped to today while preserving a real trend window for overview trends');
 assert.deepStrictEqual(rangedSnapshotGuardMetrics.court.trends.map(row => row.date), ['2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19', '2026-06-20', '2026-06-21', '2026-06-22'], 'future selected dates should be clipped to today while preserving a real trend window for court trends');
 assert.deepStrictEqual(rangedSnapshotGuardMetrics.coach.trends.map(row => row.date), ['2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19', '2026-06-20', '2026-06-21', '2026-06-22'], 'future selected dates should be clipped to today while preserving a real trend window for coach trends');
+
+const campusOnlyScopeMetrics = buildOperationsMetrics({
+  campuses: [
+    { id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' },
+    { id: 'chaojun', code: 'chaojun', name: '朝珺私教' }
+  ],
+  coaches: [
+    { id: 'mapo-coach', name: '马坡教练', status: 'active', campus: 'shunyi_mapo' },
+    { id: 'chaojun-coach', name: '朝珺教练', status: 'active', campus: 'chaojun' }
+  ],
+  leads: [],
+  students: [],
+  purchases: [],
+  membershipOrders: [],
+  courts: [],
+  membershipAccounts: [],
+  schedule: [
+    { id: 'mapo-schedule', coach: '马坡教练', studentId: 'mapo-student', startTime: '2026-09-02 09:00:00', endTime: '2026-09-02 10:00:00', status: '已排课', courseType: '私教课', campus: 'shunyi_mapo' },
+    { id: 'chaojun-schedule', coach: '朝珺教练', studentId: 'chaojun-student', startTime: '2026-09-02 10:00:00', endTime: '2026-09-02 12:00:00', status: '已排课', courseType: '私教课', campus: 'chaojun' }
+  ],
+  financeNormalizedRows: [
+    { id: 'mapo-finance', campusName: '顺义马坡', businessDate: '2026-09-02', businessType: '课程', action: '收款', cashDelta: 1000, deferredRevenueDelta: 1000 },
+    { id: 'chaojun-finance', campusName: '朝珺私教', businessDate: '2026-09-02', businessType: '课程', action: '收款', cashDelta: 2000, deferredRevenueDelta: 2000 }
+  ],
+  financeOverviewData: {
+    totalIncome: 9999,
+    recognizedRevenue: 8888,
+    pendingRevenue: 7777,
+    tradeCount: 99
+  }
+}, {
+  now: new Date('2026-09-02 12:00:00'),
+  metricScope: { campus: 'chaojun', campusName: '朝珺私教' }
+});
+assert.strictEqual(campusOnlyScopeMetrics.overview.cards.totalIncome.value, 2000, 'top overview total must follow campus filter even when no date range is selected');
+assert.strictEqual(campusOnlyScopeMetrics.coach.cards.usedHours.value, 2, 'coach scheduled hours must follow campus filter');
+assert.strictEqual(campusOnlyScopeMetrics.coach.rows.some(row => row.coach === '马坡教练'), false, 'coach rows must exclude other campuses after campus filter');
 
 const zeroRangedSnapshotGuardMetrics = buildOperationsMetrics({
   leads: [],
