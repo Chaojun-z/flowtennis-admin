@@ -86,6 +86,7 @@ assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTe
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
+assert.match(fnBody('studentTopStatsCards'), /历史学员[\s\S]*已建档可排课/, 'historical student top card should explain the new full-profile roster scope');
 assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*历史学员[\s\S]*上过体验课[\s\S]*上过正式课[\s\S]*上过体验未上正式课[\s\S]*近30天正式课活跃/, 'historical student top stats should show schedule-fact cards');
 assert.doesNotMatch(source, /当前列表课程成交/, 'trial student top stats must not show the old local course-deal card');
 assert.match(source, /function studentStandardSummaryForMode\(/, 'student page should keep backend standard summary helper for top stats');
@@ -153,8 +154,9 @@ const officialStudentColumns = fnBody('studentTableColumns').match(/return \[\s*
 assert.doesNotMatch(officialStudentColumns, /label:'电话'|课时\/课包/, 'official student table should not show phone or the old lesson/package label');
 assert.match(source, /function studentIsHistoricalRosterRow\(/, 'historical student list should use a dedicated historical roster rule');
 assert.match(source, /function studentIsActiveRosterRow\(/, 'active student list should use a dedicated active roster rule');
-assert.match(fnBody('getStudentBaseList'), /studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student base list should switch between historical and active roster rules');
-assert.doesNotMatch(fnBody('getStudentBaseList'), /includeAllRoster|return true|includeSearchIndex/, 'student search must not broaden across active and historical rosters');
+assert.match(fnBody('getStudentBaseList'), /studentListViewMode\(\)==='trial'\?studentHistoricalBaseRows\(viewRows\):\(viewRows\.length\?viewRows:students\)/, 'historical student base list should include every visible student profile');
+assert.match(fnBody('getStudentBaseList'), /studentListViewMode\(\)==='trial'\?true:studentIsActiveRosterRow\(s\)/, 'active student base list should keep the active roster rule');
+assert.doesNotMatch(fnBody('getStudentBaseList'), /includeAllRoster|includeSearchIndex/, 'student search must not use the old broadened search-index switch');
 assert.match(fnBody('getFilteredStudents'), /getStudentBaseList\(\)\.filter/, 'student keyword search should filter only the current base roster');
 assert.match(fnBody('getStudentBaseList'), /isHiddenStudentProfile\(s\)/, 'student base list should hide merged and archived student profiles');
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');

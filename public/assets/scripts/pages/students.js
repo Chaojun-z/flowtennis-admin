@@ -109,6 +109,15 @@ function studentUnifiedRecordForId(id){
     || null;
   return detail?{...(base||{}),...detail}:base;
 }
+function studentHistoricalBaseRows(viewRows=[]){
+  const seen=new Set();
+  return [...viewRows,...students].filter(row=>{
+    const id=String(row?.id||row?.studentId||'').trim();
+    if(!id||seen.has(id))return false;
+    seen.add(id);
+    return true;
+  });
+}
 function onStudentFilterChange(){resetCurrentStudentListPage();renderStudents();}
 function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
@@ -695,11 +704,11 @@ function studentMatchesCampusForList(stu){
 }
 function getStudentBaseList(){
   const viewRows=studentUnifiedViewRows();
-  const base=viewRows.length?viewRows:students;
+  const base=studentListViewMode()==='trial'?studentHistoricalBaseRows(viewRows):(viewRows.length?viewRows:students);
   return base.filter(s=>{
     if(isHiddenStudentProfile(s))return false;
     if(!studentMatchesCampusForList(s))return false;
-    return studentListViewMode()==='trial'?studentIsHistoricalRosterRow(s):studentIsActiveRosterRow(s);
+    return studentListViewMode()==='trial'?true:studentIsActiveRosterRow(s);
   });
 }
 function studentSearchText(s){
@@ -811,7 +820,7 @@ function studentPercentText(value,total){
 }
 function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
-    {label:'历史学员',valueHtml:stats.total,sub:'累计来上过课'},
+    {label:'历史学员',valueHtml:stats.total,sub:'已建档可排课'},
     {label:'上过体验课',valueHtml:stats.historicalTrialAttendedCount||0,percent:studentPercentText(stats.historicalTrialAttendedCount||0,stats.total),sub:'上过体验课 / 历史学员'},
     {label:'上过正式课',valueHtml:stats.historicalFormalAttendedCount||0,percent:studentPercentText(stats.historicalFormalAttendedCount||0,stats.total),sub:'上过正式课 / 历史学员'},
     {label:'上过体验未上正式课',valueHtml:stats.historicalTrialWithoutFormalCount||0,percent:studentPercentText(stats.historicalTrialWithoutFormalCount||0,stats.total),sub:'体验未上正式课 / 历史学员'},

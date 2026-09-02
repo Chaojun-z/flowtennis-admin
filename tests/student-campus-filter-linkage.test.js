@@ -16,7 +16,7 @@ function fnBody(name){
 
 assert.match(source, /function studentCampusValuesForList\(/, 'student list should derive campus from the unified student view row');
 assert.match(source, /function studentMatchesCampusForList\([\s\S]*studentCampusValuesForList\(stu\)[\s\S]*sameCampusValue/, 'student list should use the unified student campus source for filtering');
-assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)[\s\S]*studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student list base rows should use the shared student campus matcher and the new historical/active roster rules');
+assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)[\s\S]*studentListViewMode\(\)==='trial'\?true:studentIsActiveRosterRow\(s\)/, 'student list should use the shared campus matcher; historical includes visible student profiles and active keeps the active roster rule');
 assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student renderer should keep the existing render flow');
 assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student top stats should read the backend unified teaching summary');
 assert.doesNotMatch(fnBody('studentPageStats'), /FlowTennisPlatformDataStandards\.currentStudentSummary/, 'student top stats must not summarize schedule facts on the frontend');

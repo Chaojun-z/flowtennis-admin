@@ -1944,6 +1944,7 @@ function teachingStudentHasCourseRosterEntry(row = {}) {
 }
 
 function teachingStudentInHistoricalRoster(data = {}, row = {}, now = new Date()) {
+  if (text(row.studentId) && text(row.studentStage) === 'student' && row.hasStudentProfile === true) return true;
   if (teachingStudentHasCompletedLesson(data, row, now)
     || teachingStudentHasFormalPackage(row)
     || teachingStudentHasCourseRosterEntry(row)) return true;

@@ -504,6 +504,7 @@ function buildCustomerLifecycleRows({
       hasCourseRepeatPurchase,
       hasTrialToCourseConversion,
       hasTrialExperience,
+      hasStudentProfile: true,
       hasScheduleRecord,
       leadDate: firstValue(student.leadDate),
       leadEnteredAt: firstValue(student.leadDate),

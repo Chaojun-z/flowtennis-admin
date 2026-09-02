@@ -61,8 +61,12 @@ const context = {
 vm.createContext(context);
 vm.runInContext(source, context, { filename: 'public/assets/scripts/pages/students.js' });
 
+context.students = [
+  { id: 'profile-only-hu', name: '胡振浩', phone: '', campus: 'shunyi_mapo' }
+];
+
 elements.stuSearch.value = 'Mira';
-const activeResults = vm.runInContext('getFilteredStudents().map(row => row.id)', context);
+const activeResults = JSON.parse(vm.runInContext('JSON.stringify(getFilteredStudents().map(row => row.id))', context));
 assert.deepStrictEqual(
   activeResults,
   ['active-real-mira'],
@@ -74,11 +78,27 @@ assert.ok(
 );
 
 context.currentPage = 'trial-students';
-const historicalResults = vm.runInContext('getFilteredStudents().map(row => row.id)', context);
+const historicalResults = JSON.parse(vm.runInContext('JSON.stringify(getFilteredStudents().map(row => row.id))', context));
 assert.deepStrictEqual(
   historicalResults,
   ['active-real-mira'],
   '历史学员搜 Mira 不能命中负责教练/隐藏搜索字段里的 Mira'
+);
+
+elements.stuSearch.value = '胡振浩';
+const historicalProfileOnlyResults = JSON.parse(vm.runInContext('JSON.stringify(getFilteredStudents().map(row => row.id))', context));
+assert.deepStrictEqual(
+  historicalProfileOnlyResults,
+  ['profile-only-hu'],
+  '历史学员应能搜到已建档且可排课、但尚未上课未买课的学员'
+);
+
+context.currentPage = 'package-students';
+const activeProfileOnlyResults = JSON.parse(vm.runInContext('JSON.stringify(getFilteredStudents().map(row => row.id))', context));
+assert.deepStrictEqual(
+  activeProfileOnlyResults,
+  [],
+  '在期学员不应展示未上课未买课的新建档学员'
 );
 
 console.log('student search scope tests passed');

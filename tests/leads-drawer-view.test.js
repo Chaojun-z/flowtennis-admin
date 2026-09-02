@@ -71,9 +71,26 @@ function runLeadCreateDrawerWithoutCourts(){
   assert.match(context.drawerPayload.bodyHtml, /id="lead_leadDate_btn"/, 'lead create drawer should render the shared date button');
 }
 
+function runLeadLinkStudentSearchWithProfileOnlyStudent(){
+  const context = {
+    console,
+    window: {},
+    leads: [],
+    students: [{ id: 'profile-only-hu', name: '胡振浩', phone: '', campus: 'shunyi_mapo' }],
+    courts: [],
+    cn: value => ({ shunyi_mapo: '顺义马坡' }[value] || String(value || '')),
+    esc: htmlEsc
+  };
+  vm.createContext(context);
+  vm.runInContext(leadsOnlySource, context, { filename: 'leads.js' });
+  const ids = JSON.parse(vm.runInContext("JSON.stringify(leadLinkSearchRows('link-student','胡振').map(row => row.id))", context));
+  assert.deepStrictEqual(ids, ['profile-only-hu'], '线索池关联学员时必须能搜到已建档但未上课未买课的学员');
+}
+
 assert.match(dateControlsSource, /function courtDateButtonHtml\(/, 'shared date control should live in the core layer');
 assert.doesNotMatch(courtsSource, /function courtDateButtonHtml\(/, 'courts page should not own the shared date control');
 runLeadCreateDrawerWithoutCourts();
+runLeadLinkStudentSearchWithProfileOnlyStudent();
 
 assert.match(source, /let leadDetailActiveTab='basic'/, 'lead drawer should keep active tab state');
 assert.match(source, /function leadDetailTabsHtml\(/, 'lead detail should expose drawer tabs');

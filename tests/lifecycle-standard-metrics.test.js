@@ -244,9 +244,9 @@ assert.ok(liDongSearchRow, '轻量学员页必须返回全量学员搜索索引�
 assert.strictEqual(liDongSearchRow.name, '李东', '搜索索引必须保留原始学员姓名');
 assert.match(liDongSearchRow.searchText, /威廉/, '搜索索引必须保留备注关键字，支持按家长/关联人备注搜索');
 assert.ok(
-  !searchIndexViews.historicalStudents.some(row => row.studentId === 'student-li-dong')
+  searchIndexViews.historicalStudents.some(row => row.studentId === 'student-li-dong')
     && !searchIndexViews.activeStudents.some(row => row.studentId === 'student-li-dong'),
-  '全量搜索索引不能改变历史学员和在期学员顶部统计口径'
+  '已建档可排课学员必须进入历史学员，但不能进入在期学员'
 );
 const nameOnlyScheduleData = {
   leads: [],
@@ -891,8 +891,8 @@ const futureScheduleStandard = buildStandardLifecycleMetrics({
   now: new Date('2026-08-04 00:00:00')
 });
 assert.ok(
-  !futureScheduleStandard.views.historicalStudents.some(row => row.studentId === 'student-future-completed'),
-  '未来排课即使被误标为已结束，也不能进入历史学员或最近上课事实'
+  futureScheduleStandard.views.historicalStudents.some(row => row.studentId === 'student-future-completed'),
+  '真实学员档案即使只有未来排课，也必须能在历史学员里被搜到'
 );
 assert.strictEqual(
   futureScheduleStandard.teachingSummary.historicalFormalAttendedCount,
@@ -914,8 +914,8 @@ const sameDayFutureScheduleStandard = buildStandardLifecycleMetrics({
   now: new Date('2026-08-09 11:10:00')
 });
 assert.ok(
-  !sameDayFutureScheduleStandard.views.historicalStudents.some(row => row.studentId === 'student-future-completed'),
-  '当天当前时间之后的排课不能进入最近上课事实'
+  sameDayFutureScheduleStandard.views.historicalStudents.some(row => row.studentId === 'student-future-completed' && !row.lastFormalLessonAt && row.activityStatusLabel === '从未正式上课'),
+  '真实学员档案可以进入历史学员，但当天当前时间之后的排课不能进入最近上课事实'
 );
 
 const futureSnapshotData = {
