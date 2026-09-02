@@ -160,6 +160,23 @@ function addUtcDays(day, offset) {
   return new Date(ms + offset * 86400000).toISOString().slice(0, 10);
 }
 
+function monthEndDate(day = '') {
+  const match = String(day || '').match(/^(\d{4})-(\d{2})-\d{2}$/);
+  if (!match) return '';
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]), 0)).toISOString().slice(0, 10);
+}
+
+function addUtcMonths(monthDay = '', offset = 0) {
+  const match = String(monthDay || '').match(/^(\d{4})-(\d{2})-\d{2}$/);
+  if (!match) return '';
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1 + offset, 1)).toISOString().slice(0, 10);
+}
+
+function isFullCalendarMonthRange(range = {}) {
+  const normalized = normalizeDateRange(range);
+  return !!(normalized.startDate && normalized.endDate && normalized.startDate.endsWith('-01') && normalized.endDate === monthEndDate(normalized.startDate));
+}
+
 function enumerateDateRange(range = {}) {
   const normalized = normalizeDateRange(range);
   const count = dateRangeDayCount(normalized);
@@ -203,9 +220,14 @@ function futureSafeDays(days = [], now = new Date()) {
   return (days || []).filter(day => day && day <= today);
 }
 
-function previousDateRange(range = {}, now = new Date()) {
-  const normalized = futureSafeDateRange(range, now);
+function previousDateRange(range = {}, now = new Date(), options = {}) {
+  const normalized = options.clipFuture === false ? normalizeDateRange(range) : futureSafeDateRange(range, now);
   if (!normalized.startDate || !normalized.endDate) return null;
+  if (isFullCalendarMonthRange(normalized)) {
+    const startDate = addUtcMonths(normalized.startDate, -1);
+    const endDate = monthEndDate(startDate);
+    return startDate && endDate ? { startDate, endDate } : null;
+  }
   const days = dateRangeDayCount(normalized);
   if (!days) return null;
   const endDate = addUtcDays(normalized.startDate, -1);
@@ -307,6 +329,20 @@ function trendComparison(currentValue = 0, previousValue = 0, enabled = false) {
   const previous = Number(previousValue) || 0;
   const changeValue = money(current - previous);
   if (changeValue === 0) return { mode: 'none' };
+  return {
+    mode: 'previous_period',
+    currentValue: money(current),
+    previousValue: money(previous),
+    changeValue,
+    changeRate: previous ? round(changeValue * 100 / previous, 1) : null
+  };
+}
+
+function coachHoursComparison(currentValue = 0, previousValue = 0, enabled = false) {
+  if (!enabled) return { mode: 'none' };
+  const current = Number(currentValue) || 0;
+  const previous = Number(previousValue) || 0;
+  const changeValue = money(current - previous);
   return {
     mode: 'previous_period',
     currentValue: money(current),
@@ -1064,10 +1100,11 @@ function purchaseStudentKey(row = {}) {
 function normalizeCoachCourseType(row = {}) {
   const text = `${row.courseType || ''} ${row.standardCourseType || ''} ${row.experienceType || ''} ${row.packageName || ''} ${row.productName || ''}`.trim();
   if (/占场/.test(text)) return '占场';
-  if (/陪打/.test(text)) return '陪打';
-  if (/体验/.test(text)) return '体验课';
-  if (/专项/.test(text)) return '专项课';
-  if (/小班|班课|训练营|大师/.test(text)) return '小班课';
+  const normalized = businessTaxonomy.normalizeCourseType(row || {});
+  if (normalized?.level1 === '陪打') return '陪打';
+  if (normalized?.level1 === '体验课') return '体验课';
+  if (normalized?.level1 === '专项课') return '专项课';
+  if (normalized?.level1 === '小班课' || normalized?.level1 === '大师课') return '小班课';
   return '私教课';
 }
 
@@ -2993,6 +3030,9 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const trendRangedData = isDateRangeActive(trendDateRange) ? scopeOperationsDataByCampus(buildRangedOperationsData(data, trendDateRange), metricScope, data.campuses || []) : rangedData;
   const previousRangedData = previousRange ? scopeOperationsDataByCampus(buildRangedOperationsData(data, previousRange), metricScope, data.campuses || []) : null;
   const canComparePrevious = !!(previousRange && previousRangedData && rangeHasAnyActivity(previousRangedData, previousRange));
+  const coachPreviousRange = previousDateRange(coachReportingDateRange, now, { clipFuture: false });
+  const coachPreviousRangedData = coachPreviousRange ? scopeOperationsDataByCampus(buildRangedOperationsData(data, coachPreviousRange), metricScope, data.campuses || []) : null;
+  const canCompareCoachPrevious = !!coachPreviousRange;
   const financeOverviewData = rangedData.financeOverviewData || {};
   const customerLifecycleRows = lifecycleRowsForData(data);
   const metricLifecycleSource = buildScopedLifecycleSource({
@@ -3172,22 +3212,22 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const previousStandardLifecycleMetrics = previousMetricLifecycleSource ? buildStandardLifecycleMetrics(previousMetricLifecycleSource) : null;
   const previousCourseFunnel = previousStandardLifecycleMetrics?.funnels?.courseChain || [];
   const previousPeriodRepurchase = previousRangedData ? buildPeriodRepurchaseMetrics(previousRangedData.purchases || []) : { rate: 0, numerator: 0, denominator: 0 };
-  const previousCoachRows = previousRangedData ? buildCoachRows({
+  const previousCoachRows = coachPreviousRangedData ? buildCoachRows({
     coaches: data.coaches || [],
-    schedule: previousRangedData.schedule || [],
+    schedule: coachPreviousRangedData.schedule || [],
     feedbacks: data.feedbacks || [],
-    purchases: financeRowsAsCoachPurchases(previousRangedData.financeNormalizedRows || [], coachFinanceAttributionContext),
+    purchases: financeRowsAsCoachPurchases(coachPreviousRangedData.financeNormalizedRows || [], coachFinanceAttributionContext),
     allPurchases: allCoachFinancePurchases,
-    periodPurchases: previousRangedData.purchases || [],
+    periodPurchases: coachPreviousRangedData.purchases || [],
     customerLifecycleRows,
-    dateRange: previousRange,
+    dateRange: coachPreviousRange,
     campuses: data.campuses || [],
     now
   }) : [];
   const previousCoachHours = new Map(previousCoachRows.map(row => [row.coach, Number(row.usedHours) || 0]));
   coachRows.forEach(row => {
-    row.usedHoursComparison = canComparePrevious
-      ? trendComparison(row.usedHours, previousCoachHours.get(row.coach) || 0, true)
+    row.usedHoursComparison = canCompareCoachPrevious
+      ? coachHoursComparison(row.usedHours, previousCoachHours.get(row.coach) || 0, true)
       : { mode: 'none' };
   });
   const previousCoachAvailable = round(previousCoachRows.reduce((sum, row) => sum + row.availableHours, 0), 1);

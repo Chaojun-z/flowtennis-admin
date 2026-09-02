@@ -4,6 +4,9 @@ const {
   coachAvailableHours,
   buildOperationsMetrics
 } = require('../server/metrics/operations-metrics.js');
+const {
+  buildScheduleListViewFromData
+} = require('../server/page-data/schedule-list-read-model.js');
 
 assert.strictEqual(coachAvailableHours({ period: 'today' }), 8, 'coach daily available hours should be 8');
 assert.strictEqual(coachAvailableHours({ period: 'week' }), 48, 'coach weekly available hours should be 6 days * 8 hours');
@@ -1860,5 +1863,102 @@ assert.strictEqual(periodCoachA.feedbackCompleted, 1, 'selected-period feedback 
 assert.strictEqual(periodCoachA.feedbackRequired, 1, 'selected-period feedback denominator should use selected-period schedules');
 assert.doesNotMatch(periodCoachA.campusDistributionText, /shunyi_mapo/, 'coach campus distribution must not leak backend campus codes');
 assert.match(periodCoachA.campusDistributionText, /顺义马坡 1/, 'coach campus distribution should render the standard campus name');
+
+const coachMonthComparisonMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [{ id: 'month-coach', name: '月度教练', status: 'active' }],
+  students: [],
+  schedule: [
+    { id: 'month-prev-first-day', coach: '月度教练', studentId: 'stu-aug', startTime: '2026-08-01 09:00:00', endTime: '2026-08-01 11:00:00', status: '已结束', courseType: '私教课' },
+    { id: 'month-current', coach: '月度教练', studentId: 'stu-sep', startTime: '2026-09-02 09:00:00', endTime: '2026-09-02 12:00:00', status: '已结束', courseType: '私教课' }
+  ],
+  purchases: [],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-10-05 12:00:00'),
+  dateRange: { startDate: '2026-09-01', endDate: '2026-09-30' }
+});
+const coachMonthComparisonRow = coachMonthComparisonMetrics.coach.rows.find(row => row.coach === '月度教练');
+assert.strictEqual(coachMonthComparisonRow?.usedHours, 3, 'selected full-month coach hours should count September lessons');
+assert.strictEqual(coachMonthComparisonRow?.usedHoursComparison?.mode, 'previous_period', 'full-month coach hours should compare with the previous calendar month');
+assert.strictEqual(coachMonthComparisonRow?.usedHoursComparison?.previousValue, 2, 'selecting September should compare with August, including August 1');
+
+const coachSevenDayComparisonMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [{ id: 'week-coach', name: '七天教练', status: 'active' }],
+  students: [],
+  schedule: [
+    { id: 'week-prev', coach: '七天教练', studentId: 'stu-prev', startTime: '2026-08-25 09:00:00', endTime: '2026-08-25 11:00:00', status: '已结束', courseType: '私教课' },
+    { id: 'week-current', coach: '七天教练', studentId: 'stu-current', startTime: '2026-09-01 09:00:00', endTime: '2026-09-01 12:00:00', status: '已结束', courseType: '私教课' }
+  ],
+  purchases: [],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-09-03 12:00:00'),
+  dateRange: { startDate: '2026-09-01', endDate: '2026-09-07' }
+});
+const coachSevenDayComparisonRow = coachSevenDayComparisonMetrics.coach.rows.find(row => row.coach === '七天教练');
+assert.strictEqual(coachSevenDayComparisonRow?.usedHours, 3, 'seven-day coach hours should keep the selected seven-day range even when part of it is future');
+assert.strictEqual(coachSevenDayComparisonRow?.usedHoursComparison?.previousValue, 2, 'seven-day coach comparison should use the previous seven days');
+
+const scheduleParityData = {
+  campuses: [],
+  coaches: [{ id: 'parity-coach', name: '同源教练', status: 'active' }],
+  students: [],
+  schedule: [
+    { id: 'parity-private', coach: '同源教练', studentId: 'stu-private', startTime: '2026-08-10 09:00:00', endTime: '2026-08-10 10:00:00', status: '已排课', courseType: '私教课' },
+    { id: 'parity-trial', coach: '同源教练', studentId: 'stu-trial', startTime: '2026-08-10 10:00:00', endTime: '2026-08-10 11:00:00', status: '已排课', courseType: '私教体验课' },
+    { id: 'parity-small', coach: '同源教练', studentIds: ['stu-a', 'stu-b'], startTime: '2026-08-10 11:00:00', endTime: '2026-08-10 12:30:00', status: '已排课', courseType: '班课' },
+    { id: 'parity-special', coach: '同源教练', studentId: 'stu-special', startTime: '2026-08-10 13:00:00', endTime: '2026-08-10 14:15:00', status: '已排课', courseType: '专项训练' },
+    { id: 'parity-companion', coach: '同源教练', studentId: 'stu-companion', startTime: '2026-08-10 15:00:00', endTime: '2026-08-10 15:30:00', status: '已排课', courseType: '订场陪打' },
+    { id: 'parity-occupancy', coach: '同源教练', studentId: '占场', startTime: '2026-08-10 16:00:00', endTime: '2026-08-10 18:00:00', status: '已排课', courseType: '教练占场' },
+    { id: 'parity-cancelled', coach: '同源教练', studentId: 'stu-cancelled', startTime: '2026-08-10 18:00:00', endTime: '2026-08-10 19:00:00', status: '已取消', courseType: '私教课' }
+  ],
+  purchases: [],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  feedbacks: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+};
+const scheduleParityView = buildScheduleListViewFromData(scheduleParityData, { all: '1', startDate: '2026-08-10', endDate: '2026-08-10' });
+assert.deepStrictEqual(
+  scheduleParityView.items.map(row => [row.id, row.courseType]),
+  [
+    ['parity-cancelled', '私教课'],
+    ['parity-occupancy', '教练占场'],
+    ['parity-companion', '陪打'],
+    ['parity-special', '专项课'],
+    ['parity-small', '小班课'],
+    ['parity-trial', '体验课'],
+    ['parity-private', '私教课']
+  ],
+  '排课管理列表应输出统一课程类型，供教练人效对齐'
+);
+const scheduleParityMetrics = buildOperationsMetrics(scheduleParityData, {
+  now: new Date('2026-08-11 12:00:00'),
+  dateRange: { startDate: '2026-08-10', endDate: '2026-08-10' }
+});
+const scheduleParityCoach = scheduleParityMetrics.coach.rows.find(row => row.coach === '同源教练');
+assert.strictEqual(scheduleParityCoach?.usedHours, 5.25, 'coach detail lesson hours should match schedule management non-cancelled non-occupancy schedule duration');
+assert.deepStrictEqual(
+  scheduleParityCoach?.courseMix.map(row => [row.type, row.hours]),
+  [['体验课', 1], ['私教课', 1], ['小班课', 1.5], ['专项课', 1.25], ['陪打', 0.5]],
+  'coach detail course structure should match schedule management course type classification'
+);
 
 console.log('operations metrics tests passed');

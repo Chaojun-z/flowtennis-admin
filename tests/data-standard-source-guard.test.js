@@ -217,7 +217,7 @@ assert.match(
 );
 assert.match(
   operationsMetricsSource,
-  /const previousCoachRows = previousRangedData \? buildCoachRows\(\{[\s\S]{0,220}purchases: financeRowsAsCoachPurchases\(previousRangedData\.financeNormalizedRows \|\| \[\], coachFinanceAttributionContext\)/,
+  /const previousCoachRows = coachPreviousRangedData \? buildCoachRows\(\{[\s\S]{0,240}purchases: financeRowsAsCoachPurchases\(coachPreviousRangedData\.financeNormalizedRows \|\| \[\], coachFinanceAttributionContext\)/,
   'previous-period coach revenue should trace standard finance rows through source documents into coach metrics'
 );
 

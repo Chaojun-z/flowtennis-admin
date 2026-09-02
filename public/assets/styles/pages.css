@@ -1465,13 +1465,7 @@ body.is-coachschedule-page .content{overflow-x:hidden;padding-top:0;padding-bott
 #page-operations .operations-coach-name-cell{font-weight:700;color:#887565;white-space:normal;line-height:1.25}
 #page-operations .operations-coach-detail-hours{display:flex;align-items:center;gap:8px;white-space:nowrap;font-family:var(--ops-number-font);font-variant-numeric:tabular-nums lining-nums}
 #page-operations .operations-coach-detail-hours>span:first-child{font-size:12px;font-weight:400;color:#887565}
-#page-operations .operations-coach-detail-change{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:400;line-height:16px}
-#page-operations .operations-coach-detail-icon{width:12px;height:12px;flex:0 0 12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#page-operations .operations-coach-detail-change.up{color:#D64545}
-#page-operations .operations-coach-detail-change.down{color:#087A35}
-#page-operations .operations-coach-detail-change.muted{color:#A19080;font-weight:400}
 #page-operations .operations-coach-muted{color:#887565;font-family:var(--ops-number-font);font-variant-numeric:tabular-nums lining-nums}
-#page-operations .operations-coach-feedback{color:#887565;font-family:var(--ops-number-font);font-variant-numeric:tabular-nums lining-nums}
 #page-operations .operations-coach-detail-wrap{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#887565;line-height:1.35}
 #page-operations .operations-funnel-card{min-height:0;padding:24px 26px 22px;background:#FFFEFC;border-color:rgba(91,63,42,.10)}
 #page-operations .operations-funnel-host{min-height:0}
