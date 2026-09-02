@@ -20,10 +20,13 @@ function createLeadsRoutes(deps={}){
   }=deps;
   const LEAD_LIST_CACHE_TTL_MS=process.env.DISABLE_HOT_SCAN_PREWARM==='true'?300000:30000;
   const LEAD_LIST_CACHE_MAX_ENTRIES=120;
+  const LEAD_LIST_READ_TIMEOUT_MS=Math.max(1,Number(process.env.LEAD_LIST_READ_TIMEOUT_MS)||3500);
   const leadSourceRowsCache={expiresAt:0,rows:null};
   const leadPagedResponseCache=new Map();
   const leadFilteredResultCache=new Map();
   let leadSourceRowsLoadPromise=null;
+  let leadSourceRowsUnavailable=false;
+  let leadAuxiliaryRowsUnavailable=false;
 
   function cloneLeadCachePayload(value){
     return JSON.parse(JSON.stringify(value));
@@ -107,15 +110,37 @@ function createLeadsRoutes(deps={}){
     trimLeadFilteredResultCache();
   }
 
+  function leadReadTimeout(label){
+    const error=new Error(`${label} timed out after ${LEAD_LIST_READ_TIMEOUT_MS}ms`);
+    error.code='LEAD_LIST_READ_TIMEOUT';
+    return error;
+  }
+
+  async function withLeadReadTimeout(promise,label){
+    let timer=null;
+    try{
+      return await Promise.race([
+        promise,
+        new Promise((resolve,reject)=>{
+          timer=setTimeout(()=>reject(leadReadTimeout(label)),LEAD_LIST_READ_TIMEOUT_MS);
+        })
+      ]);
+    }finally{
+      if(timer)clearTimeout(timer);
+    }
+  }
+
   function isLocalPreviewFastMode(){
     return process.env.DISABLE_HOT_SCAN_PREWARM==='true'&&!isProductionRuntime();
   }
 
   async function readCachedLeadSourceRows(){
     const now=Date.now();
+    leadSourceRowsUnavailable=false;
     if(Array.isArray(leadSourceRowsCache.rows)&&leadSourceRowsCache.expiresAt>now)return leadSourceRowsCache.rows;
     if(leadSourceRowsLoadPromise)return cloneLeadCachePayload(await leadSourceRowsLoadPromise);
-    leadSourceRowsLoadPromise=(async()=>{
+    const staleRows=Array.isArray(leadSourceRowsCache.rows)?cloneLeadCachePayload(leadSourceRowsCache.rows):null;
+    leadSourceRowsLoadPromise=withLeadReadTimeout((async()=>{
     let rows;
     try{
       if(isLocalPreviewFastMode()&&typeof getCachedScan==='function'){
@@ -134,7 +159,14 @@ function createLeadsRoutes(deps={}){
     leadSourceRowsCache.rows=rows;
     leadSourceRowsCache.expiresAt=now+LEAD_LIST_CACHE_TTL_MS;
     return rows;
-    })().finally(()=>{leadSourceRowsLoadPromise=null;});
+    })(), 'lead source rows').catch(error=>{
+      if(error?.code==='LEAD_LIST_READ_TIMEOUT'){
+        leadSourceRowsUnavailable=true;
+        console.warn('[leads-list] lead source read unavailable, serving cached or empty rows',error.message||error);
+        return staleRows||[];
+      }
+      throw error;
+    }).finally(()=>{leadSourceRowsLoadPromise=null;});
     return cloneLeadCachePayload(await leadSourceRowsLoadPromise);
   }
 
@@ -1078,19 +1110,43 @@ function createLeadsRoutes(deps={}){
   async function readLeadPoolContext({lifecycleScope='all'}={}){
     const [leads,followups]=await Promise.all([
       readCachedLeadSourceRows(),
-      readLeadFollowupRows().catch(()=>[])
+      withLeadReadTimeout(readLeadFollowupRows().catch(()=>[]), 'lead followups').catch(error=>{
+        if(error?.code==='LEAD_LIST_READ_TIMEOUT'){
+          leadAuxiliaryRowsUnavailable=true;
+          console.warn('[leads-list] lead followup read unavailable, serving cached or empty rows',error.message||error);
+          return [];
+        }
+        throw error;
+      })
     ]);
+    const leadSourceUnavailable=leadSourceRowsUnavailable || leadAuxiliaryRowsUnavailable;
     const hiddenLeadIdentities=hiddenLeadIdentitySets(leads);
     let mergedLeads=await materializeLeadConversionRows(mergeDuplicateLeadRows(applyCurrentLeadSnapshots(visibleLeadSourceRows(leads),followups)),{persist:false});
     let customerLifecycleRows=[];
     let studentSummaryRows=[];
+    let studentTeachingSummaryUnavailable=false;
     const useLightLifecycleSource=!isLocalPreviewFastMode()&&!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
     if(useLightLifecycleSource){
-      const [loadedStudentSummaryRows,courtIndexRows]=await Promise.all([
+      const [studentSummaryResult,courtIndexResult]=await Promise.allSettled([
         readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan}),
-        getCachedScan(T_COURT_ACCOUNT_LIST_INDEX).catch(()=>[])
+        withLeadReadTimeout(getCachedScan(T_COURT_ACCOUNT_LIST_INDEX).catch(()=>[]), 'court account list index').catch(error=>{
+          if(error?.code==='LEAD_LIST_READ_TIMEOUT'){
+            leadAuxiliaryRowsUnavailable=true;
+            console.warn('[leads-list] court account list index unavailable, serving cached or empty rows',error.message||error);
+            return [];
+          }
+          throw error;
+        })
       ]);
-      studentSummaryRows=loadedStudentSummaryRows;
+      if(studentSummaryResult.status==='fulfilled'){
+        studentSummaryRows=studentSummaryResult.value;
+      }else if(studentSummaryResult.reason?.code==='STUDENT_TEACHING_SUMMARY_NOT_READY'){
+        studentTeachingSummaryUnavailable=true;
+        console.warn('[leads-list] student teaching summary unavailable, serving leads without student summary',studentSummaryResult.reason?.message||studentSummaryResult.reason);
+      }else{
+        throw studentSummaryResult.reason;
+      }
+      const courtIndexRows=courtIndexResult.status==='fulfilled'?courtIndexResult.value:[];
       const studentLifecycleRows=buildCustomerCenterSummaryLifecycleRows(studentSummaryRows);
       const courtAccountView=buildCourtAccountListViewFromIndexRows(courtIndexRows||[],{});
       const courtLifecycleRows=buildCourtLifecycleRows(courtAccountView.items||[],mergedLeads);
@@ -1141,7 +1197,7 @@ function createLeadsRoutes(deps={}){
         if(sourceLeadId&&!/^lead-from-student-/.test(sourceLeadId))return true;
         return !hiddenLeadIdentities.studentIds.has(cleanLeadText(row.studentId));
       });
-    return {rows,studentSummaryRows,customerLifecycleRows};
+    return {rows,studentSummaryRows,customerLifecycleRows,studentTeachingSummaryUnavailable,leadSourceUnavailable:leadSourceUnavailable||leadAuxiliaryRowsUnavailable};
   }
 
   async function readVisibleLeadRows({expandLifecycleSearch=false}={}){
@@ -1189,11 +1245,13 @@ function createLeadsRoutes(deps={}){
           const resultCacheKey=paging?leadFilteredResultCacheKey(query,user):'';
           let cachedResult=resultCacheKey?readLeadFilteredResultCache(resultCacheKey):null;
           if(!cachedResult){
-            const {rows,studentSummaryRows}=await readVisibleLeadContext({expandLifecycleSearch:false});
+            const {rows,studentSummaryRows,studentTeachingSummaryUnavailable,leadSourceUnavailable}=await readVisibleLeadContext({expandLifecycleSearch:false});
             const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
             const filtered=visibleRows.filter(row=>leadMatchesListFilter(row,filterState));
             const scopedSummaryRows=filterLoadAllForUser({studentTeachingSummaries:studentSummaryRows},user).studentTeachingSummaries||[];
             cachedResult={sorted:sortLeadListRows(filtered,query),summary:buildLeadListSummary(filtered,{studentTeachingSummaryRows:scopedSummaryRows,filterState}),filters:buildLeadListFilterMeta(visibleRows,filterState)};
+            if(studentTeachingSummaryUnavailable)cachedResult.summary.studentTeachingSummaryUnavailable=true;
+            if(leadSourceUnavailable)cachedResult.summary.leadSourceUnavailable=true;
             if(resultCacheKey)writeLeadFilteredResultCache(resultCacheKey,cachedResult);
           }
           const payload=paging?{...buildLeadListPage(cachedResult.sorted,paging),summary:cachedResult.summary,filters:cachedResult.filters}:cachedResult.sorted;

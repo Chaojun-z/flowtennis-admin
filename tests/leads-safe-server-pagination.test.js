@@ -343,6 +343,162 @@ async function main() {
   const bookingSearch = await request(bookingSearchHarness.handle, 'paged=1&page=1&pageSize=10&q=订场');
   assert.deepStrictEqual(bookingSearch.body.rows.map(row => row.id), ['lead-real-booking'], '线索池搜索订场只能返回真实线索，不能带出纯订场用户');
 
+  const summaryTimeoutHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-summary-timeout',
+      displayName: '摘要超时线索',
+      wechatName: '摘要超时线索',
+      leadStage: '跟进中',
+      leadDate: '2026-08-23',
+      createdAt: '2026-08-23 10:00:00',
+      campus: 'shunyi_mapo'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [],
+    ft_court_account_list_index: []
+  }, {
+    getCachedScan: async table => {
+      if (table === 'ft_student_teaching_summary') {
+        const err = new Error('教学学员统一摘要未就绪，页面拒绝展示旧数据：read-timeout');
+        err.code = 'STUDENT_TEACHING_SUMMARY_NOT_READY';
+        err.statusCode = 503;
+        throw err;
+      }
+      return clone(summaryTimeoutHarness.rows[table]);
+    }
+  });
+  const summaryTimeoutPage = await request(summaryTimeoutHarness.handle, 'paged=1&page=1&pageSize=15');
+  assert.strictEqual(summaryTimeoutPage.statusCode, 200, '线索池不能因为学员摘要读取超时返回 503');
+  assert.strictEqual(summaryTimeoutPage.body.total, 1, '摘要读取超时时仍应先返回真实线索列表');
+  assert.strictEqual(summaryTimeoutPage.body.summary.studentTeachingSummaryUnavailable, true, '摘要读取超时时 summary 必须标记降级状态');
+  assert.deepStrictEqual(summaryTimeoutPage.body.rows.map(row => row.id), ['lead-summary-timeout'], '摘要读取超时时不能丢失线索主表数据');
+
+  const previousLeadTimeout = process.env.LEAD_LIST_READ_TIMEOUT_MS;
+  process.env.LEAD_LIST_READ_TIMEOUT_MS = '50';
+  try {
+    const leadTimeoutHarness = createHarness({
+      ft_leads: [],
+      ft_lead_followups: [],
+      ft_students: [],
+      ft_courts: [],
+      ft_membership_accounts: [],
+      ft_purchases: [],
+      ft_entitlements: [],
+      ft_schedule: [],
+      ft_membership_orders: [],
+      ft_entitlement_ledger: [],
+      ft_membership_benefit_ledger: [],
+      ft_membership_account_events: [],
+      ft_financial_ledger: [],
+      ft_plans: [],
+      ft_classes: [],
+      ft_feedbacks: [],
+      ft_student_teaching_summary: [],
+      ft_court_account_list_index: []
+    }, {
+      getCachedScan: async table => {
+        if (table === 'ft_leads') return new Promise(() => {});
+        return clone(leadTimeoutHarness.rows[table]);
+      }
+    });
+    const startedAt = Date.now();
+    const leadTimeoutPage = await Promise.race([
+      request(leadTimeoutHarness.handle, 'paged=1&page=1&pageSize=15'),
+      new Promise(resolve => setTimeout(() => resolve({ hung: true, elapsedMs: Date.now() - startedAt }), 250))
+    ]);
+    assert.strictEqual(leadTimeoutPage.hung, undefined, '线索主表读取卡住时不能拖到平台 503');
+    assert.strictEqual(leadTimeoutPage.statusCode, 200, '线索主表读取卡住时也必须返回可渲染分页结构');
+    assert.strictEqual(leadTimeoutPage.body.total, 0, '线索主表读取卡住且无缓存时返回空列表');
+    assert.strictEqual(leadTimeoutPage.body.summary.leadSourceUnavailable, true, '线索主表读取卡住时 summary 必须标记降级状态');
+
+    const combinedTimeoutHarness = createHarness({
+      ft_leads: [{
+        id: 'lead-combined-timeout',
+        displayName: '组合超时线索',
+        wechatName: '组合超时线索',
+        leadStage: '跟进中',
+        leadDate: '2026-08-24',
+        createdAt: '2026-08-24 10:00:00',
+        campus: 'shunyi_mapo'
+      }],
+      ft_lead_followups: [],
+      ft_students: [],
+      ft_courts: [],
+      ft_membership_accounts: [],
+      ft_purchases: [],
+      ft_entitlements: [],
+      ft_schedule: [],
+      ft_membership_orders: [],
+      ft_entitlement_ledger: [],
+      ft_membership_benefit_ledger: [],
+      ft_membership_account_events: [],
+      ft_financial_ledger: [],
+      ft_plans: [],
+      ft_classes: [],
+      ft_feedbacks: [],
+      ft_student_teaching_summary: [{
+        id: '__student_teaching_summary_meta__',
+        kind: 'student-teaching-summary-meta',
+        status: 'ready',
+        rowCount: 1,
+        generation: 1,
+        batchId: 'batch-combined',
+        sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
+        completedAt: '2026-08-27T00:00:01.000Z',
+        checksum: buildStudentTeachingSummaryChecksum([{
+          id: 'lead-combined-timeout',
+          studentId: 'lead-combined-timeout',
+          name: '组合超时线索',
+          hasTrialAttended: false,
+          hasFormalAttended: false,
+          isHistoricalStudentRoster: false,
+          isActiveStudentRoster: false
+        }])
+      }, {
+        id: 'lead-combined-timeout',
+        studentId: 'lead-combined-timeout',
+        name: '组合超时线索',
+        hasTrialAttended: false,
+        hasFormalAttended: false,
+        isHistoricalStudentRoster: false,
+        isActiveStudentRoster: false
+      }],
+      ft_court_account_list_index: []
+    }, {
+      getCachedScan: async table => {
+        if (table === 'ft_lead_followups' || table === 'ft_court_account_list_index') {
+          return new Promise(() => {});
+        }
+        return clone(combinedTimeoutHarness.rows[table]);
+      }
+    });
+    const combinedTimeoutPage = await Promise.race([
+      request(combinedTimeoutHarness.handle, 'paged=1&page=1&pageSize=15'),
+      new Promise(resolve => setTimeout(() => resolve({ hung: true }), 8000))
+    ]);
+    assert.strictEqual(combinedTimeoutPage.hung, undefined, '组合超时场景不能让页面一直加载');
+    assert.strictEqual(combinedTimeoutPage.statusCode, 200, '组合超时场景下线索池仍应返回 200');
+    assert.strictEqual(combinedTimeoutPage.body.total, 1, '组合超时场景下真实线索仍应可见');
+    assert.strictEqual(combinedTimeoutPage.body.summary.leadSourceUnavailable, true, '组合超时场景 summary 必须标记降级');
+  } finally {
+    if (previousLeadTimeout === undefined) delete process.env.LEAD_LIST_READ_TIMEOUT_MS;
+    else process.env.LEAD_LIST_READ_TIMEOUT_MS = previousLeadTimeout;
+  }
+
   const filteredAgain = await request(handle, 'paged=1&page=1&pageSize=10&owner=吴敌&campus=shunyi_mapo&dateFrom=2026-08-01&dateTo=2026-08-31');
   assert.deepStrictEqual(filteredAgain.body.rows.map(row => row.id), filtered.body.rows.map(row => row.id), '相同查询条件应命中分页响应缓存');
   assert.strictEqual(calls.leadScans, 1, '相同查询条件命中分页响应缓存后不应重新扫表');
@@ -670,7 +826,10 @@ async function main() {
     ft_court_account_list_index: []
   });
   const notReadyPage = await request(notReadyHarness.handle, 'paged=1&page=1&pageSize=15');
-  assert.strictEqual(notReadyPage.statusCode, 503, '统一摘要未就绪时线索池必须返回 503，不能继续展示旧数据');
+  assert.strictEqual(notReadyPage.statusCode, 200, '统一摘要未就绪时线索池必须仍可打开，不能返回 503');
+  assert.strictEqual(notReadyPage.body.total, 1, '统一摘要未就绪时仍应返回真实线索列表');
+  assert.strictEqual(notReadyPage.body.summary.studentTeachingSummaryUnavailable, true, '统一摘要未就绪时必须标记统计降级');
+  assert.strictEqual(notReadyPage.body.summary.historicalStudents, 0, '统一摘要未就绪时不能继续展示旧学员统计');
 
   console.log('leads safe server pagination tests passed');
 }
