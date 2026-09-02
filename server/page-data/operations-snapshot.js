@@ -4,6 +4,7 @@ const { getOperationsRowsCacheKey } = require('../read-models/operations-source.
 
 const OPERATIONS_SNAPSHOT_VERSION = 'operations-page-snapshot-v2';
 const OPERATIONS_SNAPSHOT_NOT_READY_CODE = 'OPERATIONS_SNAPSHOT_NOT_READY';
+const COACH_DAILY_MONTH_PACK_VIEW = 'coach-month-pack';
 const SNAPSHOT_SCOPE_INDEX_ID = 'active:scope-index';
 const SNAPSHOT_SOURCE_MARKER_ID = 'active:source-marker';
 const SNAPSHOT_LAST_REBUILD_TASK_ID = '__last_operations_snapshot_rebuild__';
@@ -107,6 +108,32 @@ function dateRangeDays(range = {}) {
   return Array.from({ length: count }, (_, index) => addUtcDays(startDate, index));
 }
 
+function monthStart(day = '') {
+  const key = dateKey(day);
+  return key ? `${key.slice(0, 7)}-01` : '';
+}
+
+function monthEnd(day = '') {
+  const start = monthStart(day);
+  if (!start) return '';
+  const [year, month] = start.split('-').map((item) => parseInt(item, 10));
+  return `${start.slice(0, 7)}-${String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, '0')}`;
+}
+
+function monthKeysInRange(range = {}) {
+  const days = dateRangeDays(range);
+  const months = [];
+  const seen = new Set();
+  days.forEach((day) => {
+    const month = day.slice(0, 7);
+    if (!seen.has(month)) {
+      seen.add(month);
+      months.push(month);
+    }
+  });
+  return months;
+}
+
 function cloneDailyScope(scope = {}, day = '') {
   const daily = {
     ...scope,
@@ -123,9 +150,32 @@ function cloneDailyScope(scope = {}, day = '') {
   return daily;
 }
 
+function cloneCoachDailyMonthPackScope(scope = {}, month = '') {
+  const monthKey = String(month || dateKey(scope.dateRange?.startDate || scope.startDate).slice(0, 7)).slice(0, 7);
+  const startDate = monthStart(`${monthKey}-01`);
+  const endDate = monthEnd(startDate);
+  const pack = {
+    ...scope,
+    view: COACH_DAILY_MONTH_PACK_VIEW,
+    dateRange: { startDate, endDate },
+    metricScope: {
+      ...(scope.metricScope || {}),
+      startDate,
+      endDate
+    }
+  };
+  if (scope.campus) pack.metricScope.campus = scope.campus;
+  if (scope.campusName) pack.metricScope.campusName = scope.campusName;
+  return pack;
+}
+
 function canComposeCoachDailyScope(scope = {}) {
   const range = scope.dateRange || scope || {};
   return text(scope.view) === 'coach' && dateRangeDays(range).length > 1;
+}
+
+function isCoachDailyMonthPackScope(scope = {}) {
+  return text(scope.view) === COACH_DAILY_MONTH_PACK_VIEW;
 }
 
 function emptyCoachCard(title, unit, value = 0) {
@@ -328,6 +378,36 @@ function composeCoachSnapshotPayloads(payloads = [], scope = {}) {
   };
 }
 
+function buildCoachDailyMonthPackPayload({ month = '', dailyPayloads = [] } = {}) {
+  const days = {};
+  (dailyPayloads || []).forEach((item) => {
+    const day = dateKey(item?.day);
+    if (day && item.payload) days[day] = item.payload;
+  });
+  return {
+    coachDailyMonth: {
+      month: String(month || '').slice(0, 7),
+      days
+    },
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function payloadsFromCoachDailyMonthPacks(packs = [], range = {}) {
+  const byDay = new Map();
+  (packs || []).forEach((pack) => {
+    const days = pack?.coachDailyMonth?.days || {};
+    Object.entries(days).forEach(([day, payload]) => {
+      if (dateKey(day) && payload) byDay.set(dateKey(day), payload);
+    });
+  });
+  return dateRangeDays(range).map((day) => {
+    const payload = byDay.get(day);
+    if (!payload) throw snapshotNotReadyError(`经营分析月包快照缺少 ${day}`);
+    return payload;
+  });
+}
+
 function sourceChangedAfterSnapshot(sourceMarker, meta) {
   const changedAt = timestampMs(meta?.sourceChangedAt || sourceMarker?.changedAt);
   const sourceSnapshotAt = timestampMs(meta?.sourceSnapshotAt);
@@ -497,16 +577,18 @@ function createOperationsSnapshotLoader(deps = {}) {
       loaded = await readPublishedPayload(scope, key);
     } catch (err) {
       if (err?.code !== OPERATIONS_SNAPSHOT_NOT_READY_CODE || !canComposeCoachDailyScope(scope)) throw err;
-      const days = dateRangeDays(scope.dateRange || {});
-      const dailyPayloads = await Promise.all(days.map(async day => {
-        const dailyScope = cloneDailyScope(scope, day);
-        const dailyKey = scopeKey(user, dailyScope);
-        return (await readPublishedPayload(dailyScope, dailyKey)).payload;
+      const months = monthKeysInRange(scope.dateRange || {});
+      const monthPacks = await Promise.all(months.map(async month => {
+        const monthScope = cloneCoachDailyMonthPackScope(scope, month);
+        const monthKey = scopeKey(user, monthScope);
+        return (await readPublishedPayload(monthScope, monthKey)).payload;
       }));
+      const days = dateRangeDays(scope.dateRange || {});
+      const dailyPayloads = payloadsFromCoachDailyMonthPacks(monthPacks, scope.dateRange || {});
       return {
         ...composeCoachSnapshotPayloads(dailyPayloads, scope),
         snapshot: {
-          source: 'operations-coach-daily-snapshot',
+          source: 'operations-coach-daily-month-pack',
           snapshotVersion: OPERATIONS_SNAPSHOT_VERSION,
           batchId: `daily-compose:${days[0]}:${days[days.length - 1]}`,
           scopeKey: key,
@@ -588,6 +670,67 @@ function createOperationsSnapshotSync(deps = {}) {
     return next;
   }
 
+  async function rebuildCoachDailyMonthPackScope({ user = {}, scope = {}, dryRun = false, batchId = '', reason = 'manual', taskId = '' } = {}) {
+    if (typeof buildPayload !== 'function') throw new Error('缺少经营快照重建数据源');
+    const key = scopeKey(user, scope);
+    if (rebuildPromises.has(key)) return rebuildPromises.get(key);
+    const startedAt = new Date().toISOString();
+    const normalized = normalizeScope(user, scope);
+    const taskAttrs = {
+      reason,
+      scopeKey: key,
+      user: normalized.userScope,
+      scope: storedScopeForNormalized(normalized),
+      startedAt,
+      createdAt: startedAt
+    };
+    const run = (async () => {
+      if (!dryRun) await updateTaskStatus(taskId, { ...taskAttrs, status: 'running', error: '' });
+      try {
+        const days = dateRangeDays(scope.dateRange || {});
+        if (!days.length || new Set(days.map(day => day.slice(0, 7))).size !== 1) {
+          throw new Error('教练月包快照只允许单月范围');
+        }
+        const dailyPayloads = [];
+        for (const day of days) {
+          dailyPayloads.push({ day, payload: await buildPayload({ user, scope: cloneDailyScope(scope, day) }) });
+        }
+        const payload = buildCoachDailyMonthPackPayload({ month: days[0].slice(0, 7), dailyPayloads });
+        const built = buildOperationsSnapshot({
+          payload,
+          user,
+          scope,
+          batchId: batchId || `operations-month-pack-${Date.now()}`,
+          sourceSnapshotAt: startedAt,
+          completedAt: new Date().toISOString()
+        });
+        if (dryRun) return { dryRun: true, scopeKey: built.scopeKey, checksum: built.meta.checksum, batchId: built.meta.batchId };
+        await ensureSnapshotTables();
+        for (const chunk of built.chunks) await put(tables.operationsSnapshot, chunk.id, chunk);
+        await put(tables.operationsSnapshot, built.bundle.id, built.bundle);
+        await put(tables.operationsSnapshot, built.meta.id, built.meta);
+        await rememberScope(user, scope);
+        await updateTaskStatus(taskId, { ...taskAttrs, status: 'done', error: '', completedAt: built.meta.completedAt });
+        return { dryRun: false, scopeKey: built.scopeKey, checksum: built.meta.checksum, batchId: built.meta.batchId, bundleId: built.bundle.id };
+      } catch (err) {
+        if (!dryRun) await updateTaskStatus(taskId, { ...taskAttrs, status: 'failed', error: err?.message || err });
+        throw err;
+      } finally {
+        rebuildPromises.delete(key);
+      }
+    })();
+    rebuildPromises.set(key, run);
+    return run;
+  }
+
+  function enqueueScopesForRange(user = {}, scope = {}) {
+    if (!canComposeCoachDailyScope(scope)) return [{ user, scope }];
+    return monthKeysInRange(scope.dateRange || {}).map((month) => ({
+      user,
+      scope: cloneCoachDailyMonthPackScope(scope, month)
+    }));
+  }
+
   async function updateTaskStatus(id, attrs = {}) {
     const taskId = text(id);
     if (taskId) await recordTask(taskId, attrs);
@@ -595,22 +738,29 @@ function createOperationsSnapshotSync(deps = {}) {
   }
 
   async function enqueueRebuildTask({ user = {}, scope = {}, reason = 'queued' } = {}) {
-    const key = scopeKey(user, scope);
-    const normalized = normalizeScope(user, scope);
-    const taskId = taskIdForScopeKey(key);
     await ensureSnapshotTables();
-    await recordTask(taskId, {
-      status: 'pending',
-      reason,
-      error: '',
-      scopeKey: key,
-      user: normalized.userScope,
-      scope: storedScopeForNormalized(normalized)
-    });
-    return { queued: true, scopeKey: key, taskId };
+    const queued = [];
+    for (const item of enqueueScopesForRange(user, scope)) {
+      const key = scopeKey(item.user, item.scope);
+      const normalized = normalizeScope(item.user, item.scope);
+      const taskId = taskIdForScopeKey(key);
+      await recordTask(taskId, {
+        status: 'pending',
+        reason,
+        error: '',
+        scopeKey: key,
+        user: normalized.userScope,
+        scope: storedScopeForNormalized(normalized)
+      });
+      queued.push({ scopeKey: key, taskId });
+    }
+    return { queued: true, scopeKey: queued[0]?.scopeKey || scopeKey(user, scope), taskId: queued[0]?.taskId || taskIdForScopeKey(scopeKey(user, scope)), tasks: queued };
   }
 
   async function rebuildScope({ user = {}, scope = {}, dryRun = false, batchId = '', reason = 'manual', taskId = '' } = {}) {
+    if (isCoachDailyMonthPackScope(scope)) {
+      return rebuildCoachDailyMonthPackScope({ user, scope, dryRun, batchId, reason, taskId });
+    }
     if (typeof buildPayload !== 'function') throw new Error('缺少经营快照重建数据源');
     const key = scopeKey(user, scope);
     if (rebuildPromises.has(key)) return rebuildPromises.get(key);
@@ -722,6 +872,7 @@ function createOperationsSnapshotSync(deps = {}) {
     const scopes = Array.isArray(index?.scopes) ? index.scopes : [];
     await Promise.all(scopes.map((item) => {
       if (!item?.user) return null;
+      if (text(item?.scope?.view) === 'coach' && dateRangeDays(item?.scope?.dateRange || {}).length === 1) return null;
       return readSnapshotRow(metaIdForScopeKey(item.scopeKey)).then((row) => {
         if (row?.id) return put(tables.operationsSnapshot, row.id, { ...row, sourceChangedAt: marker.changedAt });
         return null;
@@ -737,6 +888,7 @@ function createOperationsSnapshotSync(deps = {}) {
     processQueuedRebuilds,
     queueRebuildScope,
     readSnapshotStatus,
+    rebuildCoachDailyMonthPackScope,
     rebuildScope,
     recordSourceChange,
     recordTask
@@ -746,20 +898,24 @@ function createOperationsSnapshotSync(deps = {}) {
 module.exports = {
   OPERATIONS_SNAPSHOT_VERSION,
   OPERATIONS_SNAPSHOT_NOT_READY_CODE,
+  COACH_DAILY_MONTH_PACK_VIEW,
   SNAPSHOT_SCOPE_INDEX_ID,
   SNAPSHOT_SOURCE_MARKER_ID,
   SNAPSHOT_LAST_REBUILD_TASK_ID,
   SNAPSHOT_REBUILD_TASK_PREFIX,
   SNAPSHOT_BUNDLE_INLINE_LIMIT,
   buildOperationsSnapshot,
+  buildCoachDailyMonthPackPayload,
   canComposeCoachDailyScope,
   checksumPayload,
   cloneDailyScope,
+  cloneCoachDailyMonthPackScope,
   composeCoachSnapshotPayloads,
   createOperationsSnapshotLoader,
   createOperationsSnapshotSync,
   decodePayload,
   encodePayload,
+  payloadsFromCoachDailyMonthPacks,
   chunkIdForBundle,
   metaIdForScopeKey,
   scopeKey,

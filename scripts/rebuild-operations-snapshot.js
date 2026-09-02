@@ -17,7 +17,7 @@ process.env.OPERATIONS_CACHE_TTL_MS = process.env.OPERATIONS_CACHE_TTL_MS || Str
 const { createStorageServices } = require('../server/storage.js');
 const { DEFAULT_CAMPUSES } = require('../server/bootstrap.js');
 const { buildOperationsPagePayload, getOperationsPageScope } = require('../server/page-data/operations-page.js');
-const { createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
+const { COACH_DAILY_MONTH_PACK_VIEW, createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
 const { normalizeCampusValue, displayCampusName } = require('../public/assets/scripts/core/campus.js');
 
 const TABLES = {
@@ -60,6 +60,7 @@ function parseArgs(argv = []) {
     view: value('--view'),
     commonScopes: argv.includes('--common-scopes'),
     dailyScopes: argv.includes('--daily-scopes'),
+    dailyMonthScopes: argv.includes('--daily-month-scopes'),
     skipDefaultScope: argv.includes('--skip-default-scope'),
     dailyFrom: value('--daily-from'),
     dailyTo: value('--daily-to'),
@@ -192,6 +193,35 @@ function buildDailyScopeArgs(args = {}, bounds = {}, campuses = []) {
   })));
 }
 
+function enumerateMonths(startDate, endDate) {
+  const days = enumerateDays(startDate, endDate);
+  const seen = new Set();
+  return days.map(day => day.slice(0, 7)).filter(month => {
+    if (seen.has(month)) return false;
+    seen.add(month);
+    return true;
+  });
+}
+
+function monthBoundsFromMonth(month = '') {
+  return monthBounds(`${String(month || '').slice(0, 7)}-01`);
+}
+
+function buildDailyMonthScopeArgs(args = {}, bounds = {}, campuses = []) {
+  if (!args.dailyMonthScopes) return [];
+  const months = enumerateMonths(bounds.startDate, bounds.endDate);
+  const campusScopes = [{ campus: args.campus || '', campusName: args.campusName || '' }];
+  if (!args.campus && !args.campusName) {
+    campuses.map(normalizedCampusScope).filter(Boolean).forEach((campus) => campusScopes.push(campus));
+  }
+  return campusScopes.flatMap((campusScope) => months.map(month => ({
+    ...args,
+    ...campusScope,
+    ...monthBoundsFromMonth(month),
+    view: COACH_DAILY_MONTH_PACK_VIEW
+  })));
+}
+
 function shardScopeArgs(scopes = [], args = {}) {
   const seen = new Set();
   const uniqueScopes = scopes.filter((item) => {
@@ -227,7 +257,9 @@ function buildScope(args = {}) {
   ['campus', 'campusName', 'startDate', 'endDate', 'view'].forEach((key) => {
     if (args[key]) query.set(key, args[key]);
   });
-  return getOperationsPageScope(query);
+  const scope = getOperationsPageScope(query);
+  if (args.view === COACH_DAILY_MONTH_PACK_VIEW) scope.view = COACH_DAILY_MONTH_PACK_VIEW;
+  return scope;
 }
 
 function loadOperationsHelpers() {
@@ -275,11 +307,12 @@ async function run(options = {}) {
     tables: { operationsSnapshot: T_OPERATIONS_SNAPSHOT, operationsSnapshotTasks: T_OPERATIONS_SNAPSHOT_TASKS }
   });
   const rebuilt = [];
-  const campusRows = (args.commonScopes || args.dailyScopes) && !args.campus && !args.campusName ? await listCampusesWithDefaults() : [];
-  const dailyBounds = args.dailyScopes ? await inferDailySnapshotBounds({ args, storage }) : null;
+  const campusRows = (args.commonScopes || args.dailyScopes || args.dailyMonthScopes) && !args.campus && !args.campusName ? await listCampusesWithDefaults() : [];
+  const dailyBounds = (args.dailyScopes || args.dailyMonthScopes) ? await inferDailySnapshotBounds({ args, storage }) : null;
   const scopeArgsList = shardScopeArgs([
     ...(args.skipDefaultScope ? [] : buildCommonScopeArgs({ ...args, shardCount: 1, shardIndex: 0 }, new Date(), campusRows)),
-    ...buildDailyScopeArgs(args, dailyBounds || {}, campusRows)
+    ...buildDailyScopeArgs(args, dailyBounds || {}, campusRows),
+    ...buildDailyMonthScopeArgs(args, dailyBounds || {}, campusRows)
   ], args);
   console.error(`[operations-snapshot] rebuilding ${scopeArgsList.length} scope(s), shard ${args.shardIndex + 1}/${args.shardCount}`);
   for (const scopeArgs of scopeArgsList) {
@@ -311,7 +344,9 @@ if (require.main === module) {
 module.exports = {
   buildCommonScopeArgs,
   buildDailyScopeArgs,
+  buildDailyMonthScopeArgs,
   buildScope,
+  enumerateMonths,
   enumerateDays,
   parseArgs,
   run

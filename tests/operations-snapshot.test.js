@@ -5,8 +5,9 @@ const {
   OPERATIONS_SNAPSHOT_NOT_READY_CODE,
   SNAPSHOT_BUNDLE_INLINE_LIMIT,
   SNAPSHOT_SOURCE_MARKER_ID,
+  buildCoachDailyMonthPackPayload,
   buildOperationsSnapshot,
-  cloneDailyScope,
+  cloneCoachDailyMonthPackScope,
   composeCoachSnapshotPayloads,
   createOperationsSnapshotLoader,
   createOperationsSnapshotSync,
@@ -15,7 +16,7 @@ const {
   taskIdForScopeKey
 } = require('../server/page-data/operations-snapshot.js');
 const { getOperationsRowsCacheKey } = require('../server/read-models/operations-source.js');
-const { buildCommonScopeArgs, buildDailyScopeArgs } = require('../scripts/rebuild-operations-snapshot.js');
+const { buildCommonScopeArgs, buildDailyMonthScopeArgs, buildDailyScopeArgs, buildScope } = require('../scripts/rebuild-operations-snapshot.js');
 
 const user = { id: 'admin-1', role: 'admin', dataScope: '', campusIds: [] };
 const augustScope = {
@@ -94,6 +95,24 @@ async function main() {
     aliasDailyScopes.some((row) => row.campus === 'shunyi_mapo' && row.campusName === '顺义马坡'),
     '生产历史校区别名必须规范成前端筛选使用的标准校区编码'
   );
+  const monthPackScopes = buildDailyMonthScopeArgs(
+    { write: true, view: 'coach', dailyMonthScopes: true },
+    { startDate: '2026-09-01', endDate: '2026-10-03' },
+    [{ id: 'shunyi_mapo', name: '顺义马坡' }]
+  );
+  assert.ok(
+    monthPackScopes.some((row) => row.campus === 'shunyi_mapo' && row.startDate === '2026-09-01' && row.endDate === '2026-09-30' && row.view === 'coach-month-pack'),
+    '定时快照必须生成校区月包，任意日期筛选只能读少量月包'
+  );
+  assert.ok(
+    monthPackScopes.some((row) => row.startDate === '2026-10-01' && row.endDate === '2026-10-31' && row.view === 'coach-month-pack'),
+    '跨月日期筛选必须有对应月份月包'
+  );
+  assert.strictEqual(
+    buildScope(monthPackScopes.find((row) => row.campus === 'shunyi_mapo' && row.startDate === '2026-09-01')).view,
+    'coach-month-pack',
+    '月包补建脚本必须保留内部月包视图，不能被页面 view 解析过滤'
+  );
   const payload = {
     campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
     operations: {
@@ -163,7 +182,7 @@ async function main() {
     dateRange: { startDate: '2026-09-01', endDate: '2026-09-02' },
     metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-09-01', endDate: '2026-09-02' }
   };
-  [
+  const monthDailyPayloads = [
     {
       day: '2026-09-01',
       usedHours: 2,
@@ -174,9 +193,9 @@ async function main() {
       usedHours: 3,
       revenue: 1500
     }
-  ].forEach(item => {
-    const dailyScope = cloneDailyScope(septemberRangeScope, item.day);
-    const dailyBuilt = buildOperationsSnapshot({
+  ].map(item => {
+    return {
+      day: item.day,
       payload: {
         campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
         operations: {
@@ -202,18 +221,22 @@ async function main() {
           }
         },
         generatedAt: `${item.day}T00:00:00.000Z`
-      },
-      user,
-      scope: dailyScope,
-      batchId: `daily-${item.day}`,
-      completedAt: `${item.day}T00:00:00.000Z`,
-      sourceSnapshotAt: `${item.day}T00:00:00.000Z`
-    });
-    tableRows.set(dailyBuilt.meta.id, dailyBuilt.meta);
-    tableRows.set(dailyBuilt.bundle.id, dailyBuilt.bundle);
+      }
+    };
   });
+  const monthPackScope = cloneCoachDailyMonthPackScope(septemberRangeScope, '2026-09');
+  const monthPackBuilt = buildOperationsSnapshot({
+    payload: buildCoachDailyMonthPackPayload({ month: '2026-09', dailyPayloads: monthDailyPayloads }),
+    user,
+    scope: monthPackScope,
+    batchId: 'daily-month-2026-09',
+    completedAt: '2026-09-02T00:00:00.000Z',
+    sourceSnapshotAt: '2026-09-02T00:00:00.000Z'
+  });
+  tableRows.set(monthPackBuilt.meta.id, monthPackBuilt.meta);
+  tableRows.set(monthPackBuilt.bundle.id, monthPackBuilt.bundle);
   const composedView = await loader({ user, scope: septemberRangeScope });
-  assert.strictEqual(composedView.snapshot.source, 'operations-coach-daily-snapshot', '自定义日期段缺少精确范围快照时必须走教练日快照组合');
+  assert.strictEqual(composedView.snapshot.source, 'operations-coach-daily-month-pack', '自定义日期段缺少精确范围快照时必须走教练月包组合');
   assert.strictEqual(composedView.operations.coach.cards.usedHours.value, 5, '日快照组合后的课时必须等于所选日期内每天已排课时之和');
   assert.strictEqual(composedView.operations.overview.cards.totalIncome.value, 2500, '顶部数据必须随筛选日期范围由日快照组合');
 

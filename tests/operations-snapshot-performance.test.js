@@ -1,8 +1,9 @@
 const assert = require('assert');
 
 const {
+  buildCoachDailyMonthPackPayload,
   buildOperationsSnapshot,
-  cloneDailyScope,
+  cloneCoachDailyMonthPackScope,
   createOperationsSnapshotLoader
 } = require('../server/page-data/operations-snapshot.js');
 
@@ -41,15 +42,17 @@ const { meta, bundle } = buildOperationsSnapshot({
   sourceSnapshotAt: '2026-09-01T00:00:00.000Z'
 });
 const rows = new Map([[meta.id, meta], [bundle.id, bundle]]);
+const composeScope = {
+  ...scope,
+  view: 'coach',
+  dateRange: { startDate: '2026-09-01', endDate: '2026-09-30' },
+  metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-09-01', endDate: '2026-09-30' }
+};
+const monthDailyPayloads = [];
 for (let day = 1; day <= 30; day += 1) {
   const date = `2026-09-${String(day).padStart(2, '0')}`;
-  const dailyScope = cloneDailyScope({
-    ...scope,
-    view: 'coach',
-    dateRange: { startDate: '2026-09-01', endDate: '2026-09-30' },
-    metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-09-01', endDate: '2026-09-30' }
-  }, date);
-  const dailyBuilt = buildOperationsSnapshot({
+  monthDailyPayloads.push({
+    day: date,
     payload: {
       campuses: payload.campuses,
       operations: {
@@ -57,16 +60,20 @@ for (let day = 1; day <= 30; day += 1) {
         coach: { rows: coachRows.slice(0, 100).map(row => ({ ...row, coach: row.coachName, usedHours: 1, teachingHours: 1, teachingStudentCount: 1, availableHours: 6.9, revenue: 10, courseMix: [{ type: '私教课', hours: 1 }] })) }
       },
       generatedAt: `${date}T00:00:00.000Z`
-    },
-    user,
-    scope: dailyScope,
-    batchId: `daily-${date}`,
-    completedAt: `${date}T00:00:00.000Z`,
-    sourceSnapshotAt: `${date}T00:00:00.000Z`
+    }
   });
-  rows.set(dailyBuilt.meta.id, dailyBuilt.meta);
-  rows.set(dailyBuilt.bundle.id, dailyBuilt.bundle);
 }
+const monthPackScope = cloneCoachDailyMonthPackScope(composeScope, '2026-09');
+const monthPackBuilt = buildOperationsSnapshot({
+  payload: buildCoachDailyMonthPackPayload({ month: '2026-09', dailyPayloads: monthDailyPayloads }),
+  user,
+  scope: monthPackScope,
+  batchId: 'daily-month-2026-09',
+  completedAt: '2026-09-30T00:00:00.000Z',
+  sourceSnapshotAt: '2026-09-30T00:00:00.000Z'
+});
+rows.set(monthPackBuilt.meta.id, monthPackBuilt.meta);
+rows.set(monthPackBuilt.bundle.id, monthPackBuilt.bundle);
 let scanCalled = false;
 const loader = createOperationsSnapshotLoader({
   getCachedRow: async (table, id) => rows.get(id) || null,
@@ -88,20 +95,14 @@ const loader = createOperationsSnapshotLoader({
     assert.strictEqual(view.operations.coach.rows[268].coachName, '朝珺', '大数据包下仍应返回正确教练数据');
     assert.strictEqual(view.snapshot.source, 'operations-snapshot', '硬测试必须走经营快照');
   }
-  const composeScope = {
-    ...scope,
-    view: 'coach',
-    dateRange: { startDate: '2026-09-01', endDate: '2026-09-30' },
-    metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-09-01', endDate: '2026-09-30' }
-  };
   const composeStarted = Date.now();
   const composed = await loader({ user, scope: composeScope });
   const composeElapsed = Date.now() - composeStarted;
-  assert.ok(composeElapsed < 1000, `自定义日期段教练日快照组合必须 1s 内完成，实际 ${composeElapsed}ms`);
-  assert.strictEqual(composed.snapshot.source, 'operations-coach-daily-snapshot', '自定义日期段硬测必须走教练日快照组合');
+  assert.ok(composeElapsed < 1000, `自定义日期段教练月包组合必须 1s 内完成，实际 ${composeElapsed}ms`);
+  assert.strictEqual(composed.snapshot.source, 'operations-coach-daily-month-pack', '自定义日期段硬测必须走教练月包组合');
   assert.strictEqual(composed.operations.coach.rows[0].usedHours, 30, '30 天日快照组合后教练课时必须正确累加');
   assert.strictEqual(scanCalled, false, '经营页快照读取链路不得调用 scan');
-  console.log(`operations snapshot performance tests passed\n${times.join('ms / ')}ms; daily compose ${composeElapsed}ms`);
+  console.log(`operations snapshot performance tests passed\n${times.join('ms / ')}ms; month pack compose ${composeElapsed}ms`);
 })().catch((error) => {
   console.error(error);
   process.exit(1);
