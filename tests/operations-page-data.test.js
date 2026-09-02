@@ -127,9 +127,11 @@ assert.doesNotMatch(apiSource, /\/cron\/operations-snapshot\/rebuild/, 'slow ope
 assert.match(operationsSnapshotRunnerSource, /view: value\('--view'\)/, 'operations snapshot runner should support rebuilding the lightweight coach view');
 assert.match(operationsSnapshotRunnerSource, /commonScopes: argv\.includes\('--common-scopes'\)/, 'operations snapshot runner should support prebuilding common date scopes');
 assert.match(operationsSnapshotRunnerSource, /dailyScopes: argv\.includes\('--daily-scopes'\)/, 'operations snapshot runner should support prebuilding coach daily scopes for arbitrary date filters');
+assert.match(operationsSnapshotRunnerSource, /skipDefaultScope: argv\.includes\('--skip-default-scope'\)/, 'operations snapshot runner should allow daily-only rebuild batches without reprocessing all-time scopes');
 assert.match(operationsSnapshotRunnerSource, /shardCount: Math\.max\(1, Math\.min\(parseInt\(value\('--shard-count'\)/, 'operations snapshot runner should support sharded common date rebuilds');
 assert.match(operationsSnapshotRunnerSource, /function buildCommonScopeArgs\(/, 'operations snapshot runner should build common coach date ranges before users open filters');
 assert.match(operationsSnapshotRunnerSource, /function buildDailyScopeArgs\(/, 'operations snapshot runner should build daily coach snapshots so custom date ranges do not wait for page-miss rebuilds');
+assert.match(operationsSnapshotRunnerSource, /args\.skipDefaultScope \? \[\] : buildCommonScopeArgs/, 'daily-only rebuilds must not be dragged by all-time range snapshots');
 assert.match(operationsSnapshotRunnerSource, /processQueuedRebuilds\(\{ limit: args\.limit, includeFailed: false \}\)/, 'operations snapshot runner must process date-filter misses from the durable queue');
 assert.match(operationsSnapshotWorkflowSource, /matrix:[\s\S]*shard: \[0, 1, 2, 3, 4, 5\]/, 'operations snapshot workflow must split common scopes into parallel shards');
 assert.match(operationsSnapshotWorkflowSource, /--write --view coach --common-scopes --daily-scopes --shard-count 6 --shard-index \$\{\{ matrix\.shard \}\}/, 'operations snapshot workflow must prebuild common date scopes and daily coach scopes in bounded shards');

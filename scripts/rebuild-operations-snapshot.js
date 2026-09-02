@@ -59,6 +59,7 @@ function parseArgs(argv = []) {
     view: value('--view'),
     commonScopes: argv.includes('--common-scopes'),
     dailyScopes: argv.includes('--daily-scopes'),
+    skipDefaultScope: argv.includes('--skip-default-scope'),
     dailyFrom: value('--daily-from'),
     dailyTo: value('--daily-to'),
     processQueued: argv.includes('--process-queued'),
@@ -276,7 +277,7 @@ async function run(options = {}) {
   const campusRows = (args.commonScopes || args.dailyScopes) && !args.campus && !args.campusName ? await listCampusesWithDefaults() : [];
   const dailyBounds = args.dailyScopes ? await inferDailySnapshotBounds({ args, storage }) : null;
   const scopeArgsList = shardScopeArgs([
-    ...buildCommonScopeArgs({ ...args, shardCount: 1, shardIndex: 0 }, new Date(), campusRows),
+    ...(args.skipDefaultScope ? [] : buildCommonScopeArgs({ ...args, shardCount: 1, shardIndex: 0 }, new Date(), campusRows)),
     ...buildDailyScopeArgs(args, dailyBounds || {}, campusRows)
   ], args);
   console.error(`[operations-snapshot] rebuilding ${scopeArgsList.length} scope(s), shard ${args.shardIndex + 1}/${args.shardCount}`);
