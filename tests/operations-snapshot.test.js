@@ -12,6 +12,7 @@ const {
   scopeKey,
   taskIdForScopeKey
 } = require('../server/page-data/operations-snapshot.js');
+const { getOperationsRowsCacheKey } = require('../server/read-models/operations-source.js');
 
 const user = { id: 'admin-1', role: 'admin', dataScope: '', campusIds: [] };
 const augustScope = {
@@ -49,6 +50,16 @@ async function main() {
     scopeKey(user, augustScope),
     scopeKey(user, augustCoachScope),
     '教练轻量视图必须使用独立快照 key，不能覆盖经营总览快照'
+  );
+  assert.strictEqual(
+    scopeKey({ id: 'admin-a', role: 'admin', dataScope: '', campusIds: [] }, augustCoachScope),
+    scopeKey({ id: 'admin-b', role: 'admin', dataScope: 'all', campusIds: [] }, augustCoachScope),
+    '全局管理员不论账号和 dataScope 空值差异，都必须命中同一份教练人效快照'
+  );
+  assert.strictEqual(
+    getOperationsRowsCacheKey({ id: 'admin-a', role: 'admin', dataScope: '', campusIds: [] }),
+    getOperationsRowsCacheKey({ id: 'admin-b', role: 'admin', dataScope: 'all', campusIds: [] }),
+    '经营分析原始行缓存也必须按权限范围共享，不能按管理员账号拆开'
   );
   const tableRows = new Map([
     [augustBuilt.meta.id, augustBuilt.meta],

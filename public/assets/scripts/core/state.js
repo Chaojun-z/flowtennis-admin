@@ -313,10 +313,15 @@ function assertPageDataPerformanceGuard(){
 }
 assertPageDataPerformanceGuard();
 function currentOperationsPageView(){
+  if(typeof operationsActiveTab!=='undefined'&&operationsActiveTab==='coach')return 'coach';
   try{
     const tab=localStorage.getItem('ft_operations_active_tab');
     return tab==='coach'?'coach':'';
-  }catch(e){return '';}
+  }catch(e){}
+  try{
+    if(typeof document!=='undefined'&&document.querySelector('.sb-item[data-nav-page="operations"][data-operations-tab="coach"].active'))return 'coach';
+  }catch(e){}
+  return '';
 }
 function operationsPageDataUrl(){
   const url=scopedPageDataUrl('/page-data/operations');

@@ -99,7 +99,7 @@ async function run(options = {}) {
   const target = await assertProductionWriteTarget();
   const storage = createSnapshotStorage();
   const helpers = loadOperationsHelpers();
-  const user = { id: 'system-operations-snapshot', role: 'admin', dataScope: '', campusIds: [] };
+  const user = { id: 'system-operations-snapshot', role: 'admin', dataScope: 'all', campusIds: [] };
   const listCampusesWithDefaults = async () => {
     const rows = await storage.getCachedScan(TABLES.T_CAMPUSES).catch(() => []);
     return rows.length ? rows : DEFAULT_CAMPUSES.map((campus) => ({ ...campus }));

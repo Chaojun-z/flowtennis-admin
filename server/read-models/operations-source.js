@@ -1,4 +1,5 @@
 const { readLeadSourceRows } = require('../lead-source-read-model.js');
+const { normalizePermissionProfile } = require('../permissions.js');
 
 const OPERATIONS_LEAD_FIELDS = [
   'id', 'displayName', 'name', 'source', 'campus', 'campusName', 'owner', 'coach', 'coachName',
@@ -80,11 +81,14 @@ async function getOperationsScheduleRows({ getScheduleListRows, getCachedScan, s
 }
 
 function getOperationsRowsCacheKey(user = {}) {
+  const profile = normalizePermissionProfile(user || {});
+  const isAdmin = profile.role === 'admin';
+  const dataScope = isAdmin && profile.dataScope !== 'campus' ? 'all' : profile.dataScope;
   return JSON.stringify({
-    id: user.id || user.userId || user.username || '',
-    role: user.role || '',
-    dataScope: user.dataScope || '',
-    campusIds: Array.isArray(user.campusIds) ? [...user.campusIds].sort() : []
+    id: isAdmin ? '' : (user.id || user.userId || user.username || ''),
+    role: profile.role,
+    dataScope,
+    campusIds: dataScope === 'campus' ? [...profile.campusIds].sort() : []
   });
 }
 
