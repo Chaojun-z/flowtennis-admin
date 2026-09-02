@@ -35,4 +35,6 @@ jobs:
       - run: npm ci
 
       - name: Rebuild operations snapshot
-        run: node scripts/rebuild-operations-snapshot.js --write --view coach --common-scopes --daily-scopes --shard-count 6 --shard-index ${{ matrix.shard }}
+        run: |
+          node scripts/rebuild-operations-snapshot.js --write --view coach --common-scopes --shard-count 6 --shard-index ${{ matrix.shard }}
+          node scripts/rebuild-operations-snapshot.js --write --view coach --daily-scopes --skip-default-scope --daily-from 2026-09-01 --daily-to 2026-12-31 --shard-count 6 --shard-index ${{ matrix.shard }}
