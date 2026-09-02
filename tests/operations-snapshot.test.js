@@ -13,6 +13,7 @@ const {
   taskIdForScopeKey
 } = require('../server/page-data/operations-snapshot.js');
 const { getOperationsRowsCacheKey } = require('../server/read-models/operations-source.js');
+const { buildCommonScopeArgs } = require('../scripts/rebuild-operations-snapshot.js');
 
 const user = { id: 'admin-1', role: 'admin', dataScope: '', campusIds: [] };
 const augustScope = {
@@ -29,6 +30,46 @@ const julyScope = {
 const augustCoachScope = { ...augustScope, view: 'coach' };
 
 async function main() {
+  const commonScopes = buildCommonScopeArgs(
+    { write: true, view: 'coach', commonScopes: true },
+    new Date('2026-09-02T04:00:00.000Z')
+  );
+  assert.ok(
+    commonScopes.some((row) => row.startDate === '2026-09-01' && row.endDate === '2026-09-30' && row.view === 'coach'),
+    '定时快照必须提前生成本月教练人效范围，避免日期筛选后一直加载'
+  );
+  assert.ok(
+    commonScopes.some((row) => row.startDate === '2026-08-01' && row.endDate === '2026-08-31' && row.view === 'coach'),
+    '定时快照必须提前生成上月教练人效范围，避免月度复盘筛选后一直加载'
+  );
+  assert.ok(
+    commonScopes.some((row) => row.startDate === '' && row.endDate === '' && row.view === 'coach'),
+    '定时快照必须继续生成全部时间教练人效范围，不能破坏首屏'
+  );
+  const commonCampusScopes = buildCommonScopeArgs(
+    { write: true, view: 'coach', commonScopes: true },
+    new Date('2026-09-02T04:00:00.000Z'),
+    [{ id: 'shunyi_mapo', name: '顺义马坡' }]
+  );
+  assert.ok(
+    commonCampusScopes.some((row) => row.campus === 'shunyi_mapo' && row.campusName === '顺义马坡' && row.startDate === '2026-09-01' && row.endDate === '2026-09-30' && row.view === 'coach'),
+    '定时快照必须提前生成校区 + 本月教练人效范围，避免校区筛选后日期筛选一直加载'
+  );
+  const shardA = buildCommonScopeArgs(
+    { write: true, view: 'coach', commonScopes: true, shardCount: 2, shardIndex: 0 },
+    new Date('2026-09-02T04:00:00.000Z'),
+    [{ id: 'shunyi_mapo', name: '顺义马坡' }]
+  );
+  const shardB = buildCommonScopeArgs(
+    { write: true, view: 'coach', commonScopes: true, shardCount: 2, shardIndex: 1 },
+    new Date('2026-09-02T04:00:00.000Z'),
+    [{ id: 'shunyi_mapo', name: '顺义马坡' }]
+  );
+  assert.strictEqual(
+    shardA.length + shardB.length,
+    commonCampusScopes.length,
+    '校区日期快照必须能分片并行生成，避免单个定时任务串行超时'
+  );
   const payload = {
     campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
     operations: {

@@ -55,9 +55,84 @@ function parseArgs(argv = []) {
     startDate: value('--startDate'),
     endDate: value('--endDate'),
     view: value('--view'),
+    commonScopes: argv.includes('--common-scopes'),
     processQueued: argv.includes('--process-queued'),
-    limit: Math.max(1, Math.min(parseInt(value('--limit') || '1', 10) || 1, 5))
+    limit: Math.max(1, Math.min(parseInt(value('--limit') || '1', 10) || 1, 5)),
+    shardCount: Math.max(1, Math.min(parseInt(value('--shard-count') || '1', 10) || 1, 20)),
+    shardIndex: Math.max(0, parseInt(value('--shard-index') || '0', 10) || 0)
   };
+}
+
+function chinaDateKey(date = new Date()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date).filter((item) => item.type !== 'literal').map((item) => [item.type, item.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function addDays(dateKey, amount) {
+  const base = new Date(`${dateKey}T00:00:00+08:00`);
+  base.setUTCDate(base.getUTCDate() + amount);
+  return chinaDateKey(base);
+}
+
+function monthBounds(dateKey) {
+  const [year, month] = String(dateKey || '').split('-').map((item) => parseInt(item, 10));
+  const start = `${year}-${String(month).padStart(2, '0')}-01`;
+  const end = `${year}-${String(month).padStart(2, '0')}-${String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, '0')}`;
+  return { startDate: start, endDate: end };
+}
+
+function previousMonthBounds(dateKey) {
+  const [year, month] = String(dateKey || '').split('-').map((item) => parseInt(item, 10));
+  const previousMonth = month === 1 ? 12 : month - 1;
+  const previousYear = month === 1 ? year - 1 : year;
+  return monthBounds(`${previousYear}-${String(previousMonth).padStart(2, '0')}-01`);
+}
+
+function weekBounds(dateKey) {
+  const base = new Date(`${dateKey}T00:00:00+08:00`);
+  const day = base.getUTCDay() || 7;
+  const start = addDays(dateKey, 1 - day);
+  return { startDate: start, endDate: addDays(start, 6) };
+}
+
+function normalizedCampusScope(campus = {}) {
+  const id = String(campus.id || campus.code || campus.campus || '').trim();
+  const name = String(campus.name || campus.campusName || '').trim();
+  if (!id && !name) return null;
+  return { campus: id, campusName: name };
+}
+
+function buildCommonScopeArgs(args = {}, now = new Date(), campuses = []) {
+  if (!args.commonScopes) return [args];
+  const today = chinaDateKey(now);
+  const dateScopes = [
+    { startDate: '', endDate: '' },
+    { startDate: today, endDate: today },
+    weekBounds(today),
+    monthBounds(today),
+    previousMonthBounds(today)
+  ];
+  const campusScopes = [{ campus: args.campus || '', campusName: args.campusName || '' }];
+  if (!args.campus && !args.campusName) {
+    campuses.map(normalizedCampusScope).filter(Boolean).forEach((campus) => campusScopes.push(campus));
+  }
+  const scopes = campusScopes.flatMap((campusScope) => dateScopes.map((dateScope) => ({ ...args, ...campusScope, ...dateScope })));
+  const seen = new Set();
+  const uniqueScopes = scopes.filter((item) => {
+    const key = [item.campus || '', item.campusName || '', item.startDate || '', item.endDate || '', item.view || ''].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const shardCount = Math.max(1, parseInt(args.shardCount || '1', 10) || 1);
+  const shardIndex = Math.max(0, parseInt(args.shardIndex || '0', 10) || 0);
+  if (shardCount <= 1) return uniqueScopes;
+  return uniqueScopes.filter((_, index) => index % shardCount === shardIndex % shardCount);
 }
 
 function createSnapshotStorage() {
@@ -128,7 +203,14 @@ async function run(options = {}) {
     buildPayload,
     tables: { operationsSnapshot: T_OPERATIONS_SNAPSHOT, operationsSnapshotTasks: T_OPERATIONS_SNAPSHOT_TASKS }
   });
-  const rebuilt = await sync.rebuildScope({ user, scope: buildScope(args), reason: 'script-default' });
+  const rebuilt = [];
+  const campusRows = args.commonScopes && !args.campus && !args.campusName ? await listCampusesWithDefaults() : [];
+  const scopeArgsList = buildCommonScopeArgs(args, new Date(), campusRows);
+  console.error(`[operations-snapshot] rebuilding ${scopeArgsList.length} scope(s), shard ${args.shardIndex + 1}/${args.shardCount}`);
+  for (const scopeArgs of scopeArgsList) {
+    console.error(`[operations-snapshot] scope campus=${scopeArgs.campus || 'all'} start=${scopeArgs.startDate || 'all'} end=${scopeArgs.endDate || 'all'} view=${scopeArgs.view || 'all'}`);
+    rebuilt.push(await sync.rebuildScope({ user, scope: buildScope(scopeArgs), reason: args.commonScopes ? 'script-common-scope' : 'script-default' }));
+  }
   const queued = args.processQueued ? await sync.processQueuedRebuilds({ limit: args.limit, includeFailed: false }) : { processed: 0, tasks: [] };
   return { ok: true, target, queued, rebuilt };
 }
@@ -152,6 +234,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildCommonScopeArgs,
   buildScope,
   parseArgs,
   run

@@ -7,6 +7,7 @@ const operationsPagePath = path.join(repoRoot, 'server/page-data/operations-page
 const operationsMetricsPath = path.join(repoRoot, 'server/metrics/operations-metrics.js');
 const operationsSnapshotPath = path.join(repoRoot, 'server/page-data/operations-snapshot.js');
 const operationsSnapshotRunnerPath = path.join(repoRoot, 'scripts/rebuild-operations-snapshot.js');
+const operationsSnapshotWorkflowPath = path.join(repoRoot, '.github/workflows/operations-snapshot-rebuild.yml');
 const residualPageDataPath = path.join(repoRoot, 'server/page-data/residual-pages.js');
 const courtReadModelPath = path.join(repoRoot, 'server/page-data/court-account-read-model.js');
 const leadSourceReadModelPath = path.join(repoRoot, 'server/lead-source-read-model.js');
@@ -18,6 +19,7 @@ assert.ok(fs.existsSync(operationsPagePath), 'operations page-data route should 
 assert.ok(fs.existsSync(operationsMetricsPath), 'operations metric calculations should live in server/metrics/operations-metrics.js');
 assert.ok(fs.existsSync(operationsSnapshotPath), 'operations page should have a dedicated snapshot read model');
 assert.ok(fs.existsSync(operationsSnapshotRunnerPath), 'operations snapshot rebuild should have a Node runner outside Vercel');
+assert.ok(fs.existsSync(operationsSnapshotWorkflowPath), 'operations snapshot rebuild should have a scheduled GitHub workflow');
 assert.ok(fs.existsSync(leadSourceReadModelPath), 'lead list and operations conversion should share one lead source read model');
 assert.ok(fs.existsSync(operationsSourcePath), 'all four operations dashboards should read base rows from one operations source model');
 
@@ -25,6 +27,7 @@ const operationsPageSource = fs.readFileSync(operationsPagePath, 'utf8');
 const operationsMetricsSource = fs.readFileSync(operationsMetricsPath, 'utf8');
 const operationsSnapshotSource = fs.readFileSync(operationsSnapshotPath, 'utf8');
 const operationsSnapshotRunnerSource = fs.readFileSync(operationsSnapshotRunnerPath, 'utf8');
+const operationsSnapshotWorkflowSource = fs.readFileSync(operationsSnapshotWorkflowPath, 'utf8');
 const courtReadModelSource = fs.readFileSync(courtReadModelPath, 'utf8');
 const leadSourceReadModelSource = fs.readFileSync(leadSourceReadModelPath, 'utf8');
 const operationsSourceModelSource = fs.readFileSync(operationsSourcePath, 'utf8');
@@ -122,9 +125,15 @@ assert.match(apiSource, /\['campus','campusName','startDate','endDate','view'\]/
 assert.match(apiSource, /createOperationsSnapshotSync\(\{getCachedRow,put,mkTable,scanByIdPrefix/, 'operations snapshot sync must be able to scan queued rebuild tasks by id prefix');
 assert.doesNotMatch(apiSource, /\/cron\/operations-snapshot\/rebuild/, 'slow operations snapshot rebuild must not run inside Vercel request handlers');
 assert.match(operationsSnapshotRunnerSource, /view: value\('--view'\)/, 'operations snapshot runner should support rebuilding the lightweight coach view');
+assert.match(operationsSnapshotRunnerSource, /commonScopes: argv\.includes\('--common-scopes'\)/, 'operations snapshot runner should support prebuilding common date scopes');
+assert.match(operationsSnapshotRunnerSource, /shardCount: Math\.max\(1, Math\.min\(parseInt\(value\('--shard-count'\)/, 'operations snapshot runner should support sharded common date rebuilds');
+assert.match(operationsSnapshotRunnerSource, /function buildCommonScopeArgs\(/, 'operations snapshot runner should build common coach date ranges before users open filters');
+assert.match(operationsSnapshotRunnerSource, /processQueuedRebuilds\(\{ limit: args\.limit, includeFailed: false \}\)/, 'operations snapshot runner must process date-filter misses from the durable queue');
+assert.match(operationsSnapshotWorkflowSource, /matrix:[\s\S]*shard: \[0, 1, 2, 3, 4, 5\]/, 'operations snapshot workflow must split common scopes into parallel shards');
+assert.match(operationsSnapshotWorkflowSource, /--write --view coach --common-scopes --shard-count 6 --shard-index \$\{\{ matrix\.shard \}\}/, 'operations snapshot workflow must prebuild common date scopes in bounded shards');
 assert.match(operationsSnapshotRunnerSource, /parseInt\(value\('--limit'\) \|\| '1'/, 'operations snapshot runner should keep queued rebuild batches small by default');
 assert.match(operationsSnapshotRunnerSource, /processQueuedRebuilds\(\{ limit: args\.limit, includeFailed: false \}\)/, 'operations snapshot runner must process durable queued tasks without retrying failed jobs every run');
-assert.match(operationsSnapshotRunnerSource, /rebuildScope\(\{ user, scope: buildScope\(args\), reason: 'script-default' \}\)/, 'operations snapshot runner must prebuild the default all-campus all-time snapshot');
+assert.match(operationsSnapshotRunnerSource, /listCampusesWithDefaults\(\)[\s\S]*buildCommonScopeArgs\(args, new Date\(\), campusRows\)[\s\S]*rebuildScope\(\{ user, scope: buildScope\(scopeArgs\), reason: args\.commonScopes \? 'script-common-scope' : 'script-default' \}\)/, 'operations snapshot runner must prebuild the default, campus and common date scopes');
 assert.match(apiSource, /T_LEADS/, 'api/index.js should pass lead tables into extracted page-data routes');
 assert.match(apiSource, /getFinancePageSnapshot/, 'api/index.js should pass the full finance snapshot accessor into extracted page-data routes');
 assert.match(apiSource, /scanFirstRows/, 'api/index.js should pass projected read support into extracted page-data routes');

@@ -12,6 +12,10 @@ jobs:
   rebuild-operations-snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
     env:
       TZ: Asia/Shanghai
       TS_ENDPOINT: ${{ secrets.FLOWTENNIS_TS_ENDPOINT }}
@@ -31,4 +35,4 @@ jobs:
       - run: npm ci
 
       - name: Rebuild operations snapshot
-        run: node scripts/rebuild-operations-snapshot.js --write --view coach
+        run: node scripts/rebuild-operations-snapshot.js --write --view coach --common-scopes --shard-count 6 --shard-index ${{ matrix.shard }}
