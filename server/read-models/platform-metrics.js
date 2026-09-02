@@ -778,6 +778,26 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   const ledgerScheduleStudentKeys = new Set();
   const ledgerScheduleFactKeys = new Set();
   const ledgersByScheduleId = new Map();
+  const ledgerBalanceStudentId = row => {
+    const schedule = schedulesById.get(text(row.scheduleId)) || {};
+    const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
+    return text(row.studentId || row.usedByStudentId)
+      || parseArr(schedule.studentIds).map(text).find(Boolean)
+      || text(schedule.studentId || entitlement.studentId);
+  };
+  const ledgerBalanceKey = row => text(row.scheduleId)
+    ? [text(row.scheduleId), text(row.entitlementId), ledgerBalanceStudentId(row)].join('|')
+    : `ledger:${text(row.id)}`;
+  const ledgerBalanceByKey = new Map();
+  const firstConsumeLedgerIdByKey = new Map();
+  (data.entitlementLedger || [])
+    .filter(activeStatus)
+    .forEach(row => {
+      const key = ledgerBalanceKey(row);
+      const delta = Number(row.lessonDelta) || 0;
+      ledgerBalanceByKey.set(key, (ledgerBalanceByKey.get(key) || 0) + delta);
+      if (delta < 0 && !firstConsumeLedgerIdByKey.has(key)) firstConsumeLedgerIdByKey.set(key, text(row.id));
+    });
   (data.entitlementLedger || [])
     .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0 && text(row.scheduleId))
     .forEach(row => {
@@ -813,6 +833,10 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
 
   (data.entitlementLedger || [])
     .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0)
+    .filter(row => {
+      const key = ledgerBalanceKey(row);
+      return (ledgerBalanceByKey.get(key) || 0) < 0 && firstConsumeLedgerIdByKey.get(key) === text(row.id);
+    })
     .filter(row => !dateOnly(ledgerFallbackDateTime(row) || row.relatedDate || row.scheduleTime || row.createdAt)
       || teachingDateOnOrBeforeNow(ledgerFallbackDateTime(row) || row.relatedDate || row.scheduleTime || row.createdAt, data.now || new Date()))
     .forEach(row => {
@@ -822,6 +846,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       if (!studentIds.length) return;
       const ownerStudentId = entitlementLedgerOwnerStudentId(row, entitlementsById, purchasesById);
       const schedule = findScheduleForLedgerRow(row, schedulesById, scheduleRows, studentIds);
+      if (text(row.scheduleId) && text(schedule.id) && !activeStatus(schedule)) return;
       const scheduleTime = text(schedule.startTime || schedule.endTime);
       if (scheduleTime && !teachingDateTimeOnOrBeforeNow(scheduleTime, data.now || new Date())) return;
       const trial = courseRowIsTrial(row) || courseRowIsTrial(entitlement) || courseRowIsTrial(purchase) || courseRowIsTrial(schedule);
@@ -865,7 +890,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           venue: displayVenue,
           coach: displayCoach,
           hasFeedback: lessonHasFeedback(scheduleId, schedule),
-          lessonDelta: Number(row.lessonDelta) || 0,
+          lessonDelta: ledgerBalanceByKey.get(ledgerBalanceKey(row)) || Number(row.lessonDelta) || 0,
           unit: packageUnitLabel(entitlement),
           status: '已结束',
           statusClass: 'detail-tag-muted',

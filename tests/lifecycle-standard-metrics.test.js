@@ -690,6 +690,38 @@ assert.deepStrictEqual(
   ],
   '状态为已下课的单次课必须进入后端统一上课明细'
 );
+const cancelledLedgerViews = buildTeachingStudentViews([{
+  studentId: 'student-cancelled-ledger',
+  displayName: '取消扣课学员',
+  studentStage: 'formal',
+  hasCourseStudentEntry: true,
+  hasScheduleRecord: true
+}], {
+  students: [{ id: 'student-cancelled-ledger', name: '取消扣课学员' }],
+  purchases: [{ id: 'purchase-cancelled-ledger', studentId: 'student-cancelled-ledger', courseType: '私教课', amountPaid: 4000, status: 'active' }],
+  entitlements: [{ id: 'ent-cancelled-ledger', purchaseId: 'purchase-cancelled-ledger', studentId: 'student-cancelled-ledger', courseType: '私教课', packageName: '成人1v2私教课', totalLessons: 10, remainingLessons: 8, usedLessons: 2, status: 'active' }],
+  entitlementLedger: [
+    { id: 'ledger-cancelled-consume', scheduleId: 'schedule-cancelled-ledger', entitlementId: 'ent-cancelled-ledger', purchaseId: 'purchase-cancelled-ledger', studentId: 'student-cancelled-ledger', lessonDelta: -1, action: 'consume', relatedDate: '2026-08-20', createdAt: '2026-08-20T13:00:00.000Z' },
+    { id: 'ledger-cancelled-return', scheduleId: 'schedule-cancelled-ledger', entitlementId: 'ent-cancelled-ledger', purchaseId: 'purchase-cancelled-ledger', studentId: 'student-cancelled-ledger', lessonDelta: 1, action: 'return', relatedDate: '2026-08-20', createdAt: '2026-08-20T13:05:00.000Z' },
+    { id: 'ledger-active-consume', scheduleId: 'schedule-active-ledger', entitlementId: 'ent-cancelled-ledger', purchaseId: 'purchase-cancelled-ledger', studentId: 'student-cancelled-ledger', lessonDelta: -1, action: 'consume', relatedDate: '2026-08-20', createdAt: '2026-08-20T13:10:00.000Z' }
+  ],
+  schedule: [
+    { id: 'schedule-cancelled-ledger', studentId: 'student-cancelled-ledger', studentIds: ['student-cancelled-ledger'], startTime: '2026-08-20 13:00:00', endTime: '2026-08-20 14:00:00', status: '已取消', courseType: '私教课', venue: '4号场', coach: '岳克舟教练', lessonCount: 1 },
+    { id: 'schedule-active-ledger', studentId: 'student-cancelled-ledger', studentIds: ['student-cancelled-ledger'], startTime: '2026-08-20 13:00:00', endTime: '2026-08-20 14:00:00', status: '已结束', courseType: '私教课', venue: '4号场', coach: '岳克舟教练', lessonCount: 1 }
+  ],
+  now: new Date('2026-09-02 00:00:00')
+});
+const cancelledLedgerRow = cancelledLedgerViews.formalStudents.find(row => row.studentId === 'student-cancelled-ledger');
+assert.deepStrictEqual(
+  cancelledLedgerRow?.detailLessonRecordRows.map(row => [row.scheduleId, row.time, row.lessonDelta, row.lessonSectionText]),
+  [['schedule-active-ledger', '2026-08-20 13:00-14:00', -1, '[第01节]']],
+  '已取消排课关联的扣课流水必须被退回流水抵消，不能继续显示为上课记录或占用课时顺序'
+);
+assert.strictEqual(
+  cancelledLedgerRow?.completedLessons,
+  1,
+  '同一天同一时间一条取消一条有效时，累计上课只能计算有效排课'
+);
 assert.strictEqual(
   hardStandard.views.activeStudents.find(row => row.studentId === 'hard-renewal-due')?.studentStatusLabel,
   '课包待续费',
