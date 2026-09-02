@@ -43,13 +43,15 @@ function checksumPayload(payload) {
 
 function normalizeScope(user = {}, scope = {}) {
   const dateRange = scope.dateRange || scope || {};
-  return {
+  const normalized = {
     userScope: JSON.parse(getOperationsRowsCacheKey({ ...user, id: '', userId: '', username: '' })),
     campus: text(scope.campus),
     campusName: text(scope.campusName),
     startDate: text(dateRange.startDate).slice(0, 10),
     endDate: text(dateRange.endDate).slice(0, 10)
   };
+  if (text(scope.view)) normalized.view = text(scope.view);
+  return normalized;
 }
 
 function scopeKey(user = {}, scope = {}) {
@@ -78,7 +80,7 @@ function timestampMs(value) {
 }
 
 function sourceChangedAfterSnapshot(sourceMarker, meta) {
-  const changedAt = timestampMs(sourceMarker?.changedAt);
+  const changedAt = timestampMs(meta?.sourceChangedAt || sourceMarker?.changedAt);
   const sourceSnapshotAt = timestampMs(meta?.sourceSnapshotAt);
   return changedAt > 0 && sourceSnapshotAt > 0 && changedAt > sourceSnapshotAt;
 }
@@ -109,6 +111,7 @@ function buildOperationsSnapshot({ payload, user, scope, batchId, completedAt, s
     completedAt: now,
     sourceSnapshotAt: sourceSnapshotAt || now
   };
+  const inlinePayload = chunkIds.length ? '' : encodedPayload;
   const chunks = chunkIds.map((id, index) => ({
     id,
     type: 'bundle-chunk',
@@ -129,16 +132,18 @@ function buildOperationsSnapshot({ payload, user, scope, batchId, completedAt, s
     scope: normalizedScope,
     batchId: finalBatchId,
     bundleId,
+    inlinePayload,
     checksum,
     completedAt: now,
     publishedAt: now,
-    sourceSnapshotAt: sourceSnapshotAt || now
+    sourceSnapshotAt: sourceSnapshotAt || now,
+    sourceChangedAt: sourceSnapshotAt || now
   };
   return { meta, bundle, chunks, scopeKey: key, payload };
 }
 
 function storedScopeForNormalized(normalized = {}) {
-  return {
+  const scope = {
     campus: normalized.campus || '',
     campusName: normalized.campusName || '',
     dateRange: { startDate: normalized.startDate || '', endDate: normalized.endDate || '' },
@@ -149,6 +154,8 @@ function storedScopeForNormalized(normalized = {}) {
       endDate: normalized.endDate || ''
     }
   };
+  if (normalized.view) scope.view = normalized.view;
+  return scope;
 }
 
 function snapshotHealth(meta = null, sourceMarker = null, task = null) {
@@ -167,7 +174,7 @@ function snapshotHealth(meta = null, sourceMarker = null, task = null) {
     completedAt: meta?.completedAt || '',
     sourceSnapshotAt: meta?.sourceSnapshotAt || '',
     checksum: meta?.checksum || '',
-    sourceChangedAt: sourceMarker?.changedAt || '',
+    sourceChangedAt: meta?.sourceChangedAt || sourceMarker?.changedAt || '',
     lastRebuildStatus: task?.status || '',
     lastRebuildError: task?.error || ''
   };
@@ -191,13 +198,11 @@ function createOperationsSnapshotLoader(deps = {}) {
 
   return async function loadOperationsSnapshot({ user = {}, scope = {}, forceFresh = false, allowRefreshing = false } = {}) {
     const key = scopeKey(user, scope);
-    const [meta, sourceMarker] = await Promise.all([
-      readRow(metaIdForScopeKey(key)),
-      readRow(SNAPSHOT_SOURCE_MARKER_ID).catch((err) => {
+    const meta = await readRow(metaIdForScopeKey(key));
+    const sourceMarker = meta?.sourceChangedAt ? null : await readRow(SNAPSHOT_SOURCE_MARKER_ID).catch((err) => {
         if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) return null;
         throw err;
-      })
-    ]);
+      });
     if (meta?.status !== 'published' || meta?.snapshotVersion !== OPERATIONS_SNAPSHOT_VERSION || meta.scopeKey !== key || !meta.bundleId || !meta.batchId || !meta.completedAt || !meta.sourceSnapshotAt || !meta.checksum) {
       throw snapshotNotReadyError('经营分析快照未发布或契约不完整');
     }
@@ -210,20 +215,23 @@ function createOperationsSnapshotLoader(deps = {}) {
     if (!forceFresh && memory.has(cacheKey)) {
       payload = memory.get(cacheKey);
     } else {
-      const bundle = await readRow(meta.bundleId);
-      if ((!bundle?.payload && !Array.isArray(bundle?.chunkIds)) || bundle?.codec !== 'gzip-base64-json' || bundle.scopeKey !== key) {
-        throw snapshotNotReadyError('经营分析快照包无效');
-      }
-      let encodedPayload = bundle.payload || '';
+      let encodedPayload = meta.inlinePayload || '';
       if (!encodedPayload) {
-        const chunkRows = await Promise.all((bundle.chunkIds || []).map((id) => readRow(id)));
-        if (chunkRows.length !== Number(bundle.chunkCount || 0) || chunkRows.some((row) => !row?.payload || row.bundleId !== bundle.id || row.scopeKey !== key)) {
-          throw snapshotNotReadyError('经营分析快照分片不完整');
+        const bundle = await readRow(meta.bundleId);
+        if ((!bundle?.payload && !Array.isArray(bundle?.chunkIds)) || bundle?.codec !== 'gzip-base64-json' || bundle.scopeKey !== key) {
+          throw snapshotNotReadyError('经营分析快照包无效');
         }
-        encodedPayload = chunkRows
-          .sort((left, right) => Number(left.index || 0) - Number(right.index || 0))
-          .map((row) => row.payload)
-          .join('');
+        encodedPayload = bundle.payload || '';
+        if (!encodedPayload) {
+          const chunkRows = await Promise.all((bundle.chunkIds || []).map((id) => readRow(id)));
+          if (chunkRows.length !== Number(bundle.chunkCount || 0) || chunkRows.some((row) => !row?.payload || row.bundleId !== bundle.id || row.scopeKey !== key)) {
+            throw snapshotNotReadyError('经营分析快照分片不完整');
+          }
+          encodedPayload = chunkRows
+            .sort((left, right) => Number(left.index || 0) - Number(right.index || 0))
+            .map((row) => row.payload)
+            .join('');
+        }
       }
       payload = decodePayload(encodedPayload);
       const actualChecksum = checksumPayload(payload);
@@ -436,7 +444,10 @@ function createOperationsSnapshotSync(deps = {}) {
     const scopes = Array.isArray(index?.scopes) ? index.scopes : [];
     await Promise.all(scopes.map((item) => {
       if (!item?.user) return null;
-      return queueRebuildScope({ user: item.user, scope: item.scope, reason: 'source-change' });
+      return readSnapshotRow(metaIdForScopeKey(item.scopeKey)).then((row) => {
+        if (row?.id) return put(tables.operationsSnapshot, row.id, { ...row, sourceChangedAt: marker.changedAt });
+        return null;
+      }).then(() => enqueueRebuildTask({ user: item.user, scope: item.scope, reason: 'source-change' }));
     }));
     return marker;
   }

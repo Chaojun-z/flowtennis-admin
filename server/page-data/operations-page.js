@@ -2,7 +2,8 @@ const { buildOperationsMetrics } = require('../metrics/operations-metrics.js');
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
 const {
   getOperationsRowsCacheKey,
-  getOperationsBaseRows
+  getOperationsBaseRows,
+  getOperationsCoachBaseRows
 } = require('../read-models/operations-source.js');
 const { OPERATIONS_SNAPSHOT_NOT_READY_CODE } = require('./operations-snapshot.js');
 
@@ -15,9 +16,11 @@ function getOperationsDateRange(query) {
 
 function getOperationsPageScope(query) {
   const dateRange = getOperationsDateRange(query);
+  const view = String(query?.get?.('view') || '').trim();
   return {
     campus: String(query?.get?.('campus') || '').trim(),
     campusName: String(query?.get?.('campusName') || '').trim(),
+    view: view === 'coach' ? 'coach' : '',
     dateRange,
     metricScope: {
       campus: String(query?.get?.('campus') || '').trim(),
@@ -28,12 +31,26 @@ function getOperationsPageScope(query) {
   };
 }
 
+function projectOperationsPagePayload(payload = {}, view = '') {
+  if (view !== 'coach') return payload;
+  const operations = payload.operations || {};
+  return {
+    ...payload,
+    operations: {
+      generatedAt: operations.generatedAt,
+      overview: { cards: operations.overview?.cards || {} },
+      coach: operations.coach || {}
+    }
+  };
+}
+
 function getOperationsResultCacheKey(user = {}, scope = {}) {
   const dateRange = scope.dateRange || scope;
   return JSON.stringify({
     user: JSON.parse(getOperationsRowsCacheKey(user)),
     campus: scope.campus || '',
     campusName: scope.campusName || '',
+    view: scope.view || '',
     startDate: dateRange.startDate || '',
     endDate: dateRange.endDate || ''
   });
@@ -55,8 +72,10 @@ async function buildOperationsPagePayload({
   getFinancePageSnapshotIfCached,
   tables
 }) {
-  const useGlobalFinanceSnapshot = String(user.dataScope || '').trim() !== 'campus' && !(Array.isArray(user.campusIds) && user.campusIds.length);
-  const baseRows = await getOperationsBaseRows({
+  const isCoachView = scope?.view === 'coach';
+  const useGlobalFinanceSnapshot = !isCoachView && String(user.dataScope || '').trim() !== 'campus' && !(Array.isArray(user.campusIds) && user.campusIds.length);
+  const loadBaseRows = scope?.view === 'coach' ? getOperationsCoachBaseRows : getOperationsBaseRows;
+  const baseRows = await loadBaseRows({
     user,
     useGlobalFinanceSnapshot,
     listCampusesWithDefaults,
@@ -111,7 +130,7 @@ async function buildOperationsPagePayload({
 
   return {
     campuses: scoped.campuses,
-    operations,
+    operations: projectOperationsPagePayload({ operations }, scope?.view || '').operations,
     generatedAt: operations.generatedAt
   };
 }
@@ -158,14 +177,14 @@ async function handleOperationsPageData({
     const payload = timedEndpointMetric
       ? await timedEndpointMetric('pageData.operationsSnapshot', load)
       : await load();
-    if (payload?.snapshot?.refreshing && operationsSnapshotSync?.queueRebuildScope) {
-      await operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'stale-page-hit' }).catch(() => null);
+    if (payload?.snapshot?.refreshing && operationsSnapshotSync?.enqueueRebuildTask) {
+      await operationsSnapshotSync.enqueueRebuildTask({ user, scope, reason: 'stale-page-hit' }).catch(() => null);
     }
     return sendJson(res, payload);
   } catch (err) {
     if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) {
-      if (operationsSnapshotSync?.queueRebuildScope) {
-        await operationsSnapshotSync.queueRebuildScope({ user, scope, reason: 'page-miss' }).catch(() => null);
+      if (operationsSnapshotSync?.enqueueRebuildTask) {
+        await operationsSnapshotSync.enqueueRebuildTask({ user, scope, reason: 'page-miss' }).catch(() => null);
       }
       return sendJson(res, {
         campuses: [],
@@ -188,5 +207,6 @@ module.exports = {
   getOperationsPageScope,
   getOperationsResultCacheKey,
   handleOperationsPageData,
-  invalidateOperationsPageDataCache
+  invalidateOperationsPageDataCache,
+  projectOperationsPagePayload
 };

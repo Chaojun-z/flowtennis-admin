@@ -190,11 +190,12 @@ assert.match(stateSource, /if\(typeof renderStandardPageLoading==='function'&&re
 assert.doesNotMatch(stateSource, /if\(pg==='packages'\)renderBlockLoading/, 'packages loading should not use a fake text block');
 assert.doesNotMatch(stateSource, /if\(pg==='workbench'\)renderBlockLoading/, 'workbench loading should not use a fake text block');
 assert.doesNotMatch(stateSource, /if\(pg==='postfeedback'\)renderBlockLoading/, 'postfeedback loading should not use a fake text block');
-assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2'/, 'operations client cache must be versioned after conversion lifecycle payload shape changes');
+assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-09-02-operations-coach-view-v1'/, 'operations client cache must be versioned after coach view payload shape changes');
 assert.match(stateSource, /function operationsPageCachePayloadIsCompatible\(/, 'operations client cache must validate payload shape before first paint');
 assert.match(functionBody(stateSource, 'hydrateOperationsPageFromClientCache'), /operationsPageCachePayloadIsCompatible\(data\)/, 'operations page must not hydrate stale cache that lacks new lifecycle metrics');
 assert.match(stateSource, /function operationsPageDataUrl\(\)/, 'state loader should build an operations endpoint URL with date range params');
 assert.match(functionBody(stateSource, 'operationsPageDataUrl'), /scopedPageDataUrl\('\/page-data\/operations'\)/, 'operations dashboard should request operations data with the same campus and date scope as lifecycle metrics');
+assert.match(functionBody(stateSource, 'operationsPageDataUrl'), /currentOperationsPageView\(\)[\s\S]*appendPageDataQuery\(url,\{view\}\)/, 'coach operations dashboard should request the lightweight coach snapshot view');
 assert.match(stateSource, /function loadOperationsPageDataset\(\)[\s\S]*const url=operationsPageDataUrl\(\)[\s\S]*apiCall\('GET',url\)/, 'state loader should call the operations aggregate endpoint with the selected date range');
 assert.match(functionBody(stateSource, 'loadOperationsPageDataset'), /data\?\.snapshot\?\.refreshing[\s\S]*setTimeout\([\s\S]*refreshOperationsPageDataInBackground\(\)/, 'operations snapshot refreshing state should auto retry instead of leaving the skeleton stuck');
 assert.match(stateSource, /let operationsPageSnapshotMeta=null/, 'operations page should track snapshot status separately from the metric payload');
@@ -202,7 +203,7 @@ assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 
 assert.match(stateSource, /function operationsPageDatasetRequestKey\(\)/, 'operations requests should use a date-aware request key');
 assert.match(stateSource, /operationsPageDatasetRequestKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations request key should include the active date range URL');
 assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache should be scoped by the active date range URL');
-assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2'/, 'operations client cache should invalidate stale conversion lifecycle payloads');
+assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-09-02-operations-coach-view-v1'/, 'operations client cache should invalidate stale operations view payloads');
 assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache key should include the cache version');
 assert.match(stateSource, /function readOperationsPageClientCache\(\)[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should read a cached view model before waiting for the slow aggregate endpoint');
 assert.match(stateSource, /function persistOperationsPageClientCache\([\s\S]*cacheVersion:OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should persist the latest versioned view model for fast repeat entry');
@@ -211,6 +212,7 @@ assert.match(functionBody(stateSource, 'missingRequiredDatasetsForPage'), /datas
 assert.match(functionBody(stateSource, 'pageHasUsableLoadedData'), /pg==='operations'[\s\S]*datasetHasCurrentRequestKey\('operationsPage'\)/, 'operations should not reuse an old aggregate payload after campus or date changes');
 assert.match(stateSource, /if\(pg==='operations'&&hydrateOperationsPageFromClientCache\(\)\)return;/, 'operations loading should skip skeleton when a cached view model is available');
 assert.match(stateSource, /persistOperationsPageClientCache\(data\)/, 'operations refresh should update the client view-model cache after a successful response');
+assert.match(functionBody(operationsSource, 'setOperationsTab'), /previousTab[\s\S]*reloadOperationsPageDataWithInlineLoading\(\)/, 'switching operations tabs should reload the scoped operations view instead of reusing a heavier payload');
 assert.match(stateSource, /const requestKey=datasetRequestKey\(name\)/, 'dataset request de-duplication should be scoped by request key');
 assert.match(stateSource, /datasetLoadPromises\.has\(requestKey\)/, 'in-flight operations requests should not reuse a stale all-time request after date changes');
 assert.match(stateSource, /if\(name==='operationsPage'\)[\s\S]*operationsPageRequestSeq/, 'operations refresh should only accept the latest response');

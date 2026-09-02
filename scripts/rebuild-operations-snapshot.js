@@ -54,8 +54,9 @@ function parseArgs(argv = []) {
     campusName: value('--campusName'),
     startDate: value('--startDate'),
     endDate: value('--endDate'),
+    view: value('--view'),
     processQueued: argv.includes('--process-queued'),
-    limit: Math.max(1, Math.min(parseInt(value('--limit') || '10', 10) || 10, 50))
+    limit: Math.max(1, Math.min(parseInt(value('--limit') || '1', 10) || 1, 5))
   };
 }
 
@@ -77,7 +78,7 @@ function createSnapshotStorage() {
 
 function buildScope(args = {}) {
   const query = new URLSearchParams();
-  ['campus', 'campusName', 'startDate', 'endDate'].forEach((key) => {
+  ['campus', 'campusName', 'startDate', 'endDate', 'view'].forEach((key) => {
     if (args[key]) query.set(key, args[key]);
   });
   return getOperationsPageScope(query);
@@ -109,8 +110,9 @@ async function run(options = {}) {
     user,
     listCampusesWithDefaults,
     getCachedScan: storage.getCachedScan,
-    getScheduleListRows: () => storage.getCachedScan(TABLES.T_SCHEDULE),
-    isProductionRuntime: () => false,
+    scanFirstRows: storage.scanFirstRows,
+    getScheduleListRows: null,
+    isProductionRuntime: () => true,
     filterLoadAllForUser: helpers.filterLoadAllForUser,
     mergeDuplicateLeadRows: helpers.mergeDuplicateLeadRows,
     buildFinancePageSnapshot: helpers.buildFinancePageSnapshot,
@@ -126,8 +128,8 @@ async function run(options = {}) {
     buildPayload,
     tables: { operationsSnapshot: T_OPERATIONS_SNAPSHOT, operationsSnapshotTasks: T_OPERATIONS_SNAPSHOT_TASKS }
   });
-  const queued = args.processQueued ? await sync.processQueuedRebuilds({ limit: args.limit }) : { processed: 0, tasks: [] };
   const rebuilt = await sync.rebuildScope({ user, scope: buildScope(args), reason: 'script-default' });
+  const queued = args.processQueued ? await sync.processQueuedRebuilds({ limit: args.limit, includeFailed: false }) : { processed: 0, tasks: [] };
   return { ok: true, target, queued, rebuilt };
 }
 

@@ -200,7 +200,7 @@ const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
 const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
 const DATA_CACHE_TTL_MS=60000;
 const OPERATIONS_PAGE_CACHE_PREFIX='ft_operations_view_cache_';
-const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2';
+const OPERATIONS_PAGE_CACHE_VERSION='2026-09-02-operations-coach-view-v1';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','coachSchedulePage','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
@@ -312,8 +312,16 @@ function assertPageDataPerformanceGuard(){
   });
 }
 assertPageDataPerformanceGuard();
+function currentOperationsPageView(){
+  try{
+    const tab=localStorage.getItem('ft_operations_active_tab');
+    return tab==='coach'?'coach':'';
+  }catch(e){return '';}
+}
 function operationsPageDataUrl(){
-  return scopedPageDataUrl('/page-data/operations');
+  const url=scopedPageDataUrl('/page-data/operations');
+  const view=currentOperationsPageView();
+  return view?appendPageDataQuery(url,{view}):url;
 }
 function currentScopeCampusName(){
   const code=String(campus||'').trim();
@@ -455,6 +463,9 @@ function readOperationsPageClientCache(){
 }
 function operationsPageCachePayloadIsCompatible(data){
   const operations=data?.operations||{};
+  if(currentOperationsPageView()==='coach'){
+    return !!operations.coach?.cards&&Array.isArray(operations.coach?.rows);
+  }
   const conversion=operations.conversion||{};
   const standard=conversion.standardLifecycleMetrics||{};
   const metrics=standard.metrics||{};
@@ -471,7 +482,7 @@ function persistOperationsPageClientCache(data){
   if(!data?.operations)return;
   if(!operationsPageCachePayloadIsCompatible(data))return;
   try{
-    const payload={savedAt:Date.now(),cacheVersion:OPERATIONS_PAGE_CACHE_VERSION,operations:data.operations,campuses:data.campuses||[]};
+    const payload={savedAt:Date.now(),cacheVersion:OPERATIONS_PAGE_CACHE_VERSION,operations:data.operations,campuses:data.campuses||[],snapshot:data.snapshot||null};
     localStorage.setItem(operationsPageClientCacheKey(),JSON.stringify(payload));
   }catch(e){}
 }

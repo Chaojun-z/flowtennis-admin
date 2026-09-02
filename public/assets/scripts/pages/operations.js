@@ -266,6 +266,7 @@ function operationsSimpleTable(columns = [], rows = [], emptyText = '暂无数�
 }
 
 function setOperationsTab(tab) {
+  const previousTab = operationsActiveTab;
   operationsActiveTab = ['overview', 'court', 'conversion', 'coach'].includes(tab) ? tab : 'overview';
   try{localStorage.setItem(OPERATIONS_TAB_KEY,operationsActiveTab);}catch(e){}
   if (currentPage === 'operations') {
@@ -275,6 +276,10 @@ function setOperationsTab(tab) {
     if (typeof scrollActiveSidebarItemIntoView === 'function') scrollActiveSidebarItemIntoView();
     const topTitle = document.getElementById('topTitle');
     if (topTitle && typeof renderTopTitleHtml === 'function') topTitle.innerHTML = renderTopTitleHtml('operations');
+    if(previousTab!==operationsActiveTab&&typeof reloadOperationsPageDataWithInlineLoading==='function'){
+      reloadOperationsPageDataWithInlineLoading();
+      return;
+    }
     renderOperations();
   }
 }

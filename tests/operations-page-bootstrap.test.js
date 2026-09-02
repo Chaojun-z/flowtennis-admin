@@ -21,7 +21,7 @@ async function main() {
       throw snapshotNotReadyError('经营分析快照表未初始化');
     },
     operationsSnapshotSync: {
-      queueRebuildScope: async ({ scope }) => {
+      enqueueRebuildTask: async ({ scope }) => {
         assert.strictEqual(scope.campus, 'shunyi_mapo', '快照初始化必须使用当前校区');
         assert.strictEqual(scope.dateRange.startDate, '2026-08-01', '快照初始化必须使用当前开始日期');
         assert.strictEqual(scope.dateRange.endDate, '2026-08-31', '快照初始化必须使用当前结束日期');

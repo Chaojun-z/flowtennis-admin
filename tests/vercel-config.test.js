@@ -31,7 +31,7 @@ assert.match(apiSource, /x-feishu-coach-digest-open-id-overrides/, '飞书教练
 assert.match(feishuScheduleSyncWorkflow, /cron:\s*'0 0,10 \* \* \*'/, '飞书排课表同步应在北京时间 08:00、18:00 各触发一次');
 assert.match(feishuScheduleSyncWorkflow, /\/api\/cron\/feishu-schedule-sync/, '飞书排课表同步应由 GitHub Actions 触发');
 assert.match(operationsSnapshotWorkflow, /cron: '5,20,35,50 \* \* \* \*'/, '经营分析快照应由 GitHub Actions 高频重建');
-assert.match(operationsSnapshotWorkflow, /node scripts\/rebuild-operations-snapshot\.js --write --process-queued --limit 20/, '经营分析快照 workflow 应在 Actions Runner 里直连重建，不能依赖 Vercel 长请求');
+assert.match(operationsSnapshotWorkflow, /node scripts\/rebuild-operations-snapshot\.js --write --view coach --process-queued --limit 1/, '经营分析教练人效快照 workflow 应优先重建轻量教练视图，并限制队列处理量');
 assert.match(operationsSnapshotWorkflow, /DIAG_TOKEN:\s*\$\{\{\s*secrets\.DIAG_TOKEN\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, '经营分析快照 workflow should reuse FLOWTENNIS_ADMIN_TOKEN when DIAG_TOKEN is not configured');
 const matchKeepaliveWorkflow = fs.readFileSync(matchKeepaliveWorkflowPath, 'utf8');
 assert.match(matchKeepaliveWorkflow, /cron: '0 2 \* \* \*'/, '约球 Supabase 保活应每天北京时间 10:00 触发');

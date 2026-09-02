@@ -71,8 +71,11 @@ async function readOperationsRows({ table, getCachedScan, scanFirstRows, columns
   return getCachedScan(table, { columns });
 }
 
-async function getOperationsScheduleRows({ getScheduleListRows, getCachedScan, table, columns }) {
+async function getOperationsScheduleRows({ getScheduleListRows, getCachedScan, scanFirstRows, table, columns }) {
   if (typeof getScheduleListRows === 'function') return getScheduleListRows();
+  if (typeof scanFirstRows === 'function') {
+    return scanFirstRows(table, { limit: 5000, columns, detectOverflow: true });
+  }
   return getCachedScan(table, { columns });
 }
 
@@ -141,7 +144,7 @@ async function getOperationsBaseRows({
     readOperationsRows({ table: T_MEMBERSHIP_ACCOUNTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS, limit: 2000 }),
     readOperationsRows({ table: T_MEMBERSHIP_ORDERS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ORDER_FIELDS, limit: 2000 }),
     getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
-    getOperationsScheduleRows({ getScheduleListRows, getCachedScan, table: T_SCHEDULE, columns: OPERATIONS_SCHEDULE_FIELDS }),
+    getOperationsScheduleRows({ getScheduleListRows, getCachedScan, scanFirstRows, table: T_SCHEDULE, columns: OPERATIONS_SCHEDULE_FIELDS }),
     T_FEEDBACKS ? readOperationsRows({ table: T_FEEDBACKS, getCachedScan, scanFirstRows, columns: OPERATIONS_FEEDBACK_FIELDS, limit: 2000 }) : Promise.resolve([]),
     useGlobalFinanceSnapshot && typeof getFinancePageSnapshotIfCached === 'function'
       ? Promise.resolve(getFinancePageSnapshotIfCached()).catch(() => null)
@@ -167,9 +170,71 @@ async function getOperationsBaseRows({
   return rows;
 }
 
+async function getOperationsCoachBaseRows({
+  user,
+  listCampusesWithDefaults,
+  getCachedScan,
+  scanFirstRows,
+  getScheduleListRows,
+  isProductionRuntime,
+  mergeDuplicateLeadRows,
+  tables
+}) {
+  const cacheKey = `${getOperationsRowsCacheKey(user)}:coach`;
+  const cached = operationsRowsCache.get(cacheKey);
+  if (cached && Date.now() - cached.createdAt < OPERATIONS_CACHE_TTL_MS) return cached.rows;
+  const {
+    T_LEADS,
+    T_STUDENTS,
+    T_PURCHASES,
+    T_LEAD_FOLLOWUPS,
+    T_COACHES,
+    T_SCHEDULE,
+    T_FEEDBACKS
+  } = tables;
+  const [
+    campuses,
+    leads,
+    students,
+    purchases,
+    leadFollowups,
+    coaches,
+    schedule,
+    feedbacks
+  ] = await Promise.all([
+    listCampusesWithDefaults(),
+    readLeadSourceRows({ isProductionRuntime, scanFirstRows, getCachedScan, table: T_LEADS, columns: OPERATIONS_LEAD_FIELDS }),
+    readOperationsRows({ table: T_STUDENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_STUDENT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_PURCHASES, getCachedScan, scanFirstRows, columns: OPERATIONS_PURCHASE_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_LEAD_FOLLOWUPS, getCachedScan, scanFirstRows, columns: OPERATIONS_FOLLOWUP_FIELDS, limit: 2000 }),
+    getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
+    getOperationsScheduleRows({ getScheduleListRows, getCachedScan, scanFirstRows, table: T_SCHEDULE, columns: OPERATIONS_SCHEDULE_FIELDS }),
+    T_FEEDBACKS ? readOperationsRows({ table: T_FEEDBACKS, getCachedScan, scanFirstRows, columns: OPERATIONS_FEEDBACK_FIELDS, limit: 2000 }) : Promise.resolve([])
+  ]);
+  const rows = {
+    campuses,
+    leads: typeof mergeDuplicateLeadRows === 'function' ? mergeDuplicateLeadRows(leads) : leads,
+    students,
+    purchases,
+    entitlements: [],
+    entitlementLedger: [],
+    leadFollowups,
+    courts: [],
+    membershipAccounts: [],
+    membershipOrders: [],
+    coaches,
+    schedule,
+    feedbacks,
+    cachedFinanceSnapshot: null
+  };
+  operationsRowsCache.set(cacheKey, { createdAt: Date.now(), rows });
+  return rows;
+}
+
 module.exports = {
   OPERATIONS_CACHE_TTL_MS,
   invalidateOperationsSourceCache,
   getOperationsRowsCacheKey,
-  getOperationsBaseRows
+  getOperationsBaseRows,
+  getOperationsCoachBaseRows
 };

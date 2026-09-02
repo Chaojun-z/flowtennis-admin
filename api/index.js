@@ -467,6 +467,7 @@ async function prewarmHotScanCache(){
   await Promise.all([...HOT_SCAN_TABLES.keys()].map(t=>getCachedScan(t)));
 }
 async function prewarmStudentTeachingSummaryCache(){
+  if(process.env.DISABLE_HOT_SCAN_PREWARM==='true')return [];
   if(!T_STUDENT_TEACHING_SUMMARY)return [];
   return getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(err=>{
     console.warn('[api-timing] prewarm student teaching summary failed',err?.message||err);
@@ -4399,7 +4400,7 @@ operationsSnapshotSync=createOperationsSnapshotSync({getCachedRow,put,mkTable,sc
 }});
 function operationsSnapshotScopeFromRequest(query,body={}){
   const params=new URLSearchParams();
-  ['campus','campusName','startDate','endDate'].forEach(key=>{
+  ['campus','campusName','startDate','endDate','view'].forEach(key=>{
     const value=body?.[key]??query?.get?.(key);
     if(value!==undefined&&value!==null&&value!=='')params.set(key,String(value));
   });

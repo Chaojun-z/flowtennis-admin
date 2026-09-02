@@ -25,6 +25,7 @@ const julyScope = {
   dateRange: { startDate: '2026-07-01', endDate: '2026-07-31' },
   metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-07-01', endDate: '2026-07-31' }
 };
+const augustCoachScope = { ...augustScope, view: 'coach' };
 
 async function main() {
   const payload = {
@@ -44,6 +45,11 @@ async function main() {
     completedAt: '2026-09-01T00:00:00.000Z',
     sourceSnapshotAt: '2026-09-01T00:00:00.000Z'
   });
+  assert.notStrictEqual(
+    scopeKey(user, augustScope),
+    scopeKey(user, augustCoachScope),
+    '教练轻量视图必须使用独立快照 key，不能覆盖经营总览快照'
+  );
   const tableRows = new Map([
     [augustBuilt.meta.id, augustBuilt.meta],
     [augustBuilt.bundle.id, augustBuilt.bundle]
@@ -65,9 +71,9 @@ async function main() {
   const sharedAdminView = await loader({ user: { id: 'admin-2', role: 'admin', dataScope: '', campusIds: [] }, scope: augustScope });
   assert.strictEqual(sharedAdminView.operations.coach.rows[0].coachName, '朝珺', '同权限管理员应共享同一份经营快照，不能每人首次打开都重建');
   assert.deepStrictEqual(
-    calls.slice(0, 3).map((call) => call.id),
-    [augustBuilt.meta.id, SNAPSHOT_SOURCE_MARKER_ID, augustBuilt.bundle.id],
-    '首屏只能按固定 id 读 meta/source/bundle，不能扫大表'
+    calls.slice(0, 1).map((call) => call.id),
+    [augustBuilt.meta.id],
+    '首屏只能按固定 id 读 meta，不能扫大表或二次读 bundle'
   );
 
   await assert.rejects(
@@ -76,11 +82,9 @@ async function main() {
     '7 月没有对应快照时不能返回 8 月朝珺数据'
   );
 
-  tableRows.set(SNAPSHOT_SOURCE_MARKER_ID, {
-    id: SNAPSHOT_SOURCE_MARKER_ID,
-    changedAt: '2026-09-01T00:00:01.000Z',
-    sourceTable: 'ft_schedule',
-    op: 'put'
+  tableRows.set(augustBuilt.meta.id, {
+    ...augustBuilt.meta,
+    sourceChangedAt: '2026-09-01T00:00:01.000Z'
   });
   await assert.rejects(
     () => loader({ user, scope: augustScope, forceFresh: true }),
