@@ -15,6 +15,12 @@ function text(value) {
   return String(value || '').trim();
 }
 
+function normalizeSnapshotCampusValue(value) {
+  const raw = text(value);
+  if (!raw || raw === 'all' || raw === '全部校区') return '';
+  return raw;
+}
+
 function snapshotNotReadyError(message = '经营分析快照未初始化') {
   const err = new Error(message);
   err.code = OPERATIONS_SNAPSHOT_NOT_READY_CODE;
@@ -46,8 +52,8 @@ function normalizeScope(user = {}, scope = {}) {
   const dateRange = scope.dateRange || scope || {};
   const normalized = {
     userScope: JSON.parse(getOperationsRowsCacheKey({ ...user, id: '', userId: '', username: '' })),
-    campus: text(scope.campus),
-    campusName: text(scope.campusName),
+    campus: normalizeSnapshotCampusValue(scope.campus),
+    campusName: normalizeSnapshotCampusValue(scope.campusName),
     startDate: text(dateRange.startDate).slice(0, 10),
     endDate: text(dateRange.endDate).slice(0, 10)
   };
@@ -164,14 +170,14 @@ function cloneCoachDailyMonthPackScope(scope = {}, month = '') {
       endDate
     }
   };
-  if (scope.campus) pack.metricScope.campus = scope.campus;
-  if (scope.campusName) pack.metricScope.campusName = scope.campusName;
+  if (normalizeSnapshotCampusValue(scope.campus)) pack.metricScope.campus = normalizeSnapshotCampusValue(scope.campus);
+  if (normalizeSnapshotCampusValue(scope.campusName)) pack.metricScope.campusName = normalizeSnapshotCampusValue(scope.campusName);
   return pack;
 }
 
 function canComposeCoachDailyScope(scope = {}) {
   const range = scope.dateRange || scope || {};
-  return text(scope.view) === 'coach' && dateRangeDays(range).length > 1;
+  return text(scope.view) === 'coach' && dateRangeDays(range).length >= 1;
 }
 
 function isCoachDailyMonthPackScope(scope = {}) {

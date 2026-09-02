@@ -113,6 +113,23 @@ async function main() {
     'coach-month-pack',
     '月包补建脚本必须保留内部月包视图，不能被页面 view 解析过滤'
   );
+  assert.strictEqual(
+    scopeKey({ id: 'admin-1', role: 'admin', dataScope: '', campusIds: [] }, {
+      campus: 'all',
+      campusName: '全部校区',
+      view: 'coach',
+      dateRange: { startDate: '2026-09-01', endDate: '2026-09-30' },
+      metricScope: { campus: 'all', campusName: '全部校区', startDate: '2026-09-01', endDate: '2026-09-30' }
+    }),
+    scopeKey({ id: 'admin-1', role: 'admin', dataScope: '', campusIds: [] }, {
+      campus: '',
+      campusName: '',
+      view: 'coach',
+      dateRange: { startDate: '2026-09-01', endDate: '2026-09-30' },
+      metricScope: { campus: '', campusName: '', startDate: '2026-09-01', endDate: '2026-09-30' }
+    }),
+    '全部校区和空校区必须命中同一份经营月包快照'
+  );
   const payload = {
     campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
     operations: {
@@ -239,6 +256,14 @@ async function main() {
   assert.strictEqual(composedView.snapshot.source, 'operations-coach-daily-month-pack', '自定义日期段缺少精确范围快照时必须走教练月包组合');
   assert.strictEqual(composedView.operations.coach.cards.usedHours.value, 5, '日快照组合后的课时必须等于所选日期内每天已排课时之和');
   assert.strictEqual(composedView.operations.overview.cards.totalIncome.value, 2500, '顶部数据必须随筛选日期范围由日快照组合');
+  const singleDayScope = {
+    ...augustCoachScope,
+    dateRange: { startDate: '2026-09-01', endDate: '2026-09-01' },
+    metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-09-01', endDate: '2026-09-01' }
+  };
+  const singleDayView = await loader({ user, scope: singleDayScope });
+  assert.strictEqual(singleDayView.snapshot.source, 'operations-coach-daily-month-pack', '单日筛选缺少精确快照时也必须走教练月包组合');
+  assert.strictEqual(singleDayView.operations.coach.cards.usedHours.value, 2, '单日筛选后的课时必须只取该天的月包数据');
 
   const directComposed = composeCoachSnapshotPayloads([
     { operations: { overview: { cards: { totalIncome: { value: 1 } } }, coach: { rows: [{ coach: 'A教练', usedHours: 1, teachingHours: 1, availableHours: 6.9, revenue: 10, courseMix: [{ type: '私教课', hours: 1 }] }] } } },
