@@ -384,20 +384,36 @@ async function main() {
   assert.strictEqual(fullMonthSiren?.trialConverted, 1, '快照合成不能丢失体验课转化人数');
 
   const legacyBuilt = buildOperationsSnapshot({
-    payload,
+    payload: {
+      campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
+      operations: {
+        coach: {
+          rows: [{
+            coach: 'Siren 教练',
+            usedHours: 17,
+            teachingHours: 17,
+            trialBase: 2,
+            trialConverted: 1,
+            usedHoursComparison: { mode: 'previous_period', previousValue: 1 }
+          }]
+        }
+      }
+    },
     user,
-    scope: julyScope,
+    scope: septemberFullMonthScope,
     batchId: 'legacy-v2-batch',
     completedAt: '2026-09-01T00:00:00.000Z',
     sourceSnapshotAt: '2026-09-01T00:00:00.000Z'
   });
   tableRows.set(legacyBuilt.meta.id, { ...legacyBuilt.meta, snapshotVersion: 'operations-page-snapshot-v2', version: 'operations-page-snapshot-v2' });
   tableRows.set(legacyBuilt.bundle.id, { ...legacyBuilt.bundle, snapshotVersion: 'operations-page-snapshot-v2' });
-  await assert.rejects(
-    () => loader({ user, scope: julyScope, forceFresh: true }),
-    (err) => err.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE,
-    '旧版经营分析快照不能继续喂给新版教练明细表'
-  );
+  const legacyFallbackView = await loader({ user, scope: septemberFullMonthScope, forceFresh: true });
+  const legacyFallbackSiren = legacyFallbackView.operations.coach.rows.find(row => row.coach === 'Siren 教练');
+  assert.strictEqual(legacyFallbackView.snapshot.source, 'operations-snapshot', '新版快照重建前应允许旧快照临时兜底，避免页面一直加载');
+  assert.strictEqual(legacyFallbackView.snapshot.refreshing, true, '旧快照兜底必须标记刷新中，提示后台继续生成新版快照');
+  assert.strictEqual(legacyFallbackSiren?.usedHoursComparison?.previousValue, 28, '旧快照兜底时不能沿用旧环比，必须按完整上期快照重算');
+  assert.strictEqual(legacyFallbackSiren?.trialBase, 2, '旧快照兜底不能丢失体验课上课人数');
+  assert.strictEqual(legacyFallbackSiren?.trialConverted, 1, '旧快照兜底不能丢失体验课转化人数');
 
   const directComposed = composeCoachSnapshotPayloads([
     { operations: { overview: { cards: { totalIncome: { value: 1 } } }, coach: { rows: [{ coach: 'A教练', usedHours: 1, teachingHours: 1, availableHours: 6.9, revenue: 10, courseMix: [{ type: '私教课', hours: 1 }] }] } } },

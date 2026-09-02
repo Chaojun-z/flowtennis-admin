@@ -3,6 +3,7 @@ const zlib = require('zlib');
 const { getOperationsRowsCacheKey } = require('../read-models/operations-source.js');
 
 const OPERATIONS_SNAPSHOT_VERSION = 'operations-page-snapshot-v3';
+const LEGACY_OPERATIONS_SNAPSHOT_VERSION = 'operations-page-snapshot-v2';
 const OPERATIONS_SNAPSHOT_NOT_READY_CODE = 'OPERATIONS_SNAPSHOT_NOT_READY';
 const COACH_DAILY_MONTH_PACK_VIEW = 'coach-month-pack';
 const SNAPSHOT_SCOPE_INDEX_ID = 'active:scope-index';
@@ -185,6 +186,46 @@ function coachHoursByPayloads(payloads = []) {
     });
   });
   return byCoach;
+}
+
+function cloneScopeWithDateRange(scope = {}, dateRange = {}) {
+  return {
+    ...scope,
+    dateRange,
+    metricScope: {
+      ...(scope.metricScope || {}),
+      startDate: dateRange.startDate || '',
+      endDate: dateRange.endDate || ''
+    }
+  };
+}
+
+function payloadCoachRows(payload = {}) {
+  return payload?.operations?.coach?.rows || [];
+}
+
+function applyCoachHoursComparison(payload = {}, previousPayloads = []) {
+  const previousHoursByCoach = coachHoursByPayloads(previousPayloads);
+  const nextRows = payloadCoachRows(payload).map(row => {
+    const coach = text(row.coach || row.coachName);
+    const usedHours = Number(row.usedHours ?? row.teachingHours) || 0;
+    return {
+      ...row,
+      usedHoursComparison: previousPayloads.length && coach
+        ? coachHoursComparison(usedHours, previousHoursByCoach.get(coach) || 0)
+        : { mode: 'none' }
+    };
+  });
+  return {
+    ...payload,
+    operations: {
+      ...(payload.operations || {}),
+      coach: {
+        ...(payload.operations?.coach || {}),
+        rows: nextRows
+      }
+    }
+  };
 }
 
 function cloneDailyScope(scope = {}, day = '') {
@@ -584,13 +625,15 @@ function createOperationsSnapshotLoader(deps = {}) {
 
   return async function loadOperationsSnapshot({ user = {}, scope = {}, forceFresh = false, allowRefreshing = false } = {}) {
     const key = scopeKey(user, scope);
-    const readPublishedPayload = async (targetScope, targetKey) => {
+    const readPublishedPayload = async (targetScope, targetKey, options = {}) => {
       const meta = await readRow(metaIdForScopeKey(targetKey));
       const sourceMarker = meta?.sourceChangedAt ? null : await readRow(SNAPSHOT_SOURCE_MARKER_ID).catch((err) => {
           if (err?.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE) return null;
           throw err;
         });
-      if (meta?.status !== 'published' || meta?.snapshotVersion !== OPERATIONS_SNAPSHOT_VERSION || meta.scopeKey !== targetKey || !meta.bundleId || !meta.batchId || !meta.completedAt || !meta.sourceSnapshotAt || !meta.checksum) {
+      const isCurrentVersion = meta?.snapshotVersion === OPERATIONS_SNAPSHOT_VERSION;
+      const isAllowedLegacyVersion = options.allowLegacy === true && meta?.snapshotVersion === LEGACY_OPERATIONS_SNAPSHOT_VERSION;
+      if (meta?.status !== 'published' || (!isCurrentVersion && !isAllowedLegacyVersion) || meta.scopeKey !== targetKey || !meta.bundleId || !meta.batchId || !meta.completedAt || !meta.sourceSnapshotAt || !meta.checksum) {
         throw snapshotNotReadyError('经营分析快照未发布或契约不完整');
       }
       const refreshing = sourceChangedAfterSnapshot(sourceMarker, meta);
@@ -629,18 +672,49 @@ function createOperationsSnapshotLoader(deps = {}) {
       }
       return { meta, payload, refreshing };
     };
+    const loadPreviousPayloads = async (previousRange) => {
+      if (!previousRange) return [];
+      const previousScope = cloneScopeWithDateRange(scope, previousRange);
+      const previousKey = scopeKey(user, previousScope);
+      const exact = await readPublishedPayload(previousScope, previousKey, { allowLegacy: true }).catch(() => null);
+      if (exact?.payload) return [exact.payload];
+      const previousMonths = monthKeysInRange(previousRange || {});
+      const previousMonthPacks = await Promise.all(previousMonths.map(async month => {
+        const monthScope = cloneCoachDailyMonthPackScope(scope, month);
+        const monthKey = scopeKey(user, monthScope);
+        return (await readPublishedPayload(monthScope, monthKey, { allowLegacy: true })).payload;
+      }));
+      return payloadsFromCoachDailyMonthPacks(previousMonthPacks, previousRange);
+    };
     let loaded;
     try {
       loaded = await readPublishedPayload(scope, key);
     } catch (err) {
       if (err?.code !== OPERATIONS_SNAPSHOT_NOT_READY_CODE || !canComposeCoachDailyScope(scope)) throw err;
-      const currentMonths = monthKeysInRange(scope.dateRange || {});
       const previousRange = previousCoachDateRange(scope.dateRange || {});
+      const legacyExact = await readPublishedPayload(scope, key, { allowLegacy: true }).catch(() => null);
+      if (legacyExact?.payload) {
+        const previousPayloads = await loadPreviousPayloads(previousRange).catch(() => []);
+        return {
+          ...applyCoachHoursComparison(legacyExact.payload, previousPayloads),
+          snapshot: {
+            source: 'operations-snapshot',
+            snapshotVersion: legacyExact.meta.snapshotVersion,
+            batchId: legacyExact.meta.batchId,
+            scopeKey: key,
+            refreshing: true,
+            completedAt: legacyExact.meta.completedAt,
+            sourceSnapshotAt: legacyExact.meta.sourceSnapshotAt,
+            checksum: legacyExact.meta.checksum
+          }
+        };
+      }
+      const currentMonths = monthKeysInRange(scope.dateRange || {});
       const previousMonths = monthKeysInRange(previousRange || {});
       const loadMonthPacks = async (months = []) => Promise.all(months.map(async month => {
         const monthScope = cloneCoachDailyMonthPackScope(scope, month);
         const monthKey = scopeKey(user, monthScope);
-        return (await readPublishedPayload(monthScope, monthKey)).payload;
+        return (await readPublishedPayload(monthScope, monthKey, { allowLegacy: true })).payload;
       }));
       const monthPacks = await loadMonthPacks(currentMonths);
       const previousMonthPacks = await loadMonthPacks(previousMonths);
