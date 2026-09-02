@@ -127,6 +127,17 @@ function createCorePageDataRoutes(deps={}){
     }catch(err){
       if(err?.code==='STUDENT_TEACHING_SUMMARY_NOT_READY'){
         console.warn('[customer-center-list] student teaching summary unavailable, serving empty payload',err?.message||err);
+        try{
+          const fallbackModel=await loadCustomerCenterFactModel(user,{force:true,includeLessonFacts:false});
+          return sendJson(res,{
+            ...fallbackModel,
+            studentTeachingSummaryUnavailable:true,
+            code:err.code,
+            error:err.message
+          });
+        }catch(fallbackErr){
+          console.warn('[customer-center-list] fact fallback failed, serving empty payload',fallbackErr?.message||fallbackErr);
+        }
         return sendJson(res,{
           ...buildCustomerCenterPagePayload({summaryRows:[],query}),
           studentTeachingSummaryUnavailable:true,

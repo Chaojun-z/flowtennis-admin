@@ -847,6 +847,26 @@ function createLeadsRoutes(deps={}){
     return {followups,students,courts,membershipAccounts};
   }
 
+  async function readLeadLifecycleFacts(){
+    const [students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
+      readLeadLifecycleFactRows(T_STUDENTS),
+      readLeadLifecycleFactRows(T_PURCHASES),
+      readLeadLifecycleFactRows(T_ENTITLEMENTS),
+      readLeadLifecycleFactRows(T_SCHEDULE),
+      readLeadLifecycleFactRows(T_COURTS),
+      readLeadLifecycleFactRows(T_MEMBERSHIP_ACCOUNTS),
+      readLeadLifecycleFactRows(T_MEMBERSHIP_ORDERS)
+    ]);
+    return {students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders};
+  }
+
+  function buildLeadFallbackSummaryRows(customerLifecycleRows,facts={}){
+    return buildTeachingStudentViews(customerLifecycleRows,{
+      ...facts,
+      teachingStudentSummaryRows:customerLifecycleRows
+    }).searchableStudents||[];
+  }
+
   function fallbackId(prefix,lead={},linkedId=''){
     const source=cleanLeadText(lead.id||linkedId||Date.now());
     return `${prefix}-${source.replace(/[^a-zA-Z0-9_-]/g,'-')}`;
@@ -1147,24 +1167,19 @@ function createLeadsRoutes(deps={}){
         throw studentSummaryResult.reason;
       }
       const courtIndexRows=courtIndexResult.status==='fulfilled'?courtIndexResult.value:[];
-      const studentLifecycleRows=buildCustomerCenterSummaryLifecycleRows(studentSummaryRows);
-      const courtAccountView=buildCourtAccountListViewFromIndexRows(courtIndexRows||[],{});
-      const courtLifecycleRows=buildCourtLifecycleRows(courtAccountView.items||[],mergedLeads);
-      customerLifecycleRows=[...studentLifecycleRows,...courtLifecycleRows];
-      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows,{persist:false});
-      if(createdLeads.length){
-        mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
+      if(studentSummaryRows.length){
+        const studentLifecycleRows=buildCustomerCenterSummaryLifecycleRows(studentSummaryRows);
+        const courtAccountView=buildCourtAccountListViewFromIndexRows(courtIndexRows||[],{});
+        const courtLifecycleRows=buildCourtLifecycleRows(courtAccountView.items||[],mergedLeads);
+        customerLifecycleRows=[...studentLifecycleRows,...courtLifecycleRows];
+        const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows,{persist:false});
+        if(createdLeads.length){
+          mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
+        }
       }
     }else{
-      const [students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
-        readLeadLifecycleFactRows(T_STUDENTS),
-        readLeadLifecycleFactRows(T_PURCHASES),
-        readLeadLifecycleFactRows(T_ENTITLEMENTS),
-        readLeadLifecycleFactRows(T_SCHEDULE),
-        readLeadLifecycleFactRows(T_COURTS),
-        readLeadLifecycleFactRows(T_MEMBERSHIP_ACCOUNTS),
-        readLeadLifecycleFactRows(T_MEMBERSHIP_ORDERS)
-      ]);
+      const facts=await readLeadLifecycleFacts();
+      const {students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders}=facts;
       customerLifecycleRows=buildCustomerLifecycleRows({
         leads:mergedLeads,
         students,
@@ -1189,6 +1204,39 @@ function createLeadsRoutes(deps={}){
           membershipOrders
         });
       }
+      studentSummaryRows=buildLeadFallbackSummaryRows(customerLifecycleRows,facts);
+    }
+    if(studentTeachingSummaryUnavailable&&!customerLifecycleRows.length){
+      const facts=await readLeadLifecycleFacts();
+      const {students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders}=facts;
+      customerLifecycleRows=buildCustomerLifecycleRows({
+        leads:mergedLeads,
+        students,
+        purchases,
+        entitlements,
+        schedule,
+        courts,
+        membershipAccounts,
+        membershipOrders
+      });
+      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows,{persist:false});
+      if(createdLeads.length){
+        mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
+        customerLifecycleRows=buildCustomerLifecycleRows({
+          leads:mergedLeads,
+          students,
+          purchases,
+          entitlements,
+          schedule,
+          courts,
+          membershipAccounts,
+          membershipOrders
+        });
+      }
+      studentSummaryRows=buildLeadFallbackSummaryRows(customerLifecycleRows,facts);
+    }
+    if(!studentSummaryRows.length){
+      studentSummaryRows=customerLifecycleRows.filter(row=>cleanLeadText(row?.studentId));
     }
     const rows=buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope,mergeDuplicates:true})
       .filter(row=>!hiddenLeadIdentities.ids.has(cleanLeadText(row.id))&&!hiddenLeadIdentities.ids.has(cleanLeadText(row.sourceLeadId)))

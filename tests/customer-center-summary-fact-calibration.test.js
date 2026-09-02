@@ -450,6 +450,84 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(notReadyRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用时必须显式标记降级状态');
   assert.deepStrictEqual(notReadyRes.body.teachingStudentViews.historicalStudents, [], '摘要不可用时不能回旧数据');
 
+  const fallbackHandler = makeHandler();
+  fallbackHandler.tableRows.ft_leads = [{
+    id: 'lead-fallback',
+    displayName: '回退学员',
+    wechatName: '回退学员',
+    studentId: 'stu-fallback',
+    leadStage: '已成交',
+    dealType: '课程',
+    leadDate: '2026-08-20',
+    createdAt: '2026-08-20 10:00:00',
+    campus: 'shunyi_mapo'
+  }];
+  fallbackHandler.tableRows.ft_students = [{
+    id: 'stu-fallback',
+    name: '回退学员',
+    sourceLeadId: 'lead-fallback',
+    campus: 'shunyi_mapo',
+    primaryCoach: 'Mira',
+    type: '成人',
+    status: 'active',
+    leadDate: '2026-08-20',
+    studentStage: 'formal',
+    packageBalanceRemaining: 1,
+    packageBalanceTotal: 10,
+    packageBalanceText: '1/10',
+    packageBalancePercent: 10,
+    lastFormalLessonAt: '2026-08-20',
+    detailRecentLessonDate: '2026-08-20',
+    hasTrialAttended: true,
+    hasFormalAttended: true,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: true,
+    detailLessonRecordRows: [{ time: '2026-08-19', courseType: '体验课', kind: 'schedule' }, { time: '2026-08-20', courseType: '私教课', kind: 'schedule' }],
+    packageListRows: [{ courseType: '私教课', packageName: '10节私教课包', remainingLessons: 1, totalLessons: 10 }]
+  }];
+  fallbackHandler.tableRows.ft_purchases = [{
+    id: 'purchase-fallback',
+    studentId: 'stu-fallback',
+    studentName: '回退学员',
+    courseType: '私教课',
+    packageName: '10节私教课包',
+    amountPaid: 6000,
+    purchaseDate: '2026-08-20',
+    status: 'active'
+  }];
+  fallbackHandler.tableRows.ft_schedule = [{
+    id: 'trial-fallback',
+    studentId: 'stu-fallback',
+    studentIds: ['stu-fallback'],
+    studentName: '回退学员',
+    courseType: '体验课',
+    startTime: '2026-08-19 10:00:00',
+    status: '已到课'
+  }, {
+    id: 'formal-fallback',
+    studentId: 'stu-fallback',
+    studentIds: ['stu-fallback'],
+    studentName: '回退学员',
+    courseType: '私教课',
+    startTime: '2026-08-20 10:00:00',
+    status: '已到课'
+  }];
+  fallbackHandler.tableRows.ft_student_teaching_summary = [];
+  const fallbackRes = {};
+  await fallbackHandler.handler({
+    path: '/page-data/customer-center-list',
+    method: 'GET',
+    user: { role: 'admin', name: '管理员' },
+    res: fallbackRes,
+    query: new URLSearchParams()
+  });
+  assert.strictEqual(fallbackRes.statusCode, 200, '摘要不可用但事实表可用时客户中心仍应返回 200');
+  assert.strictEqual(fallbackRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用但事实表可用时仍要标记降级状态');
+  assert.ok((fallbackRes.body.teachingStudentViews.historicalStudents || []).length > 0, '摘要不可用但事实表可用时历史学员不能变空');
+  assert.ok((fallbackRes.body.teachingStudentViews.activeStudents || []).length > 0, '摘要不可用但事实表可用时在期学员不能变空');
+  assert.ok((fallbackRes.body.standardLifecycleMetrics?.teachingSummary?.historicalStudentCount || 0) > 0, '摘要不可用但事实表可用时顶部历史学员不能掉成 0');
+  assert.ok((fallbackRes.body.standardLifecycleMetrics?.teachingSummary?.activeStudentCount || 0) > 0, '摘要不可用但事实表可用时顶部在期学员不能掉成 0');
+
   const bulk = makeBulkSummaryHandler(1200);
   const bulkRes = {};
   const startedAt = Date.now();

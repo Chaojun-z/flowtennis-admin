@@ -387,6 +387,96 @@ async function main() {
   assert.strictEqual(summaryTimeoutPage.body.summary.studentTeachingSummaryUnavailable, true, '摘要读取超时时 summary 必须标记降级状态');
   assert.deepStrictEqual(summaryTimeoutPage.body.rows.map(row => row.id), ['lead-summary-timeout'], '摘要读取超时时不能丢失线索主表数据');
 
+  const fallbackFactsHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-fallback',
+      displayName: '回退线索',
+      wechatName: '回退线索',
+      studentId: 'stu-fallback',
+      leadStage: '已成交',
+      dealType: '课程',
+      leadDate: '2026-08-20',
+      createdAt: '2026-08-20 10:00:00',
+      campus: 'shunyi_mapo'
+    }],
+    ft_lead_followups: [],
+    ft_students: [{
+      id: 'stu-fallback',
+      name: '回退学员',
+      sourceLeadId: 'lead-fallback',
+      campus: 'shunyi_mapo',
+      primaryCoach: 'Mira',
+      type: '成人',
+      status: 'active',
+      leadDate: '2026-08-20',
+      studentStage: 'formal',
+      packageBalanceRemaining: 1,
+      packageBalanceTotal: 10,
+      packageBalanceText: '1/10',
+      packageBalancePercent: 10,
+      lastFormalLessonAt: '2026-08-20',
+      detailRecentLessonDate: '2026-08-20',
+      hasTrialAttended: true,
+      hasFormalAttended: true,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: true,
+      detailLessonRecordRows: [{ time: '2026-08-19', courseType: '体验课', kind: 'schedule' }, { time: '2026-08-20', courseType: '私教课', kind: 'schedule' }],
+      packageListRows: [{ courseType: '私教课', packageName: '10节私教课包', remainingLessons: 1, totalLessons: 10 }]
+    }],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [{
+      id: 'purchase-fallback',
+      studentId: 'stu-fallback',
+      studentName: '回退学员',
+      courseType: '私教课',
+      packageName: '10节私教课包',
+      amountPaid: 6000,
+      purchaseDate: '2026-08-20',
+      status: 'active'
+    }],
+    ft_entitlements: [],
+    ft_schedule: [{
+      id: 'trial-fallback',
+      studentId: 'stu-fallback',
+      studentIds: ['stu-fallback'],
+      studentName: '回退学员',
+      courseType: '体验课',
+      startTime: '2026-08-19 10:00:00',
+      status: '已到课'
+    }, {
+      id: 'formal-fallback',
+      studentId: 'stu-fallback',
+      studentIds: ['stu-fallback'],
+      studentName: '回退学员',
+      courseType: '私教课',
+      startTime: '2026-08-20 10:00:00',
+      status: '已到课'
+    }],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [],
+    ft_court_account_list_index: []
+  });
+  fallbackFactsHarness.rows.ft_student_teaching_summary = [];
+  const fallbackFactsPage = await request(fallbackFactsHarness.handle, 'paged=1&page=1&pageSize=15');
+  assert.strictEqual(fallbackFactsPage.statusCode, 200, '摘要表不可用但事实表可用时线索池仍应返回 200');
+  assert.strictEqual(fallbackFactsPage.body.summary.studentTeachingSummaryUnavailable, true, '摘要表不可用时仍要标记降级');
+  assert.strictEqual(fallbackFactsPage.body.summary.historicalStudents, 1, '摘要表不可用但事实表可用时历史学员不能掉成 0');
+  assert.strictEqual(fallbackFactsPage.body.summary.activeStudents, 1, '摘要表不可用但事实表可用时在期学员不能掉成 0');
+  assert.strictEqual(fallbackFactsPage.body.summary.trialAttended, 1, '摘要表不可用但事实表可用时上过体验课不能掉成 0');
+  assert.strictEqual(fallbackFactsPage.body.summary.trialAttendedToFormalPurchase, 1, '摘要表不可用但事实表可用时体验后买正式课不能掉成 0');
+  const fallbackLeadRow = fallbackFactsPage.body.rows.find(row => row.id === 'lead-fallback');
+  assert.ok(fallbackLeadRow, '摘要表不可用但事实表可用时线索行不能消失');
+  assert.strictEqual(fallbackLeadRow.studentStage, 'formal', '摘要表不可用但事实表可用时行数据不能退成壳');
+  assert.strictEqual(fallbackLeadRow.hasTrialAttended, true, '摘要表不可用但事实表可用时体验事实不能丢');
+
   const previousLeadTimeout = process.env.LEAD_LIST_READ_TIMEOUT_MS;
   process.env.LEAD_LIST_READ_TIMEOUT_MS = '50';
   try {
