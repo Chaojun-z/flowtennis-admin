@@ -290,10 +290,10 @@ function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeach
   };
 }
 
-function createStudentRosterIndexReader({ tableName, getCachedScan, filterLoadAllForUser = data => data } = {}) {
+function createStudentRosterIndexReader({ tableName, getCachedScan, getCachedRow, scanByIdPrefix, filterLoadAllForUser = data => data } = {}) {
   return {
     async readCustomerCenterList({ user = {}, query } = {}) {
-      const studentTeachingSummaries = await readReadyStudentTeachingSummaryRows({ tableName, getCachedScan });
+      const studentTeachingSummaries = await readReadyStudentTeachingSummaryRows({ tableName, getCachedScan, getCachedRow, scanByIdPrefix });
       const scoped = filterLoadAllForUser({ studentTeachingSummaries }, user);
       const summaryRows = filterSummaryRowsForQuery(scoped.studentTeachingSummaries || [], query);
       return buildCustomerCenterPagePayload({

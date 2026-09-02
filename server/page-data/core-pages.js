@@ -11,7 +11,8 @@ const {
   filterStudentTeachingSummaryPublishedRows,
   buildVersionedStudentTeachingSummaryRow,
   studentTeachingSummaryRowsToDeleteAfterPublish,
-  rollbackStudentTeachingSummaryPublish
+  rollbackStudentTeachingSummaryPublish,
+  readReadyStudentTeachingSummaryRows
 } = require('../read-models/student-teaching-summary-cache.js');
 const {
   buildCoachOpsUnifiedView,
@@ -99,7 +100,7 @@ const COACH_SCHEDULE_STUDENT_PROJECTION_FIELDS=[
 function createCorePageDataRoutes(deps={}){
   const {
     init,sendJson,cappedScan,filterLoadAllForUser,listCampusesWithDefaults,getFastStudentsRead,
-    getCachedScan,getCachedRow,getScheduleListRows,getCoachScheduleRowsForUser,buildCoachRefs,
+    getCachedScan,getCachedRow,scanByIdPrefix,getScheduleListRows,getCoachScheduleRowsForUser,buildCoachRefs,
     scanCoachProposals,timedEndpointMetric,decorateWorkbenchStudents,decorateWorkbenchFeedbacks,
     decorateWorkbenchScheduleRows,decorateWorkbenchClasses,buildWorkbenchStats,projectScheduleListRow,
     normalizeMembershipPlanViewRecord,normalizeMembershipOrderViewRecord,DEFAULT_CAMPUSES,
@@ -116,6 +117,8 @@ function createCorePageDataRoutes(deps={}){
   const studentRosterIndexReader=deps.studentRosterIndexReader||createStudentRosterIndexReader({
     tableName:T_STUDENT_TEACHING_SUMMARY,
     getCachedScan,
+    getCachedRow,
+    scanByIdPrefix,
     filterLoadAllForUser
   });
   async function sendCustomerCenterTeachingSummary(res,user,query){
@@ -656,7 +659,7 @@ function createCorePageDataRoutes(deps={}){
           cappedScan(T_ENTITLEMENTS),
           cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
           cappedScan(T_PLANS),
-          cappedScan(T_STUDENT_TEACHING_SUMMARY)
+          readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix})
         ]);
         const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans,studentTeachingSummaries,coaches},user,coachRefs);
         const now=new Date();

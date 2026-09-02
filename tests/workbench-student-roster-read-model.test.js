@@ -2,6 +2,12 @@ const assert = require('assert');
 
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
+const {
+  STUDENT_TEACHING_SUMMARY_READY,
+  buildStudentTeachingSummaryChecksum,
+  buildStudentTeachingSummaryMetaRow,
+  buildVersionedStudentTeachingSummaryRow
+} = require('../server/read-models/student-teaching-summary-cache.js');
 
 const tables = {
   T_COACHES: 'coaches',
@@ -21,6 +27,23 @@ const tables = {
 const lessonDate = (index) => index < 10
   ? `2026-07-${String(index + 1).padStart(2, '0')}`
   : `2026-08-${String(index - 9).padStart(2, '0')}`;
+
+const summaryVersion = 'student-teaching-summary-current';
+const staleSummaryVersion = 'student-teaching-summary-stale';
+const currentStudentSummaryRows = [{
+  id: 'shi-duohao',
+  studentId: 'shi-duohao',
+  name: '史多灏',
+  teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+  completedLessons: 18,
+  detailPackageBalanceTotal: 20,
+  detailPackageBalanceRemaining: 2,
+  detailPackageBalanceText: '2/20',
+  detailPackageProgressText: '2/10,0/10',
+  primaryCoach: '宋教练',
+  studentStage: 'formal',
+  activityStatusLabel: '近30天活跃'
+}];
 
 const tableRows = {
   coaches: [{ id: 'coach-lin', name: '林铭教练', status: 'active' }],
@@ -84,20 +107,23 @@ const tableRows = {
     }
   ],
   feedbacks: [],
-  student_summary: [{
-    id: 'shi-duohao',
-    studentId: 'shi-duohao',
-    name: '史多灏',
-    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
-    completedLessons: 18,
-    detailPackageBalanceTotal: 20,
-    detailPackageBalanceRemaining: 2,
-    detailPackageBalanceText: '2/20',
-    detailPackageProgressText: '2/10,0/10',
-    primaryCoach: '宋教练',
-    studentStage: 'formal',
-    activityStatusLabel: '近30天活跃'
-  }]
+  student_summary: [
+    buildStudentTeachingSummaryMetaRow({
+      status: STUDENT_TEACHING_SUMMARY_READY,
+      batchId: summaryVersion,
+      activeVersion: summaryVersion,
+      sourceSnapshotAt: '2026-09-01T00:00:00.000Z',
+      completedAt: '2026-09-01T00:00:01.000Z',
+      rowCount: currentStudentSummaryRows.length,
+      checksum: buildStudentTeachingSummaryChecksum(currentStudentSummaryRows)
+    }),
+    ...currentStudentSummaryRows.map(row => buildVersionedStudentTeachingSummaryRow(row, summaryVersion)),
+    ...Array.from({ length: 501 }, (_, index) => buildVersionedStudentTeachingSummaryRow({
+      id: `stale-${index}`,
+      studentId: `stale-${index}`,
+      name: `旧摘要${index}`
+    }, staleSummaryVersion))
+  ]
 };
 
 const handler = createCorePageDataRoutes({
@@ -107,9 +133,17 @@ const handler = createCorePageDataRoutes({
     res.body = body;
     return body;
   },
-  cappedScan: async table => tableRows[table] || [],
+  cappedScan: async table => {
+    if (table === tables.T_STUDENT_TEACHING_SUMMARY) {
+      const err = new Error('生产读取被截断：student_summary 超过 500 条，请改专用读模型或提高读取上限');
+      err.code = 'PRODUCTION_READ_TRUNCATED';
+      throw err;
+    }
+    return tableRows[table] || [];
+  },
   getCachedScan: async table => tableRows[table] || [],
   getCachedRow: async (table, id) => (tableRows[table] || []).find(row => String(row.id) === String(id)) || null,
+  scanByIdPrefix: async (table, prefix) => (tableRows[table] || []).filter(row => String(row.id || '').startsWith(prefix)),
   getScheduleListRows: async () => tableRows.schedule,
   getCoachScheduleRowsForUser: async () => tableRows.schedule,
   listCampusesWithDefaults: async () => [],

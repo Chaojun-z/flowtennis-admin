@@ -779,7 +779,7 @@ const handlePurchaseEntitlementRoutes=createPurchaseEntitlementRoutes({
 });
 const handleCorePageDataRoutes=createCorePageDataRoutes({
   init,sendJson:routeSendJson,cappedScan,filterLoadAllForUser,listCampusesWithDefaults,getFastStudentsRead,
-  getCachedScan,getCachedRow,getScheduleListRows,getCoachScheduleRowsForUser,buildCoachRefs,
+  getCachedScan,getCachedRow,scanByIdPrefix,getScheduleListRows,getCoachScheduleRowsForUser,buildCoachRefs,
   scanCoachProposals,timedEndpointMetric,decorateWorkbenchStudents,decorateWorkbenchFeedbacks,
   decorateWorkbenchScheduleRows,decorateWorkbenchClasses,buildWorkbenchStats,projectScheduleListRow,
   normalizeMembershipPlanViewRecord,normalizeMembershipOrderViewRecord,DEFAULT_CAMPUSES,

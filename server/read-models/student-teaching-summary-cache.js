@@ -241,16 +241,29 @@ function wait(ms) {
 async function readReadyStudentTeachingSummaryRows({
   tableName,
   getCachedScan,
+  getCachedRow,
+  scanByIdPrefix,
   timeoutMs = 900,
   intervalMs = 150
 } = {}) {
   if (!tableName || typeof getCachedScan !== 'function') {
     throw studentTeachingSummaryNotReadyError(null, 'not-configured');
   }
+  async function loadRows() {
+    if (typeof getCachedRow === 'function' && typeof scanByIdPrefix === 'function') {
+      const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
+      const activeVersion = String(meta?.activeVersion || '').trim();
+      if (activeVersion) {
+        const rows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`);
+        return [meta, ...(Array.isArray(rows) ? rows : [])].filter(Boolean);
+      }
+    }
+    return getCachedScan(tableName, { fresh: true });
+  }
   const startedAt = Date.now();
   let lastError = null;
   for (;;) {
-    const rows = await getCachedScan(tableName, { fresh: true });
+    const rows = await loadRows();
     try {
       return requireReadyStudentTeachingSummaryRows(rows);
     } catch (err) {
