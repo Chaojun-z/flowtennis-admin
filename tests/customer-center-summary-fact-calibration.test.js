@@ -446,7 +446,9 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     res: notReadyRes,
     query: new URLSearchParams()
   });
-  assert.strictEqual(notReadyRes.statusCode, 503, '统一摘要未就绪时客户中心必须返回 503，不能回旧数据');
+  assert.strictEqual(notReadyRes.statusCode, 200, '统一摘要未就绪时客户中心也必须返回可渲染结构，避免页面 503');
+  assert.strictEqual(notReadyRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用时必须显式标记降级状态');
+  assert.deepStrictEqual(notReadyRes.body.teachingStudentViews.historicalStudents, [], '摘要不可用时不能回旧数据');
 
   const bulk = makeBulkSummaryHandler(1200);
   const bulkRes = {};

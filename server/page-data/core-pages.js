@@ -2,7 +2,7 @@ const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycl
 const { buildTeachingStudentViews, buildCoachMiniStudentRoster, buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics, TEACHING_LESSON_DETAIL_SOURCE_VERSION, teachingSummaryNeedsLessonFacts } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
-const { createStudentRosterIndexReader } = require('./student-roster-index-reader.js');
+const { createStudentRosterIndexReader, buildCustomerCenterPagePayload } = require('./student-roster-index-reader.js');
 const {
   STUDENT_TEACHING_SUMMARY_READY,
   STUDENT_TEACHING_SUMMARY_FAILED,
@@ -126,7 +126,13 @@ function createCorePageDataRoutes(deps={}){
       return sendJson(res,await studentRosterIndexReader.readCustomerCenterList({user,query}));
     }catch(err){
       if(err?.code==='STUDENT_TEACHING_SUMMARY_NOT_READY'){
-        return sendJson(res,{error:err.message,code:err.code},err.statusCode||503);
+        console.warn('[customer-center-list] student teaching summary unavailable, serving empty payload',err?.message||err);
+        return sendJson(res,{
+          ...buildCustomerCenterPagePayload({summaryRows:[],query}),
+          studentTeachingSummaryUnavailable:true,
+          code:err.code,
+          error:err.message
+        });
       }
       throw err;
     }

@@ -6,6 +6,7 @@ const {
   buildStudentTeachingSummaryChecksum,
   buildVersionedStudentTeachingSummaryRow,
   requireReadyStudentTeachingSummaryRows,
+  readReadyStudentTeachingSummaryRows,
   STUDENT_TEACHING_SUMMARY_META_ID,
   STUDENT_TEACHING_SUMMARY_READY
 } = require('../server/read-models/student-teaching-summary-cache');
@@ -57,6 +58,27 @@ async function testKeepsReadyMetaWhenRefreshFails() {
     /source scan failed/
   );
   assert.deepStrictEqual(metaWrites, [], 'failed refresh must keep the last ready meta serving pages');
+}
+
+async function testReadySummaryReadDoesNotWaitForHungScan() {
+  const startedAt = Date.now();
+  const result = await Promise.race([
+    readReadyStudentTeachingSummaryRows({
+      tableName: 'ft_student_teaching_summary',
+      getCachedScan: async () => new Promise(() => {}),
+      timeoutMs: 50,
+      intervalMs: 10
+    }).then(
+      () => ({ ok: true, elapsedMs: Date.now() - startedAt }),
+      error => ({ ok: false, error, elapsedMs: Date.now() - startedAt })
+    ),
+    new Promise(resolve => setTimeout(() => resolve({ ok: false, hung: true, elapsedMs: Date.now() - startedAt }), 250))
+  ]);
+
+  assert.strictEqual(result.hung, undefined, '摘要表读取卡住时不能拖到接口超时');
+  assert.strictEqual(result.error?.code, 'STUDENT_TEACHING_SUMMARY_NOT_READY');
+  assert.match(result.error?.message || '', /read-timeout/);
+  assert.ok(result.elapsedMs < 200, `摘要读取应快速降级，实际 ${result.elapsedMs}ms`);
 }
 
 async function testKeepsServingReadyRowsWhileNextVersionIsWritten() {
@@ -298,6 +320,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
 }
 
 (async () => {
+  await testReadySummaryReadDoesNotWaitForHungScan();
   await testKeepsReadyMetaWhenRefreshFails();
   await testKeepsServingReadyRowsWhileNextVersionIsWritten();
   await testRollsBackPartiallyWrittenRowsWhenRefreshFails();

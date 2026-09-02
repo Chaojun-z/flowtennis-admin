@@ -238,6 +238,18 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function withReadTimeout(operation, timeoutMs, reason = 'read-timeout') {
+  let timer = null;
+  const timeout = new Promise((resolve, reject) => {
+    timer = setTimeout(() => reject(studentTeachingSummaryNotReadyError(null, reason)), Math.max(1, timeoutMs));
+  });
+  try {
+    return await Promise.race([Promise.resolve().then(operation), timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function readReadyStudentTeachingSummaryRows({
   tableName,
   getCachedScan,
@@ -263,7 +275,8 @@ async function readReadyStudentTeachingSummaryRows({
   const startedAt = Date.now();
   let lastError = null;
   for (;;) {
-    const rows = await loadRows();
+    const remainingMs = Math.max(1, timeoutMs - (Date.now() - startedAt));
+    const rows = await withReadTimeout(loadRows, remainingMs);
     try {
       return requireReadyStudentTeachingSummaryRows(rows);
     } catch (err) {
