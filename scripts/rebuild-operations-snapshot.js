@@ -2,10 +2,6 @@
 
 const path = require('path');
 const dotenv = require('dotenv');
-const { createStorageServices } = require('../server/storage.js');
-const { DEFAULT_CAMPUSES } = require('../server/bootstrap.js');
-const { buildOperationsPagePayload, getOperationsPageScope } = require('../server/page-data/operations-page.js');
-const { createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
 const {
   assertExplicitWrite,
   assertProductionWriteTarget,
@@ -16,6 +12,12 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config({ path: path.join(__dirname, '..', '.env.local'), override: true });
 process.env.DISABLE_HOT_SCAN_PREWARM = process.env.DISABLE_HOT_SCAN_PREWARM || 'true';
 process.env.STORAGE_OPERATION_TIMEOUT_MS = process.env.STORAGE_OPERATION_TIMEOUT_MS || '60000';
+process.env.OPERATIONS_CACHE_TTL_MS = process.env.OPERATIONS_CACHE_TTL_MS || String(60 * 60 * 1000);
+
+const { createStorageServices } = require('../server/storage.js');
+const { DEFAULT_CAMPUSES } = require('../server/bootstrap.js');
+const { buildOperationsPagePayload, getOperationsPageScope } = require('../server/page-data/operations-page.js');
+const { createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
 
 const TABLES = {
   T_LEADS: 'ft_leads',

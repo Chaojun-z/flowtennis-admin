@@ -58,7 +58,7 @@ const OPERATIONS_SCHEDULE_FIELDS = [
   'locationType', 'externalVenueName', 'externalCourtName'
 ];
 
-const OPERATIONS_CACHE_TTL_MS = 60 * 1000;
+const OPERATIONS_CACHE_TTL_MS = Math.max(60 * 1000, parseInt(process.env.OPERATIONS_CACHE_TTL_MS || '60000', 10) || 60 * 1000);
 const operationsRowsCache = new Map();
 
 function invalidateOperationsSourceCache() {
