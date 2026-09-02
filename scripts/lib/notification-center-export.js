@@ -84,7 +84,7 @@ function addDays(dateKey, amount) {
 
 function resolveEveningReportTargetDate(now = new Date()) {
   const today = toChinaDateKey(now);
-  const hour = Number(toChinaParts(now).hour || 0);
+  const hour = Number(toChinaParts(now).hour || 0) % 24;
   return hour < 5 ? addDays(today, -1) : today;
 }
 
