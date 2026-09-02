@@ -32,6 +32,24 @@ const julyScope = {
 };
 const augustCoachScope = { ...augustScope, view: 'coach' };
 
+function testDateUtcMs(day) {
+  const match = String(day || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function testAddUtcDays(day, offset) {
+  const ms = testDateUtcMs(day);
+  if (ms == null) return '';
+  return new Date(ms + offset * 86400000).toISOString().slice(0, 10);
+}
+
+function enumerateTestDays(startDate, endDate) {
+  const days = [];
+  for (let day = startDate; day && day <= endDate; day = testAddUtcDays(day, 1)) days.push(day);
+  return days;
+}
+
 async function main() {
   const commonScopes = buildCommonScopeArgs(
     { write: true, view: 'coach', commonScopes: true },
@@ -252,6 +270,28 @@ async function main() {
   });
   tableRows.set(monthPackBuilt.meta.id, monthPackBuilt.meta);
   tableRows.set(monthPackBuilt.bundle.id, monthPackBuilt.bundle);
+  const previousMonthPackBuilt = buildOperationsSnapshot({
+    payload: buildCoachDailyMonthPackPayload({
+      month: '2026-08',
+      dailyPayloads: ['2026-08-30', '2026-08-31'].map(day => ({
+        day,
+        payload: {
+          campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
+          operations: {
+            overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, pendingRevenue: { value: 0 }, tradeCount: { value: 0 } } },
+            coach: { rows: [] }
+          }
+        }
+      }))
+    }),
+    user,
+    scope: cloneCoachDailyMonthPackScope(septemberRangeScope, '2026-08'),
+    batchId: 'daily-month-2026-08',
+    completedAt: '2026-09-02T00:00:00.000Z',
+    sourceSnapshotAt: '2026-09-02T00:00:00.000Z'
+  });
+  tableRows.set(previousMonthPackBuilt.meta.id, previousMonthPackBuilt.meta);
+  tableRows.set(previousMonthPackBuilt.bundle.id, previousMonthPackBuilt.bundle);
   const composedView = await loader({ user, scope: septemberRangeScope });
   assert.strictEqual(composedView.snapshot.source, 'operations-coach-daily-month-pack', '自定义日期段缺少精确范围快照时必须走教练月包组合');
   assert.strictEqual(composedView.operations.coach.cards.usedHours.value, 5, '日快照组合后的课时必须等于所选日期内每天已排课时之和');
@@ -264,6 +304,100 @@ async function main() {
   const singleDayView = await loader({ user, scope: singleDayScope });
   assert.strictEqual(singleDayView.snapshot.source, 'operations-coach-daily-month-pack', '单日筛选缺少精确快照时也必须走教练月包组合');
   assert.strictEqual(singleDayView.operations.coach.cards.usedHours.value, 2, '单日筛选后的课时必须只取该天的月包数据');
+
+  const septemberFullMonthScope = {
+    ...augustCoachScope,
+    dateRange: { startDate: '2026-09-01', endDate: '2026-09-30' },
+    metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-09-01', endDate: '2026-09-30' }
+  };
+  const septemberFullMonthPack = buildOperationsSnapshot({
+    payload: buildCoachDailyMonthPackPayload({
+      month: '2026-09',
+      dailyPayloads: enumerateTestDays('2026-09-01', '2026-09-30').map(day => ({
+        day,
+        payload: {
+          campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
+          operations: {
+            overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, pendingRevenue: { value: 0 }, tradeCount: { value: 0 } } },
+            coach: {
+              rows: day === '2026-09-02' ? [{
+                coach: 'Siren 教练',
+                usedHours: 17,
+                teachingHours: 17,
+                availableHours: 6.9,
+                revenue: 0,
+                trialBase: 2,
+                trialConverted: 1,
+                courseMix: [{ type: '私教课', hours: 16 }, { type: '体验课', hours: 1 }]
+              }] : []
+            }
+          }
+        }
+      }))
+    }),
+    user,
+    scope: cloneCoachDailyMonthPackScope(septemberFullMonthScope, '2026-09'),
+    batchId: 'daily-month-2026-09-full',
+    completedAt: '2026-09-02T00:00:00.000Z',
+    sourceSnapshotAt: '2026-09-02T00:00:00.000Z'
+  });
+  const augustFullMonthPack = buildOperationsSnapshot({
+    payload: buildCoachDailyMonthPackPayload({
+      month: '2026-08',
+      dailyPayloads: enumerateTestDays('2026-08-01', '2026-08-31').map(day => ({
+        day,
+        payload: {
+          campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
+          operations: {
+            overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, pendingRevenue: { value: 0 }, tradeCount: { value: 0 } } },
+            coach: {
+              rows: day === '2026-08-08' ? [{
+                coach: 'Siren 教练',
+                usedHours: 28,
+                teachingHours: 28,
+                availableHours: 6.9,
+                revenue: 0,
+                trialBase: 1,
+                trialConverted: 1,
+                courseMix: [{ type: '私教课', hours: 28 }]
+              }] : []
+            }
+          }
+        }
+      }))
+    }),
+    user,
+    scope: cloneCoachDailyMonthPackScope(septemberFullMonthScope, '2026-08'),
+    batchId: 'daily-month-2026-08-full',
+    completedAt: '2026-09-02T00:00:00.000Z',
+    sourceSnapshotAt: '2026-09-02T00:00:00.000Z'
+  });
+  [septemberFullMonthPack, augustFullMonthPack].forEach(built => {
+    tableRows.set(built.meta.id, built.meta);
+    tableRows.set(built.bundle.id, built.bundle);
+  });
+  const septemberFullMonthView = await loader({ user, scope: septemberFullMonthScope });
+  const fullMonthSiren = septemberFullMonthView.operations.coach.rows.find(row => row.coach === 'Siren 教练');
+  assert.strictEqual(fullMonthSiren?.usedHours, 17, '9 月整月快照合成应展示 9 月当前课时');
+  assert.strictEqual(fullMonthSiren?.usedHoursComparison?.previousValue, 28, '9 月整月快照合成的环比课时必须来自完整 8 月月包');
+  assert.strictEqual(fullMonthSiren?.trialBase, 2, '快照合成不能丢失体验课上课人数');
+  assert.strictEqual(fullMonthSiren?.trialConverted, 1, '快照合成不能丢失体验课转化人数');
+
+  const legacyBuilt = buildOperationsSnapshot({
+    payload,
+    user,
+    scope: julyScope,
+    batchId: 'legacy-v2-batch',
+    completedAt: '2026-09-01T00:00:00.000Z',
+    sourceSnapshotAt: '2026-09-01T00:00:00.000Z'
+  });
+  tableRows.set(legacyBuilt.meta.id, { ...legacyBuilt.meta, snapshotVersion: 'operations-page-snapshot-v2', version: 'operations-page-snapshot-v2' });
+  tableRows.set(legacyBuilt.bundle.id, { ...legacyBuilt.bundle, snapshotVersion: 'operations-page-snapshot-v2' });
+  await assert.rejects(
+    () => loader({ user, scope: julyScope, forceFresh: true }),
+    (err) => err.code === OPERATIONS_SNAPSHOT_NOT_READY_CODE,
+    '旧版经营分析快照不能继续喂给新版教练明细表'
+  );
 
   const directComposed = composeCoachSnapshotPayloads([
     { operations: { overview: { cards: { totalIncome: { value: 1 } } }, coach: { rows: [{ coach: 'A教练', usedHours: 1, teachingHours: 1, availableHours: 6.9, revenue: 10, courseMix: [{ type: '私教课', hours: 1 }] }] } } },

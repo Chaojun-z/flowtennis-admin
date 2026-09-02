@@ -74,6 +74,31 @@ const monthPackBuilt = buildOperationsSnapshot({
 });
 rows.set(monthPackBuilt.meta.id, monthPackBuilt.meta);
 rows.set(monthPackBuilt.bundle.id, monthPackBuilt.bundle);
+const previousMonthDailyPayloads = [];
+for (let day = 1; day <= 31; day += 1) {
+  const date = `2026-08-${String(day).padStart(2, '0')}`;
+  previousMonthDailyPayloads.push({
+    day: date,
+    payload: {
+      campuses: payload.campuses,
+      operations: {
+        overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, pendingRevenue: { value: 0 }, tradeCount: { value: 0 } } },
+        coach: { rows: coachRows.slice(0, 100).map(row => ({ ...row, coach: row.coachName, usedHours: 2, teachingHours: 2, teachingStudentCount: 1, availableHours: 6.9, revenue: 0, courseMix: [{ type: '私教课', hours: 2 }] })) }
+      },
+      generatedAt: `${date}T00:00:00.000Z`
+    }
+  });
+}
+const previousMonthPackBuilt = buildOperationsSnapshot({
+  payload: buildCoachDailyMonthPackPayload({ month: '2026-08', dailyPayloads: previousMonthDailyPayloads }),
+  user,
+  scope: cloneCoachDailyMonthPackScope(composeScope, '2026-08'),
+  batchId: 'daily-month-2026-08',
+  completedAt: '2026-09-30T00:00:00.000Z',
+  sourceSnapshotAt: '2026-09-30T00:00:00.000Z'
+});
+rows.set(previousMonthPackBuilt.meta.id, previousMonthPackBuilt.meta);
+rows.set(previousMonthPackBuilt.bundle.id, previousMonthPackBuilt.bundle);
 let scanCalled = false;
 const loader = createOperationsSnapshotLoader({
   getCachedRow: async (table, id) => rows.get(id) || null,

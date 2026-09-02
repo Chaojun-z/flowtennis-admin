@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const zlib = require('zlib');
 const { getOperationsRowsCacheKey } = require('../read-models/operations-source.js');
 
-const OPERATIONS_SNAPSHOT_VERSION = 'operations-page-snapshot-v2';
+const OPERATIONS_SNAPSHOT_VERSION = 'operations-page-snapshot-v3';
 const OPERATIONS_SNAPSHOT_NOT_READY_CODE = 'OPERATIONS_SNAPSHOT_NOT_READY';
 const COACH_DAILY_MONTH_PACK_VIEW = 'coach-month-pack';
 const SNAPSHOT_SCOPE_INDEX_ID = 'active:scope-index';
@@ -140,6 +140,53 @@ function monthKeysInRange(range = {}) {
   return months;
 }
 
+function previousCoachDateRange(range = {}) {
+  const days = dateRangeDays(range);
+  if (!days.length) return null;
+  const startDate = days[0];
+  const endDate = days[days.length - 1];
+  if (startDate.endsWith('-01') && endDate === monthEnd(startDate)) {
+    const [year, month] = startDate.split('-').map((item) => parseInt(item, 10));
+    const previousStart = new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 10);
+    return { startDate: previousStart, endDate: monthEnd(previousStart) };
+  }
+  const previousEnd = addUtcDays(startDate, -1);
+  const previousStart = addUtcDays(previousEnd, 1 - days.length);
+  return previousStart && previousEnd ? { startDate: previousStart, endDate: previousEnd } : null;
+}
+
+function monthKeysForCoachComposeRange(range = {}) {
+  const keys = new Set(monthKeysInRange(range));
+  const previousRange = previousCoachDateRange(range);
+  monthKeysInRange(previousRange || {}).forEach(month => keys.add(month));
+  return [...keys];
+}
+
+function coachHoursComparison(currentValue = 0, previousValue = 0) {
+  const current = moneyMetric(currentValue);
+  const previous = moneyMetric(previousValue);
+  const changeValue = moneyMetric(current - previous);
+  return {
+    mode: 'previous_period',
+    currentValue: current,
+    previousValue: previous,
+    changeValue,
+    changeRate: previous ? roundMetric(changeValue * 100 / previous, 1) : null
+  };
+}
+
+function coachHoursByPayloads(payloads = []) {
+  const byCoach = new Map();
+  (payloads || []).forEach(payload => {
+    ((payload?.operations?.coach?.rows) || []).forEach(row => {
+      const coach = text(row.coach || row.coachName);
+      if (!coach) return;
+      byCoach.set(coach, roundMetric((byCoach.get(coach) || 0) + (Number(row.usedHours ?? row.teachingHours) || 0), 2));
+    });
+  });
+  return byCoach;
+}
+
 function cloneDailyScope(scope = {}, day = '') {
   const daily = {
     ...scope,
@@ -242,7 +289,7 @@ const COACH_UTILIZATION_BANDS = [
   { band: '80%-100%', label: '高效', color: '#2E8B6D' }
 ];
 
-function composeCoachSnapshotPayloads(payloads = [], scope = {}) {
+function composeCoachSnapshotPayloads(payloads = [], scope = {}, previousPayloads = []) {
   const first = payloads.find(Boolean) || {};
   const byCoach = new Map();
   (payloads || []).forEach(payload => {
@@ -288,6 +335,7 @@ function composeCoachSnapshotPayloads(payloads = [], scope = {}) {
       byCoach.set(coach, current);
     });
   });
+  const previousHoursByCoach = coachHoursByPayloads(previousPayloads);
   const rows = [...byCoach.values()].map(row => {
     const usedHours = roundMetric(row.usedHours, 1);
     const availableHours = roundMetric(row.availableHours, 1);
@@ -307,7 +355,10 @@ function composeCoachSnapshotPayloads(payloads = [], scope = {}) {
       courseMix,
       campusDistribution,
       campusDistributionText: campusDistribution.length ? campusDistribution.map(item => `${item.campusName} ${Number.isInteger(item.hours) ? item.hours : roundMetric(item.hours, 1)}`).join(' | ') : '-',
-      utilizationBand: utilizationBandForRate(utilizationRate)
+      utilizationBand: utilizationBandForRate(utilizationRate),
+      usedHoursComparison: previousPayloads.length
+        ? coachHoursComparison(usedHours, previousHoursByCoach.get(row.coach) || 0)
+        : { mode: 'none' }
     };
   }).sort((a, b) => (Number(a.sortOrder) || 9999) - (Number(b.sortOrder) || 9999) || b.revenue - a.revenue || b.usedHours - a.usedHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
   const usedHours = roundMetric(rows.reduce((sum, row) => sum + (Number(row.usedHours) || 0), 0), 1);
@@ -583,16 +634,21 @@ function createOperationsSnapshotLoader(deps = {}) {
       loaded = await readPublishedPayload(scope, key);
     } catch (err) {
       if (err?.code !== OPERATIONS_SNAPSHOT_NOT_READY_CODE || !canComposeCoachDailyScope(scope)) throw err;
-      const months = monthKeysInRange(scope.dateRange || {});
-      const monthPacks = await Promise.all(months.map(async month => {
+      const currentMonths = monthKeysInRange(scope.dateRange || {});
+      const previousRange = previousCoachDateRange(scope.dateRange || {});
+      const previousMonths = monthKeysInRange(previousRange || {});
+      const loadMonthPacks = async (months = []) => Promise.all(months.map(async month => {
         const monthScope = cloneCoachDailyMonthPackScope(scope, month);
         const monthKey = scopeKey(user, monthScope);
         return (await readPublishedPayload(monthScope, monthKey)).payload;
       }));
+      const monthPacks = await loadMonthPacks(currentMonths);
+      const previousMonthPacks = await loadMonthPacks(previousMonths);
       const days = dateRangeDays(scope.dateRange || {});
       const dailyPayloads = payloadsFromCoachDailyMonthPacks(monthPacks, scope.dateRange || {});
+      const previousDailyPayloads = previousRange ? payloadsFromCoachDailyMonthPacks(previousMonthPacks, previousRange) : [];
       return {
-        ...composeCoachSnapshotPayloads(dailyPayloads, scope),
+        ...composeCoachSnapshotPayloads(dailyPayloads, scope, previousDailyPayloads),
         snapshot: {
           source: 'operations-coach-daily-month-pack',
           snapshotVersion: OPERATIONS_SNAPSHOT_VERSION,
@@ -731,7 +787,7 @@ function createOperationsSnapshotSync(deps = {}) {
 
   function enqueueScopesForRange(user = {}, scope = {}) {
     if (!canComposeCoachDailyScope(scope)) return [{ user, scope }];
-    return monthKeysInRange(scope.dateRange || {}).map((month) => ({
+    return monthKeysForCoachComposeRange(scope.dateRange || {}).map((month) => ({
       user,
       scope: cloneCoachDailyMonthPackScope(scope, month)
     }));
