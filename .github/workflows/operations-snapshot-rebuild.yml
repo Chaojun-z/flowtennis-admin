@@ -31,4 +31,4 @@ jobs:
       - run: npm ci
 
       - name: Rebuild operations snapshot
-        run: node scripts/rebuild-operations-snapshot.js --write --view coach --process-queued --limit 1
+        run: node scripts/rebuild-operations-snapshot.js --write --view coach
