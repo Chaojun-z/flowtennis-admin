@@ -308,7 +308,18 @@ function makeBulkSummaryHandler(count = 1200) {
     activityStatusLabel: index % 3 !== 0 ? '近30天活跃' : '91-180天沉默',
     packageStatusLabel: index % 3 !== 0 ? '课包有余额' : '课包已用完',
     studentStatusLabel: index % 3 !== 0 ? '课包活跃中' : '课包待续费',
-    searchText: `学员${index} bulk-${index}`
+    searchText: `学员${index} bulk-${index}`,
+    detailLessonRecordRows: index % 3 !== 0 ? Array.from({ length: 10 }, lessonIndex => ({
+      scheduleId: `bulk-${index}-lesson-${lessonIndex}`,
+      courseType: '私教课',
+      time: '2026-08-20 10:00:00',
+      lessonSectionText: '1次'
+    })) : [],
+    detailPackageOrderRows: index % 3 !== 0 ? Array.from({ length: 10 }, packageIndex => ({
+      packageName: `正式课包 ${packageIndex}`,
+      totalLessons: 10,
+      remainingLessons: index % 3 !== 0 ? 3 : 0
+    })) : []
   }));
   const handler = createCorePageDataRoutes({
     init: async () => {},
@@ -634,6 +645,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.ok(elapsedMs < 1000, `1200 条统一摘要下首屏搜索分页应为秒级，当前 ${elapsedMs}ms`);
   assert.strictEqual(bulk.calls.tableScans.ft_student_teaching_summary, 1, '秒级首屏只允许读取一次统一摘要索引');
   assert.strictEqual(bulkRes.body.listPage.rows.length, 15, '默认分页只返回当前页行');
+  assert.strictEqual(bulkRes.body.teachingStudentViews.activeStudents[0].detailLessonRecordRows, undefined, '首屏返回体不能携带学员上课明细大数组');
+  assert.strictEqual(bulkRes.body.teachingStudentViews.activeStudents[0].detailPackageOrderRows, undefined, '首屏返回体不能携带学员课包明细大数组');
   assert.ok(
     bulkRes.body.standardLifecycleMetrics.teachingSummary.activeStudentCount > bulkRes.body.listPage.rows.length,
     '顶部统计必须来自完整统一集合，不能只统计当前页'

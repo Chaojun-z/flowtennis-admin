@@ -270,7 +270,100 @@ function buildCustomerCenterListPage(teachingStudentViews = {}, query) {
   const view = String(query?.get('view') || '').trim();
   const q = String(query?.get('q') || '').trim();
   const studentRows = Array.isArray(teachingStudentViews[view]) ? teachingStudentViews[view] : [];
-  return paging && view ? { view, ...buildListPage(studentRows.filter(row => textSearchHit(q, row.name, row.displayName, row.studentName, row.wechatName, row.nickName, row.nickname, row.phone)), paging) } : null;
+  if (!paging || !view) return null;
+  const page = buildListPage(studentRows.filter(row => textSearchHit(q, row.name, row.displayName, row.studentName, row.wechatName, row.nickName, row.nickname, row.phone)), paging);
+  return { view, ...page, rows: page.rows.map(projectCustomerCenterStudentRow) };
+}
+
+function projectCustomerCenterStudentRow(row = {}) {
+  return {
+    id: String(row.id || row.studentId || '').trim(),
+    studentId: String(row.studentId || row.id || '').trim(),
+    sourceLeadId: String(row.sourceLeadId || '').trim(),
+    name: String(row.name || row.displayName || '').trim(),
+    displayName: String(row.displayName || row.name || '').trim(),
+    phone: String(row.phone || '').trim(),
+    type: String(row.type || '').trim(),
+    source: String(row.source || '').trim(),
+    campus: String(row.campus || '').trim(),
+    primaryCoach: String(row.primaryCoach || '').trim(),
+    notes: String(row.notes || '').trim(),
+    profileNote: String(row.profileNote || '').trim(),
+    searchText: String(row.searchText || '').trim(),
+    studentStage: String(row.studentStage || '').trim(),
+    trialStatus: String(row.trialStatus || '').trim(),
+    courseDealPath: String(row.courseDealPath || '').trim(),
+    lastFormalLessonAt: String(row.lastFormalLessonAt || '').trim(),
+    detailRecentLessonDate: String(row.detailRecentLessonDate || '').trim(),
+    completedLessons: Number(row.completedLessons) || 0,
+    coursePurchaseCount: Number(row.coursePurchaseCount) || 0,
+    hasTrialExperience: !!row.hasTrialExperience,
+    hasTrialAttended: !!row.hasTrialAttended,
+    hasFormalAttended: !!row.hasFormalAttended,
+    hasCourseConversion: !!row.hasCourseConversion,
+    isHistoricalStudentRoster: !!row.isHistoricalStudentRoster,
+    isActiveStudentRoster: !!row.isActiveStudentRoster,
+    packageBalanceRemaining: Number(row.packageBalanceRemaining) || 0,
+    packageBalanceTotal: Number(row.packageBalanceTotal) || 0,
+    packageBalanceText: String(row.packageBalanceText || '').trim(),
+    packageBalancePercent: Number(row.packageBalancePercent) || 0,
+    detailPackageBalanceRemaining: Number(row.detailPackageBalanceRemaining) || 0,
+    detailPackageBalanceTotal: Number(row.detailPackageBalanceTotal) || 0,
+    detailPackageBalanceText: String(row.detailPackageBalanceText || row.packageBalanceText || '').trim(),
+    detailPackageBalancePercent: Number(row.detailPackageBalancePercent) || 0,
+    cumulativeCoursePaidAmount: Number(row.cumulativeCoursePaidAmount) || 0,
+    cumulativeCoursePaidText: String(row.cumulativeCoursePaidText || '').trim(),
+    packageStatusLabel: String(row.packageStatusLabel || '').trim(),
+    paymentModeLabel: String(row.paymentModeLabel || '').trim(),
+    activityStatusLabel: String(row.activityStatusLabel || '').trim(),
+    lessonVolumeLabel: String(row.lessonVolumeLabel || '').trim(),
+    studentStatusLabel: String(row.studentStatusLabel || '').trim()
+  };
+}
+
+function projectCustomerCenterLifecycleRow(row = {}) {
+  const projected = projectCustomerCenterStudentRow({
+    ...row,
+    id: row.studentId || row.id,
+    primaryCoach: row.formalCoach || row.owner || row.primaryCoach,
+    type: row.customerType || row.type,
+    name: row.displayName || row.name
+  });
+  return {
+    ...projected,
+    customerKey: String(row.customerKey || '').trim(),
+    leadId: String(row.leadId || '').trim(),
+    owner: String(row.owner || row.primaryCoach || '').trim(),
+    customerType: String(row.customerType || row.type || '').trim(),
+    demandProduct: String(row.demandProduct || '').trim(),
+    trialAtRaw: String(row.trialAtRaw || '').trim(),
+    trialBookedAt: String(row.trialBookedAt || '').trim(),
+    trialAttendedAt: String(row.trialAttendedAt || '').trim(),
+    courseFirstPurchaseAt: String(row.courseFirstPurchaseAt || '').trim(),
+    conversionAt: String(row.conversionAt || '').trim(),
+    formalCoach: String(row.formalCoach || row.primaryCoach || '').trim(),
+    courtStage: String(row.courtStage || '').trim(),
+    membershipStatus: String(row.membershipStatus || '').trim(),
+    leadDate: String(row.leadDate || '').trim(),
+    createdAt: String(row.createdAt || '').trim(),
+    hasCourseRepeatPurchase: !!row.hasCourseRepeatPurchase,
+    hasTrialToCourseConversion: !!row.hasTrialToCourseConversion,
+    hasScheduleRecord: !!row.hasScheduleRecord,
+    hasCourseStudentEntry: !!row.hasCourseStudentEntry,
+    hasFreeCourseFollowup: !!row.hasFreeCourseFollowup,
+    hasBookingConversion: !!row.hasBookingConversion,
+    hasMembershipConversion: !!row.hasMembershipConversion,
+    hasTeachingSummarySnapshot: !!row.hasTeachingSummarySnapshot
+  };
+}
+
+function projectCustomerCenterTeachingViews(views = {}) {
+  const next = {};
+  Object.keys(views || {}).forEach(key => {
+    const value = views[key];
+    next[key] = Array.isArray(value) ? value.map(projectCustomerCenterStudentRow) : value;
+  });
+  return next;
 }
 
 function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeachingStudentViews = null, prebuiltStandardLifecycleMetrics = null } = {}) {
@@ -283,8 +376,8 @@ function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeach
     : buildStandardLifecycleMetrics({ ...teachingData, customerLifecycleRows }));
   const listPage = buildCustomerCenterListPage(teachingStudentViews, query);
   return {
-    customerLifecycleRows,
-    teachingStudentViews,
+    customerLifecycleRows: customerLifecycleRows.map(projectCustomerCenterLifecycleRow),
+    teachingStudentViews: projectCustomerCenterTeachingViews(teachingStudentViews),
     standardLifecycleMetrics,
     listPage
   };
