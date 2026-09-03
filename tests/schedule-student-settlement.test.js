@@ -37,7 +37,7 @@ assert.strictEqual(rows.length, 4);
 assert.strictEqual(rows[1].payMethod, '微信');
 assert.strictEqual(summarizeStudentSettlementRows(rows), '3人课包扣减 / 1人直接收款');
 
-assert.match(indexHtml, /schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*schedule\.js\?v=20260831-purchase-records-v1/, 'settlement helper should load before schedule.js');
+assert.match(indexHtml, /schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*schedule\.js\?v=20260903-stored-value-alias-v1/, 'settlement helper should load before schedule.js');
 assert.match(fnBody('renderScheduleStudentSuggestions'), /没有匹配到学员[\s\S]*schedule-student-suggest-create-link[\s\S]*openScheduleStudentQuickCreateModal[\s\S]*新建学员并排课/, 'no-result search should expose quick student creation as text');
 assert.match(scheduleSource, /function closeScheduleStudentQuickCreateModal\(/, 'quick-create modal should have its own close function');
 assert.doesNotMatch(fnBody('openScheduleStudentQuickCreateModal'), /openStandardModal\(/, 'quick-create modal must not replace the open schedule drawer');

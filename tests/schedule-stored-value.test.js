@@ -121,6 +121,42 @@ const unlinkedCreated = rules.buildScheduleStoredValueCourtUpdate({
 assert.strictEqual(unlinkedCreated.schedule.storedValueCourtId, 'court-member-unlinked', 'unlinked member account should beat same-name old guest court');
 assert.strictEqual(unlinkedCreated.court.balance, 4600);
 
+const aliasMemberCourt = {
+  id: 'court-along',
+  name: '周阿龙（Along）',
+  phone: '',
+  studentIds: [],
+  campus: 'shunyi_mapo',
+  history: [
+    { id: 'along-recharge-1', date: '2026-05-01', type: '充值', category: '会员充值', payMethod: '会员充值', amount: 5000, bonusAmount: 850 }
+  ]
+};
+const aliasStudent = { id: 'stu-along', name: '周阿龙', phone: '' };
+const aliasSchedule = {
+  ...schedule,
+  id: 'sch-along-field-fee',
+  settlementType: 'direct',
+  payMethod: '微信',
+  paidAmount: 800,
+  studentIds: ['stu-along'],
+  studentName: '周阿龙',
+  requiresFieldFee: true,
+  fieldFeeAmount: 352,
+  fieldFeePayMethod: '储值卡'
+};
+const aliasCreated = rules.buildScheduleStoredValueCourtUpdate({
+  previousSchedule: null,
+  nextSchedule: aliasSchedule,
+  courts: [aliasMemberCourt],
+  students: [aliasStudent],
+  membershipAccounts: [{ id: 'member-account-along', courtId: 'court-along', status: 'active' }],
+  now,
+  operator: '管理员',
+  operationTrace: { ...trace, operationId: 'op-along-field-fee', batchId: 'batch-op-along-field-fee' }
+});
+assert.strictEqual(aliasCreated.schedule.storedValueFieldFeeCourtId, 'court-along', 'stored-value field fee should match member courts when the court name has an alias suffix');
+assert.strictEqual(aliasCreated.court.balance, 5498);
+
 const edited = rules.buildScheduleStoredValueCourtUpdate({
   previousSchedule: created.schedule,
   nextSchedule: { ...created.schedule, paidAmount: 300 },

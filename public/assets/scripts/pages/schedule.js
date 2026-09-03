@@ -207,16 +207,18 @@ function scheduleStudentLastLessonBrief(student){
 function scheduleStudentDisplayName(student){return String(student?.name||student?.studentName||student?.displayName||student?.nickName||student?.nickname||'').trim();}
 function scheduleStudentPhone(student){return String(student?.phone||student?.mobile||student?.studentPhone||'').trim();}
 function scheduleStoredValueNormalizePhone(value){let phone=String(value||'').replace(/\D/g,'');if(phone.startsWith('86')&&phone.length>11)phone=phone.slice(2);return phone;}
-function scheduleStoredValueActiveMembership(court){return membershipAccounts.find(account=>String(account?.courtId||'')===String(court?.id||'')&&!['voided','cleared','inactive','deleted'].includes(String(account?.status||'active')));}
+function scheduleStoredValueNameKeys(value){const raw=String(value||'').trim().replace(/\s+/g,'');if(!raw)return[];const keys=new Set([raw]),withoutAlias=raw.replace(/[（(][^）)]*[）)]/g,'');if(withoutAlias)keys.add(withoutAlias);[...raw.matchAll(/[（(]([^）)]+)[）)]/g)].forEach(match=>{if(match[1])keys.add(match[1].replace(/\s+/g,''));});return[...keys].filter(Boolean);}
+function scheduleStoredValueNameMatches(a,b){const bKeys=new Set(scheduleStoredValueNameKeys(b));return scheduleStoredValueNameKeys(a).some(key=>bKeys.has(key));}
+function scheduleStoredValueActiveMembership(court){if(court?.accountType==='会员账户'&&!['voided','cleared','inactive','deleted'].includes(String(court?.membershipStatus||court?.status||'active')))return court.membershipAccount||court;return membershipAccounts.find(account=>String(account?.courtId||'')===String(court?.id||'')&&!['voided','cleared','inactive','deleted'].includes(String(account?.status||'active')));}
 function scheduleStoredValueCourtScore(court,student){
   if(!court||['inactive','deleted'].includes(String(court.status||'active'))||court.deletedAt||court.mergedIntoCourtId)return 0;
   const studentId=String(student?.id||'').trim(),studentPhone=scheduleStoredValueNormalizePhone(scheduleStudentPhone(student)),studentName=scheduleStudentDisplayName(student);
-  const ids=parseArr(court.studentIds),courtPhone=scheduleStoredValueNormalizePhone(court.phone),courtName=String(court.name||'').trim();
+  const ids=parseArr(court.studentIds),courtPhone=scheduleStoredValueNormalizePhone(court.phone||court.memberPhone),courtName=String(court.name||court.displayName||'').trim();
   let score=0;
   if(studentId&&ids.includes(studentId))score+=500;
   if(studentId&&String(court.studentId||'')===studentId)score+=500;
   if(studentPhone&&courtPhone&&courtPhone===studentPhone)score+=300;
-  if(studentName&&courtName&&courtName===studentName)score+=120;
+  if(studentName&&courtName&&scheduleStoredValueNameMatches(courtName,studentName))score+=120;
   if(!score)return 0;
   const finance=courtFinanceLocal(court);
   if(scheduleStoredValueActiveMembership(court))score+=1000;
@@ -225,8 +227,9 @@ function scheduleStoredValueCourtScore(court,student){
   return score;
 }
 function scheduleStoredValueCourtForStudent(student){
-  return courts.map(court=>({court,score:scheduleStoredValueCourtScore(court,student)})).filter(item=>item.score>0).sort((a,b)=>b.score-a.score||String(b.court.updatedAt||b.court.createdAt||'').localeCompare(String(a.court.updatedAt||a.court.createdAt||'')))[0]?.court||null;
-}
+  const byId=new Map((courts||[]).map(court=>[String(court?.id||''),court]).filter(([id])=>id));
+  (courtAccountListViewData?.items||[]).filter(item=>item?.accountType==='会员账户').forEach(item=>{const id=String(item?.id||'');if(id&&!byId.has(id))byId.set(id,item);});
+  return [...byId.values()].map(court=>({court,score:scheduleStoredValueCourtScore(court,student)})).filter(item=>item.score>0).sort((a,b)=>b.score-a.score||String(b.court.updatedAt||b.court.createdAt||'').localeCompare(String(a.court.updatedAt||a.court.createdAt||'')))[0]?.court||null;}
 function scheduleStudentSearchTokens(student){
   const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;
   return [scheduleStudentDisplayName(student),scheduleStudentPhone(student),cn(lifecycleCampus),lifecycleCampus].filter(Boolean);

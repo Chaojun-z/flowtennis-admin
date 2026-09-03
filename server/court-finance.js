@@ -178,6 +178,21 @@ function storedValueFinanceSnapshot(court){
     };
   }
 }
+function storedValueNameKeys(value){
+  const raw=cleanStoredValueText(value).replace(/\s+/g,'');
+  if(!raw)return [];
+  const keys=new Set([raw]);
+  const withoutAlias=raw.replace(/[（(][^）)]*[）)]/g,'');
+  if(withoutAlias)keys.add(withoutAlias);
+  const aliasMatches=[...raw.matchAll(/[（(]([^）)]+)[）)]/g)];
+  aliasMatches.forEach(match=>{if(match[1])keys.add(match[1].replace(/\s+/g,''));});
+  return [...keys].filter(Boolean);
+}
+function storedValueNameMatches(a,b){
+  const aKeys=storedValueNameKeys(a);
+  const bKeys=new Set(storedValueNameKeys(b));
+  return aKeys.some(key=>bKeys.has(key));
+}
 function storedValueCourtMatchScore(court,{studentId='',studentPhone='',studentName='',membershipAccounts=[]}={}){
   const ids=normalizeStudentIds(court);
   const courtPhone=normalizeStoredValuePhone(court?.phone);
@@ -185,7 +200,7 @@ function storedValueCourtMatchScore(court,{studentId='',studentPhone='',studentN
   let score=0;
   if(studentId&&ids.includes(String(studentId)))score+=500;
   if(studentPhone&&courtPhone&&courtPhone===studentPhone)score+=300;
-  if(studentName&&courtName&&courtName===studentName)score+=120;
+  if(studentName&&courtName&&storedValueNameMatches(courtName,studentName))score+=120;
   if(!score)return 0;
   const account=activeMembershipAccountForCourt(court,membershipAccounts);
   const finance=storedValueFinanceSnapshot(court);

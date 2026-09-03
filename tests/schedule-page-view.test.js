@@ -12,7 +12,7 @@ const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'pa
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
 assert.match(indexHtml, /state\.js\?v=20260830-schedule-settlement-recovery-v1/, 'state script version should force a fresh browser load for schedule settlement recovery fixes');
-assert.match(indexHtml, /schedule\.js\?v=20260831-purchase-records-v1/, 'schedule script version should force a fresh browser load after student settlement fixes');
+assert.match(indexHtml, /schedule\.js\?v=20260903-stored-value-alias-v1/, 'schedule script version should force a fresh browser load after stored-value alias matching fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
@@ -383,6 +383,8 @@ assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-det
 assert.match(fnBody('openScheduleModal'), /sch_payMethod[\s\S]*refreshScheduleStoredValueHint[\s\S]*sch_paidAmount[\s\S]*refreshScheduleStoredValueHint[\s\S]*sch_storedValueHint[\s\S]*sch_fieldFeePayMethod[\s\S]*refreshScheduleStoredValueHint[\s\S]*sch_fieldFeeAmount[\s\S]*refreshScheduleStoredValueHint[\s\S]*sch_fieldFeeStoredValueHint/, 'stored-value direct and field fee payment should show balance hints below their amount inputs');
 assert.match(source, /function refreshScheduleStoredValueHint\(/, 'schedule page should refresh stored-value balance hint');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /isStoredValuePayMethod[\s\S]*scheduleStoredValueCourtForStudent/, 'stored-value hint should read the selected student membership balance');
+assert.match(scheduleSource, /function scheduleStoredValueNameKeys\(/, 'stored-value matching should normalize aliases such as 周阿龙（Along）');
+assert.match(fnBody('scheduleStoredValueCourtForStudent'), /courtAccountListViewData\?\.items/, 'stored-value hint should also use the unified court account read model already loaded by membership pages');
 assert.match(fnBody('scheduleStoredValueCourtScore'), /scheduleStoredValueActiveMembership[\s\S]*cachedBalance[\s\S]*cachedTotalDeposit/, 'stored-value hint should prefer active member accounts with balance over stale same-name courts');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /当前储值卡余额/, 'stored-value hint should show current balance copy');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /扣后余额/, 'stored-value hint should show after-balance copy');
