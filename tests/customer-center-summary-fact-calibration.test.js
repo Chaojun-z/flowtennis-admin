@@ -380,7 +380,10 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     query: new URLSearchParams()
   });
   assert.strictEqual(rebuildRes.statusCode, 200, '手工重建摘要应成功返回');
-  const rebuiltSummaryRows = (rebuild.tableRows.ft_student_teaching_summary || []).filter(row => row.id !== '__student_teaching_summary_meta__');
+  const rebuiltSummaryRows = (rebuild.tableRows.ft_student_teaching_summary || []).filter(row => (
+    row.id !== '__student_teaching_summary_meta__' &&
+    !String(row.id || '').startsWith('__student_teaching_summary_bundle__:')
+  ));
   const rebuiltMetaRow = (rebuild.tableRows.ft_student_teaching_summary || []).find(row => row.id === '__student_teaching_summary_meta__');
   assert.ok(rebuiltMetaRow, '手工重建后必须写回 meta 行');
   assert.strictEqual(

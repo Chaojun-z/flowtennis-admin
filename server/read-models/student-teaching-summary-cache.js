@@ -8,6 +8,7 @@ const STUDENT_TEACHING_SUMMARY_PENDING = 'pending';
 const STUDENT_TEACHING_SUMMARY_REFRESHING = 'refreshing';
 const STUDENT_TEACHING_SUMMARY_FAILED = 'failed';
 const STUDENT_TEACHING_SUMMARY_VERSION_PREFIX = '__student_teaching_summary_version__:';
+const STUDENT_TEACHING_SUMMARY_BUNDLE_PREFIX = '__student_teaching_summary_bundle__:';
 const READY_STUDENT_TEACHING_SUMMARY_CACHE_TTL_MS = 30000;
 const readyStudentTeachingSummaryRowsCache = new Map();
 
@@ -31,6 +32,15 @@ function isVersionedStudentTeachingSummaryRow(row = {}) {
   return String(row?.id || '').trim().startsWith(STUDENT_TEACHING_SUMMARY_VERSION_PREFIX);
 }
 
+function buildStudentTeachingSummaryBundleId(publishVersion = '') {
+  const version = String(publishVersion || '').trim();
+  return version ? `${STUDENT_TEACHING_SUMMARY_BUNDLE_PREFIX}${version}` : '';
+}
+
+function isStudentTeachingSummaryBundleRow(row = {}) {
+  return String(row?.id || '').trim().startsWith(STUDENT_TEACHING_SUMMARY_BUNDLE_PREFIX);
+}
+
 function studentTeachingSummaryLogicalRow(row = {}) {
   if (!isVersionedStudentTeachingSummaryRow(row)) return row;
   const next = { ...row };
@@ -42,7 +52,7 @@ function studentTeachingSummaryLogicalRow(row = {}) {
 
 function filterStudentTeachingSummaryDataRows(rows = []) {
   return (Array.isArray(rows) ? rows : [])
-    .filter(row => row && !isStudentTeachingSummaryMetaRow(row) && !isVersionedStudentTeachingSummaryRow(row));
+    .filter(row => row && !isStudentTeachingSummaryMetaRow(row) && !isVersionedStudentTeachingSummaryRow(row) && !isStudentTeachingSummaryBundleRow(row));
 }
 
 function studentTeachingSummaryMetaRow(rows = []) {
@@ -56,10 +66,17 @@ function isReadyStudentTeachingSummaryMeta(meta = null) {
 function filterStudentTeachingSummaryPublishedRows(rows = [], meta = null) {
   const activeVersion = String(meta?.activeVersion || '').trim();
   if (!activeVersion) return filterStudentTeachingSummaryDataRows(rows);
-  return (Array.isArray(rows) ? rows : [])
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  const versionedRows = sourceRows
     .filter(row => row && !isStudentTeachingSummaryMetaRow(row))
     .filter(row => String(row.publishVersion || '').trim() === activeVersion)
+    .filter(row => !isStudentTeachingSummaryBundleRow(row))
     .map(studentTeachingSummaryLogicalRow);
+  if (versionedRows.length) return versionedRows;
+  const bundle = sourceRows.find(row => String(row?.id || '') === buildStudentTeachingSummaryBundleId(activeVersion));
+  const bundleRows = studentTeachingSummaryBundleLogicalRows(bundle);
+  if (bundleRows.length) return bundleRows;
+  return filterStudentTeachingSummaryDataRows(sourceRows);
 }
 
 function buildVersionedStudentTeachingSummaryRow(row = {}, publishVersion = '') {
@@ -74,10 +91,32 @@ function buildVersionedStudentTeachingSummaryRow(row = {}, publishVersion = '') 
   };
 }
 
+function buildStudentTeachingSummaryBundleRow(rows = [], publishVersion = '') {
+  const version = String(publishVersion || '').trim();
+  const id = buildStudentTeachingSummaryBundleId(version);
+  const logicalRows = cloneStudentTeachingSummaryRows((Array.isArray(rows) ? rows : []).map(studentTeachingSummaryLogicalRow));
+  return {
+    id,
+    kind: 'student-teaching-summary-bundle',
+    publishVersion: version,
+    rowCount: logicalRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(logicalRows),
+    rows: logicalRows
+  };
+}
+
+function studentTeachingSummaryBundleLogicalRows(row = {}) {
+  if (!row || !isStudentTeachingSummaryBundleRow(row)) return [];
+  return cloneStudentTeachingSummaryRows(Array.isArray(row.rows) ? row.rows : []);
+}
+
 function studentTeachingSummaryRowsToDeleteAfterPublish(rows = [], activeVersion = '') {
   const version = String(activeVersion || '').trim();
   return (Array.isArray(rows) ? rows : []).filter(row => {
     if (!row || isStudentTeachingSummaryMetaRow(row)) return false;
+    if (isStudentTeachingSummaryBundleRow(row)) {
+      return String(row.publishVersion || '').trim() !== version;
+    }
     if (!isVersionedStudentTeachingSummaryRow(row)) return true;
     return String(row.publishVersion || '').trim() !== version;
   });
@@ -294,18 +333,24 @@ async function readReadyStudentTeachingSummaryRows({
   if (!tableName || typeof getCachedScan !== 'function') {
     throw studentTeachingSummaryNotReadyError(null, 'not-configured');
   }
-	  async function loadRows() {
-	    if (typeof getCachedRow === 'function' && typeof scanByIdPrefix === 'function') {
-	      const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
-	      const activeVersion = String(meta?.activeVersion || '').trim();
-	      if (activeVersion) {
-	        const cachedRows = readReadyStudentTeachingSummaryRowsCache(tableName, meta);
-	        if (cachedRows) return [meta, ...cachedRows];
-	        const rows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`);
-	        writeReadyStudentTeachingSummaryRowsCache(tableName, meta, Array.isArray(rows) ? rows : []);
-	        return [meta, ...(Array.isArray(rows) ? rows : [])].filter(Boolean);
-	      }
-	    }
+  async function loadRows() {
+    if (typeof getCachedRow === 'function' && typeof scanByIdPrefix === 'function') {
+      const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
+      const activeVersion = String(meta?.activeVersion || '').trim();
+      if (activeVersion) {
+        const cachedRows = readReadyStudentTeachingSummaryRowsCache(tableName, meta);
+        if (cachedRows) return [meta, ...cachedRows];
+        const bundle = await getCachedRow(tableName, buildStudentTeachingSummaryBundleId(activeVersion)).catch(() => null);
+        if (bundle && isStudentTeachingSummaryBundleRow(bundle)) {
+          const rows = studentTeachingSummaryBundleLogicalRows(bundle);
+          writeReadyStudentTeachingSummaryRowsCache(tableName, meta, rows);
+          return [meta, ...rows].filter(Boolean);
+        }
+        const rows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`);
+        writeReadyStudentTeachingSummaryRowsCache(tableName, meta, Array.isArray(rows) ? rows : []);
+        return [meta, ...(Array.isArray(rows) ? rows : [])].filter(Boolean);
+      }
+    }
     return getCachedScan(tableName, { fresh: true });
   }
   const startedAt = Date.now();
@@ -411,6 +456,8 @@ function createStudentTeachingSummaryCache({
         const versioned = buildVersionedStudentTeachingSummaryRow(row, batchId);
         await put(T_STUDENT_TEACHING_SUMMARY, versioned.id, versioned);
       }
+      const bundle = buildStudentTeachingSummaryBundleRow(rows, batchId);
+      await put(T_STUDENT_TEACHING_SUMMARY, bundle.id, bundle);
       const publishedRows = filterStudentTeachingSummaryPublishedRows(
         await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }),
         { activeVersion: batchId }
@@ -482,11 +529,15 @@ module.exports = {
   STUDENT_TEACHING_SUMMARY_PENDING,
   STUDENT_TEACHING_SUMMARY_REFRESHING,
   STUDENT_TEACHING_SUMMARY_FAILED,
+  STUDENT_TEACHING_SUMMARY_BUNDLE_PREFIX,
   buildStudentTeachingSummaryMetaRow,
   isStudentTeachingSummaryMetaRow,
+  isStudentTeachingSummaryBundleRow,
   filterStudentTeachingSummaryDataRows,
   filterStudentTeachingSummaryPublishedRows,
   buildVersionedStudentTeachingSummaryRow,
+  buildStudentTeachingSummaryBundleId,
+  buildStudentTeachingSummaryBundleRow,
   studentTeachingSummaryRowsToDeleteAfterPublish,
   rollbackStudentTeachingSummaryPublish,
   buildStudentTeachingSummaryChecksum,

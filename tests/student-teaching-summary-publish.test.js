@@ -4,6 +4,7 @@ const {
   createStudentTeachingSummaryCache,
   buildStudentTeachingSummaryMetaRow,
   buildStudentTeachingSummaryChecksum,
+  buildStudentTeachingSummaryBundleRow,
   buildVersionedStudentTeachingSummaryRow,
   requireReadyStudentTeachingSummaryRows,
   readReadyStudentTeachingSummaryRows,
@@ -169,6 +170,84 @@ async function testReadySummaryRowsUseActiveVersionMemoryCache() {
   assert.deepStrictEqual(first.map(row => row.studentId), ['cached-student']);
   assert.deepStrictEqual(second.map(row => row.studentId), ['cached-student']);
   assert.strictEqual(prefixScans, 1, '同一 activeVersion + checksum 的 ready 摘要应复用内存缓存，避免每个首屏都远程扫版本行');
+}
+
+async function testReadySummaryRowsPreferBundleRow() {
+  const tableName = 'ft_student_teaching_summary_bundle_test';
+  const version = 'student-teaching-summary-bundle-test';
+  const logicalRows = [{ id: 'bundle-student', studentId: 'bundle-student', name: '发布包学员' }];
+  const bundle = buildStudentTeachingSummaryBundleRow(logicalRows, version);
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: logicalRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(logicalRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
+    completedAt: '2026-08-28T00:00:01.000Z'
+  });
+  let prefixScans = 0;
+  const rows = await readReadyStudentTeachingSummaryRows({
+    tableName,
+    getCachedRow: async (table, id) => {
+      assert.strictEqual(table, tableName);
+      if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(meta);
+      if (id === bundle.id) return clone(bundle);
+      return null;
+    },
+    scanByIdPrefix: async () => {
+      prefixScans += 1;
+      return [];
+    },
+    getCachedScan: async () => {
+      throw new Error('发布包快路径不应回退整表扫描');
+    }
+  });
+
+  assert.deepStrictEqual(rows.map(row => row.studentId), ['bundle-student']);
+  assert.strictEqual(prefixScans, 0, '存在 ready 发布包时首屏不能远程扫描版本行');
+}
+
+async function testReadySummaryRowsRejectBadBundleWithoutPrefixScan() {
+  const tableName = 'ft_student_teaching_summary_bad_bundle_test';
+  const version = 'student-teaching-summary-bad-bundle-test';
+  const logicalRows = [{ id: 'bundle-student', studentId: 'bundle-student', name: '发布包学员' }];
+  const bundle = {
+    ...buildStudentTeachingSummaryBundleRow(logicalRows, version),
+    rows: [{ id: 'wrong-student', studentId: 'wrong-student', name: '错误发布包' }]
+  };
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: logicalRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(logicalRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
+    completedAt: '2026-08-28T00:00:01.000Z'
+  });
+  let prefixScans = 0;
+  await assert.rejects(
+    () => readReadyStudentTeachingSummaryRows({
+      tableName,
+      getCachedRow: async (table, id) => {
+        assert.strictEqual(table, tableName);
+        if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(meta);
+        if (id === bundle.id) return clone(bundle);
+        return null;
+      },
+      scanByIdPrefix: async () => {
+        prefixScans += 1;
+        return [];
+      },
+      getCachedScan: async () => {
+        throw new Error('坏发布包不能回退整表扫描');
+      },
+      timeoutMs: 50,
+      intervalMs: 10
+    }),
+    /checksum-mismatch/
+  );
+  assert.strictEqual(prefixScans, 0, '发布包 checksum 错误时也不能远程扫描版本行兜底');
 }
 
 async function testKeepsServingReadyRowsWhileNextVersionIsWritten() {
@@ -411,6 +490,8 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
 
 (async () => {
   await testReadySummaryReadDoesNotWaitForHungScan();
+  await testReadySummaryRowsPreferBundleRow();
+  await testReadySummaryRowsRejectBadBundleWithoutPrefixScan();
   await testReadySummaryRowsUseActiveVersionMemoryCache();
   await testKeepsReadyMetaWhenRefreshFails();
   await testKeepsReadyMetaWhenPreviousSnapshotScanFails();

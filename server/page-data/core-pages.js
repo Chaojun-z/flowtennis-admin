@@ -10,6 +10,7 @@ const {
   buildStudentTeachingSummaryChecksum,
   filterStudentTeachingSummaryPublishedRows,
   buildVersionedStudentTeachingSummaryRow,
+  buildStudentTeachingSummaryBundleRow,
   studentTeachingSummaryRowsToDeleteAfterPublish,
   rollbackStudentTeachingSummaryPublish,
   readReadyStudentTeachingSummaryRows
@@ -484,6 +485,8 @@ function createCorePageDataRoutes(deps={}){
           const versioned=buildVersionedStudentTeachingSummaryRow(row,batchId);
           await put(T_STUDENT_TEACHING_SUMMARY,versioned.id,versioned);
         }
+        const bundle=buildStudentTeachingSummaryBundleRow(rows,batchId);
+        await put(T_STUDENT_TEACHING_SUMMARY,bundle.id,bundle);
         const publishedRows=filterStudentTeachingSummaryPublishedRows(
           await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}),
           {activeVersion:batchId}

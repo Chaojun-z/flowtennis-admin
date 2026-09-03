@@ -169,6 +169,7 @@ assert.doesNotMatch(
 assert.match(corePagesSource, /needsTeachingFacts&&T_ENTITLEMENT_LEDGER \? cappedScan\(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS\.entitlementLedger\)/, 'fresh or legacy-summary customer center reads should include live lesson ledger rows');
 assert.match(corePagesSource, /needsTeachingFacts&&T_SCHEDULE \? cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)/, 'fresh or legacy-summary customer center reads should include live schedule rows');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryRows/, 'customer center should expose an explicit admin-only rebuild path for the student teaching summary read model');
+assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryBundleRow\(rows,batchId\)[\s\S]*await put\(T_STUDENT_TEACHING_SUMMARY,bundle\.id,bundle\)/, 'student teaching summary manual rebuild must publish the single-row bundle used by first-screen pages');
 assert.match(corePagesSource, /path==='\/page-data\/purchase-detail'&&method==='GET'[\s\S]*getCachedRow\(T_PURCHASES,purchaseId\)/, 'purchase drawer should have a per-purchase detail endpoint');
 const purchaseCreateRouteSource = corePagesSource.slice(
   corePagesSource.indexOf("path==='/page-data/purchase-create'&&method==='GET'"),
