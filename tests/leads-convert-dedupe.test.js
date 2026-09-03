@@ -1,5 +1,10 @@
 const assert = require('assert');
 const { createLeadsRoutes } = require('../server/leads-routes');
+const {
+  buildStudentTeachingSummaryMetaRow,
+  buildStudentTeachingSummaryChecksum,
+  STUDENT_TEACHING_SUMMARY_READY
+} = require('../server/read-models/student-teaching-summary-cache');
 
 function makeRes() {
   return {
@@ -18,6 +23,65 @@ function makeRes() {
 
 async function main() {
   const writes = [];
+  const summaryRows = [{
+    id: 'student-2',
+    studentId: 'student-2',
+    displayName: '可搜学员',
+    name: '可搜学员',
+    phone: '13900000002',
+    sourceLeadId: '',
+    studentStage: 'formal',
+    courseDealPath: '直接成交',
+    packagePurchaseDate: '2026-04-15',
+    hasTrialAttended: false,
+    hasFormalAttended: true,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: true,
+    packageBalanceRemaining: 9,
+    packageListRows: [{ packageName: '正式课包', remainingLessons: 9, totalLessons: 10 }]
+  }, {
+    id: 'student-3',
+    studentId: 'student-3',
+    displayName: '污染学员',
+    name: '污染学员',
+    phone: '13900000003',
+    sourceLeadId: 'lead-polluted',
+    studentStage: 'formal',
+    courseDealPath: '直接成交',
+    packagePurchaseDate: '2026-04-18',
+    hasTrialAttended: false,
+    hasFormalAttended: true,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: true
+  }, {
+    id: 'student-4',
+    studentId: 'student-4',
+    displayName: '丫丫',
+    name: '丫丫',
+    phone: '13900000004',
+    sourceLeadId: 'lead-from-student-student-4',
+    studentStage: 'formal',
+    courseDealPath: '直接成交',
+    packagePurchaseDate: '2026-03-21',
+    hasTrialAttended: false,
+    hasFormalAttended: true,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: true
+  }, {
+    id: 'student-shell',
+    studentId: 'student-shell',
+    displayName: '学生壳',
+    name: '学生壳',
+    phone: '',
+    campus: 'chaojun',
+    sourceLeadId: 'lead-from-student-student-shell',
+    studentStage: 'formal',
+    courseDealPath: '直接成交',
+    hasTrialAttended: false,
+    hasFormalAttended: false,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: false
+  }];
   const rows = {
     ft_leads: [
       { id: 'lead-1', displayName: '小成', wechatName: '小成', createdAt: '2026-06-17 00:00:00' },
@@ -91,7 +155,19 @@ async function main() {
     ft_entitlements: [],
     ft_schedule: [],
     ft_membership_orders: [],
-    ft_membership_accounts: []
+    ft_membership_accounts: [],
+    ft_student_teaching_summary: [
+      buildStudentTeachingSummaryMetaRow({
+        status: STUDENT_TEACHING_SUMMARY_READY,
+        rowCount: summaryRows.length,
+        checksum: buildStudentTeachingSummaryChecksum(summaryRows),
+        batchId: 'lead-convert-dedupe-summary',
+        sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
+        completedAt: '2026-08-28T00:00:01.000Z'
+      }),
+      ...summaryRows
+    ],
+    ft_court_account_list_index: []
   };
   const handle = createLeadsRoutes({
     init: async () => {},
@@ -100,6 +176,8 @@ async function main() {
       return true;
     },
     getCachedScan: async (table) => rows[table] || [],
+    getCachedRow: async (table, id) => (rows[table] || []).find((row) => row.id === id) || null,
+    scanByIdPrefix: async (table, prefix) => (rows[table] || []).filter((row) => String(row.id || '').startsWith(prefix)),
     get: async (table, id) => (rows[table] || []).find((row) => row.id === id) || null,
     scan: async (table) => rows[table] || [],
     put: async (table, id, row) => {
@@ -127,7 +205,9 @@ async function main() {
     T_PURCHASES: 'ft_purchases',
     T_ENTITLEMENTS: 'ft_entitlements',
     T_SCHEDULE: 'ft_schedule',
-    T_MEMBERSHIP_ORDERS: 'ft_membership_orders'
+    T_MEMBERSHIP_ORDERS: 'ft_membership_orders',
+    T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary',
+    T_COURT_ACCOUNT_LIST_INDEX: 'ft_court_account_list_index'
   });
 
   const listRes = makeRes();

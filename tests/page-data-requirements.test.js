@@ -12,8 +12,11 @@ const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8
 function fnBodyFrom(sourceText, name) {
   const start = sourceText.indexOf(`function ${name}(`);
   assert.notStrictEqual(start, -1, `${name} should exist`);
-  const next = sourceText.indexOf('\nfunction ', start + 1);
-  return sourceText.slice(start, next === -1 ? sourceText.length : next);
+  const nextFunction = sourceText.indexOf('\nfunction ', start + 1);
+  const nextAsync = sourceText.indexOf('\n  async function ', start + 1);
+  const candidates = [nextFunction, nextAsync].filter(index => index !== -1);
+  const next = candidates.length ? Math.min(...candidates) : sourceText.length;
+  return sourceText.slice(start, next);
 }
 
 assert.match(source, /students:\['campuses','students','coaches'\]/, 'students page should only block on the datasets needed to paint the list and coach filter immediately');
@@ -134,8 +137,10 @@ assert.doesNotMatch(coachScheduleRouteSource, /T_PURCHASES|T_ENTITLEMENTS|T_ENTI
 const customerCenterStart = corePagesSource.indexOf("path==='/page-data/customer-center-list'&&method==='GET'");
 const customerCenterEnd = corePagesSource.indexOf("path==='/page-data/purchase-detail'&&method==='GET'");
 const customerCenterRouteSource = corePagesSource.slice(customerCenterStart, customerCenterEnd);
+const sendCustomerCenterTeachingSummarySource = fnBodyFrom(corePagesSource, 'sendCustomerCenterTeachingSummary');
 assert.match(customerCenterRouteSource, /sendCustomerCenterTeachingSummary\(res,user,query\)/, 'customer center first screen must go through the isolated student roster index reader');
 assert.doesNotMatch(customerCenterRouteSource, /getCachedScan|cappedScan|T_STUDENTS|T_PURCHASES|T_ENTITLEMENTS|T_ENTITLEMENT_LEDGER|T_SCHEDULE|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'customer center first-screen route must not have direct access to slow fact-table reads');
+assert.doesNotMatch(sendCustomerCenterTeachingSummarySource, /loadCustomerCenterFactModel|cappedScan|getCachedScan\(T_STUDENTS|getCachedScan\(T_PURCHASES|getCachedScan\(T_ENTITLEMENTS|getCachedScan\(T_SCHEDULE/, 'customer center summary error path must not fall back to fact-table scans');
 assert.match(studentRosterReaderSource, /readReadyStudentTeachingSummaryRows\(\{ tableName, getCachedScan, getCachedRow, scanByIdPrefix \}\)/, 'student roster index reader must read only ready active-version summary rows from the configured roster index table');
 assert.doesNotMatch(studentRosterReaderSource, /cappedScan|T_SCHEDULE|T_ENTITLEMENT_LEDGER|T_PURCHASES|T_ENTITLEMENTS|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'student roster index reader must not import or scan slow fact tables');
 assert.doesNotMatch(customerCenterRouteSource, /loadCustomerCenterFactModel\(user,\{force:true,includeLessonFacts:true\}\)/, 'customer center first screen must not scan live lesson facts');

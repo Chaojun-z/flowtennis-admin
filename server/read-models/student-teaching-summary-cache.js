@@ -8,6 +8,8 @@ const STUDENT_TEACHING_SUMMARY_PENDING = 'pending';
 const STUDENT_TEACHING_SUMMARY_REFRESHING = 'refreshing';
 const STUDENT_TEACHING_SUMMARY_FAILED = 'failed';
 const STUDENT_TEACHING_SUMMARY_VERSION_PREFIX = '__student_teaching_summary_version__:';
+const READY_STUDENT_TEACHING_SUMMARY_CACHE_TTL_MS = 30000;
+const readyStudentTeachingSummaryRowsCache = new Map();
 
 function parseArr(v) {
   if (Array.isArray(v)) return v;
@@ -45,6 +47,10 @@ function filterStudentTeachingSummaryDataRows(rows = []) {
 
 function studentTeachingSummaryMetaRow(rows = []) {
   return (Array.isArray(rows) ? rows : []).find(isStudentTeachingSummaryMetaRow) || null;
+}
+
+function isReadyStudentTeachingSummaryMeta(meta = null) {
+  return String(meta?.status || '') === STUDENT_TEACHING_SUMMARY_READY;
 }
 
 function filterStudentTeachingSummaryPublishedRows(rows = [], meta = null) {
@@ -163,6 +169,33 @@ function buildStudentTeachingSummaryChecksum(rows = []) {
   return crypto.createHash('sha256').update(JSON.stringify(normalizedRows)).digest('hex');
 }
 
+function readyStudentTeachingSummaryCacheKey(tableName = '', meta = {}) {
+  return JSON.stringify({
+    tableName: String(tableName || ''),
+    activeVersion: String(meta?.activeVersion || ''),
+    rowCount: Number(meta?.rowCount),
+    checksum: String(meta?.checksum || '')
+  });
+}
+
+function readReadyStudentTeachingSummaryRowsCache(tableName = '', meta = {}, now = Date.now()) {
+  const key = readyStudentTeachingSummaryCacheKey(tableName, meta);
+  const cached = readyStudentTeachingSummaryRowsCache.get(key);
+  if (!cached || cached.expiresAt <= now) {
+    if (cached) readyStudentTeachingSummaryRowsCache.delete(key);
+    return null;
+  }
+  return cloneStudentTeachingSummaryRows(cached.rows);
+}
+
+function writeReadyStudentTeachingSummaryRowsCache(tableName = '', meta = {}, rows = [], now = Date.now()) {
+  const key = readyStudentTeachingSummaryCacheKey(tableName, meta);
+  readyStudentTeachingSummaryRowsCache.set(key, {
+    expiresAt: now + READY_STUDENT_TEACHING_SUMMARY_CACHE_TTL_MS,
+    rows: cloneStudentTeachingSummaryRows(rows)
+  });
+}
+
 function buildStudentTeachingSummaryMetaRow({
   status,
   generation = Date.now(),
@@ -261,15 +294,18 @@ async function readReadyStudentTeachingSummaryRows({
   if (!tableName || typeof getCachedScan !== 'function') {
     throw studentTeachingSummaryNotReadyError(null, 'not-configured');
   }
-  async function loadRows() {
-    if (typeof getCachedRow === 'function' && typeof scanByIdPrefix === 'function') {
-      const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
-      const activeVersion = String(meta?.activeVersion || '').trim();
-      if (activeVersion) {
-        const rows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`);
-        return [meta, ...(Array.isArray(rows) ? rows : [])].filter(Boolean);
-      }
-    }
+	  async function loadRows() {
+	    if (typeof getCachedRow === 'function' && typeof scanByIdPrefix === 'function') {
+	      const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
+	      const activeVersion = String(meta?.activeVersion || '').trim();
+	      if (activeVersion) {
+	        const cachedRows = readReadyStudentTeachingSummaryRowsCache(tableName, meta);
+	        if (cachedRows) return [meta, ...cachedRows];
+	        const rows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`);
+	        writeReadyStudentTeachingSummaryRowsCache(tableName, meta, Array.isArray(rows) ? rows : []);
+	        return [meta, ...(Array.isArray(rows) ? rows : [])].filter(Boolean);
+	      }
+	    }
     return getCachedScan(tableName, { fresh: true });
   }
   const startedAt = Date.now();
@@ -290,6 +326,7 @@ async function readReadyStudentTeachingSummaryRows({
 function createStudentTeachingSummaryCache({
   tables = {},
   getCachedScan,
+  getCachedRow,
   mkTable,
   put,
   del,
@@ -351,8 +388,11 @@ function createStudentTeachingSummaryCache({
     await mkTable(T_STUDENT_TEACHING_SUMMARY).catch(() => null);
     const sourceSnapshotAt = new Date().toISOString();
     const batchId = `student-teaching-summary-${Date.now()}`;
+    const previousMeta = typeof getCachedRow === 'function'
+      ? await getCachedRow(T_STUDENT_TEACHING_SUMMARY, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null)
+      : null;
     const previousRows = cloneStudentTeachingSummaryRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }).catch(() => []));
-    const hasReadyMeta = String(studentTeachingSummaryMetaRow(previousRows)?.status || '') === STUDENT_TEACHING_SUMMARY_READY;
+    const hasReadyMeta = isReadyStudentTeachingSummaryMeta(previousMeta) || isReadyStudentTeachingSummaryMeta(studentTeachingSummaryMetaRow(previousRows));
     try {
       const [leads, students, purchases, entitlements, entitlementLedger, schedule, membershipBenefitLedger, feedbacks] = await Promise.all([
         T_LEADS ? getCachedScan(T_LEADS, { fresh: true }) : Promise.resolve([]),

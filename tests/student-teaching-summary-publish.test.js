@@ -60,6 +60,56 @@ async function testKeepsReadyMetaWhenRefreshFails() {
   assert.deepStrictEqual(metaWrites, [], 'failed refresh must keep the last ready meta serving pages');
 }
 
+async function testKeepsReadyMetaWhenPreviousSnapshotScanFails() {
+  const tables = {
+    T_LEADS: 'ft_leads',
+    T_STUDENTS: 'ft_students',
+    T_PURCHASES: 'ft_purchases',
+    T_ENTITLEMENTS: 'ft_entitlements',
+    T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger',
+    T_SCHEDULE: 'ft_schedule',
+    T_FEEDBACKS: 'ft_feedbacks',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'ft_membership_benefit_ledger',
+    T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary'
+  };
+  const metaWrites = [];
+  const existingMeta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: 0,
+    checksum: buildStudentTeachingSummaryChecksum([]),
+    batchId: 'ready-batch-before-scan-failure',
+    activeVersion: 'ready-batch-before-scan-failure',
+    sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
+    completedAt: '2026-08-28T00:00:01.000Z'
+  });
+  const cache = createStudentTeachingSummaryCache({
+    tables,
+    mkTable: async () => {},
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(existingMeta);
+      return null;
+    },
+    getCachedScan: async table => {
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY) throw new Error('previous summary scan failed');
+      if (table === tables.T_STUDENTS) throw new Error('source scan failed after previous snapshot scan failed');
+      return [];
+    },
+    put: async (table, id, row) => {
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === STUDENT_TEACHING_SUMMARY_META_ID) {
+        metaWrites.push(row);
+      }
+    },
+    del: async () => {},
+    logger: { error() {} }
+  });
+
+  await assert.rejects(
+    () => cache.refreshStudentTeachingSummaryRows(),
+    /source scan failed after previous snapshot scan failed/
+  );
+  assert.deepStrictEqual(metaWrites, [], '旧 ready 指针存在时，即使旧摘要列表扫描失败，也不能写 failed meta 覆盖发布指针');
+}
+
 async function testReadySummaryReadDoesNotWaitForHungScan() {
   const startedAt = Date.now();
   const result = await Promise.race([
@@ -79,6 +129,46 @@ async function testReadySummaryReadDoesNotWaitForHungScan() {
   assert.strictEqual(result.error?.code, 'STUDENT_TEACHING_SUMMARY_NOT_READY');
   assert.match(result.error?.message || '', /read-timeout/);
   assert.ok(result.elapsedMs < 200, `摘要读取应快速降级，实际 ${result.elapsedMs}ms`);
+}
+
+async function testReadySummaryRowsUseActiveVersionMemoryCache() {
+  const tableName = 'ft_student_teaching_summary_cache_test';
+  const version = 'student-teaching-summary-cache-test';
+  const logicalRows = [{ id: 'cached-student', studentId: 'cached-student', name: '缓存学员' }];
+  const versionedRows = logicalRows.map(row => buildVersionedStudentTeachingSummaryRow(row, version));
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: logicalRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(logicalRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
+    completedAt: '2026-08-28T00:00:01.000Z'
+  });
+  let prefixScans = 0;
+  const readOptions = {
+    tableName,
+    getCachedRow: async (table, id) => {
+      assert.strictEqual(table, tableName);
+      assert.strictEqual(id, STUDENT_TEACHING_SUMMARY_META_ID);
+      return clone(meta);
+    },
+    scanByIdPrefix: async (table, prefix) => {
+      assert.strictEqual(table, tableName);
+      assert.strictEqual(prefix, `__student_teaching_summary_version__:${version}:`);
+      prefixScans += 1;
+      return clone(versionedRows);
+    },
+    getCachedScan: async () => {
+      throw new Error('activeVersion 快路径不应回退整表扫描');
+    }
+  };
+
+  const first = await readReadyStudentTeachingSummaryRows(readOptions);
+  const second = await readReadyStudentTeachingSummaryRows(readOptions);
+  assert.deepStrictEqual(first.map(row => row.studentId), ['cached-student']);
+  assert.deepStrictEqual(second.map(row => row.studentId), ['cached-student']);
+  assert.strictEqual(prefixScans, 1, '同一 activeVersion + checksum 的 ready 摘要应复用内存缓存，避免每个首屏都远程扫版本行');
 }
 
 async function testKeepsServingReadyRowsWhileNextVersionIsWritten() {
@@ -321,7 +411,9 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
 
 (async () => {
   await testReadySummaryReadDoesNotWaitForHungScan();
+  await testReadySummaryRowsUseActiveVersionMemoryCache();
   await testKeepsReadyMetaWhenRefreshFails();
+  await testKeepsReadyMetaWhenPreviousSnapshotScanFails();
   await testKeepsServingReadyRowsWhileNextVersionIsWritten();
   await testRollsBackPartiallyWrittenRowsWhenRefreshFails();
   await testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch();

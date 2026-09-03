@@ -7,7 +7,7 @@ const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.j
 
 function createLeadsRoutes(deps={}){
   const {
-    init,sendJson,getCachedScan,get,scan,put,del,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
+    init,sendJson,getCachedScan,getCachedRow,scanByIdPrefix,get,scan,put,del,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
     cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
     LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
     normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
@@ -847,26 +847,6 @@ function createLeadsRoutes(deps={}){
     return {followups,students,courts,membershipAccounts};
   }
 
-  async function readLeadLifecycleFacts(){
-    const [students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
-      readLeadLifecycleFactRows(T_STUDENTS),
-      readLeadLifecycleFactRows(T_PURCHASES),
-      readLeadLifecycleFactRows(T_ENTITLEMENTS),
-      readLeadLifecycleFactRows(T_SCHEDULE),
-      readLeadLifecycleFactRows(T_COURTS),
-      readLeadLifecycleFactRows(T_MEMBERSHIP_ACCOUNTS),
-      readLeadLifecycleFactRows(T_MEMBERSHIP_ORDERS)
-    ]);
-    return {students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders};
-  }
-
-  function buildLeadFallbackSummaryRows(customerLifecycleRows,facts={}){
-    return buildTeachingStudentViews(customerLifecycleRows,{
-      ...facts,
-      teachingStudentSummaryRows:customerLifecycleRows
-    }).searchableStudents||[];
-  }
-
   function fallbackId(prefix,lead={},linkedId=''){
     const source=cleanLeadText(lead.id||linkedId||Date.now());
     return `${prefix}-${source.replace(/[^a-zA-Z0-9_-]/g,'-')}`;
@@ -1063,18 +1043,6 @@ function createLeadsRoutes(deps={}){
     return getCachedScan(T_LEAD_FOLLOWUPS,{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]);
   }
 
-  async function readLeadLifecycleFactRows(table){
-    if(!table)return [];
-    if(isLocalPreviewFastMode())return [];
-    if(isProductionRuntime()&&typeof scanFirstRows==='function'){
-      const limit=PRODUCTION_PAGE_READ_LIMITS?.[table]||PRODUCTION_PAGE_READ_LIMITS?.default;
-      return scanFirstRows(table,{limit}).catch(()=>[]);
-    }
-    if(typeof getCachedScan==='function')return getCachedScan(table).catch(()=>[]);
-    if(typeof scan==='function')return scan(table).catch(()=>[]);
-    return [];
-  }
-
   async function applyPersistedLeadSnapshot(lead){
     const leadId=cleanLeadText(lead?.id);
     if(!leadId||!T_LEAD_FOLLOWUPS||typeof scan!=='function'||typeof applyLeadFollowupsSnapshot!=='function')return lead;
@@ -1148,7 +1116,7 @@ function createLeadsRoutes(deps={}){
     const useLightLifecycleSource=!isLocalPreviewFastMode()&&!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
     if(useLightLifecycleSource){
       const [studentSummaryResult,courtIndexResult]=await Promise.allSettled([
-        readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan}),
+        readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix}),
         withLeadReadTimeout(getCachedScan(T_COURT_ACCOUNT_LIST_INDEX).catch(()=>[]), 'court account list index').catch(error=>{
           if(error?.code==='LEAD_LIST_READ_TIMEOUT'){
             leadAuxiliaryRowsUnavailable=true;
@@ -1177,63 +1145,6 @@ function createLeadsRoutes(deps={}){
           mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
         }
       }
-    }else{
-      const facts=await readLeadLifecycleFacts();
-      const {students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders}=facts;
-      customerLifecycleRows=buildCustomerLifecycleRows({
-        leads:mergedLeads,
-        students,
-        purchases,
-        entitlements,
-        schedule,
-        courts,
-        membershipAccounts,
-        membershipOrders
-      });
-      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows,{persist:false});
-      if(createdLeads.length){
-        mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
-        customerLifecycleRows=buildCustomerLifecycleRows({
-          leads:mergedLeads,
-          students,
-          purchases,
-          entitlements,
-          schedule,
-          courts,
-          membershipAccounts,
-          membershipOrders
-        });
-      }
-      studentSummaryRows=buildLeadFallbackSummaryRows(customerLifecycleRows,facts);
-    }
-    if(studentTeachingSummaryUnavailable&&!customerLifecycleRows.length){
-      const facts=await readLeadLifecycleFacts();
-      const {students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders}=facts;
-      customerLifecycleRows=buildCustomerLifecycleRows({
-        leads:mergedLeads,
-        students,
-        purchases,
-        entitlements,
-        schedule,
-        courts,
-        membershipAccounts,
-        membershipOrders
-      });
-      const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows,{persist:false});
-      if(createdLeads.length){
-        mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
-        customerLifecycleRows=buildCustomerLifecycleRows({
-          leads:mergedLeads,
-          students,
-          purchases,
-          entitlements,
-          schedule,
-          courts,
-          membershipAccounts,
-          membershipOrders
-        });
-      }
-      studentSummaryRows=buildLeadFallbackSummaryRows(customerLifecycleRows,facts);
     }
     if(!studentSummaryRows.length){
       studentSummaryRows=customerLifecycleRows.filter(row=>cleanLeadText(row?.studentId));

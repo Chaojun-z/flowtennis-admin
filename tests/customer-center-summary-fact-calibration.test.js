@@ -450,8 +450,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(notReadyRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用时必须显式标记降级状态');
   assert.deepStrictEqual(notReadyRes.body.teachingStudentViews.historicalStudents, [], '摘要不可用时不能回旧数据');
 
-  const fallbackHandler = makeHandler();
-  fallbackHandler.tableRows.ft_leads = [{
+  const fallbackFactRows = {
+    ft_leads: [{
     id: 'lead-fallback',
     displayName: '回退学员',
     wechatName: '回退学员',
@@ -461,8 +461,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     leadDate: '2026-08-20',
     createdAt: '2026-08-20 10:00:00',
     campus: 'shunyi_mapo'
-  }];
-  fallbackHandler.tableRows.ft_students = [{
+  }],
+    ft_students: [{
     id: 'stu-fallback',
     name: '回退学员',
     sourceLeadId: 'lead-fallback',
@@ -484,8 +484,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     isActiveStudentRoster: true,
     detailLessonRecordRows: [{ time: '2026-08-19', courseType: '体验课', kind: 'schedule' }, { time: '2026-08-20', courseType: '私教课', kind: 'schedule' }],
     packageListRows: [{ courseType: '私教课', packageName: '10节私教课包', remainingLessons: 1, totalLessons: 10 }]
-  }];
-  fallbackHandler.tableRows.ft_purchases = [{
+  }],
+    ft_purchases: [{
     id: 'purchase-fallback',
     studentId: 'stu-fallback',
     studentName: '回退学员',
@@ -494,8 +494,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     amountPaid: 6000,
     purchaseDate: '2026-08-20',
     status: 'active'
-  }];
-  fallbackHandler.tableRows.ft_schedule = [{
+  }],
+    ft_schedule: [{
     id: 'trial-fallback',
     studentId: 'stu-fallback',
     studentIds: ['stu-fallback'],
@@ -511,8 +511,10 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     courseType: '私教课',
     startTime: '2026-08-20 10:00:00',
     status: '已到课'
-  }];
-  fallbackHandler.tableRows.ft_student_teaching_summary = [];
+  }]
+  };
+  const fallbackHandler = makeHandler();
+  Object.assign(fallbackHandler.tableRows, fallbackFactRows, { ft_student_teaching_summary: [] });
   const fallbackRes = {};
   await fallbackHandler.handler({
     path: '/page-data/customer-center-list',
@@ -523,10 +525,13 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   });
   assert.strictEqual(fallbackRes.statusCode, 200, '摘要不可用但事实表可用时客户中心仍应返回 200');
   assert.strictEqual(fallbackRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用但事实表可用时仍要标记降级状态');
-  assert.ok((fallbackRes.body.teachingStudentViews.historicalStudents || []).length > 0, '摘要不可用但事实表可用时历史学员不能变空');
-  assert.ok((fallbackRes.body.teachingStudentViews.activeStudents || []).length > 0, '摘要不可用但事实表可用时在期学员不能变空');
-  assert.ok((fallbackRes.body.standardLifecycleMetrics?.teachingSummary?.historicalStudentCount || 0) > 0, '摘要不可用但事实表可用时顶部历史学员不能掉成 0');
-  assert.ok((fallbackRes.body.standardLifecycleMetrics?.teachingSummary?.activeStudentCount || 0) > 0, '摘要不可用但事实表可用时顶部在期学员不能掉成 0');
+  assert.deepStrictEqual(fallbackRes.body.teachingStudentViews.historicalStudents, [], '摘要不可用时不能回扫事实表拼历史学员');
+  assert.deepStrictEqual(fallbackRes.body.teachingStudentViews.activeStudents, [], '摘要不可用时不能回扫事实表拼在期学员');
+  assert.strictEqual(fallbackRes.body.standardLifecycleMetrics?.teachingSummary?.historicalStudentCount || 0, 0, '摘要不可用时顶部历史学员必须受控降级');
+  assert.strictEqual(fallbackRes.body.standardLifecycleMetrics?.teachingSummary?.activeStudentCount || 0, 0, '摘要不可用时顶部在期学员必须受控降级');
+  ['ft_schedule','ft_entitlement_ledger','ft_membership_benefit_ledger','ft_purchases','ft_entitlements','ft_students'].forEach(table => {
+    assert.strictEqual(fallbackHandler.calls.tableScans[table] || 0, 0, `摘要不可用时客户中心不能回扫事实大表 ${table}`);
+  });
 
   const bulk = makeBulkSummaryHandler(1200);
   const bulkRes = {};

@@ -1,6 +1,11 @@
 const assert = require('assert');
 const api = require('../api/index.js');
 const { createLeadsRoutes } = require('../server/leads-routes.js');
+const {
+  buildStudentTeachingSummaryMetaRow,
+  buildStudentTeachingSummaryChecksum,
+  STUDENT_TEACHING_SUMMARY_READY
+} = require('../server/read-models/student-teaching-summary-cache.js');
 
 const rules = api._test;
 
@@ -24,6 +29,20 @@ function makeRes() {
 }
 
 async function main() {
+  const summaryRows = [{
+    id: 'student-date',
+    studentId: 'student-date',
+    displayName: '日期污染',
+    name: '日期污染',
+    sourceLeadId: 'lead-date-polluted',
+    studentStage: 'formal',
+    courseDealPath: '直接成交',
+    packagePurchaseDate: '2026-04-15',
+    hasTrialAttended: false,
+    hasFormalAttended: true,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: true
+  }];
   const rows = {
     ft_leads: [{
       id: 'lead-wly',
@@ -101,7 +120,19 @@ async function main() {
       id: 'student-date',
       name: '日期污染',
       sourceLeadId: 'lead-date-polluted'
-    }]
+    }],
+    ft_student_teaching_summary: [
+      buildStudentTeachingSummaryMetaRow({
+        status: STUDENT_TEACHING_SUMMARY_READY,
+        rowCount: summaryRows.length,
+        checksum: buildStudentTeachingSummaryChecksum(summaryRows),
+        batchId: 'leads-current-state-summary',
+        sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
+        completedAt: '2026-08-28T00:00:01.000Z'
+      }),
+      ...summaryRows
+    ],
+    ft_court_account_list_index: []
   };
   const writes = [];
 
@@ -112,6 +143,8 @@ async function main() {
       return true;
     },
     getCachedScan: async (table) => clone(rows[table] || []),
+    getCachedRow: async (table, id) => clone((rows[table] || []).find(row => row.id === id)),
+    scanByIdPrefix: async (table, prefix) => clone((rows[table] || []).filter(row => String(row.id || '').startsWith(prefix))),
     get: async (table, id) => clone((rows[table] || []).find(row => row.id === id)),
     scan: async (table) => clone(rows[table] || []),
     put: async (table, id, row) => {
@@ -142,7 +175,9 @@ async function main() {
     T_PURCHASES: 'ft_purchases',
     T_ENTITLEMENTS: 'ft_entitlements',
     T_SCHEDULE: 'ft_schedule',
-    T_MEMBERSHIP_ORDERS: 'ft_membership_orders'
+    T_MEMBERSHIP_ORDERS: 'ft_membership_orders',
+    T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary',
+    T_COURT_ACCOUNT_LIST_INDEX: 'ft_court_account_list_index'
   });
 
   const listRes = makeRes();

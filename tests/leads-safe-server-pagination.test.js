@@ -66,6 +66,8 @@ function createHarness(seedRows, extraDeps = {}) {
       return payload;
     },
     getCachedScan: scanRows,
+    getCachedRow: async (table, id) => clone(rows[table]).find(row => String(row.id) === String(id)) || null,
+    scanByIdPrefix: async (table, prefix) => clone(rows[table]).filter(row => String(row.id || '').startsWith(prefix)),
     scan: async table => clone(rows[table]),
     get: async (table, id) => clone(rows[table]).find(row => String(row.id) === String(id)) || null,
     put: async (table, id, row) => {
@@ -165,6 +167,9 @@ async function main() {
   assert.match(routesSource, /typeof scanFirstRows==='function'[\s\S]*readLeadSourceRows\(\{isProductionRuntime:\(\)=>true,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS\}\)/, '生产线索主表应优先走轻字段投影读取，避免首屏读取完整详情');
   assert.match(routesSource, /if\(isLocalPreviewFastMode\(\)\)return \[\]/, '本地预览线索列表不应被跟进记录冷读拖到超时');
   assert.doesNotMatch(routesSource, /readLeadOptionalRows\(T_STUDENTS|getCachedScan\(T_PURCHASES|getCachedScan\(T_ENTITLEMENTS|getCachedScan\(T_ENTITLEMENT_LEDGER|getCachedScan\(T_SCHEDULE/, '线索池首屏列表接口不能读取学员、课包、权益、流水、排课事实表');
+  assert.doesNotMatch(routesSource, /readLeadLifecycleFacts/, '线索池首屏源码不能保留可复用的事实表生命周期回扫入口');
+  assert.match(routesSource, /readReadyStudentTeachingSummaryRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix\}\)/, '线索池学员统计必须通过 ready meta + activeVersion 前缀读取统一摘要');
+  assert.doesNotMatch(fnBody(routesSource, 'readLeadPoolContext'), /studentTeachingSummaryUnavailable&&[\s\S]*readLeadLifecycleFacts\(/, '线索池摘要不可用时不能回扫事实表补学员统计');
   assert.match(routesSource, /function leadPagedResponseCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query\)[\s\S]*leadListUserCachePart\(user\)/, '后端分页缓存 key 应包含完整查询条件和用户范围');
   assert.match(routesSource, /function leadFilteredResultCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query,\{includePaging:false\}\)[\s\S]*leadListUserCachePart\(user\)/, '后端翻页应复用同一筛选排序统计结果，不能每页重新全量计算');
   assert.match(routesSource, /function clearLeadListCaches\(\)[\s\S]*leadSourceRowsCache\.rows=null[\s\S]*leadPagedResponseCache\.clear\(\)[\s\S]*leadFilteredResultCache\.clear\(\)/, '线索写操作后应能清理原始行缓存、分页响应缓存和筛选结果缓存');
@@ -468,14 +473,17 @@ async function main() {
   const fallbackFactsPage = await request(fallbackFactsHarness.handle, 'paged=1&page=1&pageSize=15');
   assert.strictEqual(fallbackFactsPage.statusCode, 200, '摘要表不可用但事实表可用时线索池仍应返回 200');
   assert.strictEqual(fallbackFactsPage.body.summary.studentTeachingSummaryUnavailable, true, '摘要表不可用时仍要标记降级');
-  assert.strictEqual(fallbackFactsPage.body.summary.historicalStudents, 1, '摘要表不可用但事实表可用时历史学员不能掉成 0');
-  assert.strictEqual(fallbackFactsPage.body.summary.activeStudents, 1, '摘要表不可用但事实表可用时在期学员不能掉成 0');
-  assert.strictEqual(fallbackFactsPage.body.summary.trialAttended, 1, '摘要表不可用但事实表可用时上过体验课不能掉成 0');
-  assert.strictEqual(fallbackFactsPage.body.summary.trialAttendedToFormalPurchase, 1, '摘要表不可用但事实表可用时体验后买正式课不能掉成 0');
+  assert.strictEqual(fallbackFactsPage.body.summary.historicalStudents, 0, '摘要表不可用时历史学员统计必须受控降级，不能回扫事实表');
+  assert.strictEqual(fallbackFactsPage.body.summary.activeStudents, 0, '摘要表不可用时在期学员统计必须受控降级，不能回扫事实表');
+  assert.strictEqual(fallbackFactsPage.body.summary.trialAttended, 0, '摘要表不可用时上过体验课统计必须受控降级，不能回扫事实表');
+  assert.strictEqual(fallbackFactsPage.body.summary.trialAttendedToFormalPurchase, 0, '摘要表不可用时体验转化统计必须受控降级，不能回扫事实表');
   const fallbackLeadRow = fallbackFactsPage.body.rows.find(row => row.id === 'lead-fallback');
   assert.ok(fallbackLeadRow, '摘要表不可用但事实表可用时线索行不能消失');
-  assert.strictEqual(fallbackLeadRow.studentStage, 'formal', '摘要表不可用但事实表可用时行数据不能退成壳');
-  assert.strictEqual(fallbackLeadRow.hasTrialAttended, true, '摘要表不可用但事实表可用时体验事实不能丢');
+  assert.notStrictEqual(fallbackLeadRow.studentStage, 'formal', '摘要表不可用时线索行不能用事实表补学员阶段');
+  assert.notStrictEqual(fallbackLeadRow.hasTrialAttended, true, '摘要表不可用时线索行不能用事实表补体验事实');
+  ['ft_students','ft_purchases','ft_entitlements','ft_schedule','ft_courts','ft_membership_accounts','ft_membership_orders'].forEach(table => {
+    assert.strictEqual(fallbackFactsHarness.calls.tableScans[table] || 0, 0, `摘要不可用时线索池不能回扫事实大表 ${table}`);
+  });
 
   const previousLeadTimeout = process.env.LEAD_LIST_READ_TIMEOUT_MS;
   process.env.LEAD_LIST_READ_TIMEOUT_MS = '50';
