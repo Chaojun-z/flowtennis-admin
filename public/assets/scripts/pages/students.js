@@ -9,6 +9,7 @@ let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
 let studentSortMode='';
+let studentServerListPage=null;
 const STUDENT_DETAIL_PREWARM_CONCURRENCY=2;
 const STUDENT_DETAIL_PREWARM_MAX_ROWS=10;
 const STUDENT_DEAL_PATH_LABELS=['体验转化','直接成交','老客续费'];
@@ -40,6 +41,13 @@ function resetAllStudentListPages(){
     trial:{...(studentListPageStateByMode.trial||{}),page:standardListFirstPage()}
   };
   syncStudentPageGlobalsFromMode();
+}
+function setStudentServerListPage(page){
+  studentServerListPage=page&&Array.isArray(page.rows)?page:null;
+}
+function reloadStudentListPageData(){
+  if(typeof ensureDatasetsByName!=='function')return renderStudents();
+  return ensureDatasetsByName(['customerCenterPage'],{force:true}).then(()=>renderStudents());
 }
 function studentPackageRecordIsTrial(row={}){
   const lifecycle=studentLifecycleRow(row)||{};
@@ -118,7 +126,7 @@ function studentHistoricalBaseRows(viewRows=[]){
     return true;
   });
 }
-function onStudentFilterChange(){resetCurrentStudentListPage();renderStudents();}
+function onStudentFilterChange(){resetCurrentStudentListPage();reloadStudentListPageData();}
 function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
 }
@@ -213,8 +221,7 @@ function refreshStudentTagGroupedFilter(){
 }
 function onStudentTagFilterChange(){
   resetCurrentStudentListPage();
-  renderStudents({skipToolbar:true});
-  refreshStudentTagGroupedFilter();
+  reloadStudentListPageData().then(()=>refreshStudentTagGroupedFilter());
 }
 function studentScheduleMatches(row,stu){
   const id=String(stu?.id||stu?.studentId||'').trim();
@@ -628,24 +635,24 @@ function renderStudentPagerControls(total,pages){
 }
 function setStudentPage(value){
   syncStudentPageGlobalsFromMode();
-  const total=getFilteredStudents().length;
+  const total=studentServerListPage?.total??getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
   persistStudentPageGlobalsToMode();
-  renderStudents();
+  reloadStudentListPageData();
 }
 function setStudentPageSize(value){
   syncStudentPageGlobalsFromMode();
   stuPageSize=standardListPageSize(value,stuPageSize);
   stuPage=standardListFirstPage();
   persistStudentPageGlobalsToMode();
-  renderStudents();
+  reloadStudentListPageData();
 }
 function jumpStudentPage(value){
   syncStudentPageGlobalsFromMode();
-  const total=getFilteredStudents().length;
+  const total=studentServerListPage?.total??getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
   persistStudentPageGlobalsToMode();
-  renderStudents();
+  reloadStudentListPageData();
 }
 function studentListPrewarmParams(){
   const range=typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{};
@@ -1258,7 +1265,8 @@ function renderStudents(options={}){
   if(stats.total==null&&typeof renderStandardSkeletonKpiCards==='function')statsHost.innerHTML=renderStandardSkeletonKpiCards(5);
   else statsHost.innerHTML=renderStandardDataCards(studentTopStatsCards(stats));
   const isMobileList=document.body.classList.contains('admin-mobile');
-  const pageState=isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,stuPage,stuPageSize);
+  const serverPage=studentServerListPage&&Array.isArray(studentServerListPage.rows)?studentServerListPage:null;
+  const pageState=isMobileList?{total:serverPage?.total??list.length,pages:1,slice:list,page:1}:(serverPage?{total:serverPage.total,pages:serverPage.pages,slice:list,page:serverPage.page}:standardListSlice(list,stuPage,stuPageSize));
   stuPage=pageState.page;
   persistStudentPageGlobalsToMode();
   const {total,pages,slice}=pageState;

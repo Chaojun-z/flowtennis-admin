@@ -61,7 +61,7 @@ assert.match(source, /function ensureCourtAccountDetailData\(courtId/, 'court me
 assert.match(source, /courtAccountDetailPageDataUrl\(id,\{fresh:force\}\)/, 'court membership detail should request a single account by id');
 assert.match(source, /,packageCenterPage:\(\)=>apiCall\('GET','\/page-data\/package-center-list'\)/, 'package center first-screen pages should use a lightweight list endpoint');
 assert.match(source, /,purchasesPage:\(\)=>apiCall\('GET','\/page-data\/purchases'\)/, 'purchases page should use a dedicated aggregated endpoint');
-assert.match(source, /function customerCenterPageDataUrl\(\{fresh=false\}=\{\}\)\{[\s\S]*fresh\?appendPageDataQuery\(url,\{fresh:1,_ts:Date\.now\(\)\}\):url;/, 'customer center list endpoint url should support forced fresh reads after schedule and package mutations');
+assert.match(source, /function customerCenterPageDataUrl\(\{fresh=false\}=\{\}\)\{[\s\S]*params\.view=mode==='trial'\?'historicalStudents':'activeStudents'[\s\S]*params\.paged=1[\s\S]*fresh\?appendPageDataQuery\(next,\{fresh:1,_ts:Date\.now\(\)\}\):next;/, 'customer center list endpoint url should support paged student views and forced fresh reads');
 assert.match(source, /,customerCenterPage:\(\{fresh=false\}=\{\}\)=>apiCall\('GET',customerCenterPageDataUrl\(\{fresh\}\)\)/, 'customer center first-screen pages should use a lightweight scoped list endpoint and accept fresh reloads');
 assert.match(source, /,lifecycleMetricsPage:\(\)=>apiCall\('GET',lifecycleMetricsPageDataUrl\(\)\)/, 'standard lifecycle stats should use a lightweight scoped lifecycle metrics endpoint');
 assert.match(source, /,financePage:\(\)=>apiCall\('GET',financePageDataUrl\(\)\)/, 'finance center should use a dedicated scoped aggregated endpoint');

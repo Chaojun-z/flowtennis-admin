@@ -647,6 +647,7 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(bulkRes.body.listPage.rows.length, 15, '默认分页只返回当前页行');
   assert.strictEqual(bulkRes.body.teachingStudentViews.activeStudents[0].detailLessonRecordRows, undefined, '首屏返回体不能携带学员上课明细大数组');
   assert.strictEqual(bulkRes.body.teachingStudentViews.activeStudents[0].detailPackageOrderRows, undefined, '首屏返回体不能携带学员课包明细大数组');
+  assert.deepStrictEqual(bulkRes.body.standardLifecycleMetrics.views, {}, '首屏返回体不能在 standardLifecycleMetrics.views 里重复携带全量学员大数组');
   assert.ok(
     bulkRes.body.standardLifecycleMetrics.teachingSummary.activeStudentCount > bulkRes.body.listPage.rows.length,
     '顶部统计必须来自完整统一集合，不能只统计当前页'

@@ -51,7 +51,9 @@ assert.doesNotMatch(fnBody('studentSearchText'), /s\?\.searchText|s\?\.notes|s\?
 assert.match(fnBody('searchHit'), /compactKeyword=keyword\.replace\(\//, 'global keyword search should build a compact keyword');
 assert.match(fnBody('searchHit'), /text\.replace\(\//, 'global keyword search should compare against compact text');
 assert.match(fnBody('searchHit'), /includes\(compactKeyword\)/, 'global keyword search should ignore spaces between names');
-assert.match(source, /function onStudentFilterChange\(\)\{resetCurrentStudentListPage\(\);renderStudents\(\);\}/, 'student filters should reset the current student page pagination through the standard list flow');
+assert.match(source, /function onStudentFilterChange\(\)\{resetCurrentStudentListPage\(\);reloadStudentListPageData\(\);\}/, 'student filters should reset pagination and reload the server-side student page');
+assert.match(source, /function setStudentServerListPage\(page\)/, 'student page should store server-side pagination metadata');
+assert.match(source, /const serverPage=studentServerListPage&&Array\.isArray\(studentServerListPage\.rows\)\?studentServerListPage:null/, 'student render should use server-side pagination totals when available');
 assert.match(source, /let studentListPageStateByMode=\{package:\{page:1,pageSize:15\},trial:\{page:1,pageSize:15\}\}/, 'active and historical student pages should keep independent pagination state');
 assert.match(fnBody('setStudentPageSize'), /syncStudentPageGlobalsFromMode\(\)[\s\S]*stuPageSize=standardListPageSize\(value,stuPageSize\)[\s\S]*persistStudentPageGlobalsToMode\(\)/, 'changing page size on one student page should not leak into the other student page');
 assert.match(source, /search:\{id:'stuSearch',oninput:'onStudentFilterChange\(\)'/, 'student search should reset pagination before rendering');

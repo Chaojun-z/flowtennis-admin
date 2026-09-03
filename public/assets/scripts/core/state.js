@@ -417,7 +417,25 @@ function lifecycleMetricsPageDataUrl(){
 }
 function customerCenterPageDataUrl({fresh=false}={}){
   const url=scopedPageDataUrl('/page-data/customer-center-list');
-  return fresh?appendPageDataQuery(url,{fresh:1,_ts:Date.now()}):url;
+  const params={};
+  if(typeof isStudentListPage==='function'&&isStudentListPage(currentPage)){
+    const mode=typeof studentListViewMode==='function'?studentListViewMode():'package';
+    params.view=mode==='trial'?'historicalStudents':'activeStudents';
+    params.paged=1;
+    params.page=typeof stuPage!=='undefined'?stuPage:1;
+    params.pageSize=typeof stuPageSize!=='undefined'?stuPageSize:15;
+    const q=typeof document!=='undefined'&&document.getElementById?document.getElementById('stuSearch')?.value||'':'';
+    const type=typeof document!=='undefined'&&document.getElementById?document.getElementById('stuTypeFilter')?.value||'':'';
+    const source=typeof document!=='undefined'&&document.getElementById?document.getElementById('stuSourceFilter')?.value||'':'';
+    const coach=typeof document!=='undefined'&&document.getElementById?document.getElementById('stuCoachFilter')?.value||'':'';
+    if(q)params.q=q;
+    if(type)params.type=type;
+    if(source)params.source=source;
+    if(coach)params.coach=coach;
+    if(typeof studentTagFilterState==='object'&&studentTagFilterState&&typeof studentTagFilterCount==='function'&&studentTagFilterCount())params.tags=JSON.stringify(studentTagFilterState);
+  }
+  const next=appendPageDataQuery(url,params);
+  return fresh?appendPageDataQuery(next,{fresh:1,_ts:Date.now()}):next;
 }
 function financePageDataUrl(){
   return scopedPageDataUrl('/page-data/finance');
@@ -1203,6 +1221,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
+      if(typeof setStudentServerListPage==='function')setStudentServerListPage(data.listPage||null);
       staleCachedDatasets.delete('customerLifecycleRows');
       staleCachedDatasets.delete('customerCenterPage');
       markDatasetLoaded('customerCenterPage',requestKey);

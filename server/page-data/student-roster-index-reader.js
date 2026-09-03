@@ -366,6 +366,21 @@ function projectCustomerCenterTeachingViews(views = {}) {
   return next;
 }
 
+function projectCustomerCenterStandardMetrics(metrics = {}) {
+  return {
+    ...metrics,
+    views: {}
+  };
+}
+
+function projectCustomerCenterPagedViews(views = {}, listPage = null) {
+  if (!listPage?.view) return projectCustomerCenterTeachingViews(views);
+  return {
+    summary: views.summary || {},
+    [listPage.view]: Array.isArray(listPage.rows) ? listPage.rows : []
+  };
+}
+
 function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeachingStudentViews = null, prebuiltStandardLifecycleMetrics = null } = {}) {
   const customerLifecycleRows = buildCustomerCenterSummaryLifecycleRows(summaryRows);
   const teachingData = { teachingStudentSummaryRows: summaryRows };
@@ -375,10 +390,11 @@ function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeach
     ? buildScopedStandardLifecycleMetrics({ ...teachingData, customerLifecycleRows }, metricScope)
     : buildStandardLifecycleMetrics({ ...teachingData, customerLifecycleRows }));
   const listPage = buildCustomerCenterListPage(teachingStudentViews, query);
+  const paged = !!listPage?.view;
   return {
-    customerLifecycleRows: customerLifecycleRows.map(projectCustomerCenterLifecycleRow),
-    teachingStudentViews: projectCustomerCenterTeachingViews(teachingStudentViews),
-    standardLifecycleMetrics,
+    customerLifecycleRows: paged ? [] : customerLifecycleRows.map(projectCustomerCenterLifecycleRow),
+    teachingStudentViews: projectCustomerCenterPagedViews(teachingStudentViews, listPage),
+    standardLifecycleMetrics: projectCustomerCenterStandardMetrics(standardLifecycleMetrics),
     listPage
   };
 }
