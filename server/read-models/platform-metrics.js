@@ -478,16 +478,16 @@ function teachingPackageName(row = {}, purchase = {}) {
 function entitlementLedgerOwnerStudentId(row = {}, entitlementsById = new Map(), purchasesById = new Map()) {
   const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
   const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
-  return text(entitlement.studentId || purchase.studentId || row.studentId);
+  return text(row.packageOwnerStudentId || row.ownerStudentId || entitlement.studentId || purchase.studentId || row.studentId);
 }
 
 function entitlementLedgerStudentIds(row = {}, entitlementsById = new Map(), purchasesById = new Map(), schedulesById = new Map()) {
   const schedule = schedulesById.get(text(row.scheduleId)) || {};
   const scheduleIds = teachingScheduleStudentIds(schedule);
   const explicitIds = teachingScheduleStudentIds(row);
-  const relationIds = [row.packageOwnerStudentId, row.ownerStudentId, row.usedByStudentId, row.authorizedStudentId].map(text).filter(Boolean);
-  if (relationIds.length) {
-    return [...new Set([...scheduleIds, ...explicitIds, ...relationIds].filter(Boolean))];
+  const attendeeRelationIds = [row.usedByStudentId, row.authorizedStudentId].map(text).filter(Boolean);
+  if (attendeeRelationIds.length) {
+    return [...new Set([...scheduleIds, ...explicitIds, ...attendeeRelationIds].filter(Boolean))];
   }
   if (scheduleIds.length === 1) return scheduleIds;
   if (explicitIds.length) return explicitIds;
@@ -988,7 +988,6 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   });
   rowsByStudent.forEach((rows, studentId) => {
     const packageRows = rows
-      .filter(row => Number(row.lessonDelta) < 0)
       .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
       .filter(row => text(row.entitlementId || row.purchaseId || row.packageName))
       .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)));
@@ -997,7 +996,11 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       const packageKey = text(row.entitlementId || row.purchaseId || row.packageName);
       if (!packageKey) return;
       const usedBefore = usedBeforeByPackage.get(packageKey) || 0;
-      const count = Math.abs(Number(row.lessonDelta) || 0);
+      const pending = text(row.status) === '待上课' || row.countAsCompletedLesson === false;
+      const hasPackageReference = !!text(row.entitlementId || row.purchaseId);
+      const count = Number(row.lessonDelta) < 0
+        ? Math.abs(Number(row.lessonDelta) || 0)
+        : (pending && hasPackageReference ? Math.abs(Number(row.lessonUnits || row.lessonCount || 1) || 1) : 0);
       if (!count) return;
       const startNo = usedBefore + 1;
       const endNo = usedBefore + count;
@@ -1005,7 +1008,27 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       row.lessonSectionText = `[第${lessonSectionMarker(startNo, unit)}${startNo === endNo ? '' : `-${lessonSectionMarker(endNo, unit)}`}${unit}]`;
       usedBeforeByPackage.set(packageKey, endNo);
     });
-    rowsByStudent.set(studentId, rows.map(row => ({ ...row, lessonSectionText: row.lessonSectionText || '' })));
+    let studentUsedBefore = 0;
+    rows
+      .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
+      .filter(row => row.countAsCompletedLesson !== false || text(row.status) === '待上课')
+      .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)))
+      .forEach(row => {
+        const pending = text(row.status) === '待上课';
+        const count = Number(row.lessonDelta) < 0
+          ? Math.abs(Number(row.lessonDelta) || 0)
+          : (pending ? Math.abs(Number(row.lessonUnits || row.lessonCount || 1) || 1) : 0);
+        if (!count) return;
+        const startNo = studentUsedBefore + 1;
+        const endNo = studentUsedBefore + count;
+        row.studentLessonSequenceText = `[累计第${lessonSectionMarker(startNo, '节')}${startNo === endNo ? '' : `-${lessonSectionMarker(endNo, '节')}`}节]`;
+        studentUsedBefore = endNo;
+      });
+    rowsByStudent.set(studentId, rows.map(row => ({
+      ...row,
+      lessonSectionText: row.lessonSectionText || '',
+      studentLessonSequenceText: row.studentLessonSequenceText || ''
+    })));
   });
   return rowsByStudent;
 }

@@ -1317,8 +1317,9 @@ function studentLessonRecordHtml(stu){
   const items=rows.slice(0,limit).map((item,index)=>{
     if(item.kind){
       const sectionText=studentLessonRecordDetailSectionText(rows,index);
+      const studentSequenceText=String(item.studentLessonSequenceText||'').trim();
       const detailText=[item.courseType,item.className||item.packageName].filter(Boolean).join(' · ');
-      const title=[sectionText,item.lessonRelationText,detailText].filter(Boolean).join(' ');
+      const title=[studentSequenceText&&studentSequenceText!==sectionText?studentSequenceText:'',sectionText,item.lessonRelationText,detailText].filter(Boolean).join(' ');
       return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title||'上课记录')}</div><div class="student-lesson-meta">${studentLessonRecordMetaItem('time',item.time)}${studentLessonRecordMetaItem('site',[cn(item.campus)||'-',item.venue||''].filter(Boolean).join(' '))}${studentLessonRecordMetaItem('coach',item.coach||'-')}</div></div></div>`;
     }
     const line=item.type==='ledger'
