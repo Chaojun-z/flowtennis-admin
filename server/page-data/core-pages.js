@@ -473,10 +473,11 @@ function createCorePageDataRoutes(deps={}){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       if(!T_STUDENT_TEACHING_SUMMARY||!put||!mkTable)return sendJson(res,{error:'摘要表未配置'},500);
       await init();
-      await mkTable(T_STUDENT_TEACHING_SUMMARY);
+      const dryRun=query?.get('dryRun')==='1'||query?.get('dryRun')==='true';
+      if(!dryRun)await mkTable(T_STUDENT_TEACHING_SUMMARY);
       const sourceSnapshotAt=new Date().toISOString();
       const batchId=`student-teaching-summary-manual-${Date.now()}`;
-      const previousSummaryRows=await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}).catch(()=>[]);
+      const previousSummaryRows=dryRun?[]:await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}).catch(()=>[]);
       const previousMeta=(previousSummaryRows||[]).find(row=>String(row?.id||'')==='__student_teaching_summary_meta__');
       const hasReadyMeta=String(previousMeta?.status||'')===STUDENT_TEACHING_SUMMARY_READY;
       try{
@@ -500,6 +501,34 @@ function createCorePageDataRoutes(deps={}){
           feedbacks:scoped.feedbacks
         });
         const rows=buildStudentTeachingSummaryRows(customerLifecycleRows,scoped);
+        if(dryRun){
+          const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,{teachingStudentSummaryRows:rows});
+          const standardLifecycleMetrics=buildStandardLifecycleMetrics({...scoped,customerLifecycleRows,teachingStudentSummaryRows:rows});
+          return sendJson(res,{
+            success:true,
+            dryRun:true,
+            writePerformed:false,
+            count:rows.length,
+            teachingSummary:standardLifecycleMetrics.teachingSummary||{},
+            teachingViews:{
+              historicalStudents:(teachingStudentViews.historicalStudents||[]).length,
+              activeStudents:(teachingStudentViews.activeStudents||[]).length,
+              trialAttendedStudents:(teachingStudentViews.trialAttendedStudents||[]).length,
+              trialAttendedToFormalPurchaseStudents:(teachingStudentViews.trialAttendedToFormalPurchaseStudents||[]).length
+            },
+            sourceCounts:{
+              leads:(scoped.leads||[]).length,
+              students:(scoped.students||[]).length,
+              purchases:(scoped.purchases||[]).length,
+              entitlements:(scoped.entitlements||[]).length,
+              entitlementLedger:(scoped.entitlementLedger||[]).length,
+              schedule:(scoped.schedule||[]).length,
+              membershipBenefitLedger:(scoped.membershipBenefitLedger||[]).length,
+              feedbacks:(scoped.feedbacks||[]).length
+            },
+            updatedAt:new Date().toISOString()
+          });
+        }
         for(const row of rows){
           const versioned=buildVersionedStudentTeachingSummaryRow(row,batchId);
           await put(T_STUDENT_TEACHING_SUMMARY,versioned.id,versioned);

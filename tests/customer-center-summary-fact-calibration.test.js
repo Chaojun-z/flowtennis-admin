@@ -65,7 +65,7 @@ const legacyReadyRows = requireReadyStudentTeachingSummaryRows(legacyReadyStuden
 assert.strictEqual(legacyReadyRows.length, 1, '旧 ready 摘要缺少发布元数据时也应可读，避免卡死页面');
 
 function makeHandler({ legacyReady = false, mutateSummaryOnWrite = false } = {}) {
-  const calls = { tableScans: {}, prefixScans: {} };
+  const calls = { tableScans: {}, prefixScans: {}, puts: [], deletes: [] };
   const rows = {
     leads: [],
     students: [
@@ -178,6 +178,7 @@ function makeHandler({ legacyReady = false, mutateSummaryOnWrite = false } = {})
     return clone(tableRows[table]);
   };
   const upsertRow = (table, id, row) => {
+    calls.puts.push({ table, id });
     if (!Array.isArray(tableRows[table])) tableRows[table] = [];
     const next = clone(row);
     if (mutateSummaryOnWrite && table === 'ft_student_teaching_summary' && String(id || '') !== '__student_teaching_summary_meta__') {
@@ -212,6 +213,7 @@ function makeHandler({ legacyReady = false, mutateSummaryOnWrite = false } = {})
     PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
     put: async (table, id, row) => upsertRow(table, id, row),
     del: async (table, id) => {
+      calls.deletes.push({ table, id });
       if (!Array.isArray(tableRows[table])) return;
       tableRows[table] = tableRows[table].filter(item => String(item.id || '') !== String(id || ''));
     },
@@ -379,6 +381,24 @@ async function request(queryText = '', { legacyReady = false } = {}) {
 
   const legacyReady = await request('', { legacyReady: true });
   assert.strictEqual(legacyReady.res.statusCode, 200, '旧 ready 摘要缺少发布元数据时，客户中心仍应可正常加载');
+
+  const rebuildDryRun = makeHandler({ mutateSummaryOnWrite: true });
+  const rebuildDryRunRes = {};
+  await rebuildDryRun.handler({
+    path: '/page-data/customer-center-list/rebuild-summary',
+    method: 'POST',
+    user: { role: 'admin', name: '管理员' },
+    res: rebuildDryRunRes,
+    query: new URLSearchParams('dryRun=1')
+  });
+  assert.strictEqual(rebuildDryRunRes.statusCode, 200, '手工重建摘要 dry-run 应成功返回');
+  assert.strictEqual(rebuildDryRunRes.body.dryRun, true, 'dry-run 响应必须明确标记未写入');
+  assert.strictEqual(rebuildDryRunRes.body.writePerformed, false, 'dry-run 不得写入摘要表');
+  assert.strictEqual(rebuildDryRunRes.body.count, 4, 'dry-run 必须返回将要发布的摘要行数');
+  assert.strictEqual(rebuildDryRunRes.body.teachingSummary.historicalStudentCount, 4, 'dry-run 必须返回重建后的历史学员顶部数');
+  assert.strictEqual(rebuildDryRunRes.body.teachingSummary.activeStudentCount, 0, 'dry-run 必须返回重建后的在期学员顶部数');
+  assert.deepStrictEqual(rebuildDryRun.calls.puts, [], 'dry-run 不能写 meta、版本行或 bundle');
+  assert.deepStrictEqual(rebuildDryRun.calls.deletes, [], 'dry-run 不能清理旧版本');
 
   const rebuild = makeHandler({ mutateSummaryOnWrite: true });
   const rebuildRes = {};
