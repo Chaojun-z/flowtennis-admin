@@ -177,6 +177,9 @@ async function testReadySummaryRowsPreferBundleRow() {
   const version = 'student-teaching-summary-bundle-test';
   const logicalRows = [{ id: 'bundle-student', studentId: 'bundle-student', name: '发布包学员' }];
   const bundle = buildStudentTeachingSummaryBundleRow(logicalRows, version);
+  assert.strictEqual(bundle.encoding, 'gzip-base64', '发布包必须压缩存储，避免超过 TableStore 单列大小限制');
+  assert.ok(bundle.rowsGzipBase64, '发布包必须包含压缩后的摘要数据');
+  assert.strictEqual(bundle.rows, undefined, '发布包不能依赖明文 rows 大字段');
   const meta = buildStudentTeachingSummaryMetaRow({
     status: STUDENT_TEACHING_SUMMARY_READY,
     rowCount: logicalRows.length,
@@ -214,6 +217,8 @@ async function testReadySummaryRowsRejectBadBundleWithoutPrefixScan() {
   const logicalRows = [{ id: 'bundle-student', studentId: 'bundle-student', name: '发布包学员' }];
   const bundle = {
     ...buildStudentTeachingSummaryBundleRow(logicalRows, version),
+    encoding: '',
+    rowsGzipBase64: '',
     rows: [{ id: 'wrong-student', studentId: 'wrong-student', name: '错误发布包' }]
   };
   const meta = buildStudentTeachingSummaryMetaRow({

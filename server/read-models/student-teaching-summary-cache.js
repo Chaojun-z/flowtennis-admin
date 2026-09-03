@@ -1,6 +1,7 @@
 const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const { buildStudentTeachingSummaryRows } = require('./platform-metrics.js');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const STUDENT_TEACHING_SUMMARY_META_ID = '__student_teaching_summary_meta__';
 const STUDENT_TEACHING_SUMMARY_READY = 'ready';
@@ -95,18 +96,30 @@ function buildStudentTeachingSummaryBundleRow(rows = [], publishVersion = '') {
   const version = String(publishVersion || '').trim();
   const id = buildStudentTeachingSummaryBundleId(version);
   const logicalRows = cloneStudentTeachingSummaryRows((Array.isArray(rows) ? rows : []).map(studentTeachingSummaryLogicalRow));
+  const rowsJson = JSON.stringify(logicalRows);
   return {
     id,
     kind: 'student-teaching-summary-bundle',
     publishVersion: version,
     rowCount: logicalRows.length,
     checksum: buildStudentTeachingSummaryChecksum(logicalRows),
-    rows: logicalRows
+    encoding: 'gzip-base64',
+    rowsGzipBase64: zlib.gzipSync(rowsJson).toString('base64'),
+    uncompressedBytes: Buffer.byteLength(rowsJson, 'utf8')
   };
 }
 
 function studentTeachingSummaryBundleLogicalRows(row = {}) {
   if (!row || !isStudentTeachingSummaryBundleRow(row)) return [];
+  if (String(row.encoding || '') === 'gzip-base64' && row.rowsGzipBase64) {
+    try {
+      const json = zlib.gunzipSync(Buffer.from(String(row.rowsGzipBase64 || ''), 'base64')).toString('utf8');
+      const parsed = JSON.parse(json);
+      return cloneStudentTeachingSummaryRows(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      return [];
+    }
+  }
   return cloneStudentTeachingSummaryRows(Array.isArray(row.rows) ? row.rows : []);
 }
 
