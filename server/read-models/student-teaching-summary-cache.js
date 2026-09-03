@@ -465,16 +465,9 @@ function createStudentTeachingSummaryCache({
       const data = { leads, students, purchases, entitlements, entitlementLedger, schedule, membershipBenefitLedger, feedbacks };
       const customerLifecycleRows = buildCustomerLifecycleRows(data);
       const rows = buildStudentTeachingSummaryRows(customerLifecycleRows, data);
-      for (const row of rows) {
-        const versioned = buildVersionedStudentTeachingSummaryRow(row, batchId);
-        await put(T_STUDENT_TEACHING_SUMMARY, versioned.id, versioned);
-      }
       const bundle = buildStudentTeachingSummaryBundleRow(rows, batchId);
       await put(T_STUDENT_TEACHING_SUMMARY, bundle.id, bundle);
-      const publishedRows = filterStudentTeachingSummaryPublishedRows(
-        await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }),
-        { activeVersion: batchId }
-      );
+      const publishedRows = rows;
       await writeMeta(STUDENT_TEACHING_SUMMARY_READY, {
         batchId,
         activeVersion: batchId,
@@ -483,12 +476,6 @@ function createStudentTeachingSummaryCache({
         rowCount: publishedRows.length,
         checksum: buildStudentTeachingSummaryChecksum(publishedRows)
       });
-      if (del) {
-        const existing = await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true });
-        for (const row of studentTeachingSummaryRowsToDeleteAfterPublish(existing, batchId)) {
-          if (row?.id) await del(T_STUDENT_TEACHING_SUMMARY, row.id);
-        }
-      }
       return publishedRows;
     } catch (err) {
       try {

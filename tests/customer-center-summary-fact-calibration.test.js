@@ -410,16 +410,17 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     query: new URLSearchParams()
   });
   assert.strictEqual(rebuildRes.statusCode, 200, '手工重建摘要应成功返回');
-  const rebuiltSummaryRows = (rebuild.tableRows.ft_student_teaching_summary || []).filter(row => (
-    row.id !== '__student_teaching_summary_meta__' &&
-    !String(row.id || '').startsWith('__student_teaching_summary_bundle__:')
-  ));
+  const rebuiltSummaryRows = requireReadyStudentTeachingSummaryRows(rebuild.tableRows.ft_student_teaching_summary || []);
   const rebuiltMetaRow = (rebuild.tableRows.ft_student_teaching_summary || []).find(row => row.id === '__student_teaching_summary_meta__');
   assert.ok(rebuiltMetaRow, '手工重建后必须写回 meta 行');
+  assert.ok(
+    (rebuild.tableRows.ft_student_teaching_summary || []).some(row => String(row.id || '').startsWith('__student_teaching_summary_bundle__:')),
+    '手工重建必须写入压缩发布包'
+  );
   assert.strictEqual(
     rebuiltMetaRow.checksum,
     buildStudentTeachingSummaryChecksum(rebuiltSummaryRows),
-    '手工重建写回的 checksum 必须基于落表后的摘要行，而不是写表前的原始对象'
+    '手工重建写回的 checksum 必须基于 ready 发布包里的摘要行'
   );
 
   const bundleRows = [

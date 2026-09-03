@@ -529,16 +529,9 @@ function createCorePageDataRoutes(deps={}){
             updatedAt:new Date().toISOString()
           });
         }
-        for(const row of rows){
-          const versioned=buildVersionedStudentTeachingSummaryRow(row,batchId);
-          await put(T_STUDENT_TEACHING_SUMMARY,versioned.id,versioned);
-        }
         const bundle=buildStudentTeachingSummaryBundleRow(rows,batchId);
         await put(T_STUDENT_TEACHING_SUMMARY,bundle.id,bundle);
-        const publishedRows=filterStudentTeachingSummaryPublishedRows(
-          await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true}),
-          {activeVersion:batchId}
-        );
+        const publishedRows=rows;
         await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
           status:STUDENT_TEACHING_SUMMARY_READY,
           batchId,
@@ -550,12 +543,6 @@ function createCorePageDataRoutes(deps={}){
           sourceTable:'manual-rebuild',
           sourceOp:'rebuild-summary'
         }));
-        if(del){
-          const existing=await getCachedScan(T_STUDENT_TEACHING_SUMMARY,{fresh:true});
-          for(const row of studentTeachingSummaryRowsToDeleteAfterPublish(existing,batchId)){
-            if(row?.id)await del(T_STUDENT_TEACHING_SUMMARY,row.id);
-          }
-        }
         return sendJson(res,{success:true,count:publishedRows.length,updatedAt:new Date().toISOString()});
       }catch(err){
         try{

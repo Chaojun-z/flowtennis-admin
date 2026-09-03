@@ -384,16 +384,13 @@ async function testRollsBackPartiallyWrittenRowsWhenRefreshFails() {
     },
     getCachedScan: async table => clone(tableRows[table] || []),
     put: async (table, id, row) => {
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && String(id || '').startsWith('__student_teaching_summary_bundle__:')) {
+        throw new Error('bundle publish interrupted');
+      }
       const list = Array.isArray(tableRows[table]) ? tableRows[table] : [];
       const index = list.findIndex(item => String(item.id || '') === String(id || ''));
       const next = clone(row);
       tableRows[table] = index >= 0 ? list.map(item => String(item.id || '') === String(id || '') ? next : item) : [...list, next];
-      if (table === tables.T_STUDENT_TEACHING_SUMMARY && String(id || '') !== STUDENT_TEACHING_SUMMARY_META_ID && String(row.publishVersion || '').startsWith('student-teaching-summary-')) {
-        const versionedRows = tableRows.ft_student_teaching_summary.filter(item => String(item.publishVersion || '') !== oldVersion && String(item.id || '').startsWith('__student_teaching_summary_version__:'));
-        if (versionedRows.length === 1) {
-          throw new Error('publish interrupted');
-        }
-      }
     },
     del: async (table, id) => {
       tableRows[table] = (tableRows[table] || []).filter(row => String(row.id || '') !== String(id || ''));
@@ -403,10 +400,10 @@ async function testRollsBackPartiallyWrittenRowsWhenRefreshFails() {
 
   await assert.rejects(
     () => cache.refreshStudentTeachingSummaryRows(),
-    /publish interrupted/
+    /bundle publish interrupted/
   );
-  const leakedNewVersionRows = tableRows.ft_student_teaching_summary.filter(row => String(row.id || '').startsWith('__student_teaching_summary_version__:') && String(row.publishVersion || '') !== oldVersion);
-  assert.deepStrictEqual(leakedNewVersionRows, [], '发布失败后不能残留半成品新版本行');
+  const leakedNewBundleRows = tableRows.ft_student_teaching_summary.filter(row => String(row.id || '').startsWith('__student_teaching_summary_bundle__:') && String(row.publishVersion || '') !== oldVersion);
+  assert.deepStrictEqual(leakedNewBundleRows, [], '发布失败后不能残留半成品新版本 bundle');
   const readyRows = requireReadyStudentTeachingSummaryRows(tableRows.ft_student_teaching_summary);
   assert.deepStrictEqual(readyRows.map(row => row.studentId).sort(), ['old-student-1', 'old-student-2'], '发布失败后仍应继续读旧 ready 版本');
 }
@@ -455,7 +452,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
   };
   const clone = value => JSON.parse(JSON.stringify(value || []));
   let metaSwitched = false;
-  let cleanupFailures = 0;
+  let deletesAfterSwitch = 0;
   const cache = createStudentTeachingSummaryCache({
     tables,
     mkTable: async table => {
@@ -473,24 +470,18 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
     },
     del: async (table, id) => {
       if (table === tables.T_STUDENT_TEACHING_SUMMARY && metaSwitched && String(id || '') !== STUDENT_TEACHING_SUMMARY_META_ID) {
-        cleanupFailures += 1;
-        if (cleanupFailures === 1) {
-          throw new Error('cleanup failed after switch');
-        }
+        deletesAfterSwitch += 1;
       }
       tableRows[table] = (tableRows[table] || []).filter(row => String(row.id || '') !== String(id || ''));
     },
     logger: { error() {} }
   });
 
-  await assert.rejects(
-    () => cache.refreshStudentTeachingSummaryRows(),
-    /cleanup failed after switch/
-  );
-  const leakedNewVersionRows = tableRows.ft_student_teaching_summary.filter(row => String(row.id || '').startsWith('__student_teaching_summary_version__:') && String(row.publishVersion || '') !== oldVersion);
-  assert.deepStrictEqual(leakedNewVersionRows, [], '发布切换后失败不能残留新版本行');
+  await cache.refreshStudentTeachingSummaryRows();
+  assert.strictEqual(metaSwitched, true, '发布成功必须切换 ready meta');
+  assert.strictEqual(deletesAfterSwitch, 0, '摘要发布请求不能在切换 meta 后同步清理旧版本，避免超时造成半发布');
   const readyRows = requireReadyStudentTeachingSummaryRows(tableRows.ft_student_teaching_summary);
-  assert.deepStrictEqual(readyRows.map(row => row.studentId).sort(), ['old-student-1', 'old-student-2'], '清理阶段失败后必须恢复旧 ready 版本');
+  assert.deepStrictEqual(readyRows.map(row => row.studentId).sort(), ['new-student-1', 'new-student-2'], 'bundle-only 发布成功后必须读取新 ready 版本');
 }
 
 (async () => {
