@@ -1105,9 +1105,8 @@ function booleanSnapshotValue(value) {
 
 function teachingSummaryTrialAttendedSnapshot(row = {}) {
   const explicit = booleanSnapshotValue(row.hasTrialAttended);
-  if (explicit === true) return true;
+  if (explicit !== undefined) return explicit;
   if (teachingSummaryRowHasConsumedTrialPackage(row)) return true;
-  if (explicit === false) return false;
   return teachingSummaryRowHasTrialLesson(row);
 }
 

@@ -158,6 +158,18 @@ function makeHandler({ legacyReady = false, mutateSummaryOnWrite = false } = {})
         packageBalanceRemaining: 1,
         activityStatusLabel: '近30天活跃',
         studentStatusLabel: '课包活跃中'
+      },
+      {
+        id: 'stu-explicit-not-trial',
+        studentId: 'stu-explicit-not-trial',
+        name: '明确未体验',
+        hasTrialAttended: false,
+        hasFormalAttended: false,
+        isHistoricalStudentRoster: true,
+        isActiveStudentRoster: false,
+        detailPackageOrderRows: [
+          { packageName: '体验课包', totalLessons: 1, remainingLessons: 0, statusText: '已用完' }
+        ]
       }
     ]
   };
