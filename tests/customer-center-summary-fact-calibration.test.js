@@ -1,6 +1,11 @@
 const assert = require('assert');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
-const { requireReadyStudentTeachingSummaryRows, buildStudentTeachingSummaryChecksum } = require('../server/read-models/student-teaching-summary-cache.js');
+const {
+  requireReadyStudentTeachingSummaryRows,
+  buildStudentTeachingSummaryChecksum,
+  buildVersionedStudentTeachingSummaryRow,
+  buildStudentTeachingSummaryBundleId
+} = require('../server/read-models/student-teaching-summary-cache.js');
 
 function readyStudentSummaryRows(rows = []) {
   return [
@@ -60,7 +65,7 @@ const legacyReadyRows = requireReadyStudentTeachingSummaryRows(legacyReadyStuden
 assert.strictEqual(legacyReadyRows.length, 1, '旧 ready 摘要缺少发布元数据时也应可读，避免卡死页面');
 
 function makeHandler({ legacyReady = false, mutateSummaryOnWrite = false } = {}) {
-  const calls = { tableScans: {} };
+  const calls = { tableScans: {}, prefixScans: {} };
   const rows = {
     leads: [],
     students: [
@@ -197,6 +202,11 @@ function makeHandler({ legacyReady = false, mutateSummaryOnWrite = false } = {})
       const list = tableRows[table] || [];
       const found = list.find(item => String(item.id || '') === String(id || ''));
       return found ? clone(found) : null;
+    },
+    scanByIdPrefix: async (table, prefix) => {
+      calls.prefixScans[table] = (calls.prefixScans[table] || 0) + 1;
+      const list = tableRows[table] || [];
+      return clone(list.filter(item => String(item.id || '').startsWith(prefix)));
     },
     filterLoadAllForUser: data => data,
     PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
@@ -391,6 +401,46 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     buildStudentTeachingSummaryChecksum(rebuiltSummaryRows),
     '手工重建写回的 checksum 必须基于落表后的摘要行，而不是写表前的原始对象'
   );
+
+  const bundleRows = [
+    { id: 'bundle-student-1', studentId: 'bundle-student-1', name: '补包学员一' },
+    { id: 'bundle-student-2', studentId: 'bundle-student-2', name: '补包学员二' }
+  ];
+  const bundleVersion = 'student-teaching-summary-existing-ready';
+  const bundleHandler = makeHandler();
+  bundleHandler.tableRows.ft_student_teaching_summary = [
+    {
+      id: '__student_teaching_summary_meta__',
+      kind: 'student-teaching-summary-meta',
+      status: 'ready',
+      rowCount: bundleRows.length,
+      generation: 1,
+      batchId: bundleVersion,
+      activeVersion: bundleVersion,
+      sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
+      completedAt: '2026-08-27T00:00:01.000Z',
+      checksum: buildStudentTeachingSummaryChecksum(bundleRows)
+    },
+    ...bundleRows.map(row => buildVersionedStudentTeachingSummaryRow(row, bundleVersion))
+  ];
+  const bundleRes = {};
+  await bundleHandler.handler({
+    path: '/page-data/customer-center-list/publish-summary-bundle',
+    method: 'POST',
+    user: { role: 'admin', name: '管理员' },
+    res: bundleRes,
+    query: new URLSearchParams()
+  });
+  assert.strictEqual(bundleRes.statusCode, 200, '当前 ready 版本应允许只补写发布包');
+  assert.strictEqual(bundleRes.body.count, bundleRows.length, '补写发布包应保持当前 ready 版本行数');
+  assert.ok(
+    bundleHandler.tableRows.ft_student_teaching_summary.some(row => row.id === buildStudentTeachingSummaryBundleId(bundleVersion)),
+    '补写发布包接口必须写入当前 activeVersion 的单行 bundle'
+  );
+  ['ft_schedule','ft_entitlement_ledger','ft_membership_benefit_ledger','ft_purchases','ft_entitlements','ft_students'].forEach(table => {
+    assert.strictEqual(bundleHandler.calls.tableScans[table] || 0, 0, `补写发布包不能扫描事实大表 ${table}`);
+  });
+  assert.strictEqual(bundleHandler.calls.prefixScans.ft_student_teaching_summary, 1, '补写发布包只能按当前 activeVersion 扫摘要表版本前缀');
 
   const isolatedHandler = makeIsolatedRouteHandler();
   const isolatedRes = {};

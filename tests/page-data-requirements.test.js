@@ -170,6 +170,13 @@ assert.match(corePagesSource, /needsTeachingFacts&&T_ENTITLEMENT_LEDGER \? cappe
 assert.match(corePagesSource, /needsTeachingFacts&&T_SCHEDULE \? cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)/, 'fresh or legacy-summary customer center reads should include live schedule rows');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryRows/, 'customer center should expose an explicit admin-only rebuild path for the student teaching summary read model');
 assert.match(corePagesSource, /path==='\/page-data\/customer-center-list\/rebuild-summary'&&method==='POST'[\s\S]*buildStudentTeachingSummaryBundleRow\(rows,batchId\)[\s\S]*await put\(T_STUDENT_TEACHING_SUMMARY,bundle\.id,bundle\)/, 'student teaching summary manual rebuild must publish the single-row bundle used by first-screen pages');
+const publishSummaryBundleRouteSource = corePagesSource.slice(
+  corePagesSource.indexOf("path==='/page-data/customer-center-list/publish-summary-bundle'&&method==='POST'"),
+  corePagesSource.indexOf("path==='/page-data/customer-center-list/rebuild-summary'&&method==='POST'")
+);
+assert.match(publishSummaryBundleRouteSource, /scanByIdPrefix\(T_STUDENT_TEACHING_SUMMARY,`\$\{STUDENT_TEACHING_SUMMARY_VERSION_PREFIX\}\$\{activeVersion\}:`\)/, 'student teaching summary bundle repair must read only the current ready summary version prefix');
+assert.match(publishSummaryBundleRouteSource, /buildStudentTeachingSummaryBundleRow\(publishedRows,activeVersion\)[\s\S]*await put\(T_STUDENT_TEACHING_SUMMARY,bundle\.id,bundle\)/, 'student teaching summary bundle repair must write the single-row bundle');
+assert.doesNotMatch(publishSummaryBundleRouteSource, /cappedScan|getCachedScan|T_STUDENTS|T_PURCHASES|T_ENTITLEMENTS|T_ENTITLEMENT_LEDGER|T_SCHEDULE|T_MEMBERSHIP_BENEFIT_LEDGER|T_FEEDBACKS/, 'student teaching summary bundle repair must not scan fact tables');
 assert.match(corePagesSource, /path==='\/page-data\/purchase-detail'&&method==='GET'[\s\S]*getCachedRow\(T_PURCHASES,purchaseId\)/, 'purchase drawer should have a per-purchase detail endpoint');
 const purchaseCreateRouteSource = corePagesSource.slice(
   corePagesSource.indexOf("path==='/page-data/purchase-create'&&method==='GET'"),

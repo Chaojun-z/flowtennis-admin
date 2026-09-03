@@ -6,6 +6,8 @@ const { createStudentRosterIndexReader, buildCustomerCenterPagePayload } = requi
 const {
   STUDENT_TEACHING_SUMMARY_READY,
   STUDENT_TEACHING_SUMMARY_FAILED,
+  STUDENT_TEACHING_SUMMARY_META_ID,
+  STUDENT_TEACHING_SUMMARY_VERSION_PREFIX,
   buildStudentTeachingSummaryMetaRow,
   buildStudentTeachingSummaryChecksum,
   filterStudentTeachingSummaryPublishedRows,
@@ -449,6 +451,23 @@ function createCorePageDataRoutes(deps={}){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
       return sendCustomerCenterTeachingSummary(res,user,query);
+    }
+    if(path==='/page-data/customer-center-list/publish-summary-bundle'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      if(!T_STUDENT_TEACHING_SUMMARY||!put||!getCachedRow||!scanByIdPrefix)return sendJson(res,{error:'摘要发布包补写未配置'},500);
+      await init();
+      const meta=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,STUDENT_TEACHING_SUMMARY_META_ID).catch(()=>null);
+      const activeVersion=String(meta?.activeVersion||'').trim();
+      if(String(meta?.status||'')!==STUDENT_TEACHING_SUMMARY_READY||!activeVersion)return sendJson(res,{error:'当前教学学员摘要未发布，拒绝补写发布包'},503);
+      const versionRows=await scanByIdPrefix(T_STUDENT_TEACHING_SUMMARY,`${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`);
+      const publishedRows=filterStudentTeachingSummaryPublishedRows(versionRows,{activeVersion});
+      const checksum=buildStudentTeachingSummaryChecksum(publishedRows);
+      if(Number(meta.rowCount)!==publishedRows.length||String(meta.checksum||'')!==checksum){
+        return sendJson(res,{error:'当前教学学员摘要版本行与 meta 不一致，拒绝补写发布包'},503);
+      }
+      const bundle=buildStudentTeachingSummaryBundleRow(publishedRows,activeVersion);
+      await put(T_STUDENT_TEACHING_SUMMARY,bundle.id,bundle);
+      return sendJson(res,{success:true,count:publishedRows.length,activeVersion,checksum});
     }
     if(path==='/page-data/customer-center-list/rebuild-summary'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
