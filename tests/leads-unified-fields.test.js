@@ -116,6 +116,11 @@ assert.strictEqual(
   '2026-04-15',
   'polluted lead date and created time should not override earlier business facts'
 );
+assert.strictEqual(
+  vm.runInContext("leadDateDisplayText({ id: 'repair-lead-20260816-9947893755e4', leadDateSource: 'system', leadDate: '2026-02-26 14:30', createdAt: '2026-08-16T13:08:06.843Z', updatedAt: '2026-08-16T13:08:06.843Z' })", context),
+  '2026-02-26',
+  'system lead time returned by backend must not be replaced by repair created time'
+);
 
 const priorityEmpty = vm.runInContext('renderLeadPriorityCell({ followupPriority: "" })', context);
 assert.strictEqual(priorityEmpty, '<cell muted="true">-</cell>', 'empty priority should render as a plain dash cell');

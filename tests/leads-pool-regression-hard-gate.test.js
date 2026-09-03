@@ -104,7 +104,52 @@ const businessRows = buildLeadPoolRows({
   }]
 });
 assert.strictEqual(businessRows[0].leadDate, '2026-04-15', '无人工线索时间时必须优先取最早业务事实时间');
+assert.strictEqual(businessRows[0].firstTouchAt, '2026-04-15', '线索池必须把最终最早业务时间带给前端，不能只内部算出 leadDate');
 assert.notStrictEqual(businessRows[0].leadDate, '2026-09-01T10:00:00.000Z', '系统修复时间不能冒充线索时间');
+
+const repairGeneratedRows = buildLeadPoolRows({
+  leads: [{
+    id: 'repair-lead-20260816-9947893755e4',
+    studentId: 'repair-student-20260816-9947893755e4',
+    displayName: '董凡萱',
+    createdAt: '2026-08-16T13:08:06.843Z',
+    updatedAt: '2026-08-16T13:08:06.843Z'
+  }],
+  customerLifecycleRows: [{
+    customerKey: 'student:repair-student-20260816-9947893755e4',
+    sourceLeadId: 'repair-lead-20260816-9947893755e4',
+    studentId: 'repair-student-20260816-9947893755e4',
+    displayName: '董凡萱',
+    firstTouchAt: '2026-02-26 14:30',
+    createdAt: '2026-08-16T13:08:06.843Z',
+    updatedAt: '2026-08-16T13:08:06.843Z'
+  }]
+});
+assert.strictEqual(repairGeneratedRows[0].leadDate, '2026-02-26 14:30', '修复生成的线索必须展示真实最早上课时间，不能展示修复生成时间');
+assert.strictEqual(repairGeneratedRows[0].firstTouchAt, '2026-02-26 14:30', '修复生成的线索必须把真实最早上课时间传给前端');
+
+const materializedManualPollutionRows = buildLeadPoolRows({
+  leads: [{
+    id: 'lead-from-student-4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    studentId: '4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    displayName: '孟岩',
+    leadDate: '2026-08-28',
+    leadDateSource: 'manual',
+    createdAt: '2026-04-26T09:33:41.879Z',
+    updatedAt: '2026-08-31T04:19:28.923Z'
+  }],
+  customerLifecycleRows: [{
+    customerKey: 'student:4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    sourceLeadId: 'lead-from-student-4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    studentId: '4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    displayName: '孟岩',
+    firstTouchAt: '2026-04-26T09:33:41.879Z',
+    createdAt: '2026-04-26T09:33:41.879Z',
+    updatedAt: '2026-08-31T04:19:28.923Z'
+  }]
+});
+assert.strictEqual(materializedManualPollutionRows[0].leadDate, '2026-04-26T09:33:41.879Z', 'lead-from-student 系统生成线索不能信任历史错误 manual 日期');
+assert.strictEqual(materializedManualPollutionRows[0].leadDateSource, 'system', 'lead-from-student 系统生成线索的错误 manual 标记必须降级为 system');
 
 const summaryFactRows = buildLeadPoolRows({
   leads: [{

@@ -197,6 +197,27 @@ const freePrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: freePriva
 assert.strictEqual(freePrivateLeadRows[0].leadStage, '跟进中', 'free class follow-up should not become 已约体验 or 已成交');
 assert.strictEqual(freePrivateLeadRows[0].demandProduct, '私教课');
 
+const materializedManualPollutionLifecycleRows = buildCustomerLifecycleRows({
+  leads: [{
+    id: 'lead-from-student-4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    studentId: '4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    displayName: '孟岩',
+    leadDate: '2026-08-28',
+    leadDateSource: 'manual',
+    createdAt: '2026-04-26T09:33:41.879Z',
+    updatedAt: '2026-08-31T04:19:28.923Z'
+  }],
+  students: [{
+    id: '4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    name: '孟岩',
+    sourceLeadId: 'lead-from-student-4f559caa-7b7e-46b6-8cfd-08f6867227e3',
+    createdAt: '2026-04-26T09:33:41.879Z',
+    updatedAt: '2026-07-17T11:56:59.601Z'
+  }]
+});
+assert.strictEqual(materializedManualPollutionLifecycleRows[0].leadDateSource, 'system', 'lead-from-student 系统生成线索不能在生命周期源头保留错误 manual 标记');
+assert.strictEqual(materializedManualPollutionLifecycleRows[0].firstTouchAt, '2026-04-26T09:33:41.879Z', 'lead-from-student 系统生成线索必须回到真实学员创建时间');
+
 const shiDuohaoRows = buildCustomerLifecycleRows({
   students: [
     {

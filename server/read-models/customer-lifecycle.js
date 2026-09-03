@@ -26,6 +26,7 @@ function leadDateSource(row = {}) {
 }
 
 function resolveLeadDateSource(row = {}) {
+  if (generatedManualLeadDateLooksPolluted(row)) return 'system';
   const source = leadDateSource(row).toLowerCase();
   if (source === 'manual' || source === 'system') return source;
   const hasExplicitLeadDate = Object.prototype.hasOwnProperty.call(row, 'leadDate') || Object.prototype.hasOwnProperty.call(row, '线索时间');
@@ -44,6 +45,34 @@ function leadId(row = {}) {
 
 function materializedStudentLead(row = {}) {
   return /^lead-from-student-/.test(leadId(row));
+}
+
+function systemGeneratedLead(row = {}) {
+  return /^(lead-from-student|repair-lead)-/.test(text(leadId(row) || sourceLeadId(row)));
+}
+
+function repairGeneratedLead(row = {}) {
+  return /^repair-lead-/.test(text(leadId(row) || sourceLeadId(row)));
+}
+
+function trustedGeneratedLeadCreatedAt(row = {}) {
+  const id = text(leadId(row) || sourceLeadId(row));
+  if (!/^lead-from-student-/.test(id)) return '';
+  const createdAt = text(row.createdAt);
+  const updatedAt = text(row.updatedAt);
+  if (!createdAt) return '';
+  if (!updatedAt) return '';
+  if (updatedAt && dateValue(createdAt) >= dateValue(updatedAt)) return '';
+  return createdAt;
+}
+
+function generatedManualLeadDateLooksPolluted(row = {}) {
+  if (!systemGeneratedLead(row)) return false;
+  if (repairGeneratedLead(row)) return true;
+  const explicitLeadDate = text(row.leadDate || row['线索时间']);
+  const createdAt = trustedGeneratedLeadCreatedAt(row);
+  if (!explicitLeadDate || !createdAt) return false;
+  return dateValue(explicitLeadDate) > dateValue(createdAt);
 }
 
 function materializedLifecycleSource(row = {}) {
@@ -391,9 +420,10 @@ function buildCustomerLifecycleRows({
     const row = rowFor(id, `lead:${id || text(lead.displayName || lead.name)}`);
     const source = resolveLeadDateSource(lead);
     const explicitLeadDate = text(lead.leadDate || lead['线索时间']);
+    const generatedCreatedAt = trustedGeneratedLeadCreatedAt(lead);
     const leadDateValue = source === 'manual'
       ? explicitLeadDate
-      : firstValue(lead.leadDate, materializedStudentLead(lead) ? '' : lead.createdAt);
+      : firstValue(generatedCreatedAt, systemGeneratedLead(lead) ? '' : lead.leadDate, materializedStudentLead(lead) ? '' : lead.createdAt);
     mergeIntoRow(row, {
       sourceLeadId: id,
       leadId: id,
@@ -425,6 +455,7 @@ function buildCustomerLifecycleRows({
         lead.formalSignupAt,
         lead.enrollAt,
         lead.conversionAt,
+        generatedCreatedAt,
         source === 'system' ? '' : (materializedStudentLead(lead) ? '' : lead.createdAt)
       ),
       createdAt: firstValue(lead.createdAt, lead.leadDate)

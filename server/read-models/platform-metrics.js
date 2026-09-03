@@ -1350,6 +1350,7 @@ function earliestBusinessDateText(...values) {
 }
 
 function leadDateSourceValue(row = {}, lead = {}) {
+  if (generatedManualLeadDateLooksPolluted(row, lead)) return 'system';
   return text(lead.leadDateSource || lead.leadDateKind || lead.leadDateOrigin || row.leadDateSource || row.leadDateKind || row.leadDateOrigin);
 }
 
@@ -1366,7 +1367,7 @@ function leadDateIsManual(row = {}, lead = {}) {
 }
 
 function trustedRealLeadCreatedAt(row = {}, lead = {}, businessDate = '') {
-  if (!rowId(lead) || row.hasTeachingSummarySnapshot || isOrphanMaterializedStudentLead(lead)) return '';
+  if (!rowId(lead) || row.hasTeachingSummarySnapshot || isOrphanMaterializedStudentLead(lead) || isRepairGeneratedLead(lead)) return '';
   const createdAt = text(lead.createdAt);
   if (!createdAt) return '';
   const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt);
@@ -1421,6 +1422,43 @@ function visibleLeadProfileNote(lead = {}) {
   const note = text(lead.profileNote);
   if (/课包消耗记录#|余额\d+\/\d+|来源价格\d*[：:]/.test(note)) return '';
   return note;
+}
+
+function isSystemGeneratedLead(lead = {}) {
+  return /^(lead-from-student|repair-lead)-/.test(text(lead.id || lead.leadId || lead.sourceLeadId));
+}
+
+function isRepairGeneratedLead(lead = {}) {
+  return /^repair-lead-/.test(text(lead.id || lead.leadId || lead.sourceLeadId));
+}
+
+function generatedManualLeadDateLooksPolluted(row = {}, lead = {}) {
+  if (!isSystemGeneratedLead(lead)) return false;
+  if (isRepairGeneratedLead(lead)) return true;
+  const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
+  const businessDate = earliestBusinessDateText(
+    row.firstTouchAt,
+    row.trialAtRaw,
+    row.trialBookedAt,
+    row.trialAttendedAt,
+    row.packagePurchaseDate,
+    row.courseFirstPurchaseAt,
+    row.lastFormalLessonAt,
+    row.detailRecentLessonDate,
+    row.conversionAt,
+    lead.firstTouchAt,
+    lead.trialAtRaw,
+    lead.trialBookedAt,
+    lead.trialAttendedAt,
+    lead.packagePurchaseDate,
+    lead.courseFirstPurchaseAt,
+    lead.lastFormalLessonAt,
+    lead.detailRecentLessonDate,
+    lead.conversionAt,
+    lead.createdAt
+  );
+  if (!explicitLeadDate || !businessDate) return false;
+  return leadDateMs(explicitLeadDate) > leadDateMs(businessDate);
 }
 
 function isOrphanMaterializedStudentLead(lead = {}) {
@@ -1555,6 +1593,7 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
     const realStudentId = text(lead.studentId || lead.formalStudentId || lead.courseStudentId);
     const realCourtId = text(lead.courtId || lead.bookingCourtId);
     const realMembershipAccountId = text(lead.membershipAccountId || lead.memberId);
+    const finalLeadDate = leadBusinessDate(lifecycle, lead);
     const next = {
       ...lead,
       id,
@@ -1579,12 +1618,13 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       profileNote: visibleLeadProfileNote(lead),
       leadEnteredAt: text(lifecycle.leadEnteredAt || lead.leadEnteredAt || lead.createdAt),
       leadDateSource: leadDateSourceValue(lifecycle, lead) || (leadDateIsManual(lifecycle, lead) ? 'manual' : 'system'),
+      firstTouchAt: finalLeadDate,
       dealType,
       conversionType: dealType,
       studentId: realStudentId || text(lifecycle.studentId),
       courtId: realCourtId || text(lifecycle.courtId),
       membershipAccountId: realMembershipAccountId || text(lifecycle.membershipAccountId),
-      leadDate: leadBusinessDate(lifecycle, lead),
+      leadDate: finalLeadDate,
       createdAt: text(lead.createdAt || lifecycle.createdAt || lifecycle.leadDate),
       leadStage,
       systemStatus: leadStage,
@@ -1624,13 +1664,15 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
     if (!activeStatus(lead) || nonPersonProfile(lead)) return;
     const source = businessTaxonomy.normalizeLeadSource(lead.source);
     const orphanMaterialized = isOrphanMaterializedStudentLead(lead);
+    const finalLeadDate = leadBusinessDate({}, lead);
     rows.set(id, {
       ...lead,
       id,
       sourceLeadId: id,
       source,
       leadDateSource: leadDateSourceValue({}, lead) || (leadDateIsManual({}, lead) ? 'manual' : 'system'),
-      leadDate: leadBusinessDate({}, lead),
+      leadDate: finalLeadDate,
+      firstTouchAt: finalLeadDate,
       leadEnteredAt: text(lead.leadEnteredAt || lead.createdAt || ''),
       dealType: orphanMaterialized ? '' : text(lead.dealType || lead.conversionType),
       conversionType: orphanMaterialized ? '' : text(lead.conversionType || lead.dealType),
