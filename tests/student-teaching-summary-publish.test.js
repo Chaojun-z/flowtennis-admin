@@ -132,6 +132,46 @@ async function testReadySummaryReadDoesNotWaitForHungScan() {
   assert.ok(result.elapsedMs < 200, `摘要读取应快速降级，实际 ${result.elapsedMs}ms`);
 }
 
+async function testReadySummaryDefaultTimeoutAllowsColdBundleRead() {
+  const tableName = 'ft_student_teaching_summary_cold_bundle_test';
+  const version = 'student-teaching-summary-cold-bundle-test';
+  const logicalRows = [{ id: 'cold-student', studentId: 'cold-student', name: '冷启动学员' }];
+  const bundle = buildStudentTeachingSummaryBundleRow(logicalRows, version);
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: logicalRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(logicalRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
+    completedAt: '2026-08-28T00:00:01.000Z'
+  });
+  let prefixScans = 0;
+  const startedAt = Date.now();
+  const rows = await readReadyStudentTeachingSummaryRows({
+    tableName,
+    getCachedRow: async (table, id) => {
+      assert.strictEqual(table, tableName);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(meta);
+      if (id === bundle.id) return clone(bundle);
+      return null;
+    },
+    scanByIdPrefix: async () => {
+      prefixScans += 1;
+      return [];
+    },
+    getCachedScan: async () => {
+      throw new Error('发布包冷读不应回退整表扫描');
+    },
+    intervalMs: 10
+  });
+
+  assert.deepStrictEqual(rows.map(row => row.studentId), ['cold-student']);
+  assert.strictEqual(prefixScans, 0, '冷启动读取 ready 发布包不能扫版本行或事实表');
+  assert.ok(Date.now() - startedAt < 1600, '冷启动发布包读取应在可接受时间内完成');
+}
+
 async function testReadySummaryRowsUseActiveVersionMemoryCache() {
   const tableName = 'ft_student_teaching_summary_cache_test';
   const version = 'student-teaching-summary-cache-test';
@@ -486,6 +526,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
 
 (async () => {
   await testReadySummaryReadDoesNotWaitForHungScan();
+  await testReadySummaryDefaultTimeoutAllowsColdBundleRead();
   await testReadySummaryRowsPreferBundleRow();
   await testReadySummaryRowsRejectBadBundleWithoutPrefixScan();
   await testReadySummaryRowsUseActiveVersionMemoryCache();

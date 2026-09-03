@@ -372,7 +372,7 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(
     res.body.standardLifecycleMetrics.teachingSummary.trialAttendedStudentCount,
-    2,
+    3,
     '客户中心顶部上过体验课必须读取统一教学摘要读模型'
   );
   assert.strictEqual(
@@ -382,7 +382,7 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   );
   assert.strictEqual(
     res.body.standardLifecycleMetrics.teachingSummary.trialAttendedWithoutFormalCount,
-    1,
+    2,
     '体验未买正式课必须由同一批统一教学摘要读模型计算'
   );
   assert.strictEqual(
@@ -398,7 +398,7 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   const fresh = await request('fresh=1');
   assert.strictEqual(
     fresh.res.body.standardLifecycleMetrics.teachingSummary.trialAttendedStudentCount,
-    2,
+    3,
     '强制 fresh 也不能让首屏回退成扫描事实大表'
   );
 
@@ -543,9 +543,10 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     res: notReadyRes,
     query: new URLSearchParams()
   });
-  assert.strictEqual(notReadyRes.statusCode, 200, '统一摘要未就绪时客户中心也必须返回可渲染结构，避免页面 503');
+  assert.strictEqual(notReadyRes.statusCode, 503, '统一摘要未就绪时客户中心不能返回 200 空数据冒充成功');
   assert.strictEqual(notReadyRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用时必须显式标记降级状态');
-  assert.deepStrictEqual(notReadyRes.body.teachingStudentViews.historicalStudents, [], '摘要不可用时不能回旧数据');
+  assert.strictEqual(notReadyRes.body.teachingStudentViews, undefined, '摘要不可用时不能返回空学员列表覆盖真实数据');
+  assert.strictEqual(notReadyRes.body.listPage, undefined, '摘要不可用时不能返回空分页覆盖真实数据');
 
   const fallbackFactRows = {
     ft_leads: [{
@@ -620,12 +621,10 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     res: fallbackRes,
     query: new URLSearchParams()
   });
-  assert.strictEqual(fallbackRes.statusCode, 200, '摘要不可用但事实表可用时客户中心仍应返回 200');
+  assert.strictEqual(fallbackRes.statusCode, 503, '摘要不可用但事实表可用时客户中心也不能回扫事实表或返回 200 空数据');
   assert.strictEqual(fallbackRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用但事实表可用时仍要标记降级状态');
-  assert.deepStrictEqual(fallbackRes.body.teachingStudentViews.historicalStudents, [], '摘要不可用时不能回扫事实表拼历史学员');
-  assert.deepStrictEqual(fallbackRes.body.teachingStudentViews.activeStudents, [], '摘要不可用时不能回扫事实表拼在期学员');
-  assert.strictEqual(fallbackRes.body.standardLifecycleMetrics?.teachingSummary?.historicalStudentCount || 0, 0, '摘要不可用时顶部历史学员必须受控降级');
-  assert.strictEqual(fallbackRes.body.standardLifecycleMetrics?.teachingSummary?.activeStudentCount || 0, 0, '摘要不可用时顶部在期学员必须受控降级');
+  assert.strictEqual(fallbackRes.body.teachingStudentViews, undefined, '摘要不可用时不能回扫事实表拼历史学员');
+  assert.strictEqual(fallbackRes.body.standardLifecycleMetrics, undefined, '摘要不可用时不能返回 0 顶部数据覆盖真实数据');
   ['ft_schedule','ft_entitlement_ledger','ft_membership_benefit_ledger','ft_purchases','ft_entitlements','ft_students'].forEach(table => {
     assert.strictEqual(fallbackHandler.calls.tableScans[table] || 0, 0, `摘要不可用时客户中心不能回扫事实大表 ${table}`);
   });

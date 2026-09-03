@@ -1127,9 +1127,9 @@ function booleanSnapshotValue(value) {
 }
 
 function teachingSummaryTrialAttendedSnapshot(row = {}) {
+  if (teachingSummaryRowHasConsumedTrialPackage(row)) return true;
   const explicit = booleanSnapshotValue(row.hasTrialAttended);
   if (explicit !== undefined) return explicit;
-  if (teachingSummaryRowHasConsumedTrialPackage(row)) return true;
   return teachingSummaryRowHasTrialLesson(row);
 }
 

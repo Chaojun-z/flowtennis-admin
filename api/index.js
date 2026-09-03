@@ -13,7 +13,7 @@ const { buildMembershipFinanceSummary } = require('../server/read-models/members
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
 const { buildOperationsPagePayload, invalidateOperationsPageDataCache, getOperationsPageScope } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js'), { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
-const { createStudentTeachingSummaryCache } = require('../server/read-models/student-teaching-summary-cache.js');
+const { createStudentTeachingSummaryCache, readReadyStudentTeachingSummaryRows } = require('../server/read-models/student-teaching-summary-cache.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
 const { createAuthServices } = require('../server/auth');
@@ -469,7 +469,7 @@ async function prewarmHotScanCache(){
 async function prewarmStudentTeachingSummaryCache(){
   if(process.env.DISABLE_HOT_SCAN_PREWARM==='true')return [];
   if(!T_STUDENT_TEACHING_SUMMARY)return [];
-  return getCachedScan(T_STUDENT_TEACHING_SUMMARY).catch(err=>{
+  return readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix}).catch(err=>{
     console.warn('[api-timing] prewarm student teaching summary failed',err?.message||err);
     return [];
   });

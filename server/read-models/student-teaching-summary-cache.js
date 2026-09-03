@@ -11,6 +11,10 @@ const STUDENT_TEACHING_SUMMARY_FAILED = 'failed';
 const STUDENT_TEACHING_SUMMARY_VERSION_PREFIX = '__student_teaching_summary_version__:';
 const STUDENT_TEACHING_SUMMARY_BUNDLE_PREFIX = '__student_teaching_summary_bundle__:';
 const READY_STUDENT_TEACHING_SUMMARY_CACHE_TTL_MS = 30000;
+const READY_STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS = Math.max(
+  1200,
+  parseInt(process.env.STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS || '2500', 10) || 2500
+);
 const readyStudentTeachingSummaryRowsCache = new Map();
 
 function parseArr(v) {
@@ -340,7 +344,7 @@ async function readReadyStudentTeachingSummaryRows({
   getCachedScan,
   getCachedRow,
   scanByIdPrefix,
-  timeoutMs = 900,
+  timeoutMs = READY_STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS,
   intervalMs = 150
 } = {}) {
   if (!tableName || typeof getCachedScan !== 'function') {
