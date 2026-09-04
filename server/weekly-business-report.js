@@ -1,4 +1,8 @@
 const crypto = require('crypto');
+const { effectiveScheduleStatus } = require('./schedule.js');
+const { bookingDurationHours, normalizeCourtHistory, courtHistoryBusinessDate } = require('./page-data/court-account-read-model.js');
+const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
+const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
 const WEEKLY_REPORT_CAMPUS_NAME = '顺义马坡';
 const WEEKLY_REPORT_TIMEZONE = 'Asia/Shanghai';
@@ -14,6 +18,15 @@ function addUtcDays(day, offset) {
   const ms = dateKeyUtcMs(day);
   if (ms == null) return '';
   return new Date(ms + offset * 86400000).toISOString().slice(0, 10);
+}
+
+function isoWeekNumber(day = '') {
+  const ms = dateKeyUtcMs(day);
+  if (ms == null) return '';
+  const date = new Date(ms);
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = Date.UTC(date.getUTCFullYear(), 0, 1);
+  return Math.ceil((((date.getTime() - yearStart) / 86400000) + 1) / 7);
 }
 
 function beijingDateKey(value = new Date()) {
@@ -95,6 +108,249 @@ function fieldNumber(row = {}, keys = []) {
   return 0;
 }
 
+function textValue(row = {}, keys = []) {
+  for (const key of keys) {
+    const value = String(row?.[key] ?? '').trim();
+    if (value) return value;
+  }
+  return '';
+}
+
+function inPeriod(day = '', period = {}) {
+  const value = String(day || '').slice(0, 10);
+  if (!value) return false;
+  if (period.startDate && value < period.startDate) return false;
+  if (period.endDate && value > period.endDate) return false;
+  return true;
+}
+
+function campusMatches(row = {}) {
+  const keys = [
+    row.campus,
+    row.campusName,
+    row.campusCode,
+    row.sourceCampus,
+    row.location,
+    row.venue
+  ].map(normalizeCampusValue).filter(Boolean);
+  const target = normalizeCampusValue(WEEKLY_REPORT_CAMPUS_NAME);
+  return !keys.length || keys.includes(target) || keys.includes('shunyi_mapo');
+}
+
+function isActiveCoach(row = {}) {
+  return String(row.status || 'active').trim() === 'active';
+}
+
+function cleanCoachName(value = '') {
+  return String(value || '').trim().replace(/\s*教练$/, '');
+}
+
+function normalizeCoachDisplayName(value = '') {
+  const name = cleanCoachName(value);
+  return name ? `${name}教练` : '';
+}
+
+function scheduleHours(row = {}) {
+  const explicit = optionalNumber(row.durationHours ?? row.hours);
+  if (explicit !== null && explicit > 0) return explicit;
+  const start = new Date(String(row.startTime || '').replace(' ', 'T'));
+  const end = new Date(String(row.endTime || '').replace(' ', 'T'));
+  if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start) return numberValue((end - start) / 3600000);
+  return fieldNumber(row, ['lessonCount']);
+}
+
+function scheduleCourseBucket(row = {}) {
+  const raw = `${row.courseType || ''} ${row.experienceType || ''} ${row.productName || ''} ${row.packageName || ''}`;
+  if (/陪打/.test(raw)) return 'sparringHours';
+  if (/专项/.test(raw)) return 'specialHours';
+  if (/体验/.test(raw)) return 'trialHours';
+  if (/小班/.test(raw)) return 'smallClassHours';
+  return 'privateHours';
+}
+
+function isValidSchedule(row = {}, period = {}) {
+  return inPeriod(row.startTime, period) && campusMatches(row) && effectiveScheduleStatus(row) !== '已取消';
+}
+
+function isPrivateCoursePurchase(row = {}) {
+  if (['voided', 'refunded', 'deleted'].includes(String(row.status || '').trim())) return false;
+  const raw = `${row.courseType || ''} ${row.packageName || ''} ${row.productName || ''}`;
+  return /私教/.test(raw) && !/体验/.test(raw);
+}
+
+function purchaseAmount(row = {}) {
+  return fieldNumber(row, ['finalAmount', 'amountPaid', 'actualAmount', 'paidAmount', 'receivedAmount', 'amount']);
+}
+
+function purchaseStudentKey(row = {}) {
+  return textValue(row, ['studentId', 'studentName', 'customerName', 'name']) || textValue(row, ['id']);
+}
+
+function isFirstPurchase(row = {}, allRows = []) {
+  const explicit = String(row.firstPurchase || row.isFirstPurchase || row.paidStatus || row.courseDealPath || '').trim();
+  if (/首次/.test(explicit) || explicit === 'true' || explicit === '1') return true;
+  if (/续/.test(explicit) || explicit === 'false') return false;
+  const key = purchaseStudentKey(row);
+  const date = String(row.purchaseDate || row.createdAt || '').slice(0, 10);
+  if (!key || !date) return false;
+  return !allRows.some(item => item !== row && purchaseStudentKey(item) === key && String(item.purchaseDate || item.createdAt || '').slice(0, 10) < date);
+}
+
+function buildCourseRevenueFromRaw(raw = {}, period = {}, previousRaw = {}) {
+  const privatePurchases = normalizeRows(raw.purchases).filter(row => campusMatches(row) && isPrivateCoursePurchase(row));
+  const currentPurchases = privatePurchases.filter(row => inPeriod(row.purchaseDate || row.createdAt, period));
+  const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
+  const previousPurchases = normalizeRows(previousRaw.purchases || raw.purchases).filter(row => campusMatches(row) && isPrivateCoursePurchase(row) && inPeriod(row.purchaseDate || row.createdAt, previousPeriod));
+  const firstRows = currentPurchases.filter(row => isFirstPurchase(row, privatePurchases));
+  const renewalRows = currentPurchases.filter(row => !isFirstPurchase(row, privatePurchases));
+  const consumedRows = normalizeRows(raw.financeNormalizedRows).filter(row => {
+    const type = String(row.businessType || row.displayBusinessType || '').trim();
+    const action = String(row.action || row.transactionType || '').trim();
+    return inPeriod(row.businessDate || row.date || row.createdAt, period) && /课程/.test(type) && /消耗|入账/.test(action);
+  });
+  const previousConsumedRows = normalizeRows(previousRaw.financeNormalizedRows || raw.financeNormalizedRows).filter(row => {
+    const type = String(row.businessType || row.displayBusinessType || '').trim();
+    const action = String(row.action || row.transactionType || '').trim();
+    return inPeriod(row.businessDate || row.date || row.createdAt, previousPeriod) && /课程/.test(type) && /消耗|入账/.test(action);
+  });
+  const currentAmount = currentPurchases.reduce((sum, row) => sum + purchaseAmount(row), 0);
+  const previousAmount = previousPurchases.reduce((sum, row) => sum + purchaseAmount(row), 0);
+  const consumedAmount = consumedRows.reduce((sum, row) => sum + Math.abs(fieldNumber(row, ['recognizedRevenueDelta', 'amount', 'cashDelta'])), 0);
+  const previousConsumedAmount = previousConsumedRows.reduce((sum, row) => sum + Math.abs(fieldNumber(row, ['recognizedRevenueDelta', 'amount', 'cashDelta'])), 0);
+  const depletedEntitlements = normalizeRows(raw.entitlements).filter(row => {
+    if (!campusMatches(row)) return false;
+    const remaining = optionalNumber(row.remainingLessons);
+    if (remaining === null || remaining > 0) return false;
+    return inPeriod(row.depletedAt || row.updatedAt || row.lastConsumedAt || row.createdAt, period);
+  });
+  return {
+    totalPeople: new Set(privatePurchases.map(purchaseStudentKey).filter(Boolean)).size,
+    totalAmount: privatePurchases.reduce((sum, row) => sum + purchaseAmount(row), 0),
+    newPeople: new Set(firstRows.map(purchaseStudentKey).filter(Boolean)).size,
+    newAmount: firstRows.reduce((sum, row) => sum + purchaseAmount(row), 0),
+    consumedAmount: numberValue(consumedAmount),
+    renewalPeople: new Set(renewalRows.map(purchaseStudentKey).filter(Boolean)).size,
+    renewalAmount: renewalRows.reduce((sum, row) => sum + purchaseAmount(row), 0),
+    expiringPeople: new Set(depletedEntitlements.map(purchaseStudentKey).filter(Boolean)).size,
+    compare: {
+      people: compareValue(firstRows.length, previousPurchases.filter(row => isFirstPurchase(row, privatePurchases)).length),
+      amount: compareValue(currentAmount, previousAmount),
+      consumedAmount: compareValue(consumedAmount, previousConsumedAmount)
+    }
+  };
+}
+
+function buildCoachFromSchedules(raw = {}, period = {}, previousRaw = {}) {
+  const activeNames = new Set(normalizeRows(raw.coaches).filter(isActiveCoach).map(row => cleanCoachName(row.name || row.coachName)).filter(Boolean));
+  const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
+  const build = (rows = [], targetPeriod = {}) => {
+    const map = new Map();
+    normalizeRows(rows).filter(row => isValidSchedule(row, targetPeriod)).forEach(row => {
+      const clean = cleanCoachName(row.coach || row.coachName);
+      if (!clean || (activeNames.size && !activeNames.has(clean))) return;
+      const coach = normalizeCoachDisplayName(clean);
+      const current = map.get(coach) || { coach, privateHours: 0, smallClassHours: 0, trialHours: 0, specialHours: 0, sparringHours: 0 };
+      current[scheduleCourseBucket(row)] += scheduleHours(row);
+      map.set(coach, current);
+    });
+    return Array.from(map.values()).map(row => {
+      const total = numberValue(row.privateHours + row.smallClassHours + row.trialHours + row.specialHours + row.sparringHours);
+      return { ...row, totalHours: total, scheduledCount: total };
+    }).filter(row => row.totalHours > 0);
+  };
+  const rows = build(raw.schedule, period);
+  const prevRows = build(previousRaw.schedule || raw.schedule, previousPeriod);
+  const prevMap = new Map(prevRows.map(row => [row.coach, row]));
+  const rowsWithCompare = rows.map(row => ({ ...row, compare: compareValue(row.totalHours, prevMap.get(row.coach)?.totalHours || 0), previousHours: prevMap.get(row.coach)?.totalHours || 0 }));
+  const total = rowsWithCompare.reduce((acc, row) => {
+    acc.privateHours += row.privateHours;
+    acc.smallClassHours += row.smallClassHours;
+    acc.trialHours += row.trialHours;
+    acc.specialHours += row.specialHours;
+    acc.sparringHours += row.sparringHours;
+    return acc;
+  }, { privateHours: 0, smallClassHours: 0, trialHours: 0, specialHours: 0, sparringHours: 0 });
+  const totalScheduled = numberValue(total.privateHours + total.smallClassHours + total.trialHours + total.specialHours + total.sparringHours);
+  const previousTotalScheduled = numberValue(prevRows.reduce((sum, row) => sum + row.totalHours, 0));
+  return {
+    totalScheduled,
+    totalHours: totalScheduled,
+    privateHours: numberValue(total.privateHours),
+    smallClassHours: numberValue(total.smallClassHours),
+    trialHours: numberValue(total.trialHours),
+    specialHours: numberValue(total.specialHours),
+    sparringHours: numberValue(total.sparringHours),
+    compare: {
+      totalHours: compareValue(totalScheduled, previousTotalScheduled),
+      totalScheduled: compareValue(totalScheduled, previousTotalScheduled)
+    },
+    rows: rowsWithCompare
+  };
+}
+
+function courtHistoryRows(raw = {}, period = {}) {
+  return normalizeRows(raw.courts).flatMap(court => normalizeCourtHistory(court.history).map(row => ({ ...row, court })))
+    .filter(row => inPeriod(courtHistoryBusinessDate(row) || row.date || row.createdAt, period) && campusMatches(row.court || row));
+}
+
+function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
+  const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
+  const activeNames = new Set(normalizeRows(raw.coaches).filter(isActiveCoach).map(row => cleanCoachName(row.name || row.coachName)).filter(Boolean));
+  const scheduleBelongsToActiveCoach = row => {
+    const clean = cleanCoachName(row.coach || row.coachName);
+    return !activeNames.size || !clean || activeNames.has(clean);
+  };
+  const scheduleRows = normalizeRows(raw.schedule).filter(row => isValidSchedule(row, period) && scheduleBelongsToActiveCoach(row));
+  const previousScheduleRows = normalizeRows(previousRaw.schedule || raw.schedule).filter(row => isValidSchedule(row, previousPeriod) && scheduleBelongsToActiveCoach(row));
+  const historyRows = courtHistoryRows(raw, period);
+  const previousHistoryRows = courtHistoryRows(previousRaw, previousPeriod);
+  const labels = [
+    { key: 'guest', label: '散客场地使用', tests: [/散客/, /约球局/] },
+    { key: 'member', label: '会员场地使用', tests: [/会员/] },
+    { key: 'course', label: '课程场地使用', tests: [/课程/] },
+    { key: 'free', label: '免费场地使用', tests: [/免费/, /内部使用/, /领导/] }
+  ];
+  const sumHistory = (rows, meta) => rows.filter(row => meta.tests.some(test => test.test(rowLabel(row, ['businessType', 'displayBusinessType', 'category', 'type', 'name', 'label'], ''))))
+    .reduce((acc, row) => ({
+      count: acc.count + 1,
+      hours: acc.hours + bookingDurationHours(row),
+      amount: acc.amount + (meta.key === 'free' ? 0 : fieldNumber(row, ['amount', 'actualAmount', 'cashAmount'])),
+      receivableAmount: acc.receivableAmount + fieldNumber(row, ['receivableAmount', 'originalAmount', 'concessionAmount', 'discountAmount', 'amount'])
+    }), { count: 0, hours: 0, amount: 0, receivableAmount: 0 });
+  const courseHours = scheduleRows.reduce((sum, row) => sum + scheduleHours(row), 0);
+  const previousCourseHours = previousScheduleRows.reduce((sum, row) => sum + scheduleHours(row), 0);
+  const result = labels.map(meta => {
+    const current = sumHistory(historyRows, meta);
+    const previous = sumHistory(previousHistoryRows, meta);
+    if (meta.key === 'course') {
+      current.count += scheduleRows.length;
+      current.hours += courseHours;
+      previous.count += previousScheduleRows.length;
+      previous.hours += previousCourseHours;
+    }
+    if (meta.key === 'free') current.amount = 0;
+    return {
+      ...meta,
+      count: numberValue(current.count),
+      hours: numberValue(current.hours),
+      amount: numberValue(current.amount),
+      receivableAmount: numberValue(current.receivableAmount),
+      compare: {
+        hours: compareValue(current.hours, previous.hours),
+        amount: compareValue(current.amount, previous.amount)
+      }
+    };
+  });
+  const totalHours = result.filter(row => row.key !== 'free').reduce((sum, row) => sum + row.hours, 0);
+  return {
+    totalAvailableHours: 392,
+    actualUsedHours: numberValue(totalHours),
+    utilizationRate: numberValue(totalHours * 100 / 392),
+    usageRows: result.map(row => ({ ...row, share: percent(row.hours, result.reduce((sum, item) => sum + item.hours, 0)) })),
+    freeUsage: result.find(row => row.key === 'free') || { count: 0, hours: 0, amount: 0, receivableAmount: 0 }
+  };
+}
+
 function cardNumber(source = {}, keys = []) {
   for (const key of keys) {
     const value = source?.cards?.[key]?.value ?? source?.[key]?.value ?? source?.[key];
@@ -156,17 +412,20 @@ function buildWeeklyBusinessReportSnapshot({
 } = {}) {
   const operations = operationsPayload.operations || {};
   const previous = previousOperationsPayload.operations || {};
+  const raw = operationsPayload.weeklyReportRaw || {};
+  const previousRaw = previousOperationsPayload.weeklyReportRaw || {};
   const token = String(shareToken || crypto.randomBytes(16).toString('hex')).trim();
   const totalIncome = cardValue(operations, ['overview', 'cards', 'totalIncome']);
   const previousTotalIncome = cardValue(previous, ['overview', 'cards', 'totalIncome']);
-  const utilizationRate = cardValue(operations, ['court', 'cards', 'utilizationRate']);
-  const coachHours = cardValue(operations, ['coach', 'cards', 'usedHours']);
   const totalLeads = cardValue(operations, ['conversion', 'cards', 'totalLeads']);
-  const reportSections = buildWeeklyReportSections(operations, previous);
+  const reportSections = buildWeeklyReportSections(operations, previous, { period, raw, previousRaw });
+  const utilizationRate = numberValue(reportSections.court?.utilizationRate ?? cardValue(operations, ['court', 'cards', 'utilizationRate']));
+  const coachHours = numberValue(reportSections.coach?.totalHours ?? cardValue(operations, ['coach', 'cards', 'usedHours']));
   return {
     id: buildReportId(period),
     campusName,
     period,
+    weekNumber: isoWeekNumber(period.endDate),
     generatedAt,
     generationMode,
     shareToken: token,
@@ -231,9 +490,15 @@ function normalizeCoachRows(currentRows = [], previousRows = []) {
   });
 }
 
-function normalizeLeadSourceRows(currentRows = [], previousRows = []) {
+function normalizeLeadSourceRows(currentRows = [], previousRows = [], allSources = []) {
   const previousBySource = new Map(previousRows.map(row => [rowLabel(row, ['source', 'channel']), row]));
-  return currentRows.map(row => {
+  const currentBySource = new Map(currentRows.map(row => [rowLabel(row, ['source', 'channel']), row]));
+  const sourceNames = Array.from(new Set([
+    ...(allSources.length ? allSources : []),
+    ...currentRows.map(row => rowLabel(row, ['source', 'channel'])).filter(Boolean)
+  ]));
+  return sourceNames.map(sourceName => {
+    const row = currentBySource.get(sourceName) || { source: sourceName };
     const source = rowLabel(row, ['source', 'channel']);
     const previous = previousBySource.get(source) || {};
     const leads = fieldNumber(row, ['totalLeads', 'leads', 'count']);
@@ -325,7 +590,10 @@ function coachCourseTotals(rows = []) {
   }, { privateHours: 0, smallClassHours: 0, trialHours: 0, specialHours: 0, sparringHours: 0 });
 }
 
-function buildWeeklyReportSections(operations = {}, previous = {}) {
+function buildWeeklyReportSections(operations = {}, previous = {}, context = {}) {
+  const period = context.period || {};
+  const raw = context.raw || {};
+  const previousRaw = context.previousRaw || {};
   const overview = operations.overview || {};
   const prevOverview = previous.overview || {};
   const court = operations.court || {};
@@ -347,6 +615,12 @@ function buildWeeklyReportSections(operations = {}, previous = {}) {
   const previousCoachTotals = coachCourseTotals(prevCoach.rows);
   const totalScheduled = numberValue(currentCoachTotals.privateHours + currentCoachTotals.smallClassHours + currentCoachTotals.trialHours + currentCoachTotals.specialHours + currentCoachTotals.sparringHours);
   const previousTotalScheduled = numberValue(previousCoachTotals.privateHours + previousCoachTotals.smallClassHours + previousCoachTotals.trialHours + previousCoachTotals.specialHours + previousCoachTotals.sparringHours);
+  const rawCourseRevenue = raw.purchases ? buildCourseRevenueFromRaw(raw, period, previousRaw) : null;
+  const rawCourt = raw.courts || raw.schedule ? buildCourtUsageFromRaw(raw, period, previousRaw) : null;
+  const rawCoach = raw.schedule ? buildCoachFromSchedules(raw, period, previousRaw) : null;
+  const allLeadSources = businessTaxonomy.LEAD_SOURCE_OPTIONS.map(item => item.value);
+  const leadSourceRows = normalizeLeadSourceRows(normalizeRows(conversion.sourceRows), normalizeRows(prevConversion.sourceRows), allLeadSources);
+  const leadSourceDeals = leadSourceRows.reduce((sum, row) => sum + numberValue(row.deals), 0);
   return {
     revenue: {
       total: {
@@ -364,33 +638,32 @@ function buildWeeklyReportSections(operations = {}, previous = {}) {
         typeRows: storedValueAmount === null ? [] : [{ type: '会员储值', amount: storedValueAmount, share: percent(storedValueAmount, cardNumber(overview, ['totalIncome'])) }]
       },
       course: {
-        totalPeople: optionalCardNumber(overview, ['courseIncomePeople', 'courseStudents']),
-        totalAmount: courseAmount,
-        newPeople: optionalCardNumber(overview, ['newCourseIncomePeople', 'newCourseStudents']),
-        newAmount: courseAmount,
-        consumedAmount: courseConsumedAmount,
-        renewalPeople: optionalCardNumber(overview, ['renewalPeople', 'courseRenewalPeople']),
-        renewalAmount: optionalCardNumber(overview, ['renewalAmount', 'courseRenewalAmount']),
-        expiringPeople: optionalCardNumber(overview, ['expiringPeople', 'courseExpiringPeople']),
+        totalPeople: rawCourseRevenue?.totalPeople ?? optionalCardNumber(overview, ['courseIncomePeople', 'courseStudents']),
+        totalAmount: rawCourseRevenue?.totalAmount ?? courseAmount,
+        newPeople: rawCourseRevenue?.newPeople ?? optionalCardNumber(overview, ['newCourseIncomePeople', 'newCourseStudents']),
+        newAmount: rawCourseRevenue?.newAmount ?? courseAmount,
+        consumedAmount: rawCourseRevenue?.consumedAmount ?? courseConsumedAmount,
+        renewalPeople: rawCourseRevenue?.renewalPeople ?? optionalCardNumber(overview, ['renewalPeople', 'courseRenewalPeople']),
+        renewalAmount: rawCourseRevenue?.renewalAmount ?? optionalCardNumber(overview, ['renewalAmount', 'courseRenewalAmount']),
+        expiringPeople: rawCourseRevenue?.expiringPeople ?? optionalCardNumber(overview, ['expiringPeople', 'courseExpiringPeople']),
         expiringAmount: optionalCardNumber(overview, ['expiringAmount', 'courseExpiringAmount']),
-        nearlyEmptyPeople: optionalCardNumber(overview, ['nearlyEmptyPeople', 'courseNearlyEmptyPeople']),
         compare: {
-          people: null,
-          amount: courseAmount === null ? null : compareValue(courseAmount, prevCourseAmount || 0),
-          consumedAmount: courseConsumedAmount === null ? null : compareValue(courseConsumedAmount, prevCourseConsumedAmount || 0)
+          people: rawCourseRevenue?.compare?.people ?? null,
+          amount: rawCourseRevenue?.compare?.amount ?? (courseAmount === null ? null : compareValue(courseAmount, prevCourseAmount || 0)),
+          consumedAmount: rawCourseRevenue?.compare?.consumedAmount ?? (courseConsumedAmount === null ? null : compareValue(courseConsumedAmount, prevCourseConsumedAmount || 0))
         }
       },
       mixRows: revenueMix
     },
     court: {
-      totalAvailableHours,
-      actualUsedHours: cardNumber(court, ['bookingHours']),
-      utilizationRate: cardNumber(court, ['utilizationRate']),
-      usageRows: normalizeCourtUsageRows(court, prevCourt),
+      totalAvailableHours: rawCourt?.totalAvailableHours ?? totalAvailableHours,
+      actualUsedHours: rawCourt?.actualUsedHours ?? cardNumber(court, ['bookingHours']),
+      utilizationRate: rawCourt?.utilizationRate ?? cardNumber(court, ['utilizationRate']),
+      usageRows: rawCourt?.usageRows ?? normalizeCourtUsageRows(court, prevCourt),
       weekdayRows: normalizeWeekdayRows(court),
-      freeUsage: findFreeCourtUsage(court)
+      freeUsage: rawCourt?.freeUsage ?? findFreeCourtUsage(court)
     },
-    coach: {
+    coach: rawCoach || {
       totalScheduled,
       totalHours: totalScheduled || cardNumber(coach, ['usedHours']),
       privateHours: numberValue(currentCoachTotals.privateHours),
@@ -408,13 +681,13 @@ function buildWeeklyReportSections(operations = {}, previous = {}) {
       totalLeads: cardNumber(conversion, ['totalLeads']),
       newLeads: cardNumber(conversion, ['totalLeads']),
       trialLeads: cardNumber(conversion, ['trialPathStudents']),
-      trialDeals: cardNumber(conversion, ['trialPathDealCustomers']),
+      trialDeals: leadSourceDeals || cardNumber(conversion, ['trialPathDealCustomers']),
       compare: {
         newLeads: compareValue(cardNumber(conversion, ['totalLeads']), cardNumber(prevConversion, ['totalLeads'])),
         trialLeads: compareValue(cardNumber(conversion, ['trialPathStudents']), cardNumber(prevConversion, ['trialPathStudents'])),
         trialDeals: compareValue(cardNumber(conversion, ['trialPathDealCustomers']), cardNumber(prevConversion, ['trialPathDealCustomers']))
       },
-      sourceRows: normalizeLeadSourceRows(normalizeRows(conversion.sourceRows), normalizeRows(prevConversion.sourceRows))
+      sourceRows: leadSourceRows
     }
   };
 }
@@ -437,6 +710,14 @@ function trendText(compare = {}) {
   const sign = value > 0 ? '+' : '';
   const rate = compare.changeRate == null ? '' : ` / ${sign}${numberValue(compare.changeRate)}%`;
   return `环比 ${sign}${value}${rate}`;
+}
+
+function comparePercentText(compare = {}) {
+  if (!compare || compare.changeRate == null) return '上周无数据';
+  const value = numberValue(compare.changeRate);
+  if (value > 0) return `上涨 ${value}%`;
+  if (value < 0) return `下降 ${Math.abs(value)}%`;
+  return '持平 0%';
 }
 
 function reportMetric(label, value, unit = '', compare = null) {
@@ -531,7 +812,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
 <body>
 <main>
   <h1>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</h1>
-  <p class="muted">${escapeHtml(period.startDate)} 至 ${escapeHtml(period.endDate)}</p>
+  <p class="muted">${escapeHtml(period.startDate)} 至 ${escapeHtml(period.endDate)}${snapshot.weekNumber ? `（第 ${escapeHtml(snapshot.weekNumber)} 周）` : ''}</p>
   <div class="grid five">
     ${metricBlock('总收入', summary.totalIncome?.value || 0, ' 元')}
     ${metricBlock('已入账', summary.recognizedRevenue?.value || 0, ' 元')}
@@ -559,7 +840,6 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${reportMetric('续费人数', revenue.course?.renewalPeople, ' 人')}
     ${reportMetric('续费收入', revenue.course?.renewalAmount, ' 元')}
     ${reportMetric('到期人数', revenue.course?.expiringPeople, ' 人')}
-    ${reportMetric('即将耗尽人数', revenue.course?.nearlyEmptyPeople, ' 人')}
   </div>
   <div class="panel">${donutChart(revenue.mixRows || [], { labelKey: 'name', valueKey: 'value' })}</div>
 
@@ -595,13 +875,13 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   <div class="panel">${barChart(coachRows, { labelKey: 'coach', valueKey: 'totalHours', unit: '小时' })}</div>
   ${renderRows(coachRows, [
     { key: 'coach', label: '教练' },
-    { key: 'scheduledCount', label: '排课量' },
+    { key: 'scheduledCount', label: '本周排课量/上周排课量', render: row => `${row.scheduledCount || 0} / ${row.previousHours || 0}` },
+    { key: 'compare', label: '环比', render: row => comparePercentText(row.compare) },
     { key: 'privateHours', label: '私教课' },
     { key: 'smallClassHours', label: '小班课' },
     { key: 'trialHours', label: '体验课' },
     { key: 'specialHours', label: '专项课' },
-    { key: 'sparringHours', label: '陪打' },
-    { key: 'compare', label: '环比', render: row => trendText(row.compare) }
+    { key: 'sparringHours', label: '陪打' }
   ])}
 
   <h2>4、线索转化</h2>
@@ -711,11 +991,13 @@ async function generateWeeklyBusinessReport({
   await mkTable(table).catch(() => null);
   const scope = {
     campusName: WEEKLY_REPORT_CAMPUS_NAME,
+    includeWeeklyReportRaw: true,
     dateRange: { startDate: period.startDate, endDate: period.endDate },
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: period.startDate, endDate: period.endDate }
   };
   const previousScope = {
     campusName: WEEKLY_REPORT_CAMPUS_NAME,
+    includeWeeklyReportRaw: true,
     dateRange: { startDate: period.previousStartDate, endDate: period.previousEndDate },
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: period.previousStartDate, endDate: period.previousEndDate }
   };

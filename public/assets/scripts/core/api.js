@@ -58,8 +58,8 @@ async function renderWeeklyReportSharePage(){
   const login=document.getElementById('loginPage');
   if(app)app.style.display='none';
   if(login){
-    login.style.display='flex';
-    login.innerHTML='<div class="login-card" style="max-width:420px"><div class="login-logo"><span class="icon"></span><div class="brand">网球兄弟</div><div class="sub">每周周报</div></div><div style="font-size:13px;color:var(--ts);margin-top:12px">周报加载中...</div></div>';
+    login.style.display='block';
+    login.innerHTML='<div style="min-height:100vh;background:#070A08;color:#fff;display:grid;place-items:center;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><div style="border:1px solid #18221B;background:#0D120F;padding:24px;border-radius:12px"><div style="color:#7CFF44;font-size:12px;letter-spacing:.08em">FLOWTENNIS WEEKLY</div><div style="margin-top:10px;font-size:18px;font-weight:700">周报加载中...</div></div></div>';
   }
   const tokenValue=decodeURIComponent(window.location.pathname.split('/').pop()||'');
   try{
@@ -69,7 +69,7 @@ async function renderWeeklyReportSharePage(){
     document.write(html);
     document.close();
   }catch(e){
-    if(login)login.innerHTML=`<div class="login-card" style="max-width:420px"><div class="login-logo"><span class="icon"></span><div class="brand">网球兄弟</div><div class="sub">每周周报</div></div><div style="font-size:13px;color:var(--ts);margin-top:12px">${String(e.message||e)}</div></div>`;
+    if(login)login.innerHTML=`<div style="min-height:100vh;background:#070A08;color:#fff;display:grid;place-items:center;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><div style="border:1px solid #18221B;background:#0D120F;padding:24px;border-radius:12px"><div style="color:#7CFF44;font-size:12px;letter-spacing:.08em">FLOWTENNIS WEEKLY</div><div style="margin-top:10px;font-size:18px;font-weight:700">周报加载失败</div><div style="margin-top:8px;color:#889E8D;font-size:13px">${String(e.message||e)}</div></div></div>`;
   }
 }
 function renderStudentReminderDetailPage(){

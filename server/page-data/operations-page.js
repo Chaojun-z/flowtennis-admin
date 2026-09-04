@@ -145,10 +145,23 @@ async function buildOperationsPagePayload({
     financeOverviewData,
     financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows
   }, { dateRange, metricScope: scope?.metricScope || {} });
+  const includeWeeklyReportRaw = Boolean(scope?.includeWeeklyReportRaw);
 
   return {
     campuses: scoped.campuses,
     operations: projectOperationsPagePayload({ operations }, scope?.view || '').operations,
+    weeklyReportRaw: includeWeeklyReportRaw ? {
+      campuses: scoped.campuses,
+      leads: scoped.leads,
+      students: scoped.students,
+      purchases: scoped.purchases,
+      entitlements: scoped.entitlements,
+      entitlementLedger: scoped.entitlementLedger,
+      courts: scoped.courts,
+      coaches: scoped.coaches,
+      schedule: scoped.schedule,
+      financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows || []
+    } : undefined,
     generatedAt: operations.generatedAt
   };
 }

@@ -18,6 +18,8 @@ const indexHtml = fs.readFileSync(path.join(repoRoot, 'public/index.html'), 'utf
 const weeklyPageSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/pages/weekly-reports.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/state.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/bootstrap.js'), 'utf8');
+const publicApiSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/api.js'), 'utf8');
+const operationsPageSource = fs.readFileSync(path.join(repoRoot, 'server/page-data/operations-page.js'), 'utf8');
 
 const period = resolveWeeklyBusinessReportPeriod(new Date('2026-09-04T00:00:00.000Z'));
 assert.deepStrictEqual(period, {
@@ -99,6 +101,7 @@ const snapshot = buildWeeklyBusinessReportSnapshot({
 });
 
 assert.strictEqual(snapshot.campusName, '顺义马坡', 'snapshot should be fixed to Shunyi Mapo');
+assert.strictEqual(snapshot.weekNumber, 36, 'snapshot should expose ISO week number for the report period');
 assert.strictEqual(snapshot.summary.totalIncome.value, 12000, 'snapshot should reuse operations income value');
 assert.strictEqual(snapshot.summary.totalIncome.compare.changeValue, 2000, 'snapshot should include previous-period comparison');
 assert.strictEqual(snapshot.shareUrl, 'https://www.flowtennis.cn/weekly-reports/token-abc', 'snapshot should expose a share URL');
@@ -131,8 +134,77 @@ assert.strictEqual(noFakeSourceSnapshot.sections.court.totalAvailableHours, null
 assert.deepStrictEqual(noFakeSourceSnapshot.sections.court.usageRows.map(row => row.hours), [0, 0, 0, 0], 'weekly report must not fake guest usage when type mix rows are missing');
 assert.strictEqual(noFakeSourceSnapshot.sections.coach.totalScheduled, 81, 'coach scheduled hours must equal all listed course type hours even when lessonCount conflicts');
 
+const rawSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {
+      overview: { cards: { totalIncome: { value: 50000 }, recognizedRevenue: { value: 1600 } } },
+      court: { cards: { utilizationRate: { value: 1 } }, trends: [] },
+      coach: { cards: { usedHours: { value: 999 } } },
+      conversion: {
+        cards: { totalLeads: { value: 7 }, trialPathDealCustomers: { value: 0 }, trialPathStudents: { value: 1 } },
+        sourceRows: [{ source: '转介绍', totalLeads: 2, trialAttended: 0, trialPathDealCustomers: 1 }]
+      }
+    },
+    weeklyReportRaw: {
+      coaches: [
+        { name: '朝珺', status: 'active' },
+        { name: '小鹿', status: 'active' },
+        { name: '宋教练', status: 'inactive' }
+      ],
+      purchases: [
+        { id: 'old-private', studentId: 'stu-a', courseType: '私教课', amountPaid: 1000, purchaseDate: '2026-08-20', status: 'active', campus: 'shunyi_mapo' },
+        { id: 'first-private', studentId: 'stu-b', courseType: '私教课', amountPaid: 2000, purchaseDate: '2026-08-28', status: 'active', firstPurchase: true, campus: 'shunyi_mapo' },
+        { id: 'renew-private', studentId: 'stu-a', courseType: '私教课', amountPaid: 3000, purchaseDate: '2026-08-29', status: 'active', firstPurchase: false, campus: 'shunyi_mapo' },
+        { id: 'trial-ignore', studentId: 'stu-c', courseType: '私教体验课', amountPaid: 900, purchaseDate: '2026-08-29', status: 'active', campus: 'shunyi_mapo' }
+      ],
+      entitlements: [{ id: 'ent-a', studentId: 'stu-a', remainingLessons: 0, depletedAt: '2026-09-01', campus: 'shunyi_mapo' }],
+      financeNormalizedRows: [{ id: 'consume-a', businessDate: '2026-08-30', businessType: '课程', action: '消耗', recognizedRevenueDelta: 600 }],
+      schedule: [
+        { id: 'coach-current', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已排课', campus: 'shunyi_mapo' },
+        { id: 'coach-prev', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', campus: 'shunyi_mapo' },
+        { id: 'inactive-coach', coach: '宋教练', courseType: '私教课', startTime: '2026-08-28 12:00:00', endTime: '2026-08-28 13:00:00', status: '已排课', campus: 'shunyi_mapo' }
+      ],
+      courts: [
+        { id: 'court-a', campus: 'shunyi_mapo', history: [{ id: 'guest-booking', type: '消费', category: '散客订场', date: '2026-08-28', startTime: '2026-08-28 08:00:00', endTime: '2026-08-28 09:00:00', amount: 100 }] },
+        { id: 'court-b', campus: 'shunyi_mapo', history: [{ id: 'free-use', type: '消费', category: '内部使用', date: '2026-08-29', startTime: '2026-08-29 08:00:00', endTime: '2026-08-29 10:00:00', amount: 200 }] }
+      ]
+    }
+  },
+  previousOperationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 1 } } }, conversion: { sourceRows: [{ source: '转介绍', totalLeads: 1, trialPathDealCustomers: 0 }] } },
+    weeklyReportRaw: {
+      coaches: [{ name: '朝珺', status: 'active' }],
+      purchases: [{ id: 'prev-first', studentId: 'stu-prev', courseType: '私教课', amountPaid: 800, purchaseDate: '2026-08-20', status: 'active', firstPurchase: true, campus: 'shunyi_mapo' }],
+      financeNormalizedRows: [{ id: 'prev-consume', businessDate: '2026-08-20', businessType: '课程', action: '消耗', recognizedRevenueDelta: 300 }],
+      schedule: [{ id: 'coach-prev-only', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', campus: 'shunyi_mapo' }],
+      courts: []
+    }
+  },
+  shareToken: 'token-raw',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(rawSnapshot.sections.revenue.course.totalPeople, 2, 'course total people should count private package buyers');
+assert.strictEqual(rawSnapshot.sections.revenue.course.totalAmount, 6000, 'course total amount should sum private package purchases');
+assert.strictEqual(rawSnapshot.sections.revenue.course.newPeople, 1, 'course new people should count first private package purchases in period');
+assert.strictEqual(rawSnapshot.sections.revenue.course.newAmount, 2000, 'course new amount should sum first private package payments in period');
+assert.strictEqual(rawSnapshot.sections.revenue.course.renewalPeople, 1, 'course renewal people should count non-first private package purchases');
+assert.strictEqual(rawSnapshot.sections.revenue.course.renewalAmount, 3000, 'course renewal amount should sum non-first private package payments');
+assert.strictEqual(rawSnapshot.sections.revenue.course.consumedAmount, 600, 'course consumed amount should come from course consume finance rows');
+assert.strictEqual(rawSnapshot.sections.revenue.course.expiringPeople, 1, 'course depleted people should count depleted package holders in period');
+assert.strictEqual(rawSnapshot.sections.court.totalAvailableHours, 392, 'court available hours should use 4 courts * 14 hours * 7 days');
+assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 2, 'course court usage should include scheduled lesson court time');
+assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'free')?.amount, 0, 'free court usage actual amount should be zero');
+assert.strictEqual(rawSnapshot.sections.coach.rows.length, 1, 'coach report should only show active coaches with current-period schedules');
+assert.strictEqual(rawSnapshot.sections.coach.rows[0].coach, '朝珺教练', 'inactive and no-schedule coaches should be excluded from coach report');
+assert.strictEqual(rawSnapshot.sections.coach.rows[0].scheduledCount, 2, 'coach current scheduled column should use current week hours');
+assert.strictEqual(rawSnapshot.sections.coach.rows[0].previousHours, 1, 'coach current/previous column should include previous week hours');
+assert.strictEqual(rawSnapshot.sections.conversion.trialDeals, 1, 'conversion top trial deals should equal source row total');
+assert.ok(rawSnapshot.sections.conversion.sourceRows.find(row => row.source === '抖音' && row.leads === 0), 'conversion source table should include standard zero-value sources');
+
 const html = renderWeeklyBusinessReportHtml(snapshot, { remark: '本周雨天影响场地。' });
 assert.match(html, /顺义马坡周报/, 'HTML should render the report title');
+assert.match(html, /2026-08-27 至 2026-09-03（第 36 周）/, 'HTML should render the period week number');
 assert.match(html, /1、收入数据/, 'HTML should render revenue section');
 assert.match(html, /2、场地数据/, 'HTML should render court section');
 assert.match(html, /3、教练课时/, 'HTML should render coach section');
@@ -146,6 +218,10 @@ assert.doesNotMatch(html, /<td>-<\/td><td>-<\/td><td>-<\/td><td>-<\/td>/, 'HTML 
 assert.match(html, /本周雨天影响场地。/, 'HTML should render admin remark text');
 assert.doesNotMatch(html, /订单ID|线索ID|流水ID/, 'HTML should not expose single-record technical detail labels');
 assert.match(renderWeeklyBusinessReportHtml(noFakeSourceSnapshot), />-</, 'HTML should show a dash when a requested metric has no reliable source');
+const rawHtml = renderWeeklyBusinessReportHtml(rawSnapshot);
+assert.match(rawHtml, /本周排课量\/上周排课量/, 'coach table should explain current and previous scheduled hours');
+assert.match(rawHtml, /上涨 100%/, 'coach comparison should render a readable percentage');
+assert.doesNotMatch(rawHtml, /小鹿|宋教练|即将耗尽人数/, 'weekly report should hide coaches without current schedules, inactive coaches, and removed metrics');
 
 const successText = buildWeeklyBusinessReportFeishuText({ snapshot, status: 'success' });
 assert.match(successText, /顺义马坡周报已生成/, 'success message should be short');
@@ -165,6 +241,7 @@ assert.match(weeklyWorkflow, /cron: '0 0 \* \* 5'/, 'weekly report workflow shou
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
+assert.match(indexHtml, /api\.js\?v=20260904-weekly-report-share-v1/, 'admin shell should bust public weekly report share script cache');
 assert.match(weeklyPageSource, /重新生成本周周报/, 'admin page should allow manual regeneration');
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');
 assert.match(weeklyPageSource, /sticky:\s*true/, 'manual regeneration should keep the loading toast visible until completion');
@@ -174,6 +251,9 @@ assert.match(weeklyPageSource, /tms-btn tms-btn-ghost/, 'admin page action butto
 assert.strictEqual((stateSource.match(/renderWeeklyReports\(\)/g) || []).length, 1, 'weekly reports page should render once per page data render');
 assert.match(stateSource, /currentPage==='weekly-reports'\)return/, 'weekly report admin page should not auto-refresh on focus, visibility, or interval sync');
 assert.doesNotMatch(weeklyPageSource, /订单ID|线索ID|流水ID/, 'admin page should not expose single-record detail labels');
+assert.doesNotMatch(publicApiSource, /login-card[\s\S]*每周周报/, 'public weekly report share page should not render a login card while loading');
+assert.match(publicApiSource, /FLOWTENNIS WEEKLY/, 'public weekly report share page should render an independent public loading shell');
+assert.match(operationsPageSource, /includeWeeklyReportRaw[\s\S]*weeklyReportRaw/, 'weekly report payload should include raw source rows for report-specific metrics');
 
 async function callPublicRoute() {
   let statusCode = 0;
