@@ -740,7 +740,7 @@ function donutChart(rows = [], { labelKey = 'name', valueKey = 'value' } = {}) {
   const total = clean.reduce((sum, row) => sum + fieldNumber(row, [valueKey]), 0);
   if (!total) return '<p class="empty">暂无可绘制数据</p>';
   let acc = 0;
-  const colors = ['#2f6f8f', '#d08b45', '#6f8b5f', '#9a6b83', '#667085'];
+  const colors = ['#7CFF44', '#46A758', '#889E8D', '#3E5244', '#243629'];
   const stops = clean.map((row, index) => {
     const start = acc;
     acc += percent(fieldNumber(row, [valueKey]), total);
@@ -758,7 +758,22 @@ function lineChart(rows = [], { valueKey = 'value', unit = '%' } = {}) {
     const y = 92 - (fieldNumber(row, [valueKey]) / max) * 76;
     return { x, y, row };
   });
-  return `<div class="line-chart"><svg viewBox="0 0 100 100" role="img" aria-label="趋势图"><polyline points="${points.map(p => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="#2f6f8f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#2f6f8f"/>`).join('')}</svg><div class="line-labels">${points.map(p => `<span>${escapeHtml(p.row.label || String(p.row.date || '').slice(5))}<b>${escapeHtml(fieldNumber(p.row, [valueKey]))}${escapeHtml(unit)}</b></span>`).join('')}</div></div>`;
+  return `<div class="line-chart"><svg viewBox="0 0 100 100" role="img" aria-label="趋势图"><polyline points="${points.map(p => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="#7CFF44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="2.3" fill="#070A08" stroke="#7CFF44" stroke-width="1.4"/>`).join('')}</svg><div class="line-labels">${points.map(p => `<span>${escapeHtml(p.row.label || String(p.row.date || '').slice(5))}<b>${escapeHtml(fieldNumber(p.row, [valueKey]))}${escapeHtml(unit)}</b></span>`).join('')}</div></div>`;
+}
+
+function progressPanel(rows = [], { labelKey = 'label', valueKey = 'hours', unit = '' } = {}) {
+  const clean = normalizeRows(rows);
+  if (!clean.length) return '<p class="empty">暂无可绘制数据</p>';
+  const max = Math.max(...clean.map(row => fieldNumber(row, [valueKey])), 1);
+  return `<div class="progress-list">${clean.map(row => {
+    const value = fieldNumber(row, [valueKey]);
+    return `<div class="progress-item"><div><span>${escapeHtml(rowLabel(row, [labelKey, 'name', 'type']))}</span><strong>${escapeHtml(value)}${escapeHtml(unit)}</strong></div><i><b style="width:${Math.max(2, percent(value, max))}%"></b></i></div>`;
+  }).join('')}</div>`;
+}
+
+function ringPanel(value = 0, label = '') {
+  const safe = Math.max(0, Math.min(100, numberValue(value)));
+  return `<div class="ring-panel"><div class="ring" style="--p:${safe}"><span>${escapeHtml(safe)}%</span></div><p>${escapeHtml(label)}</p></div>`;
 }
 
 function renderRows(rows = [], columns = []) {
@@ -792,27 +807,34 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</title>
   <style>
-    body{margin:0;background:#f4f6f8;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    main{max-width:1180px;margin:0 auto;padding:34px 22px 52px}
-    h1{font-size:30px;margin:0 0 8px} h2{font-size:22px;margin:34px 0 14px} h3{font-size:16px;margin:22px 0 12px}
-    .muted{color:#667085}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.grid.five{grid-template-columns:repeat(5,minmax(0,1fr))}
-    .panel{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin-top:14px}
-    .split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .metric{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px}
-    .metric span{display:block;color:#667085;font-size:13px}.metric strong{display:block;margin-top:8px;font-size:24px}.metric em{display:block;margin-top:8px;color:#667085;font-size:12px;font-style:normal}
-    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
-    th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #eef0f3;font-size:14px}th{color:#475467;background:#fafafa}
-    .remark{white-space:pre-wrap;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px}.empty{color:#667085}
-    .bars{display:grid;gap:10px}.bar-row{display:grid;grid-template-columns:110px 1fr 84px;gap:10px;align-items:center;font-size:13px}.bar-row i{height:10px;background:#eef2f5;border-radius:999px;overflow:hidden}.bar-row b{display:block;height:100%;background:#2f6f8f;border-radius:999px}
-    .donut-wrap{display:flex;align-items:center;gap:18px}.donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:"";position:absolute;inset:34px;border-radius:50%;background:white}.legend{display:grid;gap:8px;font-size:13px}.legend span{display:flex;align-items:center;gap:8px}.legend i{width:10px;height:10px;border-radius:50%}
-    .line-chart svg{width:100%;height:190px;background:#fbfcfd;border:1px solid #edf0f2;border-radius:8px}.line-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px;color:#667085;font-size:12px}.line-labels b{display:block;color:#172033}
-    @media(max-width:760px){.grid,.grid.five,.split{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:24px 14px}.metric strong{font-size:19px}.donut-wrap{display:block}.line-labels{grid-template-columns:repeat(2,1fr)}}
+    *{box-sizing:border-box}body{margin:0;background:#070A08;color:#fff;font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background-image:linear-gradient(to right,#111813 1px,transparent 1px),linear-gradient(to bottom,#111813 1px,transparent 1px);background-size:40px 40px}
+    header{position:sticky;top:0;z-index:2;border-bottom:1px solid #18221B;background:rgba(7,10,8,.94);backdrop-filter:blur(12px)}.topbar{max-width:1600px;height:64px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}.tag{background:#7CFF44;color:#070A08;border-radius:4px;padding:6px 10px;font:700 12px ui-monospace,SFMono-Regular,monospace;letter-spacing:.04em}.path{color:#889E8D;font:12px ui-monospace,SFMono-Regular,monospace;text-transform:uppercase}.live{border:1px solid #18221B;background:rgba(0,0,0,.3);border-radius:8px;color:#7CFF44;padding:7px 12px;font:12px ui-monospace,SFMono-Regular,monospace}
+    main{max-width:1600px;margin:0 auto;padding:32px 24px 56px}.hero{display:grid;grid-template-columns:7fr 5fr;gap:20px;align-items:end;margin-bottom:22px}.eyebrow{color:#7CFF44;font:12px ui-monospace,SFMono-Regular,monospace;letter-spacing:.12em;text-transform:uppercase}h1{font-size:38px;line-height:1.15;margin:12px 0 10px;letter-spacing:0}h2{font-size:15px;margin:0;color:#fff}.muted{color:#889E8D}.hero-copy{color:#889E8D;margin:0}.section-title{margin:26px 0 12px;padding-top:10px;border-top:1px solid rgba(24,34,27,.6);display:flex;align-items:center;justify-content:space-between}.section-title span{color:#7CFF44;font:12px ui-monospace,SFMono-Regular,monospace;letter-spacing:.12em;text-transform:uppercase}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.grid.five{grid-template-columns:repeat(5,minmax(0,1fr))}.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel,.metric{background:#0D120F;border:1px solid #18221B;border-radius:12px;padding:18px}.panel{margin-top:14px}.panel:hover,.metric:hover{border-color:#2C3D2F}.metric span{display:block;color:#889E8D;font-size:12px}.metric strong{display:block;margin-top:8px;font:700 30px ui-monospace,SFMono-Regular,monospace;color:#fff;letter-spacing:0}.metric em{display:block;margin-top:8px;color:#7CFF44;font-size:12px;font-style:normal}
+    .hero-kpis{background:#0D120F;border:1px solid #18221B;border-radius:12px;padding:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.hero-kpis .metric{border:0;border-right:1px solid rgba(24,34,27,.8);border-radius:0;padding:4px 12px}.hero-kpis .metric:last-child{border-right:0}.hero-kpis .metric strong{font-size:32px}
+    table{width:100%;border-collapse:collapse;background:#0D120F;border:1px solid #18221B;border-radius:12px;overflow:hidden;margin-top:14px}th,td{text-align:left;padding:11px 12px;border-bottom:1px solid rgba(24,34,27,.8);font-size:13px}th{color:#889E8D;background:#111813;font-weight:600}td{color:#fff}tr:last-child td{border-bottom:0}.remark{white-space:pre-wrap;background:#0D120F;border:1px solid #18221B;border-radius:12px;padding:14px;color:#889E8D}.empty{color:#889E8D}
+    .bars{display:grid;gap:11px}.bar-row{display:grid;grid-template-columns:132px 1fr 92px;gap:12px;align-items:center;font-size:13px}.bar-row span{color:#889E8D}.bar-row i{height:10px;background:#18221B;border-radius:3px;overflow:hidden}.bar-row b{display:block;height:100%;background:#7CFF44;border-radius:3px}.bar-row strong{font-family:ui-monospace,SFMono-Regular,monospace;color:#fff}
+    .donut-wrap{display:flex;align-items:center;gap:20px}.donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:"";position:absolute;inset:35px;border-radius:50%;background:#0D120F}.legend{display:grid;gap:9px;font-size:13px}.legend span{display:flex;align-items:center;gap:8px;color:#889E8D}.legend i{width:10px;height:10px;border-radius:50%}
+    .line-chart svg{width:100%;height:210px;background:#070A08;border:1px solid #18221B;border-radius:8px;background-image:linear-gradient(to right,rgba(24,34,27,.55) 1px,transparent 1px),linear-gradient(to bottom,rgba(24,34,27,.55) 1px,transparent 1px);background-size:44px 44px}.line-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px;color:#3E5244;font:12px ui-monospace,SFMono-Regular,monospace}.line-labels b{display:block;color:#889E8D;margin-top:3px}
+    .progress-list{display:grid;gap:14px}.progress-item div{display:flex;justify-content:space-between;color:#889E8D;font-size:12px;margin-bottom:6px}.progress-item strong{color:#fff;font-family:ui-monospace,SFMono-Regular,monospace}.progress-item i{display:block;height:10px;background:#18221B;border-radius:3px;overflow:hidden}.progress-item b{display:block;height:100%;background:#7CFF44}.ring-panel{display:grid;place-items:center;gap:12px;padding:18px}.ring{--p:0;width:150px;height:150px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#7CFF44 calc(var(--p)*1%),#18221B 0);position:relative}.ring:after{content:"";position:absolute;inset:28px;border-radius:50%;background:#0D120F}.ring span{position:relative;z-index:1;font:700 30px ui-monospace,SFMono-Regular,monospace}.ring-panel p{margin:0;color:#889E8D;font-size:12px}
+    @media(max-width:900px){.hero,.split{grid-template-columns:1fr}.grid,.grid.five{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-kpis{grid-template-columns:1fr}.hero-kpis .metric{border-right:0;border-bottom:1px solid rgba(24,34,27,.8)}.hero-kpis .metric:last-child{border-bottom:0}.topbar{padding:0 14px}.path{display:none}main{padding:24px 14px}.metric strong{font-size:22px}.line-labels{grid-template-columns:repeat(2,1fr)}.bar-row{grid-template-columns:96px 1fr 74px}}
   </style>
 </head>
 <body>
+<header><div class="topbar"><div><span class="tag">FLOWTENNIS</span> <span class="path">// WEEKLY BUSINESS REPORT</span></div><div class="live">● ${escapeHtml(period.startDate)} - ${escapeHtml(period.endDate)}</div></div></header>
 <main>
-  <h1>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</h1>
-  <p class="muted">${escapeHtml(period.startDate)} 至 ${escapeHtml(period.endDate)}${snapshot.weekNumber ? `（第 ${escapeHtml(snapshot.weekNumber)} 周）` : ''}</p>
+  <section class="hero">
+    <div>
+      <div class="eyebrow">// SHUNYI MAPO OVERVIEW</div>
+      <h1>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</h1>
+      <p class="hero-copy">${escapeHtml(period.startDate)} 至 ${escapeHtml(period.endDate)}${snapshot.weekNumber ? `（第 ${escapeHtml(snapshot.weekNumber)} 周）` : ''}</p>
+    </div>
+    <div class="hero-kpis">
+      ${metricBlock('总收入', summary.totalIncome?.value || 0, ' 元')}
+      ${metricBlock('场地利用率', summary.courtUtilizationRate?.value || 0, '%')}
+      ${metricBlock('线索数', summary.totalLeads?.value || 0, ' 条')}
+    </div>
+  </section>
   <div class="grid five">
     ${metricBlock('总收入', summary.totalIncome?.value || 0, ' 元')}
     ${metricBlock('已入账', summary.recognizedRevenue?.value || 0, ' 元')}
@@ -821,7 +843,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${metricBlock('线索数', summary.totalLeads?.value || 0, ' 条')}
   </div>
 
-  <h2>1、收入数据</h2>
+  <div class="section-title"><h2>1、收入数据</h2><span>// REVENUE</span></div>
   <h3>1.1 储值会员</h3>
   <div class="grid">
     ${reportMetric('储值会员总数', revenue.storedValue?.totalMembers, ' 人')}
@@ -829,7 +851,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${reportMetric('总储值金额', revenue.storedValue?.totalAmount, ' 元')}
     ${reportMetric('本周新增储值', revenue.storedValue?.newAmount, ' 元', revenue.storedValue?.compare)}
   </div>
-  <div class="panel">${donutChart(revenue.storedValue?.typeRows || [], { labelKey: 'type', valueKey: 'amount' })}</div>
+  <div class="split"><div class="panel">${donutChart(revenue.storedValue?.typeRows || [], { labelKey: 'type', valueKey: 'amount' })}</div><div class="panel">${progressPanel(revenue.storedValue?.typeRows || [], { labelKey: 'type', valueKey: 'amount', unit: '元' })}</div></div>
   <h3>1.2 课程收入</h3>
   <div class="grid">
     ${reportMetric('总人数', revenue.course?.totalPeople, ' 人')}
@@ -841,9 +863,9 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${reportMetric('续费收入', revenue.course?.renewalAmount, ' 元')}
     ${reportMetric('到期人数', revenue.course?.expiringPeople, ' 人')}
   </div>
-  <div class="panel">${donutChart(revenue.mixRows || [], { labelKey: 'name', valueKey: 'value' })}</div>
+  <div class="split"><div class="panel">${donutChart(revenue.mixRows || [], { labelKey: 'name', valueKey: 'value' })}</div><div class="panel">${progressPanel(revenue.mixRows || [], { labelKey: 'name', valueKey: 'value', unit: '元' })}</div></div>
 
-  <h2>2、场地数据</h2>
+  <div class="section-title"><h2>2、场地数据</h2><span>// COURT USAGE</span></div>
   <div class="grid">
     ${reportMetric('总可用时长', court.totalAvailableHours, ' 小时')}
     ${reportMetric('实际使用时长', court.actualUsedHours || 0, ' 小时')}
@@ -852,7 +874,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   </div>
   <div class="split">
     <div class="panel"><h3>每天利用率</h3>${lineChart(court.weekdayRows || [], { valueKey: 'value', unit: '%' })}</div>
-    <div class="panel"><h3>类型占比</h3>${donutChart(court.usageRows || [], { labelKey: 'label', valueKey: 'hours' })}</div>
+    <div class="panel"><h3>类型占比</h3>${ringPanel(court.utilizationRate || 0, '本周场地利用率')}${donutChart(court.usageRows || [], { labelKey: 'label', valueKey: 'hours' })}</div>
   </div>
   ${renderRows(court.usageRows || [], [
     { key: 'label', label: '类型' },
@@ -863,7 +885,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     { key: 'compare', label: '环比', render: row => trendText(row.compare?.hours) }
   ])}
 
-  <h2>3、教练课时</h2>
+  <div class="section-title"><h2>3、教练课时</h2><span>// COACH HOURS</span></div>
   <div class="grid five">
     ${reportMetric('排课课时', coach.totalScheduled || 0, ' 小时', coach.compare?.totalScheduled)}
     ${reportMetric('私教课', coach.privateHours || 0, ' 小时')}
@@ -872,7 +894,13 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${reportMetric('专项课', coach.specialHours || 0, ' 小时')}
     ${reportMetric('陪打', coach.sparringHours || 0, ' 小时')}
   </div>
-  <div class="panel">${barChart(coachRows, { labelKey: 'coach', valueKey: 'totalHours', unit: '小时' })}</div>
+  <div class="split"><div class="panel">${barChart(coachRows, { labelKey: 'coach', valueKey: 'totalHours', unit: '小时' })}</div><div class="panel">${progressPanel([
+    { label: '私教课', hours: coach.privateHours || 0 },
+    { label: '小班课', hours: coach.smallClassHours || 0 },
+    { label: '体验课', hours: coach.trialHours || 0 },
+    { label: '专项课', hours: coach.specialHours || 0 },
+    { label: '陪打', hours: coach.sparringHours || 0 }
+  ], { labelKey: 'label', valueKey: 'hours', unit: '小时' })}</div></div>
   ${renderRows(coachRows, [
     { key: 'coach', label: '教练' },
     { key: 'scheduledCount', label: '本周排课量/上周排课量', render: row => `${row.scheduledCount || 0} / ${row.previousHours || 0}` },
@@ -884,14 +912,14 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     { key: 'sparringHours', label: '陪打' }
   ])}
 
-  <h2>4、线索转化</h2>
+  <div class="section-title"><h2>4、线索转化</h2><span>// LEAD CONVERSION</span></div>
   <div class="grid">
     ${reportMetric('总线索数', conversion.totalLeads || 0, ' 条')}
     ${reportMetric('本周新增线索', conversion.newLeads || 0, ' 条', conversion.compare?.newLeads)}
     ${reportMetric('本周体验线索', conversion.trialLeads || 0, ' 条', conversion.compare?.trialLeads)}
     ${reportMetric('体验后报名', conversion.trialDeals || 0, ' 人', conversion.compare?.trialDeals)}
   </div>
-  <div class="panel">${barChart(sourceRows.map(row => ({ name: row.source, value: row.leads })), { labelKey: 'name', valueKey: 'value', unit: '条' })}</div>
+  <div class="split"><div class="panel">${barChart(sourceRows.map(row => ({ name: row.source, value: row.leads })), { labelKey: 'name', valueKey: 'value', unit: '条' })}</div><div class="panel">${progressPanel(sourceRows.map(row => ({ label: row.source, value: row.deals })), { labelKey: 'label', valueKey: 'value', unit: '人' })}</div></div>
   ${renderRows(sourceRows, [
     { key: 'source', label: '渠道' },
     { key: 'leads', label: '线索数' },
@@ -899,7 +927,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     { key: 'deals', label: '体验后报名' },
     { key: 'compare', label: '环比', render: row => trendText(row.compare?.leads) }
   ])}
-  <h2>备注</h2>
+  <div class="section-title"><h2>备注</h2><span>// REMARK</span></div>
   <p class="remark">${escapeHtml(remark || '暂无备注')}</p>
 </main>
 </body>
