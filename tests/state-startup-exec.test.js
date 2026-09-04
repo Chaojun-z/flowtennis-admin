@@ -177,7 +177,7 @@ async function loadStateWithStorage(seed, apiImpl) {
 (async () => {
   const staleSavedAt = Date.now() - 5 * 60 * 1000;
   const cacheSeed = {
-    ft_dataset_cache_version: '2026-06-09-campus-scope-v1',
+    ft_dataset_cache_version: '2026-09-04-management-page-visibility-v1',
     'ft_dataset_cache_production_www.flowtennis.cn_u1_membershipPlans': JSON.stringify({ savedAt: staleSavedAt, data: [{ id: 'plan-old' }] }),
     'ft_dataset_cache_production_www.flowtennis.cn_u1_membershipOrders': JSON.stringify({ savedAt: staleSavedAt, data: [{ id: 'order-old' }] }),
     'ft_dataset_cache_production_www.flowtennis.cn_u1_campuses': JSON.stringify({ savedAt: staleSavedAt, data: [{ id: 'campus-old' }] }),
@@ -208,7 +208,7 @@ async function loadStateWithStorage(seed, apiImpl) {
 (async () => {
   const freshSavedAt = Date.now() - 10 * 1000;
   const cacheSeed = {
-    ft_dataset_cache_version: '2026-06-09-campus-scope-v1',
+    ft_dataset_cache_version: '2026-09-04-management-page-visibility-v1',
     'ft_dataset_cache_production_www.flowtennis.cn_u1_membershipPlans': JSON.stringify({ savedAt: freshSavedAt, data: [{ id: 'plan-fresh' }] }),
     'ft_dataset_cache_production_www.flowtennis.cn_u1_membershipOrders': JSON.stringify({ savedAt: freshSavedAt, data: [{ id: 'order-fresh' }] }),
     'ft_dataset_cache_production_www.flowtennis.cn_u1_campuses': JSON.stringify({ savedAt: freshSavedAt, data: [{ id: 'campus-fresh' }] }),

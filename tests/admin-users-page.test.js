@@ -23,8 +23,8 @@ function fnBody(name){
 }
 
 assert.doesNotMatch(coachSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'coach sidebar should not expose account management');
-assert.match(adminSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'admin sidebar should expose account management');
-assert.match(source, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should provide account management entry');
+assert.doesNotMatch(adminSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'campus-scoped admin sidebar should not expose account management by default');
+assert.match(source, /const fullManagementHtml=clientUserHasFullManagementAccess\(currentUser\)\?[\s\S]*goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should provide account management only for full-management users');
 assert.match(source, /id="page-admin-users" data-standard-list-shell="admin-users"[\s\S]*function renderStandardToolbarHtml/, 'account page should use the shared toolbar shell');
 assert.match(source, /'admin-users':\['campuses','coaches'\]/, 'account page should load campuses and coaches for coach binding');
 assert.doesNotMatch(fnBody('globalTopFilterPages'), /'admin-users'/, 'account page should not be hidden by global top filters');

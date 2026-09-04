@@ -52,6 +52,19 @@
     const value=normalizeClientCampusValue(campusId);
     return !!value&&profile.campusIds.includes(value);
   }
+  function clientUserHasFullManagementAccess(user){
+    const profile=normalizeClientPermissionProfile(user||{});
+    return profile.role==='admin'&&profile.dataScope==='all';
+  }
+  function clientPageRequiresFullManagementAccess(page){
+    return ['finance','operations','weekly-reports','coaches','admin-users','campusmgr'].includes(String(page||'').trim());
+  }
+  function clientUserCanOpenManagementPage(user,page){
+    return !clientPageRequiresFullManagementAccess(page)||clientUserHasFullManagementAccess(user);
+  }
   global.normalizeClientPermissionProfile=normalizeClientPermissionProfile;
   global.clientUserCanAccessCampus=clientUserCanAccessCampus;
+  global.clientUserHasFullManagementAccess=clientUserHasFullManagementAccess;
+  global.clientPageRequiresFullManagementAccess=clientPageRequiresFullManagementAccess;
+  global.clientUserCanOpenManagementPage=clientUserCanOpenManagementPage;
 })(typeof window!=='undefined'?window:globalThis);

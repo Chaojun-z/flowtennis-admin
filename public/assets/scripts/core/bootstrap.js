@@ -44,6 +44,7 @@ function goPage(pg,el,skipRender=false){
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentUser?.role!=='admin'&&adminPages.includes(pg))pg=isCoach?'workbench':'';
   if(currentUser?.role==='admin'&&coachPages.includes(pg))pg='package-students';
+  if(currentUser?.role==='admin'&&typeof clientUserCanOpenManagementPage==='function'&&!clientUserCanOpenManagementPage(currentUser,pg))pg='package-students';
   if(!pg)return;
   const updateDOM = () => {
     const activePage=topTitleParentPage(pg);

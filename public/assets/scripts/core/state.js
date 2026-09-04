@@ -197,7 +197,7 @@ let loadedDatasetRequestKeys=new Map();
 let staleCachedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
-const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
+const DATA_CACHE_VERSION='2026-09-04-management-page-visibility-v1';
 const DATA_CACHE_TTL_MS=60000;
 const OPERATIONS_PAGE_CACHE_PREFIX='ft_operations_view_cache_';
 const OPERATIONS_PAGE_CACHE_VERSION='2026-09-02-operations-coach-view-v1';
@@ -1430,6 +1430,11 @@ function normalizeCurrentPageForRole(){
   if(currentUser?.role==='admin'&&['workbench','postfeedback','mystudents','myclasses'].includes(currentPage)){
     currentPage='students';
     localStorage.setItem(PAGE_KEY,currentPage);
+    return;
+  }
+  if(currentUser?.role==='admin'&&typeof clientUserCanOpenManagementPage==='function'&&!clientUserCanOpenManagementPage(currentUser,currentPage)){
+    currentPage='package-students';
+    localStorage.setItem(PAGE_KEY,currentPage);
   }
 }
 const SCHEDULE_HELPERS_RENDERER_SRC='/assets/scripts/pages/schedule-helpers.js?v=20260817-detail-helper-split-v1';
@@ -1790,6 +1795,7 @@ function renderAll(){
   currentPage=normalizeStudentListPage(currentPage);
   if(isCoach&&!['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='workbench';
   else if(currentUser?.role==='admin'&&['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='package-students';
+  else if(currentUser?.role==='admin'&&typeof clientUserCanOpenManagementPage==='function'&&!clientUserCanOpenManagementPage(currentUser,currentPage))currentPage='package-students';
   else if(currentUser?.role!=='admin'&&!isCoach){doLogout();return;}
   renderPageData(currentPage);
   goPage(currentPage,null,true);
