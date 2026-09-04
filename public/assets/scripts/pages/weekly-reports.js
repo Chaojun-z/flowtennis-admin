@@ -30,17 +30,21 @@ async function renderWeeklyReports() {
     await loadWeeklyReports();
     host.innerHTML = `
       <div class="section-stack">
-        <div class="tms-page-head">
-          <div>
+        <div class="tms-toolbar">
+          <div class="tms-toolbar-left">
+            <div>
             <div class="tms-section-header">顺义马坡每周周报</div>
             <div class="tms-audit-note">每周五 8 点生成，统计上周四到本周四。历史周报保存快照，手动重新生成会覆盖同周期数据。</div>
+            </div>
           </div>
-          <button class="tms-btn tms-btn-primary" onclick="regenerateWeeklyReport()">重新生成本周周报</button>
+          <div class="tms-toolbar-right">
+            <button class="tms-btn tms-btn-primary" onclick="regenerateWeeklyReport()">重新生成本周周报</button>
+          </div>
         </div>
         <div class="tms-table-card">
           <div class="tms-table-wrapper">
             <table class="tms-table">
-              <thead><tr><th style="padding-left:20px">周期</th><th>状态</th><th>生成时间</th><th>总收入</th><th>场地利用率</th><th>教练课时</th><th>线索数</th><th>备注</th><th>操作</th></tr></thead>
+              <thead><tr><th style="padding-left:20px">周期</th><th>状态</th><th>生成时间</th><th>总收入</th><th>场地利用率</th><th>教练课时</th><th>线索数</th><th>备注</th><th class="tms-sticky-r" style="width:220px;padding-right:20px;text-align:right">操作</th></tr></thead>
               <tbody>${weeklyReportsRows.length ? weeklyReportsRows.map(weeklyReportRowHtml).join('') : '<tr><td colspan="9"><div class="tms-empty-state"><div class="tms-empty-title">暂无周报</div></div></td></tr>'}</tbody>
             </table>
           </div>
@@ -61,10 +65,10 @@ function weeklyReportRowHtml(row = {}) {
     <td>${fmt(weeklyReportSummaryValue(row, 'coachHours'))}</td>
     <td>${fmt(weeklyReportSummaryValue(row, 'totalLeads'))}</td>
     <td><div class="tms-text-remark" title="${esc(row.remark || '')}">${esc(row.remark || '-')}</div></td>
-    <td>
-      <button class="tms-action-link" onclick="openWeeklyReport('${esc(row.shareUrl || '')}')">查看</button>
-      <button class="tms-action-link" onclick="copyWeeklyReportLink('${esc(row.shareUrl || '')}')">复制链接</button>
-      <button class="tms-action-link" onclick="editWeeklyReportRemark('${esc(row.id || '')}')">备注</button>
+    <td class="tms-sticky-r tms-action-cell" style="width:220px;padding-right:20px;text-align:right">
+      <button type="button" class="tms-btn tms-btn-ghost" onclick="openWeeklyReport('${esc(row.shareUrl || '')}')">查看</button>
+      <button type="button" class="tms-btn tms-btn-ghost" onclick="copyWeeklyReportLink('${esc(row.shareUrl || '')}')">复制链接</button>
+      <button type="button" class="tms-btn tms-btn-ghost" onclick="editWeeklyReportRemark('${esc(row.id || '')}')">备注</button>
     </td>
   </tr>`;
 }

@@ -8,6 +8,7 @@ const {
   renderWeeklyBusinessReportHtml,
   buildWeeklyBusinessReportFeishuText
 } = require('../server/weekly-business-report.js');
+const { createWeeklyBusinessReportRoutes } = require('../server/weekly-business-report-routes.js');
 
 const repoRoot = path.join(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
@@ -15,6 +16,7 @@ const weeklyRoutesSource = fs.readFileSync(path.join(repoRoot, 'server/weekly-bu
 const weeklyWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/weekly-business-report.yml'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8');
 const weeklyPageSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/pages/weekly-reports.js'), 'utf8');
+const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/state.js'), 'utf8');
 
 const period = resolveWeeklyBusinessReportPeriod(new Date('2026-09-04T00:00:00.000Z'));
 assert.deepStrictEqual(period, {
@@ -111,6 +113,36 @@ assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the w
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
 assert.match(weeklyPageSource, /重新生成本周周报/, 'admin page should allow manual regeneration');
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');
+assert.match(weeklyPageSource, /tms-toolbar/, 'admin page should use the standard toolbar layout');
+assert.match(weeklyPageSource, /tms-btn tms-btn-ghost/, 'admin page action buttons should use standard button styles');
+assert.strictEqual((stateSource.match(/renderWeeklyReports\(\)/g) || []).length, 1, 'weekly reports page should render once per page data render');
 assert.doesNotMatch(weeklyPageSource, /订单ID|线索ID|流水ID/, 'admin page should not expose single-record detail labels');
 
-console.log('weekly business report tests passed');
+async function callPublicRoute() {
+  let statusCode = 0;
+  let html = '';
+  const res = {
+    setHeader() {},
+    end(value) { html = String(value || ''); },
+    get statusCode() { return statusCode; },
+    set statusCode(value) { statusCode = value; }
+  };
+  const routes = createWeeklyBusinessReportRoutes({
+    init: async () => {},
+    sendJson: () => { throw new Error('public share route must not fall through to JSON auth'); },
+    scan: async () => [{ shareToken: 'public-token', status: 'success', html: '<h1>公开周报</h1>' }],
+    table: 'ft_weekly_business_reports'
+  });
+  const handled = await routes.handlePublic({ path: '/public/weekly-business-reports/public-token', method: 'GET', res });
+  return { handled, statusCode, html };
+}
+
+callPublicRoute().then(result => {
+  assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
+  assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
+  assert.match(result.html, /公开周报/, 'public weekly report route should return stored HTML');
+  console.log('weekly business report tests passed');
+}).catch(err => {
+  console.error(err);
+  process.exit(1);
+});

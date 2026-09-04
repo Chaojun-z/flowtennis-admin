@@ -7101,6 +7101,7 @@ module.exports = async (req, res) => {
     console.log('[campuses] GET bypass scheduleInitInBackground');
     return sendJson(res,DEFAULT_CAMPUSES);
   }
+  if(await weeklyBusinessReportRoutes.handlePublic({path,method,res}))return;
   if(path==='/match-diag'&&method==='GET'){
     if(!requireDiagnosticsAccess(req,res))return;
     return handleMatchDiag({res,sendJson,safeDatabaseUrlHost,MATCH_DATABASE_URL,getMatchSqlPool});
@@ -7156,7 +7157,6 @@ module.exports = async (req, res) => {
   const body=req.body||{};
   try{
     if(path==='/health')return sendJson(res,{status:'ok',time:new Date().toISOString()});
-    if(await weeklyBusinessReportRoutes.handlePublic({path,method,res}))return;
     if((path==='/official-account/callback'||path==='/wechat/official-callback')&&method==='GET'){
       try{
         return sendPlainText(res,verifyOfficialAccountCallbackRequest(query),200);

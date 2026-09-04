@@ -1830,7 +1830,6 @@ function renderPageData(pg){
   if(pg==='courts')renderCourts();
   if(pg==='matches')renderMatches();
   if(pg==='third-party-sync')renderThirdPartySyncCenter();
-  if(pg==='weekly-reports')renderWeeklyReports();
   if(pg==='memberships')renderMemberships();
   if(pg==='membership-orders')renderMembershipOrdersAuditPage();
   if(pg==='membership-ledger')renderMembershipLedgerAuditPage();
