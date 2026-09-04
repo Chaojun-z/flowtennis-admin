@@ -12,6 +12,7 @@ const { createWeeklyBusinessReportRoutes } = require('../server/weekly-business-
 
 const repoRoot = path.join(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
+const weeklyReportSource = fs.readFileSync(path.join(repoRoot, 'server/weekly-business-report.js'), 'utf8');
 const weeklyRoutesSource = fs.readFileSync(path.join(repoRoot, 'server/weekly-business-report-routes.js'), 'utf8');
 const weeklyWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/weekly-business-report.yml'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8');
@@ -255,6 +256,7 @@ assert.match(weeklyRoutesSource, /\/cron\/weekly-business-report/, 'api should e
 assert.match(weeklyRoutesSource, /\/public\/weekly-business-reports\//, 'api should expose public HTML by share token');
 assert.match(weeklyRoutesSource, /updateWeeklyBusinessReportPublicEdits/, 'api should expose public weekly report edit saving by share token');
 assert.match(weeklyRoutesSource, /\/weekly-business-reports/, 'api should expose admin weekly report list route');
+assert.match(weeklyReportSource, /includeWeeklyReportRaw:\s*false[\s\S]*dateRange:\s*\{\}[\s\S]*metricScope:\s*\{\s*campusName:\s*WEEKLY_REPORT_CAMPUS_NAME\s*\}/, 'weekly report lifetime summary should not load full raw rows during regeneration');
 assert.match(apiSource, /FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK/, 'weekly report should use a dedicated Feishu webhook env');
 assert.match(weeklyWorkflow, /cron: '0 0 \* \* 5'/, 'weekly report workflow should run Friday 08:00 Beijing time');
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');

@@ -465,7 +465,10 @@ function buildWeeklyBusinessReportSnapshot({
   const coachHours = numberValue(reportSections.coach?.totalHours ?? cardValue(operations, ['coach', 'cards', 'usedHours']));
   const lifetimeTotalIncome = cardValue(totalOperations, ['overview', 'cards', 'totalIncome']);
   const lifetimeCourtUtilizationRate = cardValue(totalOperations, ['court', 'cards', 'utilizationRate']) || utilizationRate;
-  const lifetimePrivateCoursePeople = buildLifetimePrivateCoursePeople(totalRaw) || reportSections.revenue?.course?.totalPeople || 0;
+  const lifetimePrivateCoursePeople = buildLifetimePrivateCoursePeople(totalRaw)
+    || optionalCardNumber(totalOperations.overview || {}, ['courseIncomePeople', 'courseStudents'])
+    || reportSections.revenue?.course?.totalPeople
+    || 0;
   return {
     id: buildReportId(period),
     campusName,
@@ -1212,7 +1215,7 @@ async function generateWeeklyBusinessReport({
   };
   const totalScope = {
     campusName: WEEKLY_REPORT_CAMPUS_NAME,
-    includeWeeklyReportRaw: true,
+    includeWeeklyReportRaw: false,
     dateRange: {},
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME }
   };
