@@ -111,6 +111,7 @@ assert.strictEqual(snapshot.sections.court.usageRows.find(row => row.key === 'me
 assert.strictEqual(snapshot.sections.coach.rows.find(row => row.coach === '王教练')?.privateHours, 12, 'weekly report should derive coach private hours from course mix');
 assert.strictEqual(snapshot.sections.coach.totalScheduled, 22, 'weekly report coach total scheduled hours should equal all course type hours');
 assert.strictEqual(snapshot.sections.coach.rows.find(row => row.coach === '王教练')?.scheduledCount, 18, 'coach row scheduled value should equal that coach course type hour sum');
+assert.strictEqual(snapshot.sections.court.dailyRows.length, 8, 'court utilization chart should keep one cell for each natural day in the report period');
 assert.strictEqual(snapshot.sections.court.weekdayRows.filter(row => row.label === '周四').length, 1, 'weekly report should aggregate duplicate weekdays in an eight-day period');
 assert.strictEqual(snapshot.sections.court.weekdayRows.find(row => row.label === '周四')?.value, 51, 'duplicate weekday utilization should use the real trend average');
 assert.strictEqual(snapshot.sections.revenue.course.consumedAmount, 3200, 'course consumed amount must use course recognized revenue only');
@@ -166,6 +167,7 @@ const rawSnapshot = buildWeeklyBusinessReportSnapshot({
       ],
       schedule: [
         { id: 'coach-current', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已排课', campus: 'shunyi_mapo' },
+        { id: 'dirty-current', coach: '小鹿教练', lessonCount: 2, startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已排课', campus: 'shunyi_mapo' },
         { id: 'coach-prev', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', campus: 'shunyi_mapo' },
         { id: 'inactive-coach', coach: '宋教练', courseType: '私教课', startTime: '2026-08-28 12:00:00', endTime: '2026-08-28 13:00:00', status: '已排课', campus: 'shunyi_mapo' }
       ],
@@ -218,8 +220,14 @@ assert.match(html, /2、场地数据/, 'HTML should render court section');
 assert.match(html, /3、教练课时/, 'HTML should render coach section');
 assert.match(html, /4、线索转化/, 'HTML should render lead conversion section');
 assert.match(html, /专项课/, 'HTML should render special course coach metric');
-assert.match(html, /donut|bar-row|line-chart/, 'HTML should render report charts');
-assert.match(html, /template-interactive-chart[\s\S]*views-area[\s\S]*views-line/, 'HTML should use the provided template-style data-driven SVG chart structure');
+assert.match(html, /donut|bar-row|cohort-heatmap/, 'HTML should render report charts');
+assert.match(html, /USER RETENTION MATRIX[\s\S]*matrix-cell/, 'daily court utilization should use the template retention matrix style');
+assert.match(html, /chart-tooltip[\s\S]*data-tooltip/, 'charts and metrics should support hover tooltips');
+assert.match(html, /contenteditable="true"[\s\S]*save-edit/, 'weekly report should support direct editing and saving');
+assert.match(html, /总场地利用率/, 'hero should show lifetime court utilization label');
+assert.match(html, /总私教课人数/, 'hero should show lifetime private course people label');
+assert.match(html, /本周收入[\s\S]*本周已入账[\s\S]*本周场地利用率[\s\S]*本周教练课时[\s\S]*本周线索数/, 'top weekly metrics should use requested labels');
+assert.match(html, /12,000 元/, 'numbers should use thousands separators');
 assert.match(html, /会员场地使用/, 'HTML should render member court usage row');
 assert.match(html, /王教练/, 'HTML should render coach data rows');
 assert.match(html, /小红书/, 'HTML should render lead source rows');
@@ -228,7 +236,8 @@ assert.match(html, /本周雨天影响场地。/, 'HTML should render admin rema
 assert.doesNotMatch(html, /订单ID|线索ID|流水ID/, 'HTML should not expose single-record technical detail labels');
 assert.match(renderWeeklyBusinessReportHtml(noFakeSourceSnapshot), />-</, 'HTML should show a dash when a requested metric has no reliable source');
 const rawHtml = renderWeeklyBusinessReportHtml(rawSnapshot);
-assert.match(rawHtml, /本周排课量\/上周排课量/, 'coach table should explain current and previous scheduled hours');
+assert.match(rawHtml, /上周排课量[\s\S]*本周排课量[\s\S]*排课周环比/, 'coach table should use the requested current and previous schedule columns');
+assert.match(rawHtml, /highlight-col/, 'coach current week schedule column should be highlighted');
 assert.match(rawHtml, /上涨 100%/, 'coach comparison should render a readable percentage');
 assert.doesNotMatch(rawHtml, /小鹿|宋教练|即将耗尽人数/, 'weekly report should hide coaches without current schedules, inactive coaches, and removed metrics');
 
@@ -244,6 +253,7 @@ assert.match(failureText, /课程数据读取失败/, 'failure message should in
 assert.match(apiSource, /createWeeklyBusinessReportRoutes/, 'api should mount the extracted weekly report routes');
 assert.match(weeklyRoutesSource, /\/cron\/weekly-business-report/, 'api should expose the weekly report cron route');
 assert.match(weeklyRoutesSource, /\/public\/weekly-business-reports\//, 'api should expose public HTML by share token');
+assert.match(weeklyRoutesSource, /updateWeeklyBusinessReportPublicEdits/, 'api should expose public weekly report edit saving by share token');
 assert.match(weeklyRoutesSource, /\/weekly-business-reports/, 'api should expose admin weekly report list route');
 assert.match(apiSource, /FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK/, 'weekly report should use a dedicated Feishu webhook env');
 assert.match(weeklyWorkflow, /cron: '0 0 \* \* 5'/, 'weekly report workflow should run Friday 08:00 Beijing time');
@@ -286,11 +296,35 @@ async function callPublicRoute() {
   return { handled, statusCode, html };
 }
 
-callPublicRoute().then(result => {
+async function callPublicEditRoute() {
+  let json = null;
+  let saved = null;
+  const res = {};
+  const routes = createWeeklyBusinessReportRoutes({
+    init: async () => {},
+    sendJson: (_res, value) => { json = value; return value; },
+    scan: async () => [{ ...snapshot, shareToken: 'public-token', status: 'success' }],
+    put: async (_table, _id, row) => { saved = row; },
+    table: 'ft_weekly_business_reports'
+  });
+  const handled = await routes.handlePublic({
+    path: '/public/weekly-business-reports/public-token/edits',
+    method: 'POST',
+    body: { edits: { 'summary.totalIncome': '44,072 元', bad: '<script>alert(1)</script>' } },
+    res
+  });
+  return { handled, json, saved };
+}
+
+Promise.all([callPublicRoute(), callPublicEditRoute()]).then(([result, editResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /1、收入数据/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
   assert.doesNotMatch(result.html, /旧版周报/, 'public weekly report route should not return legacy incomplete HTML');
+  assert.deepStrictEqual(editResult.handled, { success: true }, 'public weekly report edit route should be handled by share token');
+  assert.strictEqual(editResult.json.success, true, 'public weekly report edit route should save editable values');
+  assert.strictEqual(editResult.saved.publicEdits['summary.totalIncome'], '44,072 元', 'public weekly report edits should persist saved values');
+  assert.doesNotMatch(editResult.saved.publicEdits.bad, /[<>]/, 'public weekly report edits should strip HTML tags');
   console.log('weekly business report tests passed');
 }).catch(err => {
   console.error(err);

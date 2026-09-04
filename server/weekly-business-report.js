@@ -170,8 +170,12 @@ function scheduleCourseBucket(row = {}) {
   return 'privateHours';
 }
 
+function scheduleHasCourseEvidence(row = {}) {
+  return Boolean(textValue(row, ['courseType', 'experienceType', 'productName', 'packageName', 'className', 'studentName', 'studentId', 'leadName']));
+}
+
 function isValidSchedule(row = {}, period = {}) {
-  return inPeriod(row.startTime, period) && campusMatches(row) && effectiveScheduleStatus(row) !== '已取消';
+  return inPeriod(row.startTime, period) && campusMatches(row) && effectiveScheduleStatus(row) !== '已取消' && scheduleHasCourseEvidence(row);
 }
 
 function isPrivateCoursePurchase(row = {}) {
@@ -329,6 +333,15 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     }), { count: 0, amount: 0, receivableAmount: 0 });
   const courseHours = scheduleRows.reduce((sum, row) => sum + scheduleHours(row), 0);
   const previousCourseHours = previousScheduleRows.reduce((sum, row) => sum + scheduleHours(row), 0);
+  const dailyUsedHours = new Map();
+  historyRows.forEach(row => {
+    const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
+    if (day) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
+  });
+  scheduleRows.forEach(row => {
+    const day = String(row.startTime || row.date || '').slice(0, 10);
+    if (day) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + scheduleHours(row)));
+  });
   const result = labels.map(meta => {
     const current = sumHistory(historyRows, meta);
     const previous = sumHistory(previousHistoryRows, meta);
@@ -365,6 +378,7 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     actualUsedHours: numberValue(totalHours),
     utilizationRate: numberValue(totalHours * 100 / 392),
     usageRows: result.map(row => ({ ...row, share: percent(row.hours, result.reduce((sum, item) => sum + item.hours, 0)) })),
+    dailyRows: buildDailyCourtRows(raw, period, dailyUsedHours),
     freeUsage: result.find(row => row.key === 'free') || { count: 0, hours: 0, amount: 0, receivableAmount: 0 }
   };
 }
@@ -418,11 +432,19 @@ function normalizeBaseUrl(baseUrl = '') {
   return String(baseUrl || 'https://www.flowtennis.cn').trim().replace(/\/+$/, '');
 }
 
+function buildLifetimePrivateCoursePeople(raw = {}) {
+  return new Set(normalizeRows(raw.purchases)
+    .filter(row => campusMatches(row) && isPrivateCoursePurchase(row))
+    .map(purchaseStudentKey)
+    .filter(Boolean)).size;
+}
+
 function buildWeeklyBusinessReportSnapshot({
   period,
   campusName = WEEKLY_REPORT_CAMPUS_NAME,
   operationsPayload = {},
   previousOperationsPayload = {},
+  totalOperationsPayload = null,
   shareToken = '',
   baseUrl = 'https://www.flowtennis.cn',
   generatedAt = new Date().toISOString(),
@@ -432,6 +454,8 @@ function buildWeeklyBusinessReportSnapshot({
   const previous = previousOperationsPayload.operations || {};
   const raw = operationsPayload.weeklyReportRaw || {};
   const previousRaw = previousOperationsPayload.weeklyReportRaw || {};
+  const totalOperations = totalOperationsPayload?.operations || operations;
+  const totalRaw = totalOperationsPayload?.weeklyReportRaw || raw;
   const token = String(shareToken || crypto.randomBytes(16).toString('hex')).trim();
   const totalIncome = cardValue(operations, ['overview', 'cards', 'totalIncome']);
   const previousTotalIncome = cardValue(previous, ['overview', 'cards', 'totalIncome']);
@@ -439,6 +463,9 @@ function buildWeeklyBusinessReportSnapshot({
   const reportSections = buildWeeklyReportSections(operations, previous, { period, raw, previousRaw });
   const utilizationRate = numberValue(reportSections.court?.utilizationRate ?? cardValue(operations, ['court', 'cards', 'utilizationRate']));
   const coachHours = numberValue(reportSections.coach?.totalHours ?? cardValue(operations, ['coach', 'cards', 'usedHours']));
+  const lifetimeTotalIncome = cardValue(totalOperations, ['overview', 'cards', 'totalIncome']);
+  const lifetimeCourtUtilizationRate = cardValue(totalOperations, ['court', 'cards', 'utilizationRate']) || utilizationRate;
+  const lifetimePrivateCoursePeople = buildLifetimePrivateCoursePeople(totalRaw) || reportSections.revenue?.course?.totalPeople || 0;
   return {
     id: buildReportId(period),
     campusName,
@@ -448,6 +475,11 @@ function buildWeeklyBusinessReportSnapshot({
     generationMode,
     shareToken: token,
     shareUrl: `${normalizeBaseUrl(baseUrl)}/weekly-reports/${encodeURIComponent(token)}`,
+    lifetimeSummary: {
+      totalIncome: { value: lifetimeTotalIncome },
+      courtUtilizationRate: { value: lifetimeCourtUtilizationRate },
+      privateCoursePeople: { value: lifetimePrivateCoursePeople }
+    },
     summary: {
       totalIncome: { value: totalIncome, compare: compareMetric(totalIncome, previousTotalIncome) },
       recognizedRevenue: { value: cardValue(operations, ['overview', 'cards', 'recognizedRevenue']) },
@@ -592,6 +624,35 @@ function normalizeWeekdayRows(court = {}) {
   return Array.from(groups.values()).map(row => ({ label: row.label, value: row.count ? numberValue(row.value / row.count) : 0 }));
 }
 
+function normalizeDailyCourtRows(court = {}, period = {}) {
+  const byDate = new Map(normalizeRows(court.trends).map(row => [String(row.date || '').slice(0, 10), fieldNumber(row, ['utilizationRate'])]));
+  if (!period.startDate || !period.endDate) return Array.from(byDate.entries()).map(([date, value]) => ({ date, label: date.slice(5), value }));
+  const rows = [];
+  const names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  for (let day = period.startDate; day && day <= period.endDate; day = addUtcDays(day, 1)) {
+    rows.push({ date: day, label: `${day.slice(5)} ${names[dayOfWeekUtc(day)]}`, value: numberValue(byDate.get(day) || 0) });
+  }
+  return rows;
+}
+
+function buildDailyCourtRows(raw = {}, period = {}, usedHoursByDate = new Map()) {
+  if (!period.startDate || !period.endDate) return [];
+  const names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  const rows = [];
+  for (let day = period.startDate; day && day <= period.endDate; day = addUtcDays(day, 1)) {
+    const usedHours = numberValue(usedHoursByDate.get(day) || 0);
+    const availableHours = 4 * 14;
+    rows.push({
+      date: day,
+      label: `${day.slice(5)} ${names[dayOfWeekUtc(day)]}`,
+      value: percent(usedHours, availableHours),
+      usedHours,
+      availableHours
+    });
+  }
+  return rows;
+}
+
 function findRevenueMixValue(rows = [], names = []) {
   const row = normalizeRows(rows).find(item => names.some(name => String(item.name || item.type || item.label || '').includes(name)));
   return optionalNumber(row?.value ?? row?.amount);
@@ -678,6 +739,7 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
       actualUsedHours: rawCourt?.actualUsedHours ?? cardNumber(court, ['bookingHours']),
       utilizationRate: rawCourt?.utilizationRate ?? cardNumber(court, ['utilizationRate']),
       usageRows: rawCourt?.usageRows ?? normalizeCourtUsageRows(court, prevCourt),
+      dailyRows: rawCourt?.dailyRows ?? normalizeDailyCourtRows(court, period),
       weekdayRows: normalizeWeekdayRows(court),
       freeUsage: rawCourt?.freeUsage ?? findFreeCourtUsage(court)
     },
@@ -717,12 +779,22 @@ function escapeHtml(value) {
 function formatMetricValue(value, unit = '') {
   if (value === null || value === undefined || value === '') return '-';
   const numeric = optionalNumber(value);
-  if (numeric !== null && String(unit).includes('元')) return String(Math.round(numeric));
+  if (numeric !== null) {
+    const fraction = Number.isInteger(numeric) || String(unit).includes('元') || String(unit).includes('人') || String(unit).includes('条') ? 0 : 2;
+    return numeric.toLocaleString('en-US', { maximumFractionDigits: fraction, minimumFractionDigits: 0 });
+  }
   return String(value);
 }
 
-function metricBlock(label, value, suffix = '') {
-  return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatMetricValue(value, suffix))}${escapeHtml(suffix)}</strong></section>`;
+function editableValue(edits = {}, key = '', value = '') {
+  const edited = edits && Object.prototype.hasOwnProperty.call(edits, key) ? edits[key] : value;
+  return `<span data-edit-key="${escapeHtml(key)}" data-editable="true" contenteditable="true">${escapeHtml(edited)}</span>`;
+}
+
+function metricBlock(label, value, suffix = '', edits = {}, key = '') {
+  const text = `${formatMetricValue(value, suffix)}${suffix}`;
+  const content = key ? editableValue(edits, key, text) : escapeHtml(text);
+  return `<section class="metric" data-tooltip="${escapeHtml(label)}"><span>${escapeHtml(label)}</span><strong>${content}</strong></section>`;
 }
 
 function displayMetricValue(value) {
@@ -745,9 +817,11 @@ function comparePercentText(compare = {}) {
   return '持平 0%';
 }
 
-function reportMetric(label, value, unit = '', compare = null) {
+function reportMetric(label, value, unit = '', compare = null, edits = {}, key = '') {
   const empty = value === null || value === undefined || value === '';
-  return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(empty ? displayMetricValue(value) : formatMetricValue(value, unit))}${empty ? '' : escapeHtml(unit)}</strong>${compare ? `<em>${escapeHtml(trendText(compare))}</em>` : ''}</section>`;
+  const text = empty ? displayMetricValue(value) : `${formatMetricValue(value, unit)}${unit}`;
+  const content = key ? editableValue(edits, key, text) : escapeHtml(text);
+  return `<section class="metric" data-tooltip="${escapeHtml(label)}"><span>${escapeHtml(label)}</span><strong>${content}</strong>${compare ? `<em>${escapeHtml(trendText(compare))}</em>` : ''}</section>`;
 }
 
 function barChart(rows = [], { labelKey = 'name', valueKey = 'value', unit = '' } = {}) {
@@ -756,7 +830,8 @@ function barChart(rows = [], { labelKey = 'name', valueKey = 'value', unit = '' 
   const max = Math.max(...clean.map(row => fieldNumber(row, [valueKey])), 1);
   return `<div class="bars">${clean.map(row => {
     const value = fieldNumber(row, [valueKey]);
-    return `<div class="bar-row"><span>${escapeHtml(rowLabel(row, [labelKey, 'label', 'type']))}</span><i><b style="width:${Math.max(4, percent(value, max))}%"></b></i><strong>${escapeHtml(value)}${escapeHtml(unit)}</strong></div>`;
+    const label = rowLabel(row, [labelKey, 'label', 'type']);
+    return `<div class="bar-row" data-tooltip="${escapeHtml(`${label} ${formatMetricValue(value, unit)}${unit}`)}"><span>${escapeHtml(label)}</span><i><b style="width:${Math.max(4, percent(value, max))}%"></b></i><strong>${escapeHtml(formatMetricValue(value, unit))}${escapeHtml(unit)}</strong></div>`;
   }).join('')}</div>`;
 }
 
@@ -771,7 +846,18 @@ function donutChart(rows = [], { labelKey = 'name', valueKey = 'value' } = {}) {
     acc += percent(fieldNumber(row, [valueKey]), total);
     return `${colors[index % colors.length]} ${start}% ${acc}%`;
   }).join(',');
-  return `<div class="donut-wrap"><div class="donut" style="background:conic-gradient(${stops})"></div><div class="legend">${clean.map((row, index) => `<span><i style="background:${colors[index % colors.length]}"></i>${escapeHtml(rowLabel(row, [labelKey, 'label', 'type']))} ${percent(fieldNumber(row, [valueKey]), total)}%</span>`).join('')}</div></div>`;
+  return `<div class="donut-wrap template-interactive-chart" data-tooltip="类型占比"><div class="donut" style="background:conic-gradient(${stops})"></div><div class="legend">${clean.map((row, index) => `<span data-tooltip="${escapeHtml(`${rowLabel(row, [labelKey, 'label', 'type'])} ${percent(fieldNumber(row, [valueKey]), total)}%`)}"><i style="background:${colors[index % colors.length]}"></i>${escapeHtml(rowLabel(row, [labelKey, 'label', 'type']))} ${percent(fieldNumber(row, [valueKey]), total)}%</span>`).join('')}</div></div>`;
+}
+
+function courtUsageMatrix(rows = []) {
+  const clean = normalizeRows(rows).filter(row => row.label || row.date);
+  if (!clean.length) return '<p class="empty">暂无可绘制数据</p>';
+  return `<div class="cohort-heatmap template-interactive-chart" aria-label="核心客群生命周期存留分析样式场地利用率"><div class="matrix-head"><span>USER RETENTION MATRIX</span><strong>每日场地利用率</strong></div><div class="matrix-grid">${clean.map(row => {
+    const value = fieldNumber(row, ['value']);
+    const alpha = Math.max(0.08, Math.min(0.85, value / 100));
+    const label = row.label || String(row.date || '').slice(5);
+    return `<div class="matrix-cell" data-tooltip="${escapeHtml(`${label} ${formatMetricValue(value, '%')}%`)}" style="background:rgba(124,255,68,${alpha})"><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatMetricValue(value, '%'))}%</strong></div>`;
+  }).join('')}</div></div>`;
 }
 
 function lineChart(rows = [], { valueKey = 'value', unit = '%' } = {}) {
@@ -798,7 +884,10 @@ function ringPanel(value = 0, label = '') {
 
 function renderRows(rows = [], columns = []) {
   if (!rows.length) return '<p class="empty">暂无数据</p>';
-  return `<table><thead><tr>${columns.map(col => `<th>${escapeHtml(col.label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(col => `<td>${escapeHtml(typeof col.render === 'function' ? col.render(row) : (row[col.key] ?? '-'))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  return `<table><thead><tr>${columns.map(col => `<th class="${col.highlight ? 'highlight-col' : ''}">${escapeHtml(col.label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(col => {
+    const value = typeof col.render === 'function' ? col.render(row) : (row[col.key] ?? '-');
+    return `<td class="${col.highlight ? 'highlight-col' : ''}">${col.html ? value : escapeHtml(value)}</td>`;
+  }).join('')}</tr>`).join('')}</tbody></table>`;
 }
 
 function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
@@ -820,6 +909,8 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   const conversion = sections.conversion || {};
   const coachRows = normalizeRows(coach.rows);
   const sourceRows = normalizeRows(conversion.sourceRows);
+  const lifetime = snapshot.lifetimeSummary || {};
+  const edits = snapshot.publicEdits || {};
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -828,20 +919,21 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   <title>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</title>
   <style>
     *{box-sizing:border-box}body{margin:0;background:#070A08;color:#fff;font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background-image:linear-gradient(to right,#111813 1px,transparent 1px),linear-gradient(to bottom,#111813 1px,transparent 1px);background-size:40px 40px}
-    header{position:sticky;top:0;z-index:2;border-bottom:1px solid #18221B;background:rgba(7,10,8,.94);backdrop-filter:blur(12px)}.topbar{max-width:1600px;height:64px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}.tag{background:#7CFF44;color:#070A08;border-radius:4px;padding:6px 10px;font:700 12px ui-monospace,SFMono-Regular,monospace;letter-spacing:.04em}.path{color:#889E8D;font:12px ui-monospace,SFMono-Regular,monospace;text-transform:uppercase}.live{border:1px solid #18221B;background:rgba(0,0,0,.3);border-radius:8px;color:#7CFF44;padding:7px 12px;font:12px ui-monospace,SFMono-Regular,monospace}
+    header{position:sticky;top:0;z-index:2;border-bottom:1px solid #18221B;background:rgba(7,10,8,.94);backdrop-filter:blur(12px)}.topbar{max-width:1600px;height:64px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}.tag{background:#7CFF44;color:#070A08;border-radius:4px;padding:6px 10px;font:700 12px ui-monospace,SFMono-Regular,monospace;letter-spacing:.04em}.path{color:#889E8D;font:12px ui-monospace,SFMono-Regular,monospace;text-transform:uppercase}.live{border:1px solid #18221B;background:rgba(0,0,0,.3);border-radius:8px;color:#7CFF44;padding:7px 12px;font:12px ui-monospace,SFMono-Regular,monospace}.save-edit{border:1px solid #7CFF44;background:#7CFF44;color:#070A08;border-radius:6px;padding:8px 12px;font-weight:700;cursor:pointer}.save-edit[disabled]{opacity:.65;cursor:wait}
     main{max-width:1600px;margin:0 auto;padding:32px 24px 56px}.hero{display:grid;grid-template-columns:7fr 5fr;gap:20px;align-items:end;margin-bottom:22px}.eyebrow{color:#7CFF44;font:12px ui-monospace,SFMono-Regular,monospace;letter-spacing:.12em;text-transform:uppercase}h1{font-size:38px;line-height:1.15;margin:12px 0 10px;letter-spacing:0}h2{font-size:15px;margin:0;color:#fff}.muted{color:#889E8D}.hero-copy{color:#889E8D;margin:0}.section-title{margin:26px 0 12px;padding-top:10px;border-top:1px solid rgba(24,34,27,.6);display:flex;align-items:center;justify-content:space-between}.section-title span{color:#7CFF44;font:12px ui-monospace,SFMono-Regular,monospace;letter-spacing:.12em;text-transform:uppercase}
-    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.grid.five{grid-template-columns:repeat(5,minmax(0,1fr))}.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel,.metric{background:#0D120F;border:1px solid #18221B;border-radius:12px;padding:18px}.panel{margin-top:14px}.panel:hover,.metric:hover{border-color:#2C3D2F}.metric span{display:block;color:#889E8D;font-size:12px}.metric strong{display:block;margin-top:8px;font:700 30px ui-monospace,SFMono-Regular,monospace;color:#fff;letter-spacing:0}.metric em{display:block;margin-top:8px;color:#7CFF44;font-size:12px;font-style:normal}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.grid.five{grid-template-columns:repeat(5,minmax(0,1fr))}.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel,.metric{background:#0D120F;border:1px solid #18221B;border-radius:12px;padding:18px}.panel{margin-top:14px}.panel:hover,.metric:hover,.bar-row:hover,.legend span:hover,.matrix-cell:hover{border-color:#7CFF44;filter:brightness(1.08)}.metric span{display:block;color:#889E8D;font-size:12px}.metric strong{display:block;margin-top:8px;font:700 30px ui-monospace,SFMono-Regular,monospace;color:#fff;letter-spacing:0}.metric em{display:block;margin-top:8px;color:#7CFF44;font-size:12px;font-style:normal}
     .hero-kpis{background:#0D120F;border:1px solid #18221B;border-radius:12px;padding:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.hero-kpis .metric{border:0;border-right:1px solid rgba(24,34,27,.8);border-radius:0;padding:4px 12px}.hero-kpis .metric:last-child{border-right:0}.hero-kpis .metric strong{font-size:32px}
-    table{width:100%;border-collapse:collapse;background:#0D120F;border:1px solid #18221B;border-radius:12px;overflow:hidden;margin-top:14px}th,td{text-align:left;padding:11px 12px;border-bottom:1px solid rgba(24,34,27,.8);font-size:13px}th{color:#889E8D;background:#111813;font-weight:600}td{color:#fff}tr:last-child td{border-bottom:0}.remark{white-space:pre-wrap;background:#0D120F;border:1px solid #18221B;border-radius:12px;padding:14px;color:#889E8D}.empty{color:#889E8D}
+    table{width:100%;border-collapse:collapse;background:#0D120F;border:1px solid #18221B;border-radius:12px;overflow:hidden;margin-top:14px}th,td{text-align:left;padding:11px 12px;border-bottom:1px solid rgba(24,34,27,.8);font-size:13px}th{color:#889E8D;background:#111813;font-weight:600}td{color:#fff}tr:last-child td{border-bottom:0}.highlight-col{background:rgba(124,255,68,.08);color:#7CFF44}.remark{white-space:pre-wrap;background:#0D120F;border:1px solid #18221B;border-radius:12px;padding:14px;color:#889E8D}.empty{color:#889E8D}
     .bars{display:grid;gap:11px}.bar-row{display:grid;grid-template-columns:132px 1fr 92px;gap:12px;align-items:center;font-size:13px}.bar-row span{color:#889E8D}.bar-row i{height:10px;background:#18221B;border-radius:3px;overflow:hidden}.bar-row b{display:block;height:100%;background:#7CFF44;border-radius:3px}.bar-row strong{font-family:ui-monospace,SFMono-Regular,monospace;color:#fff}
     .donut-wrap{display:flex;align-items:center;gap:20px}.donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:"";position:absolute;inset:35px;border-radius:50%;background:#0D120F}.legend{display:grid;gap:9px;font-size:13px}.legend span{display:flex;align-items:center;gap:8px;color:#889E8D}.legend i{width:10px;height:10px;border-radius:50%}
     .line-chart svg{width:100%;height:210px;background:#070A08;border:1px solid #18221B;border-radius:8px;background-image:linear-gradient(to right,rgba(24,34,27,.55) 1px,transparent 1px),linear-gradient(to bottom,rgba(24,34,27,.55) 1px,transparent 1px);background-size:44px 44px}.line-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px;color:#3E5244;font:12px ui-monospace,SFMono-Regular,monospace}.line-labels b{display:block;color:#889E8D;margin-top:3px}
     .progress-list{display:grid;gap:14px}.progress-item div{display:flex;justify-content:space-between;color:#889E8D;font-size:12px;margin-bottom:6px}.progress-item strong{color:#fff;font-family:ui-monospace,SFMono-Regular,monospace}.progress-item i{display:block;height:10px;background:#18221B;border-radius:3px;overflow:hidden}.progress-item b{display:block;height:100%;background:#7CFF44}.ring-panel{display:grid;place-items:center;gap:12px;padding:18px}.ring{--p:0;width:150px;height:150px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#7CFF44 calc(var(--p)*1%),#18221B 0);position:relative}.ring:after{content:"";position:absolute;inset:28px;border-radius:50%;background:#0D120F}.ring span{position:relative;z-index:1;font:700 30px ui-monospace,SFMono-Regular,monospace}.ring-panel p{margin:0;color:#889E8D;font-size:12px}
+    .cohort-heatmap{background:#070A08;border:1px solid #18221B;border-radius:8px;padding:14px}.matrix-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:14px}.matrix-head span{color:#7CFF44;font:12px ui-monospace,SFMono-Regular,monospace}.matrix-head strong{color:#889E8D;font-size:12px}.matrix-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}.matrix-cell{min-height:78px;border:1px solid rgba(124,255,68,.22);border-radius:6px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;color:#070A08}.matrix-cell span{font-size:12px;font-weight:700}.matrix-cell strong{font:800 24px ui-monospace,SFMono-Regular,monospace}.chart-tooltip{position:fixed;display:none;z-index:20;pointer-events:none;border:1px solid #7CFF44;background:#0D120F;color:#fff;border-radius:6px;padding:7px 9px;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.4)}[contenteditable=true]{outline:1px dashed rgba(124,255,68,.45);outline-offset:2px;border-radius:3px}
     @media(max-width:900px){.hero,.split{grid-template-columns:1fr}.grid,.grid.five{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-kpis{grid-template-columns:1fr}.hero-kpis .metric{border-right:0;border-bottom:1px solid rgba(24,34,27,.8)}.hero-kpis .metric:last-child{border-bottom:0}.topbar{padding:0 14px}.path{display:none}main{padding:24px 14px}.metric strong{font-size:22px}.line-labels{grid-template-columns:repeat(2,1fr)}.bar-row{grid-template-columns:96px 1fr 74px}}
   </style>
 </head>
 <body>
-<header><div class="topbar"><div><span class="tag">FLOWTENNIS</span> <span class="path">// WEEKLY BUSINESS REPORT</span></div><div class="live">● ${escapeHtml(period.startDate)} - ${escapeHtml(period.endDate)}${snapshot.weekNumber ? `（第 ${escapeHtml(snapshot.weekNumber)} 周）` : ''}</div></div></header>
+<header><div class="topbar"><div><span class="tag">FLOWTENNIS</span> <span class="path">// WEEKLY BUSINESS REPORT</span></div><div style="display:flex;align-items:center;gap:10px"><div class="live">● ${escapeHtml(period.startDate)} - ${escapeHtml(period.endDate)}${snapshot.weekNumber ? `（第 ${escapeHtml(snapshot.weekNumber)} 周）` : ''}</div><button class="save-edit" type="button">保存编辑</button></div></div></header>
 <main>
   <section class="hero">
     <div>
@@ -849,17 +941,17 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
       <h1>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</h1>
     </div>
     <div class="hero-kpis">
-      ${metricBlock('总收入', summary.totalIncome?.value || 0, ' 元')}
-      ${metricBlock('场地利用率', summary.courtUtilizationRate?.value || 0, '%')}
-      ${metricBlock('线索数', summary.totalLeads?.value || 0, ' 条')}
+      ${metricBlock('总收入', lifetime.totalIncome?.value || 0, ' 元', edits, 'lifetime.totalIncome')}
+      ${metricBlock('总场地利用率', lifetime.courtUtilizationRate?.value || 0, '%', edits, 'lifetime.courtUtilizationRate')}
+      ${metricBlock('总私教课人数', lifetime.privateCoursePeople?.value || 0, ' 人', edits, 'lifetime.privateCoursePeople')}
     </div>
   </section>
   <div class="grid five">
-    ${metricBlock('总收入', summary.totalIncome?.value || 0, ' 元')}
-    ${metricBlock('已入账', summary.recognizedRevenue?.value || 0, ' 元')}
-    ${metricBlock('场地利用率', summary.courtUtilizationRate?.value || 0, '%')}
-    ${metricBlock('教练课时', summary.coachHours?.value || 0, ' 小时')}
-    ${metricBlock('线索数', summary.totalLeads?.value || 0, ' 条')}
+    ${metricBlock('本周收入', summary.totalIncome?.value || 0, ' 元', edits, 'summary.totalIncome')}
+    ${metricBlock('本周已入账', summary.recognizedRevenue?.value || 0, ' 元', edits, 'summary.recognizedRevenue')}
+    ${metricBlock('本周场地利用率', summary.courtUtilizationRate?.value || 0, '%', edits, 'summary.courtUtilizationRate')}
+    ${metricBlock('本周教练课时', summary.coachHours?.value || 0, ' 小时', edits, 'summary.coachHours')}
+    ${metricBlock('本周线索数', summary.totalLeads?.value || 0, ' 条', edits, 'summary.totalLeads')}
   </div>
 
   <div class="section-title"><h2>1、收入数据</h2><span>// REVENUE</span></div>
@@ -892,8 +984,8 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${reportMetric('免费应收让利', court.freeUsage?.receivableAmount || 0, ' 元')}
   </div>
   <div class="split">
-    <div class="panel"><h3>每天利用率</h3>${lineChart(court.weekdayRows || [], { valueKey: 'value', unit: '%' })}</div>
-    <div class="panel"><h3>类型占比</h3>${ringPanel(court.utilizationRate || 0, '本周场地利用率')}${donutChart(court.usageRows || [], { labelKey: 'label', valueKey: 'hours' })}</div>
+    <div class="panel"><h3>每天利用率</h3>${courtUsageMatrix(court.dailyRows || court.weekdayRows || [])}</div>
+    <div class="panel"><h3>类型占比</h3>${donutChart(court.usageRows || [], { labelKey: 'label', valueKey: 'hours' })}</div>
   </div>
   ${renderRows(court.usageRows || [], [
     { key: 'label', label: '类型' },
@@ -913,17 +1005,18 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${reportMetric('专项课', coach.specialHours || 0, ' 小时')}
     ${reportMetric('陪打', coach.sparringHours || 0, ' 小时')}
   </div>
-  <div class="split"><div class="panel">${barChart(coachRows, { labelKey: 'coach', valueKey: 'totalHours', unit: '小时' })}</div><div class="panel">${progressPanel([
+  <div class="split"><div class="panel">${barChart(coachRows, { labelKey: 'coach', valueKey: 'totalHours', unit: '小时' })}</div><div class="panel">${donutChart([
     { label: '私教课', hours: coach.privateHours || 0 },
     { label: '小班课', hours: coach.smallClassHours || 0 },
     { label: '体验课', hours: coach.trialHours || 0 },
     { label: '专项课', hours: coach.specialHours || 0 },
     { label: '陪打', hours: coach.sparringHours || 0 }
-  ], { labelKey: 'label', valueKey: 'hours', unit: '小时' })}</div></div>
+  ], { labelKey: 'label', valueKey: 'hours' })}</div></div>
   ${renderRows(coachRows, [
     { key: 'coach', label: '教练' },
-    { key: 'scheduledCount', label: '本周排课量/上周排课量', render: row => `${row.scheduledCount || 0} / ${row.previousHours || 0}` },
-    { key: 'compare', label: '环比', render: row => comparePercentText(row.compare) },
+    { key: 'previousHours', label: '上周排课量', render: row => formatMetricValue(row.previousHours || 0, '小时') },
+    { key: 'scheduledCount', label: '本周排课量', highlight: true, render: row => formatMetricValue(row.scheduledCount || 0, '小时') },
+    { key: 'compare', label: '排课周环比', render: row => comparePercentText(row.compare) },
     { key: 'privateHours', label: '私教课' },
     { key: 'smallClassHours', label: '小班课' },
     { key: 'trialHours', label: '体验课' },
@@ -947,9 +1040,15 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     { key: 'compare', label: '环比', render: row => trendText(row.compare?.leads) }
   ])}
   <div class="section-title"><h2>备注</h2><span>// REMARK</span></div>
-  <p class="remark">${escapeHtml(remark || '暂无备注')}</p>
+  <p class="remark">${editableValue(edits, 'remark', remark || '暂无备注')}</p>
 </main>
+<div class="chart-tooltip"></div>
 <script>
+var tooltip=document.querySelector('.chart-tooltip');
+document.querySelectorAll('[data-tooltip]').forEach(function(el){
+  el.addEventListener('mousemove',function(e){if(!tooltip)return;tooltip.textContent=el.getAttribute('data-tooltip')||'';tooltip.style.display='block';tooltip.style.left=e.clientX+12+'px';tooltip.style.top=e.clientY+12+'px';});
+  el.addEventListener('mouseleave',function(){if(tooltip)tooltip.style.display='none';});
+});
 document.querySelectorAll('.template-interactive-chart').forEach(function(chart){
   var rows=[];
   try{rows=JSON.parse(chart.getAttribute('data-points')||'[]')}catch(e){}
@@ -971,6 +1070,23 @@ document.querySelectorAll('.template-interactive-chart').forEach(function(chart)
   dots.innerHTML=points.map(function(point){
     return '<circle class="interactive-dot" cx="'+point.x+'" cy="'+point.y+'" r="2.8" fill="#070A08" stroke="#7CFF44" stroke-width="1.5"></circle>';
   }).join('');
+});
+document.querySelector('.save-edit')?.addEventListener('click',async function(){
+  var button=this;
+  var values={};
+  document.querySelectorAll('[data-edit-key]').forEach(function(el){values[el.getAttribute('data-edit-key')]=el.textContent.trim();});
+  button.disabled=true;
+  button.textContent='保存中';
+  try{
+    var token=location.pathname.split('/').filter(Boolean).pop();
+    var res=await fetch('/api/public/weekly-business-reports/'+encodeURIComponent(token)+'/edits',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({edits:values})});
+    if(!res.ok)throw new Error('save failed');
+    button.textContent='已保存';
+  }catch(e){
+    button.textContent='保存失败';
+  }finally{
+    setTimeout(function(){button.disabled=false;button.textContent='保存编辑';},1600);
+  }
 });
 </script>
 </body>
@@ -1047,6 +1163,28 @@ async function updateWeeklyBusinessReportRemark({ get, put, id = '', remark = ''
   return reportView(next);
 }
 
+async function updateWeeklyBusinessReportPublicEdits({ scan, put, token = '', edits = {}, table = WEEKLY_REPORT_TABLE } = {}) {
+  const report = await findWeeklyBusinessReportByToken({ scan, token, table });
+  if (!report) {
+    const err = new Error('周报不存在');
+    err.statusCode = 404;
+    throw err;
+  }
+  const safeEdits = {};
+  Object.entries(edits || {}).forEach(([key, value]) => {
+    if (!/^[a-zA-Z0-9_.-]{1,80}$/.test(String(key))) return;
+    safeEdits[key] = String(value ?? '').replace(/[<>]/g, '').slice(0, 500);
+  });
+  const next = {
+    ...report,
+    publicEdits: safeEdits,
+    publicEditsUpdatedAt: new Date().toISOString()
+  };
+  next.html = renderWeeklyBusinessReportHtml(next, { remark: next.remark || '' });
+  await put(table, next.id, next);
+  return { success: true };
+}
+
 async function generateWeeklyBusinessReport({
   loadOperationsPayload,
   get,
@@ -1072,15 +1210,23 @@ async function generateWeeklyBusinessReport({
     dateRange: { startDate: period.previousStartDate, endDate: period.previousEndDate },
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: period.previousStartDate, endDate: period.previousEndDate }
   };
+  const totalScope = {
+    campusName: WEEKLY_REPORT_CAMPUS_NAME,
+    includeWeeklyReportRaw: true,
+    dateRange: {},
+    metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME }
+  };
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
-  const [operationsPayload, previousOperationsPayload] = await Promise.all([
+  const [operationsPayload, previousOperationsPayload, totalOperationsPayload] = await Promise.all([
     loadOperationsPayload({ user, scope }),
-    loadOperationsPayload({ user, scope: previousScope })
+    loadOperationsPayload({ user, scope: previousScope }),
+    loadOperationsPayload({ user, scope: totalScope }).catch(() => null)
   ]);
   const snapshot = buildWeeklyBusinessReportSnapshot({
     period,
     operationsPayload,
     previousOperationsPayload,
+    totalOperationsPayload,
     shareToken: existing?.shareToken || '',
     baseUrl,
     generationMode
@@ -1089,8 +1235,10 @@ async function generateWeeklyBusinessReport({
     ...snapshot,
     status: 'success',
     remark: existing?.remark || '',
-    html: renderWeeklyBusinessReportHtml(snapshot, { remark: existing?.remark || '' })
+    publicEdits: existing?.publicEdits || {},
+    html: ''
   };
+  row.html = renderWeeklyBusinessReportHtml(row, { remark: row.remark || '' });
   await put(table, row.id, row);
   return row;
 }
@@ -1106,5 +1254,6 @@ module.exports = {
   listWeeklyBusinessReports,
   findWeeklyBusinessReportByToken,
   updateWeeklyBusinessReportRemark,
+  updateWeeklyBusinessReportPublicEdits,
   generateWeeklyBusinessReport
 };

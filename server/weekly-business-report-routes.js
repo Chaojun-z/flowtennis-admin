@@ -4,6 +4,7 @@ const {
   listWeeklyBusinessReports,
   findWeeklyBusinessReportByToken,
   updateWeeklyBusinessReportRemark,
+  updateWeeklyBusinessReportPublicEdits,
   renderWeeklyBusinessReportHtml,
   buildWeeklyBusinessReportFeishuText,
   sendWeeklyBusinessReportFeishuText
@@ -43,10 +44,21 @@ function createWeeklyBusinessReportRoutes({
     return { success: true, report: snapshot, notification };
   }
 
-  async function handlePublic({ path, method, res } = {}) {
-    if (!(path.startsWith('/public/weekly-business-reports/') && method === 'GET')) return false;
+  async function handlePublic({ path, method, body, res } = {}) {
+    if (!(path.startsWith('/public/weekly-business-reports/') && (method === 'GET' || method === 'POST'))) return false;
     await init();
-    const shareToken = decodeURIComponent(path.split('/').pop() || '');
+    const isEditSave = path.endsWith('/edits') && method === 'POST';
+    const parts = path.split('/').filter(Boolean);
+    const shareToken = decodeURIComponent(parts[2] || '');
+    if (isEditSave) {
+      try {
+        const result = await updateWeeklyBusinessReportPublicEdits({ scan, put, token: shareToken, edits: body?.edits || {}, table });
+        return sendJson(res, result);
+      } catch (err) {
+        return sendJson(res, { error: String(err?.message || err) }, err.statusCode || 500);
+      }
+    }
+    if (method !== 'GET') return false;
     const report = await findWeeklyBusinessReportByToken({ scan, token: shareToken, table });
     if (!report) {
       res.statusCode = 404;
