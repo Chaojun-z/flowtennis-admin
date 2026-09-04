@@ -23,7 +23,7 @@ function createWeeklyBusinessReportRoutes({
   isProductionRuntime = () => false
 } = {}) {
   function baseUrl(req) {
-    return String(publicBaseUrl || process.env.PUBLIC_BASE_URL || (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) || `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host || 'www.flowtennis.cn'}`).replace(/\/+$/, '');
+    return String(publicBaseUrl || process.env.PUBLIC_BASE_URL || 'https://www.flowtennis.cn').replace(/\/+$/, '');
   }
 
   async function runReport({ req, mode = 'auto', now = new Date() } = {}) {
@@ -57,8 +57,7 @@ function createWeeklyBusinessReportRoutes({
     res.statusCode = 200;
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
-    const storedHtml = String(report.html || '');
-    res.end(storedHtml.includes('1、收入数据') ? storedHtml : renderWeeklyBusinessReportHtml(report, { remark: report.remark || '' }));
+    res.end(renderWeeklyBusinessReportHtml(report, { remark: report.remark || '' }));
     return true;
   }
 

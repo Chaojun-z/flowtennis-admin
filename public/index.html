@@ -7,6 +7,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="网球兄弟">
+<script>
+if(/^\/weekly-reports\/[^/]+/.test(location.pathname))document.documentElement.classList.add('weekly-report-share-shell');
+</script>
+<style>
+.weekly-report-share-shell body{background:#070A08}
+.weekly-report-share-shell #loginPage{display:none!important}
+</style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">

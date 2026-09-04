@@ -138,7 +138,9 @@ function campusMatches(row = {}) {
 }
 
 function isActiveCoach(row = {}) {
-  return String(row.status || 'active').trim() === 'active';
+  const status = String(row.status || row.employmentStatus || row.coachStatus || 'active').trim();
+  if (!status) return true;
+  return /^(active|enabled|在职|启用|正常)$/i.test(status);
 }
 
 function cleanCoachName(value = '') {
@@ -304,6 +306,8 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const previousScheduleRows = normalizeRows(previousRaw.schedule || raw.schedule).filter(row => isValidSchedule(row, previousPeriod) && scheduleBelongsToActiveCoach(row));
   const historyRows = courtHistoryRows(raw, period);
   const previousHistoryRows = courtHistoryRows(previousRaw, previousPeriod);
+  const financeRows = normalizeRows(raw.financeNormalizedRows).filter(row => inPeriod(row.businessDate || row.date || row.createdAt, period) && /场地|订场/.test(String(row.businessType || row.displayBusinessType || row.category || '')));
+  const previousFinanceRows = normalizeRows(previousRaw.financeNormalizedRows || raw.financeNormalizedRows).filter(row => inPeriod(row.businessDate || row.date || row.createdAt, previousPeriod) && /场地|订场/.test(String(row.businessType || row.displayBusinessType || row.category || '')));
   const labels = [
     { key: 'guest', label: '散客场地使用', tests: [/散客/, /约球局/] },
     { key: 'member', label: '会员场地使用', tests: [/会员/] },
@@ -317,11 +321,25 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
       amount: acc.amount + (meta.key === 'free' ? 0 : fieldNumber(row, ['amount', 'actualAmount', 'cashAmount'])),
       receivableAmount: acc.receivableAmount + fieldNumber(row, ['receivableAmount', 'originalAmount', 'concessionAmount', 'discountAmount', 'amount'])
     }), { count: 0, hours: 0, amount: 0, receivableAmount: 0 });
+  const sumFinance = (rows, meta) => rows.filter(row => meta.tests.some(test => test.test(rowLabel(row, ['businessType', 'displayBusinessType', 'category', 'type', 'name', 'label', 'businessName'], ''))))
+    .reduce((acc, row) => ({
+      count: acc.count + 1,
+      amount: acc.amount + (meta.key === 'free' ? 0 : Math.abs(fieldNumber(row, ['cashDelta', 'amount', 'recognizedRevenueDelta']))),
+      receivableAmount: acc.receivableAmount + fieldNumber(row, ['receivableAmount', 'originalAmount', 'concessionAmount', 'discountAmount'])
+    }), { count: 0, amount: 0, receivableAmount: 0 });
   const courseHours = scheduleRows.reduce((sum, row) => sum + scheduleHours(row), 0);
   const previousCourseHours = previousScheduleRows.reduce((sum, row) => sum + scheduleHours(row), 0);
   const result = labels.map(meta => {
     const current = sumHistory(historyRows, meta);
     const previous = sumHistory(previousHistoryRows, meta);
+    const financeCurrent = sumFinance(financeRows, meta);
+    const financePrevious = sumFinance(previousFinanceRows, meta);
+    if (!current.count && financeCurrent.count) current.count = financeCurrent.count;
+    if (!current.amount && financeCurrent.amount) current.amount = financeCurrent.amount;
+    if (!current.receivableAmount && financeCurrent.receivableAmount) current.receivableAmount = financeCurrent.receivableAmount;
+    if (!previous.count && financePrevious.count) previous.count = financePrevious.count;
+    if (!previous.amount && financePrevious.amount) previous.amount = financePrevious.amount;
+    if (!previous.receivableAmount && financePrevious.receivableAmount) previous.receivableAmount = financePrevious.receivableAmount;
     if (meta.key === 'course') {
       current.count += scheduleRows.length;
       current.hours += courseHours;
@@ -696,8 +714,15 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
+function formatMetricValue(value, unit = '') {
+  if (value === null || value === undefined || value === '') return '-';
+  const numeric = optionalNumber(value);
+  if (numeric !== null && String(unit).includes('元')) return String(Math.round(numeric));
+  return String(value);
+}
+
 function metricBlock(label, value, suffix = '') {
-  return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}${escapeHtml(suffix)}</strong></section>`;
+  return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatMetricValue(value, suffix))}${escapeHtml(suffix)}</strong></section>`;
 }
 
 function displayMetricValue(value) {
@@ -722,7 +747,7 @@ function comparePercentText(compare = {}) {
 
 function reportMetric(label, value, unit = '', compare = null) {
   const empty = value === null || value === undefined || value === '';
-  return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(displayMetricValue(value))}${empty ? '' : escapeHtml(unit)}</strong>${compare ? `<em>${escapeHtml(trendText(compare))}</em>` : ''}</section>`;
+  return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(empty ? displayMetricValue(value) : formatMetricValue(value, unit))}${empty ? '' : escapeHtml(unit)}</strong>${compare ? `<em>${escapeHtml(trendText(compare))}</em>` : ''}</section>`;
 }
 
 function barChart(rows = [], { labelKey = 'name', valueKey = 'value', unit = '' } = {}) {
@@ -752,13 +777,8 @@ function donutChart(rows = [], { labelKey = 'name', valueKey = 'value' } = {}) {
 function lineChart(rows = [], { valueKey = 'value', unit = '%' } = {}) {
   const clean = normalizeRows(rows).filter(row => row.label || row.date);
   if (!clean.length) return '<p class="empty">暂无可绘制数据</p>';
-  const max = Math.max(...clean.map(row => fieldNumber(row, [valueKey])), 1);
-  const points = clean.map((row, index) => {
-    const x = clean.length === 1 ? 50 : 8 + index * (84 / (clean.length - 1));
-    const y = 92 - (fieldNumber(row, [valueKey]) / max) * 76;
-    return { x, y, row };
-  });
-  return `<div class="line-chart"><svg viewBox="0 0 100 100" role="img" aria-label="趋势图"><polyline points="${points.map(p => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="#7CFF44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="2.3" fill="#070A08" stroke="#7CFF44" stroke-width="1.4"/>`).join('')}</svg><div class="line-labels">${points.map(p => `<span>${escapeHtml(p.row.label || String(p.row.date || '').slice(5))}<b>${escapeHtml(fieldNumber(p.row, [valueKey]))}${escapeHtml(unit)}</b></span>`).join('')}</div></div>`;
+  const payload = clean.map(row => ({ label: row.label || String(row.date || '').slice(5), value: fieldNumber(row, [valueKey]) }));
+  return `<div class="line-chart template-interactive-chart" data-unit="${escapeHtml(unit)}" data-points="${escapeHtml(JSON.stringify(payload))}"><svg viewBox="0 0 100 100" role="img" aria-label="趋势图"><defs><linearGradient id="weeklyAreaGlowGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7CFF44" stop-opacity="0.16"></stop><stop offset="100%" stop-color="#7CFF44" stop-opacity="0"></stop></linearGradient></defs><path class="views-area" fill="url(#weeklyAreaGlowGradient)" d=""></path><path class="views-line" fill="none" stroke="#7CFF44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d=""></path><g class="dots"></g></svg><div class="line-labels">${payload.map(row => `<span>${escapeHtml(row.label)}<b>${escapeHtml(row.value)}${escapeHtml(unit)}</b></span>`).join('')}</div></div>`;
 }
 
 function progressPanel(rows = [], { labelKey = 'label', valueKey = 'hours', unit = '' } = {}) {
@@ -767,7 +787,7 @@ function progressPanel(rows = [], { labelKey = 'label', valueKey = 'hours', unit
   const max = Math.max(...clean.map(row => fieldNumber(row, [valueKey])), 1);
   return `<div class="progress-list">${clean.map(row => {
     const value = fieldNumber(row, [valueKey]);
-    return `<div class="progress-item"><div><span>${escapeHtml(rowLabel(row, [labelKey, 'name', 'type']))}</span><strong>${escapeHtml(value)}${escapeHtml(unit)}</strong></div><i><b style="width:${Math.max(2, percent(value, max))}%"></b></i></div>`;
+    return `<div class="progress-item"><div><span>${escapeHtml(rowLabel(row, [labelKey, 'name', 'type']))}</span><strong>${escapeHtml(formatMetricValue(value, unit))}${escapeHtml(unit)}</strong></div><i>${value > 0 ? `<b style="width:${Math.max(2, percent(value, max))}%"></b>` : ''}</i></div>`;
   }).join('')}</div>`;
 }
 
@@ -821,13 +841,12 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   </style>
 </head>
 <body>
-<header><div class="topbar"><div><span class="tag">FLOWTENNIS</span> <span class="path">// WEEKLY BUSINESS REPORT</span></div><div class="live">● ${escapeHtml(period.startDate)} - ${escapeHtml(period.endDate)}</div></div></header>
+<header><div class="topbar"><div><span class="tag">FLOWTENNIS</span> <span class="path">// WEEKLY BUSINESS REPORT</span></div><div class="live">● ${escapeHtml(period.startDate)} - ${escapeHtml(period.endDate)}${snapshot.weekNumber ? `（第 ${escapeHtml(snapshot.weekNumber)} 周）` : ''}</div></div></header>
 <main>
   <section class="hero">
     <div>
       <div class="eyebrow">// SHUNYI MAPO OVERVIEW</div>
       <h1>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</h1>
-      <p class="hero-copy">${escapeHtml(period.startDate)} 至 ${escapeHtml(period.endDate)}${snapshot.weekNumber ? `（第 ${escapeHtml(snapshot.weekNumber)} 周）` : ''}</p>
     </div>
     <div class="hero-kpis">
       ${metricBlock('总收入', summary.totalIncome?.value || 0, ' 元')}
@@ -930,6 +949,30 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   <div class="section-title"><h2>备注</h2><span>// REMARK</span></div>
   <p class="remark">${escapeHtml(remark || '暂无备注')}</p>
 </main>
+<script>
+document.querySelectorAll('.template-interactive-chart').forEach(function(chart){
+  var rows=[];
+  try{rows=JSON.parse(chart.getAttribute('data-points')||'[]')}catch(e){}
+  var svg=chart.querySelector('svg');
+  var line=chart.querySelector('.views-line');
+  var area=chart.querySelector('.views-area');
+  var dots=chart.querySelector('.dots');
+  if(!rows.length||!svg||!line||!area||!dots)return;
+  var max=Math.max.apply(null,rows.map(function(row){return Number(row.value)||0}).concat([1]));
+  var points=rows.map(function(row,index){
+    var x=rows.length===1?50:8+index*(84/(rows.length-1));
+    var y=92-((Number(row.value)||0)/max)*76;
+    return {x:x,y:y,row:row};
+  });
+  var path=points.map(function(point,index){return (index?'L':'M')+point.x+' '+point.y}).join(' ');
+  var fill='M '+points[0].x+' 92 L '+points.map(function(point){return point.x+' '+point.y}).join(' L ')+' L '+points[points.length-1].x+' 92 Z';
+  line.setAttribute('d',path);
+  area.setAttribute('d',fill);
+  dots.innerHTML=points.map(function(point){
+    return '<circle class="interactive-dot" cx="'+point.x+'" cy="'+point.y+'" r="2.8" fill="#070A08" stroke="#7CFF44" stroke-width="1.5"></circle>';
+  }).join('');
+});
+</script>
 </body>
 </html>`;
 }
