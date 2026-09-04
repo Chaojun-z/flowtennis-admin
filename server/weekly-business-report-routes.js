@@ -57,7 +57,8 @@ function createWeeklyBusinessReportRoutes({
     res.statusCode = 200;
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
-    res.end(report.html || renderWeeklyBusinessReportHtml(report, { remark: report.remark || '' }));
+    const storedHtml = String(report.html || '');
+    res.end(storedHtml.includes('1、收入数据') ? storedHtml : renderWeeklyBusinessReportHtml(report, { remark: report.remark || '' }));
     return true;
   }
 

@@ -37,12 +37,20 @@ const operationsPayload = {
     },
     court: {
       cards: {
+        activeVenues: { value: 2 },
         bookingHours: { value: 30 },
+        bookingCount: { value: 12 },
         utilizationRate: { value: 66.7 }
       },
+      trends: [
+        { date: '2026-08-27', utilizationRate: 41 },
+        { date: '2026-08-28', utilizationRate: 72 }
+      ],
       usageMixRows: [
-        { type: '散客场地使用', hours: 10, amount: 1200 },
-        { type: '免费场地使用', hours: 2, amount: 0, receivableAmount: 300 }
+        { type: '散客场地使用', count: 4, hours: 10, amount: 1200 },
+        { type: '会员场地使用', count: 3, hours: 8, amount: 900 },
+        { type: '课程场地使用', count: 2, hours: 6, amount: 600 },
+        { type: '免费场地使用', count: 1, hours: 2, amount: 0, receivableAmount: 300 }
       ]
     },
     coach: {
@@ -50,7 +58,8 @@ const operationsPayload = {
         usedHours: { value: 42 }
       },
       rows: [
-        { coach: '王教练', privateLessons: 12, smallClassLessons: 3, trialLessons: 2, specialLessons: 1, sparringLessons: 1 }
+        { coach: '王教练', usedHours: 18, lessonCount: 9, courseMix: [{ type: '私教课', hours: 12 }, { type: '小班课', hours: 3 }, { type: '体验课', hours: 2 }, { type: '专项课', hours: 1 }] },
+        { coach: '张教练', usedHours: 4, lessonCount: 2, courseMix: [{ type: '陪打', hours: 4 }] }
       ]
     },
     conversion: {
@@ -87,9 +96,21 @@ assert.strictEqual(snapshot.summary.totalIncome.compare.changeValue, 2000, 'snap
 assert.strictEqual(snapshot.shareUrl, 'https://www.flowtennis.cn/weekly-reports/token-abc', 'snapshot should expose a share URL');
 assert.ok(snapshot.sections.court.freeUsage.receivableAmount >= 300, 'free court usage should keep zero actual amount and receivable concession amount');
 assert.strictEqual(snapshot.sections.detailsMode, 'summary-only', 'weekly report should not expose single-record details');
+assert.strictEqual(snapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 8, 'weekly report should preserve member court usage data');
+assert.strictEqual(snapshot.sections.coach.rows.find(row => row.coach === '王教练')?.privateHours, 12, 'weekly report should derive coach private hours from course mix');
+assert.strictEqual(snapshot.sections.conversion.sourceRows.find(row => row.source === '小红书')?.deals, 2, 'weekly report should keep source conversion data');
 
 const html = renderWeeklyBusinessReportHtml(snapshot, { remark: '本周雨天影响场地。' });
 assert.match(html, /顺义马坡周报/, 'HTML should render the report title');
+assert.match(html, /1、收入数据/, 'HTML should render revenue section');
+assert.match(html, /2、场地数据/, 'HTML should render court section');
+assert.match(html, /3、教练课时/, 'HTML should render coach section');
+assert.match(html, /4、线索转化/, 'HTML should render lead conversion section');
+assert.match(html, /donut|bar-row|line-chart/, 'HTML should render report charts');
+assert.match(html, /会员场地使用/, 'HTML should render member court usage row');
+assert.match(html, /王教练/, 'HTML should render coach data rows');
+assert.match(html, /小红书/, 'HTML should render lead source rows');
+assert.doesNotMatch(html, /<td>-<\/td><td>-<\/td><td>-<\/td><td>-<\/td>/, 'HTML should not render rows with all empty metric cells when source data exists');
 assert.match(html, /本周雨天影响场地。/, 'HTML should render admin remark text');
 assert.doesNotMatch(html, /订单ID|线索ID|流水ID/, 'HTML should not expose single-record technical detail labels');
 
@@ -130,7 +151,7 @@ async function callPublicRoute() {
   const routes = createWeeklyBusinessReportRoutes({
     init: async () => {},
     sendJson: () => { throw new Error('public share route must not fall through to JSON auth'); },
-    scan: async () => [{ shareToken: 'public-token', status: 'success', html: '<h1>公开周报</h1>' }],
+    scan: async () => [{ ...snapshot, shareToken: 'public-token', status: 'success', html: '<h1>旧版周报</h1>' }],
     table: 'ft_weekly_business_reports'
   });
   const handled = await routes.handlePublic({ path: '/public/weekly-business-reports/public-token', method: 'GET', res });
@@ -140,7 +161,8 @@ async function callPublicRoute() {
 callPublicRoute().then(result => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
-  assert.match(result.html, /公开周报/, 'public weekly report route should return stored HTML');
+  assert.match(result.html, /1、收入数据/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
+  assert.doesNotMatch(result.html, /旧版周报/, 'public weekly report route should not return legacy incomplete HTML');
   console.log('weekly business report tests passed');
 }).catch(err => {
   console.error(err);
