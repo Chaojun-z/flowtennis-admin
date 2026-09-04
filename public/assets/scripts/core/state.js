@@ -1816,6 +1816,7 @@ function renderPageData(pg){
   if(isStudentListPage(pg)&&pg!=='students')renderStudents();
   if(pg==='leads')renderLeads();
   if(pg==='operations')renderOperations();
+  if(pg==='weekly-reports')renderWeeklyReports();
   if(pg==='schedule')renderSchedule();
   if(pg==='coachschedule'||pg==='coachops')renderCoachOps();
   if(pg==='finance')renderFinanceCenter();
@@ -1829,6 +1830,7 @@ function renderPageData(pg){
   if(pg==='courts')renderCourts();
   if(pg==='matches')renderMatches();
   if(pg==='third-party-sync')renderThirdPartySyncCenter();
+  if(pg==='weekly-reports')renderWeeklyReports();
   if(pg==='memberships')renderMemberships();
   if(pg==='membership-orders')renderMembershipOrdersAuditPage();
   if(pg==='membership-ledger')renderMembershipLedgerAuditPage();

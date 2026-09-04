@@ -1,0 +1,28 @@
+name: Weekly Business Report
+
+on:
+  schedule:
+    - cron: '0 0 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-weekly-business-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: Asia/Shanghai
+      CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
+      TARGET_URL: https://www.flowtennis.cn/api/cron/weekly-business-report
+
+    steps:
+      - name: Trigger weekly business report
+        shell: bash
+        run: |
+          curl_args=(-fsS -X GET "$TARGET_URL" -H "User-Agent: github-actions-weekly-business-report")
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
+          fi
+          curl "${curl_args[@]}"

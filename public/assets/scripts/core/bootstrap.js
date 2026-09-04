@@ -9,7 +9,7 @@ let purPackageFilterValue='',purOwnerCoachFilterValue='',purCourseTypeFilterValu
 let purDateRangeFilterValue='全部',purDateRangeStart='',purDateRangeEnd='';
 let coachOpsMode='week',coachOpsPickerMonth=null,financePanel='ledger';
 
-const PAGE_TITLE_MAP={students:'在期学员','package-students':'在期学员','trial-students':'历史学员',leads:'线索池',operations:'经营分析',schedule:'排课管理',coachschedule:'排课日历',coachops:'教练课时统计',products:'课程产品',packages:'课包产品',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球活动','third-party-sync':'第三方同步中心',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
+const PAGE_TITLE_MAP={students:'在期学员','package-students':'在期学员','trial-students':'历史学员',leads:'线索池',operations:'经营分析','weekly-reports':'每周周报',schedule:'排课管理',coachschedule:'排课日历',coachops:'教练课时统计',products:'课程产品',packages:'课包产品',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球活动','third-party-sync':'第三方同步中心',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
 const FINANCE_TITLE_MAP={ledger:'财务总览',revenue:'收款流水',recognized:'入账流水',settlement:'教练结算'};
 const OPERATIONS_TITLE_MAP={overview:'经营总览',court:'场地运转',conversion:'转化与留存',coach:'教练人效'};
 const TOP_TITLE_BREADCRUMBS={
@@ -39,7 +39,7 @@ function goPage(pg,el,skipRender=false){
   if(pg==='entitlements')pg='package-students';
   pg=normalizeStudentListPage(pg);
   if(pg==='myschedule')pg='workbench';
-  const adminPages=['students','package-students','trial-students','leads','operations','schedule','coachschedule','coachops','products','packages','purchases','finance','coaches','admin-users','courts','memberships','membership-orders','membership-ledger','membership-plans','prices','campusmgr','matches','third-party-sync'];
+  const adminPages=['students','package-students','trial-students','leads','operations','weekly-reports','schedule','coachschedule','coachops','products','packages','purchases','finance','coaches','admin-users','courts','memberships','membership-orders','membership-ledger','membership-plans','prices','campusmgr','matches','third-party-sync'];
   const coachPages=['workbench','postfeedback','mystudents','myclasses'];
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentUser?.role!=='admin'&&adminPages.includes(pg))pg=isCoach?'workbench':'';

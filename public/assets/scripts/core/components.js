@@ -381,7 +381,8 @@ function adminMobileNavConfig(){
       {label:'经营总览',goPage:'operations',icon:'coachops',operationsTab:'overview'},
       {label:'场地运转',goPage:'operations',icon:'courts',operationsTab:'court'},
       {label:'转化与留存',goPage:'operations',icon:'leads',operationsTab:'conversion'},
-      {label:'教练人效',goPage:'operations',icon:'coachops',operationsTab:'coach'}
+      {label:'教练人效',goPage:'operations',icon:'coachops',operationsTab:'coach'},
+      {label:'每周周报',goPage:'weekly-reports',icon:'finance-ledger'}
     ]},
     {key:'system',label:'系统设置',defaultPage:'admin-users',items:[
       {label:'校区管理',goPage:'campusmgr',icon:'campusmgr'},
@@ -522,6 +523,7 @@ function renderSidebarShell(){
   <div class="sb-item" data-nav-page="operations" data-operations-tab="court" onclick="setOperationsTab('court');goPage('operations',this)">${sidebarIcon('courts')}场地运转</div>
   <div class="sb-item" data-nav-page="operations" data-operations-tab="conversion" onclick="setOperationsTab('conversion');goPage('operations',this)">${sidebarIcon('leads')}转化与留存</div>
   <div class="sb-item" data-nav-page="operations" data-operations-tab="coach" onclick="setOperationsTab('coach');goPage('operations',this)">${sidebarIcon('coachops')}教练人效</div>
+  <div class="sb-item" data-nav-page="weekly-reports" onclick="goPage('weekly-reports',this)">${sidebarIcon('finance-ledger')}每周周报</div>
   <div class="sb-sec">基础设置</div>
   <div class="sb-item" onclick="goPage('coaches',this)">${sidebarIcon('coaches')}教练管理</div>
   <div class="sb-item" id="sbCampusMgr" style="display:none" onclick="goPage('campusmgr',this)">${sidebarIcon('campusmgr')}校区管理</div>

@@ -50,6 +50,28 @@ function isStudentReminderBindPage(){
 function isStudentReminderDetailPage(){
   return window.location.pathname==='/student-reminder-detail';
 }
+function isWeeklyReportSharePage(){
+  return /^\/weekly-reports\/[^/]+/.test(window.location.pathname);
+}
+async function renderWeeklyReportSharePage(){
+  const app=document.getElementById('app');
+  const login=document.getElementById('loginPage');
+  if(app)app.style.display='none';
+  if(login){
+    login.style.display='flex';
+    login.innerHTML='<div class="login-card" style="max-width:420px"><div class="login-logo"><span class="icon"></span><div class="brand">网球兄弟</div><div class="sub">每周周报</div></div><div style="font-size:13px;color:var(--ts);margin-top:12px">周报加载中...</div></div>';
+  }
+  const tokenValue=decodeURIComponent(window.location.pathname.split('/').pop()||'');
+  try{
+    const res=await fetch(`/api/public/weekly-business-reports/${encodeURIComponent(tokenValue)}`,{headers:{'Cache-Control':'no-cache'}});
+    const html=await res.text();
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(e){
+    if(login)login.innerHTML=`<div class="login-card" style="max-width:420px"><div class="login-logo"><span class="icon"></span><div class="brand">网球兄弟</div><div class="sub">每周周报</div></div><div style="font-size:13px;color:var(--ts);margin-top:12px">${String(e.message||e)}</div></div>`;
+  }
+}
 function renderStudentReminderDetailPage(){
   const app=document.getElementById('app');
   const login=document.getElementById('loginPage');

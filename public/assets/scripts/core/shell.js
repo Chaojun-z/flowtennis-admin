@@ -43,6 +43,7 @@ function showApp(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   captureWechatLoginCode();
+  if(isWeeklyReportSharePage()){renderWeeklyReportSharePage();return;}
   if(isStudentReminderBindPage()){renderStudentReminderBindPage();return;}
   if(isStudentReminderDetailPage()){renderStudentReminderDetailPage();return;}
   document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});

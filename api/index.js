@@ -23,6 +23,8 @@ const { createCourtAccountListIndexSync } = require('../server/page-data/court-a
 const { createCourtAccountListSnapshotSync } = require('../server/page-data/court-account-list-snapshot.js');
 const { createScheduleListSnapshotSync } = require('../server/page-data/schedule-list-snapshot.js');
 const { createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
+const { WEEKLY_REPORT_TABLE } = require('../server/weekly-business-report.js');
+const { createWeeklyBusinessReportRoutes } = require('../server/weekly-business-report-routes.js');
 const { createBootstrapRuntime, buildBootstrapSafetyFlags, readBooleanEnv, logBlockedAutoWrite } = require('../server/bootstrap');
 const { createScheduleRules } = require('../server/schedule');
 const { activeEntitlementAuthorizationForSchedule, entitlementAuthorizedUseContext, scheduleEntitlementUsageContext } = require('../server/entitlement-authorization');
@@ -90,6 +92,7 @@ const WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY = process.env.WECHAT_OFFICIAL_ACC
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_URL = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_URL || '';
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET || '';
 const FEISHU_DAILY_REPORT_WEBHOOK = String(process.env.FEISHU_DAILY_REPORT_WEBHOOK || process.env.FEISHU_WEBHOOK_URL || '').trim();
+const FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK = String(process.env.FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK || process.env.FEISHU_BUSINESS_DAILY_REPORT_WEBHOOK || '').trim();
 const FEISHU_COACH_BOT_APP_ID = String(process.env.FEISHU_COACH_BOT_APP_ID || '').trim(), FEISHU_COACH_BOT_APP_SECRET = String(process.env.FEISHU_COACH_BOT_APP_SECRET || '').trim(), FEISHU_COACH_DIGEST_PHONE_OVERRIDES = String(process.env.FEISHU_COACH_DIGEST_PHONE_OVERRIDES || '').trim(), FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES = String(process.env.FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES || '').trim();
 const STUDENT_REMINDER_PUBLIC_BASE_URL = process.env.STUDENT_REMINDER_PUBLIC_BASE_URL || 'https://www.flowtennis.cn';
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
@@ -102,12 +105,12 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'legacy-coach-tianhao',name:'天昊'},
   {id:'老吴',name:'刘润扬教练'}
 ];
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_AUTHORIZATIONS='ft_entitlement_authorizations',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_COURT_ACCOUNT_LIST_INDEX='ft_court_account_list_index',T_COURT_ACCOUNT_LIST_INDEX_TASKS='ft_court_account_list_index_tasks',T_COURT_ACCOUNT_LIST_SNAPSHOT='ft_court_account_list_snapshot',T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS='ft_court_account_list_snapshot_tasks',T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot',T_SCHEDULE_LIST_SNAPSHOT_TASKS='ft_schedule_list_snapshot_tasks',T_OPERATIONS_SNAPSHOT='ft_operations_snapshot',T_OPERATIONS_SNAPSHOT_TASKS='ft_operations_snapshot_tasks',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_AUTHORIZATIONS='ft_entitlement_authorizations',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_COURT_ACCOUNT_LIST_INDEX='ft_court_account_list_index',T_COURT_ACCOUNT_LIST_INDEX_TASKS='ft_court_account_list_index_tasks',T_COURT_ACCOUNT_LIST_SNAPSHOT='ft_court_account_list_snapshot',T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS='ft_court_account_list_snapshot_tasks',T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot',T_SCHEDULE_LIST_SNAPSHOT_TASKS='ft_schedule_list_snapshot_tasks',T_OPERATIONS_SNAPSHOT='ft_operations_snapshot',T_OPERATIONS_SNAPSHOT_TASKS='ft_operations_snapshot_tasks',T_WEEKLY_BUSINESS_REPORTS=WEEKLY_REPORT_TABLE,T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS,T_SCHEDULE_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT_TASKS,T_OPERATIONS_SNAPSHOT,T_OPERATIONS_SNAPSHOT_TASKS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS,T_SCHEDULE_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT_TASKS,T_OPERATIONS_SNAPSHOT,T_OPERATIONS_SNAPSHOT_TASKS,T_WEEKLY_BUSINESS_REPORTS,...MEMBERSHIP_TABLES];
 const HOT_SCAN_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -128,6 +131,7 @@ const HOT_SCAN_TABLES=new Map([
   [T_SCHEDULE_LIST_SNAPSHOT_TASKS,{ttlMs:600000}],
   [T_OPERATIONS_SNAPSHOT,{ttlMs:600000}],
   [T_OPERATIONS_SNAPSHOT_TASKS,{ttlMs:600000}],
+  [T_WEEKLY_BUSINESS_REPORTS,{ttlMs:600000}],
   [T_MEMBERSHIP_ORDERS,{ttlMs:60000}],
   [T_MEMBERSHIP_BENEFIT_LEDGER,{ttlMs:60000}],
   [T_MEMBERSHIP_ACCOUNT_EVENTS,{ttlMs:60000}],
@@ -4398,6 +4402,7 @@ async function buildOperationsSnapshotPayload({user,scope}){
 operationsSnapshotSync=createOperationsSnapshotSync({getCachedRow,put,mkTable,scanByIdPrefix,buildPayload:buildOperationsSnapshotPayload,tables:{
   operationsSnapshot:T_OPERATIONS_SNAPSHOT,operationsSnapshotTasks:T_OPERATIONS_SNAPSHOT_TASKS
 }});
+const weeklyBusinessReportRoutes=createWeeklyBusinessReportRoutes({init,sendJson:routeSendJson,scan,get,put,mkTable,buildOperationsPayload:buildOperationsSnapshotPayload,table:T_WEEKLY_BUSINESS_REPORTS,webhook:FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK,isProductionRuntime});
 function operationsSnapshotScopeFromRequest(query,body={}){
   const params=new URLSearchParams();
   ['campus','campusName','startDate','endDate','view'].forEach(key=>{
@@ -7151,6 +7156,7 @@ module.exports = async (req, res) => {
   const body=req.body||{};
   try{
     if(path==='/health')return sendJson(res,{status:'ok',time:new Date().toISOString()});
+    if(await weeklyBusinessReportRoutes.handlePublic({path,method,res}))return;
     if((path==='/official-account/callback'||path==='/wechat/official-callback')&&method==='GET'){
       try{
         return sendPlainText(res,verifyOfficialAccountCallbackRequest(query),200);
@@ -7264,6 +7270,7 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendFeishuCoachDailyDigests({targetCoach:query.get('coach')||query.get('coachName')||query.get('coachId')||'',markSent:query.get('markSent')!=='false',force:query.get('force')==='true',phoneOverrides:req.headers['x-feishu-coach-digest-phone-overrides']||FEISHU_COACH_DIGEST_PHONE_OVERRIDES,openIdOverrides:req.headers['x-feishu-coach-digest-open-id-overrides']||FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES}));
     }
+    if(await weeklyBusinessReportRoutes.handleCron({path,method,req,res}))return;
     if(path==='/cron/third-party-sync-center'&&await handleThirdPartySyncCenterRoutes({path,method,body,req,res,query}))return;if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
     if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;
     if(await handleMatchRoutes({path,method,body,req,res,query}))return;
@@ -7312,6 +7319,7 @@ module.exports = async (req, res) => {
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();
       return sendJson(res,await operationsSnapshotSync.readSnapshotStatus({user,scope:operationsSnapshotScopeFromRequest(query)}));
     }
+    if(await weeklyBusinessReportRoutes.handleAdmin({path,method,body,req,res,user}))return;
     if(path==='/admin/replace-courts'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
