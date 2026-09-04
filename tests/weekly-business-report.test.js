@@ -351,7 +351,31 @@ async function callSnapshotFirstGeneration() {
   return { result, savedRows, liveLoads, elapsedMs: Date.now() - startedAt };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration()]).then(([result, editResult, generationResult]) => {
+async function callExistingReportManualRegeneration() {
+  let liveLoads = 0;
+  let snapshotLoads = 0;
+  const savedRows = [];
+  const startedAt = Date.now();
+  const result = await generateWeeklyBusinessReport({
+    period,
+    generationMode: 'manual',
+    baseUrl: 'https://www.flowtennis.cn',
+    mkTable: async () => {},
+    get: async () => ({ ...snapshot, id: 'weekly:顺义马坡:2026-08-27:2026-09-03', shareToken: 'existing-token', status: 'success' }),
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    loadOperationsPayload: async () => {
+      liveLoads += 1;
+      throw new Error('已有周报重新生成不应现场读取大量数据');
+    },
+    loadOperationsSnapshot: async () => {
+      snapshotLoads += 1;
+      throw new Error('已有周报重新生成不应读取经营快照');
+    }
+  });
+  return { result, savedRows, liveLoads, snapshotLoads, elapsedMs: Date.now() - startedAt };
+}
+
+Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration()]).then(([result, editResult, generationResult, existingGenerationResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /1、收入数据/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -364,6 +388,11 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
   assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
+  assert.strictEqual(existingGenerationResult.liveLoads, 0, 'manual regeneration for an existing report should not live-load source data');
+  assert.strictEqual(existingGenerationResult.snapshotLoads, 0, 'manual regeneration for an existing report should not wait for operations snapshots');
+  assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
+  assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
+  assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
   console.log('weekly business report tests passed');
 }).catch(err => {
   console.error(err);

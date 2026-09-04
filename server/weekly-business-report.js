@@ -1240,6 +1240,18 @@ async function generateWeeklyBusinessReport({
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME }
   };
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
+  if (generationMode === 'manual' && existing?.id) {
+    const row = {
+      ...existing,
+      status: 'success',
+      generationMode,
+      generatedAt: new Date().toISOString(),
+      html: ''
+    };
+    row.html = renderWeeklyBusinessReportHtml(row, { remark: row.remark || '' });
+    await put(table, row.id, row);
+    return row;
+  }
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
     return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: true }).catch(() => null);
