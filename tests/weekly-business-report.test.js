@@ -5,6 +5,7 @@ const path = require('path');
 const {
   resolveWeeklyBusinessReportPeriod,
   buildWeeklyBusinessReportSnapshot,
+  generateWeeklyBusinessReport,
   renderWeeklyBusinessReportHtml,
   buildWeeklyBusinessReportFeishuText
 } = require('../server/weekly-business-report.js');
@@ -258,6 +259,8 @@ assert.match(weeklyRoutesSource, /updateWeeklyBusinessReportPublicEdits/, 'api s
 assert.match(weeklyRoutesSource, /\/weekly-business-reports/, 'api should expose admin weekly report list route');
 assert.match(weeklyReportSource, /includeWeeklyReportRaw:\s*false[\s\S]*dateRange:\s*\{\}[\s\S]*metricScope:\s*\{\s*campusName:\s*WEEKLY_REPORT_CAMPUS_NAME\s*\}/, 'weekly report lifetime summary should not load full raw rows during regeneration');
 assert.match(weeklyReportSource, /weeklyRawToBaseRows[\s\S]*baseRowsOverride[\s\S]*previousScope[\s\S]*baseRowsOverride[\s\S]*totalScope[\s\S]*baseRowsOverride/, 'weekly report regeneration should reuse one raw read for previous and lifetime metrics');
+assert.match(weeklyReportSource, /loadOperationsSnapshot[\s\S]*allowRefreshing:\s*true/, 'weekly report regeneration should prefer existing operations snapshots before live loading');
+assert.match(apiSource, /loadOperationsSnapshot:operationsSnapshotSync\.loadSnapshot/, 'weekly report routes should receive the operations snapshot loader');
 assert.match(operationsPageSource, /baseRowsOverride = null[\s\S]*const baseRows = baseRowsOverride \|\| await loadBaseRows/, 'operations page payload should allow weekly report to reuse loaded base rows');
 assert.match(apiSource, /async function buildOperationsSnapshotPayload\(\{user,scope,baseRowsOverride\}\)/, 'operations payload wrapper should pass through reusable base rows');
 assert.match(apiSource, /FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK/, 'weekly report should use a dedicated Feishu webhook env');
@@ -321,7 +324,34 @@ async function callPublicEditRoute() {
   return { handled, json, saved };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute()]).then(([result, editResult]) => {
+async function callSnapshotFirstGeneration() {
+  let liveLoads = 0;
+  const savedRows = [];
+  const startedAt = Date.now();
+  const result = await generateWeeklyBusinessReport({
+    period,
+    baseUrl: 'https://www.flowtennis.cn',
+    mkTable: async () => {},
+    get: async () => ({ shareToken: 'fast-token' }),
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    loadOperationsPayload: async () => {
+      liveLoads += 1;
+      throw new Error('重新生成不应默认现场读取大量数据');
+    },
+    loadOperationsSnapshot: async ({ scope }) => {
+      if (scope?.dateRange?.startDate === period.previousStartDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 100 } } }, court: { cards: { utilizationRate: { value: 1 } } }, coach: { cards: { usedHours: { value: 1 } } }, conversion: { cards: { totalLeads: { value: 1 } } } } };
+      }
+      if (!scope?.dateRange?.startDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 1000 } } }, court: { cards: { utilizationRate: { value: 10 } } } } };
+      }
+      return operationsPayload;
+    }
+  });
+  return { result, savedRows, liveLoads, elapsedMs: Date.now() - startedAt };
+}
+
+Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration()]).then(([result, editResult, generationResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /1、收入数据/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -330,6 +360,10 @@ Promise.all([callPublicRoute(), callPublicEditRoute()]).then(([result, editResul
   assert.strictEqual(editResult.json.success, true, 'public weekly report edit route should save editable values');
   assert.strictEqual(editResult.saved.publicEdits['summary.totalIncome'], '44,072 元', 'public weekly report edits should persist saved values');
   assert.doesNotMatch(editResult.saved.publicEdits.bad, /[<>]/, 'public weekly report edits should strip HTML tags');
+  assert.strictEqual(generationResult.liveLoads, 0, 'manual weekly report regeneration should not live-load when snapshots are available');
+  assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
+  assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
+  assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
   console.log('weekly business report tests passed');
 }).catch(err => {
   console.error(err);

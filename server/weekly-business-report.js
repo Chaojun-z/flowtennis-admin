@@ -1209,6 +1209,7 @@ function weeklyRawToBaseRows(raw = {}) {
 
 async function generateWeeklyBusinessReport({
   loadOperationsPayload,
+  loadOperationsSnapshot,
   get,
   put,
   mkTable = async () => {},
@@ -1239,12 +1240,28 @@ async function generateWeeklyBusinessReport({
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME }
   };
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
-  const operationsPayload = await loadOperationsPayload({ user, scope });
-  const baseRowsOverride = operationsPayload.weeklyReportRaw ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw) : null;
-  const [previousOperationsPayload, totalOperationsPayload] = await Promise.all([
-    loadOperationsPayload({ user, scope: previousScope, baseRowsOverride }),
-    loadOperationsPayload({ user, scope: totalScope, baseRowsOverride }).catch(() => null)
+  const loadSnapshotPayload = async targetScope => {
+    if (typeof loadOperationsSnapshot !== 'function') return null;
+    return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: true }).catch(() => null);
+  };
+  const snapshotPayloads = await Promise.all([
+    loadSnapshotPayload(scope),
+    loadSnapshotPayload(previousScope),
+    loadSnapshotPayload(totalScope)
   ]);
+  let operationsPayload = snapshotPayloads[0];
+  let previousOperationsPayload = snapshotPayloads[1];
+  let totalOperationsPayload = snapshotPayloads[2];
+  if (!operationsPayload) {
+    operationsPayload = await loadOperationsPayload({ user, scope });
+  }
+  const baseRowsOverride = operationsPayload.weeklyReportRaw ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw) : null;
+  if (!previousOperationsPayload) {
+    previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride });
+  }
+  if (!totalOperationsPayload) {
+    totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride }).catch(() => null);
+  }
   const snapshot = buildWeeklyBusinessReportSnapshot({
     period,
     operationsPayload,

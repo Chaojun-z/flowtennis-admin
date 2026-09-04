@@ -18,6 +18,7 @@ function createWeeklyBusinessReportRoutes({
   put,
   mkTable,
   buildOperationsPayload,
+  loadOperationsSnapshot,
   table,
   webhook = '',
   publicBaseUrl = '',
@@ -31,6 +32,7 @@ function createWeeklyBusinessReportRoutes({
     const period = resolveWeeklyBusinessReportPeriod(now);
     const snapshot = await generateWeeklyBusinessReport({
       loadOperationsPayload: buildOperationsPayload,
+      loadOperationsSnapshot,
       get,
       put,
       mkTable,

@@ -4403,7 +4403,7 @@ async function buildOperationsSnapshotPayload({user,scope,baseRowsOverride}){
 operationsSnapshotSync=createOperationsSnapshotSync({getCachedRow,put,mkTable,scanByIdPrefix,buildPayload:buildOperationsSnapshotPayload,tables:{
   operationsSnapshot:T_OPERATIONS_SNAPSHOT,operationsSnapshotTasks:T_OPERATIONS_SNAPSHOT_TASKS
 }});
-const weeklyBusinessReportRoutes=createWeeklyBusinessReportRoutes({init,sendJson:routeSendJson,scan,get,put,mkTable,buildOperationsPayload:buildOperationsSnapshotPayload,table:T_WEEKLY_BUSINESS_REPORTS,webhook:FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK,isProductionRuntime});
+const weeklyBusinessReportRoutes=createWeeklyBusinessReportRoutes({init,sendJson:routeSendJson,scan,get,put,mkTable,buildOperationsPayload:buildOperationsSnapshotPayload,loadOperationsSnapshot:operationsSnapshotSync.loadSnapshot,table:T_WEEKLY_BUSINESS_REPORTS,webhook:FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK,isProductionRuntime});
 function operationsSnapshotScopeFromRequest(query,body={}){
   const params=new URLSearchParams();
   ['campus','campusName','startDate','endDate','view'].forEach(key=>{
