@@ -89,13 +89,15 @@ async function copyWeeklyReportLink(url) {
 }
 
 async function regenerateWeeklyReport() {
+  const pendingToast = toast('正在生成周报...', '', { sticky: true });
   try {
-    toast('正在生成周报...');
     await apiCall('POST', '/admin/weekly-business-reports/regenerate', {}, 60000);
-    toast('周报已生成', 'success');
+    pendingToast.update('周报已生成', 'success');
+    setTimeout(() => pendingToast.close(), 3000);
     renderWeeklyReports();
   } catch (e) {
-    toast(`生成失败：${e.message || e}`, 'error');
+    pendingToast.update(`生成失败：${e.message || e}`, 'error');
+    setTimeout(() => pendingToast.close(), 5000);
   }
 }
 

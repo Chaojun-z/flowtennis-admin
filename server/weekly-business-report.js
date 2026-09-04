@@ -55,6 +55,12 @@ function numberValue(value) {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
 }
 
+function optionalNumber(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+
 function cardValue(payload = {}, path = []) {
   let current = payload?.operations || payload;
   for (const key of path) current = current?.[key];
@@ -95,6 +101,15 @@ function cardNumber(source = {}, keys = []) {
     if (value !== undefined && value !== null && value !== '') return numberValue(value);
   }
   return 0;
+}
+
+function optionalCardNumber(source = {}, keys = []) {
+  for (const key of keys) {
+    const value = source?.cards?.[key]?.value ?? source?.[key]?.value ?? source?.[key];
+    const normalized = optionalNumber(value);
+    if (normalized !== null) return normalized;
+  }
+  return null;
 }
 
 function comparisonFor(current = {}, previous = {}, currentKeys = [], previousKeys = currentKeys) {
@@ -195,16 +210,23 @@ function normalizeCoachRows(currentRows = [], previousRows = []) {
     const trialHours = fieldNumber(row, ['trialLessons', 'trialHours']) || courseMixHours(row, ['体验']);
     const specialHours = fieldNumber(row, ['specialLessons', 'specialHours']) || courseMixHours(row, ['专项']);
     const sparringHours = fieldNumber(row, ['sparringLessons', 'sparringHours', 'companionHours']) || courseMixHours(row, ['陪打']);
+    const totalCourseHours = numberValue(privateHours + smallClassHours + trialHours + specialHours + sparringHours);
+    const previousPrivateHours = fieldNumber(previous, ['privateLessons', 'privateHours']) || courseMixHours(previous, ['私教']);
+    const previousSmallClassHours = fieldNumber(previous, ['smallClassLessons', 'smallClassHours', 'smallGroupHours']) || courseMixHours(previous, ['小班']);
+    const previousTrialHours = fieldNumber(previous, ['trialLessons', 'trialHours']) || courseMixHours(previous, ['体验']);
+    const previousSpecialHours = fieldNumber(previous, ['specialLessons', 'specialHours']) || courseMixHours(previous, ['专项']);
+    const previousSparringHours = fieldNumber(previous, ['sparringLessons', 'sparringHours', 'companionHours']) || courseMixHours(previous, ['陪打']);
+    const previousTotalCourseHours = numberValue(previousPrivateHours + previousSmallClassHours + previousTrialHours + previousSpecialHours + previousSparringHours);
     return {
       coach,
-      totalHours: fieldNumber(row, ['usedHours', 'teachingHours', 'hours']),
-      scheduledCount: fieldNumber(row, ['lessonCount', 'scheduleCount', 'count']),
+      totalHours: totalCourseHours || fieldNumber(row, ['usedHours', 'teachingHours', 'hours']),
+      scheduledCount: totalCourseHours,
       privateHours,
       smallClassHours,
       trialHours,
       specialHours,
       sparringHours,
-      compare: compareValue(fieldNumber(row, ['usedHours', 'teachingHours', 'hours']), fieldNumber(previous, ['usedHours', 'teachingHours', 'hours']))
+      compare: compareValue(totalCourseHours || fieldNumber(row, ['usedHours', 'teachingHours', 'hours']), previousTotalCourseHours || fieldNumber(previous, ['usedHours', 'teachingHours', 'hours']))
     };
   });
 }
@@ -255,16 +277,9 @@ function normalizeCourtUsageRows(currentCourt = {}, previousCourt = {}) {
       amount: acc.amount + fieldNumber(row, ['amount', 'actualAmount', 'cashAmount', 'bookingAmount']),
       receivableAmount: acc.receivableAmount + fieldNumber(row, ['receivableAmount', 'originalAmount', 'concessionAmount', 'discountAmount'])
     }), { count: 0, hours: 0, amount: 0, receivableAmount: 0 });
-  const fallbackHours = cardNumber(currentCourt, ['bookingHours']);
-  const fallbackAmount = cardNumber(currentCourt, ['bookingAmount']);
   const result = labels.map(meta => {
     const current = sumBy(rows, meta);
     const previous = sumBy(previousRows, meta);
-    if (meta.key === 'guest' && !rows.length && (fallbackHours || fallbackAmount)) {
-      current.hours = fallbackHours;
-      current.amount = fallbackAmount;
-      current.count = cardNumber(currentCourt, ['bookingCount']);
-    }
     return {
       ...meta,
       ...current,
@@ -282,11 +297,32 @@ function normalizeWeekdayRows(court = {}) {
   const names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   const trends = normalizeRows(court.trends);
   if (!trends.length) return [];
-  return trends.map(row => {
+  const groups = new Map();
+  trends.forEach(row => {
     const date = String(row.date || '');
     const weekday = dateKeyUtcMs(date) == null ? date : names[new Date(dateKeyUtcMs(date)).getUTCDay()];
-    return { label: weekday, value: fieldNumber(row, ['utilizationRate']) };
+    const current = groups.get(weekday) || { label: weekday, value: 0, count: 0 };
+    current.value += fieldNumber(row, ['utilizationRate']);
+    current.count += 1;
+    groups.set(weekday, current);
   });
+  return Array.from(groups.values()).map(row => ({ label: row.label, value: row.count ? numberValue(row.value / row.count) : 0 }));
+}
+
+function findRevenueMixValue(rows = [], names = []) {
+  const row = normalizeRows(rows).find(item => names.some(name => String(item.name || item.type || item.label || '').includes(name)));
+  return optionalNumber(row?.value ?? row?.amount);
+}
+
+function coachCourseTotals(rows = []) {
+  return normalizeRows(rows).reduce((acc, row) => {
+    acc.privateHours += fieldNumber(row, ['privateLessons', 'privateHours']) || courseMixHours(row, ['私教']);
+    acc.smallClassHours += fieldNumber(row, ['smallClassLessons', 'smallClassHours', 'smallGroupHours']) || courseMixHours(row, ['小班']);
+    acc.trialHours += fieldNumber(row, ['trialLessons', 'trialHours']) || courseMixHours(row, ['体验']);
+    acc.specialHours += fieldNumber(row, ['specialLessons', 'specialHours']) || courseMixHours(row, ['专项']);
+    acc.sparringHours += fieldNumber(row, ['sparringLessons', 'sparringHours', 'companionHours']) || courseMixHours(row, ['陪打']);
+    return acc;
+  }, { privateHours: 0, smallClassHours: 0, trialHours: 0, specialHours: 0, sparringHours: 0 });
 }
 
 function buildWeeklyReportSections(operations = {}, previous = {}) {
@@ -299,8 +335,18 @@ function buildWeeklyReportSections(operations = {}, previous = {}) {
   const conversion = operations.conversion || {};
   const prevConversion = previous.conversion || {};
   const revenueMix = normalizeRows(overview.revenueMix);
-  const storedValueAmount = revenueMix.find(row => String(row.name || '').includes('会员储值'))?.value ?? cardNumber(overview, ['storedValueIncome']);
-  const courseAmount = revenueMix.find(row => String(row.name || '').includes('课程'))?.value ?? cardNumber(overview, ['courseIncome']);
+  const prevRevenueMix = normalizeRows(prevOverview.revenueMix);
+  const storedValueAmount = findRevenueMixValue(revenueMix, ['会员储值']) ?? optionalCardNumber(overview, ['storedValueIncome']);
+  const prevStoredValueAmount = findRevenueMixValue(prevRevenueMix, ['会员储值']) ?? optionalCardNumber(prevOverview, ['storedValueIncome']);
+  const courseAmount = findRevenueMixValue(revenueMix, ['课程']) ?? optionalCardNumber(overview, ['courseIncome']);
+  const prevCourseAmount = findRevenueMixValue(prevRevenueMix, ['课程']) ?? optionalCardNumber(prevOverview, ['courseIncome']);
+  const courseConsumedAmount = optionalCardNumber(overview, ['courseRecognized']);
+  const prevCourseConsumedAmount = optionalCardNumber(prevOverview, ['courseRecognized']);
+  const totalAvailableHours = optionalCardNumber(court, ['totalAvailableHours', 'availableHours', 'capacityHours']);
+  const currentCoachTotals = coachCourseTotals(coach.rows);
+  const previousCoachTotals = coachCourseTotals(prevCoach.rows);
+  const totalScheduled = numberValue(currentCoachTotals.privateHours + currentCoachTotals.smallClassHours + currentCoachTotals.trialHours + currentCoachTotals.specialHours + currentCoachTotals.sparringHours);
+  const previousTotalScheduled = numberValue(previousCoachTotals.privateHours + previousCoachTotals.smallClassHours + previousCoachTotals.trialHours + previousCoachTotals.specialHours + previousCoachTotals.sparringHours);
   return {
     revenue: {
       total: {
@@ -310,34 +356,34 @@ function buildWeeklyReportSections(operations = {}, previous = {}) {
         tradeCount: cardNumber(overview, ['tradeCount'])
       },
       storedValue: {
-        totalMembers: cardNumber(conversion, ['courtChain']) || fieldNumber(conversion.courtChain || {}, ['courtMembers']),
-        newMembers: fieldNumber(conversion.courtChain || {}, ['newCourtMembers', 'courtMembers']),
-        totalAmount: numberValue(storedValueAmount),
-        newAmount: numberValue(storedValueAmount),
-        compare: compareValue(storedValueAmount, normalizeRows(prevOverview.revenueMix).find(row => String(row.name || '').includes('会员储值'))?.value || 0),
-        typeRows: [{ type: '会员储值', amount: numberValue(storedValueAmount), share: percent(storedValueAmount, cardNumber(overview, ['totalIncome'])) }]
+        totalMembers: optionalCardNumber(overview, ['storedValueMembers', 'membershipStoredValueMembers']),
+        newMembers: optionalCardNumber(overview, ['newStoredValueMembers', 'newMembershipStoredValueMembers']),
+        totalAmount: storedValueAmount,
+        newAmount: storedValueAmount,
+        compare: storedValueAmount === null ? null : compareValue(storedValueAmount, prevStoredValueAmount || 0),
+        typeRows: storedValueAmount === null ? [] : [{ type: '会员储值', amount: storedValueAmount, share: percent(storedValueAmount, cardNumber(overview, ['totalIncome'])) }]
       },
       course: {
-        totalPeople: cardNumber(conversion, ['courseDealCustomers', 'courseStudents']),
-        totalAmount: numberValue(courseAmount),
-        newPeople: cardNumber(conversion, ['courseDealCustomers']),
-        newAmount: numberValue(courseAmount),
-        consumedAmount: cardNumber(overview, ['recognizedRevenue']),
-        renewalPeople: fieldNumber(conversion.renewal || {}, ['renewalCount']),
-        renewalAmount: 0,
-        expiringPeople: cardNumber(conversion, ['trialPathPendingCustomers']),
-        expiringAmount: 0,
-        nearlyEmptyPeople: cardNumber(conversion, ['trialPathPendingCustomers']),
+        totalPeople: optionalCardNumber(overview, ['courseIncomePeople', 'courseStudents']),
+        totalAmount: courseAmount,
+        newPeople: optionalCardNumber(overview, ['newCourseIncomePeople', 'newCourseStudents']),
+        newAmount: courseAmount,
+        consumedAmount: courseConsumedAmount,
+        renewalPeople: optionalCardNumber(overview, ['renewalPeople', 'courseRenewalPeople']),
+        renewalAmount: optionalCardNumber(overview, ['renewalAmount', 'courseRenewalAmount']),
+        expiringPeople: optionalCardNumber(overview, ['expiringPeople', 'courseExpiringPeople']),
+        expiringAmount: optionalCardNumber(overview, ['expiringAmount', 'courseExpiringAmount']),
+        nearlyEmptyPeople: optionalCardNumber(overview, ['nearlyEmptyPeople', 'courseNearlyEmptyPeople']),
         compare: {
-          people: compareValue(cardNumber(conversion, ['courseDealCustomers']), cardNumber(prevConversion, ['courseDealCustomers'])),
-          amount: compareValue(courseAmount, normalizeRows(prevOverview.revenueMix).find(row => String(row.name || '').includes('课程'))?.value || 0),
-          consumedAmount: compareValue(cardNumber(overview, ['recognizedRevenue']), cardNumber(prevOverview, ['recognizedRevenue']))
+          people: null,
+          amount: courseAmount === null ? null : compareValue(courseAmount, prevCourseAmount || 0),
+          consumedAmount: courseConsumedAmount === null ? null : compareValue(courseConsumedAmount, prevCourseConsumedAmount || 0)
         }
       },
       mixRows: revenueMix
     },
     court: {
-      totalAvailableHours: cardNumber(court, ['activeVenues']) * 15 * 8,
+      totalAvailableHours,
       actualUsedHours: cardNumber(court, ['bookingHours']),
       utilizationRate: cardNumber(court, ['utilizationRate']),
       usageRows: normalizeCourtUsageRows(court, prevCourt),
@@ -345,16 +391,16 @@ function buildWeeklyReportSections(operations = {}, previous = {}) {
       freeUsage: findFreeCourtUsage(court)
     },
     coach: {
-      totalScheduled: normalizeRows(coach.rows).reduce((sum, row) => sum + fieldNumber(row, ['lessonCount', 'scheduleCount', 'count']), 0),
-      totalHours: cardNumber(coach, ['usedHours']),
-      privateHours: normalizeRows(coach.rows).reduce((sum, row) => sum + (fieldNumber(row, ['privateLessons', 'privateHours']) || courseMixHours(row, ['私教'])), 0),
-      smallClassHours: normalizeRows(coach.rows).reduce((sum, row) => sum + (fieldNumber(row, ['smallClassLessons', 'smallClassHours', 'smallGroupHours']) || courseMixHours(row, ['小班'])), 0),
-      trialHours: normalizeRows(coach.rows).reduce((sum, row) => sum + (fieldNumber(row, ['trialLessons', 'trialHours']) || courseMixHours(row, ['体验'])), 0),
-      specialHours: normalizeRows(coach.rows).reduce((sum, row) => sum + (fieldNumber(row, ['specialLessons', 'specialHours']) || courseMixHours(row, ['专项'])), 0),
-      sparringHours: normalizeRows(coach.rows).reduce((sum, row) => sum + (fieldNumber(row, ['sparringLessons', 'sparringHours', 'companionHours']) || courseMixHours(row, ['陪打'])), 0),
+      totalScheduled,
+      totalHours: totalScheduled || cardNumber(coach, ['usedHours']),
+      privateHours: numberValue(currentCoachTotals.privateHours),
+      smallClassHours: numberValue(currentCoachTotals.smallClassHours),
+      trialHours: numberValue(currentCoachTotals.trialHours),
+      specialHours: numberValue(currentCoachTotals.specialHours),
+      sparringHours: numberValue(currentCoachTotals.sparringHours),
       compare: {
-        totalHours: compareValue(cardNumber(coach, ['usedHours']), cardNumber(prevCoach, ['usedHours'])),
-        totalScheduled: compareValue(normalizeRows(coach.rows).reduce((sum, row) => sum + fieldNumber(row, ['lessonCount', 'scheduleCount', 'count']), 0), normalizeRows(prevCoach.rows).reduce((sum, row) => sum + fieldNumber(row, ['lessonCount', 'scheduleCount', 'count']), 0))
+        totalHours: compareValue(totalScheduled || cardNumber(coach, ['usedHours']), previousTotalScheduled || cardNumber(prevCoach, ['usedHours'])),
+        totalScheduled: compareValue(totalScheduled, previousTotalScheduled)
       },
       rows: normalizeCoachRows(normalizeRows(coach.rows), normalizeRows(prevCoach.rows))
     },
@@ -381,6 +427,10 @@ function metricBlock(label, value, suffix = '') {
   return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}${escapeHtml(suffix)}</strong></section>`;
 }
 
+function displayMetricValue(value) {
+  return value === null || value === undefined || value === '' ? '-' : value;
+}
+
 function trendText(compare = {}) {
   if (!compare || compare.changeValue === undefined) return '环比 -';
   const value = numberValue(compare.changeValue);
@@ -390,7 +440,8 @@ function trendText(compare = {}) {
 }
 
 function reportMetric(label, value, unit = '', compare = null) {
-  return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}${escapeHtml(unit)}</strong>${compare ? `<em>${escapeHtml(trendText(compare))}</em>` : ''}</section>`;
+  const empty = value === null || value === undefined || value === '';
+  return `<section class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(displayMetricValue(value))}${empty ? '' : escapeHtml(unit)}</strong>${compare ? `<em>${escapeHtml(trendText(compare))}</em>` : ''}</section>`;
 }
 
 function barChart(rows = [], { labelKey = 'name', valueKey = 'value', unit = '' } = {}) {
@@ -492,29 +543,29 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   <h2>1、收入数据</h2>
   <h3>1.1 储值会员</h3>
   <div class="grid">
-    ${reportMetric('储值会员总数', revenue.storedValue?.totalMembers || 0, ' 人')}
-    ${reportMetric('本周新增会员', revenue.storedValue?.newMembers || 0, ' 人', revenue.storedValue?.compare)}
-    ${reportMetric('总储值金额', revenue.storedValue?.totalAmount || 0, ' 元')}
-    ${reportMetric('本周新增储值', revenue.storedValue?.newAmount || 0, ' 元', revenue.storedValue?.compare)}
+    ${reportMetric('储值会员总数', revenue.storedValue?.totalMembers, ' 人')}
+    ${reportMetric('本周新增会员', revenue.storedValue?.newMembers, ' 人')}
+    ${reportMetric('总储值金额', revenue.storedValue?.totalAmount, ' 元')}
+    ${reportMetric('本周新增储值', revenue.storedValue?.newAmount, ' 元', revenue.storedValue?.compare)}
   </div>
   <div class="panel">${donutChart(revenue.storedValue?.typeRows || [], { labelKey: 'type', valueKey: 'amount' })}</div>
   <h3>1.2 课程收入</h3>
   <div class="grid">
-    ${reportMetric('总人数', revenue.course?.totalPeople || 0, ' 人')}
-    ${reportMetric('总收入', revenue.course?.totalAmount || 0, ' 元')}
-    ${reportMetric('本周新增人数', revenue.course?.newPeople || 0, ' 人', revenue.course?.compare?.people)}
-    ${reportMetric('本周新增收入', revenue.course?.newAmount || 0, ' 元', revenue.course?.compare?.amount)}
-    ${reportMetric('本周新增消耗', revenue.course?.consumedAmount || 0, ' 元', revenue.course?.compare?.consumedAmount)}
-    ${reportMetric('续费人数', revenue.course?.renewalPeople || 0, ' 人')}
-    ${reportMetric('续费收入', revenue.course?.renewalAmount || 0, ' 元')}
-    ${reportMetric('到期人数', revenue.course?.expiringPeople || 0, ' 人')}
-    ${reportMetric('即将耗尽人数', revenue.course?.nearlyEmptyPeople || 0, ' 人')}
+    ${reportMetric('总人数', revenue.course?.totalPeople, ' 人')}
+    ${reportMetric('总收入', revenue.course?.totalAmount, ' 元')}
+    ${reportMetric('本周新增人数', revenue.course?.newPeople, ' 人', revenue.course?.compare?.people)}
+    ${reportMetric('本周新增收入', revenue.course?.newAmount, ' 元', revenue.course?.compare?.amount)}
+    ${reportMetric('本周新增消耗', revenue.course?.consumedAmount, ' 元', revenue.course?.compare?.consumedAmount)}
+    ${reportMetric('续费人数', revenue.course?.renewalPeople, ' 人')}
+    ${reportMetric('续费收入', revenue.course?.renewalAmount, ' 元')}
+    ${reportMetric('到期人数', revenue.course?.expiringPeople, ' 人')}
+    ${reportMetric('即将耗尽人数', revenue.course?.nearlyEmptyPeople, ' 人')}
   </div>
   <div class="panel">${donutChart(revenue.mixRows || [], { labelKey: 'name', valueKey: 'value' })}</div>
 
   <h2>2、场地数据</h2>
   <div class="grid">
-    ${reportMetric('总可用时长', court.totalAvailableHours || 0, ' 小时')}
+    ${reportMetric('总可用时长', court.totalAvailableHours, ' 小时')}
     ${reportMetric('实际使用时长', court.actualUsedHours || 0, ' 小时')}
     ${reportMetric('场地利用率', court.utilizationRate || 0, '%')}
     ${reportMetric('免费应收让利', court.freeUsage?.receivableAmount || 0, ' 元')}
@@ -534,10 +585,11 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
 
   <h2>3、教练课时</h2>
   <div class="grid five">
-    ${reportMetric('排课量', coach.totalScheduled || 0, ' 节', coach.compare?.totalScheduled)}
+    ${reportMetric('排课课时', coach.totalScheduled || 0, ' 小时', coach.compare?.totalScheduled)}
     ${reportMetric('私教课', coach.privateHours || 0, ' 小时')}
     ${reportMetric('小班课', coach.smallClassHours || 0, ' 小时')}
     ${reportMetric('体验课', coach.trialHours || 0, ' 小时')}
+    ${reportMetric('专项课', coach.specialHours || 0, ' 小时')}
     ${reportMetric('陪打', coach.sparringHours || 0, ' 小时')}
   </div>
   <div class="panel">${barChart(coachRows, { labelKey: 'coach', valueKey: 'totalHours', unit: '小时' })}</div>

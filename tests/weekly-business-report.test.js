@@ -17,6 +17,7 @@ const weeklyWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/we
 const indexHtml = fs.readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8');
 const weeklyPageSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/pages/weekly-reports.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/state.js'), 'utf8');
+const bootstrapSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/bootstrap.js'), 'utf8');
 
 const period = resolveWeeklyBusinessReportPeriod(new Date('2026-09-04T00:00:00.000Z'));
 assert.deepStrictEqual(period, {
@@ -32,8 +33,14 @@ const operationsPayload = {
     overview: {
       cards: {
         totalIncome: { value: 12000 },
-        recognizedRevenue: { value: 8000 }
-      }
+        recognizedRevenue: { value: 8000 },
+        courseRecognized: { value: 3200 }
+      },
+      revenueMix: [
+        { name: '课程收入', value: 7000 },
+        { name: '订场收入', value: 3000 },
+        { name: '会员储值', value: 2000 }
+      ]
     },
     court: {
       cards: {
@@ -44,7 +51,8 @@ const operationsPayload = {
       },
       trends: [
         { date: '2026-08-27', utilizationRate: 41 },
-        { date: '2026-08-28', utilizationRate: 72 }
+        { date: '2026-08-28', utilizationRate: 72 },
+        { date: '2026-09-03', utilizationRate: 61 }
       ],
       usageMixRows: [
         { type: '散客场地使用', count: 4, hours: 10, amount: 1200 },
@@ -80,7 +88,7 @@ const snapshot = buildWeeklyBusinessReportSnapshot({
   operationsPayload,
   previousOperationsPayload: {
     operations: {
-      overview: { cards: { totalIncome: { value: 10000 } } },
+      overview: { cards: { totalIncome: { value: 10000 }, courseRecognized: { value: 2000 } }, revenueMix: [{ name: '课程收入', value: 5000 }, { name: '会员储值', value: 1000 }] },
       court: { cards: { utilizationRate: { value: 50 } } },
       coach: { cards: { usedHours: { value: 35 } } },
       conversion: { cards: { totalLeads: { value: 60 } } }
@@ -98,7 +106,30 @@ assert.ok(snapshot.sections.court.freeUsage.receivableAmount >= 300, 'free court
 assert.strictEqual(snapshot.sections.detailsMode, 'summary-only', 'weekly report should not expose single-record details');
 assert.strictEqual(snapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 8, 'weekly report should preserve member court usage data');
 assert.strictEqual(snapshot.sections.coach.rows.find(row => row.coach === '王教练')?.privateHours, 12, 'weekly report should derive coach private hours from course mix');
+assert.strictEqual(snapshot.sections.coach.totalScheduled, 22, 'weekly report coach total scheduled hours should equal all course type hours');
+assert.strictEqual(snapshot.sections.coach.rows.find(row => row.coach === '王教练')?.scheduledCount, 18, 'coach row scheduled value should equal that coach course type hour sum');
+assert.strictEqual(snapshot.sections.court.weekdayRows.filter(row => row.label === '周四').length, 1, 'weekly report should aggregate duplicate weekdays in an eight-day period');
+assert.strictEqual(snapshot.sections.court.weekdayRows.find(row => row.label === '周四')?.value, 51, 'duplicate weekday utilization should use the real trend average');
+assert.strictEqual(snapshot.sections.revenue.course.consumedAmount, 3200, 'course consumed amount must use course recognized revenue only');
 assert.strictEqual(snapshot.sections.conversion.sourceRows.find(row => row.source === '小红书')?.deals, 2, 'weekly report should keep source conversion data');
+
+const noFakeSourceSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {
+      overview: { cards: { totalIncome: { value: 1 } } },
+      court: { cards: { activeVenues: { value: 99 }, bookingHours: { value: 5 } } },
+      coach: { rows: [{ coach: '反例教练', lessonCount: 68, courseMix: [{ type: '私教课', hours: 70 }, { type: '小班课', hours: 7.5 }, { type: '体验课', hours: 2 }, { type: '陪打', hours: 1.5 }] }] }
+    }
+  },
+  previousOperationsPayload: { operations: {} },
+  shareToken: 'token-negative',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(noFakeSourceSnapshot.sections.revenue.course.totalPeople, null, 'weekly report must not borrow conversion data as course income people');
+assert.strictEqual(noFakeSourceSnapshot.sections.court.totalAvailableHours, null, 'weekly report must not invent court capacity from active venue count');
+assert.deepStrictEqual(noFakeSourceSnapshot.sections.court.usageRows.map(row => row.hours), [0, 0, 0, 0], 'weekly report must not fake guest usage when type mix rows are missing');
+assert.strictEqual(noFakeSourceSnapshot.sections.coach.totalScheduled, 81, 'coach scheduled hours must equal all listed course type hours even when lessonCount conflicts');
 
 const html = renderWeeklyBusinessReportHtml(snapshot, { remark: '本周雨天影响场地。' });
 assert.match(html, /顺义马坡周报/, 'HTML should render the report title');
@@ -106,6 +137,7 @@ assert.match(html, /1、收入数据/, 'HTML should render revenue section');
 assert.match(html, /2、场地数据/, 'HTML should render court section');
 assert.match(html, /3、教练课时/, 'HTML should render coach section');
 assert.match(html, /4、线索转化/, 'HTML should render lead conversion section');
+assert.match(html, /专项课/, 'HTML should render special course coach metric');
 assert.match(html, /donut|bar-row|line-chart/, 'HTML should render report charts');
 assert.match(html, /会员场地使用/, 'HTML should render member court usage row');
 assert.match(html, /王教练/, 'HTML should render coach data rows');
@@ -113,6 +145,7 @@ assert.match(html, /小红书/, 'HTML should render lead source rows');
 assert.doesNotMatch(html, /<td>-<\/td><td>-<\/td><td>-<\/td><td>-<\/td>/, 'HTML should not render rows with all empty metric cells when source data exists');
 assert.match(html, /本周雨天影响场地。/, 'HTML should render admin remark text');
 assert.doesNotMatch(html, /订单ID|线索ID|流水ID/, 'HTML should not expose single-record technical detail labels');
+assert.match(renderWeeklyBusinessReportHtml(noFakeSourceSnapshot), />-</, 'HTML should show a dash when a requested metric has no reliable source');
 
 const successText = buildWeeklyBusinessReportFeishuText({ snapshot, status: 'success' });
 assert.match(successText, /顺义马坡周报已生成/, 'success message should be short');
@@ -134,9 +167,12 @@ assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the w
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
 assert.match(weeklyPageSource, /重新生成本周周报/, 'admin page should allow manual regeneration');
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');
+assert.match(weeklyPageSource, /sticky:\s*true/, 'manual regeneration should keep the loading toast visible until completion');
+assert.match(bootstrapSource, /options\.sticky/, 'toast helper should support sticky loading messages');
 assert.match(weeklyPageSource, /tms-toolbar/, 'admin page should use the standard toolbar layout');
 assert.match(weeklyPageSource, /tms-btn tms-btn-ghost/, 'admin page action buttons should use standard button styles');
 assert.strictEqual((stateSource.match(/renderWeeklyReports\(\)/g) || []).length, 1, 'weekly reports page should render once per page data render');
+assert.match(stateSource, /currentPage==='weekly-reports'\)return/, 'weekly report admin page should not auto-refresh on focus, visibility, or interval sync');
 assert.doesNotMatch(weeklyPageSource, /订单ID|线索ID|流水ID/, 'admin page should not expose single-record detail labels');
 
 async function callPublicRoute() {

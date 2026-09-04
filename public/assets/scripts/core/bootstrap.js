@@ -278,7 +278,7 @@ function closeModal(){
     if(!ov.classList.contains('open'))resetModalShell();
   },220);
 }
-function toast(msg,type=''){const c=document.getElementById('toasts'),t=document.createElement('div'),span=document.createElement('span');t.className='toast '+(type||'');span.textContent=String(msg??'');t.appendChild(span);c.appendChild(t);setTimeout(()=>{t.style.cssText='opacity:0;transform:translateX(18px);transition:all .28s';setTimeout(()=>t.remove(),300);},3000);}
+function toast(msg,type='',options={}){const c=document.getElementById('toasts'),t=document.createElement('div'),span=document.createElement('span');t.className='toast '+(type||'');span.textContent=String(msg??'');t.appendChild(span);c.appendChild(t);const close=()=>{t.style.cssText='opacity:0;transform:translateX(18px);transition:all .28s';setTimeout(()=>t.remove(),300);};if(!options.sticky)setTimeout(close,options.duration||3000);return{el:t,close,update(nextMsg,nextType=''){span.textContent=String(nextMsg??'');t.className='toast '+(nextType||'');}};}
 async function backupToObsidian(){
   try{toast('生成备份…','');const d=new Date(),ds=d.toISOString().slice(0,10),ts=d.toTimeString().slice(0,5);
   let md='# FlowTennis 备份\n\n时间：'+ds+' '+ts+'\n\n---\n\n## 学员（'+students.length+'人）\n\n| 姓名 | 类型 | 手机 | 来源 | 校区 |\n|------|------|------|------|------|\n';

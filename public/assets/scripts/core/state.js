@@ -1711,6 +1711,7 @@ async function loadAll(){
   }
 }
 async function syncAllQuietly(){
+  if(currentPage==='weekly-reports')return;
   if(isSyncingAll||!currentUser)return;
   if(typeof standardSearchInputIsActive==='function'&&standardSearchInputIsActive())return;
   if(document.hidden)return;
@@ -1726,6 +1727,7 @@ async function syncAllQuietly(){
   }finally{isSyncingAll=false;}
 }
 function syncAllIfStale(){
+  if(currentPage==='weekly-reports')return;
   if(Date.now()-lastDataSyncAt>60000)syncAllQuietly();
 }
 window.addEventListener('focus',syncAllIfStale);
