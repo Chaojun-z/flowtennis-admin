@@ -4381,7 +4381,7 @@ const {
   parseLessonValue,
   computeCourtFinance
 });
-async function buildOperationsSnapshotPayload({user,scope}){
+async function buildOperationsSnapshotPayload({user,scope,baseRowsOverride}){
   return buildOperationsPagePayload({
     scope,
     dateRange:scope?.dateRange||{},
@@ -4396,7 +4396,8 @@ async function buildOperationsSnapshotPayload({user,scope}){
     buildFinancePageSnapshot,
     getFinancePageSnapshot,
     getFinancePageSnapshotIfCached,
-    tables:{T_LEADS,T_LEAD_FOLLOWUPS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_COACHES,T_USERS,T_SCHEDULE,T_FEEDBACKS}
+    tables:{T_LEADS,T_LEAD_FOLLOWUPS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_COACHES,T_USERS,T_SCHEDULE,T_FEEDBACKS},
+    baseRowsOverride
   });
 }
 operationsSnapshotSync=createOperationsSnapshotSync({getCachedRow,put,mkTable,scanByIdPrefix,buildPayload:buildOperationsSnapshotPayload,tables:{

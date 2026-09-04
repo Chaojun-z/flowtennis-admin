@@ -1188,6 +1188,25 @@ async function updateWeeklyBusinessReportPublicEdits({ scan, put, token = '', ed
   return { success: true };
 }
 
+function weeklyRawToBaseRows(raw = {}) {
+  return {
+    campuses: raw.campuses || [],
+    leads: raw.leads || [],
+    leadFollowups: raw.leadFollowups || [],
+    students: raw.students || [],
+    purchases: raw.purchases || [],
+    entitlements: raw.entitlements || [],
+    entitlementLedger: raw.entitlementLedger || [],
+    courts: raw.courts || [],
+    membershipOrders: raw.membershipOrders || [],
+    membershipAccounts: raw.membershipAccounts || [],
+    coaches: raw.coaches || [],
+    schedule: raw.schedule || [],
+    feedbacks: raw.feedbacks || [],
+    cachedFinanceSnapshot: null
+  };
+}
+
 async function generateWeeklyBusinessReport({
   loadOperationsPayload,
   get,
@@ -1220,10 +1239,11 @@ async function generateWeeklyBusinessReport({
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME }
   };
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
-  const [operationsPayload, previousOperationsPayload, totalOperationsPayload] = await Promise.all([
-    loadOperationsPayload({ user, scope }),
-    loadOperationsPayload({ user, scope: previousScope }),
-    loadOperationsPayload({ user, scope: totalScope }).catch(() => null)
+  const operationsPayload = await loadOperationsPayload({ user, scope });
+  const baseRowsOverride = operationsPayload.weeklyReportRaw ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw) : null;
+  const [previousOperationsPayload, totalOperationsPayload] = await Promise.all([
+    loadOperationsPayload({ user, scope: previousScope, baseRowsOverride }),
+    loadOperationsPayload({ user, scope: totalScope, baseRowsOverride }).catch(() => null)
   ]);
   const snapshot = buildWeeklyBusinessReportSnapshot({
     period,

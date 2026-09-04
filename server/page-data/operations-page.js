@@ -87,12 +87,13 @@ async function buildOperationsPagePayload({
   buildFinancePageSnapshot,
   getFinancePageSnapshot,
   getFinancePageSnapshotIfCached,
-  tables
+  tables,
+  baseRowsOverride = null
 }) {
   const isCoachView = scope?.view === 'coach';
   const useGlobalFinanceSnapshot = !isCoachView && String(user.dataScope || '').trim() !== 'campus' && !(Array.isArray(user.campusIds) && user.campusIds.length);
   const loadBaseRows = scope?.view === 'coach' ? getOperationsCoachBaseRows : getOperationsBaseRows;
-  const baseRows = await loadBaseRows({
+  const baseRows = baseRowsOverride || await loadBaseRows({
     user,
     useGlobalFinanceSnapshot,
     listCampusesWithDefaults,
@@ -153,11 +154,14 @@ async function buildOperationsPagePayload({
     weeklyReportRaw: includeWeeklyReportRaw ? {
       campuses: scoped.campuses,
       leads: scoped.leads,
+      leadFollowups: scoped.leadFollowups,
       students: scoped.students,
       purchases: scoped.purchases,
       entitlements: scoped.entitlements,
       entitlementLedger: scoped.entitlementLedger,
       courts: scoped.courts,
+      membershipOrders: scoped.membershipOrders,
+      membershipAccounts: scoped.membershipAccounts,
       coaches: scoped.coaches,
       schedule: scoped.schedule,
       financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows || []
