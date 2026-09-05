@@ -78,13 +78,18 @@ assert.strictEqual(parsedStructPrecheck.recommendedType, 'auto_import', 'recover
 
 const historicalRulePrecheck = precheckThirdPartyRecords([
   { id: 'coach-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '1号场', startTime: '12:00', endTime: '13:00', customerName: '晓哲', remark: '晓哲 定场', amount: 176 },
+  { id: 'xiaozhe-discount-lock', sourceType: 'lock', bookingDate: '2026-08-27', venue: '1号场', startTime: '13:00', endTime: '15:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '晓哲和师妹', amount: 280 },
   { id: 'companion-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '2号场', startTime: '14:00', endTime: '15:00', remark: 'Siren 陪打' },
+  { id: 'companion-default-split-lock', sourceType: 'lock', bookingDate: '2026-08-21', venue: '3号场', startTime: '17:00', endTime: '17:30', remark: '岳克舟陪打', amount: 288 },
   { id: 'machine-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '3号场', startTime: '16:00', endTime: '17:00', remark: '发球机 1小时' },
   { id: 'machine-free-booking-lock', sourceType: 'lock', bookingDate: '2026-08-05', venue: '1号场', startTime: '12:00', endTime: '13:00', remark: '德德 订场+发球机', amount: 120 },
   { id: 'machine-split-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '3号场', startTime: '17:00', endTime: '18:00', remark: '订场120 发球机80', amount: 200 },
   { id: 'companion-split-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '2号场', startTime: '15:00', endTime: '16:00', remark: '订场100 陪打300', amount: 400 },
   { id: 'changda-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '1号场', startTime: '10:00', endTime: '12:00', remark: '畅打' },
   { id: 'leader-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '4号场', startTime: '16:00', endTime: '18:00', remark: '领导' },
+  { id: 'decorating-lock', sourceType: 'lock', bookingDate: '2026-08-08', venue: '1号场', startTime: '21:00', endTime: '22:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '装修' },
+  { id: 'activity-lock', sourceType: 'lock', bookingDate: '2026-08-02', venue: '2号场', startTime: '17:00', endTime: '20:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '运营活动' },
+  { id: 'gift-booking-lock', sourceType: 'lock', bookingDate: '2026-08-21', venue: '3号场', startTime: '09:00', endTime: '10:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '达达 订场 赠送' },
   { id: 'construction-lock', sourceType: 'lock', bookingDate: '2026-08-01', venue: '1号场', startTime: '20:00', endTime: '22:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '施工' },
   { id: 'repair-83-lock', sourceType: 'lock', bookingDate: '2026-08-03', venue: '4号场', startTime: '06:00', endTime: '22:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '' },
   { id: 'repair-84-lock', sourceType: 'lock', bookingDate: '2026-08-04', venue: '2号场', startTime: '10:00', endTime: '20:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '' },
@@ -99,13 +104,18 @@ const historicalRulePrecheck = precheckThirdPartyRecords([
   { id: 'ops-empty-lock', sourceType: 'lock', bookingDate: '2026-07-31', venue: '3号场', startTime: '07:00', endTime: '09:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '' }
 ], { batchId: 'historical-rules', now: '2026-07-31T00:00:00+08:00' });
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'coach-lock' && item.businessCategory === '教练代订场' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '教练代订场' && item.paymentMethod === '微信转账' && /8折/.test(item.plannedAction)), 'xiaozhe coach booking rule should be auto importable when amount is known');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'xiaozhe-discount-lock' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '教练代订场' && item.amount === 224), 'xiaozhe coach booking should automatically apply 80% of the third-party court amount');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'companion-lock' && item.businessCategory === '订场陪打' && /拆分/.test(item.plannedAction) && item.needsConfirmation), 'companion locks should be classified as booking plus companion service and require confirmation before split import');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'companion-default-split-lock' && item.recommendedType === 'auto_import' && item.amountBreakdown?.bookingAmount === 88 && item.amountBreakdown?.serviceAmount === 200), 'companion locks with a total amount should default to 200 companion fee and the rest as court fee');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'machine-lock' && item.businessCategory === '订场+发球机' && /发球机/.test(item.plannedAction) && item.needsConfirmation), 'ball-machine locks should be classified as booking plus extra service and require confirmation before split import');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'machine-free-booking-lock' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '散客微信转账订场' && /免费赠送/.test(item.plannedAction)), 'booking plus free ball-machine gift should import as booking without manual split');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'machine-split-lock' && item.recommendedType === 'auto_import' && item.amountBreakdown?.bookingAmount === 120 && item.amountBreakdown?.serviceAmount === 80), 'ball-machine locks should auto import when booking and service fees are explicit');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'companion-split-lock' && item.recommendedType === 'auto_import' && item.amountBreakdown?.bookingAmount === 100 && item.amountBreakdown?.serviceAmount === 300), 'companion locks should auto import when booking and companion fees are explicit');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'changda-lock' && item.businessCategory === '畅打活动' && item.recommendedType === 'auto_import'), 'changda locks should automatically create an activity occupancy destination');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'leader-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), 'leader/internal usage locks should be classified as internal occupancy');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'decorating-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), 'decorating locks should be classified as internal occupancy');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'activity-lock' && item.businessCategory === '运营活动' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '运营活动'), 'operator activity locks should be classified as zero-income activity occupancy');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'gift-booking-lock' && item.businessCategory === '赠送订场' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '赠送订场'), 'gift booking locks should auto import as zero-income booking records');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'construction-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), 'construction locks should be classified as internal occupancy');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'repair-83-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), '2026-08-03 full-court repair locks should be internal occupancy');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'repair-84-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), '2026-08-04 full-court repair locks should be internal occupancy');
@@ -303,6 +313,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.deepStrictEqual(fallbackPosts.map(row => row.url), ['https://example.test/blocked', 'https://example.test/monitor'], 'notification should try configured webhooks in order');
 
   const writes = [];
+  const courtIndexSyncCalls = [];
+  const scheduleSnapshotDeltaCalls = [];
   const scans = {
     ft_third_party_sync_batches: [],
     ft_third_party_sync_raw_records: [],
@@ -336,6 +348,16 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     mkTable: async () => 'ok',
     uuidv4: () => 'uuid-1',
     normalizeCourtRecord: row => row,
+    courtAccountListIndexSync: {
+      rebuildCourt: async (courtId, reason) => {
+        courtIndexSyncCalls.push({ courtId, reason });
+      }
+    },
+    scheduleListSnapshotSync: {
+      recordDelta: async (row, options) => {
+        scheduleSnapshotDeltaCalls.push({ row, options });
+      }
+    },
     fetchThirdPartyData: async () => ({
       records: [
         { sourceType: 'order', orderNo: 'O1', bookingDate: '2026-07-27', venue: '1号场', startTime: '09:00', endTime: '10:00', amount: 100, payMethod: '微信支付', status: '已完成' },
@@ -479,6 +501,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(writes.some(row => row.table === 'ft_financial_ledger'), 'business import should write finance ledger table');
   assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课' && row.row.coach === '小鹿' && row.row.studentName === '张三'), 'private lesson locks may create a schedule only after matching real coach and student');
   assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课' && row.row.campus === 'shunyi_mapo' && row.row.campusName === '顺义马坡' && row.row.locationType === 'own'), 'third-party schedule imports should default to Shunyi Mapo campus');
+  assert.ok(courtIndexSyncCalls.some(row => row.reason === 'third-party-sync-import' && scans.ft_courts.some(court => court.id === row.courtId && court.history?.some(history => history.sourceRecordId === 'O1'))), 'third-party court imports should refresh the court account list index and snapshot delta for the changed court');
+  assert.ok(scheduleSnapshotDeltaCalls.some(call => call.options?.reason === 'third-party-sync-import' && call.row?.thirdPartySyncImports?.some(item => item.sourceRecordId === 'L1')), 'third-party schedule imports should refresh the schedule list snapshot delta');
   assert.ok(writes.some(row => row.table === 'ft_third_party_sync_import_results' && row.row.status === 'completed' && row.row.fullDisposition?.ok), 'full import result should be auditable');
 
   scans.ft_third_party_sync_batches.push({ id: 'member-batch', batchId: 'member-batch', status: 'prechecked' });
@@ -724,6 +748,33 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(overlapScheduleRes.body.result.status, 'paused', 'overlapping third-party schedule imports should pause instead of creating a duplicate');
   assert.ok(overlapScheduleRes.body.plan.blocked.some(row => row.sourceRecordId === 'OVERLAP-SCHEDULE' && row.reason === '已有重叠排课，请先确认是否重复'), 'overlapping schedule import should explain the duplicate risk');
   assert.ok(!scans.ft_schedule.some(row => row.id !== 'schedule-overlap-existing' && row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'OVERLAP-SCHEDULE')), 'overlapping import must not create or mark a second schedule row');
+
+  scans.ft_third_party_sync_batches.push({ id: 'empty-existing-schedule-batch', batchId: 'empty-existing-schedule-batch', status: 'prechecked' });
+  scans.ft_third_party_sync_prechecks.push({
+    id: 'empty-existing-schedule-precheck-1',
+    batchId: 'empty-existing-schedule-batch',
+    sourceRecordId: 'EMPTY-SCHEDULE',
+    sourceType: 'lock',
+    date: '2026-08-27',
+    venue: '2号场',
+    startTime: '16:00',
+    endTime: '17:00',
+    customerName: '马坡运营',
+    operatorAccount: '马坡运营',
+    phone: '13651248523',
+    remark: '',
+    recommendedType: 'needs_confirmation',
+    needsConfirmation: true,
+    riskReason: '备注为空'
+  });
+  scans.ft_schedule.push({ id: 'schedule-empty-experience', date: '2026-08-27', venue: '2号场', startTime: '2026-08-27 16:00', endTime: '2026-08-27 17:00', coach: '刘润扬', studentName: '云宝', status: '已排课' });
+  const emptyExistingScheduleRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'empty-existing-schedule-batch' }
+  });
+  assert.strictEqual(emptyExistingScheduleRes.body.result.status, 'completed', 'operator empty-note locks should bind existing same-time schedule rows instead of asking for manual confirmation');
+  assert.ok(scans.ft_schedule.some(row => row.id === 'schedule-empty-experience' && row.thirdPartySyncImports?.some(item => item.sourceRecordId === 'EMPTY-SCHEDULE')), 'same-time schedule row should receive the third-party import mark');
 
   scans.ft_third_party_sync_batches.push({ id: 'extra-service-batch', batchId: 'extra-service-batch', status: 'prechecked', counts: { totalSourceCount: 2 } });
   const extraServicePrecheck = precheckThirdPartyRecords([
