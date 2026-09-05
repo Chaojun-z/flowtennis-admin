@@ -15,6 +15,7 @@ const T_COURTS = 'ft_courts';
 const T_FINANCIAL_LEDGER = 'ft_financial_ledger';
 const T_SCHEDULE = 'ft_schedule';
 const T_MEMBERSHIP_ACCOUNTS = 'ft_membership_accounts';
+const T_MEMBERSHIP_ORDERS = 'ft_membership_orders';
 const T_COACHES = 'ft_coaches';
 const T_STUDENTS = 'ft_students';
 const THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS = 'shunyi_mapo';
@@ -85,12 +86,12 @@ function defaultDailyRange(now = new Date()) {
 
 function normalizeSourceType(value) {
   const text = cleanText(value).toLowerCase();
-  if (['order', 'lock', 'member', 'refund', 'member-ledger-gap'].includes(text)) return text;
+  if (['order', 'lock', 'member', 'refund', 'member-ledger', 'member-ledger-gap'].includes(text)) return text;
   return text || 'other';
 }
 
 function isBookingSourceType(sourceType = '') {
-  return ['order', 'lock'].includes(normalizeSourceType(sourceType));
+  return ['order', 'lock', 'member-ledger'].includes(normalizeSourceType(sourceType));
 }
 
 function isSyncGapSourceType(sourceType = '') {
@@ -98,7 +99,7 @@ function isSyncGapSourceType(sourceType = '') {
 }
 
 function recordSourceId(record = {}, index = 0) {
-  return cleanText(record.thirdPartyId || record.orderNo || record.orderId || record.id || record.sourceId) || `generated-${stableHash(record).slice(0, 16)}-${index}`;
+  return cleanText(record.thirdPartyId || record.orderNo || record.orderId || record.ledgerId || record.flowId || record.serialNo || record.transactionNo || record.id || record.sourceId) || `generated-${stableHash(record).slice(0, 16)}-${index}`;
 }
 
 function orderInfoItems(record = {}) {
@@ -187,6 +188,11 @@ function remarkOf(record = {}) {
 function parsedBookingStructureOf(record = {}) {
   return parseBookingStructureFromText([
     remarkOf(record),
+    record.orderInfoText,
+    record.bookingInfo,
+    record.consumeInfo,
+    record.transactionContent,
+    record.businessContent,
     record.time,
     record.timeRegion,
     record.period,
@@ -210,9 +216,99 @@ function operatorAccountOf(record = {}) {
 }
 
 function amountOf(record = {}) {
-  const raw = Number(record.amount || record.originalAmount || record.siteAmount || record.paidAmount || record.actualAmount || record.payAmount || record.priceAmount || 0) || 0;
+  const raw = Math.abs(moneyNumber(record.amount ?? record.originalAmount ?? record.siteAmount ?? record.paidAmount ?? record.actualAmount ?? record.payAmount ?? record.priceAmount ?? record.changeAmount ?? record.flowAmount ?? 0));
   const looksLikeCentAmount = raw >= 1000 && (Array.isArray(record.orderInfo) || record.siteAmount != null || record.wechatPaymentAmount != null || record.balancePaymentAmount != null);
   return looksLikeCentAmount ? Math.round(raw) / 100 : raw;
+}
+
+function moneyNumber(value = 0) {
+  if (typeof value === 'number') return Number.isFinite(value) ? Math.round(value * 100) / 100 : 0;
+  const text = cleanText(value).replace(/,/g, '');
+  if (!text) return 0;
+  const m = text.match(/[+-]?\s*\d+(?:\.\d+)?/);
+  return m ? Math.round(Number(m[0].replace(/\s+/g, '')) * 100) / 100 : 0;
+}
+
+function memberLedgerText(record = {}) {
+  return [
+    record.transactionType,
+    record.flowType,
+    record.type,
+    record.action,
+    record.direction,
+    record.incomeExpenseType,
+    record.businessType,
+    record.category,
+    record.amount,
+    record.changeAmount,
+    record.flowAmount,
+    record.remark,
+    record.note,
+    record.description,
+    record.transactionContent,
+    record.businessContent
+  ].map(cleanText).filter(Boolean).join(' ');
+}
+
+function memberLedgerDirection(record = {}) {
+  const signed = moneyNumber(record.amount ?? record.changeAmount ?? record.flowAmount ?? 0);
+  if (signed < 0) return 'debit';
+  if (signed > 0 && /^[+＋]/.test(cleanText(record.amount ?? record.changeAmount ?? record.flowAmount))) return 'credit';
+  const text = memberLedgerText(record);
+  if (/支出|扣费|扣款|消费|消耗/.test(text) && !/取消|退回|退款|冲正|撤销/.test(text)) return 'debit';
+  if (/收入|充值|赠送|补发|退回|退款|取消|冲正|撤销/.test(text)) return 'credit';
+  return signed < 0 ? 'debit' : 'credit';
+}
+
+function memberLedgerPaidAmount(record = {}) {
+  const text = memberLedgerText(record);
+  const m = text.match(/实充[^0-9]{0,8}(\d+(?:\.\d+)?)/);
+  return m ? moneyNumber(m[1]) : amountOf(record);
+}
+
+function memberLedgerBonusAmount(record = {}) {
+  const explicit = moneyNumber(record.bonusAmount ?? record.giftAmount ?? record.presentAmount ?? 0);
+  if (explicit) return explicit;
+  const text = memberLedgerText(record);
+  const m = text.match(/赠送[^0-9]{0,8}(\d+(?:\.\d+)?)/);
+  return m ? moneyNumber(m[1]) : 0;
+}
+
+function memberLedgerBalanceAfter(record = {}) {
+  return moneyNumber(record.balanceAfter ?? record.afterBalance ?? record.remainingBalance ?? record.balance ?? record.accountBalance ?? 0);
+}
+
+function memberLedgerRecordedAt(record = {}) {
+  return cleanText(record.recordedAt || record.transactionTime || record.occurredAt || record.createdAt || record.createTime || record.time || record.date);
+}
+
+function classifyMemberLedgerRecord(record = {}) {
+  const amount = amountOf(record);
+  const direction = memberLedgerDirection(record);
+  const text = memberLedgerText(record);
+  const hasMemberIdentity = cleanText(record.thirdPartyMemberId || record.memberId || record.rechargeUserId || record.userId || phoneOf(record) || customerNameOf(record));
+  if (!hasMemberIdentity) {
+    return ruleBasePayload(record, { recommendedType: 'high_risk_exception', plannedAction: '暂不导入', confidence: 0, riskReason: '会员流水缺少会员身份', needsConfirmation: true, businessCategory: '会员流水待匹配', processLayer: 'membership_ledger' });
+  }
+  if (direction === 'debit' && /退款|退储值|提现/.test(text) && !/订场|定场|场地/.test(text)) {
+    return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '写入会员储值退款流水并校验余额', confidence: 0.86, riskReason: '', needsConfirmation: false, businessCategory: '会员储值退款', processLayer: 'membership_ledger', suggestedFinalType: '会员储值退款', paymentMethod: '储值退款' });
+  }
+  if (direction === 'debit') {
+    if (!bookingDateOf(record) || !venueOf(record) || !startTimeOf(record) || !endTimeOf(record)) {
+      return ruleBasePayload(record, { recommendedType: 'high_risk_exception', plannedAction: '暂不导入', confidence: 0, riskReason: '会员扣款缺订场结构化字段', needsConfirmation: true, businessCategory: '会员订场扣款', processLayer: 'membership_ledger' });
+    }
+    return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '写入会员订场扣款、订场明细、财务已入账，并校验扣后余额', confidence: 0.92, riskReason: '', needsConfirmation: false, businessCategory: '会员订场扣款', processLayer: 'membership_ledger', suggestedFinalType: '会员余额订场', paymentMethod: '储值扣款' });
+  }
+  if (/取消|退回|冲正|撤销|退款/.test(text)) {
+    return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '写入会员订场取消退回流水并校验余额', confidence: 0.86, riskReason: '', needsConfirmation: false, businessCategory: '会员订场退回', processLayer: 'membership_ledger', suggestedFinalType: '会员订场取消退回', paymentMethod: '储值扣款' });
+  }
+  if (/充值/.test(text)) {
+    return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '写入会员充值订单、储值流水和余额校验', confidence: 0.92, riskReason: '', needsConfirmation: false, businessCategory: '会员储值充值', processLayer: 'membership_ledger', suggestedFinalType: '会员储值充值', paymentMethod: '会员充值' });
+  }
+  if (/赠送|补发/.test(text) || memberLedgerBonusAmount(record) > 0) {
+    return ruleBasePayload(record, { recommendedType: 'auto_import', plannedAction: '写入会员赠送余额流水并校验余额', confidence: 0.88, riskReason: '', needsConfirmation: false, businessCategory: '会员储值赠送', processLayer: 'membership_ledger', suggestedFinalType: '会员储值赠送', paymentMethod: '会员充值' });
+  }
+  return ruleBasePayload(record, { recommendedType: 'needs_confirmation', plannedAction: '运营确认会员流水类型', confidence: 0.45, riskReason: '会员流水类型不明', needsConfirmation: true, businessCategory: '会员流水待确认', processLayer: 'membership_ledger' });
 }
 
 function moneyValueFromText(text = '', labels = []) {
@@ -253,7 +349,9 @@ function extraServiceBreakdown(record = {}, finalType = '') {
 }
 
 function recordWithinRange(record = {}, rangeStart = '', rangeEnd = '') {
-  const date = bookingDateOf(record);
+  const date = normalizeSourceType(record.sourceType) === 'member-ledger'
+    ? (cleanText(memberLedgerRecordedAt(record)).slice(0, 10) || bookingDateOf(record))
+    : bookingDateOf(record);
   const start = cleanText(rangeStart).slice(0, 10);
   const end = cleanText(rangeEnd).slice(0, 10);
   if (!date || !start || !end) return true;
@@ -359,6 +457,7 @@ function classifyRecord(record = {}, duplicateKeys = new Set()) {
   if (sourceType === 'member-ledger-gap') {
     return ruleBasePayload(record, { recommendedType: 'high_risk_exception', plannedAction: '暂不导入', confidence: 0, riskReason: '会员流水批量接口缺口', needsConfirmation: true, businessCategory: '会员流水缺口', processLayer: 'membership_ledger' });
   }
+  if (sourceType === 'member-ledger') return classifyMemberLedgerRecord(record);
   if (['order', 'lock'].includes(sourceType) && (!bookingDateOf(record) || !venueOf(record) || !startTimeOf(record) || !endTimeOf(record))) {
     return ruleBasePayload(record, { recommendedType: 'high_risk_exception', plannedAction: '暂不导入', confidence: 0, riskReason: '缺日期/时间/场地', needsConfirmation: true, businessCategory: sourceType === 'lock' ? '运营锁场待补字段' : '订场待补字段', processLayer: 'booking' });
   }
@@ -456,6 +555,14 @@ function financeImpactFor(record = {}, classification = {}) {
   if (!['auto_import', 'needs_confirmation'].includes(classification.recommendedType)) return { cashDelta: 0, recognizedRevenueDelta: 0, deferredRevenueDelta: 0 };
   const amount = Object.prototype.hasOwnProperty.call(classification, 'amountOverride') && Number(classification.amountOverride) > 0 ? Number(classification.amountOverride) : amountOf(record);
   const payMethod = cleanText(record.payMethod || record.paymentMethod);
+  if (normalizeSourceType(record.sourceType) === 'member-ledger') {
+    const finalType = cleanText(classification.suggestedFinalType);
+    if (finalType === '会员余额订场') return { cashDelta: 0, recognizedRevenueDelta: amount, deferredRevenueDelta: -amount };
+    if (finalType === '会员储值充值') return { cashDelta: memberLedgerPaidAmount(record), recognizedRevenueDelta: 0, deferredRevenueDelta: memberLedgerPaidAmount(record) };
+    if (finalType === '会员储值赠送') return { cashDelta: 0, recognizedRevenueDelta: 0, deferredRevenueDelta: 0 };
+    if (finalType === '会员订场取消退回') return { cashDelta: 0, recognizedRevenueDelta: -amount, deferredRevenueDelta: amount };
+    if (finalType === '会员储值退款') return { cashDelta: -amount, recognizedRevenueDelta: 0, deferredRevenueDelta: -amount };
+  }
   if (classification.suggestedFinalType === '内部占用' || classification.businessCategory === '内部占用') return { cashDelta: 0, recognizedRevenueDelta: 0, deferredRevenueDelta: 0 };
   if (/余额|储值卡/.test(payMethod)) return { cashDelta: 0, recognizedRevenueDelta: amount, deferredRevenueDelta: -amount };
   return { cashDelta: amount, recognizedRevenueDelta: amount, deferredRevenueDelta: 0 };
@@ -465,7 +572,8 @@ function precheckThirdPartyRecords(records = [], { batchId = '', now = new Date(
   const seen = new Set();
   const items = (records || []).map((record, index) => {
     const sourceRecordId = recordSourceId(record, index);
-    const key = uniqueBookingKey(record);
+    const sourceType = normalizeSourceType(record.sourceType);
+    const key = sourceType === 'member-ledger' ? '' : uniqueBookingKey(record);
     const duplicate = key && seen.has(key);
     if (key) seen.add(key);
     const classification = classifyRecord(record, duplicate ? new Set([key]) : new Set());
@@ -475,14 +583,20 @@ function precheckThirdPartyRecords(records = [], { batchId = '', now = new Date(
       id: `${batchId || 'batch'}-precheck-${stableHash({ sourceRecordId, key }).slice(0, 16)}`,
       batchId,
       sourceRecordId,
-      sourceType: normalizeSourceType(record.sourceType),
+      sourceType,
       uniqueKey: key,
-      date: bookingDateOf(record),
+      date: sourceType === 'member-ledger' ? (cleanText(memberLedgerRecordedAt(record)).slice(0, 10) || bookingDateOf(record)) : bookingDateOf(record),
       startTime: startTimeOf(record),
       endTime: endTimeOf(record),
       venue: venueOf(record),
       customerName: customerNameOf(record),
       phone: phoneOf(record),
+      thirdPartyMemberId: cleanText(record.thirdPartyMemberId || record.memberId || record.rechargeUserId || record.userId),
+      balanceAfter: sourceType === 'member-ledger' ? memberLedgerBalanceAfter(record) : 0,
+      recordedAt: sourceType === 'member-ledger' ? memberLedgerRecordedAt(record) : '',
+      rechargeAmount: sourceType === 'member-ledger' ? memberLedgerPaidAmount(record) : 0,
+      bonusAmount: sourceType === 'member-ledger' ? memberLedgerBonusAmount(record) : 0,
+      ledgerDirection: sourceType === 'member-ledger' ? memberLedgerDirection(record) : '',
       bookingMode: bookingModeOf(record),
       operatorAccount: operatorAccountOf(record),
       remark: remarkOf(record),
@@ -532,11 +646,16 @@ function confirmedAmount(precheck = {}, confirmation = {}) {
 }
 
 function needsPositiveAmount(finalType = '') {
-  return ['会员余额订场', '散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场陪打', '订场+发球机'].includes(cleanText(finalType));
+  return ['会员余额订场', '会员储值充值', '会员订场取消退回', '会员储值退款', '散客微信转账订场', '散客现金订场', '大众点评券码订场', '教练代订场', '订场陪打', '订场+发球机'].includes(cleanText(finalType));
 }
 
 function importTargetsFor({ sourceType = '', finalType = '', recommendedType = '', amount = 0 } = {}) {
   const type = cleanText(finalType);
+  if (type === '会员余额订场') return [T_COURTS, T_FINANCIAL_LEDGER];
+  if (type === '会员储值充值') return [T_COURTS, T_MEMBERSHIP_ACCOUNTS, T_MEMBERSHIP_ORDERS];
+  if (type === '会员储值赠送') return [T_COURTS, T_MEMBERSHIP_ACCOUNTS];
+  if (type === '会员订场取消退回') return [T_COURTS];
+  if (type === '会员储值退款') return [T_COURTS];
   if (type === '排课占场') return [T_SCHEDULE];
   if (type === '内部占用') return [T_COURTS];
   if (type === '运营活动') return [T_COURTS];
@@ -559,6 +678,7 @@ function thirdPartySourceCounts(records = []) {
     totalSourceCount: (records || []).length,
     bookingOrderCount: (records || []).filter(row => normalizeSourceType(row.sourceType) === 'order').length,
     lockCount: (records || []).filter(row => normalizeSourceType(row.sourceType) === 'lock').length,
+    memberLedgerCount: (records || []).filter(row => normalizeSourceType(row.sourceType) === 'member-ledger').length,
     memberProfileCount: (records || []).filter(row => normalizeSourceType(row.sourceType) === 'member').length,
     syncGapCount: (records || []).filter(row => isSyncGapSourceType(row.sourceType)).length
   };
@@ -578,6 +698,7 @@ function buildThirdPartySyncAuditReport({ batch = {}, precheck = {}, plan = null
     totalSourceCount: Number(batch.counts.totalSourceCount || 0),
     bookingOrderCount: Number(batch.counts.bookingOrderCount || 0),
     lockCount: Number(batch.counts.lockCount || 0),
+    memberLedgerCount: Number(batch.counts.memberLedgerCount || 0),
     memberProfileCount: Number(batch.counts.memberProfileCount || 0),
     syncGapCount: Number(batch.counts.syncGapCount || 0)
   } : thirdPartySourceCounts(items);
@@ -640,8 +761,8 @@ function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations
       plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '额外项目缺少场地费和附加项目费拆分' });
       continue;
     }
-    if (finalType === '会员余额订场') {
-      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '会员余额订场需会员流水审计链，暂不支持自动导入' });
+    if (finalType === '会员余额订场' && precheck.sourceType !== 'member-ledger') {
+      plan.blocked.push({ ...precheck, sourceRecordId, confirmation, finalType, reason: '会员余额订场必须来自会员储值流水，不能只靠普通订单补余额' });
       continue;
     }
     const targetTables = importTargetsFor({ sourceType: precheck.sourceType, finalType, recommendedType: precheck.recommendedType, amount });
@@ -692,7 +813,9 @@ function filterAlertsForCurrentPlan(alerts = [], plan = {}) {
 }
 
 function payMethodForImport(item = {}) {
-  if (item.finalType === '会员余额订场') return '储值扣款';
+  if (['会员余额订场', '会员订场取消退回'].includes(item.finalType)) return '储值扣款';
+  if (['会员储值充值', '会员储值赠送'].includes(item.finalType)) return '会员充值';
+  if (item.finalType === '会员储值退款') return '储值退款';
   const method = cleanText(item.confirmation?.paymentMethod || item.paymentMethod || item.payMethod);
   if (method === '会员余额') return '储值扣款';
   if (method === '不涉及支付') return '不涉及支付';
@@ -943,6 +1066,191 @@ function buildFinancialLedgerRowsForImport(item = {}, trace = {}, now = '') {
   return [buildOneFinancialLedgerForImport(item, trace, now)];
 }
 
+function activeMembershipAccount(row = {}) {
+  return !['voided', 'deleted', 'inactive'].includes(cleanText(row.status || 'active'));
+}
+
+function samePhone(a = '', b = '') {
+  const left = normalizeThirdPartyPhone(a);
+  const right = normalizeThirdPartyPhone(b);
+  return !!left && !!right && left === right;
+}
+
+function sameMemberName(a = '', b = '') {
+  return !!compactName(a) && compactName(a) === compactName(b);
+}
+
+function findMembershipTargetForImport(item = {}, courts = [], accounts = []) {
+  const activeAccounts = (accounts || []).filter(activeMembershipAccount);
+  const courtById = new Map((courts || []).map(row => [cleanText(row.id), row]));
+  const thirdPartyMemberId = cleanText(item.thirdPartyMemberId);
+  const phone = normalizeThirdPartyPhone(item.phone);
+  const name = cleanText(item.customerName);
+  const matches = activeAccounts.filter(account => {
+    const court = courtById.get(cleanText(account.courtId)) || {};
+    if (thirdPartyMemberId && [account.thirdPartyMemberId, account.changxiaoerMemberId, account.externalMemberId].map(cleanText).includes(thirdPartyMemberId)) return true;
+    if (phone && (samePhone(account.phone, phone) || samePhone(court.phone, phone))) return true;
+    if (name && (sameMemberName(account.courtName, name) || sameMemberName(court.name, name))) return true;
+    return false;
+  });
+  const uniqueCourtIds = [...new Set(matches.map(row => cleanText(row.courtId)).filter(Boolean))];
+  if (uniqueCourtIds.length > 1) throw new Error('会员流水命中多个会员账户，需人工确认');
+  if (matches.length) {
+    const account = matches[0];
+    return { account, court: courtById.get(cleanText(account.courtId)) || null };
+  }
+  const courtMatches = (courts || []).filter(court => {
+    if (phone && samePhone(court.phone, phone)) return true;
+    if (name && sameMemberName(court.name, name)) return true;
+    return false;
+  });
+  const uniqueCourtMatches = [...new Set(courtMatches.map(row => cleanText(row.id)).filter(Boolean))];
+  if (uniqueCourtMatches.length > 1) throw new Error('会员流水命中多个订场用户，需人工确认');
+  return courtMatches.length ? { account: null, court: courtMatches[0] } : { account: null, court: null };
+}
+
+function buildMembershipAccountForLedgerImport(item = {}, court = {}, trace = {}, now = '', uuidv4 = () => crypto.randomUUID()) {
+  const id = `third-party-member-account-${uuidv4()}`;
+  return {
+    id,
+    courtId: court.id,
+    courtName: court.name || item.customerName || court.id,
+    phone: normalizeThirdPartyPhone(item.phone || court.phone),
+    status: 'active',
+    memberTag: 'changxiaoer',
+    memberLabel: '场小二同步会员',
+    discountRate: 1,
+    cycleStartDate: item.date || memberLedgerRecordedAt(item).slice(0, 10) || now.slice(0, 10),
+    validUntil: '',
+    hardExpireAt: '',
+    autoExtended: false,
+    thirdPartyMemberId: item.thirdPartyMemberId || '',
+    changxiaoerMemberId: item.thirdPartyMemberId || '',
+    lastOrderId: '',
+    notes: '场小二会员流水自动创建',
+    createdAt: now,
+    updatedAt: now,
+    ...trace
+  };
+}
+
+function buildMembershipOrderForLedgerImport(item = {}, account = {}, court = {}, trace = {}, now = '') {
+  const paidAmount = Number(item.rechargeAmount || 0) || memberLedgerPaidAmount(item);
+  const bonusAmount = Number(item.bonusAmount || 0) || memberLedgerBonusAmount(item);
+  const id = `third-party-membership-order-${item.sourceRecordId}`;
+  return {
+    id,
+    membershipAccountId: account.id,
+    courtId: court.id,
+    courtName: court.name || item.customerName || court.id,
+    membershipPlanId: '',
+    membershipPlanName: '场小二同步储值',
+    priceSource: 'third-party-ledger',
+    priceSourceId: item.sourceRecordId,
+    priceSourceName: '场小二会员流水',
+    systemAmount: paidAmount,
+    finalAmount: paidAmount,
+    priceOverridden: false,
+    overrideReason: '',
+    rechargeAmount: paidAmount,
+    bonusAmount,
+    discountRate: account.discountRate || 1,
+    purchaseDate: cleanText(item.recordedAt).slice(0, 10) || item.date || now.slice(0, 10),
+    effectiveDate: cleanText(item.recordedAt).slice(0, 10) || item.date || now.slice(0, 10),
+    thirdPartyMemberId: item.thirdPartyMemberId || '',
+    thirdPartySourceRecordId: item.sourceRecordId,
+    requestKey: `third-party-member-ledger|${item.batchId}|${item.sourceRecordId}`,
+    status: 'active',
+    notes: item.remark || '场小二会员储值流水同步',
+    createdAt: now,
+    updatedAt: now,
+    ...trace
+  };
+}
+
+function buildMemberLedgerCourtHistoryForImport(item = {}, trace = {}, now = '') {
+  const finalType = cleanText(item.finalType);
+  const base = {
+    id: `third-party-member-ledger-${item.sourceRecordId}`,
+    date: cleanText(item.recordedAt).slice(0, 10) || item.date || now.slice(0, 10),
+    occurredDate: cleanText(item.recordedAt).slice(0, 10) || item.date || now.slice(0, 10),
+    recordedAt: item.recordedAt || now,
+    source: 'third-party-sync',
+    sourceSystem: 'changxiaoer',
+    sourceRecordId: item.sourceRecordId,
+    sourceType: item.sourceType,
+    thirdPartyMemberId: item.thirdPartyMemberId || '',
+    note: item.remark || item.plannedAction || '场小二会员流水同步',
+    importedAt: now,
+    ...trace
+  };
+  if (finalType === '会员余额订场') {
+    const row = enrichCourtBookingStructure({
+      ...base,
+      type: '消费',
+      category: '订场',
+      payMethod: '储值扣款',
+      amount: item.amount,
+      venue: item.venue,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      sourceDocument: item.sourceRecordId ? `场小二会员流水 ${item.sourceRecordId}` : '场小二会员流水',
+      sourceProject: `会员订场 ${item.date || base.date} ${item.venue || ''}`.trim()
+    });
+    if (missingCourtBookingStructure(row)) throw new Error('订场结构化字段不完整：缺日期/时间/场地');
+    return row;
+  }
+  if (finalType === '会员储值充值') {
+    const orderId = `third-party-membership-order-${item.sourceRecordId}`;
+    return {
+      ...base,
+      type: '充值',
+      category: '会员充值',
+      payMethod: '会员充值',
+      amount: Number(item.rechargeAmount || 0) || memberLedgerPaidAmount(item),
+      bonusAmount: Number(item.bonusAmount || 0) || memberLedgerBonusAmount(item),
+      membershipOrderRef: orderId
+    };
+  }
+  if (finalType === '会员储值赠送') {
+    return { ...base, type: '充值', category: '会员赠送', payMethod: '会员充值', amount: 0, bonusAmount: Number(item.bonusAmount || 0) || memberLedgerBonusAmount(item) || item.amount };
+  }
+  if (finalType === '会员订场取消退回') {
+    return {
+      ...enrichCourtBookingStructure({
+        ...base,
+        type: '冲正',
+        category: '订场',
+        payMethod: '储值扣款',
+        amount: item.amount,
+        venue: item.venue,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        sourceDocument: item.sourceRecordId ? `场小二会员流水 ${item.sourceRecordId}` : '场小二会员流水',
+        sourceProject: `会员订场退回 ${item.date || base.date} ${item.venue || ''}`.trim()
+      })
+    };
+  }
+  if (finalType === '会员储值退款') return { ...base, type: '退款', category: '会员退款', payMethod: '储值退款', amount: item.amount };
+  throw new Error('暂未支持该会员流水类型');
+}
+
+function assertMemberLedgerBalanceMatches(item = {}, court = {}) {
+  const expected = Number(item.balanceAfter || 0) || 0;
+  if (!expected) return;
+  const fallbackBalance = (court.history || []).reduce((sum, row) => {
+    const amount = Number(row.amount || 0) || 0;
+    const bonus = Number(row.bonusAmount || 0) || 0;
+    if (row.type === '充值') return sum + amount + bonus;
+    if (row.type === '消费' && /储值/.test(cleanText(row.payMethod))) return sum - amount;
+    if (row.type === '冲正' && /储值/.test(cleanText(row.payMethod))) return sum + amount;
+    if (row.type === '退款' && row.payMethod === '储值退款') return sum - amount;
+    return sum;
+  }, 0);
+  const actual = Number.isFinite(Number(court.balance)) ? Number(court.balance) : Math.round(fallbackBalance * 100) / 100;
+  if (Math.abs(actual - expected) > 0.01) throw new Error(`会员余额不一致：系统 ${actual}，场小二 ${expected}`);
+}
+
 function scheduleRowMatchesImportItem(schedule = {}, item = {}) {
   return scheduleDateOf(schedule) === item.date
     && scheduleClockOf(schedule.startTime || schedule.startClock || schedule.beginTime) === item.startTime
@@ -1138,7 +1446,49 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
     if (!row?.id || !scheduleListSnapshotSync?.recordDelta) return;
     await scheduleListSnapshotSync.recordDelta(row, { scheduleId: row.id, reason: 'third-party-sync-import' }).catch(err => console.error('[third-party-sync] schedule list snapshot sync failed:', err?.message || err));
   }
-  if (item.finalType === '会员余额订场') throw new Error('会员余额订场需会员流水审计链，暂不支持自动导入');
+  if (item.sourceType === 'member-ledger') {
+    const courtTable = tables.T_COURTS || T_COURTS;
+    const accountTable = tables.T_MEMBERSHIP_ACCOUNTS || T_MEMBERSHIP_ACCOUNTS;
+    const orderTable = tables.T_MEMBERSHIP_ORDERS || T_MEMBERSHIP_ORDERS;
+    const financeTable = tables.T_FINANCIAL_LEDGER || T_FINANCIAL_LEDGER;
+    const [courts, accounts] = await Promise.all([
+      getCachedScan(courtTable).catch(() => []),
+      getCachedScan(accountTable).catch(() => [])
+    ]);
+    const target = findMembershipTargetForImport(item, courts, accounts);
+    if (!target.court && !['会员储值充值', '会员储值赠送'].includes(item.finalType)) throw new Error('会员流水未匹配到唯一会员账户，需人工确认');
+    const court = target.court || { id: `third-party-court-${uuidv4()}`, name: item.customerName || '场小二会员', phone: item.phone || '', status: 'active', history: [], createdAt: now };
+    let account = target.account || accounts.find(row => cleanText(row.courtId) === cleanText(court.id) && activeMembershipAccount(row));
+    if (!account) account = buildMembershipAccountForLedgerImport(item, court, trace, now, uuidv4);
+    else account = { ...account, thirdPartyMemberId: account.thirdPartyMemberId || item.thirdPartyMemberId || '', changxiaoerMemberId: account.changxiaoerMemberId || item.thirdPartyMemberId || '', phone: account.phone || item.phone || court.phone || '', updatedAt: now, ...trace };
+    const historyRow = buildMemberLedgerCourtHistoryForImport({ ...item, thirdPartyMemberId: item.thirdPartyMemberId || account.thirdPartyMemberId || '' }, trace, now);
+    const existingHistory = Array.isArray(court.history) ? court.history : [];
+    const nextCourt = normalizeCourtRecord({
+      ...court,
+      name: court.name || item.customerName || account.courtName || '场小二会员',
+      phone: court.phone || item.phone || account.phone || '',
+      history: [...existingHistory.filter(row => String(row.sourceRecordId || '') !== item.sourceRecordId), historyRow],
+      updatedAt: now
+    }, { allowNegativeBalance: false });
+    assertMemberLedgerBalanceMatches(item, nextCourt);
+    await put(courtTable, nextCourt.id, nextCourt);
+    await syncCourtImportIndexes(nextCourt.id);
+    written.push({ table: courtTable, id: nextCourt.id, sourceRecordId: item.sourceRecordId });
+    const nextAccount = { ...account, courtId: nextCourt.id, courtName: nextCourt.name || account.courtName || nextCourt.id, phone: account.phone || nextCourt.phone || '', updatedAt: now };
+    await put(accountTable, nextAccount.id, nextAccount);
+    written.push({ table: accountTable, id: nextAccount.id, sourceRecordId: item.sourceRecordId });
+    if (item.finalType === '会员储值充值') {
+      const order = buildMembershipOrderForLedgerImport(item, nextAccount, nextCourt, trace, now);
+      await put(orderTable, order.id, order);
+      written.push({ table: orderTable, id: order.id, sourceRecordId: item.sourceRecordId });
+    }
+    const ledgers = buildFinancialLedgerRowsForImport(item, trace, now);
+    for (const ledger of ledgers) {
+      await put(financeTable, ledger.id, ledger);
+      written.push({ table: financeTable, id: ledger.id, sourceRecordId: item.sourceRecordId });
+    }
+    return written;
+  }
   if (item.finalType === '排课占场') {
     const scheduleId = cleanText(item.confirmation?.bindTargetId || item.bindTargetId);
     const table = tables.T_SCHEDULE || T_SCHEDULE;
@@ -1293,6 +1643,14 @@ async function fetchPaged({ client, method = 'POST', url, token, rangeStart, ran
   return rows;
 }
 
+async function fetchOptionalPaged(args = {}) {
+  try {
+    return { rows: await fetchPaged(args), ok: true };
+  } catch (err) {
+    return { rows: [], ok: false, error: err.message || '第三方接口拉取失败' };
+  }
+}
+
 function cxeHeaders(token = '') {
   return {
     'content-type': 'application/json;charset=UTF-8',
@@ -1309,18 +1667,22 @@ async function fetchChangxiaoerData({ rangeStart = '', rangeEnd = '', env = proc
   const login = await client.post('https://api.console.changxiaoer.cn/admin/merchantAdminLogin', { phone, pwd }, { headers: cxeHeaders() });
   const token = cleanText(login.data?.data?.token);
   if (!token) throw new Error('第三方登录未返回 token');
-  const [orders, locks, members] = await Promise.all([
+  const memberLedgerEndpoint = cleanText(env.CXE_MEMBER_LEDGER_ENDPOINT) || 'https://api.console.changxiaoer.cn/merchantmanage/recharge/accountLog';
+  const [orders, locks, members, memberLedgerResult] = await Promise.all([
     fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/basic/order', token, rangeStart, rangeEnd }),
     fetchPaged({ client, method: 'GET', url: 'https://api.console.changxiaoer.cn/merchants-management/data-analysis/occupy-space-period-records', token, rangeStart, rangeEnd }),
-    fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userList', token, rangeStart, rangeEnd })
+    fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userList', token, rangeStart, rangeEnd }),
+    fetchOptionalPaged({ client, method: 'POST', url: memberLedgerEndpoint, token, rangeStart, rangeEnd })
   ]);
   return {
     records: [
       ...orders.map(row => ({ ...row, sourceType: 'order' })),
       ...locks.map(row => ({ ...row, sourceType: 'lock' })),
-      ...members.map(row => ({ ...row, sourceType: 'member' }))
+      ...members.map(row => ({ ...row, sourceType: 'member' })),
+      ...memberLedgerResult.rows.map(row => ({ ...row, sourceType: 'member-ledger' }))
     ],
-    gaps: ['member-ledger']
+    gaps: memberLedgerResult.ok ? [] : ['member-ledger'],
+    warnings: memberLedgerResult.ok ? [] : [{ type: 'member-ledger', reason: memberLedgerResult.error }]
   };
 }
 
@@ -1642,7 +2004,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     const operationId = `third-party-sync-import-${uuidv4()}`;
     const trace = buildImportTrace({ batchId, operationId, operator, now: importedAt });
     const financeBefore = await buildCurrentFinanceSnapshot(importedAt);
-    const backupTables = [T_COURTS, T_FINANCIAL_LEDGER, T_SCHEDULE, T_MEMBERSHIP_ACCOUNTS, T_THIRD_PARTY_SYNC_IMPORT_RESULTS];
+    const backupTables = [T_COURTS, T_FINANCIAL_LEDGER, T_SCHEDULE, T_MEMBERSHIP_ACCOUNTS, T_MEMBERSHIP_ORDERS, T_THIRD_PARTY_SYNC_IMPORT_RESULTS];
     const backup = await buildImportBackup({ getCachedScan, put, uuidv4, batchId, operationId, operator: trace.operationBy, tables: backupTables, now: importedAt });
     const writtenIds = [];
     const failed = [];
@@ -1812,18 +2174,21 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       const currentBookingPrechecks = currentPrechecks.filter(row => isBookingSourceType(row.sourceType));
       const currentOrderPrechecks = currentPrechecks.filter(row => normalizeSourceType(row.sourceType) === 'order');
       const currentLockPrechecks = currentPrechecks.filter(row => normalizeSourceType(row.sourceType) === 'lock');
+      const currentMemberLedgerPrechecks = currentPrechecks.filter(row => normalizeSourceType(row.sourceType) === 'member-ledger');
       const summary = {
         batchCount: batches.length,
         currentBatchId: latestBatchId,
         rawCount: currentRawRecords.length,
         bookingOrderCount: currentRawRecords.filter(row => normalizeSourceType(row.sourceType) === 'order').length,
         lockCount: currentRawRecords.filter(row => normalizeSourceType(row.sourceType) === 'lock').length,
-        actionableSourceCount: currentRawRecords.filter(row => ['order', 'lock'].includes(normalizeSourceType(row.sourceType))).length,
+        memberLedgerCount: currentRawRecords.filter(row => normalizeSourceType(row.sourceType) === 'member-ledger').length,
+        actionableSourceCount: currentRawRecords.filter(row => ['order', 'lock', 'member-ledger'].includes(normalizeSourceType(row.sourceType))).length,
         memberProfileCount: currentRawRecords.filter(row => normalizeSourceType(row.sourceType) === 'member').length,
         syncGapCount: currentRawRecords.filter(row => isSyncGapSourceType(row.sourceType)).length,
         autoImportCount: currentBookingPrechecks.filter(row => row.recommendedType === 'auto_import').length,
         autoBookingOrderCount: currentOrderPrechecks.filter(row => row.recommendedType === 'auto_import').length,
         autoLockCount: currentLockPrechecks.filter(row => row.recommendedType === 'auto_import').length,
+        autoMemberLedgerCount: currentMemberLedgerPrechecks.filter(row => row.recommendedType === 'auto_import').length,
         pendingCount: currentBookingPrechecks.filter(row => row.needsConfirmation || row.recommendedType === 'needs_confirmation').length,
         exceptionCount: currentBookingPrechecks.filter(row => row.recommendedType === 'high_risk_exception').length,
         duplicateCount: currentBookingPrechecks.filter(row => row.recommendedType === 'duplicate_skip').length,
@@ -1928,5 +2293,6 @@ module.exports = {
   T_THIRD_PARTY_SYNC_RAW_RECORDS,
   T_THIRD_PARTY_SYNC_PRECHECKS,
   T_THIRD_PARTY_SYNC_CONFIRMATIONS,
-  T_THIRD_PARTY_SYNC_IMPORT_RESULTS
+  T_THIRD_PARTY_SYNC_IMPORT_RESULTS,
+  T_MEMBERSHIP_ORDERS
 };

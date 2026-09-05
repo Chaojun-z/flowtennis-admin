@@ -179,6 +179,34 @@ assert.strictEqual(changxiaoerLock.phone, '13651248523', 'changxiaoer lock shoul
 assert.strictEqual(changxiaoerLock.operatorAccount, '马坡运营', 'changxiaoer lock should read nested operator name');
 assert.strictEqual(changxiaoerLock.businessCategory, '排课占场', 'changxiaoer private lesson lock should be classified as schedule occupancy');
 
+const memberLedgerDebitPrecheck = precheckThirdPartyRecords([
+  {
+    sourceType: 'member-ledger',
+    ledgerId: 'ML-DEBIT-1',
+    memberId: 'cxe-member-1',
+    memberName: '会员A',
+    memberPhone: '13900000000',
+    transactionTime: '2026-07-30 09:20:00',
+    transactionType: '订场 支出(扣费)',
+    amount: '-80.00',
+    balanceAfter: 120,
+    bookingInfo: '2026-07-30 室内2号 10:00-11:00'
+  }
+], { batchId: 'member-ledger-precheck', now: '2026-07-30T00:00:00+08:00' }).items[0];
+assert.strictEqual(memberLedgerDebitPrecheck.sourceType, 'member-ledger', 'member ledger should become a first-class sync source');
+assert.strictEqual(memberLedgerDebitPrecheck.recommendedType, 'auto_import', 'structured member stored-value booking ledger should be auto importable');
+assert.strictEqual(memberLedgerDebitPrecheck.suggestedFinalType, '会员余额订场', 'member debit ledger should import as member stored-value booking');
+assert.strictEqual(memberLedgerDebitPrecheck.paymentMethod, '储值扣款', 'member debit ledger should keep stored-value payment method');
+assert.strictEqual(memberLedgerDebitPrecheck.date, '2026-07-30', 'member debit ledger should keep the ledger business date');
+assert.strictEqual(memberLedgerDebitPrecheck.venue, '2号场', 'member debit ledger should parse structured court');
+assert.strictEqual(memberLedgerDebitPrecheck.startTime, '10:00', 'member debit ledger should parse structured start time');
+assert.strictEqual(memberLedgerDebitPrecheck.endTime, '11:00', 'member debit ledger should parse structured end time');
+assert.strictEqual(memberLedgerDebitPrecheck.balanceAfter, 120, 'member debit ledger should carry third-party after-balance for reconciliation');
+const memberLedgerRefundPrecheck = precheckThirdPartyRecords([
+  { sourceType: 'member-ledger', ledgerId: 'ML-REFUND-1', memberId: 'cxe-member-1', memberName: '会员A', memberPhone: '13900000000', transactionTime: '2026-07-30 18:00:00', transactionType: '会员储值退款 支出', amount: '-100.00', balanceAfter: 20 }
+], { batchId: 'member-ledger-refund', now: '2026-07-30T00:00:00+08:00' }).items[0];
+assert.strictEqual(memberLedgerRefundPrecheck.suggestedFinalType, '会员储值退款', 'member cash refund ledger should not be treated as a booking debit that requires court structure');
+
 const notificationText = buildThirdPartySyncNotificationText({
   type: 'success',
   batch: {
@@ -225,6 +253,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
       post: async (url, body, options) => {
         cxeCalls.push({ method: 'POST', url, body, options });
         if (/merchantAdminLogin/.test(url)) return { data: { data: { token: 'token-1' } } };
+        if (/recharge\/accountLog/.test(url)) return { data: { data: { list: [{ ledgerId: 'LEDGER-FROM-API', transactionType: '会员充值', amount: '+100.00', balanceAfter: 100 }], hasNext: false } } };
         return { data: { data: { list: [], hasNext: false } } };
       },
       get: async (url, options) => {
@@ -238,6 +267,9 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(lockGetCall.options.params.dateTo, '2026-07-30', 'lock report fetch should pass date-only dateTo because the third-party API rejects timestamp ranges');
   assert.ok(!lockGetCall.options.params.startTime && !lockGetCall.options.params.endTime, 'lock report fetch should not pass startTime/endTime to the third-party lock API');
   assert.ok(cxeFetched.records.some(row => row.sourceType === 'lock' && row.id === 'LOCK-FROM-API'), 'lock report rows should be included in fetched source records');
+  assert.ok(cxeCalls.some(call => call.method === 'POST' && /recharge\/accountLog/.test(call.url)), 'changxiaoer fetch should request member stored-value ledger rows');
+  assert.ok(cxeFetched.records.some(row => row.sourceType === 'member-ledger' && row.ledgerId === 'LEDGER-FROM-API'), 'member ledger rows should be included in fetched source records');
+  assert.deepStrictEqual(cxeFetched.gaps, [], 'member ledger should not be reported as a gap when the third-party endpoint responds');
 
   const feishuPosts = [];
   const notifyRes = await defaultNotifyThirdPartySyncResult({
@@ -330,7 +362,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     ft_schedule: [],
     ft_coaches: [{ id: 'coach-xiaolu', name: '小鹿', status: 'active' }],
     ft_students: [{ id: 'student-zhangsan', name: '张三', phone: '13911112222', status: 'active' }],
-    ft_membership_accounts: []
+    ft_membership_accounts: [],
+    ft_membership_orders: []
   };
   const handler = createThirdPartySyncCenterRoutes({
     init: async () => {},
@@ -452,7 +485,16 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     confirmations: [{ batchId: 'member-batch', sourceRecordId: 'M1', finalType: '会员余额订场', amount: 80 }],
     importResults: []
   });
-  assert.ok(unboundMemberPlan.blocked.some(item => item.reason === '会员余额订场需会员流水审计链，暂不支持自动导入'), 'member stored-value booking should stay blocked until member audit chain exists');
+  assert.ok(unboundMemberPlan.blocked.some(item => item.reason === '会员余额订场必须来自会员储值流水，不能只靠普通订单补余额'), 'member stored-value booking should stay blocked when it only has a normal order instead of member ledger');
+  const auditedMemberPlan = buildThirdPartyImportPlan({
+    batchId: 'member-ledger-precheck',
+    prechecks: [memberLedgerDebitPrecheck],
+    confirmations: [],
+    importResults: []
+  });
+  assert.strictEqual(auditedMemberPlan.importable.length, 1, 'member stored-value booking should be importable when it comes from the member ledger audit chain');
+  assert.ok(auditedMemberPlan.importable[0].targetTables.includes('ft_courts'), 'member ledger booking should write court booking history');
+  assert.ok(auditedMemberPlan.importable[0].targetTables.includes('ft_financial_ledger'), 'member ledger booking should write recognized finance ledger');
   const confirmedCompanionPlan = buildThirdPartyImportPlan({
     batchId: 'manual-companion',
     prechecks: [{
@@ -542,6 +584,60 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(memberImportRes.body.result.verification.membership.ok, false, 'member verification should not pass for blocked member bookings');
   assert.ok(!memberImportRes.body.result.writtenTables.includes('ft_membership_accounts'), 'member booking should not directly rewrite membership account rows');
   assert.ok(!writes.some(row => row.table === 'ft_courts' && row.id === 'court-1' && row.row.history?.some(history => history.sourceRecordId === 'M1')), 'blocked member booking must not write court history');
+
+  scans.ft_third_party_sync_batches.push({ id: 'member-ledger-booking-batch', batchId: 'member-ledger-booking-batch', status: 'prechecked', counts: { totalSourceCount: 1 } });
+  scans.ft_third_party_sync_prechecks.push(...precheckThirdPartyRecords([
+    {
+      sourceType: 'member-ledger',
+      ledgerId: 'ML-BOOKING-1',
+      memberId: 'cxe-member-1',
+      memberName: '会员A',
+      memberPhone: '13900000000',
+      transactionTime: '2026-07-27 09:55:00',
+      transactionType: '订场 支出(扣费)',
+      amount: '-80.00',
+      balanceAfter: 120,
+      bookingInfo: '2026-07-27 室内2号 10:00-11:00'
+    }
+  ], { batchId: 'member-ledger-booking-batch', now: '2026-07-28T00:00:00+08:00' }).items);
+  const memberLedgerBookingRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'member-ledger-booking-batch' }
+  });
+  assert.strictEqual(memberLedgerBookingRes.body.result.status, 'completed', 'member ledger booking should import when it has a unique account and after-balance matches');
+  const memberLedgerHistory = scans.ft_courts.find(row => row.id === 'court-1').history.find(row => row.sourceRecordId === 'ML-BOOKING-1');
+  assert.strictEqual(memberLedgerHistory.payMethod, '储值扣款', 'member ledger booking should write stored-value payment history');
+  assert.strictEqual(memberLedgerHistory.venue, '2号场', 'member ledger booking should keep structured court venue');
+  assert.strictEqual(memberLedgerHistory.startTime, '10:00', 'member ledger booking should keep structured start time');
+  assert.strictEqual(memberLedgerHistory.endTime, '11:00', 'member ledger booking should keep structured end time');
+  assert.ok(scans.ft_financial_ledger.some(row => row.sourceId === 'ML-BOOKING-1' && row.businessType === '会员订场' && row.cashDelta === 0 && row.recognizedRevenueDelta === 8000 && row.deferredRevenueDelta === -8000), 'member ledger booking should write recognized stored-value finance ledger');
+  assert.ok(scans.ft_membership_accounts.some(row => row.id === 'account-1' && row.thirdPartyMemberId === 'cxe-member-1'), 'member ledger booking should bind the third-party member id to the account');
+
+  scans.ft_third_party_sync_batches.push({ id: 'member-ledger-recharge-batch', batchId: 'member-ledger-recharge-batch', status: 'prechecked', counts: { totalSourceCount: 1 } });
+  scans.ft_third_party_sync_prechecks.push(...precheckThirdPartyRecords([
+    {
+      sourceType: 'member-ledger',
+      ledgerId: 'ML-RECHARGE-1',
+      memberId: 'cxe-member-2',
+      memberName: '新会员',
+      memberPhone: '13900000001',
+      transactionTime: '2026-07-28 18:00:00',
+      transactionType: '会员 收入(会员充值)',
+      amount: '+2166.00( 实充:2000,赠送166)',
+      balanceAfter: 2166
+    }
+  ], { batchId: 'member-ledger-recharge-batch', now: '2026-07-28T00:00:00+08:00' }).items);
+  const memberLedgerRechargeRes = await call(handler, {
+    path: '/third-party-sync/import',
+    method: 'POST',
+    body: { batchId: 'member-ledger-recharge-batch' }
+  });
+  assert.strictEqual(memberLedgerRechargeRes.body.result.status, 'completed', 'member recharge ledger should create the missing member account automatically');
+  const newMemberCourt = scans.ft_courts.find(row => row.phone === '13900000001');
+  assert.ok(newMemberCourt?.history?.some(row => row.sourceRecordId === 'ML-RECHARGE-1' && row.type === '充值' && row.amount === 2000 && row.bonusAmount === 166), 'member recharge ledger should write paid and bonus amounts into court history');
+  assert.ok(scans.ft_membership_accounts.some(row => row.courtId === newMemberCourt.id && row.thirdPartyMemberId === 'cxe-member-2'), 'member recharge ledger should create a membership account');
+  assert.ok(scans.ft_membership_orders.some(row => row.thirdPartySourceRecordId === 'ML-RECHARGE-1' && row.rechargeAmount === 2000 && row.bonusAmount === 166), 'member recharge ledger should create a membership order for finance/read models');
 
   scans.ft_third_party_sync_batches.push({ id: 'schedule-batch', batchId: 'schedule-batch', status: 'prechecked' });
   scans.ft_third_party_sync_prechecks.push({
