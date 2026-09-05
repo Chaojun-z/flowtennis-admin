@@ -450,10 +450,17 @@ function createStudentTeachingSummaryCache({
     await mkTable(T_STUDENT_TEACHING_SUMMARY).catch(() => null);
     const sourceSnapshotAt = new Date().toISOString();
     const batchId = `student-teaching-summary-${Date.now()}`;
+    let previousStateReadUncertain = false;
     const previousMeta = typeof getCachedRow === 'function'
-      ? await getCachedRow(T_STUDENT_TEACHING_SUMMARY, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null)
+      ? await getCachedRow(T_STUDENT_TEACHING_SUMMARY, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => {
+          previousStateReadUncertain = true;
+          return null;
+        })
       : null;
-    const previousRows = cloneStudentTeachingSummaryRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }).catch(() => []));
+    const previousRows = cloneStudentTeachingSummaryRows(await getCachedScan(T_STUDENT_TEACHING_SUMMARY, { fresh: true }).catch(() => {
+      previousStateReadUncertain = true;
+      return [];
+    }));
     const hasReadyMeta = isReadyStudentTeachingSummaryMeta(previousMeta) || isReadyStudentTeachingSummaryMeta(studentTeachingSummaryMetaRow(previousRows));
     try {
       const [leads, students, purchases, entitlements, entitlementLedger, schedule, membershipBenefitLedger, feedbacks] = await Promise.all([
@@ -496,7 +503,7 @@ function createStudentTeachingSummaryCache({
       } catch (rollbackErr) {
         logger.error('[student-teaching-summary] rollback failed', rollbackErr);
       }
-      if (!hasReadyMeta) {
+      if (!hasReadyMeta && !previousStateReadUncertain) {
         await writeMeta(STUDENT_TEACHING_SUMMARY_FAILED, { batchId, sourceSnapshotAt, error: err?.message || String(err) }).catch(metaErr => {
           logger.error('[student-teaching-summary] mark failed failed', metaErr);
         });

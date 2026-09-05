@@ -2745,7 +2745,7 @@ function buildLifecycleMetricTrendDailyRows({ source = {}, metricScope = {}, dat
       startDate: range.startDate || '',
       endDate: range.endDate || day
     });
-    const metrics = buildStandardLifecycleMetrics(dailySource).metrics || {};
+    const metrics = buildStandardLifecycleMetrics({ ...dailySource, now }).metrics || {};
     return {
       date: day,
       validLeads: Number(metrics.validLeads?.value) || 0,
@@ -3049,7 +3049,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const stageRows = rawLeadConversion.stageRows;
   const courseRows = courseConversionRows({ ...metricLifecycleSource, leads: rawLeadConversion.rawLeadPoolRows, customerLifecycleRows: metricCustomerLifecycleRows }, { now });
   const teachingCustomerLifecycleRows = metricCustomerLifecycleRows;
-  const teachingStandardLifecycleMetrics = buildStandardLifecycleMetrics(metricLifecycleSource);
+  const teachingStandardLifecycleMetrics = buildStandardLifecycleMetrics({ ...metricLifecycleSource, now });
   const courseFunnel = teachingStandardLifecycleMetrics.funnels.courseChain || [];
   const teachingSummary = teachingStandardLifecycleMetrics.teachingSummary || {};
   const teachingStudentViews = teachingStandardLifecycleMetrics.views || {};
@@ -3209,7 +3209,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     customerLifecycleRows: previousMetricCustomerLifecycleRows
   }) : null;
   const previousCourseRows = previousMetricLifecycleSource ? courseConversionRows({ ...previousMetricLifecycleSource, leads: previousRawLeadConversion.rawLeadPoolRows, customerLifecycleRows: previousMetricCustomerLifecycleRows }, { now }) : [];
-  const previousStandardLifecycleMetrics = previousMetricLifecycleSource ? buildStandardLifecycleMetrics(previousMetricLifecycleSource) : null;
+  const previousStandardLifecycleMetrics = previousMetricLifecycleSource ? buildStandardLifecycleMetrics({ ...previousMetricLifecycleSource, now }) : null;
   const previousCourseFunnel = previousStandardLifecycleMetrics?.funnels?.courseChain || [];
   const previousPeriodRepurchase = previousRangedData ? buildPeriodRepurchaseMetrics(previousRangedData.purchases || []) : { rate: 0, numerator: 0, denominator: 0 };
   const previousCoachRows = coachPreviousRangedData ? buildCoachRows({

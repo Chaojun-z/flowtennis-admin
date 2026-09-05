@@ -1096,13 +1096,15 @@ async function saveLeadBasicFromDrawer(leadId){
     return res;
   },{
     successText:'线索已更新 ✓',
-    onSuccess:()=>{
+    onSuccess:(res={})=>{
+      const lead=res?.lead||res;
+      const nextLeadId=lead?.id||leadId;
       renderLeads();
       leadDetailEditingSection='';
-      openLeadDetail(leadId);
+      openLeadDetail(nextLeadId);
       refreshLeadRuntimeInBackground({},()=>{
         renderLeads();
-        reopenLeadDetailIfStillOpen(leadId);
+        reopenLeadDetailIfStillOpen(nextLeadId);
       });
     }
   });

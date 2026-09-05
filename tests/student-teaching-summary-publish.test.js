@@ -111,6 +111,47 @@ async function testKeepsReadyMetaWhenPreviousSnapshotScanFails() {
   assert.deepStrictEqual(metaWrites, [], '旧 ready 指针存在时，即使旧摘要列表扫描失败，也不能写 failed meta 覆盖发布指针');
 }
 
+async function testDoesNotWriteFailedMetaWhenPreviousReadyStateIsUncertain() {
+  const tables = {
+    T_LEADS: 'ft_leads',
+    T_STUDENTS: 'ft_students',
+    T_PURCHASES: 'ft_purchases',
+    T_ENTITLEMENTS: 'ft_entitlements',
+    T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger',
+    T_SCHEDULE: 'ft_schedule',
+    T_FEEDBACKS: 'ft_feedbacks',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'ft_membership_benefit_ledger',
+    T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary'
+  };
+  const metaWrites = [];
+  const cache = createStudentTeachingSummaryCache({
+    tables,
+    mkTable: async () => {},
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === STUDENT_TEACHING_SUMMARY_META_ID) throw new Error('previous meta read timeout');
+      return null;
+    },
+    getCachedScan: async table => {
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY) throw new Error('previous summary scan timeout');
+      if (table === tables.T_SCHEDULE) throw new Error('source schedule scan timeout');
+      return [];
+    },
+    put: async (table, id, row) => {
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === STUDENT_TEACHING_SUMMARY_META_ID) {
+        metaWrites.push(row);
+      }
+    },
+    del: async () => {},
+    logger: { error() {} }
+  });
+
+  await assert.rejects(
+    () => cache.refreshStudentTeachingSummaryRows(),
+    /source schedule scan timeout/
+  );
+  assert.deepStrictEqual(metaWrites, [], '无法确认旧 ready 指针不存在时，失败刷新不能写 failed meta 导致历史/在期学员 503');
+}
+
 async function testReadySummaryReadDoesNotWaitForHungScan() {
   const startedAt = Date.now();
   const result = await Promise.race([
@@ -532,6 +573,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
   await testReadySummaryRowsUseActiveVersionMemoryCache();
   await testKeepsReadyMetaWhenRefreshFails();
   await testKeepsReadyMetaWhenPreviousSnapshotScanFails();
+  await testDoesNotWriteFailedMetaWhenPreviousReadyStateIsUncertain();
   await testKeepsServingReadyRowsWhileNextVersionIsWritten();
   await testRollsBackPartiallyWrittenRowsWhenRefreshFails();
   await testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch();

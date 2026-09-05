@@ -23,12 +23,12 @@ assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api
 assert.match(html, /assets\/scripts\/core\/state\.js/, 'index.html should load state.js');
 assert.match(html, /assets\/scripts\/core\/shell\.js/, 'index.html should load shell.js');
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js/, 'index.html should load bootstrap.js');
-assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260831-purchase-records-v1/, 'index.html should bust stale cached bootstrap.js after schedule delete speed feedback fixes');
+assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260904-management-page-visibility-v1/, 'index.html should keep the current bootstrap script asset version');
 assert.match(html, /assets\/scripts\/pages\/admin-users\.js/, 'index.html should load admin-users page module');
 assert.match(html, /assets\/scripts\/pages\/coaches\.js/, 'index.html should load coaches page module');
 assert.match(html, /assets\/scripts\/pages\/campusmgr\.js/, 'index.html should load campusmgr page module');
 assert.match(html, /assets\/scripts\/pages\/leads\.js/, 'index.html should load leads page module');
-assert.match(html, /assets\/scripts\/pages\/leads\.js\?v=20260808-leads-stats-skeleton-v1/, 'index.html should bust stale cached leads.js after safe lead pagination changes');
+assert.match(html, /assets\/scripts\/pages\/leads\.js\?v=20260906-synthetic-lead-save-v1/, 'index.html should bust stale cached leads.js after synthetic lead save fixes');
 assert.doesNotMatch(html, /assets\/scripts\/pages\/classes\.js|assets\/scripts\/pages\/plans\.js/, 'index.html should not load deprecated classes or plans page modules');
 assert.match(html, /assets\/scripts\/pages\/products\.js/, 'index.html should load products page module');
 assert.match(html, /assets\/scripts\/pages\/packages\.js/, 'index.html should load packages page module');
@@ -38,7 +38,7 @@ assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html shoul
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260825-coachschedule-calendar-ui-v1/, 'index.html should version coachops.js after coach calendar UI fixes');
 assert.match(html, /assets\/scripts\/standard\/charts\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached charts.js after channel quality matrix changes');
-assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached operations.js after channel quality matrix changes');
+assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260902-operations-coach-view-v1/, 'index.html should keep the current operations.js asset version');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260807-shared-date-controls-v1/, 'index.html should bust stale cached courts.js when shared date controls move out');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
@@ -52,9 +52,18 @@ assert.match(components, /goPage\('leads',this\)[\s\S]*线索池/, 'components.j
 assert.match(components, /function renderTopbarShell\(/, 'components.js should render the shared topbar');
 assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=/, 'index.html should version schedule.js to avoid stale modal behavior');
-assert.match(html, /assets\/scripts\/pages\/schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*assets\/scripts\/pages\/schedule\.js\?v=20260831-purchase-records-v1/, 'index.html should bust stale cached schedule assets after student settlement block fixes');
+assert.match(html, /assets\/scripts\/pages\/schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*assets\/scripts\/pages\/schedule\.js\?v=20260903-stored-value-alias-v1/, 'index.html should keep current schedule asset ordering and versions');
 
-assert.doesNotMatch(html, /<style>[\s\S]*<\/style>/, 'index.html should no longer keep inline style blocks');
-assert.doesNotMatch(html, /<script>[\s\S]*<\/script>/, 'index.html should no longer keep one giant inline script block');
+const htmlWithoutWeeklyShareShell = html
+  .replace(`<script>
+if(/^\\/weekly-reports\\/[^/]+/.test(location.pathname))document.documentElement.classList.add('weekly-report-share-shell');
+</script>`, '')
+  .replace(`<style>
+.weekly-report-share-shell body{background:#070A08}
+.weekly-report-share-shell #loginPage{display:none!important}
+</style>`, '');
+
+assert.doesNotMatch(htmlWithoutWeeklyShareShell, /<style>[\s\S]*<\/style>/, 'index.html should no longer keep inline style blocks except the weekly report share shell bootstrap');
+assert.doesNotMatch(htmlWithoutWeeklyShareShell, /<script>[\s\S]*<\/script>/, 'index.html should no longer keep one giant inline script block except the weekly report share shell bootstrap');
 
 console.log('index asset split tests passed');

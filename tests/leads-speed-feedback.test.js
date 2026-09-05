@@ -42,6 +42,7 @@ assert.match(fnBody('saveLead'), /if\(res\?\.followup\)upsertLeadFollowupLocal\(
 
 assertBackgroundRefresh('saveLeadBasicFromDrawer');
 assert.match(fnBody('saveLeadBasicFromDrawer'), /upsertLeadLocal\(lead\)/, 'drawer basic save should merge returned lead before reopening detail');
+assert.match(fnBody('saveLeadBasicFromDrawer'), /const nextLeadId=lead\?\.id\|\|leadId[\s\S]*openLeadDetail\(nextLeadId\)[\s\S]*reopenLeadDetailIfStillOpen\(nextLeadId\)/, 'drawer basic save should switch from synthetic lead id to the real persisted lead id');
 
 assertBackgroundRefresh('saveLeadFollowupFromDrawer');
 assert.match(fnBody('saveLeadFollowupFromDrawer'), /upsertLeadFollowupLocal\(res\.followup\)/, 'drawer follow-up save should merge returned follow-up locally');
@@ -81,7 +82,7 @@ const doDeleteBody = fnBodyFrom(bootstrapSource, 'doDelete');
 assert.match(doDeleteBody, /currentDelType==='lead'[\s\S]*renderLeads\(\)[\s\S]*refreshLeadRuntimeInBackground/, 'lead delete should only refresh the lead list and background refresh read models');
 assert.match(doDeleteBody, /if\(currentDelType==='lead'\)\{[\s\S]*return;\s*\}\s*if\(!result\?\.purchaseVoid\)renderAll\(\);/, 'lead delete should return before the full app render path');
 
-assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260831-purchase-records-v1/, 'index should bump the bootstrap script asset version');
-assert.match(html, /assets\/scripts\/pages\/leads\.js\?v=20260808-leads-stats-skeleton-v1/, 'index should bump the lead script asset version');
+assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260904-management-page-visibility-v1/, 'index should keep the current bootstrap script asset version');
+assert.match(html, /assets\/scripts\/pages\/leads\.js\?v=20260906-synthetic-lead-save-v1/, 'index should bump the lead script asset version');
 
 console.log('leads speed feedback tests passed');

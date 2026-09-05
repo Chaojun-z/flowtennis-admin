@@ -982,6 +982,20 @@ function createLeadsRoutes(deps={}){
     return studentId?`lead-from-student-${studentId}`:'';
   }
 
+  function isSyntheticStudentLeadId(id){
+    return /^lead-from-student-/.test(cleanLeadText(id));
+  }
+
+  function studentIdFromSyntheticLeadId(id){
+    const raw=cleanLeadText(id);
+    return isSyntheticStudentLeadId(raw)?raw.slice('lead-from-student-'.length):'';
+  }
+
+  function realLeadIdForSyntheticStudent(studentId){
+    const id=cleanLeadText(studentId);
+    return id?`lead-${id}`:'';
+  }
+
   function buildSyntheticLeadRecord(row={},id,now){
     const leadDate=cleanLeadText(row.firstTouchAt||row.leadEnteredAt||row.leadDate||row.trialAtRaw||row.courseFirstPurchaseAt||row.conversionAt);
     const raw={
@@ -1006,6 +1020,85 @@ function createLeadsRoutes(deps={}){
       updatedAt:now
     };
     return normalizeLeadRecord?normalizeLeadRecord(raw,{id,now}):raw;
+  }
+
+  async function visibleSyntheticLeadById(leadId){
+    const id=cleanLeadText(leadId);
+    const studentId=studentIdFromSyntheticLeadId(id);
+    if(!id||!studentId)return null;
+    const context=await readVisibleLeadContext({expandLifecycleSearch:true}).catch(()=>null);
+    return (context?.rows||[]).find(row=>{
+      return cleanLeadText(row?.id)===id||cleanLeadText(row?.studentId)===studentId;
+    })||null;
+  }
+
+  async function syntheticLeadForStudentLeadId(leadId,now){
+    const id=cleanLeadText(leadId);
+    const studentId=studentIdFromSyntheticLeadId(id);
+    if(!studentId||!T_STUDENTS||typeof get!=='function')return null;
+    const student=await get(T_STUDENTS,studentId).catch(()=>null);
+    if(!student)return null;
+    const visible=await visibleSyntheticLeadById(id);
+    const leadDate=cleanLeadText(visible?.leadDate||visible?.firstTouchAt||visible?.leadEnteredAt||student.leadDate||'');
+    const raw={
+      ...(visible||{}),
+      id,
+      displayName:cleanLeadText(visible?.displayName||student.displayName||student.name||student.wechatName),
+      name:cleanLeadText(visible?.name||student.name||student.displayName||student.wechatName),
+      wechatName:cleanLeadText(visible?.wechatName||student.wechatName||student.name||student.displayName),
+      phone:cleanLeadText(visible?.phone||student.phone),
+      source:cleanLeadText(visible?.source||student.source),
+      campus:cleanLeadText(visible?.campus||student.campus),
+      customerType:cleanLeadText(visible?.customerType||student.customerType||student.type),
+      demandProduct:cleanLeadText(visible?.demandProduct||visible?.consultType||student.demandProduct||student.consultType),
+      consultType:cleanLeadText(visible?.consultType||visible?.demandProduct||student.consultType||student.demandProduct),
+      profileNote:cleanLeadText(visible?.profileNote||student.profileNote||student.notes),
+      owner:cleanLeadText(visible?.owner||student.owner||student.primaryCoach),
+      leadDate,
+      firstTouchAt:cleanLeadText(visible?.firstTouchAt||leadDate),
+      leadEnteredAt:cleanLeadText(visible?.leadEnteredAt||leadDate),
+      studentId,
+      isCourseConverted:true,
+      createdAt:cleanLeadText(visible?.createdAt||student.createdAt||now),
+      updatedAt:now
+    };
+    const normalized=normalizeLeadRecord?normalizeLeadRecord(raw,{id,now}):raw;
+    return {
+      ...normalized,
+      id,
+      leadDate,
+      firstTouchAt:cleanLeadText(raw.firstTouchAt),
+      leadEnteredAt:cleanLeadText(raw.leadEnteredAt),
+      studentId,
+      isLifecycleSynthetic:true
+    };
+  }
+
+  async function resolveSyntheticLeadSaveTarget(leadId,body={},now){
+    const studentId=studentIdFromSyntheticLeadId(leadId);
+    if(!studentId||!T_STUDENTS||typeof get!=='function')return null;
+    const student=await get(T_STUDENTS,studentId).catch(()=>null);
+    if(!student)return null;
+    const linkedLeadId=cleanLeadText(student.sourceLeadId||student.leadId||student.fromLeadId);
+    if(linkedLeadId&&!isSyntheticStudentLeadId(linkedLeadId)){
+      const linkedLead=await get(T_LEADS,linkedLeadId).catch(()=>null);
+      if(linkedLead)return {lead:linkedLead,student,targetLeadId:linkedLeadId,created:false};
+    }
+    const synthetic=await syntheticLeadForStudentLeadId(leadId,now);
+    if(!synthetic)return null;
+    const targetLeadId=realLeadIdForSyntheticStudent(studentId);
+    if(!targetLeadId)return null;
+    const lead={
+      ...synthetic,
+      ...body,
+      id:targetLeadId,
+      studentId,
+      sourceLeadId:targetLeadId,
+      isLifecycleSynthetic:false,
+      createdAt:now,
+      updatedAt:now
+    };
+    return {lead,student,targetLeadId,created:true};
   }
 
   function groupLeadFollowupsByLeadId(followups=[]){
@@ -1309,7 +1402,8 @@ function createLeadsRoutes(deps={}){
       const leadId=leadIdM[1];
       if(method==='GET'){
         await init();
-        const raw=await get(T_LEADS,leadId).catch(()=>null);
+        let raw=await get(T_LEADS,leadId).catch(()=>null);
+        if(!raw&&isSyntheticStudentLeadId(leadId))raw=await syntheticLeadForStudentLeadId(leadId,new Date().toISOString());
         if(!raw)return sendJson(res,{error:'线索不存在'},404);
         const snapshot=await applyPersistedLeadSnapshot(raw);
         const displayLead=await applyLeadDisplaySnapshot(snapshot,{leadId});
@@ -1319,14 +1413,25 @@ function createLeadsRoutes(deps={}){
       }
       if(method==='PUT'){
         await init();
-        const old=await get(T_LEADS,leadId).catch(()=>null);
-        if(!old)return sendJson(res,{error:'线索不存在'},404);
         const now=new Date().toISOString();
-        const normalized=normalizeLeadRecord({...old,...body,id:leadId,createdAt:old.createdAt},{now});
+        let targetLeadId=leadId;
+        let syntheticStudent=null;
+        let old=await get(T_LEADS,leadId).catch(()=>null);
+        if(!old&&isSyntheticStudentLeadId(leadId)){
+          const resolved=await resolveSyntheticLeadSaveTarget(leadId,body,now);
+          if(resolved){
+            old=resolved.lead;
+            targetLeadId=resolved.targetLeadId;
+            syntheticStudent=resolved.student;
+          }
+        }
+        if(!old)return sendJson(res,{error:'线索不存在'},404);
+        const normalized=normalizeLeadRecord({...old,...body,id:targetLeadId,createdAt:old.createdAt},{now});
         const next=await applyPersistedLeadSnapshot(normalized);
         const materialized=await materializeLeadConversionIdentities(next,{now});
-        if(!materialized.changed)await put(T_LEADS,leadId,next);
-        const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId});
+        if(!materialized.changed)await put(T_LEADS,targetLeadId,next);
+        if(syntheticStudent)await ensureLifecycleSourceLink(T_STUDENTS,syntheticStudent,{id:targetLeadId},now);
+        const displayLead=await applyLeadDisplaySnapshot(materialized.lead,{leadId:targetLeadId});
         clearLeadListCaches();
         return sendJson(res,displayLead);
       }
