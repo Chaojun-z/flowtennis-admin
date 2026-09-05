@@ -8,6 +8,7 @@ const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.j
 function createLeadsRoutes(deps={}){
   const {
     init,sendJson,getCachedScan,getCachedRow,scanByIdPrefix,get,scan,put,del,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
+    refreshStudentTeachingSummaryRows,
     cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
     LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
     normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
@@ -1288,6 +1289,13 @@ function createLeadsRoutes(deps={}){
         for(const row of plan.studentProfileMerge?.referenceUpdates?.plans||[])await put(T_PLANS,row.id,row);
         for(const row of plan.studentProfileMerge?.referenceUpdates?.classes||[])await put(T_CLASSES,row.id,row);
         for(const row of plan.studentProfileMerge?.referenceUpdates?.feedbacks||[])await put(T_FEEDBACKS,row.id,row);
+        const refreshStudentIds=[
+          plan.studentProfileMerge?.targetStudentId,
+          ...(plan.studentProfileMerge?.sourceStudentUpdates||[]).map(row=>row.id)
+        ].map(cleanLeadText).filter(Boolean);
+        if(refreshStudentIds.length&&typeof refreshStudentTeachingSummaryRows==='function'){
+          await refreshStudentTeachingSummaryRows([...new Set(refreshStudentIds)]);
+        }
         clearLeadListCaches();
         return sendJson(res,leadMergeSummary(plan));
       }catch(error){

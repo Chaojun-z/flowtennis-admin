@@ -141,7 +141,7 @@ function createLeadMergeRuleHelpers(deps = {}) {
       };
     }).filter(Boolean);
 
-    const targetStudentUpdate = targetStudent ? { ...targetStudent, mergedIntoStudentId: '', updatedAt: now } : null;
+    const targetStudentUpdate = targetStudent ? { ...targetStudent, mergedIntoStudentId: '', lastLeadMergeAt: now, updatedAt: now } : null;
     if (targetStudentUpdate && text(targetStudentUpdate.status) === 'merged') targetStudentUpdate.status = 'active';
     const fillFields = ['phone', 'source', 'campus', 'type', 'primaryCoach', 'activityRange'];
     sourceStudentUpdates.forEach(source => {

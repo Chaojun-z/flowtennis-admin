@@ -467,6 +467,7 @@ function buildCustomerLifecycleRows({
   (students || []).forEach(student => {
     const sid = text(student.id || student.studentId);
     if (!sid) return;
+    if (text(student.mergedIntoStudentId) || !activeStatus(student)) return;
     studentsById.set(sid, student);
     const sourceId = resolveLeadSourceId(sourceLeadId(student) || leadByStudentId.get(sid) || '')
       || resolveLeadSourceIdByName(student.displayName, student.wechatName, student.name);

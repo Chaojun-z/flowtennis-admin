@@ -12,10 +12,11 @@ function makeRes() {
   return { statusCode: 200, body: null };
 }
 
-function createHarness(seedRows) {
+function createHarness(seedRows, options = {}) {
   const rows = clone(seedRows);
   const writes = [];
   const deletes = [];
+  const summaryRefreshes = [];
   const handle = createLeadsRoutes({
     init: async () => {},
     sendJson: (res, payload, status = 200) => {
@@ -38,6 +39,13 @@ function createHarness(seedRows) {
       rows[table] = (rows[table] || []).filter(row => String(row.id) !== String(id));
     },
     ensureLeadTables: async () => {},
+    refreshStudentTeachingSummaryRows: async studentIds => {
+      summaryRefreshes.push(clone(studentIds || []));
+      if (typeof options.refreshStudentTeachingSummaryRows === 'function') {
+        return options.refreshStudentTeachingSummaryRows(studentIds);
+      }
+      return [];
+    },
     isProductionRuntime: () => false,
     filterLoadAllForUser: payload => payload,
     cleanLeadText: value => String(value || '').trim(),
@@ -65,7 +73,7 @@ function createHarness(seedRows) {
     T_CLASSES: 'ft_classes',
     T_FEEDBACKS: 'ft_feedbacks'
   });
-  return { rows, writes, deletes, handle };
+  return { rows, writes, deletes, summaryRefreshes, handle };
 }
 
 async function request(handle, path, method, body = {}) {
@@ -277,6 +285,11 @@ async function main() {
   assert.strictEqual(businessStudentMergeHarness.rows.ft_plans[0].studentId, 'student-a');
   assert.deepStrictEqual(businessStudentMergeHarness.rows.ft_classes[0].studentIds, ['student-a']);
   assert.strictEqual(businessStudentMergeHarness.rows.ft_feedbacks[0].studentId, 'student-a');
+  assert.deepStrictEqual(
+    businessStudentMergeHarness.summaryRefreshes,
+    [['student-a', 'student-b']],
+    'lead merge must synchronously refresh student teaching summaries for the kept and merged students'
+  );
 
   const deleteHarness = createHarness({
     ft_leads: [{ id: 'lead-delete', displayName: '可删除线索', phone: '13800000003', leadStage: '跟进中' }],

@@ -11,6 +11,7 @@ const plan = merge.buildStudentMergePlan({
     ],
     purchases: [{ id: 'pur-1', studentId: 'dup', studentName: '宋缇缇' }],
     entitlements: [{ id: 'ent-1', studentId: 'dup', studentName: '宋缇缇' }],
+    entitlementLedger: [{ id: 'ledger-1', studentId: 'dup', studentName: '宋缇缇', entitlementId: 'ent-1' }],
     schedules: [{ id: 'sch-1', studentIds: ['dup'], studentName: '宋缇缇' }],
     plans: [{ id: 'plan-1', studentId: 'dup', studentName: '宋缇缇' }],
     feedbacks: [{ id: 'fb-1', studentId: 'dup', studentIds: ['dup'], studentName: '宋缇缇' }]
@@ -23,10 +24,12 @@ assert.deepStrictEqual(plan.studentUpdate, {
   name: '宋缇缇',
   campus: '顺义马坡',
   primaryCoach: '甄朝珺',
+  lastStudentMergeAt: '2026-05-22 12:00:00',
   updatedAt: '2026-05-22 12:00:00'
 });
 assert.strictEqual(plan.purchaseUpdates[0].studentId, 'keep');
 assert.strictEqual(plan.entitlementUpdates[0].studentId, 'keep');
+assert.strictEqual(plan.entitlementLedgerUpdates[0].studentId, 'keep');
 assert.deepStrictEqual(plan.scheduleUpdates[0].studentIds, ['keep']);
 assert.strictEqual(plan.planUpdates[0].studentId, 'keep');
 assert.deepStrictEqual(plan.feedbackUpdates[0].studentIds, ['keep']);

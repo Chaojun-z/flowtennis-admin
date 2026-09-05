@@ -57,6 +57,21 @@ function rowHasStudent(row={},studentId=''){
   return parseSnapshotArray(row.studentIds).some(id=>String(id||'').trim()===sid);
 }
 
+function pageDataTimeMs(value){
+  const raw=String(value||'').trim();
+  if(!raw)return 0;
+  const normalized=raw.includes('T')?raw:raw.replace(' ','T');
+  const ms=Date.parse(normalized);
+  return Number.isFinite(ms)?ms:0;
+}
+
+function studentTeachingSummaryStaleForStudent(summary={},student={}){
+  const mergedAt=pageDataTimeMs(student.lastLeadMergeAt||student.lastStudentMergeAt);
+  if(!mergedAt)return false;
+  const summaryAt=pageDataTimeMs(summary.summaryUpdatedAt||summary.updatedAt);
+  return !summaryAt||summaryAt<mergedAt;
+}
+
 function textSearchHit(q,...values){
   const keyword=String(q||'').trim().toLowerCase();
   if(!keyword)return true;
@@ -138,6 +153,15 @@ function createCorePageDataRoutes(deps={}){
       }
       throw err;
     }
+  }
+  async function readStudentTeachingSummaryRow(studentId){
+    const sid=String(studentId||'').trim();
+    if(!T_STUDENT_TEACHING_SUMMARY||!sid)return null;
+    const direct=typeof getCachedRow==='function'?await getCachedRow(T_STUDENT_TEACHING_SUMMARY,sid).catch(()=>null):null;
+    if(direct)return direct;
+    if(typeof readReadyStudentTeachingSummaryRows!=='function'||typeof getCachedScan!=='function')return null;
+    const rows=await readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix}).catch(()=>[]);
+    return (Array.isArray(rows)?rows:[]).find(row=>String(row.id||row.studentId||'').trim()===sid)||null;
   }
   async function hydrateScheduleRowsByLedgerIds(scheduleRows=[],ledgerRows=[]){
     if(!T_SCHEDULE)return scheduleRows||[];
@@ -313,10 +337,11 @@ function createCorePageDataRoutes(deps={}){
       const student=await getCachedRow(T_STUDENTS,studentId).catch(()=>null);
       if(!student)return sendJson(res,{error:'学员不存在'},404);
       const fresh=String(query?.get('fresh')||'').trim()==='1';
-      const studentTeachingSummary=T_STUDENT_TEACHING_SUMMARY ? await getCachedRow(T_STUDENT_TEACHING_SUMMARY,studentId).catch(()=>null) : null;
+      const studentTeachingSummary=await readStudentTeachingSummaryRow(studentId);
       const canUseStudentTeachingSummary=!fresh
         && studentTeachingSummary
         && String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()===TEACHING_LESSON_DETAIL_SOURCE_VERSION
+        && !studentTeachingSummaryStaleForStudent(studentTeachingSummary,student)
         && !teachingSummaryNeedsLessonFacts(studentTeachingSummary,new Date());
       if(canUseStudentTeachingSummary){
         const customerLifecycleRows=buildCustomerLifecycleRows({students:[student]});

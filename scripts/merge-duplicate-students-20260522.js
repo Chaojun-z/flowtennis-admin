@@ -10,6 +10,7 @@ const TABLES = {
   students: 'ft_students',
   purchases: 'ft_purchases',
   entitlements: 'ft_entitlements',
+  entitlementLedger: 'ft_entitlement_ledger',
   schedule: 'ft_schedule',
   plans: 'ft_plans',
   feedbacks: 'ft_feedbacks',
@@ -55,10 +56,11 @@ function buildStudentMergePlan({ keepStudentId, mergeStudentIds, data, now = new
     source: keepFilled(next.source, row.source),
     activityRange: keepFilled(next.activityRange, row.activityRange),
     notes: [next.notes, row.notes].map((v) => String(v || '').trim()).filter(Boolean).join('；')
-  }), { ...keep, updatedAt: now }));
+  }), { ...keep, lastStudentMergeAt: now, updatedAt: now }));
   const touchStudent = (row) => ({ ...row, studentId: keepStudentId, studentName: keep.name || row.studentName || '', updatedAt: now });
   const purchaseUpdates = (data.purchases || []).filter((row) => fromIds.has(String(row.studentId))).map(touchStudent);
   const entitlementUpdates = (data.entitlements || []).filter((row) => fromIds.has(String(row.studentId))).map(touchStudent);
+  const entitlementLedgerUpdates = (data.entitlementLedger || []).filter((row) => fromIds.has(String(row.studentId))).map(touchStudent);
   const planUpdates = (data.plans || []).filter((row) => fromIds.has(String(row.studentId))).map(touchStudent);
   const scheduleRows = Array.isArray(data.schedule) ? data.schedule : (Array.isArray(data.schedules) ? data.schedules : []);
   const scheduleUpdates = scheduleRows.filter((row) => parseArr(row.studentIds).some((id) => fromIds.has(String(id))) || fromIds.has(String(row.studentId))).map((row) => ({
@@ -83,6 +85,7 @@ function buildStudentMergePlan({ keepStudentId, mergeStudentIds, data, now = new
     studentUpdate,
     purchaseUpdates,
     entitlementUpdates,
+    entitlementLedgerUpdates,
     scheduleUpdates,
     planUpdates,
     feedbackUpdates,
@@ -99,6 +102,7 @@ function printPlan(plan) {
     counts: {
       purchases: plan.purchaseUpdates.length,
       entitlements: plan.entitlementUpdates.length,
+      entitlementLedger: plan.entitlementLedgerUpdates.length,
       schedule: plan.scheduleUpdates.length,
       plans: plan.planUpdates.length,
       feedbacks: plan.feedbackUpdates.length,
@@ -128,6 +132,7 @@ async function run(argv = process.argv.slice(2)) {
     students: await scanTable(client, TABLES.students),
     purchases: await scanTable(client, TABLES.purchases),
     entitlements: await scanTable(client, TABLES.entitlements),
+    entitlementLedger: await scanTable(client, TABLES.entitlementLedger),
     schedule: await scanTable(client, TABLES.schedule),
     plans: await scanTable(client, TABLES.plans),
     feedbacks: await scanTable(client, TABLES.feedbacks),
@@ -139,6 +144,7 @@ async function run(argv = process.argv.slice(2)) {
   await putRow(client, TABLES.students, plan.studentUpdate);
   for (const row of plan.purchaseUpdates) await putRow(client, TABLES.purchases, row);
   for (const row of plan.entitlementUpdates) await putRow(client, TABLES.entitlements, row);
+  for (const row of plan.entitlementLedgerUpdates) await putRow(client, TABLES.entitlementLedger, row);
   for (const row of plan.scheduleUpdates) await putRow(client, TABLES.schedule, row);
   for (const row of plan.planUpdates) await putRow(client, TABLES.plans, row);
   for (const row of plan.feedbackUpdates) await putRow(client, TABLES.feedbacks, row);

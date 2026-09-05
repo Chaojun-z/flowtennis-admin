@@ -690,6 +690,7 @@ const routeSendJson=(...args)=>{sendJson(...args);return true;};
 const {buildLeadMergePlan}=createLeadMergeRuleHelpers({cleanLeadText,mergeLeadRows,applyLeadFollowupsSnapshot,normalizeLeadRecord,deriveLeadSystemStatus});
 const handleLeadsRoutes=createLeadsRoutes({
   init,sendJson:routeSendJson,getCachedScan,getCachedRow,scanByIdPrefix,get,scan,put,del,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,uuidv4,
+  refreshStudentTeachingSummaryRows:studentTeachingSummaryCache.refreshStudentTeachingSummaryRows,
   cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
   LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
   normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,

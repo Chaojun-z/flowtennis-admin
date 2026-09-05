@@ -4,7 +4,7 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../server/read-models/customer-lifecycle.js');
-const { buildLeadPoolRows, buildTeachingStudentViews } = require('../server/read-models/platform-metrics.js');
+const { buildLeadPoolRows, buildTeachingStudentViews, buildStudentTeachingSummaryRows } = require('../server/read-models/platform-metrics.js');
 
 const rows = buildCustomerLifecycleRows({
   leads: [
@@ -421,6 +421,88 @@ assert.deepStrictEqual(
   hiddenDirtyStudentViews.searchableStudents.map(row => row.displayName).sort(),
   ['M.Z'],
   '学员统一读模型不能把已合并学员或非真人学员名重新复活到搜索/列表'
+);
+
+const mergedAliasStudentRows = buildCustomerLifecycleRows({
+  leads: [
+    {
+      id: 'lead-wang-ameng',
+      displayName: '王先生（阿萌）',
+      studentId: 'student-wang-ameng',
+      leadStage: '已成交',
+      dealType: '课程',
+      source: '大众点评',
+      campus: 'shunyi_mapo'
+    }
+  ],
+  students: [
+    {
+      id: 'student-wang-ameng',
+      name: '王先生（阿萌）',
+      sourceLeadId: 'lead-wang-ameng',
+      campus: 'shunyi_mapo'
+    },
+    {
+      id: 'student-ameng-alias',
+      name: '阿萌',
+      sourceLeadId: 'lead-wang-ameng',
+      status: 'merged',
+      mergedIntoStudentId: 'student-wang-ameng',
+      campus: 'shunyi_mapo'
+    }
+  ],
+  entitlements: [
+    {
+      id: 'ent-wang-ameng',
+      studentId: 'student-wang-ameng',
+      studentName: '王先生（阿萌）',
+      packageName: '1v2私教课 · 10课时 · 非黄金',
+      totalLessons: 10,
+      remainingLessons: 2,
+      status: 'active'
+    }
+  ],
+  schedule: [
+    {
+      id: 'schedule-wang-ameng',
+      studentIds: ['student-wang-ameng'],
+      studentName: '王先生（阿萌）',
+      courseType: '私教课',
+      status: '已排课',
+      startTime: '2026-09-04 19:00'
+    }
+  ]
+});
+const mergedAliasSummaryRows = buildStudentTeachingSummaryRows(mergedAliasStudentRows, {
+  entitlements: [
+    {
+      id: 'ent-wang-ameng',
+      studentId: 'student-wang-ameng',
+      studentName: '王先生（阿萌）',
+      packageName: '1v2私教课 · 10课时 · 非黄金',
+      totalLessons: 10,
+      remainingLessons: 2,
+      status: 'active'
+    }
+  ],
+  schedule: [
+    {
+      id: 'schedule-wang-ameng',
+      studentIds: ['student-wang-ameng'],
+      studentName: '王先生（阿萌）',
+      courseType: '私教课',
+      status: '已排课',
+      startTime: '2026-09-04 19:00'
+    }
+  ]
+});
+assert.ok(
+  mergedAliasStudentRows.some(row => row.studentId === 'student-wang-ameng' && row.displayName === '王先生（阿萌）'),
+  '已合并副学员不能污染主线索的学员身份'
+);
+assert.ok(
+  mergedAliasSummaryRows.some(row => row.studentId === 'student-wang-ameng'),
+  '主学员和已合并副学员共用 sourceLeadId 时，教学摘要仍必须生成主学员行'
 );
 
 const linkedStudentDisplayRows = buildCustomerLifecycleRows({

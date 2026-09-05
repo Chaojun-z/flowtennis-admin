@@ -1,6 +1,11 @@
 const assert = require('assert');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
+const {
+  buildStudentTeachingSummaryBundleRow,
+  buildStudentTeachingSummaryChecksum,
+  buildStudentTeachingSummaryMetaRow
+} = require('../server/read-models/student-teaching-summary-cache.js');
 
 async function requestStudentDetail({ fresh = false } = {}) {
   const calls = { cappedScan: 0 };
@@ -55,6 +60,76 @@ async function requestStudentDetail({ fresh = false } = {}) {
   const res = {};
   const query = new URLSearchParams(fresh ? 'id=stu-1&fresh=1' : 'id=stu-1');
   await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query });
+  return { res, calls };
+}
+
+async function requestBundleSummaryStudentDetail() {
+  const calls = { cappedScan: 0, prefixScan: 0, summaryScan: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const version = 'summary-version-1';
+  const summaryRows = [{
+    id: 'stu-bundle',
+    studentId: 'stu-bundle',
+    name: '王先生（阿萌）',
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    activityStatusLabel: '近30天活跃',
+    completedLessons: 10,
+    packageBalanceText: '0/10',
+    detailPackageOrderRows: [{ entitlementId: 'ent-bundle', packageName: '1v2私教课', remainingLessons: 0, totalLessons: 10 }],
+    detailLessonRecordRows: [{ kind: 'ledger', scheduleId: 'sch-bundle', time: '2026-09-04 19:00', courseType: '私教课', lessonDelta: -1, lessonSectionText: '[第10节]' }],
+    detailBenefitRows: []
+  }];
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: 'ready',
+    batchId: version,
+    activeVersion: version,
+    rowCount: summaryRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(summaryRows)
+  });
+  const bundle = buildStudentTeachingSummaryBundleRow(summaryRows, version);
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      throw new Error(`unexpected full scan: ${table}`);
+    },
+    getCachedScan: async table => {
+      calls.summaryScan += 1;
+      throw new Error(`unexpected summary full scan: ${table}`);
+    },
+    scanByIdPrefix: async () => {
+      calls.prefixScan += 1;
+      return [];
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-bundle') {
+        return { id: 'stu-bundle', name: '王先生（阿萌）', phone: '13800000000', campus: 'mapo', type: '成人' };
+      }
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === meta.id) return meta;
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === bundle.id) return bundle;
+      return null;
+    },
+    PRODUCTION_PAGE_READ_LIMITS: { entitlementLedger: 100, schedule: 100, leads: 100 },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-bundle') });
   return { res, calls };
 }
 
@@ -386,6 +461,113 @@ async function requestLegacyVersionSmallClassStudentDetail() {
   return { res, calls };
 }
 
+async function requestMergedStudentWithStaleSummaryDetail() {
+  const calls = { cappedScan: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const tableRows = {
+    purchases: [{
+      id: 'pur-ameng',
+      studentId: 'stu-wang',
+      packageName: '私教课 · 10节',
+      status: 'active',
+      purchaseDate: '2026-08-01'
+    }],
+    packages: [],
+    entitlements: [{
+      id: 'ent-ameng',
+      purchaseId: 'pur-ameng',
+      studentId: 'stu-wang',
+      packageName: '私教课 · 10节',
+      totalLessons: 10,
+      usedLessons: 2,
+      remainingLessons: 8,
+      status: 'active'
+    }],
+    entitlement_ledger: [{
+      id: 'ledger-ameng',
+      entitlementId: 'ent-ameng',
+      purchaseId: 'pur-ameng',
+      studentId: 'stu-wang',
+      scheduleId: 'sch-ameng',
+      lessonDelta: -1,
+      relatedDate: '2026-08-12'
+    }],
+    schedule: [{
+      id: 'sch-ameng',
+      studentId: 'stu-wang',
+      studentIds: ['stu-wang'],
+      startTime: '2026-08-12 10:00:00',
+      endTime: '2026-08-12 11:00:00',
+      status: '已结束',
+      courseType: '私教课',
+      lessonCount: 1
+    }],
+    membership_benefit_ledger: [],
+    feedbacks: []
+  };
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      return tableRows[table] || [];
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-wang') {
+        return {
+          id: 'stu-wang',
+          name: '王先生（阿萌）',
+          phone: '13800000000',
+          updatedAt: '2026-09-05T06:45:00.000Z',
+          lastLeadMergeAt: '2026-09-05T06:45:00.000Z'
+        };
+      }
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === 'stu-wang') {
+        return {
+          id: 'stu-wang',
+          studentId: 'stu-wang',
+          name: '王先生（阿萌）',
+          teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+          summaryUpdatedAt: '2026-09-05T06:40:00.000Z',
+          activityStatusLabel: '近30天活跃',
+          completedLessons: 1,
+          detailPackageOrderRows: [],
+          detailLessonRecordRows: [{
+            kind: 'schedule',
+            scheduleId: 'sch-old-wang',
+            time: '2026-08-01 10:00-11:00',
+            courseType: '私教课',
+            lessonDelta: -1,
+            lessonSectionText: '[第1节]'
+          }],
+          detailBenefitRows: []
+        };
+      }
+      return null;
+    },
+    PRODUCTION_PAGE_READ_LIMITS: { entitlementLedger: 100, schedule: 100, leads: 100 },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-wang') });
+  return { res, calls };
+}
+
 (async () => {
   const { res, calls } = await requestStudentDetail();
   assert.strictEqual(res.statusCode, 200);
@@ -400,6 +582,15 @@ async function requestLegacyVersionSmallClassStudentDetail() {
     [['pur-1', 9, 10]],
     'student package rows should come from the same unified teaching summary fast path'
   );
+
+  const bundleSummary = await requestBundleSummaryStudentDetail();
+  assert.strictEqual(bundleSummary.res.statusCode, 200);
+  assert.strictEqual(bundleSummary.calls.cappedScan, 0, 'published summary bundle should avoid full detail scans');
+  assert.strictEqual(bundleSummary.calls.summaryScan, 0, 'published summary bundle should avoid full summary scans');
+  assert.strictEqual(bundleSummary.calls.prefixScan, 0, 'published summary bundle should avoid version prefix scans');
+  assert.strictEqual(bundleSummary.res.body.detailStudentView.name, '王先生（阿萌）');
+  assert.strictEqual(bundleSummary.res.body.detailStudentView.completedLessons, 10);
+  assert.strictEqual(bundleSummary.res.body.detailStudentView.packageBalanceText, '0/10');
 
   const inconsistent = await requestInconsistentStudentDetail();
   assert.strictEqual(inconsistent.res.statusCode, 200);
@@ -434,6 +625,18 @@ async function requestLegacyVersionSmallClassStudentDetail() {
     legacyVersion.res.body.detailStudentView.detailLessonRecordRows.find(row => row.scheduleId === 'sch-small')?.lessonSectionText,
     '[第1次]',
     'legacy lesson summary rows must rebuild small class records without entitlement ids to the count-based label'
+  );
+
+  const mergedStaleSummary = await requestMergedStudentWithStaleSummaryDetail();
+  assert.strictEqual(mergedStaleSummary.res.statusCode, 200);
+  assert.ok(mergedStaleSummary.calls.cappedScan > 0, 'student detail must ignore a teaching summary older than the merged student row');
+  assert.ok(
+    mergedStaleSummary.res.body.detailStudentView.detailLessonRecordRows.some(row => String(row.scheduleId || '') === 'sch-ameng'),
+    'merged student detail must include lesson rows moved from the duplicate student'
+  );
+  assert.ok(
+    mergedStaleSummary.res.body.detailStudentView.detailPackageOrderRows.some(row => String(row.entitlementId || row.id || '') === 'ent-ameng'),
+    'merged student detail must include package rows moved from the duplicate student'
   );
   console.log('student detail fast path tests passed');
 })().catch(err => {
