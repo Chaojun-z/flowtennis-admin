@@ -44,11 +44,11 @@ assert.match(source, /const PAGE_DATA_BACKGROUND_REQUIREMENTS=\{[\s\S]*students:
 assert.match(source, /const STUDENT_PAGE_DEFERRED_REQUIREMENTS=\[\];/, 'student list pages should not automatically pull heavy detail datasets after first paint');
 assert.match(source, /const STUDENT_DETAIL_REQUIREMENTS=\[\];/, 'student detail tabs should not block on extra shared datasets');
 assert.match(studentsSource, /function ensureStudentDetailDatasets\(/, 'student detail should have a lazy detail data loader');
-assert.match(studentsSource, /ensureStudentDetailData\(id,\{force:studentDetailTabNeedsDatasets\(studentDetailActiveTab\)\}\)/, 'student detail should load one student detail record by id when the drawer opens');
+assert.match(studentsSource, /ensureStudentDetailData\(id,\{force:false\}\)/, 'student detail should load one fast published detail record by id when the drawer opens');
 assert.match(source, /function markStudentDetailDataStale\(studentId\)/, 'student detail should support invalidating one student after a package mutation');
 assert.match(source, /function markReadModelsStale\(names=STUDENT_DRAWER_MUTATION_READ_MODELS\)/, 'student drawer mutations should be able to stale global read models without clearing detail caches');
 assert.match(source, /function refreshReadModelsInBackground\(names=STUDENT_DRAWER_MUTATION_READ_MODELS[\s\S]*ensureDatasetsByName\(targets,\{force:true\}\)\.then/, 'student drawer mutations should refresh global read models in the background');
-assert.match(source, /async function refreshStudentDetailDataAfterMutation\(studentId\)[\s\S]*markStudentDetailDataStale\(id\)[\s\S]*ensureStudentDetailData\(id,\{force:true\}\)/, 'student drawer mutations should refresh only one student detail synchronously');
+assert.match(source, /async function refreshStudentDetailDataAfterMutation\(studentId\)[\s\S]*markStudentDetailDataStale\(id\)[\s\S]*ensureStudentDetailData\(id,\{force:false\}\)/, 'student drawer mutations should refresh only one fast published student detail synchronously');
 assert.match(source, /function isTeachingSummaryNotReadyError\(error\)/, 'read-model not-ready errors should be classified centrally');
 assert.match(source, /function renderTeachingSummaryNotReadyState\(pg\)/, 'not-ready teaching summary states should have a dedicated UI clear path');
 assert.match(source, /if\(isTeachingSummaryNotReadyError\(e\)&&renderTeachingSummaryNotReadyState\(pg\)\)return;/, 'background refreshes should clear old teaching-summary data instead of keeping it on screen');
@@ -187,10 +187,13 @@ assert.match(purchaseCreateRouteSource, /getCachedScan\(T_PACKAGES\)/, 'purchase
 assert.match(purchaseCreateRouteSource, /cappedScan\(T_COACHES\)/, 'purchase create endpoint should load coaches for owner coach defaults');
 assert.doesNotMatch(purchaseCreateRouteSource, /T_PURCHASES|T_ENTITLEMENTS|buildPurchaseUnifiedView|buildCustomerLifecycleRows/, 'purchase create endpoint must not load heavy package center facts');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*getCachedRow\(T_STUDENTS,studentId\)/, 'student drawer should have a per-student detail endpoint');
-assert.match(corePagesSource, /const canUseStudentTeachingSummary=!fresh[\s\S]*teachingSummaryNeedsLessonFacts\(studentTeachingSummary,new Date\(\)\)/, 'student drawer may use the fast teaching summary only when the summary passes the same contradiction self-check');
-assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*ignoreTeachingSummaryDetailRows:true/, 'student drawer detail rows must come from per-student fact reads, not stale teaching summary detail snapshots');
-assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*studentScheduleIds[\s\S]*studentScheduleIds\.has\(String\(row\.scheduleId\|\|''\)\)/, 'student drawer should load ledger rows linked by scheduleId so authorized package usage appears for the actual student');
-assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*relatedEntitlementIds[\s\S]*scopedEntitlements[\s\S]*relatedPurchaseIds[\s\S]*scopedPurchases[\s\S]*relatedStudents/, 'student drawer should include the package owner records needed to render authorized package usage names');
+assert.match(corePagesSource, /const canUseStudentTeachingSummary=studentTeachingSummary[\s\S]*teachingSummaryNeedsLessonFacts\(studentTeachingSummary,new Date\(\)\)/, 'student drawer must use the fast teaching summary when the summary passes the same contradiction self-check');
+assert.match(corePagesSource, /STUDENT_DETAIL_SUMMARY_NOT_READY/, 'student drawer should return a controlled not-ready state instead of scanning production fact tables');
+const studentDetailRouteSource = corePagesSource.slice(
+  corePagesSource.indexOf("path==='/page-data/student-detail'&&method==='GET'"),
+  corePagesSource.indexOf("path==='/page-data/purchases'&&method==='GET'")
+);
+assert.doesNotMatch(studentDetailRouteSource, /cappedScan\(T_SCHEDULE|cappedScan\(T_ENTITLEMENT_LEDGER|cappedScan\(T_PURCHASES|cappedScan\(T_ENTITLEMENTS/, 'student detail route must not scan slow fact tables in the drawer path');
 assert.doesNotMatch(fnBodyFrom(studentsSource, 'ensureStudentDetailDatasets'), /purchasesPage/, 'student detail must not load the full purchases aggregate');
 assert.match(apiSource, /T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary'/, 'api should declare the student teaching summary read model table');
 assert.match(apiSource, /queueStudentTeachingSummaryRefresh\(t,meta\)/, 'source table writes should queue student teaching summary refreshes outside the first-screen read path');

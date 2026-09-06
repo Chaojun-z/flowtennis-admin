@@ -43,8 +43,13 @@ assert.match(
 );
 assert.match(
   fnBody('ensureStudentDetailData'),
-  /apiCall\('GET',`\/page-data\/student-detail\?id=\$\{encodeURIComponent\(id\)\}\$\{force\?'&fresh=1':''\}`,null,20000\)/,
-  'student detail loads should use the single-student endpoint with a bounded timeout'
+  /apiCall\('GET',`\/page-data\/student-detail\?id=\$\{encodeURIComponent\(id\)\}`,null,20000\)/,
+  'student detail loads should use the fast single-student endpoint with a bounded timeout'
+);
+assert.doesNotMatch(
+  fnBody('ensureStudentDetailData'),
+  /fresh=1/,
+  'student detail requests must not bypass the published summary and re-enable production fact-table scans'
 );
 assert.doesNotMatch(
   fnBody('ensureStudentDetailData'),
@@ -58,8 +63,8 @@ assert.doesNotMatch(
 );
 assert.match(
   fnBody('ensureStudentDetailDatasets'),
-  /ensureStudentDetailData\(id,\{force:studentDetailTabNeedsDatasets\(studentDetailActiveTab\)\}\)/,
-  'student package and lesson tabs should force a fresh single-student detail request'
+  /ensureStudentDetailData\(id,\{force:false\}\)/,
+  'student package and lesson tabs should use the published detail summary instead of forcing a live fact scan'
 );
 assert.doesNotMatch(
   fnBody('openStudentDetail'),

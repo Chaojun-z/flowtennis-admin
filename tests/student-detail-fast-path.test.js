@@ -582,6 +582,9 @@ async function requestMergedStudentWithStaleSummaryDetail() {
     [['pur-1', 9, 10]],
     'student package rows should come from the same unified teaching summary fast path'
   );
+  const freshFastPath = await requestStudentDetail({ fresh: true });
+  assert.strictEqual(freshFastPath.res.statusCode, 200);
+  assert.strictEqual(freshFastPath.calls.cappedScan, 0, 'fresh=1 must not bypass a valid published student detail summary');
 
   const bundleSummary = await requestBundleSummaryStudentDetail();
   assert.strictEqual(bundleSummary.res.statusCode, 200);
@@ -593,51 +596,24 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(bundleSummary.res.body.detailStudentView.packageBalanceText, '0/10');
 
   const inconsistent = await requestInconsistentStudentDetail();
-  assert.strictEqual(inconsistent.res.statusCode, 200);
-  assert.ok(inconsistent.calls.cappedScan > 0, 'inconsistent teaching summary should force full detail facts');
-  assert.strictEqual(
-    inconsistent.res.body.detailStudentView.completedLessons,
-    18,
-    'student detail should recompute impossible summary values from package-conserved facts'
-  );
+  assert.strictEqual(inconsistent.res.statusCode, 503);
+  assert.strictEqual(inconsistent.calls.cappedScan, 0, 'inconsistent teaching summary must not scan production fact tables from the drawer');
+  assert.strictEqual(inconsistent.res.body.code, 'STUDENT_DETAIL_SUMMARY_NOT_READY');
 
   const emptySummary = await requestEmptySummaryWithTrialFactsStudentDetail();
-  assert.strictEqual(emptySummary.res.statusCode, 200);
-  assert.ok(emptySummary.calls.cappedScan > 0, 'empty teaching summary detail should fall back to lesson facts');
-  assert.ok(
-    emptySummary.res.body.detailStudentView.detailLessonRecordRows.some(row => String(row.scheduleId || row.id || '').includes('trial-sch-1') || String(row.time || '').includes('2026-06-02')),
-    'student detail should show the attended trial lesson from schedule or ledger facts'
-  );
-  assert.ok(
-    emptySummary.res.body.detailStudentView.detailPackageOrderRows.some(row => String(row.packageName || '').includes('体验课') || String(row.entitlementId || row.id || '').includes('trial-ent-1')),
-    'student detail should show the trial package from entitlement facts'
-  );
+  assert.strictEqual(emptySummary.res.statusCode, 503);
+  assert.strictEqual(emptySummary.calls.cappedScan, 0, 'empty teaching summary detail must return a controlled not-ready state instead of scanning fact tables');
+  assert.strictEqual(emptySummary.res.body.code, 'STUDENT_DETAIL_SUMMARY_NOT_READY');
 
   const legacyVersion = await requestLegacyVersionSmallClassStudentDetail();
-  assert.strictEqual(legacyVersion.res.statusCode, 200);
-  assert.ok(legacyVersion.calls.cappedScan > 0, 'legacy lesson summary version must force a fresh fact read');
-  assert.strictEqual(
-    legacyVersion.res.body.detailStudentView.detailLessonRecordRows.find(row => row.scheduleId === 'sch-special')?.lessonSectionText,
-    '[第1次]',
-    'legacy lesson summary rows must rebuild special course records to the count-based label'
-  );
-  assert.strictEqual(
-    legacyVersion.res.body.detailStudentView.detailLessonRecordRows.find(row => row.scheduleId === 'sch-small')?.lessonSectionText,
-    '[第1次]',
-    'legacy lesson summary rows must rebuild small class records without entitlement ids to the count-based label'
-  );
+  assert.strictEqual(legacyVersion.res.statusCode, 503);
+  assert.strictEqual(legacyVersion.calls.cappedScan, 0, 'legacy lesson summary version must not force a fresh fact read from the drawer');
+  assert.strictEqual(legacyVersion.res.body.code, 'STUDENT_DETAIL_SUMMARY_NOT_READY');
 
   const mergedStaleSummary = await requestMergedStudentWithStaleSummaryDetail();
-  assert.strictEqual(mergedStaleSummary.res.statusCode, 200);
-  assert.ok(mergedStaleSummary.calls.cappedScan > 0, 'student detail must ignore a teaching summary older than the merged student row');
-  assert.ok(
-    mergedStaleSummary.res.body.detailStudentView.detailLessonRecordRows.some(row => String(row.scheduleId || '') === 'sch-ameng'),
-    'merged student detail must include lesson rows moved from the duplicate student'
-  );
-  assert.ok(
-    mergedStaleSummary.res.body.detailStudentView.detailPackageOrderRows.some(row => String(row.entitlementId || row.id || '') === 'ent-ameng'),
-    'merged student detail must include package rows moved from the duplicate student'
-  );
+  assert.strictEqual(mergedStaleSummary.res.statusCode, 503);
+  assert.strictEqual(mergedStaleSummary.calls.cappedScan, 0, 'stale merged-student summaries must not trigger production fact scans from the drawer');
+  assert.strictEqual(mergedStaleSummary.res.body.code, 'STUDENT_DETAIL_SUMMARY_NOT_READY');
   console.log('student detail fast path tests passed');
 })().catch(err => {
   console.error(err);

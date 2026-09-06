@@ -786,7 +786,7 @@ function studentDetailDataReady(studentId,tab=''){
 }
 function studentDetailCacheKey(studentId,{force=false}={}){
   const id=String(studentId||'').trim();
-  return `${id}:${force?'fresh':'cached'}`;
+  return `${id}:${force?'reload':'cached'}`;
 }
 async function ensureStudentDetailData(studentId,{force=false,silent=false}={}){
   const id=String(studentId||'').trim();
@@ -794,7 +794,7 @@ async function ensureStudentDetailData(studentId,{force=false,silent=false}={}){
   if(!force&&loadedStudentDetailIds.has(id))return false;
   const key=studentDetailCacheKey(id,{force});
   if(studentDetailLoadPromises.has(key))return studentDetailLoadPromises.get(key);
-  const promise=apiCall('GET',`/page-data/student-detail?id=${encodeURIComponent(id)}${force?'&fresh=1':''}`,null,20000)
+  const promise=apiCall('GET',`/page-data/student-detail?id=${encodeURIComponent(id)}`,null,20000)
     .then(data=>{
       hydrateStudentDetailData(data||{},{silent});
       loadedStudentDetailIds.add(id);
@@ -832,7 +832,75 @@ async function refreshStudentDetailDataAfterMutation(studentId){
   const id=String(studentId||'').trim();
   if(!id)return false;
   markStudentDetailDataStale(id);
-  return ensureStudentDetailData(id,{force:true});
+  return ensureStudentDetailData(id,{force:false});
+}
+function formatStudentDetailLessonQty(value){
+  const n=Number(value);
+  if(!Number.isFinite(n))return '0';
+  return Number.isInteger(n)?String(n):String(Math.round(n*10)/10);
+}
+function studentDetailPackageOrderRowFromPurchaseResult(purchase={},entitlement={}){
+  const total=Number(entitlement.totalLessons??purchase.totalLessons??purchase.packageLessons)||0;
+  const remaining=Number(entitlement.remainingLessons??purchase.remainingLessons??total)||0;
+  const used=Number(entitlement.usedLessons??Math.max(0,total-remaining))||0;
+  const courseType=String(entitlement.courseType||purchase.courseType||'');
+  const status=String(entitlement.status||purchase.status||'active');
+  return {
+    studentId:String(entitlement.studentId||purchase.studentId||''),
+    entitlementId:String(entitlement.id||''),
+    purchaseId:String(purchase.id||entitlement.purchaseId||''),
+    packageId:String(entitlement.packageId||purchase.packageId||''),
+    packageName:String(entitlement.packageName||purchase.packageName||''),
+    courseType,
+    remainingLessons:remaining,
+    totalLessons:total,
+    usedLessons:used,
+    purchaseDate:String(purchase.purchaseDate||entitlement.validFrom||purchase.createdAt||'').slice(0,10),
+    statusText:status==='voided'?'已作废':(remaining<=0?'已用完':'正常'),
+    unit:String(entitlement.unit||purchase.unit||(/小班课|专项课/.test(courseType)?'次':'节')),
+    paidAmount:Number(purchase.finalAmount??purchase.amountPaid??purchase.actualAmount??0)||0,
+    ownerCoach:String(entitlement.ownerCoach||purchase.ownerCoach||'')
+  };
+}
+function mergeStudentDetailPurchaseResult(res={}){
+  const purchase=res.purchase||{};
+  const entitlement=res.entitlement||(Array.isArray(res.entitlements)?res.entitlements[0]:{})||{};
+  const purchaseId=String(purchase.id||entitlement.purchaseId||'').trim();
+  const studentId=String(purchase.studentId||entitlement.studentId||'').trim();
+  if(!purchaseId||!studentId)return false;
+  const existingDetail=studentDetailViewForId(studentId);
+  const baseStudent=students.find(row=>String(row?.id||'')===studentId)||{};
+  const base={...(baseStudent||{}),...(existingDetail||{}),id:studentId,studentId};
+  const row=studentDetailPackageOrderRowFromPurchaseResult(purchase,entitlement);
+  const currentRows=Array.isArray(base.detailPackageOrderRows)?base.detailPackageOrderRows:[];
+  const nextRows=[row,...currentRows.filter(item=>String(item?.purchaseId||'')!==purchaseId&&String(item?.entitlementId||'')!==String(row.entitlementId||''))]
+    .sort((a,b)=>String(b.purchaseDate||'').localeCompare(String(a.purchaseDate||'')));
+  const notVoidedRows=nextRows.filter(item=>String(item?.statusText||'')!=='已作废');
+  const activeRows=notVoidedRows.filter(item=>(Number(item?.remainingLessons)||0)>0);
+  const displayRows=activeRows.length?activeRows:notVoidedRows.slice(0,1);
+  const sumRows=(rows,key)=>rows.reduce((sum,item)=>sum+(Number(item?.[key])||0),0);
+  const remaining=sumRows(displayRows,'remainingLessons');
+  const total=sumRows(displayRows,'totalLessons');
+  const detailRemaining=sumRows(notVoidedRows,'remainingLessons');
+  const detailTotal=sumRows(notVoidedRows,'totalLessons');
+  mergeTeachingStudentDetail({
+    ...base,
+    name:base.name||purchase.studentName||entitlement.studentName||'',
+    displayName:base.displayName||base.name||purchase.studentName||entitlement.studentName||'',
+    detailPackageOrderRows:nextRows,
+    detailLessonRecordRows:Array.isArray(base.detailLessonRecordRows)?base.detailLessonRecordRows:[],
+    packageListRows:displayRows,
+    packageBalanceRemaining:remaining,
+    packageBalanceTotal:total,
+    packageBalanceText:total>0?`${formatStudentDetailLessonQty(remaining)}/${formatStudentDetailLessonQty(total)}`:(base.packageBalanceText||'-'),
+    packageBalancePercent:total>0?Math.max(0,Math.min(100,Math.round(remaining/total*100))):0,
+    detailPackageBalanceRemaining:detailRemaining,
+    detailPackageBalanceTotal:detailTotal,
+    detailPackageBalanceText:detailTotal>0?`${formatStudentDetailLessonQty(detailRemaining)}/${formatStudentDetailLessonQty(detailTotal)}`:(base.detailPackageBalanceText||'-'),
+    detailPackageBalancePercent:detailTotal>0?Math.max(0,Math.min(100,Math.round(detailRemaining/detailTotal*100))):0
+  });
+  if(existingDetail||loadedStudentDetailIds.has(studentId))loadedStudentDetailIds.add(studentId);
+  return true;
 }
 function leadFollowupsDetailReady(leadId){
   return loadedLeadFollowupDetailIds.has(String(leadId||'').trim());

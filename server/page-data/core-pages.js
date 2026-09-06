@@ -336,10 +336,8 @@ function createCorePageDataRoutes(deps={}){
       if(!studentId)return sendJson(res,{error:'缺少学员 ID'},400);
       const student=await getCachedRow(T_STUDENTS,studentId).catch(()=>null);
       if(!student)return sendJson(res,{error:'学员不存在'},404);
-      const fresh=String(query?.get('fresh')||'').trim()==='1';
       const studentTeachingSummary=await readStudentTeachingSummaryRow(studentId);
-      const canUseStudentTeachingSummary=!fresh
-        && studentTeachingSummary
+      const canUseStudentTeachingSummary=studentTeachingSummary
         && String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()===TEACHING_LESSON_DETAIL_SOURCE_VERSION
         && !studentTeachingSummaryStaleForStudent(studentTeachingSummary,student)
         && !teachingSummaryNeedsLessonFacts(studentTeachingSummary,new Date());
@@ -374,76 +372,10 @@ function createCorePageDataRoutes(deps={}){
           detailStudentView
         });
       }
-      const [purchases,packages,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks,loadedStudentTeachingSummary]=await Promise.all([
-        cappedScan(T_PURCHASES).catch(()=>[]),
-        cappedScan(T_PACKAGES).catch(()=>[]),
-        cappedScan(T_ENTITLEMENTS).catch(()=>[]),
-        T_ENTITLEMENT_LEDGER ? cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger).catch(()=>[]) : Promise.resolve([]),
-        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
-        T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
-        T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([]),
-        Promise.resolve(studentTeachingSummary)
-      ]);
-      const studentPurchases=purchases.filter(row=>String(row.studentId||'')===studentId);
-      const studentEntitlements=entitlements.filter(row=>String(row.studentId||'')===studentId);
-      const entitlementIds=new Set(studentEntitlements.map(row=>String(row.id||'')).filter(Boolean));
-      const studentScheduleIds=new Set(schedule.filter(row=>rowHasStudent(row,studentId)).map(row=>String(row.id||'')).filter(Boolean));
-      const scopedEntitlementLedger=entitlementLedger.filter(row=>entitlementIds.has(String(row.entitlementId||''))||String(row.studentId||'')===studentId||studentScheduleIds.has(String(row.scheduleId||'')));
-      const relatedEntitlementIds=new Set([...entitlementIds,...scopedEntitlementLedger.map(row=>String(row.entitlementId||'')).filter(Boolean)]);
-      const scopedEntitlements=entitlements.filter(row=>relatedEntitlementIds.has(String(row.id||'')));
-      const relatedPurchaseIds=new Set([
-        ...studentPurchases.map(row=>String(row.id||'')).filter(Boolean),
-        ...scopedEntitlements.map(row=>String(row.purchaseId||'')).filter(Boolean),
-        ...scopedEntitlementLedger.map(row=>String(row.purchaseId||'')).filter(Boolean)
-      ]);
-      const scopedPurchases=purchases.filter(row=>String(row.studentId||'')===studentId||relatedPurchaseIds.has(String(row.id||'')));
-      const relatedStudentIds=new Set([
-        studentId,
-        ...scopedEntitlements.map(row=>String(row.studentId||'')).filter(Boolean),
-        ...scopedPurchases.map(row=>String(row.studentId||'')).filter(Boolean)
-      ]);
-      const relatedStudents=[student,...(await Promise.all([...relatedStudentIds].filter(id=>id&&id!==studentId).map(id=>getCachedRow(T_STUDENTS,id).catch(()=>null))))].filter(Boolean);
-      let scoped=filterLoadAllForUser({
-        students:relatedStudents,
-        purchases:scopedPurchases,
-        packages,
-        entitlements:scopedEntitlements,
-        entitlementLedger:scopedEntitlementLedger,
-        schedule:schedule.filter(row=>rowHasStudent(row,studentId)),
-        membershipBenefitLedger:membershipBenefitLedger.filter(row=>String(row.studentId||'')===studentId),
-        feedbacks:feedbacks.filter(row=>rowHasStudent(row,studentId)),
-        studentTeachingSummaries:loadedStudentTeachingSummary?[loadedStudentTeachingSummary]:[]
-      },user);
-      scoped.schedule=await hydrateScheduleRowsByLedgerIds(scoped.schedule,scoped.entitlementLedger);
-      const customerLifecycleRows=buildCustomerLifecycleRows({
-        students:scoped.students,
-        purchases:scoped.purchases,
-        entitlements:scoped.entitlements,
-        schedule:scoped.schedule,
-        feedbacks:scoped.feedbacks
-      });
-      const teachingStudentViews=buildTeachingStudentViews(customerLifecycleRows,{...scoped,teachingStudentSummaryRows:scoped.studentTeachingSummaries,ignoreTeachingSummaryDetailRows:true});
-      const allViews=[
-        ...(teachingStudentViews.historicalStudents||[]),
-        ...(teachingStudentViews.activeStudents||[]),
-        ...(teachingStudentViews.courseStudents||[]),
-        ...(teachingStudentViews.trialStudents||[]),
-        ...(teachingStudentViews.formalStudents||[])
-      ];
-      const detailStudentView=allViews.find(row=>String(row.id||'')===studentId)||null;
       return sendJson(res,{
-        students:scoped.students,
-        purchases:scoped.purchases,
-        packages:scoped.packages,
-        entitlements:scoped.entitlements,
-        entitlementLedger:scoped.entitlementLedger,
-        schedule:scoped.schedule,
-        membershipBenefitLedger:scoped.membershipBenefitLedger,
-        feedbacks:scoped.feedbacks,
-        customerLifecycleRows,
-        teachingStudentViews,
-        detailStudentView
-      });
+        error:'学员详情读模型未准备好，请刷新学员摘要后重试',
+        code:'STUDENT_DETAIL_SUMMARY_NOT_READY'
+      },503);
     }
     if(path==='/page-data/purchases'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

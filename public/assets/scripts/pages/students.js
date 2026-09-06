@@ -635,7 +635,7 @@ function renderStudentPagerControls(total,pages){
 }
 function setStudentPage(value){
   syncStudentPageGlobalsFromMode();
-  const total=studentServerListPage?.total??getFilteredStudents().length;
+  const total=getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
   persistStudentPageGlobalsToMode();
   reloadStudentListPageData();
@@ -1266,7 +1266,8 @@ function renderStudents(options={}){
   else statsHost.innerHTML=renderStandardDataCards(studentTopStatsCards(stats));
   const isMobileList=document.body.classList.contains('admin-mobile');
   const serverPage=studentServerListPage&&Array.isArray(studentServerListPage.rows)?studentServerListPage:null;
-  const pageState=isMobileList?{total:serverPage?.total??list.length,pages:1,slice:list,page:1}:(serverPage?{total:serverPage.total,pages:serverPage.pages,slice:list,page:serverPage.page}:standardListSlice(list,stuPage,stuPageSize));
+  const localPageState=standardListSlice(list,stuPage,stuPageSize);
+  const pageState=isMobileList?{total:serverPage?.total??list.length,pages:1,slice:list,page:1}:(serverPage?{total:serverPage.total,pages:serverPage.pages,slice:list,page:serverPage.page}:localPageState);
   stuPage=pageState.page;
   persistStudentPageGlobalsToMode();
   const {total,pages,slice}=pageState;
@@ -1510,7 +1511,7 @@ function ensureStudentDetailDatasets(id,{block=false}={}){
   }
   const tasks=[];
   if(Array.isArray(STUDENT_DETAIL_REQUIREMENTS)&&STUDENT_DETAIL_REQUIREMENTS.length)tasks.push(ensureDatasetsByName(STUDENT_DETAIL_REQUIREMENTS));
-  if(typeof ensureStudentDetailData==='function')tasks.push(ensureStudentDetailData(id,{force:studentDetailTabNeedsDatasets(studentDetailActiveTab)}));
+  if(typeof ensureStudentDetailData==='function')tasks.push(ensureStudentDetailData(id,{force:false}));
   Promise.all(tasks).then(()=>{
     if(studentDetailRequestSeq!==requestSeq||!studentDetailDrawerIsOpenFor(id)||!studentDetailPageStillValid())return;
     if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))openStudentDetail(id);

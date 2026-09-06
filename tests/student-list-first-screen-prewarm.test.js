@@ -76,8 +76,13 @@ assert.doesNotMatch(
 );
 assert.match(
   ensureDetail,
-  /apiCall\('GET',`\/page-data\/student-detail\?id=\$\{encodeURIComponent\(id\)\}\$\{force\?'&fresh=1':''\}`,null,20000\)/,
-  '抽屉和预热都必须回源 student-detail 拿完整详情'
+  /apiCall\('GET',`\/page-data\/student-detail\?id=\$\{encodeURIComponent\(id\)\}`,null,20000\)/,
+  '抽屉和预热都必须走一秒级 student-detail 摘要读取'
+);
+assert.doesNotMatch(
+  ensureDetail,
+  /fresh=1/,
+  '抽屉和预热不能强制绕过摘要去扫生产大表'
 );
 assert.doesNotMatch(
   [renderStudents, prewarmRows, ensureDetail].join('\n'),
@@ -87,7 +92,7 @@ assert.doesNotMatch(
 assert.doesNotMatch(
   [prewarmRows, ensureDetail].join('\n'),
   /studentTeachingSummary/,
-  '预热和抽屉详情不能把 studentTeachingSummary 当事实源'
+  '前端不能直接读取 studentTeachingSummary，必须只通过 student-detail 接口拿后端整理好的详情'
 );
 
 console.log('student list first screen prewarm tests passed');

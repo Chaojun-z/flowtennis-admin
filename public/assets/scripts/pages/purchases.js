@@ -1076,6 +1076,7 @@ async function savePurchase(){
     if(res.purchase)purchases.unshift(res.purchase);
     if(res.entitlement)entitlements.unshift(res.entitlement);
     if(Array.isArray(res.benefitLedgerRows))res.benefitLedgerRows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
+    if(typeof mergeStudentDetailPurchaseResult==='function')mergeStudentDetailPurchaseResult(res);
     if(typeof markLearningDataStale==='function')markLearningDataStale();
   },{
     successText:'购买成功',
@@ -1083,9 +1084,6 @@ async function savePurchase(){
     refresh:async(result)=>{
       loadedDatasets.delete('purchasesPage');
       loadedDatasets.delete('purchaseCreatePage');
-      const savedStudentId=String(result?.purchase?.studentId||data.studentId||'').trim();
-      if(savedStudentId&&typeof markStudentDetailDataStale==='function')markStudentDetailDataStale(savedStudentId);
-      if(savedStudentId&&typeof ensureStudentDetailData==='function')await ensureStudentDetailData(savedStudentId,{force:true}).catch(e=>console.warn('student detail refresh after purchase failed',e));
       renderStudents();
       renderPurchases();
       renderEntitlements();
