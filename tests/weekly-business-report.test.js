@@ -239,13 +239,15 @@ assert.strictEqual(rawSnapshot.sections.revenue.storedValue.totalMembers, 2, 'st
 assert.strictEqual(rawSnapshot.sections.revenue.storedValue.newMembers, 1, 'stored value report should count new active membership accounts in the report period');
 assert.strictEqual(rawSnapshot.sections.revenue.storedValue.totalAmount, 3000, 'stored value report should sum valid membership orders');
 assert.strictEqual(rawSnapshot.sections.revenue.storedValue.newAmount, 2000, 'stored value report should sum valid membership orders in the report period');
-assert.strictEqual(rawSnapshot.sections.court.totalAvailableHours, 392, 'court available hours should use 4 courts * 14 hours * 7 days');
+assert.strictEqual(rawSnapshot.sections.court.totalAvailableHours, 448, 'court available hours should use 4 courts * 14 hours * every date in the report period');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'guest')?.amount, 100, 'court history should remain the first source for guest booking amount');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.amount, 120, 'court finance rows should backfill member booking amount when court history is missing');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.count, 1, 'court finance rows should backfill member booking count when court history is missing');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 1.5, 'court finance rows should backfill member booking hours when court history is missing');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.map(row => row.label).join('|'), '会员订场|散客订场|课程订场|领导订场|内部使用|约球局', 'weekly report should display the six standard court booking types');
-assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 3, 'course court usage should include course booking rows and scheduled lesson court time');
+assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 1, 'course court usage should come from court booking facts, not ordinary schedule rows');
+assert.strictEqual(rawSnapshot.sections.court.actualUsedHours, 8, 'ordinary coach schedule rows should not inflate weekly court usage hours');
+assert.strictEqual(rawSnapshot.sections.court.utilizationRate, 1.79, 'court utilization should use court usage facts divided by actual report-period capacity');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'free')?.amount, 0, 'free court usage actual amount should be zero');
 assert.strictEqual(rawSnapshot.summary.courtUsageHours.value, rawSnapshot.sections.court.actualUsedHours, 'weekly report list summary should expose court usage hours from report sections');
 assert.strictEqual(rawSnapshot.sections.coach.rows.length, 1, 'coach report should only show active coaches with current-period schedules');
@@ -329,13 +331,16 @@ assert.match(weeklyWorkflow, /cron: '0 0 \* \* 5'/, 'weekly report workflow shou
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260906-weekly-report-timeout-v1/, 'admin shell should bust weekly report page script cache after regenerate changes');
 assert.match(indexHtml, /api\.js\?v=20260904-weekly-report-share-v1/, 'admin shell should bust public weekly report share script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
 assert.doesNotMatch(weeklyPageSource, /顺义马坡每周周报|重新生成本周周报|editWeeklyReportRemark/, 'admin weekly report list should remove the old title block, top regenerate button and remark action');
 assert.match(weeklyPageSource, /周次[\s\S]*场地使用时长[\s\S]*查看[\s\S]*复制链接[\s\S]*重新生成/, 'admin weekly report list should show the requested columns and row actions');
+assert.match(weeklyPageSource, /weekly-report-table[\s\S]*width:1180px[\s\S]*table-layout:fixed/, 'admin weekly report list should use compact fixed column widths');
 assert.match(weeklyPageSource, /toLocaleString\('zh-CN'[\s\S]*Asia\/Shanghai/, 'admin weekly report list should format generated time in Beijing time');
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');
 assert.match(weeklyPageSource, /sticky:\s*true/, 'manual regeneration should keep the loading toast visible until completion');
+assert.match(weeklyPageSource, /regenerate'[\s\S]*10000/, 'manual regeneration should return success or timeout within 10 seconds');
 assert.match(bootstrapSource, /'weekly-reports':'马坡周报'/, 'top page title should be renamed to Mapo weekly report');
 assert.match(componentsSource, /马坡周报/, 'sidebar and mobile navigation should be renamed to Mapo weekly report');
 assert.match(bootstrapSource, /options\.sticky/, 'toast helper should support sticky loading messages');
@@ -453,6 +458,12 @@ async function callExistingReportManualRegeneration() {
 
 async function callTargetPeriodRegenerationRoute() {
   let generatedPeriod = null;
+  let webhookCalls = 0;
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    webhookCalls += 1;
+    throw new Error('manual regeneration should not wait for Feishu webhook');
+  };
   let json = null;
   const routes = createWeeklyBusinessReportRoutes({
     init: async () => {},
@@ -465,18 +476,22 @@ async function callTargetPeriodRegenerationRoute() {
       return operationsPayload;
     },
     loadOperationsSnapshot: async () => null,
-    webhook: '',
+    webhook: 'https://example.invalid/webhook',
     table: 'ft_weekly_business_reports'
   });
-  await routes.handleAdmin({
-    path: '/admin/weekly-business-reports/regenerate',
-    method: 'POST',
-    body: { period: { startDate: '2026-08-27', endDate: '2026-09-03' } },
-    req: { headers: {} },
-    res: {},
-    user: { role: 'admin' }
-  });
-  return { json, generatedPeriod };
+  try {
+    await routes.handleAdmin({
+      path: '/admin/weekly-business-reports/regenerate',
+      method: 'POST',
+      body: { period: { startDate: '2026-08-27', endDate: '2026-09-03' } },
+      req: { headers: {} },
+      res: {},
+      user: { role: 'admin' }
+    });
+  } finally {
+    global.fetch = originalFetch;
+  }
+  return { json, generatedPeriod, webhookCalls };
 }
 
 Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration(), callTargetPeriodRegenerationRoute()]).then(([result, editResult, generationResult, existingGenerationResult, targetPeriodResult]) => {
@@ -501,6 +516,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(targetPeriodResult.generatedPeriod.startDate, '2026-08-27', 'row regenerate route should use the requested report period');
   assert.strictEqual(targetPeriodResult.generatedPeriod.endDate, '2026-09-03', 'row regenerate route should use the requested report end date');
   assert.strictEqual(targetPeriodResult.json.success, true, 'row regenerate route should return success for the requested period');
+  assert.strictEqual(targetPeriodResult.webhookCalls, 0, 'manual regeneration route should not wait for Feishu webhook before responding');
   console.log('weekly business report tests passed');
 }).catch(err => {
   console.error(err);

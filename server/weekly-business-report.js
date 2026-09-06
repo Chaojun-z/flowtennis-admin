@@ -132,6 +132,13 @@ function inPeriod(day = '', period = {}) {
   return true;
 }
 
+function periodDayCount(period = {}) {
+  const start = dateKeyUtcMs(period.startDate);
+  const end = dateKeyUtcMs(period.endDate);
+  if (start == null || end == null || end < start) return 0;
+  return Math.floor((end - start) / 86400000) + 1;
+}
+
 function campusMatches(row = {}) {
   const keys = [
     row.campus,
@@ -418,13 +425,6 @@ function standardCourtUsageType(row = {}) {
 
 function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
-  const activeNames = new Set(normalizeRows(raw.coaches).filter(isActiveCoach).map(row => cleanCoachName(row.name || row.coachName)).filter(Boolean));
-  const scheduleBelongsToActiveCoach = row => {
-    const clean = cleanCoachName(row.coach || row.coachName);
-    return !activeNames.size || !clean || activeNames.has(clean);
-  };
-  const scheduleRows = normalizeRows(raw.schedule).filter(row => isValidSchedule(row, period) && scheduleBelongsToActiveCoach(row));
-  const previousScheduleRows = normalizeRows(previousRaw.schedule || raw.schedule).filter(row => isValidSchedule(row, previousPeriod) && scheduleBelongsToActiveCoach(row));
   const historyRows = courtHistoryRows(raw, period);
   const previousHistoryRows = courtHistoryRows(previousRaw, previousPeriod);
   const financeRows = normalizeRows(raw.financeNormalizedRows).filter(row => inPeriod(row.businessDate || row.date || row.createdAt, period) && /场地|订场|约球/.test(String(row.businessType || row.displayBusinessType || row.category || '')));
@@ -443,8 +443,6 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
       amount: acc.amount + (['free', 'leader'].includes(meta.key) ? 0 : financeCourtAmount(row)),
       receivableAmount: acc.receivableAmount + fieldNumber(row, ['receivableAmount', 'originalAmount', 'concessionAmount', 'discountAmount'])
     }), { count: 0, hours: 0, amount: 0, receivableAmount: 0 });
-  const courseHours = scheduleRows.reduce((sum, row) => sum + scheduleHours(row), 0);
-  const previousCourseHours = previousScheduleRows.reduce((sum, row) => sum + scheduleHours(row), 0);
   const dailyUsedHours = new Map();
   const previousDailyUsedHours = new Map();
   historyRows.forEach(row => {
@@ -454,14 +452,6 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   previousHistoryRows.forEach(row => {
     const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
     if (day) previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
-  });
-  scheduleRows.forEach(row => {
-    const day = String(row.startTime || row.date || '').slice(0, 10);
-    if (day) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + scheduleHours(row)));
-  });
-  previousScheduleRows.forEach(row => {
-    const day = String(row.startTime || row.date || '').slice(0, 10);
-    if (day) previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + scheduleHours(row)));
   });
   const dailyRows = buildDailyCourtRows(raw, period, dailyUsedHours);
   const previousDailyRows = buildDailyCourtRows(previousRaw, previousPeriod, previousDailyUsedHours);
@@ -478,12 +468,6 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     if (!previous.hours && financePrevious.hours) previous.hours = financePrevious.hours;
     if (!previous.amount && financePrevious.amount) previous.amount = financePrevious.amount;
     if (!previous.receivableAmount && financePrevious.receivableAmount) previous.receivableAmount = financePrevious.receivableAmount;
-    if (meta.key === 'course') {
-      current.count += scheduleRows.length;
-      current.hours += courseHours;
-      previous.count += previousScheduleRows.length;
-      previous.hours += previousCourseHours;
-    }
     if (['free', 'leader'].includes(meta.key)) current.amount = 0;
     return {
       ...meta,
@@ -498,6 +482,7 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     };
   });
   const totalHours = result.reduce((sum, row) => sum + row.hours, 0);
+  const totalAvailableHours = numberValue(4 * 14 * (periodDayCount(period) || 7));
   const freeUsage = result
     .filter(row => ['free', 'leader'].includes(row.key))
     .reduce((acc, row) => ({
@@ -507,9 +492,9 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
       receivableAmount: numberValue(acc.receivableAmount + row.receivableAmount)
     }), { count: 0, hours: 0, amount: 0, receivableAmount: 0 });
   return {
-    totalAvailableHours: 392,
+    totalAvailableHours,
     actualUsedHours: numberValue(totalHours),
-    utilizationRate: numberValue(totalHours * 100 / 392),
+    utilizationRate: percent(totalHours, totalAvailableHours),
     usageRows: result.map(row => ({ ...row, share: percent(row.hours, result.reduce((sum, item) => sum + item.hours, 0)) })),
     dailyRows,
     freeUsage

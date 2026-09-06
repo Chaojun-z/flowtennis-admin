@@ -65,6 +65,9 @@ function createWeeklyBusinessReportRoutes({
       generationMode: mode,
       table
     });
+    if (mode === 'manual') {
+      return { success: true, report: snapshot, notification: { skipped: true, reason: 'manual-regeneration' } };
+    }
     const text = buildWeeklyBusinessReportFeishuText({ snapshot, status: 'success' });
     const notification = await sendWeeklyBusinessReportFeishuText({ text, webhook }).catch(err => ({ sent: false, error: String(err?.message || err) }));
     return { success: true, report: snapshot, notification };
