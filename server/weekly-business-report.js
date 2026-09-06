@@ -1455,8 +1455,8 @@ async function generateWeeklyBusinessReport({
     if (typeof loadOperationsSnapshot !== 'function') return null;
     return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: true }).catch(() => null);
   };
-  const snapshotPayloads = generationMode === 'manual' ? [null, null, null] : await Promise.all([
-    loadSnapshotPayload(scope),
+  const snapshotPayloads = await Promise.all([
+    generationMode === 'manual' ? null : loadSnapshotPayload(scope),
     loadSnapshotPayload(previousScope),
     loadSnapshotPayload(totalScope)
   ]);

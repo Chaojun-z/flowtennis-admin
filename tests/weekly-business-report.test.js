@@ -419,6 +419,7 @@ async function callSnapshotFirstGeneration() {
 async function callExistingReportManualRegeneration() {
   let liveLoads = 0;
   let snapshotLoads = 0;
+  const snapshotScopes = [];
   const savedRows = [];
   const startedAt = Date.now();
   const result = await generateWeeklyBusinessReport({
@@ -434,12 +435,20 @@ async function callExistingReportManualRegeneration() {
       if (scope?.dateRange?.startDate === period.previousStartDate) return { operations: { overview: { cards: { totalIncome: { value: 100 } } } } };
       return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
     },
-    loadOperationsSnapshot: async () => {
+    loadOperationsSnapshot: async ({ scope }) => {
       snapshotLoads += 1;
+      snapshotScopes.push(scope?.dateRange?.startDate || 'lifetime');
+      if (scope?.dateRange?.startDate === period.startDate) throw new Error('manual regeneration must not use stale current-period snapshot');
+      if (scope?.dateRange?.startDate === period.previousStartDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 100 } } }, court: { cards: { utilizationRate: { value: 1 } } }, coach: { cards: { usedHours: { value: 1 } } }, conversion: { cards: { totalLeads: { value: 1 } } } } };
+      }
+      if (!scope?.dateRange?.startDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 1000 } } }, court: { cards: { utilizationRate: { value: 10 } } } } };
+      }
       return null;
     }
   });
-  return { result, savedRows, liveLoads, snapshotLoads, elapsedMs: Date.now() - startedAt };
+  return { result, savedRows, liveLoads, snapshotLoads, snapshotScopes, elapsedMs: Date.now() - startedAt };
 }
 
 async function callTargetPeriodRegenerationRoute() {
@@ -483,8 +492,9 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
   assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
-  assert.strictEqual(existingGenerationResult.liveLoads, 3, 'manual regeneration for an existing report should re-read source data for current, previous and lifetime views');
-  assert.strictEqual(existingGenerationResult.snapshotLoads, 0, 'manual regeneration for an existing report should bypass old operations snapshots');
+  assert.strictEqual(existingGenerationResult.liveLoads, 1, 'manual regeneration should live-read source data only once for the selected period');
+  assert.strictEqual(existingGenerationResult.snapshotLoads, 2, 'manual regeneration should use fast snapshots for previous and lifetime context');
+  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), [period.previousStartDate, 'lifetime'].sort(), 'manual regeneration must not use stale current-period snapshot');
   assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
   assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
