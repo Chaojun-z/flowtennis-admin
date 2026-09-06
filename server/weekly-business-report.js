@@ -217,9 +217,8 @@ function isValidSchedule(row = {}, period = {}) {
   return inPeriod(row.startTime, period) && campusMatches(row) && effectiveScheduleStatus(row) !== '已取消' && scheduleHasCourseEvidence(row);
 }
 
-function isMarkedCompletedSchedule(row = {}) {
-  const status = String(row.status || row.systemStatus || row.state || '').trim();
-  return ['已结束', '已下课', 'completed', 'finished'].includes(status);
+function isCompletedCalendarSchedule(row = {}) {
+  return effectiveScheduleStatus(row) === '已结束';
 }
 
 function courseScheduleRows(raw = {}, period = {}) {
@@ -408,7 +407,7 @@ function customerTypeForRow(row = {}, maps = { byId: new Map(), byName: new Map(
 }
 
 function completedCourseScheduleRows(raw = {}, period = {}) {
-  return courseScheduleRows(raw, period).filter(isMarkedCompletedSchedule);
+  return courseScheduleRows(raw, period).filter(isCompletedCalendarSchedule);
 }
 
 function scheduleStudentKey(row = {}) {
@@ -502,7 +501,7 @@ function buildCoachFromSchedules(raw = {}, period = {}, previousRaw = {}) {
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
   const build = (rows = [], targetPeriod = {}) => {
     const map = new Map();
-    normalizeRows(rows).filter(row => isValidSchedule(row, targetPeriod) && isMarkedCompletedSchedule(row)).forEach(row => {
+    normalizeRows(rows).filter(row => isValidSchedule(row, targetPeriod) && isCompletedCalendarSchedule(row)).forEach(row => {
       const clean = cleanCoachName(row.coach || row.coachName);
       if (!clean || clean === '小鹿' || (activeNames.size && !activeNames.has(clean))) return;
       const coach = normalizeCoachDisplayName(clean);
@@ -673,10 +672,21 @@ function buildWeeklyFinanceSummary(raw = {}, period = {}, previousRaw = {}, oper
   const previousMemberBookingRecognizedRows = previousRows.filter(row => isMemberBookingFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0);
   const guestBookingRecognizedRows = currentRows.filter(row => isGuestBookingFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0);
   const previousGuestBookingRecognizedRows = previousRows.filter(row => isGuestBookingFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0);
+  const platformRecognizedRevenue = optionalCardNumber(operations.overview || {}, ['recognizedRevenue']);
+  const previousPlatformRecognizedRevenue = optionalCardNumber(previous.overview || {}, ['recognizedRevenue']);
+  const platformCourseRecognizedRevenue = optionalCardNumber(operations.overview || {}, ['courseRecognized']);
+  const previousPlatformCourseRecognizedRevenue = optionalCardNumber(previous.overview || {}, ['courseRecognized']);
+  const recognizedRevenueFromRows = financeSum(currentRecognizedRows, 'recognizedRevenueDelta');
+  const previousRecognizedRevenueFromRows = financeSum(previousRecognizedRows, 'recognizedRevenueDelta');
+  const courseRecognizedRevenueFromRows = financeSum(courseRecognizedRows, 'recognizedRevenueDelta');
+  const previousCourseRecognizedRevenueFromRows = financeSum(previousCourseRecognizedRows, 'recognizedRevenueDelta');
+  const usePlatformFallback = (rowValue, fallbackValue) => rowValue === 0 && fallbackValue !== null && fallbackValue > 0;
   const cashReceived = hasFinanceRows ? financeSum(receiptRows, 'cashDelta') : cardNumber(operations.overview || {}, ['totalIncome']);
   const previousCashReceived = hasPreviousFinanceRows ? financeSum(previousReceiptRows, 'cashDelta') : cardNumber(previous.overview || {}, ['totalIncome']);
-  const businessRevenue = hasFinanceRows ? financeSum(currentRecognizedRows, 'recognizedRevenueDelta') : cardNumber(operations.overview || {}, ['recognizedRevenue']);
-  const previousBusinessRevenue = hasPreviousFinanceRows ? financeSum(previousRecognizedRows, 'recognizedRevenueDelta') : cardNumber(previous.overview || {}, ['recognizedRevenue']);
+  const businessRevenue = hasFinanceRows && !usePlatformFallback(recognizedRevenueFromRows, platformRecognizedRevenue) ? recognizedRevenueFromRows : (platformRecognizedRevenue ?? cardNumber(operations.overview || {}, ['recognizedRevenue']));
+  const previousBusinessRevenue = hasPreviousFinanceRows && !usePlatformFallback(previousRecognizedRevenueFromRows, previousPlatformRecognizedRevenue) ? previousRecognizedRevenueFromRows : (previousPlatformRecognizedRevenue ?? cardNumber(previous.overview || {}, ['recognizedRevenue']));
+  const courseConsumedRevenue = hasFinanceRows && !usePlatformFallback(courseRecognizedRevenueFromRows, platformCourseRecognizedRevenue) ? courseRecognizedRevenueFromRows : platformCourseRecognizedRevenue;
+  const previousCourseConsumedRevenue = hasPreviousFinanceRows && !usePlatformFallback(previousCourseRecognizedRevenueFromRows, previousPlatformCourseRecognizedRevenue) ? previousCourseRecognizedRevenueFromRows : previousPlatformCourseRecognizedRevenue;
   return {
     businessRevenue,
     cashReceived,
@@ -694,12 +704,12 @@ function buildWeeklyFinanceSummary(raw = {}, period = {}, previousRaw = {}, oper
     },
     recognized: {
       businessRevenue,
-      courseConsumedRevenue: hasFinanceRows ? financeSum(courseRecognizedRows, 'recognizedRevenueDelta') : optionalCardNumber(operations.overview || {}, ['courseRecognized']),
+      courseConsumedRevenue: courseConsumedRevenue ?? optionalCardNumber(operations.overview || {}, ['courseRecognized']),
       memberBookingConsumedRevenue: hasFinanceRows ? financeSum(memberBookingRecognizedRows, 'recognizedRevenueDelta') : optionalCardNumber(operations.overview || {}, ['storedValueConsumed', 'membershipStoredValueConsumed']),
       guestBookingRevenue: hasFinanceRows ? financeSum(guestBookingRecognizedRows, 'recognizedRevenueDelta') : optionalCardNumber(operations.overview || {}, ['bookingRecognized', 'courtRecognized']),
       compare: {
         businessRevenue: compareValue(businessRevenue, previousBusinessRevenue),
-        courseConsumedRevenue: compareValue(hasFinanceRows ? financeSum(courseRecognizedRows, 'recognizedRevenueDelta') : 0, hasPreviousFinanceRows ? financeSum(previousCourseRecognizedRows, 'recognizedRevenueDelta') : 0),
+        courseConsumedRevenue: compareValue(courseConsumedRevenue ?? 0, previousCourseConsumedRevenue ?? 0),
         memberBookingConsumedRevenue: compareValue(hasFinanceRows ? financeSum(memberBookingRecognizedRows, 'recognizedRevenueDelta') : 0, hasPreviousFinanceRows ? financeSum(previousMemberBookingRecognizedRows, 'recognizedRevenueDelta') : 0),
         guestBookingRevenue: compareValue(hasFinanceRows ? financeSum(guestBookingRecognizedRows, 'recognizedRevenueDelta') : 0, hasPreviousFinanceRows ? financeSum(previousGuestBookingRecognizedRows, 'recognizedRevenueDelta') : 0)
       }
@@ -1233,16 +1243,18 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
   const storedValueAmount = findRevenueMixValue(revenueMix, ['会员储值']) ?? optionalCardNumber(overview, ['storedValueIncome']);
   const prevStoredValueAmount = findRevenueMixValue(prevRevenueMix, ['会员储值']) ?? optionalCardNumber(prevOverview, ['storedValueIncome']);
   const rawStoredValue = raw.membershipOrders || raw.membershipAccounts ? buildStoredValueFromRaw(raw, period, previousRaw) : null;
+  const rawCourseRevenue = raw.purchases || raw.financeNormalizedRows || raw.schedule ? buildCourseRevenueFromRaw(raw, period, previousRaw) : null;
   const courseAmount = findRevenueMixValue(revenueMix, ['课程']) ?? optionalCardNumber(overview, ['courseIncome']);
   const prevCourseAmount = findRevenueMixValue(prevRevenueMix, ['课程']) ?? optionalCardNumber(prevOverview, ['courseIncome']);
   const courseConsumedAmount = optionalCardNumber(overview, ['courseRecognized']);
   const prevCourseConsumedAmount = optionalCardNumber(prevOverview, ['courseRecognized']);
+  const rawCourseConsumedAmount = rawCourseRevenue?.consumedAmount || courseConsumedAmount;
+  const rawCourseConsumedCompare = rawCourseRevenue?.consumedAmount ? rawCourseRevenue?.compare?.consumedAmount : (courseConsumedAmount === null ? null : compareValue(courseConsumedAmount, prevCourseConsumedAmount || 0));
   const totalAvailableHours = optionalCardNumber(court, ['totalAvailableHours', 'availableHours', 'capacityHours']);
   const currentCoachTotals = coachCourseTotals(coach.rows);
   const previousCoachTotals = coachCourseTotals(prevCoach.rows);
   const totalScheduled = numberValue(currentCoachTotals.privateHours + currentCoachTotals.smallClassHours + currentCoachTotals.trialHours + currentCoachTotals.specialHours + currentCoachTotals.sparringHours);
   const previousTotalScheduled = numberValue(previousCoachTotals.privateHours + previousCoachTotals.smallClassHours + previousCoachTotals.trialHours + previousCoachTotals.specialHours + previousCoachTotals.sparringHours);
-  const rawCourseRevenue = raw.purchases || raw.financeNormalizedRows || raw.schedule ? buildCourseRevenueFromRaw(raw, period, previousRaw) : null;
   const rawCourt = raw.courts || raw.schedule || raw.financeNormalizedRows ? buildCourtUsageFromRaw(raw, period, previousRaw) : null;
   const rawCoach = raw.schedule ? buildCoachFromSchedules(raw, period, previousRaw) : null;
   const allLeadSources = businessTaxonomy.LEAD_SOURCE_OPTIONS.map(item => item.value);
@@ -1282,14 +1294,14 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
       course: {
         totalPeople: rawCourseRevenue?.totalPeople ?? optionalCardNumber(overview, ['courseIncomePeople', 'courseStudents']),
         totalAmount: rawCourseRevenue?.totalAmount ?? courseAmount,
-        totalConsumedAmount: rawCourseRevenue?.totalConsumedAmount ?? courseConsumedAmount,
+        totalConsumedAmount: rawCourseRevenue?.totalConsumedAmount || courseConsumedAmount,
         totalRepeatRate: rawCourseRevenue?.totalRepeatRate ?? optionalCardNumber(overview, ['courseRepeatRate', 'packageRepeatRate']),
         paidPeople: rawCourseRevenue?.paidPeople ?? optionalCardNumber(overview, ['paidCoursePeople', 'newCourseIncomePeople', 'newCourseStudents']),
         newPeople: rawCourseRevenue?.newPeople ?? optionalCardNumber(overview, ['newCourseIncomePeople', 'newCourseStudents']),
         newAmount: rawCourseRevenue?.newAmount ?? courseAmount,
         lessonPeople: rawCourseRevenue?.lessonPeople ?? optionalCardNumber(overview, ['courseLessonPeople']),
         completedHours: rawCourseRevenue?.completedHours ?? null,
-        consumedAmount: rawCourseRevenue?.consumedAmount ?? courseConsumedAmount,
+        consumedAmount: rawCourseConsumedAmount,
         renewalPeople: rawCourseRevenue?.renewalPeople ?? optionalCardNumber(overview, ['renewalPeople', 'courseRenewalPeople']),
         renewalAmount: rawCourseRevenue?.renewalAmount ?? optionalCardNumber(overview, ['renewalAmount', 'courseRenewalAmount']),
         expiringPeople: rawCourseRevenue?.expiringPeople ?? optionalCardNumber(overview, ['expiringPeople', 'courseExpiringPeople']),
@@ -1301,7 +1313,7 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
           amount: rawCourseRevenue?.compare?.amount ?? (courseAmount === null ? null : compareValue(courseAmount, prevCourseAmount || 0)),
           lessonPeople: rawCourseRevenue?.compare?.lessonPeople ?? null,
           completedHours: rawCourseRevenue?.compare?.completedHours ?? null,
-          consumedAmount: rawCourseRevenue?.compare?.consumedAmount ?? (courseConsumedAmount === null ? null : compareValue(courseConsumedAmount, prevCourseConsumedAmount || 0)),
+          consumedAmount: rawCourseConsumedCompare,
           renewalPeople: rawCourseRevenue?.compare?.renewalPeople ?? null
         }
       },
@@ -1994,11 +2006,30 @@ async function generateWeeklyBusinessReport({
   if (!totalOperationsPayload) {
     totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride }).catch(() => null);
   }
+  const trendOperationsPayloads = [];
+  if (typeof loadOperationsSnapshot === 'function') {
+    const loadedTrendKeys = new Set([
+      `${period.startDate}:${period.endDate}`,
+      `${period.previousStartDate}:${period.previousEndDate}`
+    ]);
+    const trendPeriods = resolveTrailingWeeklyPeriods(period, 8)
+      .filter(item => !loadedTrendKeys.has(`${item.startDate}:${item.endDate}`));
+    for (const trendPeriod of trendPeriods) {
+      const trendScope = {
+        ...scope,
+        dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
+        metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
+      };
+      const payload = await loadOperationsSnapshot({ user, scope: trendScope, allowRefreshing: generationMode === 'manual' }).catch(() => null);
+      if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
+    }
+  }
   const snapshot = buildWeeklyBusinessReportSnapshot({
     period,
     operationsPayload,
     previousOperationsPayload,
     totalOperationsPayload,
+    trendOperationsPayloads,
     shareToken: existing?.shareToken || '',
     baseUrl,
     generationMode

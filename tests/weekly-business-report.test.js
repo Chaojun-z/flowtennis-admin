@@ -197,6 +197,58 @@ assert.strictEqual(requestedStructureSnapshot.sections.court.revenueUsageHours, 
 assert.strictEqual(requestedStructureSnapshot.sections.court.dailyRows.find(row => row.date === '2026-09-01')?.value, 100, 'daily court utilization should be capped at 100%');
 assert.ok(requestedStructureSnapshot.summary.courtUtilizationRate.value <= 100, 'top court utilization must never exceed 100%');
 
+const antiZeroSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {
+      overview: { cards: { totalIncome: { value: 29199 }, recognizedRevenue: { value: 4740 }, courseRecognized: { value: 3500 } } },
+      court: { cards: { utilizationRate: { value: 29 } } },
+      coach: { cards: { usedHours: { value: 83 } } }
+    },
+    weeklyReportRaw: {
+      coaches: [{ name: '朝珺', status: '在职' }],
+      purchases: [{ id: 'anti-zero-purchase', studentId: 'anti-zero-student', courseType: '私教课', amountPaid: 25199, purchaseDate: '2026-08-28', status: 'active', campus: 'shunyi_mapo' }],
+      schedule: [{ id: 'anti-zero-schedule', coach: '朝珺教练', studentId: 'anti-zero-student', studentName: '反例学员', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已排课', campus: 'shunyi_mapo', venue: '1号场' }],
+      financeNormalizedRows: [
+        { id: 'anti-zero-course-cash', campusName: '顺义马坡', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 25199, recognizedRevenueDelta: 0 },
+        { id: 'anti-zero-stored-cash', campusName: '顺义马坡', businessDate: '2026-08-29', businessType: '会员储值', action: '收款', cashDelta: 4000, recognizedRevenueDelta: 0 }
+      ]
+    }
+  },
+  previousOperationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 28729 }, recognizedRevenue: { value: 2600 }, courseRecognized: { value: 2000 } } }, court: { cards: { utilizationRate: { value: 39 } } }, coach: { cards: { usedHours: { value: 60 } } } },
+    weeklyReportRaw: {
+      coaches: [{ name: '朝珺', status: '在职' }],
+      schedule: [{ id: 'anti-zero-prev-schedule', coach: '朝珺教练', studentId: 'anti-zero-prev-student', studentName: '上周学员', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', campus: 'shunyi_mapo', venue: '1号场' }],
+      financeNormalizedRows: [{ id: 'anti-zero-prev-cash', campusName: '顺义马坡', businessDate: '2026-08-20', businessType: '课程', action: '收款', cashDelta: 13729, recognizedRevenueDelta: 0 }]
+    }
+  },
+  trendOperationsPayloads: [
+    {
+      period: { startDate: '2026-08-11', endDate: '2026-08-18' },
+      payload: {
+        operations: { overview: { cards: { totalIncome: { value: 18000 }, recognizedRevenue: { value: 1800 }, courseRecognized: { value: 1200 } } }, court: { cards: { utilizationRate: { value: 22 } } }, coach: { cards: { usedHours: { value: 44 } } } },
+        weeklyReportRaw: {
+          coaches: [{ name: '朝珺', status: '在职' }],
+          schedule: [{ id: 'anti-zero-trend-schedule', coach: '朝珺教练', studentId: 'trend-student', studentName: '趋势学员', courseType: '私教课', startTime: '2026-08-12 10:00:00', endTime: '2026-08-12 11:30:00', status: '已排课', campus: 'shunyi_mapo', venue: '1号场' }],
+          financeNormalizedRows: [{ id: 'anti-zero-trend-cash', campusName: '顺义马坡', businessDate: '2026-08-12', businessType: '课程', action: '收款', cashDelta: 18000, recognizedRevenueDelta: 0 }]
+        }
+      }
+    }
+  ],
+  shareToken: 'token-anti-zero',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(antiZeroSnapshot.summary.totalIncome.value, 4740, 'anti-zero: business revenue must fall back to the platform recognized revenue card when raw finance receipts exist but recognized rows are absent');
+assert.strictEqual(antiZeroSnapshot.sections.revenue.course.consumedAmount, 3500, 'anti-zero: course consumed revenue must use the platform course recognized card instead of dropping to zero');
+assert.ok(antiZeroSnapshot.sections.revenue.course.completedHours > 0, 'anti-zero: past calendar lessons shown as completed must not become zero completed hours');
+assert.ok(antiZeroSnapshot.summary.coachHours.value > 0, 'anti-zero: coach completed hours must not be zero when completed calendar lessons exist');
+['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours'].forEach(key => {
+  antiZeroSnapshot.sections.trends.forEach(row => {
+    assert.ok(Number(row[key]) > 0, `anti-zero: ${key} trend value must not be zero when platform data exists for ${row.label}`);
+  });
+});
+
 const noFakeSourceSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
   operationsPayload: {
@@ -629,7 +681,19 @@ async function callSnapshotFirstGeneration() {
     },
     loadOperationsSnapshot: async ({ scope }) => {
       if (scope?.dateRange?.startDate === period.previousStartDate) {
-        return { operations: { overview: { cards: { totalIncome: { value: 100 } } }, court: { cards: { utilizationRate: { value: 1 } } }, coach: { cards: { usedHours: { value: 1 } } }, conversion: { cards: { totalLeads: { value: 1 } } } } };
+        return {
+          operations: {
+            overview: { cards: { totalIncome: { value: 100 }, recognizedRevenue: { value: 80 }, courseRecognized: { value: 60 } } },
+            court: { cards: { utilizationRate: { value: 1 } } },
+            coach: { cards: { usedHours: { value: 1 } } },
+            conversion: { cards: { totalLeads: { value: 1 } } }
+          },
+          weeklyReportRaw: {
+            coaches: [{ name: '朝珺', status: '在职' }],
+            schedule: [{ id: 'manual-prev-trend-schedule', coach: '朝珺教练', studentId: 'manual-prev-student', studentName: '上周学员', courseType: '私教课', startTime: `${period.previousStartDate} 10:00:00`, endTime: `${period.previousStartDate} 11:00:00`, status: '已排课', campus: 'shunyi_mapo', venue: '1号场' }],
+            financeNormalizedRows: [{ id: 'manual-prev-trend-cash', campusName: '顺义马坡', businessDate: period.previousStartDate, businessType: '课程', action: '收款', cashDelta: 100, recognizedRevenueDelta: 0 }]
+          }
+        };
       }
       if (!scope?.dateRange?.startDate) {
         return { operations: { overview: { cards: { totalIncome: { value: 1000 } } }, court: { cards: { utilizationRate: { value: 10 } } } } };
@@ -664,12 +728,35 @@ async function callExistingReportManualRegeneration() {
       snapshotScopes.push(scope?.dateRange?.startDate || 'lifetime');
       if (scope?.dateRange?.startDate === period.startDate) return operationsPayload;
       if (scope?.dateRange?.startDate === period.previousStartDate) {
-        return { operations: { overview: { cards: { totalIncome: { value: 100 } } }, court: { cards: { utilizationRate: { value: 1 } } }, coach: { cards: { usedHours: { value: 1 } } }, conversion: { cards: { totalLeads: { value: 1 } } } } };
+        return {
+          operations: {
+            overview: { cards: { totalIncome: { value: 100 }, recognizedRevenue: { value: 80 }, courseRecognized: { value: 60 } } },
+            court: { cards: { utilizationRate: { value: 1 } } },
+            coach: { cards: { usedHours: { value: 1 } } },
+            conversion: { cards: { totalLeads: { value: 1 } } }
+          },
+          weeklyReportRaw: {
+            coaches: [{ name: '朝珺', status: '在职' }],
+            schedule: [{ id: 'manual-prev-trend-schedule', coach: '朝珺教练', studentId: 'manual-prev-student', studentName: '上周学员', courseType: '私教课', startTime: `${period.previousStartDate} 10:00:00`, endTime: `${period.previousStartDate} 11:00:00`, status: '已排课', campus: 'shunyi_mapo', venue: '1号场' }],
+            financeNormalizedRows: [{ id: 'manual-prev-trend-cash', campusName: '顺义马坡', businessDate: period.previousStartDate, businessType: '课程', action: '收款', cashDelta: 100, recognizedRevenueDelta: 0 }]
+          }
+        };
       }
       if (!scope?.dateRange?.startDate) {
         return { operations: { overview: { cards: { totalIncome: { value: 1000 } } }, court: { cards: { utilizationRate: { value: 10 } } } } };
       }
-      return null;
+      return {
+        operations: {
+          overview: { cards: { totalIncome: { value: 100 }, recognizedRevenue: { value: 80 }, courseRecognized: { value: 60 } } },
+          court: { cards: { utilizationRate: { value: 2 } } },
+          coach: { cards: { usedHours: { value: 3 } } }
+        },
+        weeklyReportRaw: {
+          coaches: [{ name: '趋势教练', status: '在职' }],
+          schedule: [{ id: `trend-${scope.dateRange.startDate}`, coach: '趋势教练', studentId: 'trend-student', studentName: '趋势学员', courseType: '私教课', startTime: `${scope.dateRange.startDate} 10:00:00`, endTime: `${scope.dateRange.startDate} 11:00:00`, status: '已排课', campus: 'shunyi_mapo', venue: '1号场' }],
+          financeNormalizedRows: [{ id: `trend-cash-${scope.dateRange.startDate}`, campusName: '顺义马坡', businessDate: scope.dateRange.startDate, businessType: '课程', action: '收款', cashDelta: 100, recognizedRevenueDelta: 0 }]
+        }
+      };
     }
   });
   return { result, savedRows, liveLoads, snapshotLoads, snapshotScopes, elapsedMs: Date.now() - startedAt };
@@ -780,10 +867,16 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
   assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
   assert.strictEqual(existingGenerationResult.liveLoads, 0, 'manual regeneration should not live-read source tables inside the request');
-  assert.strictEqual(existingGenerationResult.snapshotLoads, 3, 'manual regeneration should use fast snapshots for current, previous and lifetime context');
-  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), [period.startDate, period.previousStartDate, 'lifetime'].sort(), 'manual regeneration must use the weekly report snapshot scope for all report contexts');
+  assert.strictEqual(existingGenerationResult.snapshotLoads, 9, 'manual regeneration should use fast snapshots for current, previous, lifetime and the older six trend weeks');
+  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), ['2026-07-02', '2026-07-10', '2026-07-18', '2026-07-26', '2026-08-03', '2026-08-11', period.startDate, period.previousStartDate, 'lifetime'].sort(), 'manual regeneration must use the weekly report snapshot scope for all report contexts and trend weeks');
   assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
   assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
+  assert.strictEqual(existingGenerationResult.savedRows[0].sections.trends.length, 8, 'manual regeneration should save eight weekly trend points when platform snapshots exist');
+  existingGenerationResult.savedRows[0].sections.trends.forEach(row => {
+    ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours'].forEach(key => {
+      assert.ok(Number(row[key]) > 0, `manual regeneration should not save a zero ${key} trend when platform data exists for ${row.label}`);
+    });
+  });
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
   assert.strictEqual(missingSnapshotResult.liveLoads, 0, 'missing weekly report snapshots must fail fast instead of scanning live source tables');
   assert.strictEqual(missingSnapshotResult.json.statusCode, 503, 'missing weekly report snapshot should return a controlled retry status');
