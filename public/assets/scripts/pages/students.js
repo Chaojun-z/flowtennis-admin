@@ -1267,7 +1267,7 @@ function renderStudents(options={}){
   const isMobileList=document.body.classList.contains('admin-mobile');
   const serverPage=studentServerListPage&&Array.isArray(studentServerListPage.rows)?studentServerListPage:null;
   const localPageState=standardListSlice(list,stuPage,stuPageSize);
-  const pageState=isMobileList?{total:serverPage?.total??list.length,pages:1,slice:list,page:1}:(serverPage?{total:serverPage.total,pages:serverPage.pages,slice:list,page:serverPage.page}:localPageState);
+  const pageState=serverPage?{total:serverPage.total,pages:serverPage.pages,slice:serverPage.rows,page:serverPage.page}:(isMobileList?{total:list.length,pages:1,slice:list,page:1}:localPageState);
   stuPage=pageState.page;
   persistStudentPageGlobalsToMode();
   const {total,pages,slice}=pageState;
