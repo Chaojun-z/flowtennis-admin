@@ -2826,8 +2826,9 @@ assert.deepStrictEqual(trialConfirmedHistoryPlan.summary, {
 }, 'history safe apply should include trial creation only after explicit trial confirmation');
 
 const workflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'feishu-schedule-sync.yml'), 'utf8');
-assert.match(workflow, /cron:\s*'0 0,10 \* \* \*'/, 'workflow should run twice daily at Beijing 08:00 and 18:00');
-assert.match(workflow, /\/api\/cron\/feishu-schedule-sync/, 'workflow should call the feishu schedule sync cron endpoint');
+assert.doesNotMatch(workflow, /^\s*schedule:/m, 'workflow should not scan Feishu schedule automatically');
+assert.match(workflow, /workflow_dispatch:/, 'workflow should keep manual Feishu schedule sync entry');
+assert.match(workflow, /\/api\/cron\/feishu-schedule-sync/, 'manual workflow should call the feishu schedule sync cron endpoint');
 assert.match(workflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, 'workflow should reuse FLOWTENNIS_ADMIN_TOKEN when CRON_SECRET is not configured');
 assert.match(workflow, /notification sent=/, 'workflow log should expose whether Feishu group notification was sent or skipped');
 assert.match(workflow, /notify:\s*\n\s*description: 'dry-run 是否发群通知'/, 'manual dry-run should expose an explicit notify switch');

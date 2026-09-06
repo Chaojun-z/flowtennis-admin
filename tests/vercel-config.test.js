@@ -28,8 +28,9 @@ assert.match(feishuCoachDigestsWorkflow, /FEISHU_COACH_DIGEST_PHONE_OVERRIDES/, 
 assert.match(feishuCoachDigestsWorkflow, /FEISHU_COACH_DIGEST_OPEN_ID_OVERRIDES/, '飞书教练私发次日排课应支持用 GitHub Secret 覆盖 open_id');
 assert.match(apiSource, /x-feishu-coach-digest-phone-overrides/, '飞书教练私发次日排课接口应读取安全请求头里的手机号覆盖配置');
 assert.match(apiSource, /x-feishu-coach-digest-open-id-overrides/, '飞书教练私发次日排课接口应读取安全请求头里的 open_id 覆盖配置');
-assert.match(feishuScheduleSyncWorkflow, /cron:\s*'0 0,10 \* \* \*'/, '飞书排课表同步应在北京时间 08:00、18:00 各触发一次');
-assert.match(feishuScheduleSyncWorkflow, /\/api\/cron\/feishu-schedule-sync/, '飞书排课表同步应由 GitHub Actions 触发');
+assert.doesNotMatch(feishuScheduleSyncWorkflow, /^\s*schedule:/m, '飞书排课表同步不应再自动定时扫描');
+assert.match(feishuScheduleSyncWorkflow, /workflow_dispatch:/, '飞书排课表同步应保留手动触发入口');
+assert.match(feishuScheduleSyncWorkflow, /\/api\/cron\/feishu-schedule-sync/, '飞书排课表同步手动运行时应由 GitHub Actions 触发');
 assert.match(operationsSnapshotWorkflow, /cron: '5,20,35,50 \* \* \* \*'/, '经营分析快照应由 GitHub Actions 高频重建');
 assert.match(operationsSnapshotWorkflow, /node scripts\/rebuild-operations-snapshot\.js --write --view coach/, '经营分析教练人效快照 workflow 应优先重建轻量教练视图');
 assert.doesNotMatch(operationsSnapshotWorkflow, /--process-queued/, '经营分析教练人效主刷新链路不应被历史队列拖慢');
