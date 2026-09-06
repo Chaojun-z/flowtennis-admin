@@ -42,7 +42,11 @@ assert.doesNotMatch(
 
 assert.match(appSource, /key:'teaching'[\s\S]*?label:'教学中心'[\s\S]*?defaultPage:'schedule'[\s\S]*?排课管理[\s\S]*?goPage:'schedule'[\s\S]*?排课日历[\s\S]*?goPage:'coachschedule'/, 'teaching center should default to schedule and expose schedule sub pages');
 assert.match(appSource, /key:'finance'[\s\S]*?财务总览[\s\S]*?financePanel:'ledger'[\s\S]*?收款流水[\s\S]*?financePanel:'revenue'[\s\S]*?入账流水[\s\S]*?financePanel:'recognized'/, 'finance center should expose all finance second-level pages');
-assert.match(appSource, /key:'operations'[\s\S]*?经营总览[\s\S]*?operationsTab:'overview'[\s\S]*?场地运转[\s\S]*?operationsTab:'court'[\s\S]*?转化与留存[\s\S]*?operationsTab:'conversion'[\s\S]*?教练人效[\s\S]*?operationsTab:'coach'/, 'operations center should expose all operation second-level pages');
+assert.match(appSource, /key:'operations'[\s\S]*?defaultPage:'weekly-reports'[\s\S]*?马坡周报[\s\S]*?goPage:'weekly-reports'/, 'operations center should keep weekly report visible');
+assert.doesNotMatch(appSource, /\{label:'经营总览',goPage:'operations'[\s\S]*?operationsTab:'overview'\}/, 'admin H5 menu should hide operations overview from every account');
+assert.doesNotMatch(appSource, /\{label:'场地运转',goPage:'operations'[\s\S]*?operationsTab:'court'\}/, 'admin H5 menu should hide court operations from every account');
+assert.doesNotMatch(appSource, /\{label:'转化与留存',goPage:'operations'[\s\S]*?operationsTab:'conversion'\}/, 'admin H5 menu should hide conversion and retention from every account');
+assert.doesNotMatch(appSource, /\{label:'教练人效',goPage:'operations'[\s\S]*?operationsTab:'coach'\}/, 'admin H5 menu should hide coach efficiency from every account');
 
 assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-shell\{/, 'admin mobile shell should have mobile-only layout rules');
 assert.doesNotMatch(pagesCss, /body\.admin-mobile \.admin-mobile-module-bar\{/, 'admin mobile should not render a crowded bottom module bar');

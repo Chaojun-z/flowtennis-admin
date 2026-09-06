@@ -153,12 +153,12 @@ assert.match(indexSource, /\/assets\/scripts\/standard\/charts\.js/, 'index.html
 assert.match(indexSource, /\/assets\/scripts\/pages\/operations\.js/, 'index.html should load the operations page script');
 assert.match(apiIndexSource, /handleResidualPageDataRoutes=createResidualPageDataRoutes\([\s\S]*tables:\{[\s\S]*T_FEEDBACKS[\s\S]*\}/, 'operations page-data route should pass T_FEEDBACKS into the shared read model');
 assert.match(residualPagesSource, /handleOperationsPageData\([\s\S]*tables:\{[\s\S]*T_FEEDBACKS[\s\S]*\}/, 'operations residual page handler should include feedback table when building coach metrics');
-assert.match(componentsSource, /setOperationsTab\('overview'\);goPage\('operations',this\)[\s\S]*经营总览/, 'sidebar should expose operations overview as a left menu item');
-assert.match(componentsSource, /setOperationsTab\('court'\);goPage\('operations',this\)[\s\S]*场地运转/, 'sidebar should expose court operations as a left menu item');
-assert.match(componentsSource, /setOperationsTab\('conversion'\);goPage\('operations',this\)[\s\S]*转化与留存/, 'sidebar should expose conversion and retention as a left menu item');
-assert.match(componentsSource, /setOperationsTab\('coach'\);goPage\('operations',this\)[\s\S]*教练人效/, 'sidebar should expose coach efficiency as a left menu item');
-assert.match(componentsSource, /data-nav-page="operations" data-operations-tab="overview"/, 'operations overview should be a left menu item');
-assert.match(componentsSource, /data-nav-page="operations" data-operations-tab="conversion"/, 'operations conversion should be a left menu item');
+assert.doesNotMatch(componentsSource, /setOperationsTab\('overview'\);goPage\('operations',this\)[\s\S]*经营总览/, 'sidebar should hide operations overview from every account');
+assert.doesNotMatch(componentsSource, /setOperationsTab\('court'\);goPage\('operations',this\)[\s\S]*场地运转/, 'sidebar should hide court operations from every account');
+assert.doesNotMatch(componentsSource, /setOperationsTab\('conversion'\);goPage\('operations',this\)[\s\S]*转化与留存/, 'sidebar should hide conversion and retention from every account');
+assert.doesNotMatch(componentsSource, /setOperationsTab\('coach'\);goPage\('operations',this\)[\s\S]*教练人效/, 'sidebar should hide coach efficiency from every account');
+assert.doesNotMatch(componentsSource, /data-nav-page="operations" data-operations-tab="overview"/, 'operations overview should not be a left menu item');
+assert.doesNotMatch(componentsSource, /data-nav-page="operations" data-operations-tab="conversion"/, 'operations conversion should not be a left menu item');
 assert.match(componentsSource, /<div class="sb-sec">财务中心<\/div>[\s\S]*财务总览[\s\S]*收款流水[\s\S]*入账流水/, 'finance menu should remain as an independent module');
 assert.match(componentsSource, /<div class="sb-sec">财务中心<\/div>[\s\S]*<div class="sb-sec">经营分析<\/div>[\s\S]*<div class="sb-sec">基础设置<\/div>/, 'operations menu should sit between finance center and basic settings');
 assert.match(bootstrapSource, /operations:'经营分析'/, 'page title map should include operations');

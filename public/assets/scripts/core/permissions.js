@@ -1,6 +1,7 @@
 (function(global){
   const FEATURE_PERMISSION_KEYS=['match_ops','match_finance'];
   const ADMIN_DEFAULT_FEATURE_PERMISSIONS=['match_ops','match_finance'];
+  const HIDDEN_MANAGEMENT_PAGES=['operations'];
   function parseClientPermissionList(value){
     if(Array.isArray(value))return value.map(item=>String(item||'').trim()).filter(Boolean);
     return String(value||'').split(/[,，\s]+/).map(item=>item.trim()).filter(Boolean);
@@ -59,12 +60,16 @@
   function clientPageRequiresFullManagementAccess(page){
     return ['finance','operations','weekly-reports','coaches','admin-users','campusmgr'].includes(String(page||'').trim());
   }
+  function clientPageIsHiddenManagementView(page){
+    return HIDDEN_MANAGEMENT_PAGES.includes(String(page||'').trim());
+  }
   function clientUserCanOpenManagementPage(user,page){
-    return !clientPageRequiresFullManagementAccess(page)||clientUserHasFullManagementAccess(user);
+    return !clientPageIsHiddenManagementView(page)&&(!clientPageRequiresFullManagementAccess(page)||clientUserHasFullManagementAccess(user));
   }
   global.normalizeClientPermissionProfile=normalizeClientPermissionProfile;
   global.clientUserCanAccessCampus=clientUserCanAccessCampus;
   global.clientUserHasFullManagementAccess=clientUserHasFullManagementAccess;
   global.clientPageRequiresFullManagementAccess=clientPageRequiresFullManagementAccess;
+  global.clientPageIsHiddenManagementView=clientPageIsHiddenManagementView;
   global.clientUserCanOpenManagementPage=clientUserCanOpenManagementPage;
 })(typeof window!=='undefined'?window:globalThis);

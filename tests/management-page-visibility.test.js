@@ -24,6 +24,24 @@ assert.match(
 );
 
 assert.match(
+  source,
+  /const HIDDEN_MANAGEMENT_PAGES=\['operations'\]/,
+  'operations dashboard should be globally hidden from the management UI'
+);
+
+assert.match(
+  fnBody('clientPageIsHiddenManagementView'),
+  /HIDDEN_MANAGEMENT_PAGES\.includes/,
+  'hidden management page helper should use the explicit hidden page list'
+);
+
+assert.match(
+  fnBody('clientUserCanOpenManagementPage'),
+  /!clientPageIsHiddenManagementView\(page\)/,
+  'direct page switching should reject globally hidden management pages before role checks'
+);
+
+assert.match(
   fnBody('adminMobileNavConfig'),
   /filter\(adminMobileNavGroupVisible\)/,
   'mobile admin navigation should filter modules by page visibility'

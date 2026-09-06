@@ -383,11 +383,7 @@ function adminMobileNavConfig(){
       {label:'收款流水',goPage:'finance',icon:'finance-revenue',financePanel:'revenue'},
       {label:'入账流水',goPage:'finance',icon:'finance-recognized',financePanel:'recognized'}
     ]},
-    {key:'operations',label:'经营分析',defaultPage:'operations',items:[
-      {label:'经营总览',goPage:'operations',icon:'coachops',operationsTab:'overview'},
-      {label:'场地运转',goPage:'operations',icon:'courts',operationsTab:'court'},
-      {label:'转化与留存',goPage:'operations',icon:'leads',operationsTab:'conversion'},
-      {label:'教练人效',goPage:'operations',icon:'coachops',operationsTab:'coach'},
+    {key:'operations',label:'经营分析',defaultPage:'weekly-reports',items:[
       {label:'马坡周报',goPage:'weekly-reports',icon:'finance-ledger'}
     ]},
     {key:'system',label:'系统设置',defaultPage:'admin-users',items:[
@@ -497,10 +493,6 @@ function renderSidebarShell(){
   <div class="sb-item" data-nav-page="finance" data-finance-panel="revenue" onclick="setFinancePanel('revenue');goPage('finance',this)">${sidebarIcon('finance-revenue')}收款流水</div>
   <div class="sb-item" data-nav-page="finance" data-finance-panel="recognized" onclick="setFinancePanel('recognized');goPage('finance',this)"><span class="sb-icon"><svg data-sidebar-icon="finance-recognized" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.0001 1.6001C4.47299 1.6001 1.6001 4.47299 1.6001 8.0001C1.6001 8.14232 1.68543 8.28454 1.82765 8.36988C1.96988 8.45521 2.1121 8.45521 2.25432 8.36988L3.67654 7.51654C3.87565 7.40276 3.93254 7.14676 3.81876 6.91921C3.70499 6.7201 3.44899 6.66321 3.22143 6.77699L2.51032 7.20365C2.8801 4.52988 5.21254 2.45343 8.0001 2.45343C11.0721 2.45343 13.5468 4.9281 13.5468 8.0001C13.5468 11.0721 11.0721 13.5468 8.0001 13.5468C6.23654 13.5468 4.55832 12.6934 3.50588 11.2428C3.36365 11.0437 3.10765 11.0152 2.90854 11.1574C2.70943 11.2997 2.68099 11.5557 2.82321 11.7548C4.01788 13.4045 5.9521 14.4001 8.0001 14.4001C11.5272 14.4001 14.4001 11.5272 14.4001 8.0001C14.4001 4.47299 11.5272 1.6001 8.0001 1.6001Z" fill="currentColor"/><path d="M7.14672 10.7022C7.2605 10.7022 7.37428 10.6737 7.45961 10.5884L11.4418 6.60619C11.6125 6.43553 11.6125 6.17953 11.4418 6.00886C11.2712 5.83819 11.0152 5.83819 10.8445 6.00886L7.14672 9.67819L5.4685 7.99997C5.29783 7.8293 5.04183 7.8293 4.87116 7.99997C4.7005 8.17064 4.7005 8.42664 4.87116 8.5973L6.86228 10.5884C6.91916 10.6737 7.03294 10.7022 7.14672 10.7022Z" fill="currentColor"/></svg></span>入账流水</div>
   <div class="sb-sec">经营分析</div>
-  <div class="sb-item" data-nav-page="operations" data-operations-tab="overview" onclick="setOperationsTab('overview');goPage('operations',this)">${sidebarIcon('coachops')}经营总览</div>
-  <div class="sb-item" data-nav-page="operations" data-operations-tab="court" onclick="setOperationsTab('court');goPage('operations',this)">${sidebarIcon('courts')}场地运转</div>
-  <div class="sb-item" data-nav-page="operations" data-operations-tab="conversion" onclick="setOperationsTab('conversion');goPage('operations',this)">${sidebarIcon('leads')}转化与留存</div>
-  <div class="sb-item" data-nav-page="operations" data-operations-tab="coach" onclick="setOperationsTab('coach');goPage('operations',this)">${sidebarIcon('coachops')}教练人效</div>
   <div class="sb-item" data-nav-page="weekly-reports" onclick="goPage('weekly-reports',this)">${sidebarIcon('finance-ledger')}马坡周报</div>
   <div class="sb-sec">基础设置</div>
   <div class="sb-item" onclick="goPage('coaches',this)">${sidebarIcon('coaches')}教练管理</div>
