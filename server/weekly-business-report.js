@@ -217,6 +217,15 @@ function isValidSchedule(row = {}, period = {}) {
   return inPeriod(row.startTime, period) && campusMatches(row) && effectiveScheduleStatus(row) !== '已取消' && scheduleHasCourseEvidence(row);
 }
 
+function isMarkedCompletedSchedule(row = {}) {
+  const status = String(row.status || row.systemStatus || row.state || '').trim();
+  return ['已结束', '已下课', 'completed', 'finished'].includes(status);
+}
+
+function courseScheduleRows(raw = {}, period = {}) {
+  return normalizeRows(raw.schedule).filter(row => isValidSchedule(row, period));
+}
+
 function isPrivateCoursePurchase(row = {}) {
   if (['voided', 'refunded', 'deleted'].includes(String(row.status || '').trim())) return false;
   const raw = `${row.courseType || ''} ${row.packageName || ''} ${row.productName || ''}`;
@@ -399,9 +408,7 @@ function customerTypeForRow(row = {}, maps = { byId: new Map(), byName: new Map(
 }
 
 function completedCourseScheduleRows(raw = {}, period = {}) {
-  return normalizeRows(raw.schedule)
-    .filter(row => isValidSchedule(row, period))
-    .filter(row => effectiveScheduleStatus(row) === '已结束');
+  return courseScheduleRows(raw, period).filter(isMarkedCompletedSchedule);
 }
 
 function scheduleStudentKey(row = {}) {
@@ -495,7 +502,7 @@ function buildCoachFromSchedules(raw = {}, period = {}, previousRaw = {}) {
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
   const build = (rows = [], targetPeriod = {}) => {
     const map = new Map();
-    normalizeRows(rows).filter(row => isValidSchedule(row, targetPeriod)).forEach(row => {
+    normalizeRows(rows).filter(row => isValidSchedule(row, targetPeriod) && isMarkedCompletedSchedule(row)).forEach(row => {
       const clean = cleanCoachName(row.coach || row.coachName);
       if (!clean || clean === '小鹿' || (activeNames.size && !activeNames.has(clean))) return;
       const coach = normalizeCoachDisplayName(clean);
@@ -735,11 +742,21 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
   const historyRows = courtHistoryRows(raw, period);
   const previousHistoryRows = courtHistoryRows(previousRaw, previousPeriod);
+  const scheduleRows = courseScheduleRows(raw, period);
+  const previousScheduleRows = courseScheduleRows(previousRaw, previousPeriod);
   const courtFinanceRow = row => /场地|订场|约球|内部使用|领导/.test(String(`${row.businessType || ''} ${row.displayBusinessType || ''} ${row.category || ''}`));
   const financeRows = weeklyFinanceRows(raw, period).filter(courtFinanceRow);
   const previousFinanceRows = weeklyFinanceRows(previousRaw, previousPeriod).filter(courtFinanceRow);
   const indexStats = courtUsageIndexStats(raw, period);
   const previousIndexStats = courtUsageIndexStats(previousRaw, previousPeriod);
+  const sumScheduleCourtUsage = rows => normalizeRows(rows).reduce((acc, row) => ({
+    count: acc.count + 1,
+    hours: acc.hours + scheduleHours(row),
+    amount: 0,
+    receivableAmount: 0
+  }), { count: 0, hours: 0, amount: 0, receivableAmount: 0 });
+  const scheduleCourseUsage = sumScheduleCourtUsage(scheduleRows);
+  const previousScheduleCourseUsage = sumScheduleCourtUsage(previousScheduleRows);
   const paidCourtUsageType = row => !['领导订场', '内部使用'].includes(standardCourtUsageType(row));
   const sumHistory = (rows, meta) => rows.filter(row => standardCourtUsageType(row) === meta.label)
     .reduce((acc, row) => ({
@@ -761,7 +778,11 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const previousHistoryTypeLabels = new Set(previousHistoryRows.map(standardCourtUsageType).filter(Boolean));
   historyRows.forEach(row => {
     const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
-    if (day && paidCourtUsageType(row)) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
+    if (day && paidCourtUsageType(row) && !(scheduleRows.length && standardCourtUsageType(row) === '课程订场')) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
+  });
+  scheduleRows.forEach(row => {
+    const day = String(row.startTime || row.date || row.createdAt || '').slice(0, 10);
+    if (day) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + scheduleHours(row)));
   });
   financeRows
     .filter(row => paidCourtUsageType(row) && !historyTypeLabels.has(standardCourtUsageType(row)))
@@ -774,7 +795,11 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   }
   previousHistoryRows.forEach(row => {
     const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
-    if (day && paidCourtUsageType(row)) previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
+    if (day && paidCourtUsageType(row) && !(previousScheduleRows.length && standardCourtUsageType(row) === '课程订场')) previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
+  });
+  previousScheduleRows.forEach(row => {
+    const day = String(row.startTime || row.date || row.createdAt || '').slice(0, 10);
+    if (day) previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + scheduleHours(row)));
   });
   previousFinanceRows
     .filter(row => paidCourtUsageType(row) && !previousHistoryTypeLabels.has(standardCourtUsageType(row)))
@@ -802,6 +827,10 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     if (!current.hours && indexedCurrent.hours) current.hours = indexedCurrent.hours;
     if (!current.amount && indexedCurrent.amount) current.amount = indexedCurrent.amount;
     if (!current.receivableAmount && indexedCurrent.receivableAmount) current.receivableAmount = indexedCurrent.receivableAmount;
+    if (meta.key === 'course' && scheduleCourseUsage.count) {
+      current.count = scheduleCourseUsage.count;
+      current.hours = scheduleCourseUsage.hours;
+    }
     if (!previous.count && financePrevious.count) previous.count = financePrevious.count;
     if (!previous.hours && financePrevious.hours) previous.hours = financePrevious.hours;
     if (!previous.amount && financePrevious.amount) previous.amount = financePrevious.amount;
@@ -810,6 +839,10 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     if (!previous.hours && indexedPrevious.hours) previous.hours = indexedPrevious.hours;
     if (!previous.amount && indexedPrevious.amount) previous.amount = indexedPrevious.amount;
     if (!previous.receivableAmount && indexedPrevious.receivableAmount) previous.receivableAmount = indexedPrevious.receivableAmount;
+    if (meta.key === 'course' && previousScheduleCourseUsage.count) {
+      previous.count = previousScheduleCourseUsage.count;
+      previous.hours = previousScheduleCourseUsage.hours;
+    }
     if (['free', 'leader'].includes(meta.key)) current.amount = 0;
     return {
       ...meta,
@@ -833,6 +866,7 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     const indexedPrevious = previousIndexStats[meta.key] || {};
     if (!previous.hours && financePrevious.hours) previous.hours = financePrevious.hours;
     if (!previous.hours && indexedPrevious.hours) previous.hours = indexedPrevious.hours;
+    if (meta.key === 'course' && previousScheduleCourseUsage.hours) previous.hours = previousScheduleCourseUsage.hours;
     return { key: meta.key, hours: previous.hours };
   }).filter(row => !['free', 'leader'].includes(row.key)).reduce((sum, row) => sum + row.hours, 0);
   const totalAvailableHours = numberValue(4 * 14 * (periodDayCount(period) || 7));
@@ -1002,7 +1036,7 @@ function buildWeeklyBusinessReportSnapshot({
       recognizedRevenue: { value: financeSummary.businessRevenue, compare: financeSummary.compare.businessRevenue },
       courtUsageHours: { value: numberValue(reportSections.court?.actualUsedHours || 0) },
       courtUtilizationRate: { value: utilizationRate, compare: reportSections.court?.compare?.utilizationRate || compareMetric(utilizationRate, cardValue(previous, ['court', 'cards', 'utilizationRate'])) },
-      coachHours: { value: coachHours, compare: compareMetric(coachHours, cardValue(previous, ['coach', 'cards', 'usedHours'])) },
+      coachHours: { value: coachHours, compare: reportSections.coach?.compare?.totalHours || compareMetric(coachHours, cardValue(previous, ['coach', 'cards', 'usedHours'])) },
       totalLeads: { value: totalLeads, compare: compareMetric(totalLeads, cardValue(previous, ['conversion', 'cards', 'totalLeads'])) }
     },
     sections: {
@@ -1537,6 +1571,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   const coach = sections.coach || {};
   const conversion = sections.conversion || {};
   const coachRows = normalizeRows(coach.rows);
+  const coachLessonRows = coachRows.filter(row => normalizeRows(row.lessonRows).length);
   const sourceRows = normalizeRows(conversion.sourceRows);
   const lifetime = snapshot.lifetimeSummary || {};
   const edits = snapshot.publicEdits || {};
@@ -1685,7 +1720,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     { key: 'specialHours', label: '专项课' },
     { key: 'sparringHours', label: '陪打' }
   ], { edits, keyPrefix: 'coach.rows' })}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${coachRows.map((row, index) => `<section class="bg-cyber-card rounded-xl border border-cyber-border p-5"><h3 class="text-sm font-bold text-white">${editableText(edits, `coach.details.${index}.title`, row.coach)}</h3>${renderCoachLessonRows(row.lessonRows || [], edits, index)}</section>`).join('')}</div>
+  ${coachLessonRows.length ? `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${coachLessonRows.map((row, index) => `<section class="bg-cyber-card rounded-xl border border-cyber-border p-5"><h3 class="text-sm font-bold text-white">${editableText(edits, `coach.details.${index}.title`, row.coach)}</h3>${renderCoachLessonRows(row.lessonRows || [], edits, index)}</section>`).join('')}</div>` : ''}
 
   ${editableSectionTitle('court', '四、场地经营', '// COURT USAGE')}
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -1930,7 +1965,7 @@ async function generateWeeklyBusinessReport({
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
-    return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: false }).then(payload => {
+    return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: generationMode === 'manual' }).then(payload => {
       if (!payload) throw new Error('经营分析快照为空');
       return payload;
     }).catch(err => {

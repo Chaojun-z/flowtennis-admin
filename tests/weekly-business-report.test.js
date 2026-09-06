@@ -193,7 +193,7 @@ assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.lessonPeop
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.completedHours, 3, 'course section should expose weekly completed coach course hours');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.typeRows.find(row => row.type === '成人')?.newAmount, 1000, 'adult course row should use current-week platform receipt facts');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.typeRows.find(row => row.type === '青少年')?.completedHours, 2, 'youth course row should use current-week completed schedule facts');
-assert.strictEqual(requestedStructureSnapshot.sections.court.revenueUsageHours, 71, 'paid utilization hours should exclude internal use and leader bookings');
+assert.strictEqual(requestedStructureSnapshot.sections.court.revenueUsageHours, 74, 'paid utilization hours should include schedule court occupancy and exclude internal use and leader bookings');
 assert.strictEqual(requestedStructureSnapshot.sections.court.dailyRows.find(row => row.date === '2026-09-01')?.value, 100, 'daily court utilization should be capped at 100%');
 assert.ok(requestedStructureSnapshot.summary.courtUtilizationRate.value <= 100, 'top court utilization must never exceed 100%');
 
@@ -281,10 +281,10 @@ const rawSnapshot = buildWeeklyBusinessReportSnapshot({
         { id: 'member-order-voided', membershipAccountId: 'member-account-voided', courtId: 'court-voided', status: 'voided', rechargeAmount: 9999, purchaseDate: '2026-08-28' }
       ],
       schedule: [
-        { id: 'coach-current', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已排课', campus: 'shunyi_mapo' },
+        { id: 'coach-current', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已下课', campus: 'shunyi_mapo' },
         { id: 'dirty-current', coach: '小鹿教练', lessonCount: 2, startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已排课', campus: 'shunyi_mapo' },
-        { id: 'coach-prev', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', campus: 'shunyi_mapo' },
-        { id: 'inactive-coach', coach: '宋教练', courseType: '私教课', startTime: '2026-08-28 12:00:00', endTime: '2026-08-28 13:00:00', status: '已排课', campus: 'shunyi_mapo' }
+        { id: 'coach-prev', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已下课', campus: 'shunyi_mapo' },
+        { id: 'inactive-coach', coach: '宋教练', courseType: '私教课', startTime: '2026-08-28 12:00:00', endTime: '2026-08-28 13:00:00', status: '已下课', campus: 'shunyi_mapo' }
       ],
       courts: [
         { id: 'court-member-a', campus: 'shunyi_mapo', history: [] },
@@ -300,7 +300,7 @@ const rawSnapshot = buildWeeklyBusinessReportSnapshot({
       coaches: [{ name: '朝珺', status: 'active' }],
       purchases: [{ id: 'prev-first', studentId: 'stu-prev', courseType: '私教课', amountPaid: 800, purchaseDate: '2026-08-20', status: 'active', firstPurchase: true, campus: 'shunyi_mapo' }],
       financeNormalizedRows: [{ id: 'prev-consume', businessDate: '2026-08-20', businessType: '课程', action: '消耗', recognizedRevenueDelta: 300 }],
-      schedule: [{ id: 'coach-prev-only', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', campus: 'shunyi_mapo' }],
+      schedule: [{ id: 'coach-prev-only', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已下课', campus: 'shunyi_mapo' }],
       courts: []
     }
   },
@@ -325,15 +325,16 @@ assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.count, 1, 'court finance rows should backfill member booking count when court history is missing');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 1.5, 'court finance rows should backfill member booking hours when court history is missing');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.map(row => row.label).join('|'), '会员订场|散客订场|课程订场|领导订场|内部使用|约球局', 'weekly report should display the six standard court booking types');
-assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 1, 'course court usage should come from court booking facts, not ordinary schedule rows');
-assert.strictEqual(rawSnapshot.sections.court.actualUsedHours, 8, 'ordinary coach schedule rows should not inflate weekly court usage hours');
-assert.strictEqual(rawSnapshot.sections.court.utilizationRate, 1.12, 'court utilization should use paid court usage facts divided by actual report-period capacity');
+assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 3, 'course court usage should come from schedule rows that occupy courts');
+assert.strictEqual(rawSnapshot.sections.court.actualUsedHours, 10, 'court usage hours should include schedule court occupancy while keeping internal and leader usage separate');
+assert.strictEqual(rawSnapshot.sections.court.utilizationRate, 1.56, 'court utilization should use paid court usage including course occupancy divided by actual report-period capacity');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'free')?.amount, 0, 'free court usage actual amount should be zero');
 assert.strictEqual(rawSnapshot.summary.courtUsageHours.value, rawSnapshot.sections.court.actualUsedHours, 'weekly report list summary should expose court usage hours from report sections');
 assert.strictEqual(rawSnapshot.sections.coach.rows.length, 1, 'coach report should only show active coaches with current-period schedules');
 assert.strictEqual(rawSnapshot.sections.coach.rows[0].coach, '朝珺教练', 'inactive and no-schedule coaches should be excluded from coach report');
 assert.strictEqual(rawSnapshot.sections.coach.rows[0].scheduledCount, 2, 'coach current scheduled column should use current week hours');
 assert.strictEqual(rawSnapshot.sections.coach.rows[0].previousHours, 1, 'coach current/previous column should include previous week hours');
+assert.strictEqual(rawSnapshot.sections.coach.totalHours, 2, 'coach completed hours should only count lessons explicitly marked as completed');
 assert.strictEqual(rawSnapshot.sections.conversion.trialDeals, 1, 'conversion top trial deals should equal source row total');
 assert.ok(rawSnapshot.sections.conversion.sourceRows.find(row => row.source === '抖音' && row.leads === 0), 'conversion source table should include standard zero-value sources');
 
@@ -533,8 +534,7 @@ assert.match(weeklyRoutesSource, /\/weekly-business-reports/, 'api should expose
 assert.match(weeklyReportSource, /includeWeeklyReportRaw:\s*false[\s\S]*dateRange:\s*\{\}[\s\S]*metricScope:\s*\{\s*campusName:\s*WEEKLY_REPORT_CAMPUS_NAME\s*\}/, 'weekly report lifetime summary should not load full raw rows during regeneration');
 assert.match(weeklyReportSource, /view:\s*WEEKLY_REPORT_OPERATIONS_VIEW[\s\S]*includeWeeklyReportRaw:\s*true/, 'weekly report should use a dedicated operations snapshot scope with raw report facts');
 assert.match(weeklyReportSource, /weeklyRawToBaseRows[\s\S]*baseRowsOverride[\s\S]*previousScope[\s\S]*baseRowsOverride[\s\S]*totalScope[\s\S]*baseRowsOverride/, 'weekly report regeneration should reuse one raw read for previous and lifetime metrics');
-assert.match(weeklyReportSource, /loadOperationsSnapshot[\s\S]*allowRefreshing:\s*false/, 'weekly report regeneration should require current published snapshots before saving a report');
-assert.match(weeklyReportSource, /allowRefreshing:\s*false/, 'manual weekly report generation must reject stale snapshots instead of serving old raw data');
+assert.match(weeklyReportSource, /loadOperationsSnapshot[\s\S]*allowRefreshing:\s*generationMode === 'manual'/, 'manual weekly report regeneration should allow the latest published snapshot while it is refreshing');
 assert.match(apiSource, /loadOperationsSnapshot:operationsSnapshotSync\.loadSnapshot/, 'weekly report routes should receive the operations snapshot loader');
 assert.match(operationsPageSource, /baseRowsOverride = null[\s\S]*const baseRows = baseRowsOverride \|\| await loadBaseRows/, 'operations page payload should allow weekly report to reuse loaded base rows');
 assert.match(apiSource, /async function buildOperationsSnapshotPayload\(\{user,scope,baseRowsOverride\}\)/, 'operations payload wrapper should pass through reusable base rows');
@@ -543,12 +543,12 @@ assert.match(weeklyWorkflow, /cron: '0 0 \* \* 5'/, 'weekly report workflow shou
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260906-weekly-report-structure-v1/, 'admin shell should bust weekly report page script cache after structure changes');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260906-weekly-report-fix-v1/, 'admin shell should bust weekly report page script cache after weekly report fixes');
 assert.match(indexHtml, /api\.js\?v=20260904-weekly-report-share-v1/, 'admin shell should bust public weekly report share script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
 assert.doesNotMatch(weeklyPageSource, /顺义马坡每周周报|重新生成本周周报|editWeeklyReportRemark/, 'admin weekly report list should remove the old title block, top regenerate button and remark action');
 assert.match(weeklyPageSource, /周次[\s\S]*营业收入[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*查看[\s\S]*复制链接[\s\S]*重新生成/, 'admin weekly report list should show the requested columns and row actions');
-assert.match(weeklyPageSource, /weekly-report-table[\s\S]*width:1180px[\s\S]*table-layout:fixed/, 'admin weekly report list should use compact fixed column widths');
+assert.match(weeklyPageSource, /weekly-report-table[\s\S]*width:100%;min-width:1180px[\s\S]*table-layout:fixed/, 'admin weekly report list should fill the card while keeping compact fixed column widths');
 assert.match(weeklyPageSource, /toLocaleString\('zh-CN'[\s\S]*Asia\/Shanghai/, 'admin weekly report list should format generated time in Beijing time');
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');
 assert.match(weeklyPageSource, /sticky:\s*true/, 'manual regeneration should keep the loading toast visible until completion');

@@ -60,7 +60,7 @@ assert.match(operationsSourceModelSource, /function getOperationsBaseRows/, 'ope
 assert.match(operationsSourceModelSource, /function getOperationsCoachBaseRows/, 'operations source model should expose a lightweight coach view source');
 assert.match(operationsSourceModelSource, /function getOperationsWeeklyReportBaseRows/, 'weekly report snapshots should use a dedicated lightweight source loader');
 assert.match(operationsSourceModelSource, /getOperationsCoachBaseRows[\s\S]*courts: \[\],[\s\S]*membershipAccounts: \[\],[\s\S]*membershipOrders: \[\]/, 'coach operations source should not read court history or membership tables');
-assert.match(operationsSourceModelSource, /OPERATIONS_WEEKLY_REPORT_COURT_FIELDS[\s\S]*filter\(\(field\) => field !== 'history'\)/, 'weekly report source should not read the heavy court history field');
+assert.match(operationsSourceModelSource, /const OPERATIONS_WEEKLY_REPORT_COURT_FIELDS = OPERATIONS_COURT_FIELDS;/, 'weekly report source should read court history so internal use and renovation occupancy are available');
 assert.match(operationsSourceModelSource, /T_COURT_ACCOUNT_LIST_INDEX[\s\S]*courtAccountListIndexRows/, 'weekly report source should read the court account list index for membership metrics');
 assert.match(operationsPageSource, /scope\?\.view === 'weekly-report' \? getOperationsWeeklyReportBaseRows[\s\S]*scope\?\.view === 'coach' \? getOperationsCoachBaseRows : getOperationsBaseRows/, 'weekly report and coach operations views should use their dedicated lightweight source loaders');
 assert.match(operationsSourceModelSource, /readLeadSourceRows/, 'operations source model should use the same lead source as the leads page');

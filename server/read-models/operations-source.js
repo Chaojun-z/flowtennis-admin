@@ -41,7 +41,7 @@ const OPERATIONS_COURT_FIELDS = [
   'storedValueSpent', 'directPaidSpent', 'bookingCount', 'bookingAmount', 'bookingHours',
   'memberBookingCount', 'memberBookingAmount', 'guestBookingCount', 'guestBookingAmount', 'history'
 ];
-const OPERATIONS_WEEKLY_REPORT_COURT_FIELDS = OPERATIONS_COURT_FIELDS.filter((field) => field !== 'history');
+const OPERATIONS_WEEKLY_REPORT_COURT_FIELDS = OPERATIONS_COURT_FIELDS;
 const OPERATIONS_FOLLOWUP_FIELDS = [
   'id', 'leadId', 'followupAt', 'createdAt', 'followupBy', 'followupType',
   'communicationNote', 'concern', 'conclusion', 'statusAfter', 'nextFollowupAt', 'nextAction'
