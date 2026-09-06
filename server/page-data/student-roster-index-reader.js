@@ -41,6 +41,62 @@ function normalizedKey(value) {
   return normalizedText(value).toLowerCase();
 }
 
+function lessonQty(value) {
+  const num = Number(value) || 0;
+  return String(Number.isInteger(num) ? num : Number(num.toFixed(1))).replace(/\.0$/, '');
+}
+
+function moneyText(value) {
+  const amount = Number(value) || 0;
+  return `¥${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+}
+
+function balanceText(value, remaining, total) {
+  const raw = normalizedText(value);
+  if (raw && raw !== '-') return raw;
+  const totalValue = Number(total) || 0;
+  if (totalValue <= 0) return raw || '-';
+  return `${lessonQty(remaining)}/${lessonQty(totalValue)}`;
+}
+
+function balancePercent(value, remaining, total) {
+  const explicit = Number(value);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  const totalValue = Number(total) || 0;
+  if (totalValue <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round(((Number(remaining) || 0) / totalValue) * 100)));
+}
+
+function formalPackageRows(row = {}) {
+  return parseSnapshotArray(row.detailPackageOrderRows)
+    .concat(parseSnapshotArray(row.packageListRows))
+    .filter(item => {
+      const label = normalizedText([
+        item.courseType,
+        item.standardCourseType,
+        item.packageName,
+        item.productName
+      ].filter(Boolean).join(' '));
+      return !/体验|陪打/.test(label) && (Number(item.totalLessons) || 0) > 0;
+    });
+}
+
+function packageBalanceNumbers(row = {}) {
+  const rows = formalPackageRows(row);
+  const rowRemaining = Number(row.packageBalanceRemaining) || 0;
+  const rowTotal = Number(row.packageBalanceTotal) || 0;
+  const detailRemaining = Number(row.detailPackageBalanceRemaining) || 0;
+  const detailTotal = Number(row.detailPackageBalanceTotal) || 0;
+  const rowsRemaining = rows.reduce((sum, item) => sum + (Number(item.remainingLessons) || 0), 0);
+  const rowsTotal = rows.reduce((sum, item) => sum + (Number(item.totalLessons) || 0), 0);
+  return {
+    packageRemaining: rowTotal > 0 ? rowRemaining : rowsRemaining,
+    packageTotal: rowTotal > 0 ? rowTotal : rowsTotal,
+    detailRemaining: detailTotal > 0 ? detailRemaining : (rowTotal > 0 ? rowRemaining : rowsRemaining),
+    detailTotal: detailTotal > 0 ? detailTotal : (rowTotal > 0 ? rowTotal : rowsTotal)
+  };
+}
+
 function summaryRowDateValue(row = {}) {
   return normalizedText(row.packagePurchaseDate || row.lastFormalLessonAt || row.detailRecentLessonDate || row.summaryUpdatedAt || row.updatedAt).slice(0, 10);
 }
@@ -276,6 +332,7 @@ function buildCustomerCenterListPage(teachingStudentViews = {}, query) {
 }
 
 function projectCustomerCenterStudentRow(row = {}) {
+  const balance = packageBalanceNumbers(row);
   return {
     id: String(row.id || row.studentId || '').trim(),
     studentId: String(row.studentId || row.id || '').trim(),
@@ -303,16 +360,16 @@ function projectCustomerCenterStudentRow(row = {}) {
     hasCourseConversion: !!row.hasCourseConversion,
     isHistoricalStudentRoster: !!row.isHistoricalStudentRoster,
     isActiveStudentRoster: !!row.isActiveStudentRoster,
-    packageBalanceRemaining: Number(row.packageBalanceRemaining) || 0,
-    packageBalanceTotal: Number(row.packageBalanceTotal) || 0,
-    packageBalanceText: String(row.packageBalanceText || '').trim(),
-    packageBalancePercent: Number(row.packageBalancePercent) || 0,
-    detailPackageBalanceRemaining: Number(row.detailPackageBalanceRemaining) || 0,
-    detailPackageBalanceTotal: Number(row.detailPackageBalanceTotal) || 0,
-    detailPackageBalanceText: String(row.detailPackageBalanceText || row.packageBalanceText || '').trim(),
-    detailPackageBalancePercent: Number(row.detailPackageBalancePercent) || 0,
+    packageBalanceRemaining: balance.packageRemaining,
+    packageBalanceTotal: balance.packageTotal,
+    packageBalanceText: balanceText(row.packageBalanceText, balance.packageRemaining, balance.packageTotal),
+    packageBalancePercent: balancePercent(row.packageBalancePercent, balance.packageRemaining, balance.packageTotal),
+    detailPackageBalanceRemaining: balance.detailRemaining,
+    detailPackageBalanceTotal: balance.detailTotal,
+    detailPackageBalanceText: balanceText(row.detailPackageBalanceText || row.packageBalanceText, balance.detailRemaining, balance.detailTotal),
+    detailPackageBalancePercent: balancePercent(row.detailPackageBalancePercent, balance.detailRemaining, balance.detailTotal),
     cumulativeCoursePaidAmount: Number(row.cumulativeCoursePaidAmount) || 0,
-    cumulativeCoursePaidText: String(row.cumulativeCoursePaidText || '').trim(),
+    cumulativeCoursePaidText: String(row.cumulativeCoursePaidText || '').trim() || moneyText(row.cumulativeCoursePaidAmount),
     packageStatusLabel: String(row.packageStatusLabel || '').trim(),
     paymentModeLabel: String(row.paymentModeLabel || '').trim(),
     activityStatusLabel: String(row.activityStatusLabel || '').trim(),

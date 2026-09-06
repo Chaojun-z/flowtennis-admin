@@ -187,8 +187,9 @@ assert.match(purchaseCreateRouteSource, /getCachedScan\(T_PACKAGES\)/, 'purchase
 assert.match(purchaseCreateRouteSource, /cappedScan\(T_COACHES\)/, 'purchase create endpoint should load coaches for owner coach defaults');
 assert.doesNotMatch(purchaseCreateRouteSource, /T_PURCHASES|T_ENTITLEMENTS|buildPurchaseUnifiedView|buildCustomerLifecycleRows/, 'purchase create endpoint must not load heavy package center facts');
 assert.match(corePagesSource, /path==='\/page-data\/student-detail'&&method==='GET'[\s\S]*getCachedRow\(T_STUDENTS,studentId\)/, 'student drawer should have a per-student detail endpoint');
-assert.match(corePagesSource, /const canUseStudentTeachingSummary=studentTeachingSummary[\s\S]*teachingSummaryNeedsLessonFacts\(studentTeachingSummary,new Date\(\)\)/, 'student drawer must use the fast teaching summary when the summary passes the same contradiction self-check');
-assert.match(corePagesSource, /STUDENT_DETAIL_SUMMARY_NOT_READY/, 'student drawer should return a controlled not-ready state instead of scanning production fact tables');
+assert.match(corePagesSource, /const needsRefresh=!studentTeachingSummary[\s\S]*teachingSummaryNeedsLessonFacts\(studentTeachingSummary,new Date\(\)\)/, 'student drawer must mark stale or contradictory teaching summaries for refresh');
+assert.match(corePagesSource, /buildStudentDetailFastPayload\(\{student,studentTeachingSummary,studentId,needsRefresh\}\)/, 'student drawer should open from the fast teaching summary payload even when refresh is needed');
+assert.doesNotMatch(corePagesSource, /STUDENT_DETAIL_SUMMARY_NOT_READY/, 'student drawer should not fail the whole drawer when the fast summary can provide a safe snapshot');
 const studentDetailRouteSource = corePagesSource.slice(
   corePagesSource.indexOf("path==='/page-data/student-detail'&&method==='GET'"),
   corePagesSource.indexOf("path==='/page-data/purchases'&&method==='GET'")

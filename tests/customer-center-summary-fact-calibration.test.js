@@ -662,6 +662,82 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(searchRes.body.listPage.rows.length, 1, '搜索分页只返回当前页命中行');
   assert.strictEqual(searchRes.body.standardLifecycleMetrics.teachingSummary.activeStudentCount, 1, '搜索后的顶部统计必须来自搜索后的完整统一集合');
 
+  const sparseRows = [{
+    id: 'sparse-business-row',
+    studentId: 'sparse-business-row',
+    name: '王先生（阿萌）',
+    hasFormalAttended: true,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: true,
+    packageBalanceRemaining: 7,
+    packageBalanceTotal: 10,
+    completedLessons: 3,
+    detailRecentLessonDate: '2026-09-05',
+    lastFormalLessonAt: '2026-09-05',
+    cumulativeCoursePaidAmount: 5500,
+    detailPackageOrderRows: [{
+      packageName: '黄金时间1v2课包',
+      remainingLessons: 7,
+      totalLessons: 10,
+      paidAmount: 5500,
+      purchaseDate: '2026-09-05'
+    }],
+    detailLessonRecordRows: [{
+      kind: 'ledger',
+      time: '2026-09-05 19:00-20:00',
+      courseType: '私教课',
+      lessonDelta: -1,
+      lessonSectionText: '[第3节]'
+    }]
+  }];
+  const sparseCalls = { tableScans: {} };
+  const sparseBusinessFields = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      throw new Error(`业务字段反例不允许扫描事实表: ${table}`);
+    },
+    getCachedScan: async table => {
+      sparseCalls.tableScans[table] = (sparseCalls.tableScans[table] || 0) + 1;
+      if (table === 'ft_student_teaching_summary') return JSON.parse(JSON.stringify(readyStudentSummaryRows(sparseRows)));
+      throw new Error(`业务字段反例不允许读取其他表: ${table}`);
+    },
+    getCachedRow: async () => null,
+    filterLoadAllForUser: data => data,
+    PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
+    tables: {
+      T_LEADS: 'ft_leads',
+      T_STUDENTS: 'ft_students',
+      T_PURCHASES: 'ft_purchases',
+      T_ENTITLEMENTS: 'ft_entitlements',
+      T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger',
+      T_SCHEDULE: 'ft_schedule',
+      T_FEEDBACKS: 'ft_feedbacks',
+      T_MEMBERSHIP_BENEFIT_LEDGER: 'ft_membership_benefit_ledger',
+      T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary'
+    }
+  });
+  const sparseRes = {};
+  await sparseBusinessFields({
+    path: '/page-data/customer-center-list',
+    method: 'GET',
+    user: { role: 'admin', name: '管理员' },
+    res: sparseRes,
+    query: new URLSearchParams('view=historicalStudents&paged=1&page=1&pageSize=15')
+  });
+  assert.strictEqual(sparseRes.statusCode, 200);
+  const sparseRow = sparseRes.body.listPage.rows[0];
+  assert.strictEqual(sparseRow.packageBalanceText, '7/10', '列表必须从摘要数字稳定生成课包余额文本，不能显示空');
+  assert.strictEqual(sparseRow.detailPackageBalanceText, '7/10', '详情余额文本也必须从同一摘要数字生成');
+  assert.strictEqual(sparseRow.cumulativeCoursePaidText, '¥5,500', '列表必须从累计付费金额生成展示文本，不能显示 ¥0');
+  assert.strictEqual(sparseRow.packageStatusLabel, '课包有余额', '列表课包状态不能因为展示文本缺失而变空');
+  assert.strictEqual(sparseRow.paymentModeLabel, '课包学员', '列表付费类型不能因为展示文本缺失而变空');
+  assert.strictEqual(sparseRow.activityStatusLabel, '近30天活跃', '列表活跃状态不能因为展示文本缺失而变空');
+
   const inactiveNameSearchRes = {};
   await bulk.handler({
     path: '/page-data/customer-center-list',

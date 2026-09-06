@@ -596,24 +596,31 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(bundleSummary.res.body.detailStudentView.packageBalanceText, '0/10');
 
   const inconsistent = await requestInconsistentStudentDetail();
-  assert.strictEqual(inconsistent.res.statusCode, 503);
+  assert.strictEqual(inconsistent.res.statusCode, 200);
   assert.strictEqual(inconsistent.calls.cappedScan, 0, 'inconsistent teaching summary must not scan production fact tables from the drawer');
-  assert.strictEqual(inconsistent.res.body.code, 'STUDENT_DETAIL_SUMMARY_NOT_READY');
+  assert.strictEqual(inconsistent.res.body.studentDetailSummaryNeedsRefresh, true, 'inconsistent teaching summary should open the drawer with a refresh marker');
+  assert.ok(Array.isArray(inconsistent.res.body.detailStudentView.detailPackageOrderRows), 'drawer fallback must keep package rows as an array');
+  assert.ok(Array.isArray(inconsistent.res.body.detailStudentView.detailLessonRecordRows), 'drawer fallback must keep lesson rows as an array');
 
   const emptySummary = await requestEmptySummaryWithTrialFactsStudentDetail();
-  assert.strictEqual(emptySummary.res.statusCode, 503);
+  assert.strictEqual(emptySummary.res.statusCode, 200);
   assert.strictEqual(emptySummary.calls.cappedScan, 0, 'empty teaching summary detail must return a controlled not-ready state instead of scanning fact tables');
-  assert.strictEqual(emptySummary.res.body.code, 'STUDENT_DETAIL_SUMMARY_NOT_READY');
+  assert.strictEqual(emptySummary.res.body.studentDetailSummaryNeedsRefresh, true, 'empty teaching summary should still open the drawer');
+  assert.ok(Array.isArray(emptySummary.res.body.detailStudentView.detailPackageOrderRows), 'empty summary package rows must be an array');
+  assert.ok(Array.isArray(emptySummary.res.body.detailStudentView.detailLessonRecordRows), 'empty summary lesson rows must be an array');
 
   const legacyVersion = await requestLegacyVersionSmallClassStudentDetail();
-  assert.strictEqual(legacyVersion.res.statusCode, 503);
+  assert.strictEqual(legacyVersion.res.statusCode, 200);
   assert.strictEqual(legacyVersion.calls.cappedScan, 0, 'legacy lesson summary version must not force a fresh fact read from the drawer');
-  assert.strictEqual(legacyVersion.res.body.code, 'STUDENT_DETAIL_SUMMARY_NOT_READY');
+  assert.strictEqual(legacyVersion.res.body.studentDetailSummaryNeedsRefresh, true, 'legacy lesson summary should open the drawer with existing snapshot rows');
+  assert.strictEqual(legacyVersion.res.body.detailStudentView.detailPackageOrderRows.length, 1);
+  assert.strictEqual(legacyVersion.res.body.detailStudentView.detailLessonRecordRows.length, 2);
 
   const mergedStaleSummary = await requestMergedStudentWithStaleSummaryDetail();
-  assert.strictEqual(mergedStaleSummary.res.statusCode, 503);
+  assert.strictEqual(mergedStaleSummary.res.statusCode, 200);
   assert.strictEqual(mergedStaleSummary.calls.cappedScan, 0, 'stale merged-student summaries must not trigger production fact scans from the drawer');
-  assert.strictEqual(mergedStaleSummary.res.body.code, 'STUDENT_DETAIL_SUMMARY_NOT_READY');
+  assert.strictEqual(mergedStaleSummary.res.body.studentDetailSummaryNeedsRefresh, true, 'stale merged-student summary should open the drawer instead of failing');
+  assert.strictEqual(mergedStaleSummary.res.body.detailStudentView.name, '王先生（阿萌）');
   console.log('student detail fast path tests passed');
 })().catch(err => {
   console.error(err);

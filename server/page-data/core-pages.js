@@ -72,6 +72,51 @@ function studentTeachingSummaryStaleForStudent(summary={},student={}){
   return !summaryAt||summaryAt<mergedAt;
 }
 
+function pageDataArraySnapshot(value){
+  return Array.isArray(value)?value:parseSnapshotArray(value);
+}
+
+function buildStudentDetailFastPayload({student={},studentTeachingSummary=null,studentId='',needsRefresh=false}={}){
+  const summary=studentTeachingSummary||{};
+  const detailStudentView={
+    ...student,
+    ...summary,
+    id:studentId,
+    studentId,
+    name:student.name||summary.name||summary.displayName||'',
+    displayName:student.name||summary.displayName||summary.name||'',
+    phone:student.phone||summary.phone||'',
+    type:student.type||summary.type||'',
+    source:student.source||summary.source||'',
+    campus:student.campus||summary.campus||'',
+    primaryCoach:student.primaryCoach||summary.primaryCoach||'',
+    notes:Object.prototype.hasOwnProperty.call(student,'notes')?String(student.notes||''):String(summary.notes||''),
+    profileNote:student.profileNote||summary.profileNote||'',
+    detailPackageOrderRows:pageDataArraySnapshot(summary.detailPackageOrderRows),
+    detailLessonRecordRows:pageDataArraySnapshot(summary.detailLessonRecordRows),
+    detailBenefitRows:pageDataArraySnapshot(summary.detailBenefitRows),
+    detailBenefitGrantRows:pageDataArraySnapshot(summary.detailBenefitGrantRows),
+    detailBenefitConsumeRows:pageDataArraySnapshot(summary.detailBenefitConsumeRows),
+    detailRecentFeedbackRows:pageDataArraySnapshot(summary.detailRecentFeedbackRows),
+    studentDetailSummaryNeedsRefresh:!!needsRefresh
+  };
+  const customerLifecycleRows=buildCustomerLifecycleRows({students:[student]});
+  return {
+    students:[student],
+    purchases:[],
+    packages:[],
+    entitlements:[],
+    entitlementLedger:[],
+    schedule:[],
+    membershipBenefitLedger:[],
+    feedbacks:[],
+    customerLifecycleRows,
+    teachingStudentViews:{historicalStudents:[detailStudentView],activeStudents:[detailStudentView],courseStudents:[detailStudentView],trialStudents:[],formalStudents:[detailStudentView]},
+    detailStudentView,
+    studentDetailSummaryNeedsRefresh:!!needsRefresh
+  };
+}
+
 function textSearchHit(q,...values){
   const keyword=String(q||'').trim().toLowerCase();
   if(!keyword)return true;
@@ -337,45 +382,11 @@ function createCorePageDataRoutes(deps={}){
       const student=await getCachedRow(T_STUDENTS,studentId).catch(()=>null);
       if(!student)return sendJson(res,{error:'学员不存在'},404);
       const studentTeachingSummary=await readStudentTeachingSummaryRow(studentId);
-      const canUseStudentTeachingSummary=studentTeachingSummary
-        && String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()===TEACHING_LESSON_DETAIL_SOURCE_VERSION
-        && !studentTeachingSummaryStaleForStudent(studentTeachingSummary,student)
-        && !teachingSummaryNeedsLessonFacts(studentTeachingSummary,new Date());
-      if(canUseStudentTeachingSummary){
-        const customerLifecycleRows=buildCustomerLifecycleRows({students:[student]});
-        const detailStudentView={
-          ...student,
-          ...studentTeachingSummary,
-          id:studentId,
-          studentId,
-          name:student.name||studentTeachingSummary.name||studentTeachingSummary.displayName||'',
-          displayName:student.name||studentTeachingSummary.displayName||studentTeachingSummary.name||'',
-          phone:student.phone||studentTeachingSummary.phone||'',
-          type:student.type||studentTeachingSummary.type||'',
-          source:student.source||studentTeachingSummary.source||'',
-          campus:student.campus||studentTeachingSummary.campus||'',
-          primaryCoach:student.primaryCoach||studentTeachingSummary.primaryCoach||'',
-          notes:Object.prototype.hasOwnProperty.call(student,'notes')?String(student.notes||''):String(studentTeachingSummary.notes||''),
-          profileNote:student.profileNote||studentTeachingSummary.profileNote||''
-        };
-        return sendJson(res,{
-          students:[student],
-          purchases:[],
-          packages:[],
-          entitlements:[],
-          entitlementLedger:[],
-          schedule:[],
-          membershipBenefitLedger:[],
-          feedbacks:[],
-          customerLifecycleRows,
-          teachingStudentViews:{historicalStudents:[detailStudentView],activeStudents:[detailStudentView],courseStudents:[detailStudentView],trialStudents:[],formalStudents:[detailStudentView]},
-          detailStudentView
-        });
-      }
-      return sendJson(res,{
-        error:'学员详情读模型未准备好，请刷新学员摘要后重试',
-        code:'STUDENT_DETAIL_SUMMARY_NOT_READY'
-      },503);
+      const needsRefresh=!studentTeachingSummary
+        || String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()!==TEACHING_LESSON_DETAIL_SOURCE_VERSION
+        || studentTeachingSummaryStaleForStudent(studentTeachingSummary,student)
+        || teachingSummaryNeedsLessonFacts(studentTeachingSummary,new Date());
+      return sendJson(res,buildStudentDetailFastPayload({student,studentTeachingSummary,studentId,needsRefresh}));
     }
     if(path==='/page-data/purchases'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
