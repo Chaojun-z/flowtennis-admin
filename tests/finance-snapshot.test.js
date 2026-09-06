@@ -122,6 +122,25 @@ assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==
 assert.strictEqual(snapshot.financeSettlementRows[0].month, '2026-04', 'finance settlement snapshot should pre-aggregate by month');
 assert.strictEqual(snapshot.financeSettlementRows[0].lessonUnits, 1, 'finance settlement snapshot should count finished lesson units');
 
+const courtBusinessTypeSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  courts:[{
+    id:'court-business-types',
+    name:'订场类型测试',
+    campus:'shunyi_mapo',
+    history:[
+      { id:'member-booking', type:'消费', date:'2026-08-27', category:'会员订场', payMethod:'储值扣款', amount:100, startTime:'10:00', endTime:'11:00' },
+      { id:'guest-booking', type:'消费', date:'2026-08-27', category:'散客订场', payMethod:'微信', amount:110, startTime:'11:00', endTime:'12:00' },
+      { id:'course-booking', type:'消费', date:'2026-08-27', category:'课程订场', payMethod:'课包划扣', amount:120, startTime:'12:00', endTime:'13:00' },
+      { id:'leader-booking', type:'消费', date:'2026-08-27', category:'领导订场', payMethod:'赠送', amount:0, startTime:'13:00', endTime:'14:00' },
+      { id:'internal-use', type:'消费', date:'2026-08-27', category:'内部使用', payMethod:'赠送', amount:0, startTime:'14:00', endTime:'15:00' },
+      { id:'match-booking', type:'消费', date:'2026-08-27', category:'约球局', sourceCategory:'约球订场', payMethod:'微信', amount:130, startTime:'15:00', endTime:'16:00' }
+    ]
+  }]
+});
+const courtBusinessTypes = courtBusinessTypeSnapshot.financeNormalizedRows.map(row=>row.businessType).sort();
+assert.deepStrictEqual(courtBusinessTypes, ['会员订场','内部使用','散客订场','约球局','课程订场','领导订场'].sort(), 'finance snapshot should preserve the six standard court booking business types');
+
 const membershipTraceSnapshot = _test.buildFinancePageSnapshot({
   membershipOrders:[{
     id:'member-order-trace-only',

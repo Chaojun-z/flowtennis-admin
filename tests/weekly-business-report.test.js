@@ -20,6 +20,7 @@ const indexHtml = fs.readFileSync(path.join(repoRoot, 'public/index.html'), 'utf
 const weeklyPageSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/pages/weekly-reports.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/state.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/bootstrap.js'), 'utf8');
+const componentsSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/components.js'), 'utf8');
 const publicApiSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/api.js'), 'utf8');
 const operationsPageSource = fs.readFileSync(path.join(repoRoot, 'server/page-data/operations-page.js'), 'utf8');
 
@@ -134,8 +135,28 @@ const noFakeSourceSnapshot = buildWeeklyBusinessReportSnapshot({
 });
 assert.strictEqual(noFakeSourceSnapshot.sections.revenue.course.totalPeople, null, 'weekly report must not borrow conversion data as course income people');
 assert.strictEqual(noFakeSourceSnapshot.sections.court.totalAvailableHours, null, 'weekly report must not invent court capacity from active venue count');
-assert.deepStrictEqual(noFakeSourceSnapshot.sections.court.usageRows.map(row => row.hours), [0, 0, 0, 0], 'weekly report must not fake guest usage when type mix rows are missing');
+assert.deepStrictEqual(noFakeSourceSnapshot.sections.court.usageRows.map(row => row.hours), [0, 0, 0, 0, 0, 0], 'weekly report must not fake guest usage when type mix rows are missing');
 assert.strictEqual(noFakeSourceSnapshot.sections.coach.totalScheduled, 81, 'coach scheduled hours must equal all listed course type hours even when lessonCount conflicts');
+
+const financeOnlyCourtSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 1 } } } },
+    weeklyReportRaw: {
+      financeNormalizedRows: [
+        { id: 'finance-only-member', businessDate: '2026-08-28', businessType: '会员订场', displayBusinessType: '场地 / 会员订场', cashDelta: 0, recognizedRevenueDelta: 88, timeText: '09:00-10:00' },
+        { id: 'finance-only-match', businessDate: '2026-08-28', businessType: '约球局', displayBusinessType: '场地 / 约球局', cashDelta: 120, recognizedRevenueDelta: 120, timeText: '10:00-11:30' }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: {} },
+  shareToken: 'token-finance-only',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(financeOnlyCourtSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 1, 'weekly report should count member booking hours from finance rows even when court history is absent');
+assert.strictEqual(financeOnlyCourtSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.amount, 88, 'weekly report should count member booking recognized revenue from finance rows even when court history is absent');
+assert.strictEqual(financeOnlyCourtSnapshot.sections.court.usageRows.find(row => row.key === 'match')?.hours, 1.5, 'weekly report should keep match booking as an independent standard court type from finance rows');
+assert.strictEqual(financeOnlyCourtSnapshot.sections.court.actualUsedHours, 2.5, 'weekly report should expose total court usage hours from finance-only court rows');
 
 const rawSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
@@ -164,8 +185,22 @@ const rawSnapshot = buildWeeklyBusinessReportSnapshot({
       entitlements: [{ id: 'ent-a', studentId: 'stu-a', remainingLessons: 0, depletedAt: '2026-09-01', campus: 'shunyi_mapo' }],
       financeNormalizedRows: [
         { id: 'consume-a', businessDate: '2026-08-30', businessType: '课程', action: '消耗', recognizedRevenueDelta: 600 },
-        { id: 'guest-finance-a', businessDate: '2026-08-30', businessType: '场地 / 散客订场', cashDelta: 180 },
-        { id: 'member-finance-a', businessDate: '2026-08-31', businessType: '场地 / 会员订场', cashDelta: 120 }
+        { id: 'guest-finance-a', businessDate: '2026-08-30', businessType: '散客订场', displayBusinessType: '场地 / 散客订场', cashDelta: 180, recognizedRevenueDelta: 180, startTime: '10:00', endTime: '11:00' },
+        { id: 'member-finance-a', businessDate: '2026-08-31', businessType: '会员订场', displayBusinessType: '场地 / 会员订场', cashDelta: 0, recognizedRevenueDelta: 120, timeText: '11:00-12:30' },
+        { id: 'course-finance-a', businessDate: '2026-08-31', businessType: '课程订场', displayBusinessType: '场地 / 课程订场', cashDelta: 0, recognizedRevenueDelta: 0, timeText: '12:30-13:30' },
+        { id: 'leader-finance-a', businessDate: '2026-09-01', businessType: '领导订场', displayBusinessType: '场地 / 领导订场', cashDelta: 0, recognizedRevenueDelta: 0, timeText: '13:30-14:30' },
+        { id: 'internal-finance-a', businessDate: '2026-09-01', businessType: '内部使用', displayBusinessType: '场地 / 内部使用', cashDelta: 0, recognizedRevenueDelta: 0, timeText: '14:30-15:30' },
+        { id: 'match-finance-a', businessDate: '2026-09-02', businessType: '约球局', displayBusinessType: '场地 / 约球局', cashDelta: 200, recognizedRevenueDelta: 200, timeText: '15:30-17:00' }
+      ],
+      membershipAccounts: [
+        { id: 'member-account-a', courtId: 'court-member-a', status: 'active', createdAt: '2026-08-01' },
+        { id: 'member-account-b', courtId: 'court-member-b', status: 'active', createdAt: '2026-08-28' },
+        { id: 'member-account-voided', courtId: 'court-voided', status: 'voided', createdAt: '2026-08-28' }
+      ],
+      membershipOrders: [
+        { id: 'member-order-a', membershipAccountId: 'member-account-a', courtId: 'court-member-a', status: 'active', rechargeAmount: 1000, purchaseDate: '2026-08-01' },
+        { id: 'member-order-b', membershipAccountId: 'member-account-b', courtId: 'court-member-b', status: 'active', rechargeAmount: 2000, purchaseDate: '2026-08-28' },
+        { id: 'member-order-voided', membershipAccountId: 'member-account-voided', courtId: 'court-voided', status: 'voided', rechargeAmount: 9999, purchaseDate: '2026-08-28' }
       ],
       schedule: [
         { id: 'coach-current', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已排课', campus: 'shunyi_mapo' },
@@ -200,12 +235,19 @@ assert.strictEqual(rawSnapshot.sections.revenue.course.renewalPeople, 1, 'course
 assert.strictEqual(rawSnapshot.sections.revenue.course.renewalAmount, 3000, 'course renewal amount should sum non-first private package payments');
 assert.strictEqual(rawSnapshot.sections.revenue.course.consumedAmount, 600, 'course consumed amount should come from course consume finance rows');
 assert.strictEqual(rawSnapshot.sections.revenue.course.expiringPeople, 1, 'course depleted people should count depleted package holders in period');
-  assert.strictEqual(rawSnapshot.sections.court.totalAvailableHours, 392, 'court available hours should use 4 courts * 14 hours * 7 days');
+assert.strictEqual(rawSnapshot.sections.revenue.storedValue.totalMembers, 2, 'stored value report should count active membership accounts from the membership read source');
+assert.strictEqual(rawSnapshot.sections.revenue.storedValue.newMembers, 1, 'stored value report should count new active membership accounts in the report period');
+assert.strictEqual(rawSnapshot.sections.revenue.storedValue.totalAmount, 3000, 'stored value report should sum valid membership orders');
+assert.strictEqual(rawSnapshot.sections.revenue.storedValue.newAmount, 2000, 'stored value report should sum valid membership orders in the report period');
+assert.strictEqual(rawSnapshot.sections.court.totalAvailableHours, 392, 'court available hours should use 4 courts * 14 hours * 7 days');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'guest')?.amount, 100, 'court history should remain the first source for guest booking amount');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.amount, 120, 'court finance rows should backfill member booking amount when court history is missing');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.count, 1, 'court finance rows should backfill member booking count when court history is missing');
-assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 2, 'course court usage should include scheduled lesson court time');
+assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 1.5, 'court finance rows should backfill member booking hours when court history is missing');
+assert.strictEqual(rawSnapshot.sections.court.usageRows.map(row => row.label).join('|'), '会员订场|散客订场|课程订场|领导订场|内部使用|约球局', 'weekly report should display the six standard court booking types');
+assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 3, 'course court usage should include course booking rows and scheduled lesson court time');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'free')?.amount, 0, 'free court usage actual amount should be zero');
+assert.strictEqual(rawSnapshot.summary.courtUsageHours.value, rawSnapshot.sections.court.actualUsedHours, 'weekly report list summary should expose court usage hours from report sections');
 assert.strictEqual(rawSnapshot.sections.coach.rows.length, 1, 'coach report should only show active coaches with current-period schedules');
 assert.strictEqual(rawSnapshot.sections.coach.rows[0].coach, '朝珺教练', 'inactive and no-schedule coaches should be excluded from coach report');
 assert.strictEqual(rawSnapshot.sections.coach.rows[0].scheduledCount, 2, 'coach current scheduled column should use current week hours');
@@ -241,7 +283,7 @@ assert.match(html, /总场地利用率/, 'hero should show lifetime court utiliz
 assert.match(html, /总私教课人数/, 'hero should show lifetime private course people label');
 assert.match(html, /本周收入[\s\S]*本周已入账[\s\S]*本周场地利用率[\s\S]*本周教练课时[\s\S]*本周线索数/, 'top weekly metrics should use requested labels');
 assert.match(html, /12,000 元/, 'numbers should use thousands separators');
-assert.match(html, /会员场地使用/, 'HTML should render member court usage row');
+assert.match(html, /会员订场[\s\S]*散客订场[\s\S]*课程订场[\s\S]*领导订场[\s\S]*内部使用[\s\S]*约球局/, 'HTML should render all standard court booking type rows');
 assert.match(html, /王教练/, 'HTML should render coach data rows');
 assert.match(html, /小红书/, 'HTML should render lead source rows');
 assert.doesNotMatch(html, /<td>-<\/td><td>-<\/td><td>-<\/td><td>-<\/td>/, 'HTML should not render rows with all empty metric cells when source data exists');
@@ -289,11 +331,15 @@ assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the w
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
 assert.match(indexHtml, /api\.js\?v=20260904-weekly-report-share-v1/, 'admin shell should bust public weekly report share script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
-assert.match(weeklyPageSource, /重新生成本周周报/, 'admin page should allow manual regeneration');
+assert.doesNotMatch(weeklyPageSource, /顺义马坡每周周报|重新生成本周周报|editWeeklyReportRemark/, 'admin weekly report list should remove the old title block, top regenerate button and remark action');
+assert.match(weeklyPageSource, /周次[\s\S]*场地使用时长[\s\S]*查看[\s\S]*复制链接[\s\S]*重新生成/, 'admin weekly report list should show the requested columns and row actions');
+assert.match(weeklyPageSource, /toLocaleString\('zh-CN'[\s\S]*Asia\/Shanghai/, 'admin weekly report list should format generated time in Beijing time');
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');
 assert.match(weeklyPageSource, /sticky:\s*true/, 'manual regeneration should keep the loading toast visible until completion');
+assert.match(bootstrapSource, /'weekly-reports':'马坡周报'/, 'top page title should be renamed to Mapo weekly report');
+assert.match(componentsSource, /马坡周报/, 'sidebar and mobile navigation should be renamed to Mapo weekly report');
 assert.match(bootstrapSource, /options\.sticky/, 'toast helper should support sticky loading messages');
-assert.match(weeklyPageSource, /tms-toolbar/, 'admin page should use the standard toolbar layout');
+assert.doesNotMatch(weeklyPageSource, /tms-toolbar/, 'admin page should not render the removed weekly report title toolbar');
 assert.match(weeklyPageSource, /tms-btn tms-btn-ghost/, 'admin page action buttons should use standard button styles');
 assert.strictEqual((stateSource.match(/renderWeeklyReports\(\)/g) || []).length, 1, 'weekly reports page should render once per page data render');
 assert.match(stateSource, /currentPage==='weekly-reports'\)return/, 'weekly report admin page should not auto-refresh on focus, visibility, or interval sync');
@@ -382,19 +428,49 @@ async function callExistingReportManualRegeneration() {
     mkTable: async () => {},
     get: async () => ({ ...snapshot, id: 'weekly:顺义马坡:2026-08-27:2026-09-03', shareToken: 'existing-token', status: 'success' }),
     put: async (_table, _id, row) => { savedRows.push(row); },
-    loadOperationsPayload: async () => {
+    loadOperationsPayload: async ({ scope }) => {
       liveLoads += 1;
-      throw new Error('已有周报重新生成不应现场读取大量数据');
+      if (scope?.dateRange?.startDate === period.startDate) return operationsPayload;
+      if (scope?.dateRange?.startDate === period.previousStartDate) return { operations: { overview: { cards: { totalIncome: { value: 100 } } } } };
+      return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
     },
     loadOperationsSnapshot: async () => {
       snapshotLoads += 1;
-      throw new Error('已有周报重新生成不应读取经营快照');
+      return null;
     }
   });
   return { result, savedRows, liveLoads, snapshotLoads, elapsedMs: Date.now() - startedAt };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration()]).then(([result, editResult, generationResult, existingGenerationResult]) => {
+async function callTargetPeriodRegenerationRoute() {
+  let generatedPeriod = null;
+  let json = null;
+  const routes = createWeeklyBusinessReportRoutes({
+    init: async () => {},
+    sendJson: (_res, value) => { json = value; return value; },
+    get: async () => null,
+    put: async () => {},
+    mkTable: async () => {},
+    buildOperationsPayload: async ({ scope }) => {
+      if (scope?.dateRange?.startDate === '2026-08-27') generatedPeriod = scope.dateRange;
+      return operationsPayload;
+    },
+    loadOperationsSnapshot: async () => null,
+    webhook: '',
+    table: 'ft_weekly_business_reports'
+  });
+  await routes.handleAdmin({
+    path: '/admin/weekly-business-reports/regenerate',
+    method: 'POST',
+    body: { period: { startDate: '2026-08-27', endDate: '2026-09-03' } },
+    req: { headers: {} },
+    res: {},
+    user: { role: 'admin' }
+  });
+  return { json, generatedPeriod };
+}
+
+Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration(), callTargetPeriodRegenerationRoute()]).then(([result, editResult, generationResult, existingGenerationResult, targetPeriodResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /1、收入数据/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -407,11 +483,14 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
   assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
-  assert.strictEqual(existingGenerationResult.liveLoads, 0, 'manual regeneration for an existing report should not live-load source data');
-  assert.strictEqual(existingGenerationResult.snapshotLoads, 0, 'manual regeneration for an existing report should not wait for operations snapshots');
+  assert.strictEqual(existingGenerationResult.liveLoads, 3, 'manual regeneration for an existing report should re-read source data for current, previous and lifetime views');
+  assert.strictEqual(existingGenerationResult.snapshotLoads, 0, 'manual regeneration for an existing report should bypass old operations snapshots');
   assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
   assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
+  assert.strictEqual(targetPeriodResult.generatedPeriod.startDate, '2026-08-27', 'row regenerate route should use the requested report period');
+  assert.strictEqual(targetPeriodResult.generatedPeriod.endDate, '2026-09-03', 'row regenerate route should use the requested report end date');
+  assert.strictEqual(targetPeriodResult.json.success, true, 'row regenerate route should return success for the requested period');
   console.log('weekly business report tests passed');
 }).catch(err => {
   console.error(err);

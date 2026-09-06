@@ -28,15 +28,39 @@ function createWeeklyBusinessReportRoutes({
     return String(publicBaseUrl || process.env.PUBLIC_BASE_URL || 'https://www.flowtennis.cn').replace(/\/+$/, '');
   }
 
-  async function runReport({ req, mode = 'auto', now = new Date() } = {}) {
-    const period = resolveWeeklyBusinessReportPeriod(now);
+  function addUtcDays(day, offset) {
+    const match = String(day || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return '';
+    const ms = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return new Date(ms + offset * 86400000).toISOString().slice(0, 10);
+  }
+
+  function periodFromRequest(body = {}, now = new Date()) {
+    const requested = body?.period || {};
+    const reportId = String(body?.reportId || '').trim();
+    const match = reportId.match(/^weekly:[^:]+:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/);
+    const startDate = String(requested.startDate || match?.[1] || '').slice(0, 10);
+    const endDate = String(requested.endDate || match?.[2] || '').slice(0, 10);
+    if (!startDate || !endDate) return resolveWeeklyBusinessReportPeriod(now);
+    const previousEndDate = addUtcDays(startDate, -1);
+    return {
+      startDate,
+      endDate,
+      previousEndDate,
+      previousStartDate: addUtcDays(previousEndDate, -7),
+      timezone: 'Asia/Shanghai'
+    };
+  }
+
+  async function runReport({ req, mode = 'auto', now = new Date(), period = null } = {}) {
+    const targetPeriod = period || resolveWeeklyBusinessReportPeriod(now);
     const snapshot = await generateWeeklyBusinessReport({
       loadOperationsPayload: buildOperationsPayload,
       loadOperationsSnapshot,
       get,
       put,
       mkTable,
-      period,
+      period: targetPeriod,
       baseUrl: baseUrl(req || { headers: {} }),
       generationMode: mode,
       table
@@ -103,7 +127,7 @@ function createWeeklyBusinessReportRoutes({
     if (path === '/admin/weekly-business-reports/regenerate' && method === 'POST') {
       if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
       await init();
-      return sendJson(res, await runReport({ req, mode: 'manual' }));
+      return sendJson(res, await runReport({ req, mode: 'manual', period: periodFromRequest(body) }));
     }
     if (path.startsWith('/admin/weekly-business-reports/') && path.endsWith('/remark') && method === 'POST') {
       if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);

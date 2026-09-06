@@ -39,13 +39,21 @@ function applyStandardFinanceFields(row){
   };
 }
 function financeCourtHistoryBusinessType(row){
+  const businessType=String(row?.businessType||'').trim();
   const category=String(row?.category||'');
   const sourceCategory=String(row?.sourceCategory||'');
   const payMethod=String(row?.payMethod||'').trim();
+  const haystack=`${businessType} ${category} ${sourceCategory}`;
+  const isCourtLike=/订场|场地|约球|领导|内部/.test(haystack);
   if(row?.type==='充值')return '会员储值';
-  if(sourceCategory.includes('约球订场'))return '约球局';
+  if(businessType==='约球局'||sourceCategory.includes('约球订场')||haystack.includes('约球'))return '约球局';
+  if(businessType==='会员订场'||haystack.includes('会员订场')||(isCourtLike&&(payMethod==='储值扣款'||payMethod==='储值卡'||payMethod.includes('储值'))))return '会员订场';
+  if(businessType==='课程订场'||haystack.includes('课程订场'))return '课程订场';
+  if(businessType==='领导订场'||haystack.includes('领导'))return '领导订场';
+  if(businessType==='内部使用'||haystack.includes('内部使用')||haystack.includes('内部占用'))return '内部使用';
+  if(businessType==='散客订场'||haystack.includes('散客订场'))return '散客订场';
   if(category.includes('订场')){
-    if(payMethod==='储值扣款'||payMethod==='储值卡'||payMethod.includes('储值')||category.includes('会员'))return '会员订场';
+    if(category.includes('会员'))return '会员订场';
     return '散客订场';
   }
   if(/课|班课|训练营|体验/.test(category))return '课程';

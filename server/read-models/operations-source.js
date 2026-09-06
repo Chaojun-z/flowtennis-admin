@@ -24,7 +24,8 @@ const OPERATIONS_PURCHASE_FIELDS = [
   'coachPriceName', 'coachPriceSnapshot', 'coachNames', 'allowedCoaches', 'campusIds'
 ];
 const OPERATIONS_ENTITLEMENT_FIELDS = [
-  'id', 'studentId', 'purchaseId', 'packageId', 'campus', 'campusName', 'campusIds'
+  'id', 'studentId', 'purchaseId', 'packageId', 'campus', 'campusName', 'campusIds',
+  'remainingLessons', 'depletedAt', 'updatedAt', 'lastConsumedAt', 'createdAt'
 ];
 const OPERATIONS_ENTITLEMENT_LEDGER_FIELDS = [
   'id', 'entitlementId', 'studentId', 'purchaseId', 'scheduleId',
@@ -44,8 +45,8 @@ const OPERATIONS_FOLLOWUP_FIELDS = [
   'id', 'leadId', 'followupAt', 'createdAt', 'followupBy', 'followupType',
   'communicationNote', 'concern', 'conclusion', 'statusAfter', 'nextFollowupAt', 'nextAction'
 ];
-const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['courtId', 'sourceLeadId', 'leadId', 'fromLeadId', 'status', 'createdAt'];
-const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['courtId', 'rechargeAmount', 'amount', 'status', 'purchaseDate', 'createdAt'];
+const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['id', 'courtId', 'sourceLeadId', 'leadId', 'fromLeadId', 'status', 'createdAt', 'cycleStartDate', 'openedAt', 'firstOpenDate'];
+const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['id', 'membershipAccountId', 'courtId', 'courtName', 'rechargeAmount', 'finalAmount', 'amount', 'bonusAmount', 'status', 'purchaseDate', 'paidAt', 'paymentTime', 'createdAt', 'campus', 'campusName'];
 const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus', 'sortOrder'];
 const OPERATIONS_FEEDBACK_FIELDS = ['id', 'scheduleId', 'studentId', 'studentIds', 'coach', 'coachName', 'createdAt', 'updatedAt'];
 const OPERATIONS_SCHEDULE_FIELDS = [
