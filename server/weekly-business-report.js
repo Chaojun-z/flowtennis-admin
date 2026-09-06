@@ -1607,12 +1607,15 @@ async function generateWeeklyBusinessReport({
       throw error;
     });
   };
-  const snapshotPayloads = typeof loadOperationsSnapshot === 'function'
-    ? await Promise.all([loadSnapshotPayload(scope), loadSnapshotPayload(previousScope), loadSnapshotPayload(totalScope)])
-    : [null, null, null];
-  let operationsPayload = snapshotPayloads[0];
-  let previousOperationsPayload = snapshotPayloads[1];
-  let totalOperationsPayload = snapshotPayloads[2];
+  const snapshotPayloads = [];
+  if (typeof loadOperationsSnapshot === 'function') {
+    for (const targetScope of [scope, previousScope, totalScope]) {
+      snapshotPayloads.push(await loadSnapshotPayload(targetScope));
+    }
+  }
+  let operationsPayload = snapshotPayloads[0] || null;
+  let previousOperationsPayload = snapshotPayloads[1] || null;
+  let totalOperationsPayload = snapshotPayloads[2] || null;
   if (!operationsPayload) {
     operationsPayload = await loadOperationsPayload({ user, scope });
   }

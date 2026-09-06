@@ -668,7 +668,29 @@ async function callTargetPeriodRegenerationRoute() {
   return { json, generatedPeriod, webhookCalls };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute()]).then(([result, editResult, generationResult, existingGenerationResult, missingSnapshotResult, targetPeriodResult]) => {
+async function callSequentialSnapshotGeneration() {
+  let activeLoads = 0;
+  let maxActiveLoads = 0;
+  await generateWeeklyBusinessReport({
+    get: async () => null,
+    put: async () => {},
+    mkTable: async () => {},
+    loadOperationsPayload: async () => { throw new Error('snapshot generation should not fall back to live reads'); },
+    loadOperationsSnapshot: async ({ scope }) => {
+      activeLoads += 1;
+      maxActiveLoads = Math.max(maxActiveLoads, activeLoads);
+      await new Promise(resolve => setTimeout(resolve, 5));
+      activeLoads -= 1;
+      if (scope?.dateRange?.startDate === period.startDate) return operationsPayload;
+      if (scope?.dateRange?.startDate === period.previousStartDate) return { operations: { overview: { cards: { totalIncome: { value: 100 } } } } };
+      return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
+    },
+    period
+  });
+  return { maxActiveLoads };
+}
+
+Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, generationResult, existingGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /1、收入数据/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -694,6 +716,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(targetPeriodResult.generatedPeriod.endDate, '2026-09-03', 'row regenerate route should use the requested report end date');
   assert.strictEqual(targetPeriodResult.json.success, true, 'row regenerate route should return success for the requested period');
   assert.strictEqual(targetPeriodResult.webhookCalls, 0, 'manual regeneration route should not wait for Feishu webhook before responding');
+  assert.strictEqual(sequentialResult.maxActiveLoads, 1, 'weekly report regeneration should load operation snapshots sequentially to avoid TableStore getRow timeout fan-out');
   console.log('weekly business report tests passed');
 }).catch(err => {
   console.error(err);
