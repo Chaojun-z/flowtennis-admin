@@ -7,6 +7,7 @@ const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.j
 const WEEKLY_REPORT_CAMPUS_NAME = '顺义马坡';
 const WEEKLY_REPORT_TIMEZONE = 'Asia/Shanghai';
 const WEEKLY_REPORT_TABLE = 'ft_weekly_business_reports';
+const WEEKLY_REPORT_OPERATIONS_VIEW = 'weekly-report';
 const COURT_USAGE_TYPES = [
   { key: 'member', label: '会员订场' },
   { key: 'guest', label: '散客订场' },
@@ -1419,18 +1420,21 @@ async function generateWeeklyBusinessReport({
   await mkTable(table).catch(() => null);
   const scope = {
     campusName: WEEKLY_REPORT_CAMPUS_NAME,
+    view: WEEKLY_REPORT_OPERATIONS_VIEW,
     includeWeeklyReportRaw: true,
     dateRange: { startDate: period.startDate, endDate: period.endDate },
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: period.startDate, endDate: period.endDate }
   };
   const previousScope = {
     campusName: WEEKLY_REPORT_CAMPUS_NAME,
+    view: WEEKLY_REPORT_OPERATIONS_VIEW,
     includeWeeklyReportRaw: true,
     dateRange: { startDate: period.previousStartDate, endDate: period.previousEndDate },
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: period.previousStartDate, endDate: period.previousEndDate }
   };
   const totalScope = {
     campusName: WEEKLY_REPORT_CAMPUS_NAME,
+    view: WEEKLY_REPORT_OPERATIONS_VIEW,
     includeWeeklyReportRaw: false,
     dateRange: {},
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME }
@@ -1438,13 +1442,19 @@ async function generateWeeklyBusinessReport({
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
-    return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: true }).catch(() => null);
+    return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: false }).then(payload => {
+      if (!payload) throw new Error('经营分析快照为空');
+      return payload;
+    }).catch(err => {
+      const error = new Error(`周报数据快照未就绪，请等待后台快照生成后重试：${err?.message || err}`);
+      error.code = err?.code || 'WEEKLY_REPORT_SNAPSHOT_NOT_READY';
+      error.statusCode = err?.statusCode || 503;
+      throw error;
+    });
   };
-  const snapshotPayloads = await Promise.all([
-    generationMode === 'manual' ? null : loadSnapshotPayload(scope),
-    loadSnapshotPayload(previousScope),
-    loadSnapshotPayload(totalScope)
-  ]);
+  const snapshotPayloads = typeof loadOperationsSnapshot === 'function'
+    ? await Promise.all([loadSnapshotPayload(scope), loadSnapshotPayload(previousScope), loadSnapshotPayload(totalScope)])
+    : [null, null, null];
   let operationsPayload = snapshotPayloads[0];
   let previousOperationsPayload = snapshotPayloads[1];
   let totalOperationsPayload = snapshotPayloads[2];

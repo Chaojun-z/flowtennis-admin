@@ -23,6 +23,8 @@ const bootstrapSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scrip
 const componentsSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/components.js'), 'utf8');
 const publicApiSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/api.js'), 'utf8');
 const operationsPageSource = fs.readFileSync(path.join(repoRoot, 'server/page-data/operations-page.js'), 'utf8');
+const operationsSnapshotWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/operations-snapshot-rebuild.yml'), 'utf8');
+const operationsSnapshotRunnerSource = fs.readFileSync(path.join(repoRoot, 'scripts/rebuild-operations-snapshot.js'), 'utf8');
 
 const period = resolveWeeklyBusinessReportPeriod(new Date('2026-09-04T00:00:00.000Z'));
 assert.deepStrictEqual(period, {
@@ -321,8 +323,10 @@ assert.match(weeklyRoutesSource, /\/public\/weekly-business-reports\//, 'api sho
 assert.match(weeklyRoutesSource, /updateWeeklyBusinessReportPublicEdits/, 'api should expose public weekly report edit saving by share token');
 assert.match(weeklyRoutesSource, /\/weekly-business-reports/, 'api should expose admin weekly report list route');
 assert.match(weeklyReportSource, /includeWeeklyReportRaw:\s*false[\s\S]*dateRange:\s*\{\}[\s\S]*metricScope:\s*\{\s*campusName:\s*WEEKLY_REPORT_CAMPUS_NAME\s*\}/, 'weekly report lifetime summary should not load full raw rows during regeneration');
+assert.match(weeklyReportSource, /view:\s*WEEKLY_REPORT_OPERATIONS_VIEW[\s\S]*includeWeeklyReportRaw:\s*true/, 'weekly report should use a dedicated operations snapshot scope with raw report facts');
 assert.match(weeklyReportSource, /weeklyRawToBaseRows[\s\S]*baseRowsOverride[\s\S]*previousScope[\s\S]*baseRowsOverride[\s\S]*totalScope[\s\S]*baseRowsOverride/, 'weekly report regeneration should reuse one raw read for previous and lifetime metrics');
-assert.match(weeklyReportSource, /loadOperationsSnapshot[\s\S]*allowRefreshing:\s*true/, 'weekly report regeneration should prefer existing operations snapshots before live loading');
+assert.match(weeklyReportSource, /loadOperationsSnapshot[\s\S]*allowRefreshing:\s*false/, 'weekly report regeneration should require current published snapshots before saving a report');
+assert.match(weeklyReportSource, /allowRefreshing:\s*false/, 'manual weekly report generation must reject stale snapshots instead of serving old raw data');
 assert.match(apiSource, /loadOperationsSnapshot:operationsSnapshotSync\.loadSnapshot/, 'weekly report routes should receive the operations snapshot loader');
 assert.match(operationsPageSource, /baseRowsOverride = null[\s\S]*const baseRows = baseRowsOverride \|\| await loadBaseRows/, 'operations page payload should allow weekly report to reuse loaded base rows');
 assert.match(apiSource, /async function buildOperationsSnapshotPayload\(\{user,scope,baseRowsOverride\}\)/, 'operations payload wrapper should pass through reusable base rows');
@@ -354,6 +358,11 @@ assert.match(publicApiSource, /FLOWTENNIS WEEKLY/, 'public weekly report share p
 assert.match(weeklyRoutesSource, /PUBLIC_BASE_URL \|\| 'https:\/\/www\.flowtennis\.cn'/, 'weekly report share links should default to the public production domain');
 assert.match(weeklyRoutesSource, /res\.end\(renderWeeklyBusinessReportHtml\(report/, 'public route should always render with the current report template instead of serving stale stored HTML');
 assert.match(operationsPageSource, /includeWeeklyReportRaw[\s\S]*weeklyReportRaw/, 'weekly report payload should include raw source rows for report-specific metrics');
+assert.match(operationsSnapshotRunnerSource, /weeklyReportScopes: argv\.includes\('--weekly-report-scopes'\)/, 'operations snapshot runner should support weekly report snapshot scopes');
+assert.match(operationsSnapshotRunnerSource, /buildWeeklyReportScopeArgs[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: false/, 'weekly report snapshot runner should prebuild current, previous and lifetime scopes');
+assert.match(operationsSnapshotRunnerSource, /scanFirstRows: scope\?\.view === 'weekly-report'[\s\S]*storage\.getCachedScan\(table, weeklyReportScanOptions/, 'weekly report snapshot rebuild must use the offline full-read path instead of production first-row truncation');
+assert.match(operationsSnapshotWorkflow, /--weekly-report-scopes --skip-default-scope/, 'high-frequency operations snapshot workflow should prebuild weekly report scopes');
+assert.match(weeklyWorkflow, /Rebuild weekly report snapshots[\s\S]*--weekly-report-scopes --skip-default-scope[\s\S]*Trigger weekly business report/, 'weekly report workflow should rebuild weekly report snapshots before triggering the report endpoint');
 
 async function callPublicRoute() {
   let statusCode = 0;
@@ -443,7 +452,7 @@ async function callExistingReportManualRegeneration() {
     loadOperationsSnapshot: async ({ scope }) => {
       snapshotLoads += 1;
       snapshotScopes.push(scope?.dateRange?.startDate || 'lifetime');
-      if (scope?.dateRange?.startDate === period.startDate) throw new Error('manual regeneration must not use stale current-period snapshot');
+      if (scope?.dateRange?.startDate === period.startDate) return operationsPayload;
       if (scope?.dateRange?.startDate === period.previousStartDate) {
         return { operations: { overview: { cards: { totalIncome: { value: 100 } } }, court: { cards: { utilizationRate: { value: 1 } } }, coach: { cards: { usedHours: { value: 1 } } }, conversion: { cards: { totalLeads: { value: 1 } } } } };
       }
@@ -454,6 +463,33 @@ async function callExistingReportManualRegeneration() {
     }
   });
   return { result, savedRows, liveLoads, snapshotLoads, snapshotScopes, elapsedMs: Date.now() - startedAt };
+}
+
+async function callManualRegenerationWithoutSnapshot() {
+  let liveLoads = 0;
+  let json = null;
+  const routes = createWeeklyBusinessReportRoutes({
+    init: async () => {},
+    sendJson: (_res, value, statusCode = 200) => { json = { statusCode, value }; return value; },
+    get: async () => null,
+    put: async () => {},
+    mkTable: async () => {},
+    buildOperationsPayload: async () => {
+      liveLoads += 1;
+      throw new Error('missing snapshot must not fall back to slow live reads');
+    },
+    loadOperationsSnapshot: async () => null,
+    table: 'ft_weekly_business_reports'
+  });
+  await routes.handleAdmin({
+    path: '/admin/weekly-business-reports/regenerate',
+    method: 'POST',
+    body: { period: { startDate: '2026-08-27', endDate: '2026-09-03' } },
+    req: { headers: {} },
+    res: {},
+    user: { role: 'admin' }
+  });
+  return { json, liveLoads };
 }
 
 async function callTargetPeriodRegenerationRoute() {
@@ -471,11 +507,15 @@ async function callTargetPeriodRegenerationRoute() {
     get: async () => null,
     put: async () => {},
     mkTable: async () => {},
-    buildOperationsPayload: async ({ scope }) => {
-      if (scope?.dateRange?.startDate === '2026-08-27') generatedPeriod = scope.dateRange;
-      return operationsPayload;
+    buildOperationsPayload: async () => { throw new Error('row regeneration must not live-read source tables'); },
+    loadOperationsSnapshot: async ({ scope }) => {
+      if (scope?.dateRange?.startDate === '2026-08-27') {
+        generatedPeriod = scope.dateRange;
+        return operationsPayload;
+      }
+      if (scope?.dateRange?.startDate === '2026-08-19') return { operations: { overview: { cards: { totalIncome: { value: 100 } } } } };
+      return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
     },
-    loadOperationsSnapshot: async () => null,
     webhook: 'https://example.invalid/webhook',
     table: 'ft_weekly_business_reports'
   });
@@ -494,7 +534,7 @@ async function callTargetPeriodRegenerationRoute() {
   return { json, generatedPeriod, webhookCalls };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration(), callTargetPeriodRegenerationRoute()]).then(([result, editResult, generationResult, existingGenerationResult, targetPeriodResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute()]).then(([result, editResult, generationResult, existingGenerationResult, missingSnapshotResult, targetPeriodResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /1、收入数据/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -507,12 +547,15 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
   assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
-  assert.strictEqual(existingGenerationResult.liveLoads, 1, 'manual regeneration should live-read source data only once for the selected period');
-  assert.strictEqual(existingGenerationResult.snapshotLoads, 2, 'manual regeneration should use fast snapshots for previous and lifetime context');
-  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), [period.previousStartDate, 'lifetime'].sort(), 'manual regeneration must not use stale current-period snapshot');
+  assert.strictEqual(existingGenerationResult.liveLoads, 0, 'manual regeneration should not live-read source tables inside the request');
+  assert.strictEqual(existingGenerationResult.snapshotLoads, 3, 'manual regeneration should use fast snapshots for current, previous and lifetime context');
+  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), [period.startDate, period.previousStartDate, 'lifetime'].sort(), 'manual regeneration must use the weekly report snapshot scope for all report contexts');
   assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
   assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
+  assert.strictEqual(missingSnapshotResult.liveLoads, 0, 'missing weekly report snapshots must fail fast instead of scanning live source tables');
+  assert.strictEqual(missingSnapshotResult.json.statusCode, 503, 'missing weekly report snapshot should return a controlled retry status');
+  assert.match(missingSnapshotResult.json.value.error, /周报数据快照未就绪/, 'missing weekly report snapshot should explain that data snapshot is not ready');
   assert.strictEqual(targetPeriodResult.generatedPeriod.startDate, '2026-08-27', 'row regenerate route should use the requested report period');
   assert.strictEqual(targetPeriodResult.generatedPeriod.endDate, '2026-09-03', 'row regenerate route should use the requested report end date');
   assert.strictEqual(targetPeriodResult.json.success, true, 'row regenerate route should return success for the requested period');

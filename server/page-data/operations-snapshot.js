@@ -59,6 +59,7 @@ function normalizeScope(user = {}, scope = {}) {
     endDate: text(dateRange.endDate).slice(0, 10)
   };
   if (text(scope.view)) normalized.view = text(scope.view);
+  if (scope.includeWeeklyReportRaw === true) normalized.includeWeeklyReportRaw = true;
   return normalized;
 }
 
@@ -582,6 +583,7 @@ function storedScopeForNormalized(normalized = {}) {
     }
   };
   if (normalized.view) scope.view = normalized.view;
+  if (normalized.includeWeeklyReportRaw) scope.includeWeeklyReportRaw = true;
   return scope;
 }
 

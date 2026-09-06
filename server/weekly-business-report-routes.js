@@ -130,7 +130,11 @@ function createWeeklyBusinessReportRoutes({
     if (path === '/admin/weekly-business-reports/regenerate' && method === 'POST') {
       if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
       await init();
-      return sendJson(res, await runReport({ req, mode: 'manual', period: periodFromRequest(body) }));
+      try {
+        return sendJson(res, await runReport({ req, mode: 'manual', period: periodFromRequest(body) }));
+      } catch (err) {
+        return sendJson(res, { success: false, error: String(err?.message || err), code: err?.code || '' }, err.statusCode || 500);
+      }
     }
     if (path.startsWith('/admin/weekly-business-reports/') && path.endsWith('/remark') && method === 'POST') {
       if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);

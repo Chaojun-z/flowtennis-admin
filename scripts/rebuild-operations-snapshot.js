@@ -18,6 +18,7 @@ const { createStorageServices } = require('../server/storage.js');
 const { DEFAULT_CAMPUSES } = require('../server/bootstrap.js');
 const { buildOperationsPagePayload, getOperationsPageScope } = require('../server/page-data/operations-page.js');
 const { COACH_DAILY_MONTH_PACK_VIEW, createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
+const { WEEKLY_REPORT_CAMPUS_NAME, resolveWeeklyBusinessReportPeriod } = require('../server/weekly-business-report.js');
 const { normalizeCampusValue, displayCampusName } = require('../public/assets/scripts/core/campus.js');
 
 const TABLES = {
@@ -61,6 +62,8 @@ function parseArgs(argv = []) {
     commonScopes: argv.includes('--common-scopes'),
     dailyScopes: argv.includes('--daily-scopes'),
     dailyMonthScopes: argv.includes('--daily-month-scopes'),
+    weeklyReportScopes: argv.includes('--weekly-report-scopes'),
+    includeWeeklyReportRaw: argv.includes('--include-weekly-report-raw'),
     skipDefaultScope: argv.includes('--skip-default-scope'),
     dailyFrom: value('--daily-from'),
     dailyTo: value('--daily-to'),
@@ -225,7 +228,7 @@ function buildDailyMonthScopeArgs(args = {}, bounds = {}, campuses = []) {
 function shardScopeArgs(scopes = [], args = {}) {
   const seen = new Set();
   const uniqueScopes = scopes.filter((item) => {
-    const key = [item.campus || '', item.campusName || '', item.startDate || '', item.endDate || '', item.view || ''].join('|');
+    const key = [item.campus || '', item.campusName || '', item.startDate || '', item.endDate || '', item.view || '', item.includeWeeklyReportRaw ? 'raw' : ''].join('|');
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -234,6 +237,18 @@ function shardScopeArgs(scopes = [], args = {}) {
   const shardIndex = Math.max(0, parseInt(args.shardIndex || '0', 10) || 0);
   if (shardCount <= 1) return uniqueScopes;
   return uniqueScopes.filter((_, index) => index % shardCount === shardIndex % shardCount);
+}
+
+function buildWeeklyReportScopeArgs(args = {}, now = new Date()) {
+  if (!args.weeklyReportScopes) return [];
+  const period = resolveWeeklyBusinessReportPeriod(now);
+  const campusName = args.campusName || WEEKLY_REPORT_CAMPUS_NAME;
+  const campus = args.campus || '';
+  return [
+    { ...args, campus, campusName, startDate: period.startDate, endDate: period.endDate, view: 'weekly-report', includeWeeklyReportRaw: true },
+    { ...args, campus, campusName, startDate: period.previousStartDate, endDate: period.previousEndDate, view: 'weekly-report', includeWeeklyReportRaw: true },
+    { ...args, campus, campusName, startDate: '', endDate: '', view: 'weekly-report', includeWeeklyReportRaw: false }
+  ];
 }
 
 function createSnapshotStorage() {
@@ -258,7 +273,8 @@ function buildScope(args = {}) {
     if (args[key]) query.set(key, args[key]);
   });
   const scope = getOperationsPageScope(query);
-  if (args.view === COACH_DAILY_MONTH_PACK_VIEW) scope.view = COACH_DAILY_MONTH_PACK_VIEW;
+  if (args.view && args.view !== 'coach') scope.view = args.view;
+  if (args.includeWeeklyReportRaw) scope.includeWeeklyReportRaw = true;
   return scope;
 }
 
@@ -282,13 +298,19 @@ async function run(options = {}) {
     const rows = await storage.getCachedScan(TABLES.T_CAMPUSES).catch(() => []);
     return rows.length ? rows : DEFAULT_CAMPUSES.map((campus) => ({ ...campus }));
   };
+  const weeklyReportScanOptions = (table, options = {}) => ({
+    ...options,
+    pageLimit: table === TABLES.T_COURTS ? 50 : 200
+  });
   const buildPayload = ({ scope }) => buildOperationsPagePayload({
     scope,
     dateRange: scope?.dateRange || {},
     user,
     listCampusesWithDefaults,
-    getCachedScan: storage.getCachedScan,
-    scanFirstRows: storage.scanFirstRows,
+    getCachedScan: (table, options = {}) => storage.getCachedScan(table, scope?.view === 'weekly-report' ? weeklyReportScanOptions(table, options) : options),
+    scanFirstRows: scope?.view === 'weekly-report'
+      ? (table, options = {}) => storage.getCachedScan(table, weeklyReportScanOptions(table, options))
+      : storage.scanFirstRows,
     getScheduleListRows: null,
     isProductionRuntime: () => true,
     filterLoadAllForUser: helpers.filterLoadAllForUser,
@@ -312,7 +334,8 @@ async function run(options = {}) {
   const scopeArgsList = shardScopeArgs([
     ...(args.skipDefaultScope ? [] : buildCommonScopeArgs({ ...args, shardCount: 1, shardIndex: 0 }, new Date(), campusRows)),
     ...buildDailyScopeArgs(args, dailyBounds || {}, campusRows),
-    ...buildDailyMonthScopeArgs(args, dailyBounds || {}, campusRows)
+    ...buildDailyMonthScopeArgs(args, dailyBounds || {}, campusRows),
+    ...buildWeeklyReportScopeArgs(args, new Date())
   ], args);
   console.error(`[operations-snapshot] rebuilding ${scopeArgsList.length} scope(s), shard ${args.shardIndex + 1}/${args.shardCount}`);
   for (const scopeArgs of scopeArgsList) {
@@ -345,6 +368,7 @@ module.exports = {
   buildCommonScopeArgs,
   buildDailyScopeArgs,
   buildDailyMonthScopeArgs,
+  buildWeeklyReportScopeArgs,
   buildScope,
   enumerateMonths,
   enumerateDays,

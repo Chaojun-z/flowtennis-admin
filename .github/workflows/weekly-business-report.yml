@@ -16,8 +16,25 @@ jobs:
       TZ: Asia/Shanghai
       CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
       TARGET_URL: https://www.flowtennis.cn/api/cron/weekly-business-report
+      TS_ENDPOINT: ${{ secrets.FLOWTENNIS_TS_ENDPOINT }}
+      TS_INSTANCE: ${{ secrets.FLOWTENNIS_TS_INSTANCE }}
+      ALIBABA_CLOUD_ACCESS_KEY_ID: ${{ secrets.FLOWTENNIS_ALIYUN_ACCESS_KEY_ID }}
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${{ secrets.FLOWTENNIS_ALIYUN_ACCESS_KEY_SECRET }}
+      DIAG_TOKEN: ${{ secrets.DIAG_TOKEN || secrets.FLOWTENNIS_ADMIN_TOKEN }}
 
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Rebuild weekly report snapshots
+        run: node scripts/rebuild-operations-snapshot.js --write --weekly-report-scopes --skip-default-scope
+
       - name: Trigger weekly business report
         shell: bash
         run: |

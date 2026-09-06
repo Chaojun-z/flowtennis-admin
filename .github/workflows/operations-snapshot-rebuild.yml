@@ -38,3 +38,4 @@ jobs:
         run: |
           node scripts/rebuild-operations-snapshot.js --write --view coach --common-scopes --shard-count 6 --shard-index ${{ matrix.shard }}
           node scripts/rebuild-operations-snapshot.js --write --view coach --daily-month-scopes --skip-default-scope --daily-from 2026-08-01 --daily-to 2026-12-31 --shard-count 6 --shard-index ${{ matrix.shard }}
+          node scripts/rebuild-operations-snapshot.js --write --weekly-report-scopes --skip-default-scope --shard-count 6 --shard-index ${{ matrix.shard }}
