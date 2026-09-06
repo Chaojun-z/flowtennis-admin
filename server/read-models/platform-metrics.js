@@ -1419,7 +1419,7 @@ function leadBusinessDate(row = {}, lead = {}) {
   const manualLeadDate = leadDateIsManual(row, lead);
   const source = leadDateSourceValue(row, lead).toLowerCase();
   const businessDate = earliestBusinessDateText(...businessFacts);
-  const realLeadCreatedAt = trustedRealLeadCreatedAt(row, lead, businessDate) || trustedGeneratedLeadCreatedAt(lead);
+  const realLeadCreatedAt = trustedRealLeadCreatedAt(row, lead, businessDate);
   if (manualLeadDate && explicitLeadDate) return explicitLeadDate;
   if (businessDate) return businessDate;
   if (realLeadCreatedAt) return realLeadCreatedAt;
@@ -1461,8 +1461,6 @@ function generatedManualLeadDateLooksPolluted(row = {}, lead = {}) {
     row.trialAttendedAt,
     row.packagePurchaseDate,
     row.courseFirstPurchaseAt,
-    row.lastFormalLessonAt,
-    row.detailRecentLessonDate,
     row.conversionAt,
     lead.firstTouchAt,
     lead.trialAtRaw,
@@ -1470,26 +1468,19 @@ function generatedManualLeadDateLooksPolluted(row = {}, lead = {}) {
     lead.trialAttendedAt,
     lead.packagePurchaseDate,
     lead.courseFirstPurchaseAt,
-    lead.lastFormalLessonAt,
-    lead.detailRecentLessonDate,
-    lead.conversionAt,
-    lead.createdAt
+    lead.conversionAt
   );
-  if (!explicitLeadDate || !businessDate) return false;
+  const source = text(lead.leadDateSource || lead.leadDateKind || lead.leadDateOrigin || row.leadDateSource || row.leadDateKind || row.leadDateOrigin).toLowerCase();
+  if (!explicitLeadDate) return source === 'manual';
+  if (!businessDate) return source === 'manual'
+    || explicitLeadDate === text(lead.createdAt || row.createdAt)
+    || explicitLeadDate === text(lead.updatedAt || row.updatedAt);
+  if (source === 'manual') return true;
   return leadDateMs(explicitLeadDate) > leadDateMs(businessDate);
 }
 
 function isOrphanMaterializedStudentLead(lead = {}) {
   return /^lead-from-student-/.test(text(lead.id || lead.leadId));
-}
-
-function trustedGeneratedLeadCreatedAt(lead = {}) {
-  if (!isOrphanMaterializedStudentLead(lead)) return '';
-  const createdAt = text(lead.createdAt);
-  const updatedAt = text(lead.updatedAt);
-  if (!createdAt || !updatedAt) return '';
-  if (leadDateMs(createdAt) >= leadDateMs(updatedAt)) return '';
-  return createdAt;
 }
 
 function normalizeLifecycleDealType(value = '') {

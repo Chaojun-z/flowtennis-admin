@@ -252,7 +252,7 @@ function leadDateOnly(value,lead={}){
   return `${parts.year}-${String(parts.month).padStart(2,'0')}-${String(parts.day).padStart(2,'0')}`;
 }
 function leadDateInputValue(lead){
-  return leadDateOnly(lead?.leadDate||lead?.leadEnteredAt||lead?.createdAt||lead?.updatedAt,lead)||today();
+  return leadDateOnly(leadBusinessDateValue(lead),lead)||'';
 }
 function leadDateLooksManual(lead={}){
   const source=leadStandardField(lead,'leadDateSource');
@@ -280,15 +280,6 @@ function leadTrustedCreatedAtValue(lead={},businessDate=''){
   if(businessDate&&explicit===createdAt&&(!updatedAt||updatedAt===createdAt)&&leadBusinessDateCompareValue(createdAt,lead)>leadBusinessDateCompareValue(businessDate,lead))return '';
   return createdAt;
 }
-function leadTrustedGeneratedCreatedAtValue(lead={}){
-  const id=String(lead?.id||lead?.leadId||lead?.sourceLeadId||'').trim();
-  if(!/^lead-from-student-/.test(id))return '';
-  const createdAt=String(leadStandardField(lead,'createdAt')||lead?.createdAt||'').trim();
-  const updatedAt=String(leadStandardField(lead,'updatedAt')||lead?.updatedAt||'').trim();
-  if(!createdAt||!updatedAt)return '';
-  if(leadBusinessDateCompareValue(createdAt,lead)>=leadBusinessDateCompareValue(updatedAt,lead))return '';
-  return createdAt;
-}
 function leadEarliestBusinessDateValue(lead={}){
   return [
     leadStandardField(lead,'firstTouchAt'),
@@ -309,22 +300,14 @@ function leadBusinessDateValue(lead={}){
   const summarySnapshot=Boolean(lead?.hasTeachingSummarySnapshot||leadStandardField(lead,'hasTeachingSummarySnapshot'));
   const backendLeadDate=leadStandardField(lead,'leadDate');
   const generatedLead=/^lead-from-student-/.test(String(lead?.id||lead?.leadId||lead?.sourceLeadId||'').trim());
-  const trustedGeneratedCreatedAt=leadTrustedGeneratedCreatedAtValue(lead);
-  const recentLessonDates=[
-    String(leadStandardField(lead,'lastFormalLessonAt')||'').trim(),
-    String(leadStandardField(lead,'detailRecentLessonDate')||'').trim()
-  ].filter(Boolean);
-  const trustedGeneratedLeadDate=source==='system'&&generatedLead&&backendLeadDate&&backendLeadDate===trustedGeneratedCreatedAt&&!recentLessonDates.includes(backendLeadDate)?backendLeadDate:'';
   const systemLeadDate=source==='system'&&backendLeadDate&&![
     String(leadStandardField(lead,'createdAt')||lead?.createdAt||'').trim(),
     String(leadStandardField(lead,'updatedAt')||lead?.updatedAt||'').trim(),
     String(leadStandardField(lead,'leadEnteredAt')||lead?.leadEnteredAt||'').trim()
-  ].includes(backendLeadDate)?backendLeadDate:'';
+  ].includes(backendLeadDate)&&!generatedLead?backendLeadDate:'';
   return businessDate
-    || trustedGeneratedLeadDate
     || systemLeadDate
     || (summarySnapshot?'':leadTrustedCreatedAtValue(lead,businessDate))
-    || trustedGeneratedCreatedAt
     || (source==='system'?'':leadStandardField(lead,'leadDate'));
 }
 function leadDateDisplayText(lead){
@@ -752,7 +735,7 @@ function getFilteredLeads(){
     if(campusValue!=='all'&&!sameCampusValue(lead?.campus,campusValue))return false;
     return true;
   }).sort((a,b)=>{
-    const leadDateDiff = leadSortDateValue(b?.leadDate) - leadSortDateValue(a?.leadDate);
+    const leadDateDiff = leadSortDateValue(leadBusinessDateValue(b)) - leadSortDateValue(leadBusinessDateValue(a));
     if(leadDateDiff!==0)return leadDateDiff;
     const followupDiff = leadSortDateValue(b?.lastFollowupAt) - leadSortDateValue(a?.lastFollowupAt);
     if(followupDiff!==0)return followupDiff;

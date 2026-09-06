@@ -288,7 +288,7 @@ function createLeadsRoutes(deps={}){
     const systemLeadDate=cleanLeadText(row?.leadDateSource).toLowerCase()==='system';
     const storedLeadDate=systemLeadDate?'':(row?.leadDate||row?.leadEnteredAt);
     const businessDate=leadEarliestDateValue(row?.firstTouchAt,row?.trialAtRaw,row?.trialBookedAt,row?.trialAttendedAt,row?.packagePurchaseDate,row?.courseFirstPurchaseAt,row?.conversionAt,row?.enrollAtRaw,row?.formalSignupAt);
-    return storedLeadDate||businessDate||leadTrustedCreatedAtValue(row,businessDate)||leadTrustedGeneratedCreatedAtValue(row);
+    return storedLeadDate||businessDate||leadTrustedCreatedAtValue(row,businessDate);
   }
 
   function leadEarliestDateValue(...values){
@@ -307,16 +307,6 @@ function createLeadsRoutes(deps={}){
     const explicitLeadDate=cleanLeadText(row?.leadDate||row?.leadEnteredAt);
     const updatedAt=cleanLeadText(row?.updatedAt);
     if(businessDate&&explicitLeadDate===createdAt&&(!updatedAt||updatedAt===createdAt)&&leadDateMs(createdAt)>leadDateMs(businessDate))return '';
-    return createdAt;
-  }
-
-  function leadTrustedGeneratedCreatedAtValue(row={}){
-    const id=cleanLeadText(row?.id||row?.leadId||row?.sourceLeadId);
-    if(!/^lead-from-student-/.test(id))return '';
-    const createdAt=cleanLeadText(row?.createdAt);
-    const updatedAt=cleanLeadText(row?.updatedAt);
-    if(!createdAt||!updatedAt)return '';
-    if(leadDateMs(createdAt)>=leadDateMs(updatedAt))return '';
     return createdAt;
   }
 
@@ -1049,7 +1039,7 @@ function createLeadsRoutes(deps={}){
     const student=await get(T_STUDENTS,studentId).catch(()=>null);
     if(!student)return null;
     const visible=await visibleSyntheticLeadById(id);
-    const leadDate=cleanLeadText(visible?.leadDate||visible?.firstTouchAt||visible?.leadEnteredAt||student.leadDate||'');
+    const leadDate=cleanLeadText(visible?.leadDate||visible?.firstTouchAt||student.leadDate||'');
     const raw={
       ...(visible||{}),
       id,
@@ -1165,7 +1155,7 @@ function createLeadsRoutes(deps={}){
         return rowId===leadId||sourceLeadId===leadId;
       });
       if(!visible)return lead;
-      const visibleLeadDate=cleanLeadText(visible.leadDate||visible.leadEnteredAt||visible.firstTouchAt);
+      const visibleLeadDate=cleanLeadText(visible.leadDate||visible.firstTouchAt);
       const leadDate=visibleLeadDate||cleanLeadText(lead?.leadDate||lead?.leadEnteredAt||lead?.firstTouchAt);
       return {
         ...lead,

@@ -216,7 +216,7 @@ const materializedManualPollutionLifecycleRows = buildCustomerLifecycleRows({
   }]
 });
 assert.strictEqual(materializedManualPollutionLifecycleRows[0].leadDateSource, 'system', 'lead-from-student 系统生成线索不能在生命周期源头保留错误 manual 标记');
-assert.strictEqual(materializedManualPollutionLifecycleRows[0].firstTouchAt, '2026-04-26T09:33:41.879Z', 'lead-from-student 系统生成线索必须回到真实学员创建时间');
+assert.strictEqual(materializedManualPollutionLifecycleRows[0].firstTouchAt, '', 'lead-from-student 系统生成线索没有人工时间和业务事实时，不能用学员创建时间兜底');
 
 const shiDuohaoRows = buildCustomerLifecycleRows({
   students: [
