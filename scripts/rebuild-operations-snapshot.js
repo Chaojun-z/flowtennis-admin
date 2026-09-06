@@ -303,7 +303,7 @@ async function run(options = {}) {
   };
   const weeklyReportScanOptions = (table, options = {}) => ({
     ...options,
-    pageLimit: table === TABLES.T_COURTS ? 50 : 200
+    pageLimit: 500
   });
   const buildPayload = ({ scope }) => buildOperationsPagePayload({
     scope,
