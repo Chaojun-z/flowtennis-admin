@@ -287,8 +287,8 @@ function createLeadsRoutes(deps={}){
   function leadBusinessDateValue(row={}){
     const systemLeadDate=cleanLeadText(row?.leadDateSource).toLowerCase()==='system';
     const storedLeadDate=systemLeadDate?'':(row?.leadDate||row?.leadEnteredAt);
-    const businessDate=leadEarliestDateValue(row?.firstTouchAt,row?.trialAtRaw,row?.trialBookedAt,row?.trialAttendedAt,row?.packagePurchaseDate,row?.courseFirstPurchaseAt,row?.lastFormalLessonAt,row?.detailRecentLessonDate,row?.conversionAt,row?.enrollAtRaw,row?.formalSignupAt);
-    return storedLeadDate||businessDate||leadTrustedCreatedAtValue(row,businessDate);
+    const businessDate=leadEarliestDateValue(row?.firstTouchAt,row?.trialAtRaw,row?.trialBookedAt,row?.trialAttendedAt,row?.packagePurchaseDate,row?.courseFirstPurchaseAt,row?.conversionAt,row?.enrollAtRaw,row?.formalSignupAt);
+    return storedLeadDate||businessDate||leadTrustedCreatedAtValue(row,businessDate)||leadTrustedGeneratedCreatedAtValue(row);
   }
 
   function leadEarliestDateValue(...values){
@@ -307,6 +307,16 @@ function createLeadsRoutes(deps={}){
     const explicitLeadDate=cleanLeadText(row?.leadDate||row?.leadEnteredAt);
     const updatedAt=cleanLeadText(row?.updatedAt);
     if(businessDate&&explicitLeadDate===createdAt&&(!updatedAt||updatedAt===createdAt)&&leadDateMs(createdAt)>leadDateMs(businessDate))return '';
+    return createdAt;
+  }
+
+  function leadTrustedGeneratedCreatedAtValue(row={}){
+    const id=cleanLeadText(row?.id||row?.leadId||row?.sourceLeadId);
+    if(!/^lead-from-student-/.test(id))return '';
+    const createdAt=cleanLeadText(row?.createdAt);
+    const updatedAt=cleanLeadText(row?.updatedAt);
+    if(!createdAt||!updatedAt)return '';
+    if(leadDateMs(createdAt)>=leadDateMs(updatedAt))return '';
     return createdAt;
   }
 
@@ -589,7 +599,7 @@ function createLeadsRoutes(deps={}){
       packageStatusLabel:cleanLeadText(row?.packageStatusLabel||''),
       paymentModeLabel:cleanLeadText(row?.paymentModeLabel||''),
       lessonVolumeLabel:cleanLeadText(row?.lessonVolumeLabel||''),
-      leadDate:cleanLeadText(row?.firstTouchAt||row?.trialAtRaw||row?.trialBookedAt||row?.trialAttendedAt||row?.packagePurchaseDate||row?.courseFirstPurchaseAt||row?.lastFormalLessonAt||row?.detailRecentLessonDate||row?.conversionAt||''),
+      leadDate:cleanLeadText(row?.firstTouchAt||row?.trialAtRaw||row?.trialBookedAt||row?.trialAttendedAt||row?.packagePurchaseDate||row?.courseFirstPurchaseAt||row?.conversionAt||''),
       createdAt:cleanLeadText(row?.summaryUpdatedAt||row?.updatedAt||''),
       hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||cleanLeadText(row?.studentStage||'')==='formal'||hasFormalCourseFact,
       hasBookingConversion:leadSummaryBool(row?.hasBookingConversion),

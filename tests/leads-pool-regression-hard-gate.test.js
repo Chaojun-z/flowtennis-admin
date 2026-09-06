@@ -51,6 +51,11 @@ assert.doesNotMatch(
   /leadDate:[^\n]*summaryUpdatedAt/,
   '任何线索池、历史学员、在期学员最终模型都不能用摘要更新时间冒充线索时间'
 );
+assert.doesNotMatch(
+  [routesSource, metricsSource, studentRosterIndexSource].join('\n'),
+  /leadDate:[^\n]*(lastFormalLessonAt|detailRecentLessonDate)/,
+  '影子线索的线索时间不能从最近正式课/最近上课时间兜底'
+);
 
 const manualRows = buildLeadPoolRows({
   leads: [{
@@ -184,5 +189,31 @@ const syntheticRows = buildLeadPoolRows({
   }]
 });
 assert.strictEqual(syntheticRows[0].leadDate, '', '没有人工时间和业务事实时必须为空，不能使用摘要生成/修复时间');
+
+const recentLessonOnlySyntheticRows = buildLeadPoolRows({
+  leads: [{
+    id: 'lead-from-student-7fd6be9d-a3d2-4fdb-adba-cbc91e4ec2b5',
+    studentId: '7fd6be9d-a3d2-4fdb-adba-cbc91e4ec2b5',
+    displayName: '孙小萌',
+    leadDate: '',
+    leadDateSource: 'system',
+    createdAt: '2026-04-25T13:06:42.567Z',
+    updatedAt: '2026-06-26T03:37:16.269Z'
+  }],
+  customerLifecycleRows: [{
+    customerKey: 'teaching-summary:7fd6be9d-a3d2-4fdb-adba-cbc91e4ec2b5',
+    sourceLeadId: 'lead-from-student-7fd6be9d-a3d2-4fdb-adba-cbc91e4ec2b5',
+    studentId: '7fd6be9d-a3d2-4fdb-adba-cbc91e4ec2b5',
+    displayName: '孙小萌',
+    hasTeachingSummarySnapshot: true,
+    lastFormalLessonAt: '2026-09-05',
+    detailRecentLessonDate: '2026-09-05',
+    createdAt: '2026-09-06T00:48:25.472Z',
+    updatedAt: '2026-09-06T00:48:25.472Z',
+    summaryUpdatedAt: '2026-09-06T00:48:25.472Z'
+  }]
+});
+assert.strictEqual(recentLessonOnlySyntheticRows[0].leadDate, '2026-04-25T13:06:42.567Z', '影子线索没有真实线索时间时，应回到可信创建时间，不能显示最近上课时间');
+assert.notStrictEqual(recentLessonOnlySyntheticRows[0].leadDate, '2026-09-05', '影子线索最近上课时间不能污染线索时间');
 
 console.log('leads pool regression hard gate tests passed');

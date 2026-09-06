@@ -1406,8 +1406,6 @@ function leadBusinessDate(row = {}, lead = {}) {
     row.trialAttendedAt,
     row.packagePurchaseDate,
     row.courseFirstPurchaseAt,
-    row.lastFormalLessonAt,
-    row.detailRecentLessonDate,
     row.conversionAt,
     lead.firstTouchAt,
     lead.trialAtRaw,
@@ -1415,15 +1413,13 @@ function leadBusinessDate(row = {}, lead = {}) {
     lead.trialAttendedAt,
     lead.packagePurchaseDate,
     lead.courseFirstPurchaseAt,
-    lead.lastFormalLessonAt,
-    lead.detailRecentLessonDate,
     lead.conversionAt
   ];
   const explicitLeadDate = text(lead.leadDate || lead.leadEnteredAt || row.leadDate || row.leadEnteredAt);
   const manualLeadDate = leadDateIsManual(row, lead);
   const source = leadDateSourceValue(row, lead).toLowerCase();
   const businessDate = earliestBusinessDateText(...businessFacts);
-  const realLeadCreatedAt = trustedRealLeadCreatedAt(row, lead, businessDate);
+  const realLeadCreatedAt = trustedRealLeadCreatedAt(row, lead, businessDate) || trustedGeneratedLeadCreatedAt(lead);
   if (manualLeadDate && explicitLeadDate) return explicitLeadDate;
   if (businessDate) return businessDate;
   if (realLeadCreatedAt) return realLeadCreatedAt;
@@ -1485,6 +1481,15 @@ function generatedManualLeadDateLooksPolluted(row = {}, lead = {}) {
 
 function isOrphanMaterializedStudentLead(lead = {}) {
   return /^lead-from-student-/.test(text(lead.id || lead.leadId));
+}
+
+function trustedGeneratedLeadCreatedAt(lead = {}) {
+  if (!isOrphanMaterializedStudentLead(lead)) return '';
+  const createdAt = text(lead.createdAt);
+  const updatedAt = text(lead.updatedAt);
+  if (!createdAt || !updatedAt) return '';
+  if (leadDateMs(createdAt) >= leadDateMs(updatedAt)) return '';
+  return createdAt;
 }
 
 function normalizeLifecycleDealType(value = '') {
@@ -2422,7 +2427,7 @@ function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
         hasCourseStudentEntry: true,
         hasFreeCourseFollowup: true,
         leadDateSource: text(row.leadDateSource || '') || 'system',
-        leadDate: text(row.trialAtRaw || row.trialBookedAt || row.trialAttendedAt || row.packagePurchaseDate || row.courseFirstPurchaseAt || row.lastFormalLessonAt || row.detailRecentLessonDate || row.conversionAt),
+        leadDate: text(row.trialAtRaw || row.trialBookedAt || row.trialAttendedAt || row.packagePurchaseDate || row.courseFirstPurchaseAt || row.conversionAt),
         createdAt: text(row.summaryUpdatedAt || row.updatedAt),
         hasCourseConversion: text(row.studentStage) === 'formal',
         hasBookingConversion: false,

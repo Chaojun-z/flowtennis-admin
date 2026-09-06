@@ -219,6 +219,16 @@ assert.strictEqual(
   'lead list and detail should prefer the earliest real business fact, not the summary refresh time'
 );
 assert.strictEqual(
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-from-student-7fd6be9d-a3d2-4fdb-adba-cbc91e4ec2b5', hasTeachingSummarySnapshot: true, leadDateSource: 'system', leadDate: '2026-04-25T13:06:42.567Z', createdAt: '2026-04-25T13:06:42.567Z', updatedAt: '2026-06-26T03:37:16.269Z', lastFormalLessonAt: '2026-09-05', detailRecentLessonDate: '2026-09-05' }),
+  '2026-04-25',
+  'lead list and detail should not replace a backend system lead time with recent lesson time'
+);
+assert.strictEqual(
+  leadDateHelpersContext.leadDateDisplayText({ id: 'lead-from-student-empty-date', hasTeachingSummarySnapshot: true, leadDateSource: 'system', leadDate: '', createdAt: '2026-09-06T00:48:25.472Z', updatedAt: '2026-09-06T00:48:25.472Z', lastFormalLessonAt: '2026-09-05', detailRecentLessonDate: '2026-09-05' }),
+  '-',
+  'lead list and detail should leave lesson-only shadow leads empty instead of showing recent lesson time'
+);
+assert.strictEqual(
   leadDateHelpersContext.leadDateInputValue({ leadDate: '2026-08-29', firstTouchAt: '2026-04-15' }),
   '2026-08-29',
   'lead edit form should keep the stored lead time value instead of forcing the display fallback'
