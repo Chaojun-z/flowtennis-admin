@@ -3,7 +3,8 @@ const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycl
 const {
   getOperationsRowsCacheKey,
   getOperationsBaseRows,
-  getOperationsCoachBaseRows
+  getOperationsCoachBaseRows,
+  getOperationsWeeklyReportBaseRows
 } = require('../read-models/operations-source.js');
 const { OPERATIONS_SNAPSHOT_NOT_READY_CODE } = require('./operations-snapshot.js');
 const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
@@ -21,7 +22,7 @@ function getOperationsPageScope(query) {
   return {
     campus: String(query?.get?.('campus') || '').trim(),
     campusName: String(query?.get?.('campusName') || '').trim(),
-    view: view === 'coach' ? 'coach' : '',
+    view: view === 'weekly-report' ? 'weekly-report' : view === 'coach' ? 'coach' : '',
     dateRange,
     metricScope: {
       campus: String(query?.get?.('campus') || '').trim(),
@@ -91,8 +92,9 @@ async function buildOperationsPagePayload({
   baseRowsOverride = null
 }) {
   const isCoachView = scope?.view === 'coach';
-  const useGlobalFinanceSnapshot = !isCoachView && String(user.dataScope || '').trim() !== 'campus' && !(Array.isArray(user.campusIds) && user.campusIds.length);
-  const loadBaseRows = scope?.view === 'coach' ? getOperationsCoachBaseRows : getOperationsBaseRows;
+  const isWeeklyReportView = scope?.view === 'weekly-report';
+  const useGlobalFinanceSnapshot = !isCoachView && !isWeeklyReportView && String(user.dataScope || '').trim() !== 'campus' && !(Array.isArray(user.campusIds) && user.campusIds.length);
+  const loadBaseRows = scope?.view === 'weekly-report' ? getOperationsWeeklyReportBaseRows : scope?.view === 'coach' ? getOperationsCoachBaseRows : getOperationsBaseRows;
   const baseRows = baseRowsOverride || await loadBaseRows({
     user,
     useGlobalFinanceSnapshot,
@@ -135,6 +137,7 @@ async function buildOperationsPagePayload({
     students: scoped.students,
     purchases: scoped.purchases,
     courts: scoped.courts,
+    courtAccountListIndexRows: baseRows.courtAccountListIndexRows || [],
     membershipOrders: scoped.membershipOrders,
     membershipAccounts: scoped.membershipAccounts,
     schedule: scoped.schedule
@@ -163,6 +166,7 @@ async function buildOperationsPagePayload({
       entitlements: scoped.entitlements,
       entitlementLedger: scoped.entitlementLedger,
       courts: scoped.courts,
+      courtAccountListIndexRows: baseRows.courtAccountListIndexRows || [],
       membershipOrders: scoped.membershipOrders,
       membershipAccounts: scoped.membershipAccounts,
       membershipPlans: scoped.membershipPlans,

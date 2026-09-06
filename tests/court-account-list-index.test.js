@@ -25,6 +25,7 @@ const source = {
     campus: 'shunyi_mapo',
     history: [
       { type: '消费', amount: 100, payMethod: '微信', category: '订场', date: '2026-08-03', startTime: '10:00', endTime: '11:00', venue: '1号场' },
+      { type: '消费', amount: 80, payMethod: '储值扣款', category: '订场', date: '2026-08-03', startTime: '11:00', endTime: '12:00', venue: '1号场' },
       { type: '退款', amount: 20, payMethod: '微信', category: '订场', date: '2026-08-03', startTime: '10:00', endTime: '11:00', venue: '1号场' }
     ],
     updatedAt: '2026-01-01 10:00:00'
@@ -79,6 +80,9 @@ async function main() {
   assert.strictEqual(indexRows.length, 5, '索引应从事实源重建全部有效订场用户');
   assert.ok(!indexRows.some((row) => row.item.bookingRows || row.item.rechargeRows || row.item.benefitRows), '列表索引不应保存详情抽屉完整明细');
   assert.ok(indexRows.some((row) => row.id === 'member-new' && row.membershipFinanceStats?.paidAmount === 1000), '列表索引应保存会员顶部统计需要的轻量口径字段');
+  const mixedBookingStats = indexRows.find((row) => row.id === 'court-new')?.bookingDayStats?.[0] || {};
+  assert.strictEqual(mixedBookingStats.memberBookingHours, 1, '索引应保存会员订场小时，周报不能按总小时估算');
+  assert.strictEqual(mixedBookingStats.guestBookingHours, 1, '索引应保存散客订场小时，周报不能按总小时估算');
 
   const cases = [
     { page: 1, pageSize: 2, sortKey: 'lastBookingDate', sortDir: 'desc' },

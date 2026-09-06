@@ -80,8 +80,10 @@ function buildBookingDayStats(bookingRows = []) {
       bookingHours: 0,
       memberBookingCount: 0,
       memberBookingAmount: 0,
+      memberBookingHours: 0,
       guestBookingCount: 0,
-      guestBookingAmount: 0
+      guestBookingAmount: 0,
+      guestBookingHours: 0
     };
     const amount = money(row.amount);
     if (row.type === '消费') {
@@ -93,12 +95,14 @@ function buildBookingDayStats(bookingRows = []) {
       if (isMember) {
         current.memberBookingCount += 1;
         current.memberBookingAmount = money(current.memberBookingAmount + amount);
+        current.memberBookingHours = money(current.memberBookingHours + hours);
       }
     } else if (row.type === '退款' || row.type === '冲正') {
       current.bookingAmount = money(current.bookingAmount - amount);
     }
     current.guestBookingCount = Math.max(0, current.bookingCount - current.memberBookingCount);
     current.guestBookingAmount = Math.max(0, money(current.bookingAmount - current.memberBookingAmount));
+    current.guestBookingHours = Math.max(0, money(current.bookingHours - current.memberBookingHours));
     map.set(date, current);
   });
   return [...map.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));

@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { effectiveScheduleStatus } = require('./schedule.js');
 const { bookingDurationHours, normalizeCourtHistory, courtHistoryBusinessDate, buildCourtAccountListViewFromData } = require('./page-data/court-account-read-model.js');
+const { buildCourtAccountListViewFromIndexRows } = require('./page-data/court-account-list-index.js');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
@@ -257,8 +258,12 @@ function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
       membershipAccountEvents: normalizeRows(sourceRaw.membershipAccountEvents)
     };
   };
-  const view = buildCourtAccountListViewFromData(source(raw), { includeDetails: true, accountType: '会员账户' });
-  const previousView = buildCourtAccountListViewFromData(source(previousRaw), { includeDetails: true, accountType: '会员账户' });
+  const indexedView = (sourceRaw = {}) => {
+    const rows = normalizeRows(sourceRaw.courtAccountListIndexRows);
+    return rows.length ? buildCourtAccountListViewFromIndexRows(rows, { accountType: '会员账户' }) : null;
+  };
+  const view = indexedView(raw) || buildCourtAccountListViewFromData(source(raw), { includeDetails: true, accountType: '会员账户' });
+  const previousView = indexedView(previousRaw) || buildCourtAccountListViewFromData(source(previousRaw), { includeDetails: true, accountType: '会员账户' });
   const memberItems = normalizeRows(view.items);
   const financeRedemptionAmount = (sourceRaw, targetPeriod) => {
     const rows = normalizeRows(sourceRaw.financeNormalizedRows).filter(row => {
@@ -275,10 +280,32 @@ function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
       const sign = row.type === '退款' || row.type === '冲正' ? -1 : row.type === '消费' ? 1 : 0;
       return rowSum + sign * fieldNumber(row, ['amount']);
     }, 0), 0));
+  const indexedRedemptionAmount = (sourceRaw, targetPeriod) => numberValue(normalizeRows(sourceRaw.courtAccountListIndexRows)
+    .filter(row => weeklyCampusMatchesStrict(row.item || row))
+    .flatMap(row => normalizeRows(row.bookingDayStats))
+    .filter(row => inPeriod(row.date, targetPeriod))
+    .reduce((sum, row) => sum + fieldNumber(row, ['memberBookingAmount']), 0));
+  const ordersByAccountOrCourt = (sourceRaw = {}) => {
+    const map = new Map();
+    normalizeRows(sourceRaw.membershipOrders).forEach(order => {
+      [order.membershipAccountId, order.courtId].map(value => String(value || '').trim()).filter(Boolean).forEach(key => {
+        const rows = map.get(key) || [];
+        rows.push(order);
+        map.set(key, rows);
+      });
+    });
+    return map;
+  };
+  const currentOrderMap = ordersByAccountOrCourt(raw);
   const newMemberRows = memberItems
     .filter(item => inPeriod(item.firstOpenDate, period))
     .map(item => {
-      const currentRechargeRows = normalizeRows(item.rechargeRows).filter(row => inPeriod(row.purchaseDate || row.createdAt, period));
+      const accountId = String(item.membershipAccount?.id || item.membershipAccountId || '').trim();
+      const courtId = String(item.id || item.courtId || '').trim();
+      const fallbackRechargeRows = [...new Map([...(currentOrderMap.get(accountId) || []), ...(currentOrderMap.get(courtId) || [])]
+        .map(row => [String(row?.id || `${row?.membershipAccountId || ''}:${row?.courtId || ''}:${row?.purchaseDate || row?.createdAt || ''}`), row])).values()];
+      const currentRechargeRows = normalizeRows(item.rechargeRows?.length ? item.rechargeRows : fallbackRechargeRows)
+        .filter(row => inPeriod(row.purchaseDate || row.paidAt || row.paymentTime || row.createdAt, period));
       return {
         name: item.displayName || '-',
         firstOpenDate: String(item.firstOpenDate || '').slice(0, 10) || '-',
@@ -289,8 +316,10 @@ function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
     .sort((a, b) => String(a.firstOpenDate || '').localeCompare(String(b.firstOpenDate || '')) || String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN'));
   const summary = view.summary?.membershipFinanceSummary || {};
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
-  const previousRedeemedAmount = financeRedemptionAmount(previousRaw, previousPeriod) ?? historyRedemptionAmount(previousView.items || [], previousPeriod);
-  const redeemedAmount = financeRedemptionAmount(raw, period) ?? historyRedemptionAmount(memberItems, period);
+  const previousHistoryRedeemed = historyRedemptionAmount(previousView.items || [], previousPeriod);
+  const currentHistoryRedeemed = historyRedemptionAmount(memberItems, period);
+  const previousRedeemedAmount = financeRedemptionAmount(previousRaw, previousPeriod) ?? (previousHistoryRedeemed || indexedRedemptionAmount(previousRaw, previousPeriod));
+  const redeemedAmount = financeRedemptionAmount(raw, period) ?? (currentHistoryRedeemed || indexedRedemptionAmount(raw, period));
   const currentRechargeAmount = numberValue(newMemberRows.reduce((sum, row) => sum + fieldNumber(row, ['amount']), 0));
   return {
     totalMembers: numberValue(summary.memberCount),
@@ -488,12 +517,41 @@ function standardCourtUsageType(row = {}) {
   return match?.label || '';
 }
 
+function courtUsageIndexStats(raw = {}, period = {}) {
+  return normalizeRows(raw.courtAccountListIndexRows)
+    .filter(row => weeklyCampusMatchesStrict(row.item || row))
+    .flatMap(row => normalizeRows(row.bookingDayStats))
+    .filter(row => inPeriod(row.date, period))
+    .reduce((acc, row) => {
+      const bookingCount = fieldNumber(row, ['bookingCount']);
+      const bookingHours = fieldNumber(row, ['bookingHours']);
+      const memberCount = fieldNumber(row, ['memberBookingCount']);
+      const guestCount = fieldNumber(row, ['guestBookingCount']);
+      const memberHours = fieldNumber(row, ['memberBookingHours']) || (memberCount > 0 && memberCount === bookingCount ? bookingHours : 0);
+      const guestHours = fieldNumber(row, ['guestBookingHours']) || (guestCount > 0 && guestCount === bookingCount ? bookingHours : 0);
+      acc.member.count += memberCount;
+      acc.member.hours += memberHours;
+      acc.member.amount += fieldNumber(row, ['memberBookingAmount']);
+      acc.guest.count += guestCount;
+      acc.guest.hours += guestHours;
+      acc.guest.amount += fieldNumber(row, ['guestBookingAmount']);
+      acc.daily.set(row.date, numberValue((acc.daily.get(row.date) || 0) + fieldNumber(row, ['bookingHours'])));
+      return acc;
+    }, {
+      member: { count: 0, hours: 0, amount: 0, receivableAmount: 0 },
+      guest: { count: 0, hours: 0, amount: 0, receivableAmount: 0 },
+      daily: new Map()
+    });
+}
+
 function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
   const historyRows = courtHistoryRows(raw, period);
   const previousHistoryRows = courtHistoryRows(previousRaw, previousPeriod);
   const financeRows = normalizeRows(raw.financeNormalizedRows).filter(row => inPeriod(row.businessDate || row.date || row.createdAt, period) && /场地|订场|约球/.test(String(row.businessType || row.displayBusinessType || row.category || '')));
   const previousFinanceRows = normalizeRows(previousRaw.financeNormalizedRows || raw.financeNormalizedRows).filter(row => inPeriod(row.businessDate || row.date || row.createdAt, previousPeriod) && /场地|订场|约球/.test(String(row.businessType || row.displayBusinessType || row.category || '')));
+  const indexStats = courtUsageIndexStats(raw, period);
+  const previousIndexStats = courtUsageIndexStats(previousRaw, previousPeriod);
   const sumHistory = (rows, meta) => rows.filter(row => standardCourtUsageType(row) === meta.label)
     .reduce((acc, row) => ({
       count: acc.count + 1,
@@ -514,10 +572,16 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
     if (day) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
   });
+  if (!historyRows.length && indexStats.daily.size) {
+    indexStats.daily.forEach((hours, day) => dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + hours)));
+  }
   previousHistoryRows.forEach(row => {
     const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
     if (day) previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
   });
+  if (!previousHistoryRows.length && previousIndexStats.daily.size) {
+    previousIndexStats.daily.forEach((hours, day) => previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + hours)));
+  }
   const dailyRows = buildDailyCourtRows(raw, period, dailyUsedHours);
   const previousDailyRows = buildDailyCourtRows(previousRaw, previousPeriod, previousDailyUsedHours);
   const result = COURT_USAGE_TYPES.map(meta => {
@@ -525,14 +589,24 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     const previous = sumHistory(previousHistoryRows, meta);
     const financeCurrent = sumFinance(financeRows, meta);
     const financePrevious = sumFinance(previousFinanceRows, meta);
+    const indexedCurrent = indexStats[meta.key] || {};
+    const indexedPrevious = previousIndexStats[meta.key] || {};
     if (!current.count && financeCurrent.count) current.count = financeCurrent.count;
     if (!current.hours && financeCurrent.hours) current.hours = financeCurrent.hours;
     if (!current.amount && financeCurrent.amount) current.amount = financeCurrent.amount;
     if (!current.receivableAmount && financeCurrent.receivableAmount) current.receivableAmount = financeCurrent.receivableAmount;
+    if (!current.count && indexedCurrent.count) current.count = indexedCurrent.count;
+    if (!current.hours && indexedCurrent.hours) current.hours = indexedCurrent.hours;
+    if (!current.amount && indexedCurrent.amount) current.amount = indexedCurrent.amount;
+    if (!current.receivableAmount && indexedCurrent.receivableAmount) current.receivableAmount = indexedCurrent.receivableAmount;
     if (!previous.count && financePrevious.count) previous.count = financePrevious.count;
     if (!previous.hours && financePrevious.hours) previous.hours = financePrevious.hours;
     if (!previous.amount && financePrevious.amount) previous.amount = financePrevious.amount;
     if (!previous.receivableAmount && financePrevious.receivableAmount) previous.receivableAmount = financePrevious.receivableAmount;
+    if (!previous.count && indexedPrevious.count) previous.count = indexedPrevious.count;
+    if (!previous.hours && indexedPrevious.hours) previous.hours = indexedPrevious.hours;
+    if (!previous.amount && indexedPrevious.amount) previous.amount = indexedPrevious.amount;
+    if (!previous.receivableAmount && indexedPrevious.receivableAmount) previous.receivableAmount = indexedPrevious.receivableAmount;
     if (['free', 'leader'].includes(meta.key)) current.amount = 0;
     return {
       ...meta,

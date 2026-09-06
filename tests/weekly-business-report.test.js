@@ -324,6 +324,73 @@ assert.match(storedValueHtml, /总储值金额[\s\S]*本周新增会员[\s\S]*�
 assert.match(storedValueHtml, /本周新增会员明细[\s\S]*新会员/, 'stored value chart area should be replaced by current-week new member details');
 assert.doesNotMatch(storedValueHtml, /storedValue\.donut|storedValue\.progress/, 'stored value section should not render the old two charts');
 
+const storedValueIndexSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 1 } } } },
+    weeklyReportRaw: {
+      campuses: [{ code: 'shunyi_mapo', name: '顺义马坡' }],
+      courts: [
+        { id: 'court-index-old', name: '索引老会员', campus: 'shunyi_mapo', status: 'active', cachedTotalDeposit: 2000 },
+        { id: 'court-index-new', name: '索引新会员', campus: 'shunyi_mapo', status: 'active', cachedTotalDeposit: 3000 }
+      ],
+      courtAccountListIndexRows: [
+        {
+          id: 'court-index-old',
+          courtId: 'court-index-old',
+          item: {
+            id: 'court-index-old',
+            displayName: '索引老会员',
+            campusCode: 'shunyi_mapo',
+            accountType: '会员账户',
+            membershipStatusCode: 'active',
+            firstOpenDate: '2026-07-01',
+            membershipAccount: { id: 'account-index-old', courtId: 'court-index-old' },
+            totalDeposit: 2000,
+            balance: 1600
+          },
+          bookingDayStats: [{ date: '2026-08-28', bookingCount: 1, bookingHours: 1.5, bookingAmount: 180, memberBookingCount: 1, memberBookingAmount: 180 }],
+          membershipFinanceStats: { memberCount: 1, paidAmount: 2000, bonusAmount: 0, consumableAmount: 2000, pendingAmount: 1600 }
+        },
+        {
+          id: 'court-index-new',
+          courtId: 'court-index-new',
+          item: {
+            id: 'court-index-new',
+            displayName: '索引新会员',
+            campusCode: 'shunyi_mapo',
+            accountType: '会员账户',
+            membershipStatusCode: 'active',
+            firstOpenDate: '2026-08-28',
+            membershipAccount: { id: 'account-index-new', courtId: 'court-index-new' },
+            totalDeposit: 3000,
+            balance: 2800
+          },
+          bookingDayStats: [{ date: '2026-09-01', bookingCount: 1, bookingHours: 1, bookingAmount: 120, memberBookingCount: 1, memberBookingAmount: 120 }],
+          membershipFinanceStats: { memberCount: 1, paidAmount: 3000, bonusAmount: 0, consumableAmount: 3000, pendingAmount: 2800 }
+        }
+      ],
+      membershipAccounts: [
+        { id: 'account-index-old', courtId: 'court-index-old', status: 'active', createdAt: '2026-07-01' },
+        { id: 'account-index-new', courtId: 'court-index-new', status: 'active', createdAt: '2026-08-28' }
+      ],
+      membershipOrders: [
+        { id: 'order-index-old', membershipAccountId: 'account-index-old', courtId: 'court-index-old', status: 'active', rechargeAmount: 2000, purchaseDate: '2026-07-01' },
+        { id: 'order-index-new', membershipAccountId: 'account-index-new', courtId: 'court-index-new', status: 'active', rechargeAmount: 3000, purchaseDate: '2026-08-28' }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: { overview: { cards: { totalIncome: { value: 1 } } } }, weeklyReportRaw: { courtAccountListIndexRows: [] } },
+  shareToken: 'token-stored-value-index',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.totalMembers, 2, 'stored value report should use the court account list index when court history is not loaded');
+assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.totalAmount, 5000, 'stored value report should keep indexed membership paid amount without scanning court history');
+assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.newMembers, 1, 'stored value report should still count newly opened members from light membership rows');
+assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.newAmount, 3000, 'stored value report should still show current-week new member recharge amount from membership orders');
+assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.redeemedAmount, 300, 'stored value report should fall back to indexed member booking amount for current-week redemption');
+assert.strictEqual(storedValueIndexSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 2.5, 'court usage should use indexed member booking hours when court history is not loaded');
+
 const html = renderWeeklyBusinessReportHtml(snapshot, { remark: '本周雨天影响场地。' });
 assert.match(html, /顺义马坡周报/, 'HTML should render the report title');
 assert.match(html, /2026-08-27 - 2026-09-03（第 36 周）/, 'HTML should render the period week number in the top-right date pill');
@@ -424,6 +491,7 @@ assert.match(weeklyRoutesSource, /PUBLIC_BASE_URL \|\| 'https:\/\/www\.flowtenni
 assert.match(weeklyRoutesSource, /res\.end\(renderWeeklyBusinessReportHtml\(report/, 'public route should always render with the current report template instead of serving stale stored HTML');
 assert.match(operationsPageSource, /includeWeeklyReportRaw[\s\S]*weeklyReportRaw/, 'weekly report payload should include raw source rows for report-specific metrics');
 assert.match(operationsPageSource, /weeklyReportRaw: includeWeeklyReportRaw \? \{[\s\S]*membershipPlans: scoped\.membershipPlans[\s\S]*membershipBenefitLedger: scoped\.membershipBenefitLedger[\s\S]*membershipAccountEvents: scoped\.membershipAccountEvents/s, 'weekly report raw payload should include complete membership read-model inputs');
+assert.match(operationsPageSource, /weeklyReportRaw: includeWeeklyReportRaw \? \{[\s\S]*courtAccountListIndexRows: baseRows\.courtAccountListIndexRows \|\| \[\]/, 'weekly report raw payload should include the court account list index rows for fast stored value metrics');
 assert.match(operationsSnapshotRunnerSource, /weeklyReportScopes: argv\.includes\('--weekly-report-scopes'\)/, 'operations snapshot runner should support weekly report snapshot scopes');
 assert.match(operationsSnapshotRunnerSource, /buildWeeklyReportScopeArgs[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: false/, 'weekly report snapshot runner should prebuild current, previous and lifetime scopes');
 assert.match(operationsSnapshotRunnerSource, /scanFirstRows: scope\?\.view === 'weekly-report'[\s\S]*storage\.getCachedScan\(table, weeklyReportScanOptions/, 'weekly report snapshot rebuild must use the offline full-read path instead of production first-row truncation');

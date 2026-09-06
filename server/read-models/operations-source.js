@@ -41,6 +41,7 @@ const OPERATIONS_COURT_FIELDS = [
   'storedValueSpent', 'directPaidSpent', 'bookingCount', 'bookingAmount', 'bookingHours',
   'memberBookingCount', 'memberBookingAmount', 'guestBookingCount', 'guestBookingAmount', 'history'
 ];
+const OPERATIONS_WEEKLY_REPORT_COURT_FIELDS = OPERATIONS_COURT_FIELDS.filter((field) => field !== 'history');
 const OPERATIONS_FOLLOWUP_FIELDS = [
   'id', 'leadId', 'followupAt', 'createdAt', 'followupBy', 'followupType',
   'communicationNote', 'concern', 'conclusion', 'statusAfter', 'nextFollowupAt', 'nextAction'
@@ -251,10 +252,109 @@ async function getOperationsCoachBaseRows({
   return rows;
 }
 
+async function getOperationsWeeklyReportBaseRows({
+  user,
+  useGlobalFinanceSnapshot,
+  listCampusesWithDefaults,
+  getCachedScan,
+  scanFirstRows,
+  getScheduleListRows,
+  isProductionRuntime,
+  mergeDuplicateLeadRows,
+  getFinancePageSnapshotIfCached,
+  tables
+}) {
+  const cacheKey = `${getOperationsRowsCacheKey(user)}:weekly-report`;
+  const cached = operationsRowsCache.get(cacheKey);
+  if (cached && Date.now() - cached.createdAt < OPERATIONS_CACHE_TTL_MS) return cached.rows;
+  const {
+    T_LEADS,
+    T_STUDENTS,
+    T_PURCHASES,
+    T_ENTITLEMENTS,
+    T_ENTITLEMENT_LEDGER,
+    T_LEAD_FOLLOWUPS,
+    T_COURTS,
+    T_MEMBERSHIP_ORDERS,
+    T_MEMBERSHIP_ACCOUNTS,
+    T_MEMBERSHIP_PLANS,
+    T_MEMBERSHIP_BENEFIT_LEDGER,
+    T_MEMBERSHIP_ACCOUNT_EVENTS,
+    T_COURT_ACCOUNT_LIST_INDEX,
+    T_COACHES,
+    T_SCHEDULE,
+    T_FEEDBACKS
+  } = tables;
+  const [
+    campuses,
+    leads,
+    students,
+    purchases,
+    entitlements,
+    entitlementLedger,
+    leadFollowups,
+    courts,
+    membershipAccounts,
+    membershipOrders,
+    membershipPlans,
+    membershipBenefitLedger,
+    membershipAccountEvents,
+    courtAccountListIndexRows,
+    coaches,
+    schedule,
+    feedbacks,
+    cachedFinanceSnapshot
+  ] = await Promise.all([
+    listCampusesWithDefaults(),
+    readLeadSourceRows({ isProductionRuntime, scanFirstRows, getCachedScan, table: T_LEADS, columns: OPERATIONS_LEAD_FIELDS }),
+    readOperationsRows({ table: T_STUDENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_STUDENT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_PURCHASES, getCachedScan, scanFirstRows, columns: OPERATIONS_PURCHASE_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_ENTITLEMENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_ENTITLEMENT_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_LEDGER_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_LEAD_FOLLOWUPS, getCachedScan, scanFirstRows, columns: OPERATIONS_FOLLOWUP_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_COURTS, getCachedScan, scanFirstRows, columns: OPERATIONS_WEEKLY_REPORT_COURT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_MEMBERSHIP_ACCOUNTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_MEMBERSHIP_ORDERS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ORDER_FIELDS, limit: 2000 }),
+    T_MEMBERSHIP_PLANS ? readOperationsRows({ table: T_MEMBERSHIP_PLANS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_PLAN_FIELDS, limit: 1000 }) : Promise.resolve([]),
+    T_MEMBERSHIP_BENEFIT_LEDGER ? readOperationsRows({ table: T_MEMBERSHIP_BENEFIT_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_BENEFIT_LEDGER_FIELDS, limit: 2000 }) : Promise.resolve([]),
+    T_MEMBERSHIP_ACCOUNT_EVENTS ? readOperationsRows({ table: T_MEMBERSHIP_ACCOUNT_EVENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_EVENT_FIELDS, limit: 2000 }) : Promise.resolve([]),
+    T_COURT_ACCOUNT_LIST_INDEX ? getCachedScan(T_COURT_ACCOUNT_LIST_INDEX, { fresh: true }).catch(() => []) : Promise.resolve([]),
+    getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
+    getOperationsScheduleRows({ getScheduleListRows, getCachedScan, scanFirstRows, table: T_SCHEDULE, columns: OPERATIONS_SCHEDULE_FIELDS }),
+    T_FEEDBACKS ? readOperationsRows({ table: T_FEEDBACKS, getCachedScan, scanFirstRows, columns: OPERATIONS_FEEDBACK_FIELDS, limit: 2000 }) : Promise.resolve([]),
+    useGlobalFinanceSnapshot && typeof getFinancePageSnapshotIfCached === 'function'
+      ? Promise.resolve(getFinancePageSnapshotIfCached()).catch(() => null)
+      : Promise.resolve(null)
+  ]);
+  const rows = {
+    campuses,
+    leads: typeof mergeDuplicateLeadRows === 'function' ? mergeDuplicateLeadRows(leads) : leads,
+    students,
+    purchases,
+    entitlements,
+    entitlementLedger,
+    leadFollowups,
+    courts,
+    membershipAccounts,
+    membershipOrders,
+    membershipPlans,
+    membershipBenefitLedger,
+    membershipAccountEvents,
+    courtAccountListIndexRows,
+    coaches,
+    schedule,
+    feedbacks,
+    cachedFinanceSnapshot
+  };
+  operationsRowsCache.set(cacheKey, { createdAt: Date.now(), rows });
+  return rows;
+}
+
 module.exports = {
   OPERATIONS_CACHE_TTL_MS,
   invalidateOperationsSourceCache,
   getOperationsRowsCacheKey,
   getOperationsBaseRows,
-  getOperationsCoachBaseRows
+  getOperationsCoachBaseRows,
+  getOperationsWeeklyReportBaseRows
 };

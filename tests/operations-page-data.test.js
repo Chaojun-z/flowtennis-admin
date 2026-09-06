@@ -39,7 +39,7 @@ assert.match(operationsPageSource, /function handleOperationsPageData/, 'operati
 assert.match(operationsPageSource, /buildOperationsMetrics/, 'operations page-data should delegate calculations to server/metrics/operations-metrics.js');
 assert.match(operationsPageSource, /function projectOperationsPagePayload/, 'operations page-data should support lightweight view-model projection');
 assert.match(operationsPageSource, /view === 'coach'[\s\S]*operations: \{[\s\S]*overview:[\s\S]*coach:/, 'coach operations view should return only overview guard data and coach metrics');
-assert.match(operationsPageSource, /view: view === 'coach' \? 'coach' : ''/, 'operations page scope should include the lightweight coach view key');
+assert.match(operationsPageSource, /view: view === 'weekly-report' \? 'weekly-report' : view === 'coach' \? 'coach' : ''/, 'operations page scope should include the lightweight weekly report and coach view keys');
 assert.match(operationsSnapshotSource, /createOperationsSnapshotLoader/, 'operations snapshot should expose a direct loader for the page route');
 assert.match(operationsSnapshotSource, /scopeKey\(user, scope\)/, 'operations snapshot key must include the current user scope, campus and date range');
 assert.match(operationsSnapshotSource, /SNAPSHOT_SOURCE_MARKER_ID/, 'operations snapshot should track source writes so stale data is not served as latest');
@@ -58,8 +58,11 @@ assert.doesNotMatch(operationsPageSource, /T_LEADS[\s\S]{0,160}limit:\s*600/, 'o
 assert.match(operationsPageSource, /require\('\.\.\/read-models\/operations-source\.js'\)/, 'operations page-data should depend on the shared operations source model');
 assert.match(operationsSourceModelSource, /function getOperationsBaseRows/, 'operations source model should own the shared base row loading');
 assert.match(operationsSourceModelSource, /function getOperationsCoachBaseRows/, 'operations source model should expose a lightweight coach view source');
+assert.match(operationsSourceModelSource, /function getOperationsWeeklyReportBaseRows/, 'weekly report snapshots should use a dedicated lightweight source loader');
 assert.match(operationsSourceModelSource, /getOperationsCoachBaseRows[\s\S]*courts: \[\],[\s\S]*membershipAccounts: \[\],[\s\S]*membershipOrders: \[\]/, 'coach operations source should not read court history or membership tables');
-assert.match(operationsPageSource, /scope\?\.view === 'coach' \? getOperationsCoachBaseRows : getOperationsBaseRows/, 'coach operations view should use the lightweight coach source loader');
+assert.match(operationsSourceModelSource, /OPERATIONS_WEEKLY_REPORT_COURT_FIELDS[\s\S]*filter\(\(field\) => field !== 'history'\)/, 'weekly report source should not read the heavy court history field');
+assert.match(operationsSourceModelSource, /T_COURT_ACCOUNT_LIST_INDEX[\s\S]*courtAccountListIndexRows/, 'weekly report source should read the court account list index for membership metrics');
+assert.match(operationsPageSource, /scope\?\.view === 'weekly-report' \? getOperationsWeeklyReportBaseRows[\s\S]*scope\?\.view === 'coach' \? getOperationsCoachBaseRows : getOperationsBaseRows/, 'weekly report and coach operations views should use their dedicated lightweight source loaders');
 assert.match(operationsSourceModelSource, /readLeadSourceRows/, 'operations source model should use the same lead source as the leads page');
 assert.doesNotMatch(operationsPageSource, /async function getOperationsBaseRows/, 'operations page-data should not keep a second base row loader');
 assert.match(operationsPageSource, /getOperationsRowsCacheKey/, 'operations snapshot rebuild scope should be scoped before reuse');
@@ -80,7 +83,7 @@ assert.match(operationsSourceModelSource, /OPERATIONS_SCHEDULE_FIELDS[\s\S]*'ven
 assert.match(operationsSourceModelSource, /function getOperationsScheduleRows/, 'operations source model should own the operations schedule read path');
 assert.match(operationsSourceModelSource, /getOperationsScheduleRows\(\{[\s\S]*getScheduleListRows[\s\S]*table:\s*T_SCHEDULE[\s\S]*columns:\s*OPERATIONS_SCHEDULE_FIELDS/, 'operations source should prefer the same complete schedule rows used by schedule list and calendar');
 assert.doesNotMatch(operationsSourceModelSource, /readOperationsRows\(\{\s*table:\s*T_SCHEDULE/, 'operations source should not cap schedule rows with the generic first-row read path');
-assert.match(operationsPageSource, /const loadBaseRows = scope\?\.view === 'coach' \? getOperationsCoachBaseRows : getOperationsBaseRows;[\s\S]*getScheduleListRows,/, 'operations page-data should pass the schedule list reader into the selected operations source');
+assert.match(operationsPageSource, /const loadBaseRows = scope\?\.view === 'weekly-report' \? getOperationsWeeklyReportBaseRows[\s\S]*getScheduleListRows,/, 'operations page-data should pass the schedule list reader into the selected operations source');
 assert.match(residualSource, /handleOperationsPageData\(\{[\s\S]*getScheduleListRows[\s\S]*tables:\{[\s\S]*T_SCHEDULE/, 'residual operations route should pass getScheduleListRows into operations page-data');
 assert.match(operationsSourceModelSource, /OPERATIONS_ENTITLEMENT_LEDGER_FIELDS[\s\S]*'sourceDate'[\s\S]*'sourceTimeBand'[\s\S]*'sourceVenue'/, 'operations source model should read historical course ledger venue and time fields for heatmaps');
 assert.match(operationsSourceModelSource, /T_ENTITLEMENT_LEDGER[\s\S]*OPERATIONS_ENTITLEMENT_LEDGER_FIELDS/, 'operations source model should scan entitlement ledger rows for court heatmaps');
@@ -125,6 +128,7 @@ assert.match(apiSource, /prewarmStudentTeachingSummaryCache\(\)\{[\s\S]*DISABLE_
 assert.match(apiSource, /\['campus','campusName','startDate','endDate','view'\]/, 'manual operations snapshot rebuild should preserve the lightweight view scope');
 assert.match(apiSource, /createOperationsSnapshotSync\(\{getCachedRow,put,mkTable,scanByIdPrefix/, 'operations snapshot sync must be able to scan queued rebuild tasks by id prefix');
 assert.match(apiSource, /buildOperationsSnapshotPayload[\s\S]*tables:\{[\s\S]*T_MEMBERSHIP_PLANS[\s\S]*T_MEMBERSHIP_BENEFIT_LEDGER[\s\S]*T_MEMBERSHIP_ACCOUNT_EVENTS[\s\S]*\}/, 'weekly operations snapshot builder should pass complete membership tables');
+assert.match(apiSource, /buildOperationsSnapshotPayload[\s\S]*tables:\{[\s\S]*T_COURT_ACCOUNT_LIST_INDEX[\s\S]*\}/, 'weekly operations snapshot builder should pass the court account list index table');
 assert.doesNotMatch(apiSource, /\/cron\/operations-snapshot\/rebuild/, 'slow operations snapshot rebuild must not run inside Vercel request handlers');
 assert.match(operationsSnapshotRunnerSource, /view: value\('--view'\)/, 'operations snapshot runner should support rebuilding the lightweight coach view');
 assert.match(operationsSnapshotRunnerSource, /commonScopes: argv\.includes\('--common-scopes'\)/, 'operations snapshot runner should support prebuilding common date scopes');
