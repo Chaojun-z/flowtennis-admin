@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { effectiveScheduleStatus } = require('./schedule.js');
-const { bookingDurationHours, normalizeCourtHistory, courtHistoryBusinessDate } = require('./page-data/court-account-read-model.js');
+const { bookingDurationHours, normalizeCourtHistory, courtHistoryBusinessDate, buildCourtAccountListViewFromData } = require('./page-data/court-account-read-model.js');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
@@ -153,6 +153,19 @@ function campusMatches(row = {}) {
   return !keys.length || keys.includes(target) || keys.includes('shunyi_mapo');
 }
 
+function weeklyCampusMatchesStrict(row = {}) {
+  const keys = [
+    row.campus,
+    row.campusName,
+    row.campusCode,
+    row.sourceCampus,
+    row.location,
+    row.venue
+  ].map(normalizeCampusValue).filter(Boolean);
+  const target = normalizeCampusValue(WEEKLY_REPORT_CAMPUS_NAME);
+  return keys.includes(target) || keys.includes('shunyi_mapo');
+}
+
 function isActiveCoach(row = {}) {
   const status = String(row.status || row.employmentStatus || row.coachStatus || 'active').trim();
   if (!status) return true;
@@ -220,29 +233,80 @@ function membershipAccountDate(row = {}) {
   return textValue(row, ['firstOpenDate', 'openedAt', 'cycleStartDate', 'createdAt']).slice(0, 10);
 }
 
-function buildStoredValueFromRaw(raw = {}, period = {}, previousRaw = {}) {
-  const activeAccounts = normalizeRows(raw.membershipAccounts).filter(row => !invalidBusinessStatus(row.status) && campusMatches(row));
-  const validOrders = normalizeRows(raw.membershipOrders).filter(row => !invalidBusinessStatus(row.status) && campusMatches(row) && membershipOrderAmount(row) > 0);
-  const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
-  const currentOrders = validOrders.filter(row => inPeriod(membershipOrderDate(row), period));
-  const previousOrders = normalizeRows(previousRaw.membershipOrders || raw.membershipOrders).filter(row => !invalidBusinessStatus(row.status) && campusMatches(row) && membershipOrderAmount(row) > 0 && inPeriod(membershipOrderDate(row), previousPeriod));
-  const accountKeysWithOrders = new Set(validOrders.map(membershipOrderKey).filter(Boolean));
-  const currentAccountKeys = new Set(currentOrders.map(membershipOrderKey).filter(Boolean));
-  activeAccounts.forEach(row => {
-    const key = textValue(row, ['id', 'courtId']);
-    if (key && inPeriod(membershipAccountDate(row), period)) currentAccountKeys.add(key);
-  });
-  const totalAmount = validOrders.reduce((sum, row) => sum + membershipOrderAmount(row), 0);
-  const newAmount = currentOrders.reduce((sum, row) => sum + membershipOrderAmount(row), 0);
-  const previousAmount = previousOrders.reduce((sum, row) => sum + membershipOrderAmount(row), 0);
-  return {
-    totalMembers: activeAccounts.length || accountKeysWithOrders.size,
-    newMembers: currentAccountKeys.size,
-    totalAmount: numberValue(totalAmount),
-    newAmount: numberValue(newAmount),
-    compare: compareValue(newAmount, previousAmount),
-    typeRows: totalAmount > 0 ? [{ type: '会员储值', amount: numberValue(totalAmount), share: 100 }] : []
+function isStoredValueBookingPayment(value = '') {
+  const method = String(value || '').trim();
+  return method === '储值扣款' || method === '储值卡' || method.includes('储值');
+}
+
+function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
+  const source = (sourceRaw = {}) => {
+    const courts = normalizeRows(sourceRaw.courts).filter(row => weeklyCampusMatchesStrict(row));
+    const courtIds = new Set(courts.map(row => String(row?.id || '').trim()).filter(Boolean));
+    return {
+      campuses: normalizeRows(sourceRaw.campuses),
+      students: normalizeRows(sourceRaw.students),
+      leads: normalizeRows(sourceRaw.leads),
+      courts,
+      membershipAccounts: normalizeRows(sourceRaw.membershipAccounts).filter(row => {
+        const courtId = String(row?.courtId || '').trim();
+        return (courtId && courtIds.has(courtId)) || weeklyCampusMatchesStrict(row);
+      }),
+      membershipOrders: normalizeRows(sourceRaw.membershipOrders),
+      membershipPlans: normalizeRows(sourceRaw.membershipPlans),
+      membershipBenefitLedger: normalizeRows(sourceRaw.membershipBenefitLedger),
+      membershipAccountEvents: normalizeRows(sourceRaw.membershipAccountEvents)
+    };
   };
+  const view = buildCourtAccountListViewFromData(source(raw), { includeDetails: true, accountType: '会员账户' });
+  const previousView = buildCourtAccountListViewFromData(source(previousRaw), { includeDetails: true, accountType: '会员账户' });
+  const memberItems = normalizeRows(view.items);
+  const financeRedemptionAmount = (sourceRaw, targetPeriod) => {
+    const rows = normalizeRows(sourceRaw.financeNormalizedRows).filter(row => {
+      const type = String(row.businessType || row.displayBusinessType || '').trim();
+      return inPeriod(row.businessDate || row.date || row.createdAt, targetPeriod)
+        && weeklyCampusMatchesStrict(row)
+        && (type === '会员订场' || (String(row.businessTypeLevel1 || '') === '场地' && String(row.businessTypeLevel2 || '') === '会员订场'));
+    });
+    return rows.length ? numberValue(rows.reduce((sum, row) => sum + fieldNumber(row, ['recognizedRevenueDelta', 'amount']), 0)) : null;
+  };
+  const historyRedemptionAmount = (items, targetPeriod) => numberValue(normalizeRows(items).reduce((sum, item) => sum + normalizeRows(item.bookingRows)
+    .filter(row => isStoredValueBookingPayment(row.payMethod) && inPeriod(row.bookingDate || row.date || row.createdAt, targetPeriod))
+    .reduce((rowSum, row) => {
+      const sign = row.type === '退款' || row.type === '冲正' ? -1 : row.type === '消费' ? 1 : 0;
+      return rowSum + sign * fieldNumber(row, ['amount']);
+    }, 0), 0));
+  const newMemberRows = memberItems
+    .filter(item => inPeriod(item.firstOpenDate, period))
+    .map(item => {
+      const currentRechargeRows = normalizeRows(item.rechargeRows).filter(row => inPeriod(row.purchaseDate || row.createdAt, period));
+      return {
+        name: item.displayName || '-',
+        firstOpenDate: String(item.firstOpenDate || '').slice(0, 10) || '-',
+        tier: item.membershipTierLabel || '-',
+        amount: numberValue(currentRechargeRows.reduce((sum, row) => sum + fieldNumber(row, ['paidAmount', 'rechargeAmount', 'finalAmount', 'amount']), 0))
+      };
+    })
+    .sort((a, b) => String(a.firstOpenDate || '').localeCompare(String(b.firstOpenDate || '')) || String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN'));
+  const summary = view.summary?.membershipFinanceSummary || {};
+  const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
+  const previousRedeemedAmount = financeRedemptionAmount(previousRaw, previousPeriod) ?? historyRedemptionAmount(previousView.items || [], previousPeriod);
+  const redeemedAmount = financeRedemptionAmount(raw, period) ?? historyRedemptionAmount(memberItems, period);
+  const currentRechargeAmount = numberValue(newMemberRows.reduce((sum, row) => sum + fieldNumber(row, ['amount']), 0));
+  return {
+    totalMembers: numberValue(summary.memberCount),
+    newMembers: newMemberRows.length,
+    totalAmount: numberValue(summary.paidAmount),
+    newAmount: currentRechargeAmount,
+    redeemedAmount,
+    compare: compareValue(redeemedAmount, previousRedeemedAmount),
+    newMemberRows,
+    typeRows: []
+  };
+}
+
+function buildStoredValueFromRaw(raw = {}, period = {}, previousRaw = {}) {
+  const readModel = buildStoredValueReadModel(raw, period, previousRaw);
+  return readModel;
 }
 
 function purchaseAmount(row = {}) {
@@ -831,7 +895,9 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
         newMembers: rawStoredValue?.newMembers ?? optionalCardNumber(overview, ['newStoredValueMembers', 'newMembershipStoredValueMembers']),
         totalAmount: rawStoredValue?.totalAmount ?? storedValueAmount,
         newAmount: rawStoredValue?.newAmount ?? storedValueAmount,
+        redeemedAmount: rawStoredValue?.redeemedAmount ?? optionalCardNumber(overview, ['storedValueConsumed', 'membershipStoredValueConsumed']),
         compare: rawStoredValue?.compare ?? (storedValueAmount === null ? null : compareValue(storedValueAmount, prevStoredValueAmount || 0)),
+        newMemberRows: rawStoredValue?.newMemberRows ?? [],
         typeRows: rawStoredValue?.typeRows ?? (storedValueAmount === null ? [] : [{ type: '会员储值', amount: storedValueAmount, share: percent(storedValueAmount, cardNumber(overview, ['totalIncome'])) }])
       },
       course: {
@@ -1060,6 +1126,18 @@ function renderRows(rows = [], columns = [], { edits = {}, keyPrefix = '' } = {}
   }).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
+function renderStoredValueNewMembers(rows = [], edits = {}) {
+  return `<div class="bg-cyber-card rounded-xl border border-cyber-border p-5">
+    <div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${editableText(edits, 'storedValue.newMembers.title', '本周新增会员明细')}</h4><span class="text-xs font-mono text-cyber-muted">${editableText(edits, 'storedValue.newMembers.count', `${normalizeRows(rows).length} 人`)}</span></div>
+    ${renderRows(normalizeRows(rows), [
+      { key: 'name', label: '会员' },
+      { key: 'firstOpenDate', label: '开卡日期' },
+      { key: 'tier', label: '会员类型' },
+      { key: 'amount', label: '本周储值金额', highlight: true, render: row => `${formatMetricValue(row.amount, '元')}元` }
+    ], { edits, keyPrefix: 'storedValue.newMembers' })}
+  </div>`;
+}
+
 function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   const period = snapshot.period || {};
   const summary = snapshot.summary || {};
@@ -1157,11 +1235,11 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, 'section.storedValue.title', '1.1 储值会员')}</h3>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     ${reportMetric('储值会员总数', revenue.storedValue?.totalMembers, ' 人', null, edits, 'storedValue.totalMembers')}
-    ${reportMetric('本周新增会员', revenue.storedValue?.newMembers, ' 人', null, edits, 'storedValue.newMembers')}
     ${reportMetric('总储值金额', revenue.storedValue?.totalAmount, ' 元', null, edits, 'storedValue.totalAmount')}
-    ${reportMetric('本周新增储值', revenue.storedValue?.newAmount, ' 元', revenue.storedValue?.compare, edits, 'storedValue.newAmount')}
+    ${reportMetric('本周新增会员', revenue.storedValue?.newMembers, ' 人', null, edits, 'storedValue.newMembers')}
+    ${reportMetric('本周新增核销金额', revenue.storedValue?.redeemedAmount, ' 元', revenue.storedValue?.compare, edits, 'storedValue.redeemedAmount')}
   </div>
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6"><div class="lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all">${donutChart(revenue.storedValue?.typeRows || [], { labelKey: 'type', valueKey: 'amount', edits, keyPrefix: 'storedValue.donut' })}</div><div class="lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all">${progressPanel(revenue.storedValue?.typeRows || [], { labelKey: 'type', valueKey: 'amount', unit: '元', edits, keyPrefix: 'storedValue.progress' })}</div></div>
+  ${renderStoredValueNewMembers(revenue.storedValue?.newMemberRows || [], edits)}
   <h3 id="private-course" class="text-base font-bold text-white leading-snug scroll-mt-24">${editableText(edits, 'section.course.title', '1.2 私教课收入')}</h3>
   <div data-section="private-course-kpi" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     ${templateMetric('总人数', revenue.course?.totalPeople, ' 人', null, edits, 'course.totalPeople')}
@@ -1397,6 +1475,9 @@ function weeklyRawToBaseRows(raw = {}) {
     courts: raw.courts || [],
     membershipOrders: raw.membershipOrders || [],
     membershipAccounts: raw.membershipAccounts || [],
+    membershipPlans: raw.membershipPlans || [],
+    membershipBenefitLedger: raw.membershipBenefitLedger || [],
+    membershipAccountEvents: raw.membershipAccountEvents || [],
     coaches: raw.coaches || [],
     schedule: raw.schedule || [],
     feedbacks: raw.feedbacks || [],

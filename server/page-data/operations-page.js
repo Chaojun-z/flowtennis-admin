@@ -120,6 +120,9 @@ async function buildOperationsPagePayload({
     courts: baseRows.courts,
     membershipOrders: baseRows.membershipOrders,
     membershipAccounts: baseRows.membershipAccounts,
+    membershipPlans: baseRows.membershipPlans,
+    membershipBenefitLedger: baseRows.membershipBenefitLedger,
+    membershipAccountEvents: baseRows.membershipAccountEvents,
     coaches: baseRows.coaches,
     schedule: baseRows.schedule,
     feedbacks: baseRows.feedbacks
@@ -162,6 +165,9 @@ async function buildOperationsPagePayload({
       courts: scoped.courts,
       membershipOrders: scoped.membershipOrders,
       membershipAccounts: scoped.membershipAccounts,
+      membershipPlans: scoped.membershipPlans,
+      membershipBenefitLedger: scoped.membershipBenefitLedger,
+      membershipAccountEvents: scoped.membershipAccountEvents,
       coaches: scoped.coaches,
       schedule: scoped.schedule,
       financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows || []

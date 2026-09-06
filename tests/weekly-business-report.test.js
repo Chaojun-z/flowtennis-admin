@@ -211,6 +211,8 @@ const rawSnapshot = buildWeeklyBusinessReportSnapshot({
         { id: 'inactive-coach', coach: '宋教练', courseType: '私教课', startTime: '2026-08-28 12:00:00', endTime: '2026-08-28 13:00:00', status: '已排课', campus: 'shunyi_mapo' }
       ],
       courts: [
+        { id: 'court-member-a', campus: 'shunyi_mapo', history: [] },
+        { id: 'court-member-b', campus: 'shunyi_mapo', history: [] },
         { id: 'court-a', campus: 'shunyi_mapo', history: [{ id: 'guest-booking', type: '消费', category: '散客订场', date: '2026-08-28', startTime: '2026-08-28 08:00:00', endTime: '2026-08-28 09:00:00', amount: 100 }] },
         { id: 'court-b', campus: 'shunyi_mapo', history: [{ id: 'free-use', type: '消费', category: '内部使用', date: '2026-08-29', startTime: '2026-08-29 08:00:00', endTime: '2026-08-29 10:00:00', amount: 200 }] }
       ]
@@ -258,6 +260,69 @@ assert.strictEqual(rawSnapshot.sections.coach.rows[0].scheduledCount, 2, 'coach 
 assert.strictEqual(rawSnapshot.sections.coach.rows[0].previousHours, 1, 'coach current/previous column should include previous week hours');
 assert.strictEqual(rawSnapshot.sections.conversion.trialDeals, 1, 'conversion top trial deals should equal source row total');
 assert.ok(rawSnapshot.sections.conversion.sourceRows.find(row => row.source === '抖音' && row.leads === 0), 'conversion source table should include standard zero-value sources');
+
+const storedValueReadModelSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {
+      overview: { cards: { totalIncome: { value: 1 } } }
+    },
+    weeklyReportRaw: {
+      campuses: [{ code: 'shunyi_mapo', name: '顺义马坡' }],
+      courts: [
+        { id: 'court-active-old', name: '老会员', campus: 'shunyi_mapo', status: 'active', history: [{ type: '消费', amount: 180, payMethod: '储值扣款', category: '订场', date: '2026-08-28', startTime: '10:00', endTime: '11:00' }] },
+        { id: 'court-active-new', name: '新会员', campus: 'shunyi_mapo', status: 'active', history: [{ type: '消费', amount: 220, payMethod: '储值卡', category: '订场', date: '2026-09-01', startTime: '11:00', endTime: '12:00' }] },
+        { id: 'court-inactive', name: '停用会员', campus: 'shunyi_mapo', status: 'inactive', history: [] },
+        { id: 'court-blank-campus', name: '空校区会员', status: 'active', history: [] }
+      ],
+      membershipAccounts: [
+        { id: 'account-old', courtId: 'court-active-old', status: 'active', createdAt: '2026-07-01' },
+        { id: 'account-new', courtId: 'court-active-new', status: 'active', createdAt: '2026-08-28' },
+        { id: 'account-inactive-court', courtId: 'court-inactive', status: 'active', createdAt: '2026-08-28' },
+        { id: 'account-orphan', courtId: 'court-missing', status: 'active', createdAt: '2026-08-28' },
+        { id: 'account-blank-campus', courtId: 'court-blank-campus', status: 'active', createdAt: '2026-08-28' }
+      ],
+      membershipOrders: [
+        { id: 'order-old', membershipAccountId: 'account-old', courtId: 'court-active-old', status: 'active', rechargeAmount: 2000, purchaseDate: '2026-07-01' },
+        { id: 'order-old-renewal', membershipAccountId: 'account-old', courtId: 'court-active-old', status: 'active', rechargeAmount: 2000, purchaseDate: '2026-08-29' },
+        { id: 'order-new', membershipAccountId: 'account-new', courtId: 'court-active-new', status: 'active', rechargeAmount: 3000, purchaseDate: '2026-08-28' },
+        { id: 'order-inactive-court', membershipAccountId: 'account-inactive-court', courtId: 'court-inactive', status: 'active', rechargeAmount: 9999, purchaseDate: '2026-08-28' },
+        { id: 'order-orphan', membershipAccountId: 'account-orphan', courtId: 'court-missing', status: 'active', rechargeAmount: 9999, purchaseDate: '2026-08-28' },
+        { id: 'order-blank-campus', membershipAccountId: 'account-blank-campus', courtId: 'court-blank-campus', status: 'active', rechargeAmount: 9999, purchaseDate: '2026-08-28' }
+      ],
+      financeNormalizedRows: [
+        { id: 'member-use', campusName: '顺义马坡', businessDate: '2026-08-28', businessType: '会员订场', action: '已入账', recognizedRevenueDelta: 500 },
+        { id: 'member-refund', campusName: '顺义马坡', businessDate: '2026-09-01', businessType: '会员订场', action: '回退', recognizedRevenueDelta: -100 },
+        { id: 'other-campus-member-use', campusName: '国网中心', businessDate: '2026-09-01', businessType: '会员订场', action: '已入账', recognizedRevenueDelta: 9999 }
+      ]
+    }
+  },
+  previousOperationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 1 } } } },
+    weeklyReportRaw: {
+      campuses: [{ code: 'shunyi_mapo', name: '顺义马坡' }],
+      courts: [
+        { id: 'court-active-old', name: '老会员', campus: 'shunyi_mapo', status: 'active', history: [{ type: '消费', amount: 80, payMethod: '储值扣款', category: '订场', date: '2026-08-20', startTime: '10:00', endTime: '11:00' }] }
+      ],
+      membershipAccounts: [{ id: 'account-old', courtId: 'court-active-old', status: 'active', createdAt: '2026-07-01' }],
+      membershipOrders: [{ id: 'order-old', membershipAccountId: 'account-old', courtId: 'court-active-old', status: 'active', rechargeAmount: 2000, purchaseDate: '2026-07-01' }],
+      financeNormalizedRows: [
+        { id: 'previous-member-use', campusName: '顺义马坡', businessDate: '2026-08-20', businessType: '会员订场', action: '已入账', recognizedRevenueDelta: 80 }
+      ]
+    }
+  },
+  shareToken: 'token-stored-value-read-model',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(storedValueReadModelSnapshot.sections.revenue.storedValue.totalMembers, 2, 'stored value report should use the membership page read model member count and exclude inactive/orphan courts');
+assert.strictEqual(storedValueReadModelSnapshot.sections.revenue.storedValue.totalAmount, 7000, 'stored value report should use the membership page read model paid amount and exclude inactive/orphan orders');
+assert.strictEqual(storedValueReadModelSnapshot.sections.revenue.storedValue.newMembers, 1, 'stored value report should count newly opened members, not renewal orders in the week');
+assert.strictEqual(storedValueReadModelSnapshot.sections.revenue.storedValue.redeemedAmount, 400, 'stored value report should expose current-week stored value redemption amount');
+assert.deepStrictEqual(storedValueReadModelSnapshot.sections.revenue.storedValue.newMemberRows.map(row => row.name), ['新会员'], 'stored value report should expose current-week new member details');
+const storedValueHtml = renderWeeklyBusinessReportHtml(storedValueReadModelSnapshot);
+assert.match(storedValueHtml, /总储值金额[\s\S]*本周新增会员[\s\S]*本周新增核销金额/, 'stored value metrics should swap total amount before new members and add redemption amount last');
+assert.match(storedValueHtml, /本周新增会员明细[\s\S]*新会员/, 'stored value chart area should be replaced by current-week new member details');
+assert.doesNotMatch(storedValueHtml, /storedValue\.donut|storedValue\.progress/, 'stored value section should not render the old two charts');
 
 const html = renderWeeklyBusinessReportHtml(snapshot, { remark: '本周雨天影响场地。' });
 assert.match(html, /顺义马坡周报/, 'HTML should render the report title');
@@ -358,6 +423,7 @@ assert.match(publicApiSource, /FLOWTENNIS WEEKLY/, 'public weekly report share p
 assert.match(weeklyRoutesSource, /PUBLIC_BASE_URL \|\| 'https:\/\/www\.flowtennis\.cn'/, 'weekly report share links should default to the public production domain');
 assert.match(weeklyRoutesSource, /res\.end\(renderWeeklyBusinessReportHtml\(report/, 'public route should always render with the current report template instead of serving stale stored HTML');
 assert.match(operationsPageSource, /includeWeeklyReportRaw[\s\S]*weeklyReportRaw/, 'weekly report payload should include raw source rows for report-specific metrics');
+assert.match(operationsPageSource, /weeklyReportRaw: includeWeeklyReportRaw \? \{[\s\S]*membershipPlans: scoped\.membershipPlans[\s\S]*membershipBenefitLedger: scoped\.membershipBenefitLedger[\s\S]*membershipAccountEvents: scoped\.membershipAccountEvents/s, 'weekly report raw payload should include complete membership read-model inputs');
 assert.match(operationsSnapshotRunnerSource, /weeklyReportScopes: argv\.includes\('--weekly-report-scopes'\)/, 'operations snapshot runner should support weekly report snapshot scopes');
 assert.match(operationsSnapshotRunnerSource, /buildWeeklyReportScopeArgs[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: false/, 'weekly report snapshot runner should prebuild current, previous and lifetime scopes');
 assert.match(operationsSnapshotRunnerSource, /scanFirstRows: scope\?\.view === 'weekly-report'[\s\S]*storage\.getCachedScan\(table, weeklyReportScanOptions/, 'weekly report snapshot rebuild must use the offline full-read path instead of production first-row truncation');

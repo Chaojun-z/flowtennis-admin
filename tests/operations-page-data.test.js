@@ -109,6 +109,7 @@ assert.match(operationsMetricsSource, /trendDiagnostics:\s*buildTrendDiagnostics
 assert.match(operationsPageSource, /mergeDuplicateLeadRows/, 'operations page-data should use the same deduped lead pool as the leads page');
 assert.match(operationsSourceModelSource, /function invalidateOperationsSourceCache\(\)[\s\S]*operationsRowsCache\.clear\(\)/, 'operations source model should expose raw row cache invalidation for realtime writes');
 assert.match(apiSource, /OPERATIONS_SOURCE_TABLES=new Set\(\[[\s\S]*T_LEADS[\s\S]*T_LEAD_FOLLOWUPS[\s\S]*T_SCHEDULE[\s\S]*T_COURTS[\s\S]*T_PURCHASES[\s\S]*\]\)/, 'api should list operation source tables that invalidate operations caches');
+assert.match(apiSource, /OPERATIONS_SOURCE_TABLES=new Set\(\[[\s\S]*T_MEMBERSHIP_PLANS[\s\S]*T_MEMBERSHIP_BENEFIT_LEDGER[\s\S]*T_MEMBERSHIP_ACCOUNT_EVENTS[\s\S]*\]\)/, 'membership plan, benefit ledger and account event writes should invalidate operations snapshots');
 assert.match(apiSource, /onTableWrite\(t,meta\)\{[\s\S]*OPERATIONS_SOURCE_TABLES\.has\(t\)[\s\S]*invalidateOperationsSourceCache\(\)[\s\S]*invalidateOperationsPageDataCache\(\)[\s\S]*recordSourceChange/, 'storage writes to operation source tables should invalidate operations caches and mark snapshots stale immediately');
 assert.match(residualSource, /require\('\.\/operations-page\.js'\)/, 'residual page-data routes should import operations-page.js');
 assert.match(residualSource, /path==='\/page-data\/operations'&&method==='GET'/, 'residual page-data routes should own /page-data/operations');
@@ -123,6 +124,7 @@ assert.match(apiSource, /\/admin\/operations-snapshot\/rebuild/, 'API should exp
 assert.match(apiSource, /prewarmStudentTeachingSummaryCache\(\)\{[\s\S]*DISABLE_HOT_SCAN_PREWARM/, 'API load-time teaching summary prewarm must be disabled for snapshot runner commands');
 assert.match(apiSource, /\['campus','campusName','startDate','endDate','view'\]/, 'manual operations snapshot rebuild should preserve the lightweight view scope');
 assert.match(apiSource, /createOperationsSnapshotSync\(\{getCachedRow,put,mkTable,scanByIdPrefix/, 'operations snapshot sync must be able to scan queued rebuild tasks by id prefix');
+assert.match(apiSource, /buildOperationsSnapshotPayload[\s\S]*tables:\{[\s\S]*T_MEMBERSHIP_PLANS[\s\S]*T_MEMBERSHIP_BENEFIT_LEDGER[\s\S]*T_MEMBERSHIP_ACCOUNT_EVENTS[\s\S]*\}/, 'weekly operations snapshot builder should pass complete membership tables');
 assert.doesNotMatch(apiSource, /\/cron\/operations-snapshot\/rebuild/, 'slow operations snapshot rebuild must not run inside Vercel request handlers');
 assert.match(operationsSnapshotRunnerSource, /view: value\('--view'\)/, 'operations snapshot runner should support rebuilding the lightweight coach view');
 assert.match(operationsSnapshotRunnerSource, /commonScopes: argv\.includes\('--common-scopes'\)/, 'operations snapshot runner should support prebuilding common date scopes');

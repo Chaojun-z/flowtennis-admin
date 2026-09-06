@@ -46,7 +46,10 @@ const OPERATIONS_FOLLOWUP_FIELDS = [
   'communicationNote', 'concern', 'conclusion', 'statusAfter', 'nextFollowupAt', 'nextAction'
 ];
 const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['id', 'courtId', 'sourceLeadId', 'leadId', 'fromLeadId', 'status', 'createdAt', 'cycleStartDate', 'openedAt', 'firstOpenDate'];
-const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['id', 'membershipAccountId', 'courtId', 'courtName', 'rechargeAmount', 'finalAmount', 'amount', 'bonusAmount', 'status', 'purchaseDate', 'paidAt', 'paymentTime', 'createdAt', 'campus', 'campusName'];
+const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['id', 'membershipAccountId', 'courtId', 'courtName', 'membershipPlanId', 'membershipPlanName', 'planName', 'tierCode', 'rechargeAmount', 'finalAmount', 'amount', 'bonusAmount', 'status', 'purchaseDate', 'paidAt', 'paymentTime', 'createdAt', 'campus', 'campusName'];
+const OPERATIONS_MEMBERSHIP_PLAN_FIELDS = ['id', 'name', 'tierCode', 'memberTag', 'thirdPartyLevelName'];
+const OPERATIONS_MEMBERSHIP_BENEFIT_LEDGER_FIELDS = ['id', 'membershipAccountId', 'courtId', 'membershipOrderRef', 'benefitCode', 'benefitLabel', 'action', 'delta', 'unit', 'reason', 'operator', 'createdAt', 'relatedDate'];
+const OPERATIONS_MEMBERSHIP_ACCOUNT_EVENT_FIELDS = ['id', 'courtId', 'membershipAccountId', 'type', 'createdAt'];
 const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus', 'sortOrder'];
 const OPERATIONS_FEEDBACK_FIELDS = ['id', 'scheduleId', 'studentId', 'studentIds', 'coach', 'coachName', 'createdAt', 'updatedAt'];
 const OPERATIONS_SCHEDULE_FIELDS = [
@@ -118,6 +121,9 @@ async function getOperationsBaseRows({
     T_COURTS,
     T_MEMBERSHIP_ORDERS,
     T_MEMBERSHIP_ACCOUNTS,
+    T_MEMBERSHIP_PLANS,
+    T_MEMBERSHIP_BENEFIT_LEDGER,
+    T_MEMBERSHIP_ACCOUNT_EVENTS,
     T_COACHES,
     T_SCHEDULE,
     T_FEEDBACKS
@@ -133,6 +139,9 @@ async function getOperationsBaseRows({
     courts,
     membershipAccounts,
     membershipOrders,
+    membershipPlans,
+    membershipBenefitLedger,
+    membershipAccountEvents,
     coaches,
     schedule,
     feedbacks,
@@ -148,6 +157,9 @@ async function getOperationsBaseRows({
     readOperationsRows({ table: T_COURTS, getCachedScan, scanFirstRows, columns: OPERATIONS_COURT_FIELDS, limit: 2000 }),
     readOperationsRows({ table: T_MEMBERSHIP_ACCOUNTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS, limit: 2000 }),
     readOperationsRows({ table: T_MEMBERSHIP_ORDERS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ORDER_FIELDS, limit: 2000 }),
+    T_MEMBERSHIP_PLANS ? readOperationsRows({ table: T_MEMBERSHIP_PLANS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_PLAN_FIELDS, limit: 1000 }) : Promise.resolve([]),
+    T_MEMBERSHIP_BENEFIT_LEDGER ? readOperationsRows({ table: T_MEMBERSHIP_BENEFIT_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_BENEFIT_LEDGER_FIELDS, limit: 2000 }) : Promise.resolve([]),
+    T_MEMBERSHIP_ACCOUNT_EVENTS ? readOperationsRows({ table: T_MEMBERSHIP_ACCOUNT_EVENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_EVENT_FIELDS, limit: 2000 }) : Promise.resolve([]),
     getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
     getOperationsScheduleRows({ getScheduleListRows, getCachedScan, scanFirstRows, table: T_SCHEDULE, columns: OPERATIONS_SCHEDULE_FIELDS }),
     T_FEEDBACKS ? readOperationsRows({ table: T_FEEDBACKS, getCachedScan, scanFirstRows, columns: OPERATIONS_FEEDBACK_FIELDS, limit: 2000 }) : Promise.resolve([]),
@@ -166,6 +178,9 @@ async function getOperationsBaseRows({
     courts,
     membershipAccounts,
     membershipOrders,
+    membershipPlans,
+    membershipBenefitLedger,
+    membershipAccountEvents,
     coaches,
     schedule,
     feedbacks,
