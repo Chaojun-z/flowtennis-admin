@@ -1601,7 +1601,7 @@ function pageHasUsableLoadedData(pg){
   }
   if(pg==='operations')return !!operationsPageData&&datasetHasCurrentRequestKey('operationsPage');
   if(pg==='finance')return !!financeOverviewData;
-  return requiredDatasetsForPage(pg).every(name=>loadedDatasets.has(name));
+  return requiredDatasetsForPage(pg).every(name=>loadedDatasets.has(name)&&datasetHasCurrentRequestKey(name));
 }
 async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   const requestVersion=++dataRequestVersion;

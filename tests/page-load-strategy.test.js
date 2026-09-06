@@ -22,6 +22,7 @@ assert.match(fnBody('showApp'), /deferPageDataLoad\(currentPage,\{quiet:true\}\)
 assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)renderPageData\(pg\)/, 'goPage should not render immediately before page data is ready');
 assert.match(fnBody('goPage'), /if\(!skipRender\)\{[\s\S]*pageHasUsableLoadedData[\s\S]*renderPageData\(pg\)[\s\S]*else renderPageLoading\(pg\);[\s\S]*deferPageDataLoad\(pg,\{quiet:true\}\);[\s\S]*\}/, 'goPage should reuse already loaded page data immediately and only show loading for missing data');
 assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg,\{quiet:true\}\)/, 'goPage should not call page data loading synchronously in the click task');
+assert.match(fnBody('pageHasUsableLoadedData'), /requiredDatasetsForPage\(pg\)\.every\(name=>loadedDatasets\.has\(name\)&&datasetHasCurrentRequestKey\(name\)\)/, 'student split pages must not render stale customerCenterPage data from another page/filter before the current list payload arrives');
 assert.match(html, /function deferPageDataLoad\(/, 'state should expose a next-frame page data loader');
 assert.match(fnBody('deferPageDataLoad'), /requestAnimationFrame|setTimeout/, 'deferred page data loading should yield to paint before loading');
 assert.doesNotMatch(fnBody('loadPageDataAndRender'), /if\(quiet&&loadedDatasets\.size\)\{[\s\S]*renderAll\(\);[\s\S]*\}[\s\S]*await ensurePageDatasets/, 'loadPageDataAndRender should not synchronously renderAll before awaiting page data');
