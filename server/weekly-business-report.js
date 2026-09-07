@@ -611,8 +611,31 @@ function financeCampusMatches(row = {}) {
   return !campusFields.length || weeklyCampusMatchesStrict(row);
 }
 
+function financialLedgerMoney(value) {
+  return numberValue((Number(value) || 0) / 100);
+}
+
+function normalizeFinancialLedgerRows(raw = {}) {
+  return normalizeRows(raw.financialLedger)
+    .filter(row => !['voided', 'deleted', 'inactive', 'cancelled', 'canceled'].includes(String(row.status || 'active').toLowerCase()))
+    .map(row => ({
+      ...row,
+      businessDate: row.businessDate || row.date || row.createdAt || '',
+      action: row.action || row.transactionType || '',
+      paymentChannel: row.paymentChannel || row.paymentMethod || '',
+      cashDelta: financialLedgerMoney(row.cashDelta),
+      recognizedRevenueDelta: financialLedgerMoney(row.recognizedRevenueDelta),
+      deferredRevenueDelta: financialLedgerMoney(row.deferredRevenueDelta),
+      startTime: row.startTime || row.sourceSnapshot?.startTime || '',
+      endTime: row.endTime || row.sourceSnapshot?.endTime || '',
+      venue: row.venue || row.sourceSnapshot?.venue || ''
+    }));
+}
+
 function weeklyFinanceRows(raw = {}, period = {}) {
-  return normalizeRows(raw.financeNormalizedRows)
+  const financialLedgerRows = normalizeFinancialLedgerRows(raw);
+  const sourceRows = financialLedgerRows.length ? financialLedgerRows : normalizeRows(raw.financeNormalizedRows);
+  return sourceRows
     .filter(row => !row.differenceReason)
     .filter(row => financeCampusMatches(row))
     .filter(row => inOptionalPeriod(row.businessDate || row.date || row.purchaseDate || row.relatedDate || row.createdAt, period));
@@ -1932,6 +1955,7 @@ function weeklyRawToBaseRows(raw = {}) {
     membershipPlans: raw.membershipPlans || [],
     membershipBenefitLedger: raw.membershipBenefitLedger || [],
     membershipAccountEvents: raw.membershipAccountEvents || [],
+    financialLedger: raw.financialLedger || [],
     coaches: raw.coaches || [],
     schedule: raw.schedule || [],
     feedbacks: raw.feedbacks || [],

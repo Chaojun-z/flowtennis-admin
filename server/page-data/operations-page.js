@@ -125,6 +125,7 @@ async function buildOperationsPagePayload({
     membershipPlans: baseRows.membershipPlans,
     membershipBenefitLedger: baseRows.membershipBenefitLedger,
     membershipAccountEvents: baseRows.membershipAccountEvents,
+    financialLedger: baseRows.financialLedger,
     coaches: baseRows.coaches,
     schedule: baseRows.schedule,
     feedbacks: baseRows.feedbacks
@@ -136,6 +137,8 @@ async function buildOperationsPagePayload({
     campuses: scoped.campuses,
     students: scoped.students,
     purchases: scoped.purchases,
+    entitlements: scoped.entitlements,
+    entitlementLedger: scoped.entitlementLedger,
     courts: scoped.courts,
     courtAccountListIndexRows: baseRows.courtAccountListIndexRows || [],
     membershipOrders: scoped.membershipOrders,
@@ -172,6 +175,7 @@ async function buildOperationsPagePayload({
       membershipPlans: scoped.membershipPlans,
       membershipBenefitLedger: scoped.membershipBenefitLedger,
       membershipAccountEvents: scoped.membershipAccountEvents,
+      financialLedger: scoped.financialLedger,
       coaches: scoped.coaches,
       schedule: scoped.schedule,
       financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows || []

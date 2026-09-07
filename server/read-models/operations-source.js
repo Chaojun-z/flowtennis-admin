@@ -51,6 +51,12 @@ const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['id', 'membershipAccountId', 'courtI
 const OPERATIONS_MEMBERSHIP_PLAN_FIELDS = ['id', 'name', 'tierCode', 'memberTag', 'thirdPartyLevelName'];
 const OPERATIONS_MEMBERSHIP_BENEFIT_LEDGER_FIELDS = ['id', 'membershipAccountId', 'courtId', 'membershipOrderRef', 'benefitCode', 'benefitLabel', 'action', 'delta', 'unit', 'reason', 'operator', 'createdAt', 'relatedDate'];
 const OPERATIONS_MEMBERSHIP_ACCOUNT_EVENT_FIELDS = ['id', 'courtId', 'membershipAccountId', 'type', 'createdAt'];
+const OPERATIONS_FINANCIAL_LEDGER_FIELDS = [
+  'status', 'businessDate', 'campus', 'campusName', 'businessType', 'displayBusinessType',
+  'businessTypeLevel1', 'businessTypeLevel2', 'action', 'transactionType',
+  'cashDelta', 'recognizedRevenueDelta', 'deferredRevenueDelta',
+  'paymentChannel', 'paymentMethod', 'sourceDocument', 'sourceSnapshot', 'notes'
+];
 const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus', 'sortOrder'];
 const OPERATIONS_FEEDBACK_FIELDS = ['id', 'scheduleId', 'studentId', 'studentIds', 'coach', 'coachName', 'createdAt', 'updatedAt'];
 const OPERATIONS_SCHEDULE_FIELDS = [
@@ -280,6 +286,7 @@ async function getOperationsWeeklyReportBaseRows({
     T_MEMBERSHIP_PLANS,
     T_MEMBERSHIP_BENEFIT_LEDGER,
     T_MEMBERSHIP_ACCOUNT_EVENTS,
+    T_FINANCIAL_LEDGER,
     T_COURT_ACCOUNT_LIST_INDEX,
     T_COACHES,
     T_SCHEDULE,
@@ -299,6 +306,7 @@ async function getOperationsWeeklyReportBaseRows({
     membershipPlans,
     membershipBenefitLedger,
     membershipAccountEvents,
+    financialLedger,
     courtAccountListIndexRows,
     coaches,
     schedule,
@@ -318,6 +326,7 @@ async function getOperationsWeeklyReportBaseRows({
     T_MEMBERSHIP_PLANS ? readOperationsRows({ table: T_MEMBERSHIP_PLANS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_PLAN_FIELDS, limit: 1000 }) : Promise.resolve([]),
     T_MEMBERSHIP_BENEFIT_LEDGER ? readOperationsRows({ table: T_MEMBERSHIP_BENEFIT_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_BENEFIT_LEDGER_FIELDS, limit: 2000 }) : Promise.resolve([]),
     T_MEMBERSHIP_ACCOUNT_EVENTS ? readOperationsRows({ table: T_MEMBERSHIP_ACCOUNT_EVENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_EVENT_FIELDS, limit: 2000 }) : Promise.resolve([]),
+    T_FINANCIAL_LEDGER ? readOperationsRows({ table: T_FINANCIAL_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_FINANCIAL_LEDGER_FIELDS, limit: 5000 }) : Promise.resolve([]),
     T_COURT_ACCOUNT_LIST_INDEX ? getCachedScan(T_COURT_ACCOUNT_LIST_INDEX, { fresh: true }).catch(() => []) : Promise.resolve([]),
     getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
     getOperationsScheduleRows({ getScheduleListRows, getCachedScan, scanFirstRows, table: T_SCHEDULE, columns: OPERATIONS_SCHEDULE_FIELDS }),
@@ -340,6 +349,7 @@ async function getOperationsWeeklyReportBaseRows({
     membershipPlans,
     membershipBenefitLedger,
     membershipAccountEvents,
+    financialLedger,
     courtAccountListIndexRows,
     coaches,
     schedule,

@@ -34,6 +34,7 @@ const TABLES = {
   T_MEMBERSHIP_PLANS: 'ft_membership_plans',
   T_MEMBERSHIP_BENEFIT_LEDGER: 'ft_membership_benefit_ledger',
   T_MEMBERSHIP_ACCOUNT_EVENTS: 'ft_membership_account_events',
+  T_FINANCIAL_LEDGER: 'ft_financial_ledger',
   T_COURT_ACCOUNT_LIST_INDEX: 'ft_court_account_list_index',
   T_COACHES: 'ft_coaches',
   T_USERS: 'ft_users',

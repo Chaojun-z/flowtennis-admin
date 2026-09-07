@@ -197,6 +197,48 @@ assert.strictEqual(requestedStructureSnapshot.sections.court.revenueUsageHours, 
 assert.strictEqual(requestedStructureSnapshot.sections.court.dailyRows.find(row => row.date === '2026-09-01')?.value, 100, 'daily court utilization should be capped at 100%');
 assert.ok(requestedStructureSnapshot.summary.courtUtilizationRate.value <= 100, 'top court utilization must never exceed 100%');
 
+const financialLedgerSourceSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {
+      overview: { cards: { totalIncome: { value: 29199 }, recognizedRevenue: { value: 0 } } },
+      court: { cards: { utilizationRate: { value: 29 } } },
+      coach: { cards: { usedHours: { value: 80.5 } } }
+    },
+    weeklyReportRaw: {
+      financialLedger: [
+        { id: 'ledger-course-receipt', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 2519900, recognizedRevenueDelta: 0, deferredRevenueDelta: 2519900 },
+        { id: 'ledger-course-consume', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-29', businessType: '课程', action: '已入账', paymentChannel: '课包划扣', cashDelta: 0, recognizedRevenueDelta: 825000, deferredRevenueDelta: -825000 },
+        { id: 'ledger-guest-booking', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-30', businessType: '散客订场', action: '收款', cashDelta: 474000, recognizedRevenueDelta: 474000, deferredRevenueDelta: 0 },
+        { id: 'ledger-member-booking', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-31', businessType: '会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 620650, deferredRevenueDelta: -620650 },
+        { id: 'ledger-stored-value', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-09-01', businessType: '会员储值', action: '收款', cashDelta: 400000, recognizedRevenueDelta: 0, deferredRevenueDelta: 400000 },
+        { id: 'ledger-voided', status: 'voided', campus: 'shunyi_mapo', businessDate: '2026-09-01', businessType: '散客订场', action: '收款', cashDelta: 999900, recognizedRevenueDelta: 999900 }
+      ],
+      financeNormalizedRows: [
+        { id: 'legacy-zero-row', campusName: '顺义马坡', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 29199, recognizedRevenueDelta: 0 }
+      ]
+    }
+  },
+  previousOperationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 1 }, recognizedRevenue: { value: 0 } } }, court: { cards: { utilizationRate: { value: 1 } } }, coach: { cards: { usedHours: { value: 1 } } } },
+    weeklyReportRaw: {
+      financialLedger: [
+        { id: 'ledger-prev-course-consume', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-20', businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 500000, deferredRevenueDelta: -500000 }
+      ]
+    }
+  },
+  shareToken: 'token-financial-ledger',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(financialLedgerSourceSnapshot.summary.totalIncome.value, 19196.5, 'financial ledger recognized revenue must be the weekly business revenue source');
+assert.strictEqual(financialLedgerSourceSnapshot.sections.revenue.receipts.totalAmount, 33939, 'financial ledger cashDelta must drive weekly cash received without double-counting legacy rows');
+assert.strictEqual(financialLedgerSourceSnapshot.sections.revenue.receipts.courseAmount, 25199, 'financial ledger course receipts should be converted from cents to yuan');
+assert.strictEqual(financialLedgerSourceSnapshot.sections.revenue.receipts.bookingAmount, 4740, 'financial ledger booking receipts should be converted from cents to yuan');
+assert.strictEqual(financialLedgerSourceSnapshot.sections.revenue.receipts.storedValueAmount, 4000, 'financial ledger stored value receipts should be converted from cents to yuan');
+assert.strictEqual(financialLedgerSourceSnapshot.sections.revenue.recognized.courseConsumedRevenue, 8250, 'financial ledger course recognized revenue should be used instead of zero temporary rows');
+assert.strictEqual(financialLedgerSourceSnapshot.sections.revenue.recognized.memberBookingConsumedRevenue, 6206.5, 'financial ledger member booking recognized revenue should be used');
+assert.strictEqual(financialLedgerSourceSnapshot.sections.revenue.recognized.guestBookingRevenue, 4740, 'financial ledger guest booking recognized revenue should be used');
+
 const antiZeroSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
   operationsPayload: {
