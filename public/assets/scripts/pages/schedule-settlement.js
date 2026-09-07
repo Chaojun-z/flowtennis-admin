@@ -3,6 +3,36 @@
     return String(value == null ? '' : value).trim();
   }
 
+  function parseArr(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string' && value) {
+      try { return JSON.parse(value); } catch (_) { return []; }
+    }
+    return [];
+  }
+
+  function roundMoney(value) {
+    const number = Number(value) || 0;
+    return Math.round(number * 100) / 100;
+  }
+
+  function splitMoneyEvenly(total, count) {
+    const size = Math.max(0, Number(count) || 0);
+    if (!size) return [];
+    const cents = Math.round((Number(total) || 0) * 100);
+    const base = Math.floor(cents / size);
+    const remainder = cents - base * size;
+    return Array.from({ length: size }, (_, index) => roundMoney((base + (index === size - 1 ? remainder : 0)) / 100));
+  }
+
+  function normalizeSettlementType(value = '', fallback = 'package') {
+    const raw = trimText(value);
+    if (['direct', '直接收款', 'paid'].includes(raw)) return 'direct';
+    if (['gift', 'free', '赠送', '免费'].includes(raw)) return 'gift';
+    if (raw === 'package' || raw === '课包扣减') return 'package';
+    return trimText(fallback) || 'package';
+  }
+
   function buildStudentQuickCreatePayload(input = {}) {
     return {
       name: trimText(input.name),
@@ -40,6 +70,39 @@
       if (existing.expanded !== undefined) next.expanded = !!existing.expanded;
       return next;
     });
+  }
+
+  function buildInitialStudentSettlementRowsForSchedule(schedule = {}, studentIds = [], defaultSettlementType = 'package') {
+    const ids = [...new Set((Array.isArray(studentIds) ? studentIds : []).map(trimText).filter(Boolean))];
+    const existingRows = parseArr(schedule.studentSettlementRows);
+    const type = normalizeSettlementType(schedule.settlementType || schedule.paymentType, defaultSettlementType);
+    if (existingRows.length) return normalizeStudentSettlementRows({ studentIds: ids, defaultSettlementType: type, existingRows });
+    const rows = normalizeStudentSettlementRows({ studentIds: ids, defaultSettlementType: type, existingRows: [] });
+    if (!rows.length) return [];
+    const entitlementIds = parseArr(schedule.entitlementIds).map(trimText).filter(Boolean);
+    const lessonAmounts = splitMoneyEvenly(schedule.paidAmount || schedule.paymentAmount || 0, rows.length);
+    const fieldFeeTotal = roundMoney(schedule.fieldFeeAmount || 0);
+    const fieldFeeAmounts = splitMoneyEvenly(fieldFeeTotal, rows.length);
+    return rows.map((row, index) => ({
+      ...row,
+      settlementType: type,
+      payMethod: type === 'direct' ? trimText(schedule.payMethod || schedule.paymentChannel) || row.payMethod || '微信' : '',
+      amount: type === 'direct' ? lessonAmounts[index] || 0 : 0,
+      fieldFeeMode: fieldFeeTotal > 0 ? 'separate' : row.fieldFeeMode,
+      fieldFeePayMethod: fieldFeeTotal > 0 ? trimText(schedule.fieldFeePayMethod) || '微信' : '',
+      fieldFeeAmount: fieldFeeTotal > 0 ? fieldFeeAmounts[index] || 0 : 0,
+      entitlementId: row.entitlementId || entitlementIds[index] || (rows.length === 1 ? trimText(schedule.entitlementId) : ''),
+      note: row.note
+    }));
+  }
+
+  function selectStudentSettlementEntitlement(row = {}, options = []) {
+    const studentId = trimText(row.studentId);
+    const preferredId = trimText(row.entitlementId);
+    const rows = (Array.isArray(options) ? options : []).filter(option => !studentId || trimText(option?.studentId) === studentId);
+    return (preferredId && rows.find(option => trimText(option?.entitlementId || option?.id) === preferredId && option.selectable !== false))
+      || rows.find(option => option.selectable !== false)
+      || null;
   }
 
   function settlementRowLabel(row = {}) {
@@ -151,6 +214,8 @@
     trimText,
     buildStudentQuickCreatePayload,
     normalizeStudentSettlementRows,
+    buildInitialStudentSettlementRowsForSchedule,
+    selectStudentSettlementEntitlement,
     serializeStudentSettlementRows,
     summarizeStudentSettlementRows,
     settlementTypeLabel,

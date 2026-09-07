@@ -11,7 +11,9 @@ const apiSource = fs.readFileSync(path.join(repoRoot, 'api', 'index.js'), 'utf8'
 const {
   normalizeStudentSettlementRows,
   summarizeStudentSettlementRows,
-  scheduleStudentSettlementRowHtml
+  scheduleStudentSettlementRowHtml,
+  buildInitialStudentSettlementRowsForSchedule,
+  selectStudentSettlementEntitlement
 } = require('../public/assets/scripts/pages/schedule-settlement.js');
 
 function fnBody(name) {
@@ -54,6 +56,7 @@ assert.match(fnBody('saveScheduleStudentQuickCreate'), /apiCall\('POST','\/stude
 assert.doesNotMatch(fnBody('saveScheduleStudentQuickCreate'), /renderStudents\(\)/, 'saving a quick student should not rerender the whole students page');
 
 assert.match(fnBody('openScheduleModal'), /id="sch_studentSettlementRows"/, 'schedule modal should keep hidden settlement rows');
+assert.match(fnBody('openScheduleModal'), /buildInitialStudentSettlementRowsForSchedule/, 'schedule edit should hydrate initial settlement rows from saved schedule data');
 assert.match(fnBody('openScheduleModal'), /packageField\}<div id="sch_studentSettlementSectionHost"><\/div><div class="tms-form-row schedule-time-row"/, 'student settlement section should stay inside the basic schedule form');
 assert.match(fnBody('scheduleUsesPerStudentSettlementCourse'), /\['小班课','专项课'\]/, 'small group and special schedules should use per-student settlement');
 assert.match(fnBody('refreshScheduleStudentSettlementSection'), /!scheduleUsesPerStudentSettlementCourse\(\)\|\|!ids\.length/, 'student settlement rows should show for selected students in per-student settlement courses');
@@ -67,6 +70,36 @@ assert.match(scheduleStudentSettlementRowHtml({
   packageText: '小班课包 · 剩余3次',
   payMethodOptions: [{ value: '微信', label: '微信' }, { value: '现金', label: '现金' }]
 }), /学员A[\s\S]*结算方式[\s\S]*场地费[\s\S]*扣减课包[\s\S]*小班课包 · 剩余3次[\s\S]*课时费支付[\s\S]*场地费支付[\s\S]*sch_studentSettlementFieldFeeAmount_s1/, 'small group row should show one complete settlement set per student');
+const legacyDirectRows = buildInitialStudentSettlementRowsForSchedule({
+  studentIds: ['s1', 's2', 's3'],
+  settlementType: 'direct',
+  payMethod: '支付宝',
+  paidAmount: 301,
+  fieldFeeAmount: 90,
+  fieldFeePayMethod: '现金'
+}, ['s1', 's2', 's3'], 'direct');
+assert.deepStrictEqual(
+  legacyDirectRows.map(row => ({ studentId: row.studentId, settlementType: row.settlementType, payMethod: row.payMethod, amount: row.amount, fieldFeeMode: row.fieldFeeMode, fieldFeePayMethod: row.fieldFeePayMethod, fieldFeeAmount: row.fieldFeeAmount })),
+  [
+    { studentId: 's1', settlementType: 'direct', payMethod: '支付宝', amount: 100.33, fieldFeeMode: 'separate', fieldFeePayMethod: '现金', fieldFeeAmount: 30 },
+    { studentId: 's2', settlementType: 'direct', payMethod: '支付宝', amount: 100.33, fieldFeeMode: 'separate', fieldFeePayMethod: '现金', fieldFeeAmount: 30 },
+    { studentId: 's3', settlementType: 'direct', payMethod: '支付宝', amount: 100.34, fieldFeeMode: 'separate', fieldFeePayMethod: '现金', fieldFeeAmount: 30 }
+  ],
+  'editing legacy direct-paid multi-student schedules should hydrate per-student rows without resetting money to zero'
+);
+assert.strictEqual(
+  selectStudentSettlementEntitlement(
+    { studentId: 's1', entitlementId: 'ent-original' },
+    [
+      { studentId: 's1', entitlementId: 'ent-newer', selectable: true },
+      { studentId: 's1', entitlementId: 'ent-original', selectable: true }
+    ]
+  ).entitlementId,
+  'ent-original',
+  'editing should keep the previously saved package instead of replacing it with the first recommendation'
+);
+assert.match(fnBody('scheduleSelectableEntitlementForStudent'), /selectStudentSettlementEntitlement/, 'student entitlement selection should prefer the saved package when available');
+assert.match(fnBody('captureScheduleStudentSettlementRows'), /scheduleSelectableEntitlementForStudent\(studentId,row\)/, 'saving after opening edit should keep each row package preference');
 assert.match(fnBody('renderScheduleStudentEntitlementRows'), /schedule-student-entitlement-action/, 'package matching rows should expose a direct-payment action for each student');
 assert.match(fnBody('renderScheduleStudentEntitlementRows'), /setScheduleStudentSettlementType\([\s\S]*'direct'\)/, 'package matching rows should switch one student to direct payment');
 assert.match(scheduleSource, /function setScheduleStudentSettlementType\(/, 'schedule page should expose a helper for switching one student to direct payment');
