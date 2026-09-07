@@ -19,8 +19,8 @@ assert.match(
 );
 assert.match(
   fnBody('studentDetailMetricsHtml'),
-  /studentPackageLessonMeta\(stu\)[\s\S]*剩余课时\/总数/,
-  'student detail top card should render remaining lessons from the detail package metric'
+  /studentPackageLessonMeta\(stu\)[\s\S]*可用课时/,
+  'student detail top card should render available lessons from the detail package metric'
 );
 
 console.log('student detail package balance view tests passed');

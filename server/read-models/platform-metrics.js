@@ -3,7 +3,7 @@ const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
 
-const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v4';
+const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v5';
 
 function text(value) {
   return String(value || '').trim();
@@ -830,6 +830,36 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     || row.feedbackStatus === '已反馈'
     || row.hasFeedback === true
   );
+  const lessonPackageMeta = (row = {}) => {
+    const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
+    const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
+    const totalLessons = Number(entitlement.totalLessons || purchase.totalLessons || purchase.packageLessons) || 0;
+    return {
+      entitlement,
+      purchase,
+      totalLessons,
+      unit: packageUnitLabel(entitlement.id ? entitlement : (purchase.id ? purchase : row)),
+      packageName: teachingPackageName(entitlement, purchase) || text(row.packageName || purchase.packageName || entitlement.packageName)
+    };
+  };
+  const lessonPaymentSourceText = (row = {}) => {
+    if (courseRowIsTrial(row)) return '体验课';
+    const value = text([
+      row.settlementType,
+      row.paymentType,
+      row.payType,
+      row.paymentMethod,
+      row.paymentChannel,
+      row.reason,
+      row.notes
+    ].filter(Boolean).join(' '));
+    if (row.freeLesson === true || row.action === 'free_lesson' || /gift|free|赠送|赠课|免费|补偿/.test(value)) return '赠送课｜免费';
+    if (teachingPaymentIsDirect(row)) {
+      const amount = coursePaymentAmount(row);
+      return amount > 0 ? `单次付费｜${moneyText(amount)}` : '单次付费';
+    }
+    return '历史记录｜未关联订单';
+  };
 
   (data.entitlementLedger || [])
     .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0)
@@ -929,6 +959,14 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           coach: text(row.coach || row.coachName),
           hasFeedback: lessonHasFeedback(scheduleId, row),
           lessonDelta: pending ? 0 : -Math.abs(scheduleLessonUnits(row)),
+          settlementType: text(row.settlementType),
+          paymentType: text(row.paymentType),
+          payType: text(row.payType),
+          paymentMethod: text(row.paymentMethod),
+          paymentChannel: text(row.paymentChannel),
+          paidAmount: coursePaymentAmount(row),
+          freeLesson: row.freeLesson === true,
+          action: text(row.action),
           countAsCompletedLesson: pending ? false : true,
           unit: packageUnitLabel(row),
           status: pending ? '待上课' : '已结束',
@@ -1004,8 +1042,21 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       if (!count) return;
       const startNo = usedBefore + 1;
       const endNo = usedBefore + count;
-      const unit = row.unit || '节';
+      const packageMeta = lessonPackageMeta(row);
+      const unit = packageMeta.unit || row.unit || '节';
       row.lessonSectionText = `[第${lessonSectionMarker(startNo, unit)}${startNo === endNo ? '' : `-${lessonSectionMarker(endNo, unit)}`}${unit}]`;
+      if (packageMeta.totalLessons > 0) {
+        const progressRange = startNo === endNo
+          ? lessonQty(endNo)
+          : `${lessonQty(startNo)}-${lessonQty(endNo)}`;
+        const progressText = `第${progressRange}/${lessonQty(packageMeta.totalLessons)}${unit}`;
+        const remainingAfter = Math.max(0, round(packageMeta.totalLessons - endNo, 1));
+        row.packageLessonProgressText = progressText;
+        row.packageRemainingAfterText = `${pending ? '预计剩' : '剩'}${lessonQty(remainingAfter)}${unit}`;
+        row.lessonSourceType = pending ? 'package_pending' : 'package';
+        row.lessonSourceText = `${pending ? '课包占用' : '课包扣课'}｜${progressText}｜${row.packageRemainingAfterText}`;
+        row.packageName = row.packageName || packageMeta.packageName;
+      }
       usedBeforeByPackage.set(packageKey, endNo);
     });
     let studentUsedBefore = 0;
@@ -1027,7 +1078,9 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     rowsByStudent.set(studentId, rows.map(row => ({
       ...row,
       lessonSectionText: row.lessonSectionText || '',
-      studentLessonSequenceText: row.studentLessonSequenceText || ''
+      studentLessonSequenceText: row.studentLessonSequenceText || '',
+      lessonSourceType: row.lessonSourceType || (courseRowIsTrial(row) ? 'trial' : (teachingPaymentIsDirect(row) ? 'direct' : 'history')),
+      lessonSourceText: row.lessonSourceText || lessonPaymentSourceText(row)
     })));
   });
   return rowsByStudent;

@@ -452,6 +452,12 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .student-lesson-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:#667085;font-size:12px;line-height:1.4}
 .student-lesson-meta-item{display:inline-flex;align-items:center;gap:5px}
 .student-lesson-meta-icon{width:14px;height:14px;flex:0 0 auto;color:#98A2B3}
+.student-lesson-source{margin-top:8px;color:#805435;font-size:12px;line-height:1.45}
+.student-lesson-relation{margin-top:4px;color:#98A2B3;font-size:12px;line-height:1.45}
+.student-lesson-filter-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;color:#667085;font-size:12px;line-height:1.45}
+.student-lesson-filter-banner span:first-child{color:#1F2937}
+.student-lesson-filter-banner button{border:0;background:transparent;color:#805435;font-size:12px;padding:0;cursor:pointer}
+.student-lesson-filter-banner button:hover{text-decoration:underline}
 .student-lesson-charge{flex:0 0 auto;align-self:flex-start;margin-top:2px}
 .student-lesson-charge strong{display:inline-flex;align-items:center;min-height:0;padding:0;color:#B97244;font-size:12px;font-weight:400;white-space:nowrap;background:transparent}
 .student-feedback-card{border:1px solid #ECE7E1;border-radius:9px;background:#fff;padding:10px 12px;color:#4B5563;font-size:12px;line-height:1.6;margin-bottom:8px}

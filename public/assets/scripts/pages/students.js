@@ -5,6 +5,7 @@ let studentDetailEditingStudentId='';
 let studentDetailRequestSeq=0;
 let studentDetailPrewarmSeq=0;
 let studentDetailPrewarmKey='';
+let studentLessonRecordFilterState={studentId:'',entitlementId:'',purchaseId:'',packageName:''};
 let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
@@ -999,12 +1000,32 @@ function studentDetailBenefitsTabHtml(s){
 function studentDetailMetricsHtml(stu){
   const meta=studentPackageLessonMeta(stu);
   const recentDate=studentLastLessonDate(stu);
+  const packageBreakdown=studentPackageBalanceCategoryText(stu);
   const cards=[
-    {label:'剩余课时/总数',value:meta.hasPackage?lessonQty(meta.remaining):'-',sub:meta.hasPackage?`/ ${lessonQty(meta.total)}节`:'暂无课包'},
+    {label:'可用课时',value:meta.hasPackage?lessonQty(meta.remaining):'-',sub:meta.hasPackage?[`/ ${lessonQty(meta.total)}节`,packageBreakdown].filter(Boolean).join(' · '):'暂无课包'},
     {label:'负责教练',value:studentPrimaryCoachText(stu),sub:''},
     {label:'最近上课',value:recentDate||'-',sub:recentDate?daysAgoText(recentDate).split(' · ')[1]||'':'暂无记录'}
   ];
   return `<div class="student-detail-metrics">${cards.map(card=>`<div class="student-detail-metric"><div class="student-detail-metric-label">${esc(card.label)}</div><div class="student-detail-metric-value">${esc(card.value)}${card.sub?`<span>${esc(card.sub)}</span>`:''}</div></div>`).join('')}</div>`;
+}
+function studentPackageCourseShortLabel(row={}){
+  const value=String([row.standardCourseType,row.courseType,row.packageCourseType,row.packageName,row.productName,row.name].filter(Boolean).join(' '));
+  if(/专项/.test(value))return '专项';
+  if(/小班|训练营|随到随学/.test(value))return '小班';
+  if(/私教|1\s*[vV对]\s*1|1\s*[vV对]\s*2/.test(value))return '私教';
+  return '其他';
+}
+function studentPackageBalanceCategoryText(stu){
+  const rows=(Array.isArray(stu?.detailPackageOrderRows)?stu.detailPackageOrderRows:[])
+    .filter(row=>Number(row?.remainingLessons)>0&&Number(row?.totalLessons)>0&&!studentPackageRecordIsTrial(row));
+  if(!rows.length)return '';
+  const totals=new Map();
+  rows.forEach(row=>{
+    const key=studentPackageCourseShortLabel(row);
+    totals.set(key,(totals.get(key)||0)+(Number(row.remainingLessons)||0));
+  });
+  const parts=['私教','小班','专项','其他'].filter(key=>totals.has(key)).map(key=>`${key}${lessonQty(totals.get(key))}`);
+  return parts.length===1?`${parts[0].replace(/[0-9.]+$/,'')}课包`:parts.join('｜');
 }
 function studentDetailSectionBlockHtml(title,content,extraClass=''){
   return content?`<section class="student-detail-section ${extraClass}"><h4>${esc(title)}</h4>${content}</section>`:'';
@@ -1179,6 +1200,48 @@ function studentLessonRecordMetaIcon(kind){
 function studentLessonRecordMetaItem(kind,text){
   return `<span class="student-lesson-meta-item">${studentLessonRecordMetaIcon(kind)}<span>${esc(renderStandardEmptyText(text))}</span></span>`;
 }
+function setStudentLessonRecordPackageFilter(studentId,entitlementId='',purchaseId='',packageName=''){
+  studentLessonRecordFilterState={studentId:String(studentId||''),entitlementId:String(entitlementId||''),purchaseId:String(purchaseId||''),packageName:String(packageName||'')};
+  if(studentId)openStudentDetail(studentId);
+}
+function clearStudentLessonRecordPackageFilter(studentId=''){
+  studentLessonRecordFilterState={studentId:'',entitlementId:'',purchaseId:'',packageName:''};
+  if(studentId)openStudentDetail(studentId);
+}
+function studentLessonRecordActiveFilter(stu){
+  const sid=String(stu?.id||stu?.studentId||'');
+  return sid&&studentLessonRecordFilterState.studentId===sid?studentLessonRecordFilterState:null;
+}
+function studentLessonRecordMatchesFilter(row={},filter=null){
+  if(!filter)return true;
+  if(filter.entitlementId&&String(row.entitlementId||'')===filter.entitlementId)return true;
+  if(filter.purchaseId&&String(row.purchaseId||'')===filter.purchaseId)return true;
+  if(filter.packageName&&String(row.packageName||row.className||'')===filter.packageName)return true;
+  return false;
+}
+function studentLessonRecordFilterBannerHtml(stu,rows=[]){
+  const filter=studentLessonRecordActiveFilter(stu);
+  if(!filter)return '';
+  const name=filter.packageName||'当前课包';
+  return `<div class="student-lesson-filter-banner"><span>正在查看：${esc(name)}</span><span>共${lessonQty(rows.length)}节</span><button type="button" onclick="clearStudentLessonRecordPackageFilter(${jsArg(stu.id||stu.studentId)})">清除</button></div>`;
+}
+function studentLessonRecordTitleText(item={},rows=[],index=0){
+  const studentSequenceText=String(item.studentLessonSequenceText||'').trim();
+  const packageText=String(item.className||item.packageName||item.courseDisplayName||item.courseType||'上课记录').trim();
+  const fallbackSection=studentLessonRecordDetailSectionText(rows,index);
+  return [studentSequenceText||fallbackSection,packageText].filter(Boolean).join(' ');
+}
+function studentLessonRecordSourceText(item={},stu={},rows=[],index=0){
+  const explicit=String(item.lessonSourceText||'').trim();
+  if(explicit)return explicit;
+  const sectionText=studentLessonRecordDetailSectionText(rows,index);
+  if(sectionText)return `课包扣课｜${sectionText.replace(/^\[|\]$/g,'')}`;
+  const payAmount=Number(item.paidAmount||item.paymentAmount||item.actualAmount||item.amountPaid||item.amount)||0;
+  const source=String([item.settlementType,item.paymentType,item.payType,item.paymentMethod,item.paymentChannel,item.reason,item.notes].filter(Boolean).join(' '));
+  if(item.freeLesson===true||item.action==='free_lesson'||/赠送|赠课|免费|gift|free/.test(source))return '赠送课｜免费';
+  if(payAmount>0||/单次|按次|direct|single|现金|微信|支付宝|转账|收款/.test(source))return payAmount>0?`单次付费｜¥${fmt(payAmount)}`:'单次付费';
+  return '历史记录｜未关联订单';
+}
 function studentLessonRecordDetailSectionText(rows=[],index=0){
   const row=rows[index]||{};
   const marker=typeof studentLessonSectionMarker==='function'?studentLessonSectionMarker:(value=>String(value));
@@ -1311,17 +1374,18 @@ function studentRecentFeedbacks(stu,limit=2){
   }).sort((a,b)=>new Date(b.startTime||b.createdAt||0)-new Date(a.startTime||a.createdAt||0)).slice(0,limit);
 }
 function studentLessonRecordHtml(stu){
-  const rows=studentLessonRecordRows(stu);
-  if(!rows.length)return '<div class="student-detail-empty">暂无上课记录</div>';
+  const allRows=studentLessonRecordRows(stu);
+  const filter=studentLessonRecordActiveFilter(stu);
+  const rows=filter?allRows.filter(row=>studentLessonRecordMatchesFilter(row,filter)):allRows;
+  if(!rows.length)return `${studentLessonRecordFilterBannerHtml(stu,rows)}<div class="student-detail-empty">暂无上课记录</div>`;
   const limit=studentLessonRecordExpanded(stu)?rows.length:10;
   const expanded=studentLessonRecordExpanded(stu);
   const items=rows.slice(0,limit).map((item,index)=>{
     if(item.kind){
-      const sectionText=studentLessonRecordDetailSectionText(rows,index);
-      const studentSequenceText=String(item.studentLessonSequenceText||'').trim();
-      const detailText=[item.courseType,item.className||item.packageName].filter(Boolean).join(' · ');
-      const title=[studentSequenceText&&studentSequenceText!==sectionText?studentSequenceText:'',sectionText,item.lessonRelationText,detailText].filter(Boolean).join(' ');
-      return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title||'上课记录')}</div><div class="student-lesson-meta">${studentLessonRecordMetaItem('time',item.time)}${studentLessonRecordMetaItem('site',[cn(item.campus)||'-',item.venue||''].filter(Boolean).join(' '))}${studentLessonRecordMetaItem('coach',item.coach||'-')}</div></div></div>`;
+      const title=studentLessonRecordTitleText(item,rows,index);
+      const sourceText=studentLessonRecordSourceText(item,stu,rows,index);
+      const relation=item.lessonRelationText?`<div class="student-lesson-relation">${esc(item.lessonRelationText)}</div>`:'';
+      return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title||'上课记录')}</div><div class="student-lesson-meta">${studentLessonRecordMetaItem('time',item.time)}${studentLessonRecordMetaItem('site',[cn(item.campus)||'-',item.venue||''].filter(Boolean).join(' '))}${studentLessonRecordMetaItem('coach',item.coach||'-')}</div><div class="student-lesson-source">${esc(sourceText)}</div>${relation}</div></div>`;
     }
     const line=item.type==='ledger'
       ? studentLessonRecordPackageHtml(item.row,item.ent)

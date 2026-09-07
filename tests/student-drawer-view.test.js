@@ -51,6 +51,13 @@ assert.match(source, /studentDetailOrdersTabHtml\(s\)[\s\S]*useGrid:false/, 'stu
 assert.match(fnBody('studentAccountSummaryHtml'), /membershipReadModelFinanceForCourt/, 'student detail linked booking account summary should read balance and spending from the court account read model');
 assert.match(fnBody('studentMembershipSummaryHtml'), /membershipReadModelItemForCourt/, 'student detail linked membership summary should read membership facts from the court account read model');
 assert.match(fnBody('studentLessonRecordHtml'), /renderDetailDrawerTimeline\(items,\{emptyText:'暂无上课记录'\}\)/, 'student lesson records should use the shared drawer timeline');
+assert.match(source, /let studentLessonRecordFilterState=/, 'student drawer should keep package record filtering as local UI state');
+assert.match(source, /function setStudentLessonRecordPackageFilter\(/, 'package cards should filter the single lesson timeline instead of opening a second list');
+assert.match(source, /function clearStudentLessonRecordPackageFilter\(/, 'lesson timeline package filter should be clearable');
+assert.match(fnBody('studentEntitlementSummaryHtml'), /setStudentLessonRecordPackageFilter[\s\S]*查看记录/, 'student package cards should provide a short view-records action');
+assert.match(fnBody('studentLessonRecordHtml'), /studentLessonRecordFilterBannerHtml/, 'lesson records should show the active package filter banner');
+assert.match(fnBody('studentLessonRecordHtml'), /studentLessonRecordSourceText/, 'lesson records should render the unified source text from the read model');
+assert.doesNotMatch(source, /不扣私教课包/, 'student lesson copy should not use confusing package-negative wording');
 assert.match(source, /studentDetailBenefitsTabHtml\(s\)[\s\S]*useGrid:false/, 'student benefit records should span the full drawer width');
 assert.match(source, /studentBenefitListTableHtml\(s\)[\s\S]*renderDetailDrawerTable/, 'student benefit list should use the shared drawer table');
 assert.match(source, /studentBenefitGrantTableHtml\(s\)[\s\S]*renderDetailDrawerTable/, 'student benefit grant records should use the shared drawer table');
