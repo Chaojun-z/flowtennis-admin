@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
+const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 const {
   requireReadyStudentTeachingSummaryRows,
   buildStudentTeachingSummaryChecksum,
@@ -8,19 +9,23 @@ const {
 } = require('../server/read-models/student-teaching-summary-cache.js');
 
 function readyStudentSummaryRows(rows = []) {
+  const versionedRows = rows.map(row => ({
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    ...row
+  }));
   return [
     {
       id: '__student_teaching_summary_meta__',
       kind: 'student-teaching-summary-meta',
       status: 'ready',
-      rowCount: rows.length,
+      rowCount: versionedRows.length,
       generation: 1,
       batchId: 'test-batch',
       sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
       completedAt: '2026-08-27T00:00:01.000Z',
-      checksum: buildStudentTeachingSummaryChecksum(rows)
+      checksum: buildStudentTeachingSummaryChecksum(versionedRows)
     },
-    ...rows
+    ...versionedRows
   ];
 }
 
@@ -403,7 +408,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   );
 
   const legacyReady = await request('', { legacyReady: true });
-  assert.strictEqual(legacyReady.res.statusCode, 200, '旧 ready 摘要缺少发布元数据时，客户中心仍应可正常加载');
+  assert.strictEqual(legacyReady.res.statusCode, 503, '旧 ready 摘要缺少当前教学口径版本时，客户中心必须拒绝展示旧数据');
+  assert.strictEqual(legacyReady.res.body.code, 'STUDENT_TEACHING_SUMMARY_NOT_READY', '旧摘要必须走受控不可用状态，等待重建摘要');
 
   const rebuildDryRun = makeHandler({ mutateSummaryOnWrite: true });
   const rebuildDryRunRes = {};
@@ -417,8 +423,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(rebuildDryRunRes.statusCode, 200, '手工重建摘要 dry-run 应成功返回');
   assert.strictEqual(rebuildDryRunRes.body.dryRun, true, 'dry-run 响应必须明确标记未写入');
   assert.strictEqual(rebuildDryRunRes.body.writePerformed, false, 'dry-run 不得写入摘要表');
-  assert.strictEqual(rebuildDryRunRes.body.count, 4, 'dry-run 必须返回将要发布的摘要行数');
-  assert.strictEqual(rebuildDryRunRes.body.teachingSummary.historicalStudentCount, 4, 'dry-run 必须返回重建后的历史学员顶部数');
+  assert.strictEqual(rebuildDryRunRes.body.count, 1, 'dry-run 必须返回将要发布的摘要行数，不能把已排课误算成已上课学员');
+  assert.strictEqual(rebuildDryRunRes.body.teachingSummary.historicalStudentCount, 1, 'dry-run 必须返回重建后的历史学员顶部数，已排课不计入累计上课口径');
   assert.strictEqual(rebuildDryRunRes.body.teachingSummary.activeStudentCount, 0, 'dry-run 必须返回重建后的在期学员顶部数');
   assert.deepStrictEqual(rebuildDryRun.calls.puts, [], 'dry-run 不能写 meta、版本行或 bundle');
   assert.deepStrictEqual(rebuildDryRun.calls.deletes, [], 'dry-run 不能清理旧版本');

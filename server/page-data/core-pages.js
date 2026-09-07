@@ -80,6 +80,7 @@ function pageDataArraySnapshot(value){
 
 function buildStudentDetailFastPayload({student={},studentTeachingSummary=null,studentId='',needsRefresh=false}={}){
   const summary=studentTeachingSummary||{};
+  const hasTrustedSummary=!!studentTeachingSummary;
   const detailStudentView={
     ...student,
     ...summary,
@@ -94,14 +95,23 @@ function buildStudentDetailFastPayload({student={},studentTeachingSummary=null,s
     primaryCoach:student.primaryCoach||summary.primaryCoach||'',
     notes:Object.prototype.hasOwnProperty.call(student,'notes')?String(student.notes||''):String(summary.notes||''),
     profileNote:student.profileNote||summary.profileNote||'',
-    detailPackageOrderRows:pageDataArraySnapshot(summary.detailPackageOrderRows),
-    detailLessonRecordRows:pageDataArraySnapshot(summary.detailLessonRecordRows),
-    detailBenefitRows:pageDataArraySnapshot(summary.detailBenefitRows),
-    detailBenefitGrantRows:pageDataArraySnapshot(summary.detailBenefitGrantRows),
-    detailBenefitConsumeRows:pageDataArraySnapshot(summary.detailBenefitConsumeRows),
-    detailRecentFeedbackRows:pageDataArraySnapshot(summary.detailRecentFeedbackRows),
     studentDetailSummaryNeedsRefresh:!!needsRefresh
   };
+  if(hasTrustedSummary){
+    detailStudentView.detailPackageOrderRows=pageDataArraySnapshot(summary.detailPackageOrderRows);
+    detailStudentView.detailLessonRecordRows=pageDataArraySnapshot(summary.detailLessonRecordRows);
+    detailStudentView.detailBenefitRows=pageDataArraySnapshot(summary.detailBenefitRows);
+    detailStudentView.detailBenefitGrantRows=pageDataArraySnapshot(summary.detailBenefitGrantRows);
+    detailStudentView.detailBenefitConsumeRows=pageDataArraySnapshot(summary.detailBenefitConsumeRows);
+    detailStudentView.detailRecentFeedbackRows=pageDataArraySnapshot(summary.detailRecentFeedbackRows);
+  }else{
+    detailStudentView.detailPackageOrderRows=[];
+    detailStudentView.detailLessonRecordRows=[];
+    detailStudentView.detailBenefitRows=[];
+    detailStudentView.detailBenefitGrantRows=[];
+    detailStudentView.detailBenefitConsumeRows=[];
+    detailStudentView.detailRecentFeedbackRows=[];
+  }
   const customerLifecycleRows=buildCustomerLifecycleRows({students:[student]});
   return {
     students:[student],
@@ -205,13 +215,14 @@ function createCorePageDataRoutes(deps={}){
     const sid=String(studentId||'').trim();
     if(!T_STUDENT_TEACHING_SUMMARY||!sid)return null;
     if(typeof getCachedRow==='function'){
+      const isCurrentTeachingSummaryRow=row=>String(row?.teachingLessonDetailSourceVersion||'').trim()===TEACHING_LESSON_DETAIL_SOURCE_VERSION;
       const meta=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,STUDENT_TEACHING_SUMMARY_META_ID).catch(()=>null);
       const activeVersion=String(meta?.activeVersion||'').trim();
       if(meta&&activeVersion){
         const versionedId=`${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:${sid}`;
         const versioned=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,versionedId).catch(()=>null);
         const versionedStudentId=String(versioned?.publishedRowId||versioned?.studentId||'').trim();
-        if(versioned&&String(versioned.publishVersion||'').trim()===activeVersion&&versionedStudentId===sid){
+        if(versioned&&String(versioned.publishVersion||'').trim()===activeVersion&&versionedStudentId===sid&&isCurrentTeachingSummaryRow(versioned)){
           return {...versioned,id:sid,publishedRowId:undefined,publishVersion:undefined};
         }
         const bundle=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,buildStudentTeachingSummaryBundleId(activeVersion)).catch(()=>null);
@@ -219,11 +230,15 @@ function createCorePageDataRoutes(deps={}){
         if(bundle){
           try{rows=requireReadyStudentTeachingSummaryRows([meta,bundle]);}catch(e){rows=[];}
         }
-        const published=(Array.isArray(rows)?rows:[]).find(row=>String(row.id||row.studentId||'').trim()===sid)||null;
+        const published=(Array.isArray(rows)?rows:[]).find(row=>String(row.id||row.studentId||'').trim()===sid&&isCurrentTeachingSummaryRow(row))||null;
         if(published)return published;
       }
     }
     const direct=typeof getCachedRow==='function'?await getCachedRow(T_STUDENT_TEACHING_SUMMARY,sid).catch(()=>null):null;
+    if(direct&&String(direct.publishVersion||'').trim()){
+      if(String(direct.teachingLessonDetailSourceVersion||'').trim()!==TEACHING_LESSON_DETAIL_SOURCE_VERSION)return null;
+    }
+    if(direct&&String(direct.teachingLessonDetailSourceVersion||'').trim()!==TEACHING_LESSON_DETAIL_SOURCE_VERSION)return null;
     return direct||null;
   }
   async function hydrateScheduleRowsByLedgerIds(scheduleRows=[],ledgerRows=[]){
@@ -513,6 +528,10 @@ function createCorePageDataRoutes(deps={}){
             },
             updatedAt:new Date().toISOString()
           });
+        }
+        for(const row of rows){
+          const versionedRow=buildVersionedStudentTeachingSummaryRow(row,batchId);
+          await put(T_STUDENT_TEACHING_SUMMARY,versionedRow.id,versionedRow);
         }
         const bundle=buildStudentTeachingSummaryBundleRow(rows,batchId);
         await put(T_STUDENT_TEACHING_SUMMARY,bundle.id,bundle);

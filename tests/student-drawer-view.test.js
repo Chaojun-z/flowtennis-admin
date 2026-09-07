@@ -60,6 +60,9 @@ assert.match(fnBody('studentLessonRecordHtml'), /return `\$\{studentLessonRecord
 assert.match(fnBody('studentLessonRecordFilterBannerHtml'), /reduce[\s\S]*lessonDelta[\s\S]*共\$\{lessonQty\(totalUnits\)\}课时/, 'active package filter count must summarize consumed lesson hours, not attendance record rows');
 assert.doesNotMatch(fnBody('studentLessonRecordFilterBannerHtml'), /rows\.length[\s\S]*节/, 'active package filter banner must not call two-hour lessons one record');
 assert.doesNotMatch(fnBody('studentLessonRecordMatchesFilter'), /packageName/, 'package lesson filtering must be strict and must not fall back to package name matching');
+assert.match(fnBody('studentLessonRecordMatchesFilter'), /if\(filter\.packageRecordKey\)return recordKey===filter\.packageRecordKey;/, 'package record key must be the only matcher when present, so entitlementId fallback cannot pull overflow rows back in');
+assert.match(fnBody('studentLessonRecordDetailSectionText'), /packageRecordKey[\s\S]*item\.packageRecordKey/, 'lesson section fallback must only group by packageRecordKey');
+assert.doesNotMatch(fnBody('studentLessonRecordDetailSectionText'), /item\.entitlementId\|\|item\.purchaseId\|\|item\.packageName/, 'lesson section fallback must not group by loose entitlement/purchase/name fallback');
 assert.match(fnBody('studentEntitlementSummaryHtml'), /packageRecordKey[\s\S]*setStudentLessonRecordPackageFilter/, 'package cards should pass a stable package record key for strict lesson filtering');
 assert.match(fnBody('studentLessonRecordHtml'), /studentLessonRecordSourceText/, 'lesson records should render the unified source text from the read model');
 assert.doesNotMatch(source, /不扣私教课包/, 'student lesson copy should not use confusing package-negative wording');

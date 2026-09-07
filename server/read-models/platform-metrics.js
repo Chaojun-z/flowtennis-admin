@@ -3,7 +3,7 @@ const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
 
-const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v5';
+const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v7';
 
 function text(value) {
   return String(value || '').trim();
@@ -797,16 +797,38 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   const ledgerBalanceKey = row => text(row.scheduleId)
     ? [text(row.scheduleId), text(row.entitlementId), ledgerBalanceStudentId(row)].join('|')
     : `ledger:${text(row.id)}`;
+  const ledgerEffectiveSortKey = row => text(row.updatedAt || row.relatedDate || row.sourceDate || row.scheduleTime || row.createdAt || row.id);
   const ledgerBalanceByKey = new Map();
   const firstConsumeLedgerIdByKey = new Map();
+  const ledgerRowsByKey = new Map();
   (data.entitlementLedger || [])
     .filter(activeStatus)
     .forEach(row => {
       const key = ledgerBalanceKey(row);
-      const delta = Number(row.lessonDelta) || 0;
-      ledgerBalanceByKey.set(key, (ledgerBalanceByKey.get(key) || 0) + delta);
-      if (delta < 0 && !firstConsumeLedgerIdByKey.has(key)) firstConsumeLedgerIdByKey.set(key, text(row.id));
+      const rows = ledgerRowsByKey.get(key) || [];
+      rows.push(row);
+      ledgerRowsByKey.set(key, rows);
     });
+  ledgerRowsByKey.forEach((rows, key) => {
+    const deltas = rows.map(row => Number(row.lessonDelta) || 0);
+    const negativeRows = rows.filter(row => (Number(row.lessonDelta) || 0) < 0);
+    if (!negativeRows.length) return;
+    const positiveTotal = deltas.filter(delta => delta > 0).reduce((sum, delta) => sum + delta, 0);
+    const latestNegative = negativeRows
+      .slice()
+      .sort((a, b) => ledgerEffectiveSortKey(b).localeCompare(ledgerEffectiveSortKey(a)) || text(b.id).localeCompare(text(a.id)))[0];
+    const latestEditedConsume = negativeRows
+      .filter(row => /编辑.*消课/.test(text(row.reason || row.notes)))
+      .sort((a, b) => ledgerEffectiveSortKey(b).localeCompare(ledgerEffectiveSortKey(a)) || text(b.id).localeCompare(text(a.id)))[0];
+    const effectiveNegative = latestEditedConsume || latestNegative;
+    const balance = positiveTotal > 0
+      ? (latestEditedConsume ? (Number(latestEditedConsume.lessonDelta) || 0) : deltas.reduce((sum, delta) => sum + delta, 0))
+      : Number(effectiveNegative.lessonDelta) || 0;
+    ledgerBalanceByKey.set(key, balance);
+    if (balance < 0) {
+      firstConsumeLedgerIdByKey.set(key, text(effectiveNegative.id));
+    }
+  });
   (data.entitlementLedger || [])
     .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0 && text(row.scheduleId))
     .forEach(row => {
@@ -902,7 +924,10 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
         const displayCoach = text(schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach);
         const hasLinkedSchedule = !!text(schedule.id);
         const hasManualDisplayContext = /\d{1,2}:\d{2}/.test(displayTime) && !!displayVenue && !!displayCoach;
-        if (text(row.scheduleId) && !hasLinkedSchedule && !hasManualDisplayContext) return;
+        const hasLedgerConsumeFallbackContext = !!text(entitlement.id || purchase.id)
+          && !!dateOnly(fallbackTime || row.relatedDate || row.sourceDate || row.scheduleTime || row.createdAt)
+          && /手动消课|导入消课|上课消耗|排课消课|编辑排课消课|补.*消课/.test(text(row.reason || row.notes));
+        if (text(row.scheduleId) && !hasLinkedSchedule && !hasManualDisplayContext && !hasLedgerConsumeFallbackContext) return;
         ledgerScheduleFactKeys.add(lessonFactKey(studentId, {
           startTime: schedule.startTime,
           relatedDate: fallbackTime || row.relatedDate,
@@ -1039,11 +1064,11 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   rowsByStudent.forEach((rows, studentId) => {
     const packageRows = rows
       .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
-      .filter(row => text(row.entitlementId || row.purchaseId || row.packageName))
+      .filter(row => text(row.packageRecordKey))
       .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)));
     const usedBeforeByPackage = new Map();
     packageRows.forEach(row => {
-      const packageKey = text(row.packageRecordKey || row.entitlementId || row.purchaseId || row.packageName);
+      const packageKey = text(row.packageRecordKey);
       if (!packageKey) return;
       const usedBefore = usedBeforeByPackage.get(packageKey) || 0;
       const pending = text(row.status) === '待上课' || row.countAsCompletedLesson === false;
@@ -1056,6 +1081,15 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       const endNo = usedBefore + count;
       const packageMeta = lessonPackageMeta(row);
       const unit = packageMeta.unit || row.unit || '节';
+      if (packageMeta.totalLessons > 0 && endNo > packageMeta.totalLessons) {
+        row.packageRecordKey = '';
+        row.lessonSectionText = '';
+        row.packageLessonProgressText = '';
+        row.packageRemainingAfterText = '';
+        row.lessonSourceType = 'package_overflow';
+        row.lessonSourceText = '待核对｜课包超额';
+        return;
+      }
       row.lessonSectionText = `[第${lessonSectionMarker(startNo, unit)}${startNo === endNo ? '' : `-${lessonSectionMarker(endNo, unit)}`}${unit}]`;
       if (packageMeta.totalLessons > 0) {
         const progressRange = startNo === endNo
@@ -1955,7 +1989,7 @@ function teachingScheduleLessonFact(row = {}, now = new Date()) {
   const base = teachingBaseDateKey(now);
   const happened = !!day && !!base && teachingDateTimeOnOrBeforeNow(timeValue, now);
   if (teachingScheduleCompleted(row)) return happened;
-  if (status === '已排课') return happened;
+  if (['已排课', '待上课', '待确认', '预约', '已预约'].includes(status)) return false;
   return happened;
 }
 
@@ -1964,7 +1998,7 @@ function teachingSchedulePendingLessonFact(row = {}, now = new Date()) {
   if (teachingScheduleCompleted(row)) return false;
   const status = text(row.status || row.systemStatus);
   if (!['已排课', '待上课', '待确认', '预约', '已预约'].includes(status)) return false;
-  return teachingDateTimeAfterNow(row.startTime || row.endTime || row.createdAt, now);
+  return true;
 }
 
 function teachingScheduleStudentIds(row = {}) {

@@ -303,6 +303,76 @@ async function requestVersionedSummaryBeatsStaleDirectRowStudentDetail() {
   return { res, calls };
 }
 
+async function requestLegacyPublishedWJingSummaryStudentDetail() {
+  const calls = { cappedScan: 0, prefixScan: 0, summaryScan: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const version = 'summary-version-wjing-legacy';
+  const staleRows = [{
+    id: 'stu-wjing-legacy',
+    studentId: 'stu-wjing-legacy',
+    name: 'W.Jing',
+    teachingLessonDetailSourceVersion: 'lesson-record-v5',
+    activityStatusLabel: '近30天活跃',
+    completedLessons: 59,
+    detailPackageOrderRows: [{ packageRecordKey: 'ent:ent-wjing-ten', entitlementId: 'ent-wjing-ten', packageName: '成人1v1 朝珺非黄金10课时', remainingLessons: 0, totalLessons: 10 }],
+    detailLessonRecordRows: [
+      { kind: 'ledger', packageRecordKey: 'ent:ent-wjing-ten', entitlementId: 'ent-wjing-ten', scheduleId: 'wjing-old-sch-68', time: '2026-09-04 10:00-11:00', courseType: '私教课', lessonDelta: -1, studentLessonSequenceText: '[累计第68节]' }
+    ],
+    detailBenefitRows: []
+  }];
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: 'ready',
+    batchId: version,
+    activeVersion: version,
+    rowCount: staleRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(staleRows)
+  });
+  const bundle = buildStudentTeachingSummaryBundleRow(staleRows, version);
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      throw new Error(`unexpected full scan: ${table}`);
+    },
+    getCachedScan: async table => {
+      calls.summaryScan += 1;
+      throw new Error(`unexpected summary full scan: ${table}`);
+    },
+    scanByIdPrefix: async () => {
+      calls.prefixScan += 1;
+      return [];
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-wjing-legacy') return { id: 'stu-wjing-legacy', name: 'W.Jing', phone: '13800000000', campus: 'shunyi_mapo', type: '成人' };
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === 'stu-wjing-legacy') return staleRows[0];
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === meta.id) return meta;
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === bundle.id) return bundle;
+      return null;
+    },
+    PRODUCTION_PAGE_READ_LIMITS: { entitlementLedger: 100, schedule: 100, leads: 100 },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-wjing-legacy') });
+  return { res, calls };
+}
+
 async function requestInconsistentStudentDetail() {
   const calls = { cappedScan: 0 };
   const tables = {
@@ -781,6 +851,14 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(versionedBeatsStale.res.body.detailStudentView.completedLessons, 67, 'student drawer must prefer active versioned summary rows over stale direct rows');
   assert.strictEqual(versionedBeatsStale.res.body.detailStudentView.detailLessonRecordRows[0]?.studentLessonSequenceText, '[累计第66-67节]');
 
+  const legacyPublished = await requestLegacyPublishedWJingSummaryStudentDetail();
+  assert.strictEqual(legacyPublished.res.statusCode, 200);
+  assert.strictEqual(legacyPublished.calls.cappedScan, 0, 'legacy W.Jing summary must not trigger production fact scans from the drawer');
+  assert.strictEqual(legacyPublished.calls.summaryScan, 0, 'legacy W.Jing summary must not full-scan summary rows from the drawer');
+  assert.strictEqual(legacyPublished.res.body.studentDetailSummaryNeedsRefresh, true, 'legacy W.Jing summary should be marked unavailable for refresh');
+  assert.strictEqual(legacyPublished.res.body.detailStudentView.completedLessons, undefined, 'legacy W.Jing summary must not return stale 59/68 cumulative values');
+  assert.deepStrictEqual(legacyPublished.res.body.detailStudentView.detailLessonRecordRows, [], 'legacy W.Jing summary must not display stale lesson records');
+
   const inconsistent = await requestInconsistentStudentDetail();
   assert.strictEqual(inconsistent.res.statusCode, 200);
   assert.strictEqual(inconsistent.calls.cappedScan, 0, 'inconsistent teaching summary must not scan production fact tables from the drawer');
@@ -798,9 +876,9 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   const legacyVersion = await requestLegacyVersionSmallClassStudentDetail();
   assert.strictEqual(legacyVersion.res.statusCode, 200);
   assert.strictEqual(legacyVersion.calls.cappedScan, 0, 'legacy lesson summary version must not force a fresh fact read from the drawer');
-  assert.strictEqual(legacyVersion.res.body.studentDetailSummaryNeedsRefresh, true, 'legacy lesson summary should open the drawer with existing snapshot rows');
-  assert.strictEqual(legacyVersion.res.body.detailStudentView.detailPackageOrderRows.length, 1);
-  assert.strictEqual(legacyVersion.res.body.detailStudentView.detailLessonRecordRows.length, 2);
+  assert.strictEqual(legacyVersion.res.body.studentDetailSummaryNeedsRefresh, true, 'legacy lesson summary should open the drawer with a refresh marker');
+  assert.deepStrictEqual(legacyVersion.res.body.detailStudentView.detailPackageOrderRows, []);
+  assert.deepStrictEqual(legacyVersion.res.body.detailStudentView.detailLessonRecordRows, []);
 
   const mergedStaleSummary = await requestMergedStudentWithStaleSummaryDetail();
   assert.strictEqual(mergedStaleSummary.res.statusCode, 200);

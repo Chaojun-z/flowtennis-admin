@@ -200,4 +200,189 @@ assert.strictEqual(
   'free gifted lessons should show a short source label'
 );
 
+const overflowSchedules = Array.from({ length: 18 }, (_, index) => ({
+  id: `sch-wjing-overflow-${index + 1}`,
+  entitlementId: 'ent-wjing-ten',
+  purchaseId: 'pur-wjing-ten',
+  studentId: 'wjing-overflow',
+  startTime: `2026-06-${String(index + 1).padStart(2, '0')} 09:00:00`,
+  endTime: `2026-06-${String(index + 1).padStart(2, '0')} 10:00:00`,
+  status: '已结束',
+  courseType: index >= 10 ? '专项课' : '私教课',
+  venue: `${(index % 3) + 1}号场`,
+  coach: index >= 10 ? '其他教练' : 'Siren 教练',
+  lessonCount: 1
+}));
+const overflowViews = buildTeachingStudentViews([{
+  customerKey: 'student:wjing-overflow',
+  studentId: 'wjing-overflow',
+  displayName: 'W.Jing',
+  studentStage: 'formal'
+}], {
+  students: [{ id: 'wjing-overflow', name: 'W.Jing', type: '成人', campus: 'shunyi_mapo', primaryCoach: 'Siren 教练' }],
+  purchases: [{ id: 'pur-wjing-ten', studentId: 'wjing-overflow', packageName: '成人1v1 朝珺非黄金10课时', courseType: '私教课', status: 'active', purchaseDate: '2026-04-05', actualAmount: 3500 }],
+  entitlements: [{ id: 'ent-wjing-ten', purchaseId: 'pur-wjing-ten', studentId: 'wjing-overflow', packageName: '成人1v1 朝珺非黄金10课时', courseType: '私教课', totalLessons: 10, usedLessons: 10, remainingLessons: 0, status: 'depleted', ownerCoach: 'Siren 教练' }],
+  entitlementLedger: overflowSchedules.map((schedule, index) => ({
+    id: `ledger-wjing-overflow-${index + 1}`,
+    entitlementId: 'ent-wjing-ten',
+    purchaseId: 'pur-wjing-ten',
+    studentId: 'wjing-overflow',
+    scheduleId: schedule.id,
+    lessonDelta: -1,
+    relatedDate: schedule.startTime.slice(0, 10),
+    reason: '上课消耗'
+  })),
+  schedule: overflowSchedules,
+  now
+});
+const overflowStudent = overflowViews.historicalStudents.find(item => item.studentId === 'wjing-overflow');
+assert.ok(overflowStudent, 'W.Jing-style overflow student should be present');
+const filteredOverflowRows = overflowStudent.detailLessonRecordRows.filter(item => item.packageRecordKey === 'ent:ent-wjing-ten');
+assert.strictEqual(
+  filteredOverflowRows.reduce((sum, item) => sum + Math.abs(Number(item.lessonDelta) || 0), 0),
+  10,
+  'a 10-hour package filter must never show more than 10 consumed hours'
+);
+assert.strictEqual(filteredOverflowRows.length, 10, 'a 10-hour package filter must not return 18 mixed lesson rows');
+assert.ok(
+  overflowStudent.detailLessonRecordRows.filter(item => String(item.lessonSourceText || '') === '待核对｜课包超额').every(item => item.packageRecordKey !== 'ent:ent-wjing-ten'),
+  'overflow lesson rows should stay out of the clicked package filter'
+);
+assert.ok(
+  overflowStudent.detailLessonRecordRows.filter(item => String(item.lessonSourceText || '') === '待核对｜课包超额').length === 8,
+  'the eight extra W.Jing-style rows should be marked for data audit'
+);
+assert.ok(
+  !overflowStudent.detailLessonRecordRows.some(item => /第1[1-8]\/10/.test(String(item.lessonSourceText || ''))),
+  'package progress must not display impossible 11-18/10 labels'
+);
+
+const manualConsumeViews = buildTeachingStudentViews([{
+  customerKey: 'student:manual-ledger-student',
+  studentId: 'manual-ledger-student',
+  displayName: '手动消课学员',
+  studentStage: 'formal'
+}], {
+  students: [{ id: 'manual-ledger-student', name: '手动消课学员', type: '成人', campus: 'shunyi_mapo', primaryCoach: 'Siren 教练' }],
+  purchases: [{ id: 'pur-manual-ledger', studentId: 'manual-ledger-student', packageName: '成人1v1 10课时', courseType: '私教课', status: 'active', purchaseDate: '2026-05-01', actualAmount: 5000 }],
+  entitlements: [{ id: 'ent-manual-ledger', purchaseId: 'pur-manual-ledger', studentId: 'manual-ledger-student', packageName: '成人1v1 10课时', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active', ownerCoach: 'Siren 教练' }],
+  entitlementLedger: [{
+    id: 'ledger-manual-stale-schedule',
+    entitlementId: 'ent-manual-ledger',
+    purchaseId: 'pur-manual-ledger',
+    studentId: 'manual-ledger-student',
+    scheduleId: 'missing-old-schedule-id',
+    lessonDelta: -1,
+    relatedDate: '2026-06-01',
+    reason: '手动消课'
+  }],
+  schedule: [],
+  now
+});
+const manualConsumeStudent = manualConsumeViews.historicalStudents.find(item => item.studentId === 'manual-ledger-student');
+assert.ok(manualConsumeStudent, 'manual consume student should be present');
+assert.strictEqual(
+  manualConsumeStudent.completedLessons,
+  1,
+  'manual consumed package hours must count in the same cumulative lesson model even when the old schedule row is missing'
+);
+assert.deepStrictEqual(
+  manualConsumeStudent.detailLessonRecordRows.map(item => [item.packageRecordKey, item.studentLessonSequenceText, item.lessonSourceText]),
+  [['ent:ent-manual-ledger', '[累计第01节]', '课包扣课｜第1/10节｜剩9节']],
+  'manual consumed package hours must stay visible in the package filter instead of disappearing from the drawer'
+);
+
+const editedConsumeViews = buildTeachingStudentViews([{
+  customerKey: 'student:edited-ledger-student',
+  studentId: 'edited-ledger-student',
+  displayName: '编辑消课学员',
+  studentStage: 'formal'
+}], {
+  students: [{ id: 'edited-ledger-student', name: '编辑消课学员', type: '成人', campus: 'shunyi_mapo', primaryCoach: 'Siren 教练' }],
+  purchases: [{ id: 'pur-edited-ledger', studentId: 'edited-ledger-student', packageName: '成人1v1 10课时', courseType: '私教课', status: 'active', purchaseDate: '2026-05-01', actualAmount: 5000 }],
+  entitlements: [{ id: 'ent-edited-ledger', purchaseId: 'pur-edited-ledger', studentId: 'edited-ledger-student', packageName: '成人1v1 10课时', courseType: '私教课', totalLessons: 10, usedLessons: 1, remainingLessons: 9, status: 'active', ownerCoach: 'Siren 教练' }],
+  entitlementLedger: [
+    {
+      id: 'ledger-edited-original',
+      entitlementId: 'ent-edited-ledger',
+      purchaseId: 'pur-edited-ledger',
+      studentId: 'edited-ledger-student',
+      scheduleId: 'schedule-edited-ledger',
+      lessonDelta: -2,
+      relatedDate: '2026-06-02T10:00:00.000Z',
+      reason: '排课消课'
+    },
+    {
+      id: 'ledger-edited-final',
+      entitlementId: 'ent-edited-ledger',
+      purchaseId: 'pur-edited-ledger',
+      studentId: 'edited-ledger-student',
+      scheduleId: 'schedule-edited-ledger',
+      lessonDelta: -1,
+      relatedDate: '2026-06-02T10:05:00.000Z',
+      reason: '编辑排课消课'
+    },
+    {
+      id: 'ledger-edited-partial-return',
+      entitlementId: 'ent-edited-ledger',
+      purchaseId: 'pur-edited-ledger',
+      studentId: 'edited-ledger-student',
+      scheduleId: 'schedule-edited-partial-return',
+      lessonDelta: 1,
+      relatedDate: '2026-06-03T10:04:00.000Z',
+      reason: '编辑排课退回旧权益'
+    },
+    {
+      id: 'ledger-edited-partial-final',
+      entitlementId: 'ent-edited-ledger',
+      purchaseId: 'pur-edited-ledger',
+      studentId: 'edited-ledger-student',
+      scheduleId: 'schedule-edited-partial-return',
+      lessonDelta: -2,
+      relatedDate: '2026-06-03T10:05:00.000Z',
+      reason: '编辑排课消课'
+    }
+  ],
+  schedule: [
+    {
+      id: 'schedule-edited-ledger',
+      studentId: 'edited-ledger-student',
+      studentIds: ['edited-ledger-student'],
+      startTime: '2026-06-02 10:00:00',
+      endTime: '2026-06-02 11:00:00',
+      status: '已排课',
+      courseType: '私教课',
+      venue: '3号场',
+      coach: 'Siren 教练'
+    },
+    {
+      id: 'schedule-edited-partial-return',
+      studentId: 'edited-ledger-student',
+      studentIds: ['edited-ledger-student'],
+      startTime: '2026-06-03 10:00:00',
+      endTime: '2026-06-03 12:00:00',
+      status: '已排课',
+      courseType: '私教课',
+      venue: '3号场',
+      coach: 'Siren 教练'
+    }
+  ],
+  now
+});
+const editedConsumeStudent = editedConsumeViews.historicalStudents.find(item => item.studentId === 'edited-ledger-student');
+assert.ok(editedConsumeStudent, 'edited consume student should be present');
+assert.strictEqual(
+  editedConsumeStudent.completedLessons,
+  3,
+  'edited consume rows must use the final edited deduction, including W.Jing-style partial return rows'
+);
+assert.deepStrictEqual(
+  editedConsumeStudent.detailLessonRecordRows.map(item => [item.lessonDelta, item.studentLessonSequenceText, item.lessonSourceText]),
+  [
+    [-2, '[累计第02-03节]', '课包扣课｜第2-3/10节｜剩7节'],
+    [-1, '[累计第01节]', '课包扣课｜第1/10节｜剩9节']
+  ],
+  'the drawer should show the edited final consume row once, not duplicate old and new deductions'
+);
+
 console.log('student lesson record source read model tests passed');

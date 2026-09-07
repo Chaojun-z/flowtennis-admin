@@ -645,16 +645,16 @@ const depletedRecentScheduledViews = buildTeachingStudentViews(depletedRecentSch
 });
 assert.ok(
   depletedRecentScheduledViews.historicalStudents.some(row => row.studentId === 'student-dede'),
-  '课包已用完但有过去已排课正式课的学员必须保留在历史学员'
+  '课包已用完且买过正式课包的学员必须保留在历史学员'
 );
 assert.ok(
-  depletedRecentScheduledViews.activeStudents.some(row => row.studentId === 'student-dede'),
-  '课包已用完但近90天有过去已排课正式课的学员必须保留在在期学员'
+  !depletedRecentScheduledViews.activeStudents.some(row => row.studentId === 'student-dede'),
+  '课包已用完且只有已排课、没有已完成或扣课事实的学员不能保留在在期学员'
 );
 assert.strictEqual(
-  depletedRecentScheduledViews.activeStudents.find(row => row.studentId === 'student-dede').lastFormalLessonAt,
-  '2026-07-14',
-  '过去已排课正式课必须进入最近正式课日期'
+  depletedRecentScheduledViews.historicalStudents.find(row => row.studentId === 'student-dede').lastFormalLessonAt,
+  '',
+  '过去已排课正式课不能进入最近正式课日期'
 );
 
 const directPrivateRows = buildCustomerLifecycleRows({

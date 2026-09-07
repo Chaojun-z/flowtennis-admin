@@ -208,7 +208,7 @@ assert.ok(
   ['trialStudentCount', 2],
   ['formalStudentCount', 3],
   ['historicalStudentCount', 6],
-  ['activeStudentCount', 1],
+  ['activeStudentCount', 0],
   ['courseDealCustomers', 3],
   ['trialAttendedStudentCount', 2],
   ['trialAttendedToFormalPurchaseCount', 1],

@@ -72,15 +72,15 @@ function filterStudentTeachingSummaryPublishedRows(rows = [], meta = null) {
   const activeVersion = String(meta?.activeVersion || '').trim();
   if (!activeVersion) return filterStudentTeachingSummaryDataRows(rows);
   const sourceRows = Array.isArray(rows) ? rows : [];
+  const bundle = sourceRows.find(row => String(row?.id || '') === buildStudentTeachingSummaryBundleId(activeVersion));
+  const bundleRows = studentTeachingSummaryBundleLogicalRows(bundle);
+  if (bundleRows.length) return bundleRows;
   const versionedRows = sourceRows
     .filter(row => row && !isStudentTeachingSummaryMetaRow(row))
     .filter(row => String(row.publishVersion || '').trim() === activeVersion)
     .filter(row => !isStudentTeachingSummaryBundleRow(row))
     .map(studentTeachingSummaryLogicalRow);
   if (versionedRows.length) return versionedRows;
-  const bundle = sourceRows.find(row => String(row?.id || '') === buildStudentTeachingSummaryBundleId(activeVersion));
-  const bundleRows = studentTeachingSummaryBundleLogicalRows(bundle);
-  if (bundleRows.length) return bundleRows;
   return filterStudentTeachingSummaryDataRows(sourceRows);
 }
 
@@ -290,6 +290,7 @@ function studentTeachingSummaryNotReadyError(meta = null, reason = '') {
   const status = String(meta?.status || 'missing');
   const err = new Error(`教学学员统一摘要未就绪，页面拒绝展示旧数据：${reason || status}`);
   err.code = 'STUDENT_TEACHING_SUMMARY_NOT_READY';
+  err.reason = String(reason || status);
   err.statusCode = 503;
   err.meta = meta || null;
   return err;
@@ -307,6 +308,14 @@ function requireReadyStudentTeachingSummaryRows(rows = []) {
   }
   if (expectedCount !== dataRows.length) {
     throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${dataRows.length}/${expectedCount}`);
+  }
+  const currentVersion = String(require('./platform-metrics.js').TEACHING_LESSON_DETAIL_SOURCE_VERSION || '').trim();
+  const hasTeachingLessonSnapshot = row => Number(row?.completedLessons) > 0
+    || parseArr(row?.detailLessonRecordRows).length > 0
+    || parseArr(row?.detailPackageOrderRows).length > 0
+    || String(row?.teachingLessonDetailSourceVersion || '').trim();
+  if (currentVersion && dataRows.some(row => hasTeachingLessonSnapshot(row) && String(row?.teachingLessonDetailSourceVersion || '').trim() !== currentVersion)) {
+    throw studentTeachingSummaryNotReadyError(meta, 'source-version-mismatch');
   }
   const actualChecksum = buildStudentTeachingSummaryChecksum(dataRows);
   if (!String(meta.checksum || '').trim() || meta.checksum !== actualChecksum) {
@@ -379,6 +388,8 @@ async function readReadyStudentTeachingSummaryRows({
       return requireReadyStudentTeachingSummaryRows(rows);
     } catch (err) {
       lastError = err;
+      if (['source-version-mismatch', 'checksum-mismatch', 'invalid-row-count'].includes(String(err?.reason || ''))
+        || String(err?.reason || '').startsWith('row-count-mismatch:')) throw err;
       if (Date.now() - startedAt >= timeoutMs) throw lastError;
       await wait(intervalMs);
     }
@@ -476,6 +487,10 @@ function createStudentTeachingSummaryCache({
       const data = { leads, students, purchases, entitlements, entitlementLedger, schedule, membershipBenefitLedger, feedbacks };
       const customerLifecycleRows = buildCustomerLifecycleRows(data);
       const rows = buildStudentTeachingSummaryRows(customerLifecycleRows, data);
+      for (const row of rows) {
+        const versionedRow = buildVersionedStudentTeachingSummaryRow(row, batchId);
+        await put(T_STUDENT_TEACHING_SUMMARY, versionedRow.id, versionedRow);
+      }
       const bundle = buildStudentTeachingSummaryBundleRow(rows, batchId);
       await put(T_STUDENT_TEACHING_SUMMARY, bundle.id, bundle);
       const publishedRows = rows;

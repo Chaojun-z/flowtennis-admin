@@ -110,8 +110,8 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   standard.views.activeStudents.map(row => row.studentId).sort(),
-  ['student-formal-schedule-only', 'student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-active'],
-  '在期学员必须按课包有余额或近90天正式课活跃返回，必须包含未取消且时间已过去的已排课记录'
+  ['student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-active'],
+  '在期学员必须按课包有余额或近90天已完成正式课活跃返回，不能把单纯已排课当成已上课'
 );
 assert.strictEqual(
   standard.teachingSummary.historicalStudentCount,
@@ -125,8 +125,8 @@ assert.strictEqual(
 );
 assert.strictEqual(
   standard.teachingSummary.historicalFormalAttendedCount,
-  6,
-  '历史学员上过正式课必须只按排课表正式课事实统计，不能把核销流水算成上课'
+  5,
+  '历史学员上过正式课必须只按已完成正式课事实统计，不能把单纯已排课算成上课'
 );
 assert.strictEqual(
   standard.teachingSummary.historicalTrialWithoutFormalCount,
@@ -140,7 +140,7 @@ assert.strictEqual(
 );
 assert.strictEqual(
   standard.teachingSummary.activeStudentCount,
-  5,
+  4,
   '在期学员顶部总数必须来自在期学员新视图'
 );
 assert.strictEqual(
@@ -150,7 +150,7 @@ assert.strictEqual(
 );
 assert.strictEqual(
   standard.teachingSummary.activeFormalLesson90Count,
-  4,
+  3,
   '在期学员近90天正式课活跃必须和排课表正式课事实一致'
 );
 assert.strictEqual(
@@ -635,8 +635,8 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   hardActiveIds,
-  ['hard-blank-formal', 'hard-gift-free', 'hard-ledger-only-recent', 'hard-package-blank', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-no-lesson', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-recent', 'hard-stable-single'],
-  '在期学员必须是历史学员的子集，并包含课包有余额或90天内上过正式课的人'
+  ['hard-gift-free', 'hard-ledger-only-recent', 'hard-package-blank', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-no-lesson', 'hard-package-plus-gift', 'hard-renewal-due', 'hard-single-recent', 'hard-stable-single'],
+  '在期学员必须是历史学员的子集，并包含课包有余额或90天内已完成/有效扣课正式课的人，不能把单纯已排课算已上课'
 );
 assert.ok(
   hardActiveIds.every(id => hardHistoricalIds.includes(id)),
@@ -666,20 +666,20 @@ assert.strictEqual(
   '同一学员既有课包扣减又有赠送/免费正式课，必须按课包+单次付费展示'
 );
 assert.strictEqual(
-  hardStandard.views.activeStudents.find(row => row.studentId === 'hard-blank-formal')?.paymentModeLabel,
-  '单次付费学员',
-  '没有课包且结算字段为空的正式课排课事实，必须兜底按单次付费学员展示'
+  hardStandard.views.historicalStudents.find(row => row.studentId === 'hard-blank-formal')?.paymentModeLabel,
+  '-',
+  '没有课包且只有未完成排课的记录，不能兜底标成单次付费学员'
 );
 assert.strictEqual(
   hardStandard.views.activeStudents.find(row => row.studentId === 'hard-package-blank')?.paymentModeLabel,
   '课包学员',
   '有正式课包的历史老排课即使结算字段为空，也不能误判为单次付费'
 );
-const pastScheduledDetailRow = hardStandard.views.activeStudents.find(row => row.studentId === 'hard-past-scheduled');
+const pastScheduledDetailRow = hardStandard.views.historicalStudents.find(row => row.studentId === 'hard-past-scheduled');
 assert.deepStrictEqual(
-  pastScheduledDetailRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
-  [['schedule', '2026-07-01 10:00-11:00', '私教课', -1]],
-  '已过时间且未取消的排课既然计入累计上课，也必须由后端统一明细输出'
+  (pastScheduledDetailRow?.detailLessonRecordRows || []).map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
+  [],
+  '单纯已排课不能计入累计上课，也不能作为已完成上课明细输出'
 );
 const stableSingleDetailRow = hardStandard.views.activeStudents.find(row => row.studentId === 'hard-stable-single');
 assert.deepStrictEqual(
@@ -763,13 +763,13 @@ assert.strictEqual(
 );
 assert.strictEqual(
   hardStandard.teachingSummary.activeFormalLesson30Count,
-  11,
-  '在期学员近30天正式课活跃必须只按排课表正式课事实输出'
+  8,
+  '在期学员近30天正式课活跃必须只按已完成/有效扣课正式课事实输出，不能把单纯已排课算活跃'
 );
 assert.strictEqual(
   hardStandard.teachingSummary.activeFormalLesson90Count,
-  11,
-  '在期学员近90天正式课活跃必须只按排课表正式课事实输出'
+  8,
+  '在期学员近90天正式课活跃必须只按已完成/有效扣课正式课事实输出，不能把单纯已排课算活跃'
 );
 
 const staleSummaryCase = {

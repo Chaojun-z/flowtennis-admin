@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 
 const {
   createStudentTeachingSummaryCache,
@@ -336,6 +337,52 @@ async function testReadySummaryRowsRejectBadBundleWithoutPrefixScan() {
   assert.strictEqual(prefixScans, 0, '发布包 checksum 错误时也不能远程扫描版本行兜底');
 }
 
+async function testReadySummaryRowsRejectLegacyLessonSourceVersion() {
+  const tableName = 'ft_student_teaching_summary_legacy_source_version_test';
+  const version = 'student-teaching-summary-legacy-source-version-test';
+  const legacyRows = [{
+    id: 'stu-wjing',
+    studentId: 'stu-wjing',
+    name: 'W.Jing',
+    teachingLessonDetailSourceVersion: 'lesson-record-v5',
+    completedLessons: 59,
+    detailLessonRecordRows: [{ studentLessonSequenceText: '[累计第68节]', lessonDelta: -1 }]
+  }];
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: legacyRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(legacyRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-09-07T00:00:00.000Z',
+    completedAt: '2026-09-07T00:00:01.000Z'
+  });
+  const bundle = buildStudentTeachingSummaryBundleRow(legacyRows, version);
+  await assert.rejects(
+    () => readReadyStudentTeachingSummaryRows({
+      tableName,
+      getCachedRow: async (table, id) => {
+        assert.strictEqual(table, tableName);
+        if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(meta);
+        if (id === bundle.id) return clone(bundle);
+        return null;
+      },
+      scanByIdPrefix: async () => [],
+      getCachedScan: async () => {
+        throw new Error('legacy source version must not fall back to full summary scan');
+      },
+      timeoutMs: 50,
+      intervalMs: 10
+    }),
+    /source-version-mismatch/
+  );
+  assert.notStrictEqual(
+    legacyRows[0].teachingLessonDetailSourceVersion,
+    TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    'test fixture must represent the stale production W.Jing summary version'
+  );
+}
+
 async function testKeepsServingReadyRowsWhileNextVersionIsWritten() {
   const tables = {
     T_LEADS: 'ft_leads',
@@ -413,6 +460,11 @@ async function testKeepsServingReadyRowsWhileNextVersionIsWritten() {
   assert.strictEqual(checkedDuringWrite, true, '测试必须覆盖新摘要写入中的读取窗口');
   const finalRows = requireReadyStudentTeachingSummaryRows(tableRows.ft_student_teaching_summary);
   assert.deepStrictEqual(finalRows.map(row => row.studentId), ['new-student'], '发布完成后必须只读新版本摘要');
+  const finalMeta = tableRows.ft_student_teaching_summary.find(row => row.id === STUDENT_TEACHING_SUMMARY_META_ID);
+  const detailRowId = `__student_teaching_summary_version__:${finalMeta.activeVersion}:new-student`;
+  const detailRow = tableRows.ft_student_teaching_summary.find(row => row.id === detailRowId);
+  assert.ok(detailRow, '摘要发布必须写入单学员版本行，抽屉才能按 studentId 点查而不是读取大 bundle');
+  assert.strictEqual(detailRow.publishedRowId, 'new-student', '单学员版本行必须保留真实学员 ID');
 }
 
 async function testRollsBackPartiallyWrittenRowsWhenRefreshFails() {
@@ -570,6 +622,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
   await testReadySummaryDefaultTimeoutAllowsColdBundleRead();
   await testReadySummaryRowsPreferBundleRow();
   await testReadySummaryRowsRejectBadBundleWithoutPrefixScan();
+  await testReadySummaryRowsRejectLegacyLessonSourceVersion();
   await testReadySummaryRowsUseActiveVersionMemoryCache();
   await testKeepsReadyMetaWhenRefreshFails();
   await testKeepsReadyMetaWhenPreviousSnapshotScanFails();

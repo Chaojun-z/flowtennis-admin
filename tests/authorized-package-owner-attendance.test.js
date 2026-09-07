@@ -81,6 +81,33 @@ assert.strictEqual(pendingRow?.lessonSectionText, '[第02节]', '待上课排课
 assert.strictEqual(pendingRow?.countAsCompletedLesson, false, '待上课排课显示预计编号时不能计入累计上课');
 assert.strictEqual(pendingRow?.studentLessonSequenceText, '', '待上课排课不能占用累计上课编号，避免列表和抽屉记录累计数不一致');
 
+const overdueScheduledResult = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-overdue-scheduled', name: '已排课未扣课学员' }],
+  purchases: [
+    { id: 'purchase-overdue-scheduled', studentId: 'student-overdue-scheduled', packageName: '1v1私教课 · 10课时 · 黄金', courseType: '私教课', packageLessons: 10, amountPaid: 4500, status: 'active', purchaseDate: '2026-08-01' }
+  ],
+  entitlements: [
+    { id: 'ent-overdue-scheduled', studentId: 'student-overdue-scheduled', purchaseId: 'purchase-overdue-scheduled', packageName: '1v1私教课 · 10课时 · 黄金', courseType: '私教课', totalLessons: 10, remainingLessons: 10, usedLessons: 0, status: 'active' }
+  ],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-overdue-scheduled', studentId: 'student-overdue-scheduled', studentIds: ['student-overdue-scheduled'], startTime: '2026-08-09 10:00:00', endTime: '2026-08-09 11:00:00', status: '已排课', courseType: '私教课', coach: '王教练', lessonCount: 1, entitlementId: 'ent-overdue-scheduled', purchaseId: 'purchase-overdue-scheduled' }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const overdueScheduledStudent = [
+  ...overdueScheduledResult.teachingStudentViews.historicalStudents,
+  ...overdueScheduledResult.teachingStudentViews.activeStudents
+].find(row => row.studentId === 'student-overdue-scheduled');
+const overdueScheduledRow = overdueScheduledStudent?.detailLessonRecordRows.find(row => row.scheduleId === 'schedule-overdue-scheduled');
+assert.strictEqual(overdueScheduledStudent?.completedLessons, 0, '已排课但未完成/未扣课的历史排课不能计入累计上课');
+assert.strictEqual(overdueScheduledRow?.countAsCompletedLesson, false, '已排课未扣课记录只能作为占用/待核对展示');
+assert.strictEqual(overdueScheduledRow?.studentLessonSequenceText, '', '已排课未扣课记录不能显示累计第几节');
+
 const multiPackageResult = buildPlatformMetrics({
   leads: [],
   students: [{ id: 'student-multi-package', name: '跨课包学员' }],

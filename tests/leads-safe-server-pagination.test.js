@@ -4,6 +4,7 @@ const path = require('path');
 const api = require('../api/index.js');
 const { createLeadsRoutes } = require('../server/leads-routes.js');
 const { buildStudentTeachingSummaryChecksum } = require('../server/read-models/student-teaching-summary-cache.js');
+const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 
 const repoRoot = path.join(__dirname, '..');
 const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/state.js'), 'utf8');
@@ -29,19 +30,23 @@ function clone(value) {
 }
 
 function readyStudentSummaryRows(rows = []) {
+  const versionedRows = rows.map(row => ({
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    ...row
+  }));
   return [
     {
       id: '__student_teaching_summary_meta__',
       kind: 'student-teaching-summary-meta',
       status: 'ready',
-      rowCount: rows.length,
+      rowCount: versionedRows.length,
       generation: 1,
       batchId: 'test-batch',
       sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
       completedAt: '2026-08-27T00:00:01.000Z',
-      checksum: buildStudentTeachingSummaryChecksum(rows)
+      checksum: buildStudentTeachingSummaryChecksum(versionedRows)
     },
-    ...rows
+    ...versionedRows
   ];
 }
 

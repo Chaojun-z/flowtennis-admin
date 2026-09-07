@@ -1215,7 +1215,7 @@ function studentLessonRecordActiveFilter(stu){
 function studentLessonRecordMatchesFilter(row={},filter=null){
   if(!filter)return true;
   const recordKey=String(row.packageRecordKey||'').trim();
-  if(filter.packageRecordKey&&recordKey&&recordKey===filter.packageRecordKey)return true;
+  if(filter.packageRecordKey)return recordKey===filter.packageRecordKey;
   if(filter.entitlementId&&String(row.entitlementId||'').trim()===filter.entitlementId)return true;
   if(filter.purchaseId&&String(row.purchaseId||'').trim()===filter.purchaseId)return true;
   return false;
@@ -1248,13 +1248,13 @@ function studentLessonRecordDetailSectionText(rows=[],index=0){
   const row=rows[index]||{};
   const marker=typeof studentLessonSectionMarker==='function'?studentLessonSectionMarker:(value=>String(value));
   if(row.lessonSectionText)return row.lessonSectionText;
-  const entitlementId=String(row.entitlementId||row.purchaseId||row.packageName||'').trim();
+  const packageRecordKey=String(row.packageRecordKey||'').trim();
   const unit=typeof packageBalanceUnitLabel==='function'
     ? packageBalanceUnitLabel({...row,packageName:row.packageName||'',courseType:row.courseType||''})
     : String(row.unit||'节').trim();
-  if(!entitlementId||/体验/.test(String(row.courseType||row.packageName||'')))return '';
+  if(!packageRecordKey||/体验/.test(String(row.courseType||row.packageName||'')))return '';
   const packageRows=(Array.isArray(rows)?rows:[])
-    .filter(item=>String(item.entitlementId||item.purchaseId||item.packageName||'').trim()===entitlementId)
+    .filter(item=>String(item.packageRecordKey||'').trim()===packageRecordKey)
     .filter(item=>Number(item.lessonDelta)<0)
     .filter(item=>String(typeof packageBalanceUnitLabel==='function'
       ? packageBalanceUnitLabel({...item,packageName:item.packageName||'',courseType:item.courseType||''})
