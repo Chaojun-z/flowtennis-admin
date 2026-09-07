@@ -57,6 +57,8 @@ assert.match(source, /function clearStudentLessonRecordPackageFilter\(/, 'lesson
 assert.match(fnBody('studentEntitlementSummaryHtml'), /setStudentLessonRecordPackageFilter[\s\S]*查看记录/, 'student package cards should provide a short view-records action');
 assert.match(fnBody('studentLessonRecordHtml'), /studentLessonRecordFilterBannerHtml/, 'lesson records should show the active package filter banner');
 assert.match(fnBody('studentLessonRecordHtml'), /return `\$\{studentLessonRecordFilterBannerHtml\(stu,rows\)\}\$\{renderDetailDrawerTimeline\(items,\{emptyText:'暂无上课记录'\}\)\}\$\{more\}`/, 'active package filter should show the clear-filter banner even when matching lesson records exist');
+assert.match(fnBody('studentLessonRecordFilterBannerHtml'), /reduce[\s\S]*lessonDelta[\s\S]*共\$\{lessonQty\(totalUnits\)\}课时/, 'active package filter count must summarize consumed lesson hours, not attendance record rows');
+assert.doesNotMatch(fnBody('studentLessonRecordFilterBannerHtml'), /rows\.length[\s\S]*节/, 'active package filter banner must not call two-hour lessons one record');
 assert.doesNotMatch(fnBody('studentLessonRecordMatchesFilter'), /packageName/, 'package lesson filtering must be strict and must not fall back to package name matching');
 assert.match(fnBody('studentEntitlementSummaryHtml'), /packageRecordKey[\s\S]*setStudentLessonRecordPackageFilter/, 'package cards should pass a stable package record key for strict lesson filtering');
 assert.match(fnBody('studentLessonRecordHtml'), /studentLessonRecordSourceText/, 'lesson records should render the unified source text from the read model');

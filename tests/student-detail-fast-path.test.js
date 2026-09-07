@@ -4,6 +4,7 @@ const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models
 const {
   buildStudentTeachingSummaryBundleRow,
   buildStudentTeachingSummaryChecksum,
+  buildVersionedStudentTeachingSummaryRow,
   buildStudentTeachingSummaryMetaRow
 } = require('../server/read-models/student-teaching-summary-cache.js');
 
@@ -215,6 +216,90 @@ async function requestPublishedSummaryBeatsStaleDirectRowStudentDetail() {
   });
   const res = {};
   await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-wjing') });
+  return { res, calls };
+}
+
+async function requestVersionedSummaryBeatsStaleDirectRowStudentDetail() {
+  const calls = { cappedScan: 0, prefixScan: 0, summaryScan: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const version = 'summary-version-wjing-versioned-only';
+  const publishedRows = [{
+    id: 'stu-wjing-versioned',
+    studentId: 'stu-wjing-versioned',
+    name: 'W.Jing',
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    activityStatusLabel: '近30天活跃',
+    completedLessons: 67,
+    packageBalanceText: '21/80',
+    detailPackageOrderRows: [{ packageRecordKey: 'ent:ent-wjing-versioned', entitlementId: 'ent-wjing-versioned', packageName: '1v1私教课 · 50课时 · 非黄金', remainingLessons: 21, totalLessons: 50 }],
+    detailLessonRecordRows: [
+      { kind: 'ledger', packageRecordKey: 'ent:ent-wjing-versioned', entitlementId: 'ent-wjing-versioned', scheduleId: 'wjing-versioned-sch-67', time: '2026-09-04 10:00-12:00', courseType: '私教课', lessonDelta: -2, studentLessonSequenceText: '[累计第66-67节]' }
+    ],
+    detailBenefitRows: []
+  }];
+  const staleDirectRow = {
+    id: 'stu-wjing-versioned',
+    studentId: 'stu-wjing-versioned',
+    name: 'W.Jing',
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    activityStatusLabel: '近30天活跃',
+    completedLessons: 59,
+    packageBalanceText: '21/80',
+    detailLessonRecordRows: [
+      { kind: 'ledger', scheduleId: 'wjing-old-sch-59', time: '2026-08-20 10:00-12:00', courseType: '私教课', lessonDelta: -1, studentLessonSequenceText: '[累计第59节]' }
+    ],
+    detailBenefitRows: []
+  };
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: 'ready',
+    batchId: version,
+    activeVersion: version,
+    rowCount: publishedRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(publishedRows)
+  });
+  const versionedRow = buildVersionedStudentTeachingSummaryRow(publishedRows[0], version);
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      throw new Error(`unexpected full scan: ${table}`);
+    },
+    getCachedScan: async table => {
+      calls.summaryScan += 1;
+      throw new Error(`unexpected summary full scan: ${table}`);
+    },
+    scanByIdPrefix: async () => {
+      calls.prefixScan += 1;
+      throw new Error('unexpected prefix scan');
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-wjing-versioned') return { id: 'stu-wjing-versioned', name: 'W.Jing', phone: '13800000000', campus: 'shunyi_mapo', type: '成人' };
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === 'stu-wjing-versioned') return staleDirectRow;
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === meta.id) return meta;
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === versionedRow.id) return versionedRow;
+      return null;
+    },
+    PRODUCTION_PAGE_READ_LIMITS: { entitlementLedger: 100, schedule: 100, leads: 100 },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-wjing-versioned') });
   return { res, calls };
 }
 
@@ -687,6 +772,14 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(publishedBeatsStale.calls.prefixScan, 0, 'W.Jing-style detail should not need a version prefix scan when the bundle exists');
   assert.strictEqual(publishedBeatsStale.res.body.detailStudentView.completedLessons, 67, 'student drawer should use the same published summary count as the list instead of stale direct row count');
   assert.strictEqual(publishedBeatsStale.res.body.detailStudentView.detailLessonRecordRows[0]?.studentLessonSequenceText, '[累计第66-67节]');
+
+  const versionedBeatsStale = await requestVersionedSummaryBeatsStaleDirectRowStudentDetail();
+  assert.strictEqual(versionedBeatsStale.res.statusCode, 200);
+  assert.strictEqual(versionedBeatsStale.calls.cappedScan, 0, 'versioned-only W.Jing detail must not scan production fact tables');
+  assert.strictEqual(versionedBeatsStale.calls.summaryScan, 0, 'versioned-only W.Jing detail must not full-scan summary rows');
+  assert.strictEqual(versionedBeatsStale.calls.prefixScan, 0, 'versioned-only W.Jing detail should use exact versioned student row lookup');
+  assert.strictEqual(versionedBeatsStale.res.body.detailStudentView.completedLessons, 67, 'student drawer must prefer active versioned summary rows over stale direct rows');
+  assert.strictEqual(versionedBeatsStale.res.body.detailStudentView.detailLessonRecordRows[0]?.studentLessonSequenceText, '[累计第66-67节]');
 
   const inconsistent = await requestInconsistentStudentDetail();
   assert.strictEqual(inconsistent.res.statusCode, 200);

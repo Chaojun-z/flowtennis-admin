@@ -208,6 +208,12 @@ function createCorePageDataRoutes(deps={}){
       const meta=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,STUDENT_TEACHING_SUMMARY_META_ID).catch(()=>null);
       const activeVersion=String(meta?.activeVersion||'').trim();
       if(meta&&activeVersion){
+        const versionedId=`${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:${sid}`;
+        const versioned=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,versionedId).catch(()=>null);
+        const versionedStudentId=String(versioned?.publishedRowId||versioned?.studentId||'').trim();
+        if(versioned&&String(versioned.publishVersion||'').trim()===activeVersion&&versionedStudentId===sid){
+          return {...versioned,id:sid,publishedRowId:undefined,publishVersion:undefined};
+        }
         const bundle=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,buildStudentTeachingSummaryBundleId(activeVersion)).catch(()=>null);
         let rows=[];
         if(bundle){

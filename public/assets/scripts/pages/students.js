@@ -1224,7 +1224,8 @@ function studentLessonRecordFilterBannerHtml(stu,rows=[]){
   const filter=studentLessonRecordActiveFilter(stu);
   if(!filter)return '';
   const name=filter.packageName||'当前课包';
-  return `<div class="student-lesson-filter-banner"><span>正在查看：${esc(name)}</span><span>共${lessonQty(rows.length)}节</span><button type="button" onclick="clearStudentLessonRecordPackageFilter(${jsArg(stu.id||stu.studentId)})">清除</button></div>`;
+  const totalUnits=(Array.isArray(rows)?rows:[]).reduce((sum,row)=>sum+Math.abs(Math.min(0,Number(row.lessonDelta)||0)),0);
+  return `<div class="student-lesson-filter-banner"><span>正在查看：${esc(name)}</span><span>共${lessonQty(totalUnits)}课时</span><button type="button" onclick="clearStudentLessonRecordPackageFilter(${jsArg(stu.id||stu.studentId)})">清除</button></div>`;
 }
 function studentLessonRecordTitleText(item={},rows=[],index=0){
   const studentSequenceText=String(item.studentLessonSequenceText||'').trim();
