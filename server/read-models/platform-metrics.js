@@ -475,6 +475,13 @@ function teachingPackageName(row = {}, purchase = {}) {
   return text(row.packageName || row.productName || row.name || purchase.packageName || purchase.productName || purchase.name || row.courseType || purchase.courseType || '课包');
 }
 
+function teachingPackageRecordKey(row = {}) {
+  const entitlementId = text(row.entitlementId || (row.purchaseId ? row.id : ''));
+  if (entitlementId) return `ent:${entitlementId}`;
+  const purchaseId = text(row.purchaseId || row.id);
+  return purchaseId ? `pur:${purchaseId}` : '';
+}
+
 function entitlementLedgerOwnerStudentId(row = {}, entitlementsById = new Map(), purchasesById = new Map()) {
   const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
   const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
@@ -532,6 +539,7 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
       list.push({
         entitlementId: text(row.id),
         purchaseId: text(row.purchaseId),
+        packageRecordKey: teachingPackageRecordKey(row),
         packageId: text(row.packageId || row.originalPackageId || purchase.packageId || purchase.originalPackageId),
         packageName: teachingPackageName(row, purchase),
         remainingLessons: Number(row.remainingLessons) || 0,
@@ -556,6 +564,7 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
       list.push({
         entitlementId: '',
         purchaseId: text(row.id),
+        packageRecordKey: teachingPackageRecordKey({ purchaseId: text(row.id) }),
         packageId: text(row.packageId || row.originalPackageId),
         packageName: teachingPackageName(row, row),
         remainingLessons: Number(row.remainingLessons) || totalLessons,
@@ -839,7 +848,8 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       purchase,
       totalLessons,
       unit: packageUnitLabel(entitlement.id ? entitlement : (purchase.id ? purchase : row)),
-      packageName: teachingPackageName(entitlement, purchase) || text(row.packageName || purchase.packageName || entitlement.packageName)
+      packageName: teachingPackageName(entitlement, purchase) || text(row.packageName || purchase.packageName || entitlement.packageName),
+      packageRecordKey: teachingPackageRecordKey({ entitlementId: text(row.entitlementId || entitlement.id), purchaseId: text(row.purchaseId || entitlement.purchaseId || purchase.id) })
     };
   };
   const lessonPaymentSourceText = (row = {}) => {
@@ -905,6 +915,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           scheduleId,
           entitlementId: text(row.entitlementId),
           purchaseId: text(row.purchaseId || entitlement.purchaseId),
+          packageRecordKey: teachingPackageRecordKey({ entitlementId: text(row.entitlementId), purchaseId: text(row.purchaseId || entitlement.purchaseId) }),
           sortTime,
           time: displayTime,
           packageName: teachingPackageName(entitlement, purchase) || text(row.packageName || row.className || row.courseName || row.standardCourseType || row.courseType),
@@ -949,6 +960,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           scheduleId,
           entitlementId,
           purchaseId,
+          packageRecordKey: teachingPackageRecordKey({ entitlementId, purchaseId }),
           sortTime,
           time: dateTimeText(row),
           packageName: teachingPackageName(row, row),
@@ -1031,7 +1043,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)));
     const usedBeforeByPackage = new Map();
     packageRows.forEach(row => {
-      const packageKey = text(row.entitlementId || row.purchaseId || row.packageName);
+      const packageKey = text(row.packageRecordKey || row.entitlementId || row.purchaseId || row.packageName);
       if (!packageKey) return;
       const usedBefore = usedBeforeByPackage.get(packageKey) || 0;
       const pending = text(row.status) === '待上课' || row.countAsCompletedLesson === false;
@@ -1056,13 +1068,14 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
         row.lessonSourceType = pending ? 'package_pending' : 'package';
         row.lessonSourceText = `${pending ? '课包占用' : '课包扣课'}｜${progressText}｜${row.packageRemainingAfterText}`;
         row.packageName = row.packageName || packageMeta.packageName;
+        row.packageRecordKey = row.packageRecordKey || packageMeta.packageRecordKey;
       }
       usedBeforeByPackage.set(packageKey, endNo);
     });
     let studentUsedBefore = 0;
     rows
       .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
-      .filter(row => row.countAsCompletedLesson !== false || text(row.status) === '待上课')
+      .filter(row => row.countAsCompletedLesson !== false)
       .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)))
       .forEach(row => {
         const pending = text(row.status) === '待上课';
@@ -1079,6 +1092,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       ...row,
       lessonSectionText: row.lessonSectionText || '',
       studentLessonSequenceText: row.studentLessonSequenceText || '',
+      packageRecordKey: row.packageRecordKey || '',
       lessonSourceType: row.lessonSourceType || (courseRowIsTrial(row) ? 'trial' : (teachingPaymentIsDirect(row) ? 'direct' : 'history')),
       lessonSourceText: row.lessonSourceText || lessonPaymentSourceText(row)
     })));

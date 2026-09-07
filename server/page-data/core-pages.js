@@ -12,7 +12,9 @@ const {
   buildStudentTeachingSummaryChecksum,
   filterStudentTeachingSummaryPublishedRows,
   buildVersionedStudentTeachingSummaryRow,
+  buildStudentTeachingSummaryBundleId,
   buildStudentTeachingSummaryBundleRow,
+  requireReadyStudentTeachingSummaryRows,
   studentTeachingSummaryRowsToDeleteAfterPublish,
   rollbackStudentTeachingSummaryPublish,
   readReadyStudentTeachingSummaryRows
@@ -202,11 +204,21 @@ function createCorePageDataRoutes(deps={}){
   async function readStudentTeachingSummaryRow(studentId){
     const sid=String(studentId||'').trim();
     if(!T_STUDENT_TEACHING_SUMMARY||!sid)return null;
+    if(typeof getCachedRow==='function'){
+      const meta=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,STUDENT_TEACHING_SUMMARY_META_ID).catch(()=>null);
+      const activeVersion=String(meta?.activeVersion||'').trim();
+      if(meta&&activeVersion){
+        const bundle=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,buildStudentTeachingSummaryBundleId(activeVersion)).catch(()=>null);
+        let rows=[];
+        if(bundle){
+          try{rows=requireReadyStudentTeachingSummaryRows([meta,bundle]);}catch(e){rows=[];}
+        }
+        const published=(Array.isArray(rows)?rows:[]).find(row=>String(row.id||row.studentId||'').trim()===sid)||null;
+        if(published)return published;
+      }
+    }
     const direct=typeof getCachedRow==='function'?await getCachedRow(T_STUDENT_TEACHING_SUMMARY,sid).catch(()=>null):null;
-    if(direct)return direct;
-    if(typeof readReadyStudentTeachingSummaryRows!=='function'||typeof getCachedScan!=='function')return null;
-    const rows=await readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix}).catch(()=>[]);
-    return (Array.isArray(rows)?rows:[]).find(row=>String(row.id||row.studentId||'').trim()===sid)||null;
+    return direct||null;
   }
   async function hydrateScheduleRowsByLedgerIds(scheduleRows=[],ledgerRows=[]){
     if(!T_SCHEDULE)return scheduleRows||[];

@@ -922,7 +922,8 @@ FlowTennis 只保留三类转化观察口径：课程总漏斗、体验课上课
 7. `最近上课` 只展示截至当前日期已经发生的最近一次上课事实；未来排课不得进入最近上课、活跃状态或累计上课，但可在上课/排课明细中以 `待上课` 展示。
 8. `活跃状态`、`最近上课`、`累计上课` 必须使用同一批已发生教学上课事实；不得出现“最近上课有日期或累计上课大于 0，但活跃状态为从未正式上课”的结果。
 9. 课包核销流水能证明正式课已发生时，统一读模型必须把它纳入上课事实；不能只看排课表或旧字段 `lastFormalLessonAt`。
-10. 学员抽屉、小程序等多入口展示上课记录时，来源文案必须读取统一读模型 `detailLessonRecordRows.lessonSourceText`；课包扣课记录必须同源展示 `packageLessonProgressText` 和 `packageRemainingAfterText`，页面不得按课包余额现场反推。
+10. 学员抽屉、小程序等多入口展示上课记录时，来源文案必须读取统一读模型 `detailLessonRecordRows.lessonSourceText`；课包扣课记录必须同源展示 `packageRecordKey`、`packageLessonProgressText` 和 `packageRemainingAfterText`，页面不得按课包名或课包余额现场反推。
+11. `studentLessonSequenceText` 只允许用于已完成正式课；待上课、未来排课、体验课、陪打不得占用“累计第 x 节”编号。
 
 会员管理页面列表固定口径：
 

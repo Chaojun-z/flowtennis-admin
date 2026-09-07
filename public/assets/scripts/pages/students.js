@@ -5,7 +5,7 @@ let studentDetailEditingStudentId='';
 let studentDetailRequestSeq=0;
 let studentDetailPrewarmSeq=0;
 let studentDetailPrewarmKey='';
-let studentLessonRecordFilterState={studentId:'',entitlementId:'',purchaseId:'',packageName:''};
+let studentLessonRecordFilterState={studentId:'',packageRecordKey:'',entitlementId:'',purchaseId:'',packageName:''};
 let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
@@ -1200,12 +1200,12 @@ function studentLessonRecordMetaIcon(kind){
 function studentLessonRecordMetaItem(kind,text){
   return `<span class="student-lesson-meta-item">${studentLessonRecordMetaIcon(kind)}<span>${esc(renderStandardEmptyText(text))}</span></span>`;
 }
-function setStudentLessonRecordPackageFilter(studentId,entitlementId='',purchaseId='',packageName=''){
-  studentLessonRecordFilterState={studentId:String(studentId||''),entitlementId:String(entitlementId||''),purchaseId:String(purchaseId||''),packageName:String(packageName||'')};
+function setStudentLessonRecordPackageFilter(studentId,packageRecordKey='',entitlementId='',purchaseId='',packageName=''){
+  studentLessonRecordFilterState={studentId:String(studentId||''),packageRecordKey:String(packageRecordKey||''),entitlementId:String(entitlementId||''),purchaseId:String(purchaseId||''),packageName:String(packageName||'')};
   if(studentId)openStudentDetail(studentId);
 }
 function clearStudentLessonRecordPackageFilter(studentId=''){
-  studentLessonRecordFilterState={studentId:'',entitlementId:'',purchaseId:'',packageName:''};
+  studentLessonRecordFilterState={studentId:'',packageRecordKey:'',entitlementId:'',purchaseId:'',packageName:''};
   if(studentId)openStudentDetail(studentId);
 }
 function studentLessonRecordActiveFilter(stu){
@@ -1214,9 +1214,10 @@ function studentLessonRecordActiveFilter(stu){
 }
 function studentLessonRecordMatchesFilter(row={},filter=null){
   if(!filter)return true;
-  if(filter.entitlementId&&String(row.entitlementId||'')===filter.entitlementId)return true;
-  if(filter.purchaseId&&String(row.purchaseId||'')===filter.purchaseId)return true;
-  if(filter.packageName&&String(row.packageName||row.className||'')===filter.packageName)return true;
+  const recordKey=String(row.packageRecordKey||'').trim();
+  if(filter.packageRecordKey&&recordKey&&recordKey===filter.packageRecordKey)return true;
+  if(filter.entitlementId&&String(row.entitlementId||'').trim()===filter.entitlementId)return true;
+  if(filter.purchaseId&&String(row.purchaseId||'').trim()===filter.purchaseId)return true;
   return false;
 }
 function studentLessonRecordFilterBannerHtml(stu,rows=[]){
@@ -1393,7 +1394,7 @@ function studentLessonRecordHtml(stu){
     return line;
   });
   const more=rows.length>10?`<div style="margin-top:6px"><button class="btn-sec" onclick="toggleStudentLessonRecordExpanded('${stu.id}')">${expanded?'收起':'展开全部'}</button></div>`:'';
-  return `${renderDetailDrawerTimeline(items,{emptyText:'暂无上课记录'})}${more}`;
+  return `${studentLessonRecordFilterBannerHtml(stu,rows)}${renderDetailDrawerTimeline(items,{emptyText:'暂无上课记录'})}${more}`;
 }
 function studentLessonRecordRows(stu){
   if(Array.isArray(stu?.detailLessonRecordRows))return stu.detailLessonRecordRows;

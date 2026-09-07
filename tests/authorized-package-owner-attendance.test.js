@@ -79,7 +79,7 @@ const pendingStudent = [
 const pendingRow = pendingStudent?.detailLessonRecordRows.find(row => row.scheduleId === 'schedule-pending-section-2');
 assert.strictEqual(pendingRow?.lessonSectionText, '[第02节]', '待上课排课应显示预计第几节');
 assert.strictEqual(pendingRow?.countAsCompletedLesson, false, '待上课排课显示预计编号时不能计入累计上课');
-assert.strictEqual(pendingRow?.studentLessonSequenceText, '[累计第02节]', '待上课排课应显示预计累计第几节');
+assert.strictEqual(pendingRow?.studentLessonSequenceText, '', '待上课排课不能占用累计上课编号，避免列表和抽屉记录累计数不一致');
 
 const multiPackageResult = buildPlatformMetrics({
   leads: [],

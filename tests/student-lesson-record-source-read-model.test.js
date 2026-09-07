@@ -157,17 +157,29 @@ assert.strictEqual(row.completedLessons, 16, 'list and drawer cumulative lessons
 assert.strictEqual(row.detailRecentLessonDate, '2026-08-10', 'latest completed formal lesson should drive drawer and list recent lesson');
 assert.strictEqual(row.detailPackageBalanceText, '18/32', 'available lessons should include private, small-class and special packages');
 assert.deepStrictEqual(
-  row.detailPackageOrderRows.map(item => [item.entitlementId, item.remainingLessons, item.totalLessons]),
+  row.detailPackageOrderRows.map(item => [item.packageRecordKey, item.entitlementId, item.remainingLessons, item.totalLessons]),
   [
-    ['ent-private-new', 8, 10],
-    ['ent-special', 3, 4],
-    ['ent-small', 6, 8],
-    ['ent-private-old', 1, 10]
+    ['ent:ent-private-new', 'ent-private-new', 8, 10],
+    ['ent:ent-special', 'ent-special', 3, 4],
+    ['ent:ent-small', 'ent-small', 6, 8],
+    ['ent:ent-private-old', 'ent-private-old', 1, 10]
   ],
   'package order rows should keep every package balance correct and newest first'
 );
 
 const byScheduleId = new Map(row.detailLessonRecordRows.map(item => [item.scheduleId, item]));
+assert.strictEqual(
+  byScheduleId.get('sch-private-new-2')?.packageRecordKey,
+  'ent:ent-private-new',
+  'package-backed lesson records should carry the same strict package record key as the package card'
+);
+assert.deepStrictEqual(
+  row.detailLessonRecordRows
+    .filter(item => item.packageRecordKey === 'ent:ent-private-new')
+    .map(item => item.scheduleId),
+  ['sch-private-new-2', 'sch-private-new-1'],
+  'strict package filtering should only return records that belong to the clicked package'
+);
 assert.deepStrictEqual(
   [
     byScheduleId.get('sch-private-new-2')?.lessonSourceText,

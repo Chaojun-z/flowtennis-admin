@@ -56,6 +56,9 @@ assert.match(source, /function setStudentLessonRecordPackageFilter\(/, 'package 
 assert.match(source, /function clearStudentLessonRecordPackageFilter\(/, 'lesson timeline package filter should be clearable');
 assert.match(fnBody('studentEntitlementSummaryHtml'), /setStudentLessonRecordPackageFilter[\s\S]*查看记录/, 'student package cards should provide a short view-records action');
 assert.match(fnBody('studentLessonRecordHtml'), /studentLessonRecordFilterBannerHtml/, 'lesson records should show the active package filter banner');
+assert.match(fnBody('studentLessonRecordHtml'), /return `\$\{studentLessonRecordFilterBannerHtml\(stu,rows\)\}\$\{renderDetailDrawerTimeline\(items,\{emptyText:'暂无上课记录'\}\)\}\$\{more\}`/, 'active package filter should show the clear-filter banner even when matching lesson records exist');
+assert.doesNotMatch(fnBody('studentLessonRecordMatchesFilter'), /packageName/, 'package lesson filtering must be strict and must not fall back to package name matching');
+assert.match(fnBody('studentEntitlementSummaryHtml'), /packageRecordKey[\s\S]*setStudentLessonRecordPackageFilter/, 'package cards should pass a stable package record key for strict lesson filtering');
 assert.match(fnBody('studentLessonRecordHtml'), /studentLessonRecordSourceText/, 'lesson records should render the unified source text from the read model');
 assert.doesNotMatch(source, /不扣私教课包/, 'student lesson copy should not use confusing package-negative wording');
 assert.match(source, /studentDetailBenefitsTabHtml\(s\)[\s\S]*useGrid:false/, 'student benefit records should span the full drawer width');
