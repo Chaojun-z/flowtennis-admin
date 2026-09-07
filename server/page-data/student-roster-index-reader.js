@@ -517,6 +517,8 @@ function createStudentRosterIndexReader({ tableName, getCachedScan, getCachedRow
       const studentTeachingSummaries = await readReadyStudentTeachingSummaryListRows({
         tableName,
         getCachedRow,
+        getCachedScan,
+        scanByIdPrefix,
         verifyChecksum: true
       });
       const scoped = filterLoadAllForUser({ studentTeachingSummaries }, user);

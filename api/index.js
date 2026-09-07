@@ -473,7 +473,7 @@ async function prewarmHotScanCache(){
 async function prewarmStudentTeachingSummaryCache(){
   if(process.env.DISABLE_HOT_SCAN_PREWARM==='true')return [];
   if(!T_STUDENT_TEACHING_SUMMARY)return [];
-  return readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,verifyChecksum:true}).catch(err=>{
+  return readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,verifyChecksum:true}).catch(err=>{
     console.warn('[api-timing] prewarm student teaching summary failed',err?.message||err);
     return [];
   });

@@ -183,6 +183,28 @@ const STUDENT_TEACHING_SUMMARY_LIST_ROW_FIELDS = [
   'leadDate',
   'createdAt'
 ];
+const STUDENT_TEACHING_SUMMARY_META_FIELDS = [
+  'kind',
+  'status',
+  'generation',
+  'rowCount',
+  'sourceTable',
+  'sourceOp',
+  'sourceId',
+  'batchId',
+  'activeVersion',
+  'sourceSnapshotAt',
+  'completedAt',
+  'checksum',
+  'error',
+  'updatedAt'
+];
+const STUDENT_TEACHING_SUMMARY_LIST_SCAN_COLUMNS = [...new Set([
+  ...STUDENT_TEACHING_SUMMARY_META_FIELDS,
+  'publishedRowId',
+  'publishVersion',
+  ...STUDENT_TEACHING_SUMMARY_LIST_ROW_FIELDS
+])];
 
 function projectStudentTeachingSummaryListRow(row = {}) {
   const logical = studentTeachingSummaryLogicalRow(row || {});
@@ -522,11 +544,26 @@ async function readReadyStudentTeachingSummaryRows({
 async function readReadyStudentTeachingSummaryListRows({
   tableName,
   getCachedRow,
+  getCachedScan,
+  scanByIdPrefix,
   verifyChecksum = true,
   timeoutMs = READY_STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS
 } = {}) {
   if (!tableName || typeof getCachedRow !== 'function') {
     throw studentTeachingSummaryNotReadyError(null, 'not-configured');
+  }
+  function readListRowsFromProjectedRows(meta, rows = []) {
+    const dataRows = filterStudentTeachingSummaryPublishedRows([meta, ...(Array.isArray(rows) ? rows : [])], meta)
+      .filter(row => String(row?.id || '').trim() !== String(meta?.id || '').trim())
+      .map(projectStudentTeachingSummaryListRow);
+    const expectedCount = Number(meta.rowCount);
+    if (!Number.isSafeInteger(expectedCount) || expectedCount < 0) {
+      throw studentTeachingSummaryNotReadyError(meta, 'invalid-row-count');
+    }
+    if (expectedCount !== dataRows.length) {
+      throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${dataRows.length}/${expectedCount}`);
+    }
+    return dataRows;
   }
   return withReadTimeout(async () => {
     const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
@@ -535,31 +572,48 @@ async function readReadyStudentTeachingSummaryListRows({
     if (String(meta.status || '') !== STUDENT_TEACHING_SUMMARY_READY) {
       throw studentTeachingSummaryNotReadyError(meta, String(meta.status || '') || 'unknown');
     }
-    if (!activeVersion) throw studentTeachingSummaryNotReadyError(meta, 'missing-active-version');
     const expectedCount = Number(meta.rowCount);
     if (!Number.isSafeInteger(expectedCount) || expectedCount < 0) {
       throw studentTeachingSummaryNotReadyError(meta, 'invalid-row-count');
     }
-    const bundleId = buildStudentTeachingSummaryListBundleId(activeVersion);
-    const bundle = await getCachedRow(tableName, bundleId).catch(() => null);
-    if (!isStudentTeachingSummaryListBundleRow(bundle)) {
-      throw studentTeachingSummaryNotReadyError(meta, 'missing-list-bundle');
-    }
-    if (String(bundle.publishVersion || '').trim() !== activeVersion) {
-      throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-version-mismatch');
-    }
-    const rows = studentTeachingSummaryListBundleLogicalRows(bundle);
-    if (expectedCount !== rows.length || Number(bundle.rowCount) !== rows.length) {
-      throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${rows.length}/${expectedCount}`);
-    }
-    requireReadyStudentTeachingSummaryRows([meta, ...rows], { verifyChecksum: false });
-    if (verifyChecksum) {
-      const actualChecksum = buildStudentTeachingSummaryChecksum(rows);
-      if (!String(bundle.checksum || '').trim() || String(bundle.checksum || '') !== actualChecksum) {
-        throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-checksum-mismatch');
+    if (activeVersion) {
+      const bundleId = buildStudentTeachingSummaryListBundleId(activeVersion);
+      const bundle = await getCachedRow(tableName, bundleId).catch(() => null);
+      if (isStudentTeachingSummaryListBundleRow(bundle)) {
+        if (String(bundle.publishVersion || '').trim() !== activeVersion) {
+          throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-version-mismatch');
+        }
+        const rows = studentTeachingSummaryListBundleLogicalRows(bundle);
+        if (expectedCount !== rows.length || Number(bundle.rowCount) !== rows.length) {
+          throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${rows.length}/${expectedCount}`);
+        }
+        requireReadyStudentTeachingSummaryRows([meta, ...rows], { verifyChecksum: false });
+        if (verifyChecksum) {
+          const actualChecksum = buildStudentTeachingSummaryChecksum(rows);
+          if (!String(bundle.checksum || '').trim() || String(bundle.checksum || '') !== actualChecksum) {
+            throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-checksum-mismatch');
+          }
+        }
+        return rows;
+      }
+      if (typeof scanByIdPrefix === 'function') {
+        const versionRows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`, {
+          columns: STUDENT_TEACHING_SUMMARY_LIST_SCAN_COLUMNS
+        }).catch(() => []);
+        if (Array.isArray(versionRows) && versionRows.length) {
+          return readListRowsFromProjectedRows(meta, versionRows);
+        }
       }
     }
-    return rows;
+    if (typeof getCachedScan === 'function') {
+      const projectedRows = await getCachedScan(tableName, {
+        columns: STUDENT_TEACHING_SUMMARY_LIST_SCAN_COLUMNS,
+        pageLimit: 500
+      }).catch(() => []);
+      const projectedMeta = studentTeachingSummaryMetaRow(projectedRows) || meta;
+      return readListRowsFromProjectedRows(projectedMeta, projectedRows);
+    }
+    throw studentTeachingSummaryNotReadyError(meta, 'missing-list-bundle');
   }, timeoutMs, 'list-bundle-read-timeout');
 }
 
@@ -727,6 +781,7 @@ module.exports = {
   STUDENT_TEACHING_SUMMARY_VERSION_PREFIX,
   STUDENT_TEACHING_SUMMARY_BUNDLE_PREFIX,
   STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_PREFIX,
+  STUDENT_TEACHING_SUMMARY_LIST_SCAN_COLUMNS,
   buildStudentTeachingSummaryMetaRow,
   isStudentTeachingSummaryMetaRow,
   isStudentTeachingSummaryBundleRow,

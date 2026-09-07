@@ -338,6 +338,53 @@ async function testReadySummaryListRowsUseListBundleOnly() {
   assert.strictEqual(rows[0].detailPackageOrderRows, undefined, '列表轻量包不能携带课包明细大数组');
 }
 
+async function testReadySummaryListRowsFallbackToProjectedSummaryRows() {
+  const tableName = 'ft_student_teaching_summary_projected_fallback_test';
+  const version = 'student-teaching-summary-before-list-bundle';
+  const logicalRows = [{
+    id: 'legacy-list-student',
+    studentId: 'legacy-list-student',
+    name: '缺轻量包学员',
+    completedLessons: 67,
+    hasTrialAttended: true,
+    hasFormalAttended: true,
+    detailLessonRecordRows: [{ id: 'large-detail-row' }],
+    detailPackageOrderRows: [{ id: 'large-package-row' }]
+  }];
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: logicalRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(logicalRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-09-07T00:00:00.000Z',
+    completedAt: '2026-09-07T00:00:01.000Z'
+  });
+  const scannedOptions = [];
+  const rows = await readReadyStudentTeachingSummaryListRows({
+    tableName,
+    getCachedRow: async (table, id) => {
+      assert.strictEqual(table, tableName);
+      if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(meta);
+      return null;
+    },
+    scanByIdPrefix: async () => [],
+    getCachedScan: async (table, options = {}) => {
+      assert.strictEqual(table, tableName);
+      scannedOptions.push(options);
+      return clone([meta, ...logicalRows]);
+    },
+    timeoutMs: 50
+  });
+
+  assert.deepStrictEqual(rows.map(row => row.studentId), ['legacy-list-student']);
+  assert.strictEqual(rows[0].completedLessons, 67, '线上缺轻量列表包时，历史/在期列表也必须能读取旧摘要轻字段');
+  assert.strictEqual(rows[0].detailLessonRecordRows, undefined, '摘要表兜底也不能把上课明细大数组发到首屏');
+  assert.strictEqual(rows[0].detailPackageOrderRows, undefined, '摘要表兜底也不能把课包明细大数组发到首屏');
+  assert.ok(scannedOptions[0].columns.length > 0, '摘要表兜底必须使用轻字段投影读取');
+  assert.ok(!scannedOptions[0].columns.includes('rowsGzipBase64'), '摘要表兜底不能读取旧大 bundle 内容');
+}
+
 async function testReadySummaryRowsRejectBadBundleWithoutPrefixScan() {
   const tableName = 'ft_student_teaching_summary_bad_bundle_test';
   const version = 'student-teaching-summary-bad-bundle-test';
@@ -674,6 +721,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
   await testReadySummaryDefaultTimeoutAllowsColdBundleRead();
   await testReadySummaryRowsPreferBundleRow();
   await testReadySummaryListRowsUseListBundleOnly();
+  await testReadySummaryListRowsFallbackToProjectedSummaryRows();
   await testReadySummaryRowsRejectBadBundleWithoutPrefixScan();
   await testReadySummaryRowsRejectLegacyLessonSourceVersion();
   await testReadySummaryRowsUseActiveVersionMemoryCache();

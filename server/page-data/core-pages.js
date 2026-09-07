@@ -706,7 +706,7 @@ function createCorePageDataRoutes(deps={}){
           cappedScan(T_ENTITLEMENTS),
           cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
           cappedScan(T_PLANS),
-          readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,verifyChecksum:true}).catch(()=>[])
+          readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,verifyChecksum:true}).catch(()=>[])
         ]);
         const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans,studentTeachingSummaries,coaches},user,coachRefs);
         const now=new Date();

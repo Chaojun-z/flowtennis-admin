@@ -455,10 +455,14 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   );
 
   const legacyReady = await request('', { legacyReady: true });
-  assert.strictEqual(legacyReady.res.statusCode, 200, '旧 ready 摘要缺少当前教学口径版本时，客户中心不能让页面 503');
-  assert.strictEqual(legacyReady.res.body.code, 'STUDENT_TEACHING_SUMMARY_NOT_READY', '旧摘要必须走受控不可用状态，等待重建摘要');
-  assert.strictEqual(legacyReady.res.body.studentTeachingSummaryUnavailable, true, '旧摘要必须显式标记不可用，不能冒充真实数据');
-  assert.strictEqual(legacyReady.res.body.teachingStudentViews, undefined, '旧摘要不可用时不能返回空列表覆盖真实数据');
+  assert.strictEqual(legacyReady.res.statusCode, 200, '旧 ready 摘要缺少轻量列表包时，客户中心不能让页面 503 或空页');
+  assert.strictEqual(legacyReady.res.body.studentTeachingSummaryUnavailable, undefined, '有可用摘要轻字段时不能把页面挡成更新中');
+  assert.strictEqual(legacyReady.res.body.standardLifecycleMetrics.teachingSummary.historicalStudentCount, 3, '旧摘要轻字段必须能恢复历史学员顶部数');
+  assert.strictEqual(legacyReady.res.body.standardLifecycleMetrics.teachingSummary.activeStudentCount, 1, '旧摘要轻字段必须能恢复在期学员顶部数');
+  assert.strictEqual(legacyReady.calls.tableScans.ft_student_teaching_summary, 1, '缺轻量列表包时只能扫描摘要表轻字段兜底');
+  ['ft_schedule','ft_entitlement_ledger','ft_membership_benefit_ledger','ft_purchases','ft_entitlements','ft_students'].forEach(table => {
+    assert.strictEqual(legacyReady.calls.tableScans[table] || 0, 0, `旧摘要兜底不能扫描事实大表 ${table}`);
+  });
 
   const rebuildDryRun = makeHandler({ mutateSummaryOnWrite: true });
   const rebuildDryRunRes = {};
