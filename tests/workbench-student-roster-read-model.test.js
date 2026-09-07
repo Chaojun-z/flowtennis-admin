@@ -6,6 +6,7 @@ const {
   STUDENT_TEACHING_SUMMARY_READY,
   buildStudentTeachingSummaryChecksum,
   buildStudentTeachingSummaryMetaRow,
+  buildStudentTeachingSummaryListBundleRow,
   buildVersionedStudentTeachingSummaryRow
 } = require('../server/read-models/student-teaching-summary-cache.js');
 
@@ -117,6 +118,7 @@ const tableRows = {
       rowCount: currentStudentSummaryRows.length,
       checksum: buildStudentTeachingSummaryChecksum(currentStudentSummaryRows)
     }),
+    buildStudentTeachingSummaryListBundleRow(currentStudentSummaryRows, summaryVersion),
     ...currentStudentSummaryRows.map(row => buildVersionedStudentTeachingSummaryRow(row, summaryVersion)),
     ...Array.from({ length: 501 }, (_, index) => buildVersionedStudentTeachingSummaryRow({
       id: `stale-${index}`,

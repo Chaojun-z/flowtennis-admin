@@ -6,6 +6,14 @@ const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8
 const bootstrapSource = fs.readFileSync(path.join(__dirname, '../server/bootstrap.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 
+function fnBody(source, name) {
+  const start = source.indexOf(`async function ${name}(`);
+  assert.ok(start >= 0, `${name} should exist`);
+  const next = source.indexOf('\n}', start);
+  assert.ok(next > start, `${name} should have a body`);
+  return source.slice(start, next + 2);
+}
+
 assert.match(apiSource, /const ENABLE_RUNTIME_TABLE_ENSURE = BOOTSTRAP_SAFETY_FLAGS\.enableRuntimeTableEnsure;/, 'api should expose runtime table ensure through the centralized safety flags');
 assert.match(bootstrapSource, /function buildBootstrapSafetyFlags\(env=process\.env\)/, 'bootstrap module should centralize bootstrap safety flags');
 assert.match(apiSource, /const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = BOOTSTRAP_SAFETY_FLAGS\.enableShunyiMapoFinanceSeedBootstrap;/, 'finance seed bootstrap should be filtered by runtime safety flags');
@@ -25,8 +33,9 @@ assert.match(bootstrapSource, /console\.log\(`\[api-init\] ensureDefaultCampuses
 assert.match(bootstrapSource, /console\.log\(`\[api-init\] bootstrapShunyiMapoFinanceSeed done \$\{Date\.now\(\)-stepStartedAt\}ms \(total \$\{Date\.now\(\)-startedAt\}ms\)`\);/, 'init should log the finance seed step duration');
 assert.doesNotMatch(apiSource, /if\(path==='\/load-all'&&method==='GET'\)\{[\s\S]*await maybeRepairImportedLedgerDuplicates\(\);/s, 'load-all should not trigger imported ledger repair from the request path');
 assert.match(bootstrapSource, /console\.log\(`\[api-init\] prewarmHotScanCache dispatched \$\{Date\.now\(\)-stepStartedAt\}ms \(total \$\{Date\.now\(\)-startedAt\}ms\)`\);/, 'init should log when cache prewarm is dispatched');
-assert.match(apiSource, /async function prewarmStudentTeachingSummaryCache\(\)\{[\s\S]*readReadyStudentTeachingSummaryRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix\}\)[\s\S]*\}/, 'customer center first screen should prewarm the ready summary fast path');
-assert.doesNotMatch(apiSource, /async function prewarmStudentTeachingSummaryCache\(\)\{[\s\S]*return getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)[\s\S]*\}/, 'customer center first screen prewarm must not scan the whole summary table');
+assert.match(apiSource, /async function prewarmStudentTeachingSummaryCache\(\)\{[\s\S]*readReadyStudentTeachingSummaryListRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,verifyChecksum:true\}\)[\s\S]*\}/, 'customer center first screen should prewarm the ready list-bundle fast path');
+assert.doesNotMatch(fnBody(apiSource, 'prewarmStudentTeachingSummaryCache'), /scanByIdPrefix/, 'customer center first screen prewarm must not scan active-version summary rows');
+assert.doesNotMatch(fnBody(apiSource, 'prewarmStudentTeachingSummaryCache'), /getCachedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'customer center first screen prewarm must not scan the whole summary table');
 assert.match(apiSource, /prewarmStudentTeachingSummaryCache\(\);/, 'student teaching summary cache should be warmed without enabling full hot scan prewarm');
 assert.doesNotMatch(stateSource, /load-all/, 'front-end page loading should not fall back to the heavy load-all endpoint');
 assert.match(stateSource, /const PERFORMANCE_PAGE_DATA_GUARD=\{[\s\S]*students:\['classes','schedule','courts'\][\s\S]*coachschedule:\['entitlements','entitlementLedger'\][\s\S]*workbench:\['workbenchPage'\][\s\S]*\};/, 'page data performance guard should lock the current students and coach schedule loading strategy');

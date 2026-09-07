@@ -76,8 +76,8 @@ assert.ok(
   '体验后买正式课必须来自统一读模型输出'
 );
 assert.ok(
-  leadsRouteSource.includes('readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix})'),
-  '线索池顶部学员指标必须读取 ready activeVersion 统一摘要，不能命中旧热缓存'
+  leadsRouteSource.includes('readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,verifyChecksum:true})'),
+  '线索池顶部学员指标必须读取 ready activeVersion 轻量列表包，不能命中旧热缓存或扫描版本行'
 );
 assert.ok(
   leadsRouteSource.includes('buildLeadTeachingSummaryFromReadModel') && leadsRouteSource.includes('buildTeachingStudentViews'),

@@ -1,5 +1,60 @@
 const { buildTeachingStudentViews, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
-const { readReadyStudentTeachingSummaryRows } = require('../read-models/student-teaching-summary-cache.js');
+const { readReadyStudentTeachingSummaryListRows } = require('../read-models/student-teaching-summary-cache.js');
+
+const CUSTOMER_CENTER_STUDENT_SUMMARY_LIST_COLUMNS = [
+  'publishedRowId',
+  'publishVersion',
+  'studentId',
+  'sourceLeadId',
+  'name',
+  'displayName',
+  'wechatName',
+  'nickName',
+  'nickname',
+  'phone',
+  'type',
+  'source',
+  'campus',
+  'campusId',
+  'campusName',
+  'campusIds',
+  'primaryCoach',
+  'notes',
+  'profileNote',
+  'studentStage',
+  'courseDealPath',
+  'trialStatus',
+  'coursePurchaseCount',
+  'hasTrialExperience',
+  'hasTrialAttended',
+  'hasFormalAttended',
+  'hasCourseConversion',
+  'isHistoricalStudentRoster',
+  'isActiveStudentRoster',
+  'packageListText',
+  'packageBalanceRemaining',
+  'packageBalanceTotal',
+  'packageBalanceText',
+  'packageBalancePercent',
+  'detailPackageBalanceRemaining',
+  'detailPackageBalanceTotal',
+  'detailPackageBalanceText',
+  'detailPackageBalancePercent',
+  'packagePurchaseDate',
+  'lastFormalLessonAt',
+  'detailRecentLessonDate',
+  'cumulativeCoursePaidAmount',
+  'cumulativeCoursePaidText',
+  'completedLessons',
+  'packageStatusLabel',
+  'paymentModeLabel',
+  'activityStatusLabel',
+  'lessonVolumeLabel',
+  'studentStatusLabel',
+  'teachingLessonDetailSourceVersion',
+  'summaryUpdatedAt',
+  'updatedAt'
+];
 
 function pageDataScopeFromQuery(query) {
   return {
@@ -459,7 +514,11 @@ function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeach
 function createStudentRosterIndexReader({ tableName, getCachedScan, getCachedRow, scanByIdPrefix, filterLoadAllForUser = data => data } = {}) {
   return {
     async readCustomerCenterList({ user = {}, query } = {}) {
-      const studentTeachingSummaries = await readReadyStudentTeachingSummaryRows({ tableName, getCachedScan, getCachedRow, scanByIdPrefix });
+      const studentTeachingSummaries = await readReadyStudentTeachingSummaryListRows({
+        tableName,
+        getCachedRow,
+        verifyChecksum: true
+      });
       const scoped = filterLoadAllForUser({ studentTeachingSummaries }, user);
       const summaryRows = filterSummaryRowsForQuery(scoped.studentTeachingSummaries || [], query);
       return buildCustomerCenterPagePayload({
@@ -474,5 +533,6 @@ module.exports = {
   createStudentRosterIndexReader,
   buildCustomerCenterSummaryLifecycleRows,
   buildCustomerCenterPagePayload,
-  filterSummaryRowsForQuery
+  filterSummaryRowsForQuery,
+  CUSTOMER_CENTER_STUDENT_SUMMARY_LIST_COLUMNS
 };

@@ -1,4 +1,5 @@
 const assert = require('assert');
+const zlib = require('zlib');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 const {
@@ -40,6 +41,40 @@ function legacyReadyStudentSummaryRows(rows = []) {
       checksum: buildStudentTeachingSummaryChecksum(rows)
     },
     ...rows
+  ];
+}
+
+function readyStudentSummaryListBundleRows(rows = [], version = 'test-list-bundle') {
+  const projectedRows = rows.map(row => ({
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    ...row,
+    detailLessonRecordRows: undefined,
+    detailPackageOrderRows: undefined,
+    detailBenefitRows: undefined
+  }));
+  const rowsJson = JSON.stringify(projectedRows);
+  return [
+    {
+      id: '__student_teaching_summary_meta__',
+      kind: 'student-teaching-summary-meta',
+      status: 'ready',
+      rowCount: projectedRows.length,
+      generation: 1,
+      batchId: version,
+      activeVersion: version,
+      sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
+      completedAt: '2026-08-27T00:00:01.000Z',
+      checksum: buildStudentTeachingSummaryChecksum(projectedRows)
+    },
+    {
+      id: `__student_teaching_summary_list_bundle__:${version}`,
+      kind: 'student-teaching-summary-list-bundle',
+      publishVersion: version,
+      rowCount: projectedRows.length,
+      checksum: buildStudentTeachingSummaryChecksum(projectedRows),
+      encoding: 'gzip-base64',
+      rowsGzipBase64: zlib.gzipSync(rowsJson).toString('base64')
+    }
   ];
 }
 
@@ -187,7 +222,7 @@ function makeHandler({ legacyReady = false, mutateSummaryOnWrite = false } = {})
     ft_schedule: rows.schedule,
     ft_feedbacks: rows.feedbacks,
     ft_membership_benefit_ledger: rows.membershipBenefitLedger,
-    ft_student_teaching_summary: legacyReady ? legacyReadyStudentSummaryRows(rows.studentSummaries) : readyStudentSummaryRows(rows.studentSummaries)
+    ft_student_teaching_summary: legacyReady ? legacyReadyStudentSummaryRows(rows.studentSummaries) : readyStudentSummaryListBundleRows(rows.studentSummaries)
   };
   const clone = value => JSON.parse(JSON.stringify(value || []));
   const readTable = async table => {
@@ -295,7 +330,8 @@ function makeIsolatedRouteHandler() {
 }
 
 function makeBulkSummaryHandler(count = 1200) {
-  const calls = { tableScans: {} };
+  const calls = { tableScans: {}, rowGets: {}, prefixScans: {} };
+  const version = 'bulk-list-bundle-version';
   const summaryRows = Array.from({ length: count }, (_, index) => ({
     id: `bulk-${index}`,
     studentId: `bulk-${index}`,
@@ -326,6 +362,9 @@ function makeBulkSummaryHandler(count = 1200) {
       remainingLessons: index % 3 !== 0 ? 3 : 0
     })) : []
   }));
+  const tableRows = {
+    ft_student_teaching_summary: readyStudentSummaryListBundleRows(summaryRows, version)
+  };
   const handler = createCorePageDataRoutes({
     init: async () => {},
     sendJson: (res, body, status = 200) => {
@@ -338,10 +377,17 @@ function makeBulkSummaryHandler(count = 1200) {
     },
     getCachedScan: async table => {
       calls.tableScans[table] = (calls.tableScans[table] || 0) + 1;
-      if (table === 'ft_student_teaching_summary') return JSON.parse(JSON.stringify(readyStudentSummaryRows(summaryRows)));
-      throw new Error(`首屏性能测试不允许读取其他表: ${table}`);
+      throw new Error(`首屏性能测试不允许扫描表: ${table}`);
     },
-    getCachedRow: async () => null,
+    getCachedRow: async (table, id) => {
+      calls.rowGets[`${table}:${id}`] = (calls.rowGets[`${table}:${id}`] || 0) + 1;
+      const found = (tableRows[table] || []).find(row => String(row.id || '') === String(id || ''));
+      return found ? JSON.parse(JSON.stringify(found)) : null;
+    },
+    scanByIdPrefix: async (table, prefix) => {
+      calls.prefixScans[`${table}:${prefix}`] = (calls.prefixScans[`${table}:${prefix}`] || 0) + 1;
+      throw new Error(`首屏性能测试不允许扫描摘要版本前缀: ${table} ${prefix}`);
+    },
     filterLoadAllForUser: data => data,
     PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
     tables: {
@@ -356,7 +402,7 @@ function makeBulkSummaryHandler(count = 1200) {
       T_STUDENT_TEACHING_SUMMARY: 'ft_student_teaching_summary'
     }
   });
-  return { handler, calls };
+  return { handler, calls, version };
 }
 
 async function request(queryText = '', { legacyReady = false } = {}) {
@@ -377,7 +423,7 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(
     res.body.standardLifecycleMetrics.teachingSummary.trialAttendedStudentCount,
-    3,
+    2,
     '客户中心顶部上过体验课必须读取统一教学摘要读模型'
   );
   assert.strictEqual(
@@ -387,7 +433,7 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   );
   assert.strictEqual(
     res.body.standardLifecycleMetrics.teachingSummary.trialAttendedWithoutFormalCount,
-    2,
+    1,
     '体验未买正式课必须由同一批统一教学摘要读模型计算'
   );
   assert.strictEqual(
@@ -395,7 +441,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     1,
     '在期学员必须能从摘要行里的最近正式课和课包余额字段稳定还原'
   );
-  assert.strictEqual(calls.tableScans.ft_student_teaching_summary, 1, '客户中心首屏必须读取统一教学摘要读模型');
+  assert.strictEqual(calls.tableScans.ft_student_teaching_summary || 0, 0, '客户中心首屏不能扫描统一摘要表');
+  assert.strictEqual(calls.prefixScans.ft_student_teaching_summary || 0, 0, '客户中心首屏不能扫描统一摘要版本前缀');
   ['ft_schedule','ft_entitlement_ledger','ft_membership_benefit_ledger','ft_purchases','ft_entitlements','ft_students'].forEach(table => {
     assert.strictEqual(calls.tableScans[table] || 0, 0, `客户中心首屏不能扫描事实大表 ${table}`);
   });
@@ -403,13 +450,15 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   const fresh = await request('fresh=1');
   assert.strictEqual(
     fresh.res.body.standardLifecycleMetrics.teachingSummary.trialAttendedStudentCount,
-    3,
+    2,
     '强制 fresh 也不能让首屏回退成扫描事实大表'
   );
 
   const legacyReady = await request('', { legacyReady: true });
-  assert.strictEqual(legacyReady.res.statusCode, 503, '旧 ready 摘要缺少当前教学口径版本时，客户中心必须拒绝展示旧数据');
+  assert.strictEqual(legacyReady.res.statusCode, 200, '旧 ready 摘要缺少当前教学口径版本时，客户中心不能让页面 503');
   assert.strictEqual(legacyReady.res.body.code, 'STUDENT_TEACHING_SUMMARY_NOT_READY', '旧摘要必须走受控不可用状态，等待重建摘要');
+  assert.strictEqual(legacyReady.res.body.studentTeachingSummaryUnavailable, true, '旧摘要必须显式标记不可用，不能冒充真实数据');
+  assert.strictEqual(legacyReady.res.body.teachingStudentViews, undefined, '旧摘要不可用时不能返回空列表覆盖真实数据');
 
   const rebuildDryRun = makeHandler({ mutateSummaryOnWrite: true });
   const rebuildDryRunRes = {};
@@ -549,7 +598,7 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     res: notReadyRes,
     query: new URLSearchParams()
   });
-  assert.strictEqual(notReadyRes.statusCode, 503, '统一摘要未就绪时客户中心不能返回 200 空数据冒充成功');
+  assert.strictEqual(notReadyRes.statusCode, 200, '统一摘要未就绪时客户中心不能让页面 503');
   assert.strictEqual(notReadyRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用时必须显式标记降级状态');
   assert.strictEqual(notReadyRes.body.teachingStudentViews, undefined, '摘要不可用时不能返回空学员列表覆盖真实数据');
   assert.strictEqual(notReadyRes.body.listPage, undefined, '摘要不可用时不能返回空分页覆盖真实数据');
@@ -627,7 +676,7 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     res: fallbackRes,
     query: new URLSearchParams()
   });
-  assert.strictEqual(fallbackRes.statusCode, 503, '摘要不可用但事实表可用时客户中心也不能回扫事实表或返回 200 空数据');
+  assert.strictEqual(fallbackRes.statusCode, 200, '摘要不可用但事实表可用时客户中心不能 503，也不能回扫事实表或返回 200 空数据冒充成功');
   assert.strictEqual(fallbackRes.body.studentTeachingSummaryUnavailable, true, '摘要不可用但事实表可用时仍要标记降级状态');
   assert.strictEqual(fallbackRes.body.teachingStudentViews, undefined, '摘要不可用时不能回扫事实表拼历史学员');
   assert.strictEqual(fallbackRes.body.standardLifecycleMetrics, undefined, '摘要不可用时不能返回 0 顶部数据覆盖真实数据');
@@ -648,7 +697,13 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   const elapsedMs = Date.now() - startedAt;
   assert.strictEqual(bulkRes.statusCode, 200);
   assert.ok(elapsedMs < 1000, `1200 条统一摘要下首屏搜索分页应为秒级，当前 ${elapsedMs}ms`);
-  assert.strictEqual(bulk.calls.tableScans.ft_student_teaching_summary, 1, '秒级首屏只允许读取一次统一摘要索引');
+  assert.strictEqual(bulk.calls.tableScans.ft_student_teaching_summary || 0, 0, '秒级首屏不能扫描统一摘要表');
+  assert.strictEqual(Object.keys(bulk.calls.prefixScans).length, 0, '秒级首屏不能扫描 activeVersion 全量前缀');
+  assert.strictEqual(
+    bulk.calls.rowGets[`ft_student_teaching_summary:__student_teaching_summary_list_bundle__:${bulk.version}`],
+    1,
+    '秒级首屏必须点读当前 activeVersion 的轻量列表发布包'
+  );
   assert.strictEqual(bulkRes.body.listPage.rows.length, 15, '默认分页只返回当前页行');
   assert.strictEqual(bulkRes.body.teachingStudentViews.activeStudents[0].detailLessonRecordRows, undefined, '首屏返回体不能携带学员上课明细大数组');
   assert.strictEqual(bulkRes.body.teachingStudentViews.activeStudents[0].detailPackageOrderRows, undefined, '首屏返回体不能携带学员课包明细大数组');
@@ -696,7 +751,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
       lessonSectionText: '[第3节]'
     }]
   }];
-  const sparseCalls = { tableScans: {} };
+  const sparseCalls = { tableScans: {}, prefixScans: {} };
+  const sparseSummaryTableRows = readyStudentSummaryListBundleRows(sparseRows, 'sparse-list-bundle-version');
   const sparseBusinessFields = createCorePageDataRoutes({
     init: async () => {},
     sendJson: (res, body, status = 200) => {
@@ -709,10 +765,18 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     },
     getCachedScan: async table => {
       sparseCalls.tableScans[table] = (sparseCalls.tableScans[table] || 0) + 1;
-      if (table === 'ft_student_teaching_summary') return JSON.parse(JSON.stringify(readyStudentSummaryRows(sparseRows)));
-      throw new Error(`业务字段反例不允许读取其他表: ${table}`);
+      throw new Error(`业务字段反例不允许扫描表: ${table}`);
     },
-    getCachedRow: async () => null,
+    getCachedRow: async (table, id) => {
+      const found = table === 'ft_student_teaching_summary'
+        ? sparseSummaryTableRows.find(row => String(row.id || '') === String(id || ''))
+        : null;
+      return found ? JSON.parse(JSON.stringify(found)) : null;
+    },
+    scanByIdPrefix: async (table, prefix) => {
+      sparseCalls.prefixScans[table] = (sparseCalls.prefixScans[table] || 0) + 1;
+      throw new Error(`业务字段反例不允许扫描摘要版本前缀: ${table} ${prefix}`);
+    },
     filterLoadAllForUser: data => data,
     PRODUCTION_PAGE_READ_LIMITS: { schedule: 2000, entitlementLedger: 2000 },
     tables: {

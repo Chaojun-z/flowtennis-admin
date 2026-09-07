@@ -6,9 +6,12 @@ const {
   buildStudentTeachingSummaryMetaRow,
   buildStudentTeachingSummaryChecksum,
   buildStudentTeachingSummaryBundleRow,
+  buildStudentTeachingSummaryListBundleId,
+  buildStudentTeachingSummaryListBundleRow,
   buildVersionedStudentTeachingSummaryRow,
   requireReadyStudentTeachingSummaryRows,
   readReadyStudentTeachingSummaryRows,
+  readReadyStudentTeachingSummaryListRows,
   STUDENT_TEACHING_SUMMARY_META_ID,
   STUDENT_TEACHING_SUMMARY_READY
 } = require('../server/read-models/student-teaching-summary-cache');
@@ -293,6 +296,48 @@ async function testReadySummaryRowsPreferBundleRow() {
   assert.strictEqual(prefixScans, 0, '存在 ready 发布包时首屏不能远程扫描版本行');
 }
 
+async function testReadySummaryListRowsUseListBundleOnly() {
+  const tableName = 'ft_student_teaching_summary_list_bundle_test';
+  const version = 'student-teaching-summary-list-bundle-test';
+  const logicalRows = [{
+    id: 'list-student',
+    studentId: 'list-student',
+    name: '列表学员',
+    completedLessons: 67,
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    detailLessonRecordRows: [{ id: 'large-detail-row' }],
+    detailPackageOrderRows: [{ id: 'large-package-row' }]
+  }];
+  const listBundle = buildStudentTeachingSummaryListBundleRow(logicalRows, version);
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: logicalRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(logicalRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-09-07T00:00:00.000Z',
+    completedAt: '2026-09-07T00:00:01.000Z'
+  });
+  const gotIds = [];
+  const rows = await readReadyStudentTeachingSummaryListRows({
+    tableName,
+    getCachedRow: async (table, id) => {
+      assert.strictEqual(table, tableName);
+      gotIds.push(id);
+      if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(meta);
+      if (id === listBundle.id) return clone(listBundle);
+      return null;
+    },
+    timeoutMs: 50
+  });
+
+  assert.deepStrictEqual(gotIds, [STUDENT_TEACHING_SUMMARY_META_ID, buildStudentTeachingSummaryListBundleId(version)], '列表读取只能点读 meta 和轻量列表包');
+  assert.deepStrictEqual(rows.map(row => row.studentId), ['list-student']);
+  assert.strictEqual(rows[0].completedLessons, 67, '列表轻量包必须保留累计上课数');
+  assert.strictEqual(rows[0].detailLessonRecordRows, undefined, '列表轻量包不能携带上课明细大数组');
+  assert.strictEqual(rows[0].detailPackageOrderRows, undefined, '列表轻量包不能携带课包明细大数组');
+}
+
 async function testReadySummaryRowsRejectBadBundleWithoutPrefixScan() {
   const tableName = 'ft_student_teaching_summary_bad_bundle_test';
   const version = 'student-teaching-summary-bad-bundle-test';
@@ -465,6 +510,13 @@ async function testKeepsServingReadyRowsWhileNextVersionIsWritten() {
   const detailRow = tableRows.ft_student_teaching_summary.find(row => row.id === detailRowId);
   assert.ok(detailRow, '摘要发布必须写入单学员版本行，抽屉才能按 studentId 点查而不是读取大 bundle');
   assert.strictEqual(detailRow.publishedRowId, 'new-student', '单学员版本行必须保留真实学员 ID');
+  const listBundle = tableRows.ft_student_teaching_summary.find(row => row.id === buildStudentTeachingSummaryListBundleId(finalMeta.activeVersion));
+  assert.ok(listBundle, '摘要发布必须写入客户中心列表轻量包，列表才能点读而不是扫版本行');
+  const listRows = await readReadyStudentTeachingSummaryListRows({
+    tableName: tables.T_STUDENT_TEACHING_SUMMARY,
+    getCachedRow: async (table, id) => clone((tableRows[table] || []).find(row => String(row.id || '') === String(id || '')) || null)
+  });
+  assert.deepStrictEqual(listRows.map(row => row.studentId), ['new-student'], '列表轻量包必须和当前 ready activeVersion 一致');
 }
 
 async function testRollsBackPartiallyWrittenRowsWhenRefreshFails() {
@@ -621,6 +673,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
   await testReadySummaryReadDoesNotWaitForHungScan();
   await testReadySummaryDefaultTimeoutAllowsColdBundleRead();
   await testReadySummaryRowsPreferBundleRow();
+  await testReadySummaryListRowsUseListBundleOnly();
   await testReadySummaryRowsRejectBadBundleWithoutPrefixScan();
   await testReadySummaryRowsRejectLegacyLessonSourceVersion();
   await testReadySummaryRowsUseActiveVersionMemoryCache();

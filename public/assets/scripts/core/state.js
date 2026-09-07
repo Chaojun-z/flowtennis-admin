@@ -1138,6 +1138,25 @@ function isTeachingSummaryNotReadyError(error){
   const message=String(error?.message||'');
   return code==='STUDENT_TEACHING_SUMMARY_NOT_READY' || (status===503 && /教学学员统一摘要未就绪/.test(message));
 }
+function teachingSummaryNotReadyErrorFromPayload(data){
+  if(!data?.studentTeachingSummaryUnavailable)return null;
+  const error=new Error(data.error||'教学学员统一摘要未就绪，请稍后重试');
+  error.code=data.code||'STUDENT_TEACHING_SUMMARY_NOT_READY';
+  error.statusCode=200;
+  return error;
+}
+function renderTeachingSummaryPendingTable(pg){
+  const title='教学数据更新中';
+  const desc='统一上课和课包摘要正在更新，完成后刷新即可查看。';
+  const html=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div><button class="tms-state-action" onclick="loadPageDataAndRender(currentPage,{force:true})">重新加载</button></div></td></tr>`;
+  if(pg==='leads'){
+    const el=document.getElementById('leadTbody');
+    if(el)el.innerHTML=html;
+    return;
+  }
+  const el=document.getElementById('stuTbody');
+  if(el)el.innerHTML=html;
+}
 function clearTeachingSummaryPageState(pg){
   if(pg==='leads'){
     leads=[];
@@ -1165,7 +1184,7 @@ function renderTeachingSummaryNotReadyState(pg){
   clearTeachingSummaryPageState(pg);
   if(pg==='leads'){
     if(typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
-    if(typeof renderLeadTableLoading==='function')renderLeadTableLoading();
+    renderTeachingSummaryPendingTable(pg);
     const info=document.getElementById('leadPagerInfo');
     if(info)info.innerHTML=renderPagerInfoHtml(0);
     if(typeof renderLeadPagerControls==='function')renderLeadPagerControls(0,1);
@@ -1173,7 +1192,7 @@ function renderTeachingSummaryNotReadyState(pg){
   }
   if(isStudentListPage(pg)){
     renderStudentStatsLoading();
-    if(typeof renderStudentTableLoading==='function')renderStudentTableLoading();
+    renderTeachingSummaryPendingTable(pg);
     const info=document.getElementById('stuPagerInfo');
     if(info)info.innerHTML=renderPagerInfoHtml(0);
     if(typeof renderStudentPagerControls==='function')renderStudentPagerControls(0,1);
@@ -1286,6 +1305,8 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       return;
     }
     if(name==='customerCenterPage'){
+      const notReady=teachingSummaryNotReadyErrorFromPayload(data);
+      if(notReady)throw notReady;
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
@@ -1296,6 +1317,8 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       return;
     }
     if(name==='lifecycleMetricsPage'){
+      const notReady=teachingSummaryNotReadyErrorFromPayload(data);
+      if(notReady)throw notReady;
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};

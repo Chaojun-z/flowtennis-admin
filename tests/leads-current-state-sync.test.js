@@ -4,6 +4,7 @@ const { createLeadsRoutes } = require('../server/leads-routes.js');
 const {
   buildStudentTeachingSummaryMetaRow,
   buildStudentTeachingSummaryChecksum,
+  buildStudentTeachingSummaryListBundleRow,
   STUDENT_TEACHING_SUMMARY_READY
 } = require('../server/read-models/student-teaching-summary-cache.js');
 
@@ -43,6 +44,7 @@ async function main() {
     isHistoricalStudentRoster: true,
     isActiveStudentRoster: true
   }];
+  const summaryVersion = 'leads-current-state-summary';
   const rows = {
     ft_leads: [{
       id: 'lead-wly',
@@ -126,11 +128,12 @@ async function main() {
         status: STUDENT_TEACHING_SUMMARY_READY,
         rowCount: summaryRows.length,
         checksum: buildStudentTeachingSummaryChecksum(summaryRows),
-        batchId: 'leads-current-state-summary',
+        batchId: summaryVersion,
+        activeVersion: summaryVersion,
         sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
         completedAt: '2026-08-28T00:00:01.000Z'
       }),
-      ...summaryRows
+      buildStudentTeachingSummaryListBundleRow(summaryRows, summaryVersion)
     ],
     ft_court_account_list_index: []
   };

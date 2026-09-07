@@ -3,6 +3,7 @@ const { createLeadsRoutes } = require('../server/leads-routes');
 const {
   buildStudentTeachingSummaryMetaRow,
   buildStudentTeachingSummaryChecksum,
+  buildStudentTeachingSummaryListBundleRow,
   STUDENT_TEACHING_SUMMARY_READY
 } = require('../server/read-models/student-teaching-summary-cache');
 
@@ -82,6 +83,7 @@ async function main() {
     isHistoricalStudentRoster: true,
     isActiveStudentRoster: false
   }];
+  const summaryVersion = 'lead-convert-dedupe-summary';
   const rows = {
     ft_leads: [
       { id: 'lead-1', displayName: '小成', wechatName: '小成', createdAt: '2026-06-17 00:00:00' },
@@ -161,11 +163,12 @@ async function main() {
         status: STUDENT_TEACHING_SUMMARY_READY,
         rowCount: summaryRows.length,
         checksum: buildStudentTeachingSummaryChecksum(summaryRows),
-        batchId: 'lead-convert-dedupe-summary',
+        batchId: summaryVersion,
+        activeVersion: summaryVersion,
         sourceSnapshotAt: '2026-08-28T00:00:00.000Z',
         completedAt: '2026-08-28T00:00:01.000Z'
       }),
-      ...summaryRows
+      buildStudentTeachingSummaryListBundleRow(summaryRows, summaryVersion)
     ],
     ft_court_account_list_index: []
   };

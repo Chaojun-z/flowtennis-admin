@@ -828,20 +828,22 @@ async function requestMergedStudentWithStaleSummaryDetail() {
 
   const bundleSummary = await requestBundleSummaryStudentDetail();
   assert.strictEqual(bundleSummary.res.statusCode, 200);
-  assert.strictEqual(bundleSummary.calls.cappedScan, 0, 'published summary bundle should avoid full detail scans');
-  assert.strictEqual(bundleSummary.calls.summaryScan, 0, 'published summary bundle should avoid full summary scans');
-  assert.strictEqual(bundleSummary.calls.prefixScan, 0, 'published summary bundle should avoid version prefix scans');
+  assert.strictEqual(bundleSummary.calls.cappedScan, 0, 'drawer must not scan production fact tables when only a bundle exists');
+  assert.strictEqual(bundleSummary.calls.summaryScan, 0, 'drawer must not full-scan summary rows when only a bundle exists');
+  assert.strictEqual(bundleSummary.calls.prefixScan, 0, 'drawer must use exact student-row lookup instead of version prefix scans');
   assert.strictEqual(bundleSummary.res.body.detailStudentView.name, '王先生（阿萌）');
-  assert.strictEqual(bundleSummary.res.body.detailStudentView.completedLessons, 10);
-  assert.strictEqual(bundleSummary.res.body.detailStudentView.packageBalanceText, '0/10');
+  assert.strictEqual(bundleSummary.res.body.studentDetailSummaryNeedsRefresh, true, 'bundle-only summary should not be treated as a one-second trusted drawer row');
+  assert.strictEqual(bundleSummary.res.body.detailStudentView.completedLessons, undefined, 'drawer must not read a large bundle to fill cumulative lesson counts');
+  assert.deepStrictEqual(bundleSummary.res.body.detailStudentView.detailLessonRecordRows, [], 'drawer must not read bundle lesson records');
 
   const publishedBeatsStale = await requestPublishedSummaryBeatsStaleDirectRowStudentDetail();
   assert.strictEqual(publishedBeatsStale.res.statusCode, 200);
-  assert.strictEqual(publishedBeatsStale.calls.cappedScan, 0, 'W.Jing-style stale direct summary fallback must not scan production fact tables');
-  assert.strictEqual(publishedBeatsStale.calls.summaryScan, 0, 'W.Jing-style detail should read the published bundle directly without summary full scan');
-  assert.strictEqual(publishedBeatsStale.calls.prefixScan, 0, 'W.Jing-style detail should not need a version prefix scan when the bundle exists');
-  assert.strictEqual(publishedBeatsStale.res.body.detailStudentView.completedLessons, 67, 'student drawer should use the same published summary count as the list instead of stale direct row count');
-  assert.strictEqual(publishedBeatsStale.res.body.detailStudentView.detailLessonRecordRows[0]?.studentLessonSequenceText, '[累计第66-67节]');
+  assert.strictEqual(publishedBeatsStale.calls.cappedScan, 0, 'W.Jing-style bundle-only stale fallback must not scan production fact tables');
+  assert.strictEqual(publishedBeatsStale.calls.summaryScan, 0, 'W.Jing-style drawer must not full-scan summary rows');
+  assert.strictEqual(publishedBeatsStale.calls.prefixScan, 0, 'W.Jing-style drawer must not prefix-scan version rows');
+  assert.strictEqual(publishedBeatsStale.res.body.studentDetailSummaryNeedsRefresh, true, 'bundle-only published data should require rebuilding versioned student rows');
+  assert.strictEqual(publishedBeatsStale.res.body.detailStudentView.completedLessons, undefined, 'student drawer must not fall back to stale direct 59 or bundle cumulative values');
+  assert.deepStrictEqual(publishedBeatsStale.res.body.detailStudentView.detailLessonRecordRows, [], 'student drawer must not display stale or bundle lesson records without an exact versioned row');
 
   const versionedBeatsStale = await requestVersionedSummaryBeatsStaleDirectRowStudentDetail();
   assert.strictEqual(versionedBeatsStale.res.statusCode, 200);

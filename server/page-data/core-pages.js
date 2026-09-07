@@ -14,10 +14,11 @@ const {
   buildVersionedStudentTeachingSummaryRow,
   buildStudentTeachingSummaryBundleId,
   buildStudentTeachingSummaryBundleRow,
+  buildStudentTeachingSummaryListBundleRow,
   requireReadyStudentTeachingSummaryRows,
   studentTeachingSummaryRowsToDeleteAfterPublish,
   rollbackStudentTeachingSummaryPublish,
-  readReadyStudentTeachingSummaryRows
+  readReadyStudentTeachingSummaryListRows
 } = require('../read-models/student-teaching-summary-cache.js');
 const {
   buildCoachOpsUnifiedView,
@@ -206,7 +207,7 @@ function createCorePageDataRoutes(deps={}){
           studentTeachingSummaryUnavailable:true,
           code:err.code,
           error:err.message
-        },err.statusCode||503);
+        },200);
       }
       throw err;
     }
@@ -225,13 +226,7 @@ function createCorePageDataRoutes(deps={}){
         if(versioned&&String(versioned.publishVersion||'').trim()===activeVersion&&versionedStudentId===sid&&isCurrentTeachingSummaryRow(versioned)){
           return {...versioned,id:sid,publishedRowId:undefined,publishVersion:undefined};
         }
-        const bundle=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,buildStudentTeachingSummaryBundleId(activeVersion)).catch(()=>null);
-        let rows=[];
-        if(bundle){
-          try{rows=requireReadyStudentTeachingSummaryRows([meta,bundle]);}catch(e){rows=[];}
-        }
-        const published=(Array.isArray(rows)?rows:[]).find(row=>String(row.id||row.studentId||'').trim()===sid&&isCurrentTeachingSummaryRow(row))||null;
-        if(published)return published;
+        return null;
       }
     }
     const direct=typeof getCachedRow==='function'?await getCachedRow(T_STUDENT_TEACHING_SUMMARY,sid).catch(()=>null):null;
@@ -467,6 +462,8 @@ function createCorePageDataRoutes(deps={}){
       }
       const bundle=buildStudentTeachingSummaryBundleRow(publishedRows,activeVersion);
       await put(T_STUDENT_TEACHING_SUMMARY,bundle.id,bundle);
+      const listBundle=buildStudentTeachingSummaryListBundleRow(publishedRows,activeVersion);
+      await put(T_STUDENT_TEACHING_SUMMARY,listBundle.id,listBundle);
       return sendJson(res,{success:true,count:publishedRows.length,activeVersion,checksum});
     }
     if(path==='/page-data/customer-center-list/rebuild-summary'&&method==='POST'){
@@ -535,6 +532,8 @@ function createCorePageDataRoutes(deps={}){
         }
         const bundle=buildStudentTeachingSummaryBundleRow(rows,batchId);
         await put(T_STUDENT_TEACHING_SUMMARY,bundle.id,bundle);
+        const listBundle=buildStudentTeachingSummaryListBundleRow(rows,batchId);
+        await put(T_STUDENT_TEACHING_SUMMARY,listBundle.id,listBundle);
         const publishedRows=rows;
         await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
           status:STUDENT_TEACHING_SUMMARY_READY,
@@ -707,7 +706,7 @@ function createCorePageDataRoutes(deps={}){
           cappedScan(T_ENTITLEMENTS),
           cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
           cappedScan(T_PLANS),
-          readReadyStudentTeachingSummaryRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix})
+          readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,verifyChecksum:true}).catch(()=>[])
         ]);
         const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans,studentTeachingSummaries,coaches},user,coachRefs);
         const now=new Date();

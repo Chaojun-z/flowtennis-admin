@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const api = require('../api/index.js');
 const { createLeadsRoutes } = require('../server/leads-routes.js');
-const { buildStudentTeachingSummaryChecksum } = require('../server/read-models/student-teaching-summary-cache.js');
+const { buildStudentTeachingSummaryChecksum, buildStudentTeachingSummaryListBundleRow } = require('../server/read-models/student-teaching-summary-cache.js');
 const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 
 const repoRoot = path.join(__dirname, '..');
@@ -30,6 +30,7 @@ function clone(value) {
 }
 
 function readyStudentSummaryRows(rows = []) {
+  const version = 'test-batch';
   const versionedRows = rows.map(row => ({
     teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
     ...row
@@ -41,12 +42,13 @@ function readyStudentSummaryRows(rows = []) {
       status: 'ready',
       rowCount: versionedRows.length,
       generation: 1,
-      batchId: 'test-batch',
+      batchId: version,
+      activeVersion: version,
       sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
       completedAt: '2026-08-27T00:00:01.000Z',
       checksum: buildStudentTeachingSummaryChecksum(versionedRows)
     },
-    ...versionedRows
+    buildStudentTeachingSummaryListBundleRow(versionedRows, version)
   ];
 }
 
@@ -173,7 +175,8 @@ async function main() {
   assert.match(routesSource, /if\(isLocalPreviewFastMode\(\)\)return \[\]/, '本地预览线索列表不应被跟进记录冷读拖到超时');
   assert.doesNotMatch(routesSource, /readLeadOptionalRows\(T_STUDENTS|getCachedScan\(T_PURCHASES|getCachedScan\(T_ENTITLEMENTS|getCachedScan\(T_ENTITLEMENT_LEDGER|getCachedScan\(T_SCHEDULE/, '线索池首屏列表接口不能读取学员、课包、权益、流水、排课事实表');
   assert.doesNotMatch(routesSource, /readLeadLifecycleFacts/, '线索池首屏源码不能保留可复用的事实表生命周期回扫入口');
-  assert.match(routesSource, /readReadyStudentTeachingSummaryRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix\}\)/, '线索池学员统计必须通过 ready meta + activeVersion 前缀读取统一摘要');
+  assert.match(routesSource, /readReadyStudentTeachingSummaryListRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,verifyChecksum:true\}\)/, '线索池学员统计必须通过 ready meta + activeVersion 轻量列表包读取统一口径');
+  assert.doesNotMatch(routesSource, /readReadyStudentTeachingSummaryRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix,preferBundle:false,verifyChecksum:false\}\)/, '线索池首屏不能扫描 activeVersion 摘要行');
   assert.doesNotMatch(fnBody(routesSource, 'readLeadPoolContext'), /studentTeachingSummaryUnavailable&&[\s\S]*readLeadLifecycleFacts\(/, '线索池摘要不可用时不能回扫事实表补学员统计');
   assert.match(routesSource, /function leadPagedResponseCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query\)[\s\S]*leadListUserCachePart\(user\)/, '后端分页缓存 key 应包含完整查询条件和用户范围');
   assert.match(routesSource, /function leadFilteredResultCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query,\{includePaging:false\}\)[\s\S]*leadListUserCachePart\(user\)/, '后端翻页应复用同一筛选排序统计结果，不能每页重新全量计算');
@@ -381,14 +384,14 @@ async function main() {
     ft_student_teaching_summary: [],
     ft_court_account_list_index: []
   }, {
-    getCachedScan: async table => {
+    getCachedRow: async (table, id) => {
       if (table === 'ft_student_teaching_summary') {
         const err = new Error('教学学员统一摘要未就绪，页面拒绝展示旧数据：read-timeout');
         err.code = 'STUDENT_TEACHING_SUMMARY_NOT_READY';
         err.statusCode = 503;
         throw err;
       }
-      return clone(summaryTimeoutHarness.rows[table]);
+      return clone(summaryTimeoutHarness.rows[table]).find(row => String(row.id) === String(id)) || null;
     }
   });
   const summaryTimeoutPage = await request(summaryTimeoutHarness.handle, 'paged=1&page=1&pageSize=15');

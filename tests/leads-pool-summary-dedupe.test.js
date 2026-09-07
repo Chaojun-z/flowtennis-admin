@@ -5,6 +5,7 @@ const { buildCustomerLifecycleRows } = require('../server/read-models/customer-l
 const {
   buildStudentTeachingSummaryChecksum,
   buildStudentTeachingSummaryMetaRow,
+  buildStudentTeachingSummaryListBundleRow,
   buildVersionedStudentTeachingSummaryRow
 } = require('../server/read-models/student-teaching-summary-cache.js');
 
@@ -21,6 +22,7 @@ function readySummaryRows(rows = []) {
       completedAt: '2026-09-01T00:00:01.000Z',
       checksum: buildStudentTeachingSummaryChecksum(rows)
     }),
+    buildStudentTeachingSummaryListBundleRow(rows, version),
     ...rows.map(row => buildVersionedStudentTeachingSummaryRow(row, version))
   ];
 }
