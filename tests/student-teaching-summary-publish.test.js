@@ -361,6 +361,7 @@ async function testReadySummaryListRowsFallbackToProjectedSummaryRows() {
     completedAt: '2026-09-07T00:00:01.000Z'
   });
   const scannedOptions = [];
+  const writes = [];
   const rows = await readReadyStudentTeachingSummaryListRows({
     tableName,
     getCachedRow: async (table, id) => {
@@ -374,6 +375,9 @@ async function testReadySummaryListRowsFallbackToProjectedSummaryRows() {
       scannedOptions.push(options);
       return clone([meta, ...logicalRows]);
     },
+    put: async (table, id, row) => {
+      writes.push({ table, id, row });
+    },
     timeoutMs: 50
   });
 
@@ -383,6 +387,8 @@ async function testReadySummaryListRowsFallbackToProjectedSummaryRows() {
   assert.strictEqual(rows[0].detailPackageOrderRows, undefined, '摘要表兜底也不能把课包明细大数组发到首屏');
   assert.ok(scannedOptions[0].columns.length > 0, '摘要表兜底必须使用轻字段投影读取');
   assert.ok(!scannedOptions[0].columns.includes('rowsGzipBase64'), '摘要表兜底不能读取旧大 bundle 内容');
+  assert.strictEqual(writes.length, 1, '缺轻量列表包时，第一次请求必须补写轻量列表包，避免页面持续更新中');
+  assert.strictEqual(writes[0].id, buildStudentTeachingSummaryListBundleId(version), '补写的必须是当前 activeVersion 的轻量列表包');
 }
 
 async function testReadySummaryRowsRejectBadBundleWithoutPrefixScan() {

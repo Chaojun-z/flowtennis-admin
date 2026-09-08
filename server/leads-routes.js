@@ -1210,7 +1210,7 @@ function createLeadsRoutes(deps={}){
     const useLightLifecycleSource=!isLocalPreviewFastMode()&&!!(T_STUDENT_TEACHING_SUMMARY&&T_COURT_ACCOUNT_LIST_INDEX&&typeof getCachedScan==='function'&&typeof buildCourtAccountListViewFromIndexRows==='function');
     if(useLightLifecycleSource){
       const [studentSummaryResult,courtIndexResult]=await Promise.allSettled([
-        readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,verifyChecksum:true}),
+        readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,put,verifyChecksum:true}),
         withLeadReadTimeout(getCachedScan(T_COURT_ACCOUNT_LIST_INDEX).catch(()=>[]), 'court account list index').catch(error=>{
           if(error?.code==='LEAD_LIST_READ_TIMEOUT'){
             leadAuxiliaryRowsUnavailable=true;

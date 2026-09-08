@@ -175,7 +175,7 @@ async function main() {
   assert.match(routesSource, /if\(isLocalPreviewFastMode\(\)\)return \[\]/, '本地预览线索列表不应被跟进记录冷读拖到超时');
   assert.doesNotMatch(routesSource, /readLeadOptionalRows\(T_STUDENTS|getCachedScan\(T_PURCHASES|getCachedScan\(T_ENTITLEMENTS|getCachedScan\(T_ENTITLEMENT_LEDGER|getCachedScan\(T_SCHEDULE/, '线索池首屏列表接口不能读取学员、课包、权益、流水、排课事实表');
   assert.doesNotMatch(routesSource, /readLeadLifecycleFacts/, '线索池首屏源码不能保留可复用的事实表生命周期回扫入口');
-  assert.match(routesSource, /readReadyStudentTeachingSummaryListRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,verifyChecksum:true\}\)/, '线索池学员统计必须通过统一摘要读模型读取，缺轻量包时只能用摘要表轻字段兜底');
+  assert.match(routesSource, /readReadyStudentTeachingSummaryListRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,put,verifyChecksum:true\}\)/, '线索池学员统计必须通过统一摘要读模型读取，缺轻量包时只能用摘要表轻字段兜底并补写轻量包');
   assert.doesNotMatch(routesSource, /readReadyStudentTeachingSummaryRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix,preferBundle:false,verifyChecksum:false\}\)/, '线索池首屏不能扫描 activeVersion 摘要行');
   assert.doesNotMatch(fnBody(routesSource, 'readLeadPoolContext'), /studentTeachingSummaryUnavailable&&[\s\S]*readLeadLifecycleFacts\(/, '线索池摘要不可用时不能回扫事实表补学员统计');
   assert.match(routesSource, /function leadPagedResponseCacheKey\(query,user\)[\s\S]*leadListQueryCachePart\(query\)[\s\S]*leadListUserCachePart\(user\)/, '后端分页缓存 key 应包含完整查询条件和用户范围');

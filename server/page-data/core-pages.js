@@ -15,6 +15,7 @@ const {
   buildStudentTeachingSummaryBundleId,
   buildStudentTeachingSummaryBundleRow,
   buildStudentTeachingSummaryListBundleRow,
+  studentTeachingSummaryBundleLogicalRows,
   requireReadyStudentTeachingSummaryRows,
   studentTeachingSummaryRowsToDeleteAfterPublish,
   rollbackStudentTeachingSummaryPublish,
@@ -195,6 +196,7 @@ function createCorePageDataRoutes(deps={}){
     getCachedScan,
     getCachedRow,
     scanByIdPrefix,
+    put,
     filterLoadAllForUser
   });
   async function sendCustomerCenterTeachingSummary(res,user,query){
@@ -455,7 +457,11 @@ function createCorePageDataRoutes(deps={}){
       const activeVersion=String(meta?.activeVersion||'').trim();
       if(String(meta?.status||'')!==STUDENT_TEACHING_SUMMARY_READY||!activeVersion)return sendJson(res,{error:'当前教学学员摘要未发布，拒绝补写发布包'},503);
       const versionRows=await scanByIdPrefix(T_STUDENT_TEACHING_SUMMARY,`${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`);
-      const publishedRows=filterStudentTeachingSummaryPublishedRows(versionRows,{activeVersion});
+      let publishedRows=filterStudentTeachingSummaryPublishedRows(versionRows,{activeVersion});
+      if(!publishedRows.length){
+        const existingBundle=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,buildStudentTeachingSummaryBundleId(activeVersion)).catch(()=>null);
+        publishedRows=studentTeachingSummaryBundleLogicalRows(existingBundle);
+      }
       const checksum=buildStudentTeachingSummaryChecksum(publishedRows);
       if(Number(meta.rowCount)!==publishedRows.length||String(meta.checksum||'')!==checksum){
         return sendJson(res,{error:'当前教学学员摘要版本行与 meta 不一致，拒绝补写发布包'},503);
@@ -706,7 +712,7 @@ function createCorePageDataRoutes(deps={}){
           cappedScan(T_ENTITLEMENTS),
           cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
           cappedScan(T_PLANS),
-          readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,verifyChecksum:true}).catch(()=>[])
+          readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,put,verifyChecksum:true}).catch(()=>[])
         ]);
         const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,plans,studentTeachingSummaries,coaches},user,coachRefs);
         const now=new Date();

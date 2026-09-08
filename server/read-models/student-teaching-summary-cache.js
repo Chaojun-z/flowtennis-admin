@@ -17,6 +17,7 @@ const READY_STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS = Math.max(
   parseInt(process.env.STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS || '2500', 10) || 2500
 );
 const readyStudentTeachingSummaryRowsCache = new Map();
+const studentTeachingSummaryListBundleRepairPromises = new Map();
 
 function parseArr(v) {
   if (Array.isArray(v)) return v;
@@ -546,6 +547,7 @@ async function readReadyStudentTeachingSummaryListRows({
   getCachedRow,
   getCachedScan,
   scanByIdPrefix,
+  put,
   verifyChecksum = true,
   timeoutMs = READY_STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS
 } = {}) {
@@ -601,7 +603,16 @@ async function readReadyStudentTeachingSummaryListRows({
           columns: STUDENT_TEACHING_SUMMARY_LIST_SCAN_COLUMNS
         }).catch(() => []);
         if (Array.isArray(versionRows) && versionRows.length) {
-          return readListRowsFromProjectedRows(meta, versionRows);
+          const rows = readListRowsFromProjectedRows(meta, versionRows);
+          if (typeof put === 'function') {
+            await queueStudentTeachingSummaryListBundleRepair({
+              tableName,
+              activeVersion,
+              rows,
+              put
+            });
+          }
+          return rows;
         }
       }
     }
@@ -611,10 +622,42 @@ async function readReadyStudentTeachingSummaryListRows({
         pageLimit: 500
       }).catch(() => []);
       const projectedMeta = studentTeachingSummaryMetaRow(projectedRows) || meta;
-      return readListRowsFromProjectedRows(projectedMeta, projectedRows);
+      const rows = readListRowsFromProjectedRows(projectedMeta, projectedRows);
+      const versionForRepair = String(projectedMeta?.activeVersion || projectedMeta?.batchId || activeVersion || '').trim();
+      if (versionForRepair && typeof put === 'function') {
+        await queueStudentTeachingSummaryListBundleRepair({
+          tableName,
+          activeVersion: versionForRepair,
+          rows,
+          put
+        });
+      }
+      return rows;
     }
     throw studentTeachingSummaryNotReadyError(meta, 'missing-list-bundle');
   }, timeoutMs, 'list-bundle-read-timeout');
+}
+
+function queueStudentTeachingSummaryListBundleRepair({
+  tableName = '',
+  activeVersion = '',
+  rows = [],
+  put
+} = {}) {
+  const version = String(activeVersion || '').trim();
+  if (!tableName || !version || !Array.isArray(rows) || !rows.length || typeof put !== 'function') return;
+  const key = `${tableName}:${version}`;
+  if (studentTeachingSummaryListBundleRepairPromises.has(key)) return studentTeachingSummaryListBundleRepairPromises.get(key);
+  const promise = Promise.resolve().then(async () => {
+    const listBundle = buildStudentTeachingSummaryListBundleRow(rows, version);
+    await put(tableName, listBundle.id, listBundle);
+  }).catch(err => {
+    console.warn('[student-teaching-summary] list bundle repair failed', err?.message || err);
+  }).finally(() => {
+    studentTeachingSummaryListBundleRepairPromises.delete(key);
+  });
+  studentTeachingSummaryListBundleRepairPromises.set(key, promise);
+  return promise;
 }
 
 function createStudentTeachingSummaryCache({
@@ -793,6 +836,7 @@ module.exports = {
   buildStudentTeachingSummaryListBundleId,
   buildStudentTeachingSummaryBundleRow,
   buildStudentTeachingSummaryListBundleRow,
+  studentTeachingSummaryBundleLogicalRows,
   studentTeachingSummaryRowsToDeleteAfterPublish,
   rollbackStudentTeachingSummaryPublish,
   buildStudentTeachingSummaryChecksum,

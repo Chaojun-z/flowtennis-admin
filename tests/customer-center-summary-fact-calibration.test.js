@@ -6,7 +6,9 @@ const {
   requireReadyStudentTeachingSummaryRows,
   buildStudentTeachingSummaryChecksum,
   buildVersionedStudentTeachingSummaryRow,
-  buildStudentTeachingSummaryBundleId
+  buildStudentTeachingSummaryBundleId,
+  buildStudentTeachingSummaryListBundleId,
+  buildStudentTeachingSummaryBundleRow
 } = require('../server/read-models/student-teaching-summary-cache.js');
 
 function readyStudentSummaryRows(rows = []) {
@@ -544,6 +546,40 @@ async function request(queryText = '', { legacyReady = false } = {}) {
     assert.strictEqual(bundleHandler.calls.tableScans[table] || 0, 0, `补写发布包不能扫描事实大表 ${table}`);
   });
   assert.strictEqual(bundleHandler.calls.prefixScans.ft_student_teaching_summary, 1, '补写发布包只能按当前 activeVersion 扫摘要表版本前缀');
+
+  const bundleOnlyHandler = makeHandler();
+  const bundleOnlyVersion = 'student-teaching-summary-bundle-only-ready';
+  bundleOnlyHandler.tableRows.ft_student_teaching_summary = [
+    {
+      id: '__student_teaching_summary_meta__',
+      kind: 'student-teaching-summary-meta',
+      status: 'ready',
+      rowCount: bundleRows.length,
+      generation: 1,
+      batchId: bundleOnlyVersion,
+      activeVersion: bundleOnlyVersion,
+      sourceSnapshotAt: '2026-08-27T00:00:00.000Z',
+      completedAt: '2026-08-27T00:00:01.000Z',
+      checksum: buildStudentTeachingSummaryChecksum(bundleRows)
+    },
+    buildStudentTeachingSummaryBundleRow(bundleRows, bundleOnlyVersion)
+  ];
+  const bundleOnlyRes = {};
+  await bundleOnlyHandler.handler({
+    path: '/page-data/customer-center-list/publish-summary-bundle',
+    method: 'POST',
+    user: { role: 'admin', name: '管理员' },
+    res: bundleOnlyRes,
+    query: new URLSearchParams()
+  });
+  assert.strictEqual(bundleOnlyRes.statusCode, 200, '线上只有旧压缩发布包时，也必须允许补写轻量列表包');
+  assert.ok(
+    bundleOnlyHandler.tableRows.ft_student_teaching_summary.some(row => row.id === buildStudentTeachingSummaryListBundleId(bundleOnlyVersion)),
+    '只有旧压缩发布包时，补写接口必须生成首屏点读的轻量列表包'
+  );
+  ['ft_schedule','ft_entitlement_ledger','ft_membership_benefit_ledger','ft_purchases','ft_entitlements','ft_students'].forEach(table => {
+    assert.strictEqual(bundleOnlyHandler.calls.tableScans[table] || 0, 0, `旧压缩包补写轻量包不能扫描事实大表 ${table}`);
+  });
 
   const isolatedHandler = makeIsolatedRouteHandler();
   const isolatedRes = {};

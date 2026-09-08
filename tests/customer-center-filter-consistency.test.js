@@ -76,8 +76,8 @@ assert.ok(
   '体验后买正式课必须来自统一读模型输出'
 );
 assert.ok(
-  leadsRouteSource.includes('readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,verifyChecksum:true})'),
-  '线索池顶部学员指标必须读取统一教学摘要，缺轻量包时只能用摘要表轻字段兜底'
+  leadsRouteSource.includes('readReadyStudentTeachingSummaryListRows({tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,put,verifyChecksum:true})'),
+  '线索池顶部学员指标必须读取统一教学摘要，缺轻量包时只能用摘要表轻字段兜底并补写轻量包'
 );
 assert.ok(
   leadsRouteSource.includes('buildLeadTeachingSummaryFromReadModel') && leadsRouteSource.includes('buildTeachingStudentViews'),

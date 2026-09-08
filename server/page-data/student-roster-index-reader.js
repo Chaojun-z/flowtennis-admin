@@ -511,7 +511,7 @@ function buildCustomerCenterPagePayload({ summaryRows = [], query, prebuiltTeach
   };
 }
 
-function createStudentRosterIndexReader({ tableName, getCachedScan, getCachedRow, scanByIdPrefix, filterLoadAllForUser = data => data } = {}) {
+function createStudentRosterIndexReader({ tableName, getCachedScan, getCachedRow, scanByIdPrefix, put, filterLoadAllForUser = data => data } = {}) {
   return {
     async readCustomerCenterList({ user = {}, query } = {}) {
       const studentTeachingSummaries = await readReadyStudentTeachingSummaryListRows({
@@ -519,6 +519,7 @@ function createStudentRosterIndexReader({ tableName, getCachedScan, getCachedRow
         getCachedRow,
         getCachedScan,
         scanByIdPrefix,
+        put,
         verifyChecksum: true
       });
       const scoped = filterLoadAllForUser({ studentTeachingSummaries }, user);
