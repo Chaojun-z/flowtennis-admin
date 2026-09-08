@@ -56,6 +56,7 @@ assert.match(source, /studentTeachingSummaryUnavailable[\s\S]*STUDENT_TEACHING_S
 assert.match(source, /if\(name==='customerCenterPage'\)\{[\s\S]*teachingSummaryNotReadyErrorFromPayload\(data\)[\s\S]*throw notReady/, 'customer center loader should stop before hydrating empty data when summary is unavailable');
 assert.match(source, /if\(name==='lifecycleMetricsPage'\)\{[\s\S]*teachingSummaryNotReadyErrorFromPayload\(data\)[\s\S]*throw notReady/, 'lifecycle metrics loader should stop before hydrating empty data when summary is unavailable');
 assert.match(source, /function renderTeachingSummaryPendingTable\(pg\)/, 'not-ready teaching summary should render a visible pending state instead of a loading loop');
+assert.match(source, /async function repairTeachingSummaryAndReload\(pg,manual=false\)[\s\S]*apiCall\('POST','\/page-data\/customer-center-list\/publish-summary-bundle'/, 'not-ready teaching summary should actively repair the list bundle before reloading');
 assert.match(source, /if\(isTeachingSummaryNotReadyError\(e\)&&renderTeachingSummaryNotReadyState\(pg\)\)return;/, 'background refreshes should clear old teaching-summary data instead of keeping it on screen');
 assert.match(source, /function ensurePurchaseDetailData\(purchaseId/, 'purchase detail should have a per-purchase detail loader');
 assert.match(source, /\/page-data\/purchase-detail\?id=/, 'purchase detail loader should call the per-purchase endpoint');

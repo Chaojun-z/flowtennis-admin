@@ -1145,10 +1145,28 @@ function teachingSummaryNotReadyErrorFromPayload(data){
   error.statusCode=200;
   return error;
 }
+const teachingSummaryRepairPages=new Set();
+const teachingSummaryAutoRepairPages=new Set();
+async function repairTeachingSummaryAndReload(pg,manual=false){
+  const page=String(pg||currentPage||'').trim();
+  const key=page||'customer-center';
+  if(!manual&&teachingSummaryAutoRepairPages.has(key))return;
+  if(!manual)teachingSummaryAutoRepairPages.add(key);
+  if(teachingSummaryRepairPages.has(key))return;
+  teachingSummaryRepairPages.add(key);
+  try{
+    await apiCall('POST','/page-data/customer-center-list/publish-summary-bundle',null,30000);
+  }catch(e){
+    console.warn('student teaching summary repair failed:',e);
+  }finally{
+    teachingSummaryRepairPages.delete(key);
+  }
+  loadPageDataAndRender(page||currentPage,{force:true});
+}
 function renderTeachingSummaryPendingTable(pg){
   const title='教学数据更新中';
-  const desc='统一上课和课包摘要正在更新，完成后刷新即可查看。';
-  const html=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div><button class="tms-state-action" onclick="loadPageDataAndRender(currentPage,{force:true})">重新加载</button></div></td></tr>`;
+  const desc='正在恢复首屏摘要，请稍后重新加载。';
+  const html=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div><button class="tms-state-action" onclick="repairTeachingSummaryAndReload(currentPage,true)">重新加载</button></div></td></tr>`;
   if(pg==='leads'){
     const el=document.getElementById('leadTbody');
     if(el)el.innerHTML=html;
@@ -1188,6 +1206,7 @@ function renderTeachingSummaryNotReadyState(pg){
     const info=document.getElementById('leadPagerInfo');
     if(info)info.innerHTML=renderPagerInfoHtml(0);
     if(typeof renderLeadPagerControls==='function')renderLeadPagerControls(0,1);
+    repairTeachingSummaryAndReload(pg);
     return true;
   }
   if(isStudentListPage(pg)){
@@ -1196,6 +1215,7 @@ function renderTeachingSummaryNotReadyState(pg){
     const info=document.getElementById('stuPagerInfo');
     if(info)info.innerHTML=renderPagerInfoHtml(0);
     if(typeof renderStudentPagerControls==='function')renderStudentPagerControls(0,1);
+    repairTeachingSummaryAndReload(pg);
     return true;
   }
   return false;

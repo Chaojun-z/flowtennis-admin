@@ -21,7 +21,7 @@ assert.ok(
 );
 assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api.js');
 assert.match(html, /assets\/scripts\/core\/state\.js/, 'index.html should load state.js');
-assert.match(html, /assets\/scripts\/core\/state\.js\?v=20260907-teaching-summary-not-ready-v1/, 'index.html should bust stale cached state.js after teaching summary not-ready handling fixes');
+assert.match(html, /assets\/scripts\/core\/state\.js\?v=20260908-teaching-summary-repair-v1/, 'index.html should bust stale cached state.js after teaching summary repair handling fixes');
 assert.match(html, /assets\/scripts\/core\/shell\.js/, 'index.html should load shell.js');
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js/, 'index.html should load bootstrap.js');
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260904-management-page-visibility-v1/, 'index.html should keep the current bootstrap script asset version');
