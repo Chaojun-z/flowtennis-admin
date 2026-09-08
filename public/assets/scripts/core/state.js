@@ -1200,22 +1200,27 @@ function clearTeachingSummaryPageState(pg){
   }
 }
 function renderTeachingSummaryNotReadyState(pg){
-  clearTeachingSummaryPageState(pg);
+  const hasUsableData=pageHasUsableLoadedData(pg);
+  if(!hasUsableData)clearTeachingSummaryPageState(pg);
   if(pg==='leads'){
-    if(typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
-    renderTeachingSummaryPendingTable(pg);
-    const info=document.getElementById('leadPagerInfo');
-    if(info)info.innerHTML=renderPagerInfoHtml(0);
-    if(typeof renderLeadPagerControls==='function')renderLeadPagerControls(0,1);
+    if(!hasUsableData){
+      if(typeof renderLeadStatsLoading==='function')renderLeadStatsLoading();
+      renderTeachingSummaryPendingTable(pg);
+      const info=document.getElementById('leadPagerInfo');
+      if(info)info.innerHTML=renderPagerInfoHtml(0);
+      if(typeof renderLeadPagerControls==='function')renderLeadPagerControls(0,1);
+    }
     repairTeachingSummaryAndReload(pg);
     return true;
   }
   if(isStudentListPage(pg)){
-    renderStudentStatsLoading();
-    renderTeachingSummaryPendingTable(pg);
-    const info=document.getElementById('stuPagerInfo');
-    if(info)info.innerHTML=renderPagerInfoHtml(0);
-    if(typeof renderStudentPagerControls==='function')renderStudentPagerControls(0,1);
+    if(!hasUsableData){
+      renderStudentStatsLoading();
+      renderTeachingSummaryPendingTable(pg);
+      const info=document.getElementById('stuPagerInfo');
+      if(info)info.innerHTML=renderPagerInfoHtml(0);
+      if(typeof renderStudentPagerControls==='function')renderStudentPagerControls(0,1);
+    }
     repairTeachingSummaryAndReload(pg);
     return true;
   }

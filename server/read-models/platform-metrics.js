@@ -2203,17 +2203,15 @@ function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
 }
 
 function teachingStudentHasTrialAttendedFact(data = {}, row = {}, now = new Date()) {
-  if (row.hasTeachingSummarySnapshot) return teachingSummaryTrialAttendedSnapshot(row);
+  if (booleanSnapshotValue(row.hasTrialAttended) === true) return true;
   if (teachingStudentTrialLessonFactRows(data, text(row.studentId), now).length > 0) return true;
-  return false;
+  return teachingSummaryTrialAttendedSnapshot(row);
 }
 
 function teachingStudentHasFormalAttendedFact(data = {}, row = {}, now = new Date()) {
+  if (booleanSnapshotValue(row.hasFormalAttended) === true) return true;
   if (teachingStudentFormalLessonFactRows(data, text(row.studentId), now).length > 0) return true;
-  if (!hasFreshTeachingLessonFacts(data) && row.hasTeachingSummarySnapshot) {
-    return booleanSnapshotValue(row.hasFormalAttended) === true || teachingSummaryRowHasFormalLesson(row, now);
-  }
-  return false;
+  return teachingSummaryFormalAttendedSnapshot(row, now);
 }
 
 function teachingStudentHasFormalPackage(row = {}) {
@@ -3028,14 +3026,12 @@ function buildStudentTeachingSummaryRows(customerLifecycleRows = [], data = {}) 
   const views = buildTeachingStudentViews(customerLifecycleRows, data);
   return (views.historicalStudents || [])
     .map(row => {
-      const studentId = text(row.studentId);
-      const trialFactRows = teachingStudentTrialLessonFactRows(data, studentId, now);
-      const formalFactRows = teachingStudentFormalLessonFactRows(data, studentId, now);
       const hasTrialAttended = teachingStudentHasTrialAttendedFact(data, row, now);
+      const hasFormalAttended = teachingStudentHasFormalAttendedFact(data, row, now);
       return teachingStudentSummarySnapshotRow({
         ...row,
-        hasTrialAttended: hasFreshTeachingLessonFacts(data) ? trialFactRows.length > 0 : hasTrialAttended,
-        hasFormalAttended: hasFreshTeachingLessonFacts(data) ? formalFactRows.length > 0 : !!row.hasFormalAttended
+        hasTrialAttended,
+        hasFormalAttended
       }, updatedAt);
     })
     .filter(Boolean);

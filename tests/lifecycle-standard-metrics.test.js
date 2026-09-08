@@ -318,6 +318,61 @@ assert.strictEqual(
   8,
   '当前事实表可用时，累计上课必须由同一批上课明细汇总，旧摘要累计不能覆盖真实口径'
 );
+const truthySummarySourceRows = [{
+  id: 'student-summary-truthy-merge',
+  studentId: 'student-summary-truthy-merge',
+  name: '真值学员',
+  campus: 'shunyi_mapo',
+  type: '成人',
+  primaryCoach: 'Mira',
+  studentStage: 'formal',
+  completedLessons: 67,
+  hasTrialAttended: true,
+  hasFormalAttended: true,
+  detailLessonRecordRows: [
+    { kind: 'ledger', time: '2026-06-07 10:00', courseType: '体验课', lessonDelta: -1, studentLessonSequenceText: '[累计第1节]' },
+    { kind: 'ledger', time: '2026-06-10 10:00', courseType: '私教课', lessonDelta: -2, studentLessonSequenceText: '[累计第66-67节]' }
+  ],
+  detailPackageOrderRows: [{ packageName: '1v1私教课 · 50课时 · 非黄金', remainingLessons: 21, totalLessons: 50 }],
+  packageBalanceRemaining: 21,
+  packageBalanceTotal: 50,
+  packageBalanceText: '21/50',
+  detailRecentLessonDate: '2026-06-10',
+  lastFormalLessonAt: '2026-06-10',
+  summaryUpdatedAt: '2026-06-11T00:00:00.000Z',
+  updatedAt: '2026-06-11T00:00:00.000Z'
+}];
+const truthySummaryData = {
+  schedule: [{
+    id: 'other-formal',
+    studentId: 'other-student',
+    studentIds: ['other-student'],
+    courseType: '私教课',
+    startTime: '2026-07-01 10:00:00',
+    endTime: '2026-07-01 11:00:00',
+    status: '已完成'
+  }],
+  entitlementLedger: [{
+    id: 'other-ledger',
+    studentId: 'other-student',
+    lessonDelta: -1,
+    status: 'active'
+  }],
+  purchases: [],
+  entitlements: [],
+  membershipBenefitLedger: [],
+  feedbacks: [],
+  now: new Date('2026-07-09 00:00:00')
+};
+const truthySummaryRows = buildStudentTeachingSummaryRows(truthySummarySourceRows, truthySummaryData);
+const truthySummaryRow = truthySummaryRows.find(row => row.studentId === 'student-summary-truthy-merge');
+assert.strictEqual(truthySummaryRow?.hasTrialAttended, true, '源数据已确认上过体验课时，不得被 fresh 事实洗成 false');
+assert.strictEqual(truthySummaryRow?.hasFormalAttended, true, '源数据已确认上过正式课时，不得被 fresh 事实洗成 false');
+assert.strictEqual(truthySummaryRow?.completedLessons, 67, '源数据已有累计课时数时，不得被 fresh 事实改成别的口径');
+const truthySummaryViews = buildTeachingStudentViews(truthySummarySourceRows, truthySummaryData);
+assert.strictEqual(truthySummaryViews.summary.trialAttendedStudentCount, 1, '上过体验课人数必须保留源头真值，不能被 fresh 事实清空');
+assert.strictEqual(truthySummaryViews.summary.historicalTrialAttendedCount, 1, '历史学员体验课人数必须保留源头真值');
+assert.strictEqual(truthySummaryViews.summary.historicalFormalAttendedCount, 2, '历史学员正式课人数必须保留源头真值');
 const mixedLedgerStudentIdData = {
   leads: [],
   students: [{ id: 'student-mixed-ledger-id', name: 'William（时节）' }],
