@@ -1260,6 +1260,23 @@ function teachingSummaryRowHasTrialLesson(row = {}) {
   ].filter(Boolean).join(' '))));
 }
 
+function teachingSummaryRowHasAttendedTrialLesson(row = {}) {
+  return arraySnapshotValue(row.detailLessonRecordRows).some(item => {
+    if (!(courseRowIsTrial(item) || /体验/.test(text([
+      item.courseType,
+      item.standardCourseType,
+      item.packageName,
+      item.productName,
+      item.className,
+      item.courseName
+    ].filter(Boolean).join(' '))))) return false;
+    const delta = Number(item.lessonDelta);
+    if (Number.isFinite(delta)) return delta < 0;
+    if (item.countAsCompletedLesson === false) return false;
+    return ['ledger', 'schedule'].includes(text(item.kind));
+  });
+}
+
 function teachingSummaryRowHasConsumedTrialPackage(row = {}) {
   return [...arraySnapshotValue(row.detailPackageOrderRows), ...arraySnapshotValue(row.packageListRows)].some(item => {
     if (!(courseRowIsTrial(item) || /体验/.test(text(`${item.courseType || ''} ${item.standardCourseType || ''} ${item.packageName || ''} ${item.productName || ''}`)))) return false;
@@ -2205,6 +2222,7 @@ function teachingSummaryNeedsLessonFacts(row = {}, now = new Date()) {
 function teachingStudentHasTrialAttendedFact(data = {}, row = {}, now = new Date()) {
   if (booleanSnapshotValue(row.hasTrialAttended) === true) return true;
   if (teachingStudentTrialLessonFactRows(data, text(row.studentId), now).length > 0) return true;
+  if (hasFreshTeachingLessonFacts(data)) return teachingSummaryRowHasAttendedTrialLesson(row);
   return teachingSummaryTrialAttendedSnapshot(row);
 }
 
@@ -2563,8 +2581,8 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
     .filter(row => text(row.studentStage) === 'trial')
     .map(courseViewRow);
   const trialAttendedStudents = studentRows
-    .filter(hasTrialAttended)
-    .map(courseViewRow);
+    .map(courseViewRow)
+    .filter(hasTrialAttended);
   const trialAttendedIds = new Set(trialAttendedStudents.map(row => text(row.studentId)).filter(Boolean));
   const trialAttendedToFormalPurchaseStudents = formalStudents.filter(row => trialAttendedIds.has(text(row.studentId)));
   const trialAttendedToFormalPurchaseIds = new Set(trialAttendedToFormalPurchaseStudents.map(row => text(row.studentId)).filter(Boolean));

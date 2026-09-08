@@ -951,6 +951,35 @@ const explicitFalseTrialSummaryStandard = buildStandardLifecycleMetrics({
 });
 assert.strictEqual(explicitFalseTrialSummaryStandard.teachingSummary.historicalTrialAttendedCount, 0, '摘要显式 hasTrialAttended=false 时不能再从明细反推，避免体验课人数膨胀');
 
+const ledgerTrialFormalData = {
+  leads: [{ id: 'lead-ledger-trial-formal', displayName: '核销体验成交', leadDate: '2026-07-01' }],
+  students: [{ id: 'student-ledger-trial-formal', name: '核销体验成交', sourceLeadId: 'lead-ledger-trial-formal' }],
+  purchases: [
+    { id: 'purchase-ledger-trial', studentId: 'student-ledger-trial-formal', courseType: '体验课', packageName: '体验课', amountPaid: 239, status: 'active', purchaseDate: '2026-07-01' },
+    { id: 'purchase-ledger-formal', studentId: 'student-ledger-trial-formal', courseType: '私教课', packageName: '正式课包', amountPaid: 6000, status: 'active', purchaseDate: '2026-07-03' }
+  ],
+  entitlements: [
+    { id: 'entitlement-ledger-trial', studentId: 'student-ledger-trial-formal', purchaseId: 'purchase-ledger-trial', courseType: '体验课', packageName: '体验课', totalLessons: 1, remainingLessons: 0, status: 'active' },
+    { id: 'entitlement-ledger-formal', studentId: 'student-ledger-trial-formal', purchaseId: 'purchase-ledger-formal', courseType: '私教课', packageName: '正式课包', totalLessons: 10, remainingLessons: 10, status: 'active' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-trial-consume', studentId: 'student-ledger-trial-formal', entitlementId: 'entitlement-ledger-trial', purchaseId: 'purchase-ledger-trial', lessonDelta: -1, relatedDate: '2026-07-02', status: 'active' }
+  ],
+  schedule: [],
+  feedbacks: [],
+  membershipBenefitLedger: [],
+  now: new Date('2026-07-09 00:00:00')
+};
+const ledgerTrialFormalLifecycleRows = buildCustomerLifecycleRows(ledgerTrialFormalData);
+const ledgerTrialFormalStandard = buildStandardLifecycleMetrics({
+  ...ledgerTrialFormalData,
+  customerLifecycleRows: ledgerTrialFormalLifecycleRows
+});
+assert.strictEqual(ledgerTrialFormalStandard.teachingSummary.trialAttendedStudentCount, 1, '核销流水里的结构化体验课明细必须进入上过体验课统计');
+assert.strictEqual(ledgerTrialFormalStandard.teachingSummary.trialAttendedToFormalPurchaseCount, 1, '核销体验后购买正式课包必须进入体验后买正式课统计');
+const ledgerTrialFormalSummaryRows = buildStudentTeachingSummaryRows(ledgerTrialFormalLifecycleRows, ledgerTrialFormalData);
+assert.strictEqual(ledgerTrialFormalSummaryRows[0]?.hasTrialAttended, true, '发布摘要行必须写入结构化体验课明细对应的 hasTrialAttended=true');
+
 const futureScheduleData = {
   students: [{ id: 'student-future-completed', name: '未来已结束误标' }],
   purchases: [],
