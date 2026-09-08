@@ -1,5 +1,4 @@
 const assert = require('assert');
-const zlib = require('zlib');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const { TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 const {
@@ -8,7 +7,8 @@ const {
   buildVersionedStudentTeachingSummaryRow,
   buildStudentTeachingSummaryBundleId,
   buildStudentTeachingSummaryListBundleId,
-  buildStudentTeachingSummaryBundleRow
+  buildStudentTeachingSummaryBundleRow,
+  buildStudentTeachingSummaryListBundleRow
 } = require('../server/read-models/student-teaching-summary-cache.js');
 
 function readyStudentSummaryRows(rows = []) {
@@ -54,7 +54,6 @@ function readyStudentSummaryListBundleRows(rows = [], version = 'test-list-bundl
     detailPackageOrderRows: undefined,
     detailBenefitRows: undefined
   }));
-  const rowsJson = JSON.stringify(projectedRows);
   return [
     {
       id: '__student_teaching_summary_meta__',
@@ -68,15 +67,7 @@ function readyStudentSummaryListBundleRows(rows = [], version = 'test-list-bundl
       completedAt: '2026-08-27T00:00:01.000Z',
       checksum: buildStudentTeachingSummaryChecksum(projectedRows)
     },
-    {
-      id: `__student_teaching_summary_list_bundle__:${version}`,
-      kind: 'student-teaching-summary-list-bundle',
-      publishVersion: version,
-      rowCount: projectedRows.length,
-      checksum: buildStudentTeachingSummaryChecksum(projectedRows),
-      encoding: 'gzip-base64',
-      rowsGzipBase64: zlib.gzipSync(rowsJson).toString('base64')
-    }
+    buildStudentTeachingSummaryListBundleRow(projectedRows, version)
   ];
 }
 

@@ -676,6 +676,7 @@ function setDatasetValue(name,data,{persist=true}={}){
         summary:data?.summary||null,
         filters:data?.filters||null
       };
+    if(leadListPageData?.summary?.studentTeachingSummaryUnavailable&&typeof repairTeachingSummaryAndReload==='function')repairTeachingSummaryAndReload('leads');
   }
   if(name==='leadFollowups')leadFollowups=rows;
   if(name==='courts')courts=rows;

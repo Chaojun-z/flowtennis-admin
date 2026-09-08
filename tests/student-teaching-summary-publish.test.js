@@ -343,6 +343,39 @@ async function testReadySummaryListRowsUseListBundleOnly() {
   assert.strictEqual(rows[0].detailPackageOrderRows, undefined, '列表轻量包不能携带课包明细大数组');
 }
 
+async function testReadySummaryListRowsRejectStaleListBundleSchema() {
+  const tableName = 'ft_student_teaching_summary_stale_list_bundle_test';
+  const version = 'student-teaching-summary-stale-list-bundle-test';
+  const logicalRows = [{
+    id: 'stale-list-student',
+    studentId: 'stale-list-student',
+    name: '旧轻量包学员',
+    completedLessons: 1
+  }];
+  const staleListBundle = buildStudentTeachingSummaryListBundleRow(logicalRows, version);
+  delete staleListBundle.schemaVersion;
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: logicalRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(logicalRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-09-07T00:00:00.000Z',
+    completedAt: '2026-09-07T00:00:01.000Z'
+  });
+  await assert.rejects(() => readReadyStudentTeachingSummaryListRows({
+    tableName,
+    getCachedRow: async (table, id) => {
+      assert.strictEqual(table, tableName);
+      if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(meta);
+      if (id === staleListBundle.id) return clone(staleListBundle);
+      return null;
+    },
+    timeoutMs: 50
+  }), error => error?.code === 'STUDENT_TEACHING_SUMMARY_NOT_READY' && error?.reason === 'list-bundle-schema-mismatch',
+  '旧轻量包没有体验事实版本号时必须被拒绝，避免继续展示 0');
+}
+
 async function testReadySummaryListRowsFallbackToProjectedSummaryRows() {
   const tableName = 'ft_student_teaching_summary_projected_fallback_test';
   const version = 'student-teaching-summary-before-list-bundle';
@@ -732,6 +765,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
   await testReadySummaryDefaultTimeoutAllowsColdBundleRead();
   await testReadySummaryRowsPreferBundleRow();
   await testReadySummaryListRowsUseListBundleOnly();
+  await testReadySummaryListRowsRejectStaleListBundleSchema();
   await testReadySummaryListRowsFallbackToProjectedSummaryRows();
   await testReadySummaryRowsRejectBadBundleWithoutPrefixScan();
   await testReadySummaryRowsRejectLegacyLessonSourceVersion();

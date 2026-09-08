@@ -11,6 +11,7 @@ const STUDENT_TEACHING_SUMMARY_FAILED = 'failed';
 const STUDENT_TEACHING_SUMMARY_VERSION_PREFIX = '__student_teaching_summary_version__:';
 const STUDENT_TEACHING_SUMMARY_BUNDLE_PREFIX = '__student_teaching_summary_bundle__:';
 const STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_PREFIX = '__student_teaching_summary_list_bundle__:';
+const STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_SCHEMA_VERSION = 'trial-facts-v2';
 const READY_STUDENT_TEACHING_SUMMARY_CACHE_TTL_MS = 30000;
 const READY_STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS = Math.max(
   1200,
@@ -312,6 +313,7 @@ function buildStudentTeachingSummaryListBundleRow(rows = [], publishVersion = ''
   return {
     id,
     kind: 'student-teaching-summary-list-bundle',
+    schemaVersion: STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_SCHEMA_VERSION,
     publishVersion: version,
     rowCount: logicalRows.length,
     checksum: buildStudentTeachingSummaryChecksum(logicalRows),
@@ -673,6 +675,9 @@ async function readReadyStudentTeachingSummaryListRows({
       if (isStudentTeachingSummaryListBundleRow(bundle)) {
         if (String(bundle.publishVersion || '').trim() !== activeVersion) {
           throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-version-mismatch');
+        }
+        if (String(bundle.schemaVersion || '').trim() !== STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_SCHEMA_VERSION) {
+          throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-schema-mismatch');
         }
         const rows = studentTeachingSummaryListBundleLogicalRows(bundle);
         if (expectedCount !== rows.length || Number(bundle.rowCount) !== rows.length) {
