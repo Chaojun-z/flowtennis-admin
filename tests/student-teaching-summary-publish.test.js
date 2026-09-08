@@ -343,14 +343,17 @@ async function testReadySummaryListRowsUseListBundleOnly() {
   assert.strictEqual(rows[0].detailPackageOrderRows, undefined, '列表轻量包不能携带课包明细大数组');
 }
 
-async function testReadySummaryListRowsRejectStaleListBundleSchema() {
+async function testReadySummaryListRowsFallbackFromStaleListBundleSchema() {
   const tableName = 'ft_student_teaching_summary_stale_list_bundle_test';
   const version = 'student-teaching-summary-stale-list-bundle-test';
   const logicalRows = [{
     id: 'stale-list-student',
     studentId: 'stale-list-student',
     name: '旧轻量包学员',
-    completedLessons: 1
+    completedLessons: 1,
+    hasTrialAttended: true,
+    detailLessonRecordRows: [{ id: 'trial-row', courseType: '体验课' }],
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION
   }];
   const staleListBundle = buildStudentTeachingSummaryListBundleRow(logicalRows, version);
   delete staleListBundle.schemaVersion;
@@ -363,7 +366,9 @@ async function testReadySummaryListRowsRejectStaleListBundleSchema() {
     sourceSnapshotAt: '2026-09-07T00:00:00.000Z',
     completedAt: '2026-09-07T00:00:01.000Z'
   });
-  await assert.rejects(() => readReadyStudentTeachingSummaryListRows({
+  const scannedPrefixes = [];
+  const writes = [];
+  const rows = await readReadyStudentTeachingSummaryListRows({
     tableName,
     getCachedRow: async (table, id) => {
       assert.strictEqual(table, tableName);
@@ -371,9 +376,25 @@ async function testReadySummaryListRowsRejectStaleListBundleSchema() {
       if (id === staleListBundle.id) return clone(staleListBundle);
       return null;
     },
+    scanByIdPrefix: async (table, prefix) => {
+      assert.strictEqual(table, tableName);
+      scannedPrefixes.push(prefix);
+      return logicalRows.map(row => buildVersionedStudentTeachingSummaryRow(row, version));
+    },
+    getCachedScan: async () => {
+      throw new Error('stale bundle schema fallback should not scan the full table');
+    },
+    put: async (table, id, row) => {
+      writes.push({ table, id, row });
+    },
     timeoutMs: 50
-  }), error => error?.code === 'STUDENT_TEACHING_SUMMARY_NOT_READY' && error?.reason === 'list-bundle-schema-mismatch',
-  '旧轻量包没有体验事实版本号时必须被拒绝，避免继续展示 0');
+  });
+  assert.deepStrictEqual(scannedPrefixes, [`__student_teaching_summary_version__:${version}:`], '旧轻量包缺 schema 时应回退读取版本行，而不是直接把页面判死');
+  assert.deepStrictEqual(rows.map(row => row.studentId), ['stale-list-student']);
+  assert.strictEqual(rows[0].hasTrialAttended, true, '旧轻量包缺 schema 时也必须恢复真实上过体验课');
+  assert.ok(!rows[0].hasTrialToCourseConversion, '未发生正式转化时不能凭空补成转化');
+  assert.strictEqual(writes.length, 1, '旧轻量包缺 schema 时应在后台补写新轻量包');
+  assert.strictEqual(writes[0].id, staleListBundle.id, '后台补写的必须是当前 activeVersion 的轻量列表包');
 }
 
 async function testReadySummaryListRowsFallbackToProjectedSummaryRows() {
@@ -765,7 +786,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
   await testReadySummaryDefaultTimeoutAllowsColdBundleRead();
   await testReadySummaryRowsPreferBundleRow();
   await testReadySummaryListRowsUseListBundleOnly();
-  await testReadySummaryListRowsRejectStaleListBundleSchema();
+  await testReadySummaryListRowsFallbackFromStaleListBundleSchema();
   await testReadySummaryListRowsFallbackToProjectedSummaryRows();
   await testReadySummaryRowsRejectBadBundleWithoutPrefixScan();
   await testReadySummaryRowsRejectLegacyLessonSourceVersion();

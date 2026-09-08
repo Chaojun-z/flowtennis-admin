@@ -673,24 +673,27 @@ async function readReadyStudentTeachingSummaryListRows({
       const bundleId = buildStudentTeachingSummaryListBundleId(activeVersion);
       const bundle = await getCachedRow(tableName, bundleId).catch(() => null);
       if (isStudentTeachingSummaryListBundleRow(bundle)) {
-        if (String(bundle.publishVersion || '').trim() !== activeVersion) {
-          throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-version-mismatch');
-        }
-        if (String(bundle.schemaVersion || '').trim() !== STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_SCHEMA_VERSION) {
-          throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-schema-mismatch');
-        }
-        const rows = studentTeachingSummaryListBundleLogicalRows(bundle);
-        if (expectedCount !== rows.length || Number(bundle.rowCount) !== rows.length) {
-          throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${rows.length}/${expectedCount}`);
-        }
-        requireReadyStudentTeachingSummaryRows([meta, ...rows], { verifyChecksum: false });
-        if (verifyChecksum) {
-          const actualChecksum = buildStudentTeachingSummaryChecksum(rows);
-          if (!String(bundle.checksum || '').trim() || String(bundle.checksum || '') !== actualChecksum) {
-            throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-checksum-mismatch');
+        const bundleVersion = String(bundle.publishVersion || '').trim();
+        const bundleSchemaVersion = String(bundle.schemaVersion || '').trim();
+        const bundleRows = studentTeachingSummaryListBundleLogicalRows(bundle);
+        if (bundleVersion === activeVersion && bundleSchemaVersion === STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_SCHEMA_VERSION) {
+          if (expectedCount !== bundleRows.length || Number(bundle.rowCount) !== bundleRows.length) {
+            throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${bundleRows.length}/${expectedCount}`);
           }
+          requireReadyStudentTeachingSummaryRows([meta, ...bundleRows], { verifyChecksum: false });
+          if (verifyChecksum) {
+            const actualChecksum = buildStudentTeachingSummaryChecksum(bundleRows);
+            if (!String(bundle.checksum || '').trim() || String(bundle.checksum || '') !== actualChecksum) {
+              throw studentTeachingSummaryNotReadyError(meta, 'list-bundle-checksum-mismatch');
+            }
+          }
+          return bundleRows;
         }
-        return rows;
+        console.warn('[student-teaching-summary] list bundle is stale, falling back to version rows', {
+          activeVersion,
+          bundleVersion,
+          bundleSchemaVersion
+        });
       }
       if (typeof scanByIdPrefix === 'function') {
         const versionRows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`, {
