@@ -304,8 +304,11 @@ async function testReadySummaryListRowsUseListBundleOnly() {
     studentId: 'list-student',
     name: '列表学员',
     completedLessons: 67,
+    studentStage: 'formal',
+    packagePurchaseDate: '2026-09-02',
+    hasTrialAttended: false,
     teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
-    detailLessonRecordRows: [{ id: 'large-detail-row' }],
+    detailLessonRecordRows: [{ id: 'large-detail-row', courseType: '体验课' }],
     detailPackageOrderRows: [{ id: 'large-package-row' }]
   }];
   const listBundle = buildStudentTeachingSummaryListBundleRow(logicalRows, version);
@@ -334,6 +337,8 @@ async function testReadySummaryListRowsUseListBundleOnly() {
   assert.deepStrictEqual(gotIds, [STUDENT_TEACHING_SUMMARY_META_ID, buildStudentTeachingSummaryListBundleId(version)], '列表读取只能点读 meta 和轻量列表包');
   assert.deepStrictEqual(rows.map(row => row.studentId), ['list-student']);
   assert.strictEqual(rows[0].completedLessons, 67, '列表轻量包必须保留累计上课数');
+  assert.strictEqual(rows[0].hasTrialAttended, true, '列表轻量包必须从旧完整摘要明细反推出真实上过体验课，不能被旧 false 覆盖');
+  assert.strictEqual(rows[0].hasTrialToCourseConversion, true, '列表轻量包必须保留体验后买正式课事实，供线索池 1s 顶部统计使用');
   assert.strictEqual(rows[0].detailLessonRecordRows, undefined, '列表轻量包不能携带上课明细大数组');
   assert.strictEqual(rows[0].detailPackageOrderRows, undefined, '列表轻量包不能携带课包明细大数组');
 }

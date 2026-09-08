@@ -318,6 +318,48 @@ async function main() {
   const ownerSearch = await request(handle, 'paged=1&page=1&pageSize=10&q=mira');
   assert.strictEqual(ownerSearch.body.total, 0, '搜索 mira 不应命中跟进人 Mira，跟进人必须走单独筛选项');
 
+  const trialLightFactsHarness = createHarness({
+    ft_leads: [{
+      id: 'lead-light-trial',
+      displayName: '轻量体验线索',
+      wechatName: '轻量体验线索',
+      studentId: 'stu-light-trial',
+      leadStage: '已成交',
+      leadDate: '2026-08-24',
+      createdAt: '2026-08-24 10:00:00',
+      campus: 'shunyi_mapo'
+    }],
+    ft_lead_followups: [],
+    ft_students: [],
+    ft_courts: [],
+    ft_membership_accounts: [],
+    ft_purchases: [],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
+    ft_entitlement_ledger: [],
+    ft_membership_benefit_ledger: [],
+    ft_membership_account_events: [],
+    ft_financial_ledger: [],
+    ft_plans: [],
+    ft_classes: [],
+    ft_feedbacks: [],
+    ft_student_teaching_summary: [{
+      id: 'stu-light-trial',
+      studentId: 'stu-light-trial',
+      sourceLeadId: 'lead-light-trial',
+      displayName: '轻量体验线索',
+      hasTrialAttended: true,
+      hasTrialToCourseConversion: true,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: false
+    }],
+    ft_court_account_list_index: []
+  });
+  const trialLightFactsPage = await request(trialLightFactsHarness.handle, 'paged=1&page=1&pageSize=15');
+  assert.strictEqual(trialLightFactsPage.body.summary.trialAttended, 1, '线索池顶部上过体验课必须支持 1s 轻量摘要结果字段，不能依赖大明细');
+  assert.strictEqual(trialLightFactsPage.body.summary.trialAttendedToFormalPurchase, 1, '线索池顶部体验后买正式课必须支持 1s 轻量摘要结果字段，不能掉成 0');
+
   const bookingSearchHarness = createHarness({
     ft_leads: [{
       id: 'lead-real-booking',

@@ -124,6 +124,80 @@ function buildStudentTeachingSummaryBundleRow(rows = [], publishVersion = '') {
   };
 }
 
+function studentTeachingSummaryListText(value) {
+  return String(value || '').trim();
+}
+
+function studentTeachingSummaryListBool(value) {
+  if (value === true || value === false) return value;
+  const raw = studentTeachingSummaryListText(value).toLowerCase();
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return undefined;
+}
+
+function studentTeachingSummaryListLabel(item = {}) {
+  return studentTeachingSummaryListText([
+    item?.courseType,
+    item?.standardCourseType,
+    item?.packageName,
+    item?.productName,
+    item?.courseName,
+    item?.className
+  ].filter(Boolean).join(' '));
+}
+
+function studentTeachingSummaryListItemIsTrial(item = {}) {
+  return /体验/.test(studentTeachingSummaryListLabel(item));
+}
+
+function studentTeachingSummaryListItemIsFormalCourse(item = {}) {
+  const label = studentTeachingSummaryListLabel(item);
+  return !/体验|陪打/.test(label) && /私教|小班|课包|正式|成人|青少年|网球/.test(label);
+}
+
+function studentTeachingSummaryListHasTrialLesson(row = {}) {
+  return parseArr(row.detailLessonRecordRows).some(studentTeachingSummaryListItemIsTrial);
+}
+
+function studentTeachingSummaryListHasConsumedTrialPackage(row = {}) {
+  return [...parseArr(row.detailPackageOrderRows), ...parseArr(row.packageListRows)].some(item => {
+    if (!studentTeachingSummaryListItemIsTrial(item)) return false;
+    const total = Number(item?.totalLessons) || 0;
+    const used = Number(item?.usedLessons) || 0;
+    const remaining = Number(item?.remainingLessons);
+    return used > 0
+      || (total > 0 && Number.isFinite(remaining) && remaining <= 0)
+      || /已用完|已核销|已消课/.test(studentTeachingSummaryListText(item?.statusText || item?.status));
+  });
+}
+
+function studentTeachingSummaryListHasTrialAttended(row = {}) {
+  if (studentTeachingSummaryListHasTrialLesson(row) || studentTeachingSummaryListHasConsumedTrialPackage(row)) return true;
+  return studentTeachingSummaryListBool(row.hasTrialAttended) === true;
+}
+
+function studentTeachingSummaryListHasFormalAttended(row = {}) {
+  if (studentTeachingSummaryListBool(row.hasFormalAttended) === true) return true;
+  return !!studentTeachingSummaryListText(row.lastFormalLessonAt || row.detailRecentLessonDate);
+}
+
+function studentTeachingSummaryListHasFormalCourseFact(row = {}) {
+  if (studentTeachingSummaryListHasFormalAttended(row)) return true;
+  if (studentTeachingSummaryListBool(row.hasCourseConversion) === true) return true;
+  if ((Number(row.coursePurchaseCount) || 0) > 0) return true;
+  if (studentTeachingSummaryListText(row.studentStage) === 'formal') return true;
+  if (studentTeachingSummaryListText(row.packagePurchaseDate || row.courseFirstPurchaseAt || row.conversionAt)) return true;
+  if ((Number(row.cumulativeCoursePaidAmount) || 0) > 0) return true;
+  if ((Number(row.packageBalanceTotal) || 0) > 0) return true;
+  return [...parseArr(row.detailPackageOrderRows), ...parseArr(row.packageListRows)]
+    .some(item => studentTeachingSummaryListItemIsFormalCourse(item) && (
+      Number(item?.actualAmount || item?.paidAmount || item?.totalAmount || 0) > 0
+      || Number(item?.totalLessons || 0) > 0
+      || studentTeachingSummaryListText(item?.purchaseDate || item?.createdAt)
+    ));
+}
+
 const STUDENT_TEACHING_SUMMARY_LIST_ROW_FIELDS = [
   'id',
   'studentId',
@@ -156,6 +230,7 @@ const STUDENT_TEACHING_SUMMARY_LIST_ROW_FIELDS = [
   'hasTrialAttended',
   'hasFormalAttended',
   'hasCourseConversion',
+  'hasTrialToCourseConversion',
   'isHistoricalStudentRoster',
   'isActiveStudentRoster',
   'packageListText',
@@ -209,10 +284,24 @@ const STUDENT_TEACHING_SUMMARY_LIST_SCAN_COLUMNS = [...new Set([
 
 function projectStudentTeachingSummaryListRow(row = {}) {
   const logical = studentTeachingSummaryLogicalRow(row || {});
-  return STUDENT_TEACHING_SUMMARY_LIST_ROW_FIELDS.reduce((next, field) => {
+  const projected = STUDENT_TEACHING_SUMMARY_LIST_ROW_FIELDS.reduce((next, field) => {
     if (logical[field] !== undefined) next[field] = logical[field];
     return next;
   }, {});
+  const hasTrialAttended = studentTeachingSummaryListHasTrialAttended(logical);
+  const hasFormalAttended = studentTeachingSummaryListHasFormalAttended(logical);
+  const hasFormalCourseFact = studentTeachingSummaryListHasFormalCourseFact(logical);
+  if (hasTrialAttended) {
+    projected.hasTrialAttended = true;
+    projected.hasTrialExperience = true;
+  }
+  if (hasFormalAttended) {
+    projected.hasFormalAttended = true;
+  }
+  if (hasTrialAttended && hasFormalCourseFact) {
+    projected.hasTrialToCourseConversion = true;
+  }
+  return projected;
 }
 
 function buildStudentTeachingSummaryListBundleRow(rows = [], publishVersion = '') {

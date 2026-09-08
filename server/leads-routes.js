@@ -540,7 +540,8 @@ function createLeadsRoutes(deps={}){
       const hasTrialAttended=explicitTrialAttended!==undefined?explicitTrialAttended:(!!cleanLeadText(row?.trialAttendedAt)||summaryRowHasTrialLesson(row)||summaryRowHasConsumedTrialPackage(row));
       const hasFormalAttended=explicitFormalAttended!==undefined?explicitFormalAttended:!!cleanLeadText(row?.lastFormalLessonAt);
       const hasFormalCourseFact=summaryRowHasFormalCourseFact(row);
-      const hasTrialToCourseConversion=hasTrialAttended&&hasFormalCourseFact;
+      const explicitTrialToCourseConversion=summaryRowExplicitBool(row,'hasTrialToCourseConversion');
+      const hasTrialToCourseConversion=explicitTrialToCourseConversion!==undefined?explicitTrialToCourseConversion:(hasTrialAttended&&hasFormalCourseFact);
       return {
         customerKey:`teaching-summary:${studentId}`,
         sourceLeadId:cleanLeadText(row?.sourceLeadId||''),
@@ -561,7 +562,7 @@ function createLeadsRoutes(deps={}){
         formalCoach:cleanLeadText(row?.primaryCoach||''),
         profileNote:cleanLeadText(row?.profileNote||row?.notes||''),
         notes:cleanLeadText(row?.notes||row?.profileNote||''),
-        studentStage:cleanLeadText(row?.studentStage||(hasFormalAttended?'formal':(hasTrialAttended?'trial':'student'))),
+        studentStage:cleanLeadText(row?.studentStage||(hasTrialToCourseConversion||hasFormalCourseFact||hasFormalAttended?'formal':(hasTrialAttended?'trial':'student'))),
       courseDealPath:cleanLeadText(row?.courseDealPath||''),
       trialStatus:cleanLeadText(row?.trialStatus||''),
       coursePurchaseCount:Number(row?.coursePurchaseCount)||0,
@@ -591,7 +592,7 @@ function createLeadsRoutes(deps={}){
       lessonVolumeLabel:cleanLeadText(row?.lessonVolumeLabel||''),
       leadDate:cleanLeadText(row?.firstTouchAt||row?.trialAtRaw||row?.trialBookedAt||row?.trialAttendedAt||row?.packagePurchaseDate||row?.courseFirstPurchaseAt||row?.conversionAt||''),
       createdAt:cleanLeadText(row?.summaryUpdatedAt||row?.updatedAt||''),
-      hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||cleanLeadText(row?.studentStage||'')==='formal'||hasFormalCourseFact,
+      hasCourseConversion:leadSummaryBool(row?.hasCourseConversion)||hasTrialToCourseConversion||cleanLeadText(row?.studentStage||'')==='formal'||hasFormalCourseFact,
       hasBookingConversion:leadSummaryBool(row?.hasBookingConversion),
         hasMembershipConversion:leadSummaryBool(row?.hasMembershipConversion)
       };
