@@ -307,6 +307,7 @@ assert.match(scheduleJs, /function coachStatsRangeText[\s\S]*range\.view === 'mo
 assert.match(scheduleJs, /function coachStatsRangeText[\s\S]*range\.view === 'year'[\s\S]*`\$\{year\} 年`/, 'year range label should render as YYYY 年');
 assert.match(scheduleJs, /function coachStatsRangeText[\s\S]*range\.view === 'all'[\s\S]*coachStatsSlashDateText\(range\.startDate\)[\s\S]*~/, 'all-time range label should render as a slash date range');
 assert.match(scheduleJs, /function trendLabel[\s\S]*view === 'all'[\s\S]*`\$\{year\}年\$\{month\}月`/, 'all-time trend labels should explicitly include month text');
+assert.match(scheduleJs, /function trendLabelVisible[\s\S]*if \(view === 'all'\) return true;/, 'all-time trend should show every month label instead of only lesson numbers');
 assert.match(scheduleJs, /catch \(error\) \{[\s\S]*buildLocalCoachStatsData\(\{[\s\S]*schedule: this\.data\.schedule \|\| \[\][\s\S]*coachStatsError:\s*''/, 'stats tab should fall back to loaded schedule data without showing a blocking error card');
 assert.match(scheduleJs, /STUDENT_DETAIL_RECORD_PREVIEW_COUNT\s*=\s*5/, 'student detail should default to showing the latest five lesson records');
 assert.match(scheduleJs, /lessonRecordsShown/, 'student detail should keep a visible subset of lesson records for collapsed state');
@@ -634,6 +635,7 @@ assert.match(scheduleJs, /function coachStatsInlineLocationText[\s\S]*·[\s\S]*�
 assert.match(scheduleWxss, /\.stats-trend-month\s+\.stats-trend-label\.is-hidden\s*\{[\s\S]*visibility:\s*hidden;/, 'month trend should keep daily bars while sampling x-axis labels');
 assert.match(scheduleJs, /coachStatsTrendStyle:\s*safeView === 'all' \? `width:\$\{Math\.max\(361, count \* 54\)\}px;` : ''/, 'all-time trend should aggregate by month and scroll with a concrete mini-program width');
 assert.match(scheduleJs, /if \(!n \|\| view === 'month'\) return '';/, 'all-time trend should show values like year view while monthly view still samples labels');
+assert.match(scheduleWxml, /class="stats-trend-axis"[\s\S]*item\.lessonUnitsText[\s\S]*item\.label/, 'stats trend should keep lesson values and month labels in one fixed axis area');
 assert.doesNotMatch(cssBlock(scheduleWxss, '.stats-trend-all .stats-trend-value'), /display:\s*none;/, 'all-time trend should not hide value text');
 assert.match(cssBlock(scheduleWxss, '.stats-trend-all .stats-trend-value'), /display:\s*block;/, 'all-time trend should show lesson values above month labels');
 assert.match(scheduleWxss, /\.stats-detail-item\s*\{[\s\S]*height:\s*34px;[\s\S]*flex-wrap:\s*nowrap;[\s\S]*overflow:\s*hidden;/, 'stats detail rows should stay on one line');

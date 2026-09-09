@@ -349,8 +349,10 @@
                   <view class="stats-trend-track">
                     <view class="stats-trend-bar" style="{{item.barStyle}}"></view>
                   </view>
-                  <text class="stats-trend-value">{{item.lessonUnitsText}}</text>
-                  <text class="stats-trend-label {{item.labelClass}}">{{item.label}}</text>
+                  <view class="stats-trend-axis">
+                    <text class="stats-trend-value">{{item.lessonUnitsText}}</text>
+                    <text class="stats-trend-label {{item.labelClass}}">{{item.label}}</text>
+                  </view>
                 </view>
               </view>
             </scroll-view>

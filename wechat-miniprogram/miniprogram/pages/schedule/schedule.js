@@ -641,6 +641,7 @@ function trendLabel(key = '', view = 'week') {
 }
 
 function trendLabelVisible(key = '', view = 'week', index = 0, total = 0) {
+  if (view === 'all') return true;
   if (view === 'month') {
     const day = Number(String(key || '').slice(8, 10));
     return index === 0 || index === total - 1 || day === 8 || day === 15 || day === 22;
