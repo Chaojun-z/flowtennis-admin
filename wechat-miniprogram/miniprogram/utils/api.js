@@ -103,6 +103,14 @@ function loadCoachWorkbench() {
   return request('/page-data/workbench');
 }
 
+function loadCoachStats(params = {}) {
+  const query = Object.keys(params)
+    .filter(key => params[key] !== undefined && params[key] !== null && String(params[key]) !== '')
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+    .join('&');
+  return request(`/page-data/coach-stats${query ? `?${query}` : ''}`);
+}
+
 function saveCoachFeedback(payload = {}) {
   const feedbackId = payload.id || '';
   if (feedbackId) {
@@ -124,6 +132,7 @@ module.exports = {
   bindWechatAfterLogin,
   loginWithWechat,
   loadCoachWorkbench,
+  loadCoachStats,
   saveCoachFeedback,
   saveCoachProposal,
   request,

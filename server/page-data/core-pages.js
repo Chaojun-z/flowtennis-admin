@@ -1,6 +1,7 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
 const { buildTeachingStudentViews, buildCoachMiniStudentRoster, buildStudentTeachingSummaryRows, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics, TEACHING_LESSON_DETAIL_SOURCE_VERSION, teachingSummaryNeedsLessonFacts } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
+const { buildCoachCompletedLessonStats } = require('../read-models/coach-completed-lesson-stats.js');
 const { buildCourtAccountListViewFromData } = require('./court-account-read-model.js');
 const { createStudentRosterIndexReader } = require('./student-roster-index-reader.js');
 const {
@@ -693,6 +694,34 @@ function createCorePageDataRoutes(deps={}){
             campuses:scoped.campuses||[]
           })
         });
+      },{role:user.role||''});
+    }
+    if(path==='/page-data/coach-stats'&&method==='GET'){
+      return timedEndpointMetric('pageData.coachStats',async()=>{
+        await init();
+        const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
+        const coachRefs=buildCoachRefs({coaches,users});
+        const scheduleRowsPromise=user.role==='admin'?getScheduleListRows():getCoachScheduleRowsForUser(user,coachRefs);
+        const [campuses,schedule,feedbacks]=await Promise.all([
+          listCampusesWithDefaults(),
+          scheduleRowsPromise,
+          cappedScan(T_FEEDBACKS)
+        ]);
+        const scoped=filterLoadAllForUser({campuses,schedule,feedbacks,coaches},user,coachRefs);
+        const now=new Date();
+        const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
+        const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,[],now).filter(row=>!row.isCancelled);
+        return sendJson(res,buildCoachCompletedLessonStats({
+          schedule:decoratedSchedule,
+          campuses:scoped.campuses||[],
+          user,
+          coachName:String(query?.get('coachName')||query?.get('coach')||'').trim(),
+          view:String(query?.get('view')||'week').trim(),
+          startDate:String(query?.get('startDate')||'').trim(),
+          endDate:String(query?.get('endDate')||'').trim(),
+          offset:Number(query?.get('offset')||0),
+          now
+        }));
       },{role:user.role||''});
     }
     if(path==='/page-data/workbench'&&method==='GET'){

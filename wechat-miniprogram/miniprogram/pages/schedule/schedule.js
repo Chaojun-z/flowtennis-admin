@@ -1,4 +1,4 @@
-const { loginWithWechat, loadCoachWorkbench, saveCoachFeedback, saveCoachProposal, TOKEN_KEY, USER_KEY } = require('../../utils/api');
+const { loginWithWechat, loadCoachWorkbench, loadCoachStats, saveCoachFeedback, saveCoachProposal, TOKEN_KEY, USER_KEY } = require('../../utils/api');
 const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, classBlockStyle, workbenchTodoState, requiredFeedbackTodoVisible, scheduleLocationText, campusDisplayName } = require('../../utils/schedule');
 
 const TIMETABLE_START_HOUR = 7;
@@ -7,6 +7,12 @@ const timetableHours = Array.from({ length: TIMETABLE_END_HOUR - TIMETABLE_START
 const TIMETABLE_HOUR_HEIGHT_RPX = 150;
 const TIMETABLE_DAY_WIDTH_RPX = 228;
 const STUDENT_DETAIL_RECORD_PREVIEW_COUNT = 5;
+const COACH_STATS_VIEW_OPTIONS = [
+  { key: 'week', label: '周' },
+  { key: 'month', label: '月' },
+  { key: 'year', label: '年' },
+  { key: 'all', label: '全部' }
+];
 
 function coachDisplayName(name = '') {
   const trimmed = String(name || '').trim();
@@ -337,9 +343,7 @@ function scheduleUsesAttendeeLessonUnits(item = {}) {
 function scheduleLessonUnits(item = {}) {
   const count = Number(item.lessonCount);
   const durationUnits = scheduleDurationLessonUnits(item);
-  if (Number.isFinite(count) && count > 0) {
-    return scheduleUsesAttendeeLessonUnits(item) ? count : Math.max(count, durationUnits);
-  }
+  if (Number.isFinite(count) && count > 0) return count;
   if (durationUnits > 0) return durationUnits;
   return 1;
 }
@@ -575,6 +579,292 @@ function buildShiftStats(shifts = []) {
   const totalLessons = shifts.reduce((sum, item) => sum + (parseInt(item.totalLessons, 10) || 0), 0);
   const usedLessons = shifts.reduce((sum, item) => sum + (parseInt(item.usedLessons, 10) || 0), 0);
   return { totalCount, activeCount, totalLessons, usedLessons, remainingLessons: Math.max(0, totalLessons - usedLessons) };
+}
+
+function formatCoachStatsNumber(value) {
+  const n = Number(value) || 0;
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
+}
+
+function shortDateText(value = '') {
+  const raw = String(value || '').trim();
+  return raw ? raw.slice(5).replace('-', '.') : '';
+}
+
+function coachStatsRangeText(range = {}) {
+  if (!range || range.view === 'all') return '全部已完成课程';
+  if (range.startDate && range.startDate === range.endDate) return range.startDate;
+  if (range.startDate && range.endDate) return `${range.startDate} 至 ${range.endDate}`;
+  return '';
+}
+
+function coachStatsTabOptions(current = 'week') {
+  return COACH_STATS_VIEW_OPTIONS.map(item => ({
+    ...item,
+    className: item.key === current ? 'is-active' : ''
+  }));
+}
+
+function trendLabel(key = '', view = 'week') {
+  if (view === 'year') {
+    const month = Number(String(key || '').slice(5, 7));
+    return month ? `${month}月` : '';
+  }
+  if (view === 'all') {
+    const raw = String(key || '');
+    return raw.length >= 7 ? raw.slice(2, 7).replace('-', '.') : raw.replace('-', '.');
+  }
+  return shortDateText(key);
+}
+
+function trendLabelVisible(key = '', view = 'week', index = 0, total = 0) {
+  if (view === 'month') {
+    const day = Number(String(key || '').slice(8, 10));
+    return index === 0 || index === total - 1 || day === 8 || day === 15 || day === 22;
+  }
+  return true;
+}
+
+function trendValueText(units = 0, view = 'week') {
+  const n = Number(units) || 0;
+  if (!n || view === 'month' || view === 'all') return '';
+  return formatCoachStatsNumber(n);
+}
+
+function coachStatsDetailDateLabel(value = '') {
+  const parts = String(value || '').slice(0, 10).split('-').map(part => Number(part));
+  const month = parts[1];
+  const day = parts[2];
+  return month && day ? `${month}.${day} 日` : String(value || '');
+}
+
+function coachStatsInlineLocationText(value = '') {
+  return String(value || '').trim()
+    .replace(/\s*·\s*/g, ' ')
+    .replace(/(\d+)号场/g, '$1 号场');
+}
+
+function coachStatsTrendUiState(view = 'week', trendCount = 0) {
+  const safeView = COACH_STATS_VIEW_OPTIONS.some(item => item.key === view) ? view : 'week';
+  const count = Math.max(0, Number(trendCount) || 0);
+  return {
+    coachStatsTrendClass: `stats-trend stats-trend-${safeView}`,
+    coachStatsTrendScrollClass: safeView === 'all' ? 'is-scrollable' : '',
+    coachStatsTrendScrollable: safeView === 'all',
+    coachStatsTrendStyle: safeView === 'all' ? `width:${Math.max(361, count * 46)}px;` : ''
+  };
+}
+
+function adaptCoachStatsData(data = {}) {
+  const range = data.range || {};
+  const summary = data.summary || {};
+  const trend = Array.isArray(data.trend) ? data.trend : [];
+  const maxTrend = Math.max(0, ...trend.map(item => Number(item.lessonUnits) || 0));
+  return {
+    ...coachStatsTrendUiState(range.view, trend.length),
+    coachStatsRangeText: coachStatsRangeText(range),
+    coachStatsSummary: {
+      totalLessonUnits: Number(summary.totalLessonUnits) || 0,
+      totalLessonUnitsText: formatCoachStatsNumber(summary.totalLessonUnits),
+      typeHighlights: (summary.typeHighlights || []).map(item => ({
+        ...item,
+        lessonUnitsText: formatCoachStatsNumber(item.lessonUnits)
+      }))
+    },
+    coachStatsTypeRows: (data.byType || []).map(item => ({
+      ...item,
+      lessonUnitsText: formatCoachStatsNumber(item.lessonUnits),
+      percentText: `${formatCoachStatsNumber(item.percent)}%`,
+      barStyle: `width:${Math.max(0, Math.min(100, Number(item.percent) || 0))}%`
+    })),
+    coachStatsTrendRows: trend.map((item, index) => {
+      const units = Number(item.lessonUnits) || 0;
+      const height = maxTrend ? Math.max(units ? 8 : 0, Math.round((units / maxTrend) * 100)) : 0;
+      const showLabel = trendLabelVisible(item.key, range.view, index, trend.length);
+      return {
+        ...item,
+        label: showLabel ? trendLabel(item.key, range.view) : '',
+        labelClass: showLabel ? '' : 'is-hidden',
+        className: units ? 'has-value' : 'is-zero',
+        lessonUnitsText: trendValueText(units, range.view),
+        barStyle: `height:${height}%`
+      };
+    }),
+    coachStatsDetailGroups: (data.detailGroups || []).map(group => ({
+      ...group,
+      displayDate: group.displayDate || coachStatsDetailDateLabel(group.key),
+      lessonUnitsText: formatCoachStatsNumber(group.lessonUnits),
+      expanded: group.expanded !== false,
+      items: (group.items || []).map(item => ({
+        ...item,
+        locationInlineText: coachStatsInlineLocationText(item.locationInlineText || item.locationText),
+        lessonUnitsText: formatCoachStatsNumber(item.lessonUnits)
+      }))
+    }))
+  };
+}
+
+function coachStatsRangeBounds(view = 'all', offset = 0, now = new Date()) {
+  const base = now instanceof Date ? new Date(now.getTime()) : new Date(now);
+  const safeOffset = Number.isFinite(Number(offset)) ? Number(offset) : 0;
+  const pad = value => String(value).padStart(2, '0');
+  const dateText = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  if (view === 'week') {
+    const day = base.getDay() || 7;
+    const monday = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    monday.setDate(monday.getDate() - day + 1 + safeOffset * 7);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate());
+    sunday.setDate(sunday.getDate() + 6);
+    return { view, startDate: dateText(monday), endDate: dateText(sunday) };
+  }
+  if (view === 'month') {
+    const monthStart = new Date(base.getFullYear(), base.getMonth() + safeOffset, 1);
+    const monthEnd = new Date(base.getFullYear(), base.getMonth() + safeOffset + 1, 0);
+    return { view, startDate: dateText(monthStart), endDate: dateText(monthEnd) };
+  }
+  if (view === 'year') {
+    const year = base.getFullYear() + safeOffset;
+    return { view, startDate: `${year}-01-01`, endDate: `${year}-12-31` };
+  }
+  return { view: 'all', startDate: '', endDate: '' };
+}
+
+function coachStatsRangeLabel(range = {}) {
+  if (!range || range.view === 'all') return '全部已完成课程';
+  if (range.startDate && range.startDate === range.endDate) return range.startDate;
+  if (range.startDate && range.endDate) return `${range.startDate} 至 ${range.endDate}`;
+  return '';
+}
+
+function coachStatsCourseGroup(item = {}) {
+  const raw = String(item.courseType || item.type || item.title || item.standardCourseType || item.experienceType || '').trim();
+  if (/占场/.test(raw)) return '占场';
+  if (/陪打/.test(raw)) return '陪打';
+  if (/体验/.test(raw)) return '体验课';
+  if (/专项/.test(raw)) return '专项课';
+  if (/大师课|小班/.test(raw)) return '小班课';
+  return '私教课';
+}
+
+function coachStatsDateKey(item = {}) {
+  return String(item.startTime || item.start || '').slice(0, 10);
+}
+
+function coachStatsTimeText(item = {}) {
+  const start = String(item.startTime || '').match(/\d{1,2}:\d{2}/)?.[0] || '';
+  const end = String(item.endTime || '').match(/\d{1,2}:\d{2}/)?.[0] || '';
+  return start && end ? `${start}-${end}` : start || end || '';
+}
+
+function buildLocalCoachStatsData({ schedule = [], campuses = [], view = 'all', offset = 0, now = new Date() } = {}) {
+  const range = coachStatsRangeBounds(view, offset, now);
+  const normalized = (schedule || [])
+    .filter(item => scheduleEnded(item, now))
+    .filter(item => {
+      if (range.view === 'all') return true;
+      const key = coachStatsDateKey(item);
+      return key >= range.startDate && key <= range.endDate;
+    })
+    .map(item => ({
+      ...item,
+      lessonUnits: scheduleLessonUnits(item),
+      courseTypeGroup: coachStatsCourseGroup(item),
+      dateKey: coachStatsDateKey(item),
+      timeText: coachStatsTimeText(item),
+      locationText: String(item.locationText || item.loc || scheduleLocationText(item) || '').trim(),
+      studentText: String(item.studentText || item.student || item.studentName || '').trim() || '未填写学员',
+      courseTypeText: String(item.courseType || item.type || item.title || item.standardCourseType || item.experienceType || '').trim() || '私教课'
+    }));
+  const totalLessonUnits = normalized.reduce((sum, item) => sum + Number(item.lessonUnits || 0), 0);
+  const typeMap = new Map();
+  normalized.forEach(item => {
+    const key = item.courseTypeGroup || '未分类';
+    typeMap.set(key, (typeMap.get(key) || 0) + Number(item.lessonUnits || 0));
+  });
+  const typeRows = [...typeMap.entries()].map(([type, lessonUnits]) => ({
+    type,
+    lessonUnits: Number(lessonUnits.toFixed(2)),
+    percent: totalLessonUnits ? Number(((lessonUnits / totalLessonUnits) * 100).toFixed(1)) : 0
+  }));
+  typeRows.sort((a, b) => b.lessonUnits - a.lessonUnits || a.type.localeCompare(b.type, 'zh-Hans-CN'));
+  const trendMap = new Map();
+  normalized.forEach(item => {
+    const key = range.view === 'year' || range.view === 'all' ? item.dateKey.slice(0, 7) : item.dateKey;
+    trendMap.set(key, (trendMap.get(key) || 0) + Number(item.lessonUnits || 0));
+  });
+  const trendKeys = (() => {
+    if (range.view === 'year') {
+      const year = String(range.startDate).slice(0, 4);
+      return Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`);
+    }
+    if (range.view === 'all') {
+      return [...new Set(normalized.map(item => item.dateKey.slice(0, 7)).filter(Boolean))].sort();
+    }
+    const start = new Date(`${range.startDate}T00:00:00`);
+    const end = new Date(`${range.endDate}T00:00:00`);
+    const keys = [];
+    for (let date = start; date <= end; date.setDate(date.getDate() + 1)) keys.push(date.toISOString().slice(0, 10));
+    return keys;
+  })();
+  const detailGroupsMap = new Map();
+  normalized.forEach(item => {
+    const key = item.dateKey;
+    if (!detailGroupsMap.has(key)) detailGroupsMap.set(key, []);
+    detailGroupsMap.get(key).push(item);
+  });
+  const detailGroups = [...detailGroupsMap.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([key, items]) => ({
+      key,
+      displayDate: coachStatsDetailDateLabel(key),
+      lessonUnits: Number(items.reduce((sum, item) => sum + Number(item.lessonUnits || 0), 0).toFixed(2)),
+      expanded: true,
+      items: items.sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || ''))).map(item => ({
+        id: item.id,
+        date: key,
+        timeText: item.timeText,
+        lessonUnits: item.lessonUnits,
+        courseTypeText: item.courseTypeText,
+        courseTypeGroup: item.courseTypeGroup,
+        studentText: item.studentText,
+        locationText: item.locationText,
+        locationInlineText: coachStatsInlineLocationText(item.locationText)
+      }))
+    }));
+  const maxTrend = Math.max(0, ...trendKeys.map(key => Number(trendMap.get(key) || 0)));
+  return {
+    ...coachStatsTrendUiState(range.view, trendKeys.length),
+    coachStatsRangeText: coachStatsRangeLabel(range),
+    coachStatsSummary: {
+      totalLessonUnits: Number(totalLessonUnits.toFixed(2)),
+      totalLessonUnitsText: lessonUnitsText(totalLessonUnits),
+      typeHighlights: typeRows.slice(0, 3).map(item => ({ ...item, lessonUnitsText: lessonUnitsText(item.lessonUnits) }))
+    },
+    coachStatsTypeRows: typeRows.map(item => ({
+      ...item,
+      lessonUnitsText: lessonUnitsText(item.lessonUnits),
+      percentText: `${lessonUnitsText(item.percent)}%`,
+      barStyle: `width:${Math.max(0, Math.min(100, item.percent || 0))}%`
+    })),
+    coachStatsTrendRows: trendKeys.map((key, index) => {
+      const units = Number(trendMap.get(key) || 0);
+      const height = maxTrend ? Math.max(units ? 8 : 0, Math.round((units / maxTrend) * 100)) : 0;
+      const showLabel = trendLabelVisible(key, range.view, index, trendKeys.length);
+      return {
+        key,
+        label: showLabel ? trendLabel(key, range.view) : '',
+        labelClass: showLabel ? '' : 'is-hidden',
+        className: units ? 'has-value' : 'is-zero',
+        lessonUnitsText: trendValueText(units, range.view),
+        barStyle: `height:${height}%`
+      };
+    }),
+    coachStatsDetailGroups: detailGroups.map(group => ({
+      ...group,
+      displayDate: group.displayDate || coachStatsDetailDateLabel(group.key),
+      lessonUnitsText: lessonUnitsText(group.lessonUnits)
+    }))
+  };
 }
 
 function buildShiftScheduleForm(shift, linkedClass = null, campuses = []) {
@@ -1850,7 +2140,7 @@ function timetableScrollLeft(days = [], isCurrentWeek = true) {
 
 function normalizeScheduleRouteTab(value = '') {
   const tab = String(value || '').trim();
-  return ['dashboard', 'timetable', 'students', 'shifts'].includes(tab) ? tab : '';
+  return ['dashboard', 'timetable', 'students', 'stats'].includes(tab) ? tab : '';
 }
 
 function scheduleTabState(activeTab = 'dashboard') {
@@ -1859,11 +2149,11 @@ function scheduleTabState(activeTab = 'dashboard') {
     isDashboard: activeTab === 'dashboard',
     isTimetable: activeTab === 'timetable',
     isStudents: activeTab === 'students',
-    isShifts: activeTab === 'shifts',
+    isStats: activeTab === 'stats',
     dashboardTabClass: activeTab === 'dashboard' ? 'active' : '',
     timetableTabClass: activeTab === 'timetable' ? 'active' : '',
     studentsTabClass: activeTab === 'students' ? 'active' : '',
-    shiftsTabClass: activeTab === 'shifts' ? 'active' : ''
+    statsTabClass: activeTab === 'stats' ? 'active' : ''
   };
 }
 
@@ -1876,7 +2166,7 @@ Page({
     isDashboard: true,
     isTimetable: false,
     isStudents: false,
-    isShifts: false,
+    isStats: false,
     isCurrentWeek: true,
     weekOffset: 0,
     weekTitle: '本周',
@@ -1921,6 +2211,20 @@ Page({
     studentStats: { totalCount: 0, weekActiveCount: 0, monthActiveCount: 0, activeCount: 0, trialCount: 0, endedCount: 0 },
     shiftsList: [],
     shiftStats: { totalCount: 0, activeCount: 0, totalLessons: 0, usedLessons: 0, remainingLessons: 0 },
+    coachStatsLoading: false,
+    coachStatsError: '',
+    coachStatsView: 'all',
+    coachStatsOffset: 0,
+    coachStatsViewTabs: coachStatsTabOptions('all'),
+    coachStatsRangeText: '',
+    coachStatsSummary: { totalLessonUnits: 0, totalLessonUnitsText: '0', typeHighlights: [] },
+    coachStatsTypeRows: [],
+    coachStatsTrendRows: [],
+    coachStatsTrendClass: 'stats-trend stats-trend-all',
+    coachStatsTrendScrollClass: 'is-scrollable',
+    coachStatsTrendScrollable: true,
+    coachStatsTrendStyle: 'width:361px;',
+    coachStatsDetailGroups: [],
     feedbackForm: feedbackFormFromRecord(),
     feedbackCounts: feedbackCountsOf(),
     feedbackListStyle: 'normal',
@@ -1998,7 +2302,7 @@ Page({
     dashboardTabClass: 'active',
     timetableTabClass: '',
     studentsTabClass: '',
-    shiftsTabClass: '',
+    statsTabClass: '',
     posterStyle: '蓝绿对角',
     posterTemplateKey: 'blueGreenDiagonal',
     posterStyles: POSTER_STYLE_OPTIONS,
@@ -2027,6 +2331,10 @@ Page({
   },
 
   onPullDownRefresh() {
+    if (this.data.activeTab === 'stats') {
+      this.loadCoachStatsView({ stopPullDown: true });
+      return;
+    }
     this.load({ stopPullDown: true });
   },
 
@@ -2073,6 +2381,7 @@ Page({
         hasLoaded: true
       });
       this.renderWeek();
+      if (this.data.activeTab === 'stats') this.loadCoachStatsView();
       this.tryOpenPendingRouteAction();
     } catch (err) {
       if (handleCoachAuthError(err)) return;
@@ -2185,7 +2494,66 @@ Page({
     const activeTab = event.currentTarget.dataset.tab || 'timetable';
     this.setData(scheduleTabState(activeTab), () => {
       if (activeTab === 'timetable') this.renderWeek();
+      if (activeTab === 'stats') this.loadCoachStatsView();
     });
+  },
+
+  onCoachStatsViewTap(event) {
+    const coachStatsView = event.currentTarget.dataset.view || 'week';
+    if (coachStatsView === this.data.coachStatsView) return;
+    this.setData({
+      coachStatsView,
+      coachStatsOffset: 0,
+      coachStatsViewTabs: coachStatsTabOptions(coachStatsView)
+    }, () => this.loadCoachStatsView());
+  },
+
+  prevCoachStatsRange() {
+    this.setData({ coachStatsOffset: this.data.coachStatsOffset - 1 }, () => this.loadCoachStatsView());
+  },
+
+  nextCoachStatsRange() {
+    this.setData({ coachStatsOffset: this.data.coachStatsOffset + 1 }, () => this.loadCoachStatsView());
+  },
+
+  async loadCoachStatsView(options = {}) {
+    this.setData({ coachStatsLoading: true, coachStatsError: '' });
+    try {
+      await ensureCoachSession();
+      if (!this.data.schedule.length && !this.data.loading) await this.load({ keepLoading: true });
+      const data = await loadCoachStats({
+        view: this.data.coachStatsView,
+        offset: this.data.coachStatsOffset
+      });
+      this.setData({
+        ...adaptCoachStatsData(data),
+        coachStatsLoading: false
+      });
+    } catch (error) {
+      const message = String(error.message || '').trim();
+      const fallback = buildLocalCoachStatsData({
+        schedule: this.data.schedule || [],
+        campuses: this.data.campusesRaw || [],
+        view: this.data.coachStatsView,
+        offset: this.data.coachStatsOffset,
+        now: new Date()
+      });
+      this.setData({
+        ...fallback,
+        coachStatsLoading: false,
+        coachStatsError: ''
+      });
+    } finally {
+      if (options.stopPullDown) wx.stopPullDownRefresh();
+    }
+  },
+
+  toggleCoachStatsGroup(event) {
+    const key = event.currentTarget.dataset.key;
+    const coachStatsDetailGroups = this.data.coachStatsDetailGroups.map(group => (
+      String(group.key) === String(key) ? { ...group, expanded: !group.expanded } : group
+    ));
+    this.setData({ coachStatsDetailGroups });
   },
 
   toggleCoachMenu() {

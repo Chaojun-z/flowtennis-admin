@@ -69,7 +69,7 @@
   <block wx:else>
     <view wx:if="{{isTimetable}}" class="custom-nav-title">我的课表</view>
     <view wx:if="{{isStudents}}" class="custom-nav-title">我的学员</view>
-    <view wx:if="{{isShifts}}" class="custom-nav-title">我的班次</view>
+    <view wx:if="{{isStats}}" class="custom-nav-title">课时统计</view>
 
     <scroll-view wx:if="{{isDashboard}}" scroll-y class="page-scroll page-bg">
       <view class="dashboard-top">
@@ -294,65 +294,100 @@
       </view>
     </scroll-view>
 
-    <scroll-view wx:if="{{isShifts}}" scroll-y class="page-scroll page-bg">
-      <view class="shifts-top">
-        <view class="shift-summary-card">
-          <view class="shift-summary-block">
-            <text class="shift-summary-label">我的班次</text>
-            <view class="shift-summary-line">
-              <text class="shift-summary-value shift-summary-value-main">{{shiftStats.totalCount}}</text>
-              <text class="shift-summary-unit">个</text>
-              <text class="shift-summary-foot shift-summary-foot-left">进行中 {{shiftStats.activeCount}}</text>
+    <scroll-view wx:if="{{isStats}}" scroll-y class="page-scroll page-bg">
+      <view class="stats-top">
+        <view class="stats-summary-card">
+          <view class="stats-summary-head">
+            <view>
+              <text class="stats-summary-label">已完成课时</text>
+              <view class="stats-summary-value-row">
+                <text class="stats-summary-value">{{coachStatsSummary.totalLessonUnitsText}}</text>
+                <text class="stats-summary-unit">课时</text>
+              </view>
             </view>
           </view>
-          <view class="shift-summary-divider"></view>
-          <view class="shift-summary-block">
-            <text class="shift-summary-label">总课时 / 已上</text>
-            <view class="shift-summary-line">
-              <text class="shift-summary-value shift-summary-value-main">{{shiftStats.totalLessons}}</text>
-              <text class="shift-summary-slash">/</text>
-              <text class="shift-summary-value shift-summary-value-sub">{{shiftStats.usedLessons}}</text>
-              <text class="shift-summary-foot">剩余 {{shiftStats.remainingLessons}} 节</text>
+          <view class="stats-highlight-row" wx:if="{{coachStatsSummary.typeHighlights.length}}">
+            <view wx:for="{{coachStatsSummary.typeHighlights}}" wx:key="type" class="stats-highlight-item">
+              <text class="stats-highlight-value">{{item.lessonUnitsText}}</text>
+              <text class="stats-highlight-label">{{item.type}}</text>
             </view>
           </view>
         </view>
       </view>
 
-      <view class="page-body">
-        <view class="summary-card summary-left shift-tip-card">
-          <view class="shift-tip-icon"></view>
-          <text>这里查看你当前负责的班次，可快速了解学员名单和进度。</text>
+      <view class="page-body stats-page-body">
+        <view class="stats-toolbar">
+          <view class="stats-view-segment">
+            <view wx:for="{{coachStatsViewTabs}}" wx:key="key" class="stats-view-item {{item.className}}" data-view="{{item.key}}" bindtap="onCoachStatsViewTap">{{item.label}}</view>
+          </view>
+          <view class="stats-range-row">
+            <view class="stats-range-btn" bindtap="prevCoachStatsRange"></view>
+            <text class="stats-range-text">{{coachStatsRangeText}}</text>
+            <view class="stats-range-btn stats-range-next" bindtap="nextCoachStatsRange"></view>
+          </view>
         </view>
-        <view wx:if="{{shiftsList.length}}">
-          <view wx:for="{{shiftsList}}" wx:key="id" class="shift-card">
-            <view class="shift-accent {{item.accentClass}}"></view>
-            <view class="shift-head">
-              <view class="shift-head-left">
-                <text class="shift-name">{{item.name}}</text>
-                <text class="status-tag {{item.statusClass}}">{{item.status}}</text>
-              </view>
+
+        <view wx:if="{{coachStatsLoading}}" class="stats-card stats-loading">统计加载中...</view>
+        <view wx:elif="{{coachStatsError}}" class="stats-card stats-error">{{coachStatsError}}</view>
+        <block wx:else>
+          <view class="stats-card">
+            <view class="stats-card-head">
+              <text class="stats-card-title">课时趋势</text>
             </view>
-            <view class="shift-info-line"><text class="shift-info-label">课程内容：</text><text class="shift-info-value">{{item.courseContent}}</text></view>
-            <view class="shift-info-line"><text class="shift-info-label">班级学员：</text><text class="shift-info-value">{{item.student}}</text></view>
-            <view class="shift-info-line"><text class="shift-info-label">排课时间：</text><text class="shift-info-value">{{item.scheduleTime}}</text></view>
-            <view class="shift-card-divider"></view>
-            <view class="shift-progress-row">
-              <view class="shift-progress-left">
-                <text class="shift-progress-label">课时进度</text>
-                <text class="shift-progress-value">{{item.progress}}</text>
-                <view class="shift-progress-track">
-                  <view class="shift-progress-fill" style="width:{{item.progressWidth}};"></view>
+            <scroll-view scroll-x="{{coachStatsTrendScrollable}}" class="stats-trend-scroll {{coachStatsTrendScrollClass}}" enhanced show-scrollbar="{{false}}">
+              <view class="{{coachStatsTrendClass}}" style="{{coachStatsTrendStyle}}">
+                <view wx:for="{{coachStatsTrendRows}}" wx:key="key" class="stats-trend-item {{item.className}}">
+                  <view class="stats-trend-track">
+                    <view class="stats-trend-bar" style="{{item.barStyle}}"></view>
+                  </view>
+                  <text class="stats-trend-value">{{item.lessonUnitsText}}</text>
+                  <text class="stats-trend-label {{item.labelClass}}">{{item.label}}</text>
                 </view>
               </view>
-              <view class="shift-action {{item.actionClass}}" data-id="{{item.id}}" bindtap="openShiftAction">{{item.actionText}}</view>
-            </view>
+            </scroll-view>
           </view>
-          <view class="bottom-end">已经到底啦</view>
-        </view>
-        <view wx:elif="{{!shiftsList.length}}" class="shift-empty">
-          <text class="shift-empty-title">暂无班次</text>
-          <text class="shift-empty-copy">等后端班次数据接通后，这里会展示真实班次。</text>
-        </view>
+
+          <view class="stats-card">
+            <view class="stats-card-head">
+              <text class="stats-card-title">课程类型</text>
+            </view>
+            <view wx:if="{{coachStatsTypeRows.length}}">
+              <view wx:for="{{coachStatsTypeRows}}" wx:key="type" class="stats-type-row">
+                <view class="stats-type-main">
+                  <text class="stats-type-name">{{item.type}}</text>
+                  <text class="stats-type-value">{{item.lessonUnitsText}}课时</text>
+                </view>
+                <view class="stats-type-track">
+                  <view class="stats-type-fill" style="{{item.barStyle}}"></view>
+                </view>
+                <text class="stats-type-percent">{{item.percentText}}</text>
+              </view>
+            </view>
+            <view wx:else class="stats-empty-small">暂无已完成课时</view>
+          </view>
+
+          <view class="stats-card">
+            <view class="stats-card-head">
+              <text class="stats-card-title">上课明细</text>
+            </view>
+            <view wx:if="{{coachStatsDetailGroups.length}}">
+              <view wx:for="{{coachStatsDetailGroups}}" wx:key="key" class="stats-detail-group">
+                <view class="stats-detail-date" data-key="{{item.key}}" bindtap="toggleCoachStatsGroup">
+                  <text>{{item.displayDate}}</text>
+                  <text>{{item.lessonUnitsText}}课时</text>
+                </view>
+                <view wx:if="{{item.expanded}}">
+                  <view wx:for="{{item.items}}" wx:for-item="lesson" wx:key="id" class="stats-detail-item">
+                    <text class="stats-detail-time">{{lesson.timeText}}</text>
+                    <text class="stats-detail-title">{{lesson.courseTypeText}}·{{lesson.studentText}}</text>
+                    <text class="stats-detail-location">{{lesson.locationInlineText}}</text>
+                  </view>
+                </view>
+              </view>
+            </view>
+            <view wx:else class="stats-empty-small">暂无已完成课时</view>
+          </view>
+        </block>
       </view>
     </scroll-view>
 
@@ -369,9 +404,9 @@
         <view class="tab-icon tab-students-icon {{studentsTabClass}}"></view>
         <text>我的学员</text>
       </view>
-      <view class="tab-item {{shiftsTabClass}}" data-tab="shifts" bindtap="switchTab">
-        <view class="tab-icon tab-classes-icon {{shiftsTabClass}}"></view>
-        <text>我的班次</text>
+      <view class="tab-item {{statsTabClass}}" data-tab="stats" bindtap="switchTab">
+        <view class="tab-icon tab-stats-icon {{statsTabClass}}"></view>
+        <text>课时统计</text>
       </view>
       <view class="tab-home-indicator"></view>
     </view>

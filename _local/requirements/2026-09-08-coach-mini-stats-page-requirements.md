@@ -70,7 +70,8 @@
 
 1. 管理端教练工作台 / 教练相关统计中使用的已完成课时口径。
 2. 后端排课有效状态口径 `effectiveScheduleStatus(schedule, now)`。
-3. 后端课时计算口径 `workbenchLessonUnits(schedule)`。
+3. 全平台数据口径总表中的 `COACH_LESSON_HOURS`。
+4. 后端共享读模型 `buildCoachCompletedLessonStats(...)`。
 
 开发要求：
 
@@ -91,16 +92,16 @@
 
 单条记录课时数取值规则：
 
-1. 优先使用排课字段 `lessonCount`。
-2. 如果 `lessonCount` 缺失或小于等于 0，按现有系统兜底逻辑计算：
-   - `endTime - startTime` 换算小时数；
-   - 如果时间也无法计算，则兜底为 `1`。
+1. 优先按课程实际时长折算：`endTime - startTime` 换算小时数。
+2. 如果已有管理端标准化课时字段 `durationHours / hours`，优先使用该标准化结果。
+3. 如历史数据存在 `lessonCount` 且大于实际时长，按管理端兼容逻辑取较大值，避免老数据低估。
+4. 如果时间和标准化课时都无法计算，则兜底为 `1`。
 
-开发时应复用现有后端 `workbenchLessonUnits(schedule)` 的口径，避免重新写一套计算。
+开发时应复用后端共享读模型 `buildCoachCompletedLessonStats(...)`，避免小程序前端重新写一套计算。
 
 注意：
 
-1. 这里的 `lessonCount` 是排课消耗课时，不是排课记录数量。
+1. 本页统计的是教练课时量，不是排课记录数量。
 2. 不能用 `list.length` 当总课时。
 3. 管理端若调整课时计算规则，小程序应自动跟随共享口径变化。
 
@@ -572,7 +573,7 @@ detailGroup=可选，展开年/月分组时使用
 | 课程类型 | `standardCourseType`，兜底 `courseTypeLabel / courseType` |
 | 汇总课程类型 | 管理端 `normalizeCoachCourseType(row)` 同口径 |
 | 明细课程类型 | `standardCourseType`，兜底 `courseTypeLabel / courseType` |
-| 课时 | 管理端已完成课时口径，当前复用 `workbenchLessonUnits(schedule)` |
+| 课时 | 管理端已完成课时口径，当前复用 `buildCoachCompletedLessonStats(...)` |
 | 状态 | `effectiveScheduleStatus(schedule, now)` |
 
 ---

@@ -129,7 +129,10 @@ assert.match(scheduleWxml, /bindscroll="onTimetableScroll"/, 'native timetable s
 assert.match(scheduleWxml, /class="timetable-shell"[\s\S]*scroll-x scroll-y class="timetable-scroll"/, 'native timetable should keep the white shell fixed outside the scrollable content');
 assert.match(scheduleWxml, /custom-nav-title">我的课表/, 'timetable tab should render the title in a dedicated custom nav layer');
 assert.match(scheduleWxml, /custom-nav-title">我的学员/, 'students tab should render the title in a dedicated custom nav layer');
-assert.match(scheduleWxml, /custom-nav-title">我的班次/, 'shifts tab should render the title in a dedicated custom nav layer');
+assert.match(scheduleWxml, /custom-nav-title">课时统计/, 'stats tab should render the lesson stats title in a dedicated custom nav layer');
+assert.match(scheduleWxml, /tab-stats-icon[\s\S]*<text>课时统计<\/text>/, 'stats bottom tab should be renamed to lesson stats');
+assert.doesNotMatch(scheduleWxml, /custom-nav-title">统计<\/view>|<text>统计<\/text>/, 'stats page should no longer use the short stats name');
+assert.doesNotMatch(scheduleWxml, /custom-nav-title">我的班次/, 'mini program should replace the old shifts title with stats');
 assert.match(scheduleWxml, /tt-time-axis[\s\S]*tt-now-label[\s\S]*currentTimeText[\s\S]*tt-day-columns[\s\S]*tt-now-line[\s\S]*tt-now-line-solid/, 'native timetable should keep the current-time label fixed inside the left time axis');
 assert.match(scheduleWxml, /tt-day-date-dot/, 'native timetable should render the active day as a round date marker');
 assert.match(scheduleWxml, /tt-course-status/, 'native timetable course cards should render pending status as a compact badge');
@@ -155,7 +158,13 @@ assert.doesNotMatch(scheduleWxml, /student-record-head[\s\S]*item\.courseType[\s
 assert.match(scheduleWxml, /student-record-head[\s\S]*item\.status[\s\S]*item\.feedbackStatusText/, 'student lesson record tags should show status before pending feedback');
 assert.doesNotMatch(scheduleWxml, /教练视角摘要/, 'student detail sheet should no longer render the coach perspective summary card');
 assert.match(scheduleWxml, /shift-detail-sheet[\s\S]*班级详情[\s\S]*基础信息[\s\S]*班级概览[\s\S]*班级备注[\s\S]*最近一次排课[\s\S]*关闭/, 'shift detail sheet should render the mapped class profile sections');
-assert.match(scheduleWxml, /wx:elif="\{\{!shiftsList\.length\}\}"[\s\S]*暂无班次/, 'shift page should render an empty state instead of mock cards when classes are empty');
+assert.match(scheduleWxml, /wx:if="\{\{isStats\}\}"[\s\S]*已完成课时[\s\S]*课时趋势[\s\S]*课程类型[\s\S]*上课明细/, 'stats tab should render the completed lesson stats sections');
+assert.doesNotMatch(scheduleWxml, /统一口径/, 'stats tab should not expose internal metric wording to coaches');
+assert.match(scheduleWxml, /scroll-x="\{\{coachStatsTrendScrollable\}\}"[\s\S]*class="stats-trend-scroll \{\{coachStatsTrendScrollClass\}\}"/, 'stats trend should use controlled horizontal scrolling for long-cycle data');
+assert.match(scheduleWxml, /class="\{\{coachStatsTrendClass\}\}" style="\{\{coachStatsTrendStyle\}\}"/, 'stats trend should use a concrete width for all-time horizontal scrolling');
+assert.match(scheduleWxml, /stats-detail-date[\s\S]*item\.displayDate[\s\S]*item\.lessonUnitsText[\s\S]*stats-detail-item[\s\S]*lesson\.timeText[\s\S]*lesson\.courseTypeText\}\}·\{\{lesson\.studentText[\s\S]*lesson\.locationInlineText/, 'stats detail rows should render date totals and single-line lesson rows');
+assert.doesNotMatch(scheduleWxml, /stats-detail-units/, 'stats detail rows should not render right-side lesson units for each class');
+assert.doesNotMatch(scheduleWxml, /暂无班次/, 'stats tab should replace the old shifts empty state');
 assert.doesNotMatch(scheduleWxml, /编辑排课|取消排课|去排课|保存排课|确认取消/, 'coach mini program should not expose schedule create, edit, or cancel actions');
 
 const scheduleJs = readText('wechat-miniprogram/miniprogram/pages/schedule/schedule.js');
@@ -203,7 +212,9 @@ assert.match(scheduleWxml, /feedback-sheet \{\{feedbackSheetClass\}\}[\s\S]*课�
 assert.match(scheduleWxml, /detail-sheet \{\{detailSheetClass\}\}[\s\S]*排课详情[\s\S]*bindtap="closeDetail"[\s\S]*bindtap="closeDetail"/, 'schedule detail close buttons should only close schedule detail');
 assert.match(scheduleJs, /onLoad\(options = \{\}\)/, 'schedule page should read route params when opened from reminder links');
 assert.match(scheduleJs, /function normalizeScheduleRouteTab/, 'schedule route should normalize supported tab params');
-assert.match(scheduleJs, /function scheduleTabState[\s\S]*isTimetable: activeTab === 'timetable'/, 'schedule route should reuse the same tab state mapping as manual tab switching');
+assert.match(scheduleJs, /function normalizeScheduleRouteTab[\s\S]*'stats'/, 'schedule route should support the stats tab param');
+assert.doesNotMatch(scheduleJs, /function normalizeScheduleRouteTab[\s\S]*'shifts'/, 'schedule route should no longer expose the old shifts tab');
+assert.match(scheduleJs, /function scheduleTabState[\s\S]*isTimetable: activeTab === 'timetable'[\s\S]*isStats: activeTab === 'stats'/, 'schedule route should reuse the same tab state mapping as manual tab switching');
 assert.match(scheduleJs, /const routeTab = normalizeScheduleRouteTab\(options\.tab\)/, 'schedule page should read tab=timetable from reminder links');
 assert.match(scheduleJs, /\.\.\.\(routeTab \? scheduleTabState\(routeTab\) : \{\}\)/, 'schedule page should apply route tab state before loading data');
 assert.match(scheduleJs, /pendingRouteScheduleId:/, 'schedule page should keep the pending reminder schedule id');
@@ -267,7 +278,7 @@ assert.match(scheduleJs, /function buildStudentLessonRecords[\s\S]*studentLedger
 assert.match(scheduleJs, /function studentLedgerRecordHasDisplayContext[\s\S]*linkedSchedule\.id[\s\S]*metaParts\.length >= 2/, 'student detail lesson records should reject dirty orphan ledger rows without schedule, venue, and coach');
 assert.match(scheduleJs, /studentScheduleRaw/, 'mini program should keep a student-detail schedule set separate from the timetable schedule');
 assert.match(scheduleJs, /function scheduleDurationLessonUnits[\s\S]*Math\.round\(\(end - start\) \/ 360000\) \/ 10/, 'mini program lesson units should derive a precise duration fallback from start and end time');
-assert.match(scheduleJs, /function scheduleLessonUnits[\s\S]*Math\.max\(count,\s*durationUnits\)/, 'mini program lesson units should not let a stale lower lessonCount override a longer real lesson duration');
+assert.doesNotMatch(scheduleJs.match(/function scheduleLessonUnits\(item = \{\}\)[\s\S]*?\n\}/)[0], /Math\.max\(count,\s*durationUnits\)/, 'mini program lesson units should prioritize lessonCount and only use duration as fallback');
 assert.match(scheduleJs, /function studentScheduleMeta[\s\S]*scheduleLessonUnits\(item\)/, 'student lesson record meta should display normalized lesson units');
 assert.match(scheduleJs, /function scheduleLessonDisplayUnit\([\s\S]*小班[\s\S]*次/, 'mini program should expose a count unit helper for small group lessons');
 assert.match(scheduleJs, /function scheduleConsumedLessonText[\s\S]*scheduleLessonDisplayUnit\(schedule\)[\s\S]*return `\$\{lessonUnitsText\(Math\.max\(consumed, scheduleLessonUnits\(schedule\)\)\)\} \$\{unit\}`/, 'mini program schedule detail should show count-based deductions with the correct unit');
@@ -277,7 +288,9 @@ assert.match(scheduleJs, /packagePercent:\s*Number\.isFinite\(Number\(student\.p
 assert.match(scheduleJs, /const studentsRaw = studentRosterItems\(studentRoster\);[\s\S]*const studentsList = buildStudentCards\(studentsRaw\)/, 'student cards should consume backend roster items only');
 assert.doesNotMatch(scheduleJs, /packageText:\s*totalLessons \? `\$\{usedLessons\}\/\$\{totalLessons\}`/, 'student cards should not derive package progress from class usedLessons');
 assert.match(scheduleJs, /scheduleConsumedLessonText\(selectedClass, entitlementLedger\)/, 'schedule detail should derive consumed lessons from entitlement ledger rows');
-assert.match(scheduleJs, /const shiftsList = \[\];/, 'my classes tab should intentionally stay as an empty page after removing class concepts');
+assert.match(scheduleJs, /loadCoachStats\(\{[\s\S]*view: this\.data\.coachStatsView[\s\S]*offset: this\.data\.coachStatsOffset/, 'stats tab should load backend coach stats instead of local class data');
+assert.match(scheduleJs, /coachStatsView:\s*'all'/, 'stats tab should default to all completed lessons');
+assert.match(scheduleJs, /catch \(error\) \{[\s\S]*buildLocalCoachStatsData\(\{[\s\S]*schedule: this\.data\.schedule \|\| \[\][\s\S]*coachStatsError:\s*''/, 'stats tab should fall back to loaded schedule data without showing a blocking error card');
 assert.match(scheduleJs, /STUDENT_DETAIL_RECORD_PREVIEW_COUNT\s*=\s*5/, 'student detail should default to showing the latest five lesson records');
 assert.match(scheduleJs, /lessonRecordsShown/, 'student detail should keep a visible subset of lesson records for collapsed state');
 assert.match(scheduleJs, /toggleStudentLessonRecords\(\)/, 'student detail should let the coach expand all lesson records');
@@ -411,6 +424,10 @@ const workbenchRouteSource = corePageDataJs.slice(
   corePageDataJs.indexOf("path==='/page-data/workbench'&&method==='GET'"),
   corePageDataJs.indexOf('return false;', corePageDataJs.indexOf("path==='/page-data/workbench'&&method==='GET'"))
 );
+const coachStatsRouteSource = corePageDataJs.slice(
+  corePageDataJs.indexOf("path==='/page-data/coach-stats'&&method==='GET'"),
+  corePageDataJs.indexOf("path==='/page-data/workbench'&&method==='GET'")
+);
 assert.match(authRoutesJs, /\/auth\/wechat-login/, 'API should support mini program login by bound openid');
 assert.match(apiServerJs, /findWechatUserByOpenId/, 'API should find the bound coach account by openid');
 assert.match(apiServerJs, /function officialAccountTimetablePagePath/, 'course reminders should build timetable deep links through a dedicated helper');
@@ -434,6 +451,8 @@ assert.match(apiServerJs, /workbenchState:/, 'workbench API should expose standa
 assert.match(apiServerJs, /studentTeachingSummaries:normalized\.studentTeachingSummaries\.filter\(row=>studentIds\.has\(String\(row\.studentId\|\|row\.id\|\|''\)\.trim\(\)\)\)/, 'coach-scoped workbench data should keep unified teaching summary rows for visible students');
 assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API should read entitlement balances for the mini program');
 assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS\.entitlementLedger\)/, 'workbench API should read entitlement consume ledger for the mini program');
+assert.match(coachStatsRouteSource, /buildCoachCompletedLessonStats/, 'coach stats API should use the shared completed lesson stats read model');
+assert.doesNotMatch(coachStatsRouteSource, /put\(|del\(|mkTable/, 'coach stats API should be read-only');
 assert.match(workbenchRouteSource, /readReadyStudentTeachingSummaryListRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow,getCachedScan,scanByIdPrefix,put,verifyChecksum:true\}\)/, 'workbench API should read the ready summary list and use summary-table light-field fallback before returning empty data');
 assert.doesNotMatch(workbenchRouteSource, /readReadyStudentTeachingSummaryRows\(\{tableName:T_STUDENT_TEACHING_SUMMARY,getCachedScan,getCachedRow,scanByIdPrefix,preferBundle:false,verifyChecksum:false\}\)/, 'workbench API must not scan active-version summary rows for mini program student details');
 assert.doesNotMatch(workbenchRouteSource, /cappedScan\(T_STUDENT_TEACHING_SUMMARY\)/, 'workbench API must not scan the full student teaching summary table in production');
@@ -579,7 +598,7 @@ assert.match(scheduleWxss, /\.tab-workdesk-icon\.active\s*\{[\s\S]*fill='%232B3A
 assert.match(scheduleWxss, /\.tab-workdesk-icon:not\(\.active\)\s*\{[\s\S]*stroke='%2394A3B8'[\s\S]*stroke-width='2'/, 'inactive workdesk tab should use the provided outline SVG path');
 assert.match(scheduleWxss, /\.tab-schedule-icon\.active\s*\{[\s\S]*rect x='4' y='5' width='16' height='15' rx='2' fill='%232B3A55'[\s\S]*stroke='%23FFFFFF' stroke-width='2'/, 'active schedule tab should use the latest calendar SVG with white negative-space divider');
 assert.match(scheduleWxss, /\.tab-schedule-icon:not\(\.active\)\s*\{[\s\S]*rect x='4' y='5' width='16' height='15' rx='2' stroke='%2394A3B8' stroke-width='2'[\s\S]*M8 3v4M16 3v4M4 11h16[\s\S]*stroke='%2394A3B8' stroke-width='2'/, 'inactive schedule tab should use the latest outline calendar SVG');
-assert.match(scheduleWxss, /\.tab-classes-icon\.active\s*\{[\s\S]*fill='%23FFFFFF'/, 'active classes tab should preserve the white negative-space SVG detail');
+assert.match(scheduleWxss, /\.tab-stats-icon\.active\s*\{[\s\S]*%232B3A55/, 'active stats tab should use the same active color as the other tab icons');
 assert.match(scheduleWxss, /\.timetable-top\s*\{[\s\S]*height:\s*210px;[\s\S]*padding:\s*115px 16px 0;[\s\S]*background:\s*linear-gradient\(135deg,\s*#2b3a55 0%,\s*#1e2a38 100%\)/i, 'timetable top should match the requested dark header shell');
 assert.match(scheduleWxss, /\.week-switch\s*\{[\s\S]*width:\s*188px;[\s\S]*height:\s*36px;[\s\S]*border:\s*1px solid rgba\(255,\s*255,\s*255,\s*0\.1\);[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.15\);/i, 'timetable week switch should keep the translucent pill shell while leaving enough room for the date text');
 assert.match(scheduleWxss, /\.switch-btn::before\s*\{[\s\S]*width:\s*8px;[\s\S]*height:\s*10px;[\s\S]*background-image:\s*url\("data:image\/svg\+xml/, 'timetable switch arrows should use the provided SVG chevron shape without distortion');
@@ -588,9 +607,18 @@ assert.match(scheduleWxss, /\.back-week-btn\s*\{[\s\S]*width:\s*80px;[\s\S]*heig
 assert.match(scheduleWxss, /\.timetable-shell\s*\{[\s\S]*margin-top:\s*-45px;[\s\S]*border-top-left-radius:\s*40rpx;[\s\S]*border-top-right-radius:\s*40rpx;/, 'timetable grid should sit in the SVG rounded white panel with 45px overlap');
 assert.match(scheduleWxss, /\.timetable-top\s*\{[\s\S]*height:\s*210px;/i, 'timetable top blue panel should use the unified 210px height');
 assert.match(scheduleWxss, /\.students-top\s*\{[\s\S]*height:\s*210px;/i, 'students top blue panel should use the unified 210px height');
-assert.match(scheduleWxss, /\.shifts-top\s*\{[\s\S]*height:\s*210px;/i, 'shifts top blue panel should use the unified 210px height');
+assert.match(scheduleWxss, /\.stats-top\s*\{[\s\S]*height:\s*210px;/i, 'stats top blue panel should use the unified 210px height');
 assert.match(scheduleWxss, /\.students-summary\s*\{[\s\S]*width:\s*361px;[\s\S]*height:\s*90px;/i, 'students summary card should keep the 361x90 token');
-assert.match(scheduleWxss, /\.shift-summary-card\s*\{[\s\S]*height:\s*90px;/i, 'shifts summary card should keep the 90px height token');
+assert.match(scheduleWxss, /\.stats-summary-card\s*\{[\s\S]*height:\s*150px;/i, 'stats summary card should keep enough stable height for the total and highlights');
+assert.doesNotMatch(scheduleWxss.match(/\.stats-summary-value\s*\{[^}]*\}/)[0], /font-family:\s*Courier,\s*monospace;/, 'stats summary number should reuse the same font family as dashboard metrics');
+assert.match(scheduleJs, /if \(view === 'year'\)[\s\S]*`\$\{month\}月`/, 'year trend should render compact month labels on mobile');
+assert.match(scheduleJs, /if \(!n \|\| view === 'month' \|\| view === 'all'\) return '';/, 'monthly and all-time trends should prioritize readable x-axis labels over dense value text');
+assert.match(scheduleJs, /function coachStatsDetailDateLabel[\s\S]*`\$\{month\}\.\$\{day\} 日`/, 'stats detail date groups should use compact mobile date labels');
+assert.match(scheduleJs, /function coachStatsInlineLocationText[\s\S]*·[\s\S]*号场[\s\S]*'\$1 号场'/, 'stats detail location should be compacted for a single mobile row');
+assert.match(scheduleWxss, /\.stats-trend-month\s+\.stats-trend-label\.is-hidden\s*\{[\s\S]*visibility:\s*hidden;/, 'month trend should keep daily bars while sampling x-axis labels');
+assert.match(scheduleJs, /coachStatsTrendStyle:\s*safeView === 'all' \? `width:\$\{Math\.max\(361, count \* 46\)\}px;` : ''/, 'all-time trend should aggregate by month and scroll with a concrete mini-program width');
+assert.match(scheduleWxss, /\.stats-trend-all\s+\.stats-trend-value\s*\{[\s\S]*display:\s*none;/, 'all-time trend should show month nodes instead of unlabeled value rows');
+assert.match(scheduleWxss, /\.stats-detail-item\s*\{[\s\S]*height:\s*34px;[\s\S]*flex-wrap:\s*nowrap;[\s\S]*overflow:\s*hidden;/, 'stats detail rows should stay on one line');
 assert.match(scheduleWxss, /\.custom-nav-title\s*\{[\s\S]*font-size:\s*20px;[\s\S]*line-height:\s*26px;/i, 'top tab titles should use the requested 20px typography');
 assert.match(scheduleWxss, /\.loading-shell-top\s*\{[\s\S]*height:\s*210px;[\s\S]*background:\s*linear-gradient\(135deg,\s*#2b3a55 0%,\s*#1e2a38 100%\)/i, 'loading shell should keep the same dark header height and gradient');
 assert.match(scheduleWxss, /\.loading-shell-summary\s*\{[\s\S]*width:\s*361px;[\s\S]*height:\s*90px;[\s\S]*margin:\s*-45px auto 0;/i, 'loading shell summary card should overlap the header by 45px with the same 361x90 footprint');
