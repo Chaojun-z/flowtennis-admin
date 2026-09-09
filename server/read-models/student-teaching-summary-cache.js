@@ -527,6 +527,7 @@ function studentTeachingSummaryNotReadyError(meta = null, reason = '') {
 
 function requireReadyStudentTeachingSummaryRows(rows = [], options = {}) {
   const verifyChecksum = options.verifyChecksum !== false;
+  const verifyLessonDetailSourceVersion = options.verifyLessonDetailSourceVersion !== false;
   const meta = studentTeachingSummaryMetaRow(rows);
   if (!meta) throw studentTeachingSummaryNotReadyError(null, 'missing-meta');
   const dataRows = filterStudentTeachingSummaryPublishedRows(rows, meta);
@@ -544,7 +545,7 @@ function requireReadyStudentTeachingSummaryRows(rows = [], options = {}) {
     || parseArr(row?.detailLessonRecordRows).length > 0
     || parseArr(row?.detailPackageOrderRows).length > 0
     || String(row?.teachingLessonDetailSourceVersion || '').trim();
-  if (currentVersion && dataRows.some(row => hasTeachingLessonSnapshot(row) && String(row?.teachingLessonDetailSourceVersion || '').trim() !== currentVersion)) {
+  if (verifyLessonDetailSourceVersion && currentVersion && dataRows.some(row => hasTeachingLessonSnapshot(row) && String(row?.teachingLessonDetailSourceVersion || '').trim() !== currentVersion)) {
     throw studentTeachingSummaryNotReadyError(meta, 'source-version-mismatch');
   }
   if (verifyChecksum) {
@@ -680,7 +681,7 @@ async function readReadyStudentTeachingSummaryListRows({
           if (expectedCount !== bundleRows.length || Number(bundle.rowCount) !== bundleRows.length) {
             throw studentTeachingSummaryNotReadyError(meta, `row-count-mismatch:${bundleRows.length}/${expectedCount}`);
           }
-          requireReadyStudentTeachingSummaryRows([meta, ...bundleRows], { verifyChecksum: false });
+          requireReadyStudentTeachingSummaryRows([meta, ...bundleRows], { verifyChecksum: false, verifyLessonDetailSourceVersion: false });
           if (verifyChecksum) {
             const actualChecksum = buildStudentTeachingSummaryChecksum(bundleRows);
             if (!String(bundle.checksum || '').trim() || String(bundle.checksum || '') !== actualChecksum) {

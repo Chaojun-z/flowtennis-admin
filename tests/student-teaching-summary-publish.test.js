@@ -540,6 +540,54 @@ async function testReadySummaryRowsRejectLegacyLessonSourceVersion() {
   );
 }
 
+async function testReadySummaryListRowsAcceptLegacyLessonSourceVersion() {
+  const tableName = 'ft_student_teaching_summary_legacy_source_list_test';
+  const version = 'student-teaching-summary-legacy-source-list-test';
+  const legacyRows = [{
+    id: 'stu-active-legacy',
+    studentId: 'stu-active-legacy',
+    name: '旧摘要在期学员',
+    teachingLessonDetailSourceVersion: 'lesson-record-v7',
+    completedLessons: 27.5,
+    isActiveStudentRoster: true,
+    detailLessonRecordRows: undefined,
+    detailPackageOrderRows: undefined
+  }];
+  const meta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: legacyRows.length,
+    checksum: buildStudentTeachingSummaryChecksum(legacyRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-09-09T00:00:00.000Z',
+    completedAt: '2026-09-09T00:00:01.000Z'
+  });
+  const listBundle = buildStudentTeachingSummaryListBundleRow(legacyRows, version);
+  const rows = await readReadyStudentTeachingSummaryListRows({
+    tableName,
+    getCachedRow: async (table, id) => {
+      assert.strictEqual(table, tableName);
+      if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(meta);
+      if (id === listBundle.id) return clone(listBundle);
+      return null;
+    },
+    getCachedScan: async () => {
+      throw new Error('legacy list bundle should not need fact or summary scan');
+    },
+    scanByIdPrefix: async () => {
+      throw new Error('legacy list bundle should be enough for roster pages');
+    },
+    timeoutMs: 50
+  });
+  assert.deepStrictEqual(rows.map(row => row.studentId), ['stu-active-legacy'], '历史/在期学员列表必须继续展示旧摘要轻字段，不能整页更新中');
+  assert.strictEqual(rows[0].detailLessonRecordRows, undefined, '列表轻包不能携带上课明细');
+  assert.notStrictEqual(
+    legacyRows[0].teachingLessonDetailSourceVersion,
+    TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    'test fixture must represent the production v7 list summary after the v8 detail field change'
+  );
+}
+
 async function testKeepsServingReadyRowsWhileNextVersionIsWritten() {
   const tables = {
     T_LEADS: 'ft_leads',
@@ -790,6 +838,7 @@ async function testRestoresOldReadyMetaWhenCleanupFailsAfterSwitch() {
   await testReadySummaryListRowsFallbackToProjectedSummaryRows();
   await testReadySummaryRowsRejectBadBundleWithoutPrefixScan();
   await testReadySummaryRowsRejectLegacyLessonSourceVersion();
+  await testReadySummaryListRowsAcceptLegacyLessonSourceVersion();
   await testReadySummaryRowsUseActiveVersionMemoryCache();
   await testKeepsReadyMetaWhenRefreshFails();
   await testKeepsReadyMetaWhenPreviousSnapshotScanFails();
