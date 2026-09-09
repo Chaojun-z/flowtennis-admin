@@ -784,6 +784,7 @@ function mergeScheduleSaveResult(result,editingId){
   changedClasses.forEach(c=>{const i=classes.findIndex(x=>x.id===c.id);if(i>=0)classes[i]=c;});
   (result?.plans||[]).forEach(p=>{const i=plans.findIndex(x=>x.id===p.id);if(i>=0)plans[i]=p;else plans.unshift(p);});
   (result?.entitlements||[]).forEach(e=>{const i=entitlements.findIndex(x=>x.id===e.id);if(i>=0)entitlements[i]=e;else entitlements.unshift(e);});
+  if(typeof rememberLocalEntitlementLedgerRows==='function')rememberLocalEntitlementLedgerRows(result?.entitlementLedger||[]);
   (result?.entitlementLedger||[]).forEach(l=>{const i=entitlementLedger.findIndex(x=>x.id===l.id);if(i<0)entitlementLedger.unshift(l);});
   (result?.financialLedger||[]).forEach(l=>{const i=financialLedger.findIndex(x=>x.id===l.id);if(i>=0)financialLedger[i]=l;else financialLedger.unshift(l);});
   (result?.courts||[]).forEach(c=>{const i=courts.findIndex(x=>x.id===c.id);if(i>=0)courts[i]=c;else courts.unshift(c);});

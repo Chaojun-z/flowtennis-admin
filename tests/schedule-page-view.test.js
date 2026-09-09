@@ -11,8 +11,8 @@ const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'pa
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
-assert.match(indexHtml, /state\.js\?v=20260908-trial-summary-repair-v2/, 'state script version should force a fresh browser load for teaching summary repair handling fixes');
-assert.match(indexHtml, /schedule\.js\?v=20260903-stored-value-alias-v1/, 'schedule script version should force a fresh browser load after stored-value alias matching fixes');
+assert.match(indexHtml, /state\.js\?v=20260909-mutation-freshness-v1/, 'state script version should force a fresh browser load for mutation freshness fixes');
+assert.match(indexHtml, /schedule\.js\?v=20260909-mutation-freshness-v1/, 'schedule script version should force a fresh browser load after mutation freshness fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');

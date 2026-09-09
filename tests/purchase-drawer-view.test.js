@@ -5,6 +5,7 @@ const path = require('path');
 
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const corePageDataSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);
@@ -87,6 +88,7 @@ assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker sh
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_packageId_dropdown[\s\S]*text-overflow:ellipsis/, 'purchase package dropdown should clip long package names instead of overflowing the input');
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_edit_packageId_dropdown[\s\S]*font-size:10px/, 'purchase edit package dropdown should use smaller text for long package names');
 assert.match(savePurchase, /mergeStudentDetailPurchaseResult\(res\)/, 'purchase save should immediately merge the returned purchase and entitlement into the open student drawer cache');
+assert.match(indexHtml, /purchases\.js\?v=20260909-mutation-freshness-v1/, 'purchase script version should force a fresh browser load after student drawer mutation freshness fixes');
 assert.doesNotMatch(savePurchase, /ensureStudentDetailData\(savedStudentId,\{force:true\}\)/, 'purchase save must not synchronously force-refresh student detail and re-enable slow fact scans');
 assert.doesNotMatch(savePurchase, /await Promise\.all\(\[[\s\S]*purchaseCreatePage[\s\S]*packageCenterPage[\s\S]*customerCenterPage[\s\S]*lifecycleMetricsPage/, 'purchase save should not wait for create data or slow global read models');
 assert.match(savePurchase, /ensureDatasetsByName\(\['purchaseCreatePage','packageCenterPage','customerCenterPage','lifecycleMetricsPage'\],\{force:true\}\)\.then/, 'purchase save should refresh create data and slow list models in the background');

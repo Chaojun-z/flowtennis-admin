@@ -21,7 +21,7 @@ assert.ok(
 );
 assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api.js');
 assert.match(html, /assets\/scripts\/core\/state\.js/, 'index.html should load state.js');
-assert.match(html, /assets\/scripts\/core\/state\.js\?v=20260908-trial-summary-repair-v2/, 'index.html should bust stale cached state.js after teaching summary repair handling fixes');
+assert.match(html, /assets\/scripts\/core\/state\.js\?v=20260909-mutation-freshness-v1/, 'index.html should bust stale cached state.js after mutation freshness fixes');
 assert.match(html, /assets\/scripts\/core\/shell\.js/, 'index.html should load shell.js');
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js/, 'index.html should load bootstrap.js');
 assert.match(html, /assets\/scripts\/core\/bootstrap\.js\?v=20260904-management-page-visibility-v1/, 'index.html should keep the current bootstrap script asset version');
@@ -53,7 +53,7 @@ assert.match(components, /goPage\('leads',this\)[\s\S]*线索池/, 'components.j
 assert.match(components, /function renderTopbarShell\(/, 'components.js should render the shared topbar');
 assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=/, 'index.html should version schedule.js to avoid stale modal behavior');
-assert.match(html, /assets\/scripts\/pages\/schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*assets\/scripts\/pages\/schedule\.js\?v=20260903-stored-value-alias-v1/, 'index.html should keep current schedule asset ordering and versions');
+assert.match(html, /assets\/scripts\/pages\/schedule-settlement\.js\?v=20260831-per-student-settlement-block-v1[\s\S]*assets\/scripts\/pages\/schedule\.js\?v=20260909-mutation-freshness-v1/, 'index.html should keep current schedule asset ordering and versions');
 
 const htmlWithoutWeeklyShareShell = html
   .replace(`<script>

@@ -11,6 +11,9 @@ let thirdPartySyncCenterData={summary:{},batches:[],rawRecords:[],prechecks:[],c
 let customerLifecycleRows=[];
 let teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
 const studentDetailViewCache=new Map();
+const LOCAL_MUTATION_FRESHNESS_MS=5*60*1000;
+const studentDetailLocalMutationAt=new Map();
+const localEntitlementLedgerRows=new Map();
 let standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
@@ -686,7 +689,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='packageBoardPreferences')packageBoardColumnOrder=Array.isArray(data?.columnOrder)?data.columnOrder:[];
   if(name==='purchases')purchases=rows;
   if(name==='entitlements')entitlements=rows;
-  if(name==='entitlementLedger')entitlementLedger=rows;
+  if(name==='entitlementLedger')entitlementLedger=mergeFreshLocalEntitlementLedgerRows(rows);
   if(name==='financialLedger')financialLedger=rows;
   if(name==='membershipPlans')membershipPlans=rows;
   if(name==='membershipAccounts')membershipAccounts=rows;
@@ -738,6 +741,86 @@ function mergeTeachingStudentDetail(row){
 function studentDetailViewForId(id){
   return studentDetailViewCache.get(String(id||''))||null;
 }
+function markStudentDetailLocalMutation(studentId){
+  const id=String(studentId||'').trim();
+  if(id)studentDetailLocalMutationAt.set(id,Date.now());
+}
+function hasFreshStudentDetailLocalMutation(studentId){
+  const id=String(studentId||'').trim();
+  const at=Number(studentDetailLocalMutationAt.get(id))||0;
+  if(!id||!at)return false;
+  if(Date.now()-at>LOCAL_MUTATION_FRESHNESS_MS){
+    studentDetailLocalMutationAt.delete(id);
+    return false;
+  }
+  return true;
+}
+function studentDetailPackageRowKey(row={}){
+  return String(row.packageRecordKey||row.entitlementId||row.purchaseId||row.id||'').trim();
+}
+function recalculateStudentDetailPackageBalance(detail={}){
+  const rows=Array.isArray(detail.detailPackageOrderRows)?detail.detailPackageOrderRows:[];
+  const notVoidedRows=rows.filter(item=>String(item?.statusText||'')!=='已作废');
+  const activeRows=notVoidedRows.filter(item=>(Number(item?.remainingLessons)||0)>0);
+  const displayRows=activeRows.length?activeRows:notVoidedRows.slice(0,1);
+  const sumRows=(list,key)=>list.reduce((sum,item)=>sum+(Number(item?.[key])||0),0);
+  const remaining=sumRows(displayRows,'remainingLessons');
+  const total=sumRows(displayRows,'totalLessons');
+  const detailRemaining=sumRows(notVoidedRows,'remainingLessons');
+  const detailTotal=sumRows(notVoidedRows,'totalLessons');
+  return {
+    ...detail,
+    packageListRows:displayRows,
+    packageBalanceRemaining:remaining,
+    packageBalanceTotal:total,
+    packageBalanceText:total>0?`${formatStudentDetailLessonQty(remaining)}/${formatStudentDetailLessonQty(total)}`:(detail.packageBalanceText||'-'),
+    packageBalancePercent:total>0?Math.max(0,Math.min(100,Math.round(remaining/total*100))):0,
+    detailPackageBalanceRemaining:detailRemaining,
+    detailPackageBalanceTotal:detailTotal,
+    detailPackageBalanceText:detailTotal>0?`${formatStudentDetailLessonQty(detailRemaining)}/${formatStudentDetailLessonQty(detailTotal)}`:(detail.detailPackageBalanceText||'-'),
+    detailPackageBalancePercent:detailTotal>0?Math.max(0,Math.min(100,Math.round(detailRemaining/detailTotal*100))):0
+  };
+}
+function preserveFreshStudentDetailLocalFacts(incoming={}){
+  const studentId=String(incoming.id||incoming.studentId||'').trim();
+  if(!studentId||!hasFreshStudentDetailLocalMutation(studentId))return incoming;
+  const existing=studentDetailViewForId(studentId);
+  if(!existing)return incoming;
+  const incomingRows=Array.isArray(incoming.detailPackageOrderRows)?incoming.detailPackageOrderRows:[];
+  const existingRows=Array.isArray(existing.detailPackageOrderRows)?existing.detailPackageOrderRows:[];
+  const packageRowsByKey=new Map();
+  incomingRows.forEach(row=>{const key=studentDetailPackageRowKey(row);if(key)packageRowsByKey.set(key,row);});
+  existingRows.forEach(row=>{const key=studentDetailPackageRowKey(row);if(key)packageRowsByKey.set(key,row);});
+  const detailPackageOrderRows=[...packageRowsByKey.values()]
+    .sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
+  const incomingLessonRows=Array.isArray(incoming.detailLessonRecordRows)?incoming.detailLessonRecordRows:[];
+  const existingLessonRows=Array.isArray(existing.detailLessonRecordRows)?existing.detailLessonRecordRows:[];
+  const lessonRowsByKey=new Map();
+  incomingLessonRows.forEach(row=>{const key=String(row.id||row.ledgerId||row.scheduleId||'').trim();if(key)lessonRowsByKey.set(key,row);});
+  existingLessonRows.forEach(row=>{const key=String(row.id||row.ledgerId||row.scheduleId||'').trim();if(key)lessonRowsByKey.set(key,row);});
+  return recalculateStudentDetailPackageBalance({
+    ...incoming,
+    detailPackageOrderRows,
+    detailLessonRecordRows:[...lessonRowsByKey.values()]
+  });
+}
+function rememberLocalEntitlementLedgerRows(rows=[]){
+  (Array.isArray(rows)?rows:[rows]).filter(row=>row&&row.id).forEach(row=>{
+    localEntitlementLedgerRows.set(String(row.id),{row,at:Date.now()});
+  });
+}
+function mergeFreshLocalEntitlementLedgerRows(rows=[]){
+  const map=new Map((Array.isArray(rows)?rows:[]).filter(row=>row&&row.id).map(row=>[String(row.id),row]));
+  const now=Date.now();
+  [...localEntitlementLedgerRows.entries()].forEach(([id,item])=>{
+    if(!item?.at||now-item.at>LOCAL_MUTATION_FRESHNESS_MS){
+      localEntitlementLedgerRows.delete(id);
+      return;
+    }
+    if(item.row)map.set(id,item.row);
+  });
+  return [...map.values()];
+}
 function hydratePurchaseDetailData(data={}){
   mergeDatasetRowsById('purchases',data.purchases||[]);
   mergeDatasetRowsById('packages',data.packages||[]);
@@ -769,7 +852,7 @@ function hydrateStudentDetailData(data={},options={}){
   mergeDatasetRowsById('feedbacks',data.feedbacks||[]);
   if(Array.isArray(data.customerLifecycleRows))mergeDatasetRowsById('customerLifecycleRows',data.customerLifecycleRows);
   if(data.detailStudentView){
-    mergeTeachingStudentDetail(data.detailStudentView);
+    mergeTeachingStudentDetail(preserveFreshStudentDetailLocalFacts(data.detailStudentView));
     if(!options.silent&&typeof renderStudentsIfVisible==='function')renderStudentsIfVisible();
   }
 }
@@ -884,6 +967,7 @@ function mergeStudentDetailPurchaseResult(res={}){
   const total=sumRows(displayRows,'totalLessons');
   const detailRemaining=sumRows(notVoidedRows,'remainingLessons');
   const detailTotal=sumRows(notVoidedRows,'totalLessons');
+  markStudentDetailLocalMutation(studentId);
   mergeTeachingStudentDetail({
     ...base,
     name:base.name||purchase.studentName||entitlement.studentName||'',
@@ -901,6 +985,57 @@ function mergeStudentDetailPurchaseResult(res={}){
     detailPackageBalancePercent:detailTotal>0?Math.max(0,Math.min(100,Math.round(detailRemaining/detailTotal*100))):0
   });
   if(existingDetail||loadedStudentDetailIds.has(studentId))loadedStudentDetailIds.add(studentId);
+  return true;
+}
+function mergeStudentDetailEntitlementResult(entitlement={},ledger={}){
+  const studentId=String(entitlement.studentId||ledger.studentId||'').trim();
+  const entitlementId=String(entitlement.id||ledger.entitlementId||'').trim();
+  if(!studentId||!entitlementId)return false;
+  const existingDetail=studentDetailViewForId(studentId);
+  if(!existingDetail&&!loadedStudentDetailIds.has(studentId))return false;
+  const purchase=purchases.find(row=>String(row?.id||'')===String(entitlement.purchaseId||''))||{};
+  const currentRows=Array.isArray(existingDetail?.detailPackageOrderRows)?existingDetail.detailPackageOrderRows:[];
+  const existingRow=currentRows.find(row=>String(row?.entitlementId||'')===entitlementId)||{};
+  const nextRow={
+    ...existingRow,
+    ...studentDetailPackageOrderRowFromPurchaseResult({...purchase,studentId,purchaseId:entitlement.purchaseId},entitlement),
+    purchaseDate:existingRow.purchaseDate||purchase.purchaseDate||String(entitlement.validFrom||entitlement.createdAt||'').slice(0,10)
+  };
+  const detailPackageOrderRows=[
+    nextRow,
+    ...currentRows.filter(row=>String(row?.entitlementId||'')!==entitlementId)
+  ].sort((a,b)=>String(b.purchaseDate||'').localeCompare(String(a.purchaseDate||'')));
+  const currentLessonRows=Array.isArray(existingDetail?.detailLessonRecordRows)?existingDetail.detailLessonRecordRows:[];
+  const ledgerId=String(ledger.id||'').trim();
+  const detailLessonRecordRows=ledgerId
+    ? [
+      {
+        kind:'ledger',
+        id:ledgerId,
+        ledgerId,
+        entitlementId,
+        purchaseId:String(entitlement.purchaseId||ledger.purchaseId||''),
+        studentId,
+        scheduleId:String(ledger.scheduleId||''),
+        courseType:String(entitlement.courseType||ledger.courseType||''),
+        packageName:String(entitlement.packageName||existingRow.packageName||purchase.packageName||''),
+        lessonDelta:Number(ledger.lessonDelta)||0,
+        action:String(ledger.action||''),
+        reason:String(ledger.reason||''),
+        relatedDate:String(ledger.relatedDate||ledger.sourceDate||ledger.createdAt||'').slice(0,10),
+        time:String(ledger.scheduleTime||ledger.relatedDate||ledger.sourceDate||ledger.createdAt||'')
+      },
+      ...currentLessonRows.filter(row=>String(row?.id||row?.ledgerId||'')!==ledgerId)
+    ]
+    : currentLessonRows;
+  markStudentDetailLocalMutation(studentId);
+  mergeTeachingStudentDetail(recalculateStudentDetailPackageBalance({
+    ...(existingDetail||{}),
+    id:studentId,
+    studentId,
+    detailPackageOrderRows,
+    detailLessonRecordRows
+  }));
   return true;
 }
 function leadFollowupsDetailReady(leadId){

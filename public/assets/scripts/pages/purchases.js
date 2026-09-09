@@ -878,7 +878,13 @@ function patchManualEntitlementAdjustResult(result){
     const i=entitlements.findIndex(e=>e.id===result.entitlement.id);
     if(i>=0)entitlements[i]=result.entitlement;else entitlements.unshift(result.entitlement);
   }
-  if(result?.ledger)entitlementLedger.unshift(result.ledger);
+  if(result?.ledger){
+    if(typeof rememberLocalEntitlementLedgerRows==='function')rememberLocalEntitlementLedgerRows([result.ledger]);
+    entitlementLedger.unshift(result.ledger);
+  }
+  if(result?.entitlement&&typeof mergeStudentDetailEntitlementResult==='function'){
+    mergeStudentDetailEntitlementResult(result.entitlement,result.ledger||{});
+  }
 }
 async function saveManualEntitlementAdjust(entitlementId, action){
   const overlay=document.getElementById('overlay');
