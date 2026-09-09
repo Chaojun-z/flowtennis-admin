@@ -599,7 +599,7 @@ function standardCourtUsageType(row = {}) {
   });
   if (COURT_USAGE_TYPES.some(item => item.label === normalized.level2)) return normalized.level2;
   const text = rowLabel(row, ['displayBusinessType', 'category', 'type', 'name', 'label', 'businessName', 'sourceProject', 'sourceCategory'], '');
-  if (/免费/.test(text)) return '内部使用';
+  if (/免费|内部|装修|维护|锁场|不可售|占用/.test(text)) return '内部使用';
   const match = COURT_USAGE_TYPES.find(item => text.includes(item.label) || text.includes(item.label.replace('订场', '场地使用')));
   return match?.label || '';
 }
@@ -632,13 +632,54 @@ function normalizeFinancialLedgerRows(raw = {}) {
     }));
 }
 
-function weeklyFinanceRows(raw = {}, period = {}) {
-  const financialLedgerRows = normalizeFinancialLedgerRows(raw);
-  const sourceRows = financialLedgerRows.length ? financialLedgerRows : normalizeRows(raw.financeNormalizedRows);
-  return sourceRows
+function financeRowsForPeriod(rows = [], period = {}) {
+  return normalizeRows(rows)
     .filter(row => !row.differenceReason)
     .filter(row => financeCampusMatches(row))
     .filter(row => inOptionalPeriod(row.businessDate || row.date || row.purchaseDate || row.relatedDate || row.createdAt, period));
+}
+
+function financeSourceCompletenessScore(rows = [], period = {}) {
+  const periodRows = financeRowsForPeriod(rows, period);
+  const receiptRows = periodRows.filter(isFinanceReceipt);
+  const recognizedRows = periodRows.filter(row => fieldNumber(row, ['recognizedRevenueDelta']) !== 0);
+  const has = predicate => periodRows.some(predicate) ? 1 : 0;
+  const categoryScore = [
+    has(row => isCourseFinanceRow(row) && isFinanceReceipt(row)),
+    has(row => isStoredValueFinanceRow(row) && isFinanceReceipt(row)),
+    has(row => isGuestBookingFinanceRow(row) && isFinanceReceipt(row)),
+    has(row => isCourseFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0),
+    has(row => isMemberBookingFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0),
+    has(row => isGuestBookingFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0)
+  ].reduce((sum, value) => sum + value, 0);
+  return {
+    rowCount: periodRows.length,
+    categoryScore,
+    cashAmount: financeSum(receiptRows, 'cashDelta'),
+    recognizedAmount: financeSum(recognizedRows, 'recognizedRevenueDelta')
+  };
+}
+
+function financeSourceScoreValue(score = {}) {
+  return score.categoryScore * 1000000
+    + score.rowCount * 1000
+    + numberValue(score.cashAmount + score.recognizedAmount);
+}
+
+function selectWeeklyFinanceSourceRows(raw = {}, period = {}) {
+  const financialLedgerRows = normalizeFinancialLedgerRows(raw);
+  const normalizedRows = normalizeRows(raw.financeNormalizedRows);
+  if (!financialLedgerRows.length) return normalizedRows;
+  if (!normalizedRows.length) return financialLedgerRows;
+  const ledgerScore = financeSourceCompletenessScore(financialLedgerRows, period);
+  const normalizedScore = financeSourceCompletenessScore(normalizedRows, period);
+  return financeSourceScoreValue(normalizedScore) > financeSourceScoreValue(ledgerScore)
+    ? normalizedRows
+    : financialLedgerRows;
+}
+
+function weeklyFinanceRows(raw = {}, period = {}) {
+  return financeRowsForPeriod(selectWeeklyFinanceSourceRows(raw, period), period);
 }
 
 function financeAction(row = {}) {
@@ -667,7 +708,13 @@ function isMemberBookingFinanceRow(row = {}) {
 
 function isGuestBookingFinanceRow(row = {}) {
   const type = financeTypeText(row);
-  return type === '散客订场' || type === '约球局' || standardCourtUsageType(row) === '散客订场' || standardCourtUsageType(row) === '约球局';
+  const usageType = standardCourtUsageType(row);
+  return type === '散客订场'
+    || type === '约球局'
+    || type === '课程订场'
+    || usageType === '散客订场'
+    || usageType === '约球局'
+    || usageType === '课程订场';
 }
 
 function financeSum(rows = [], key = '') {
@@ -995,6 +1042,12 @@ function resolveTrailingWeeklyPeriods(period = {}, count = 8) {
   return rows;
 }
 
+function weeklyRawHasFactsInPeriod(raw = {}, period = {}) {
+  return weeklyFinanceRows(raw, period).length > 0
+    || completedCourseScheduleRows(raw, period).length > 0
+    || courtHistoryRows(raw, period).length > 0;
+}
+
 function buildWeeklyTrendRows({ period = {}, operationsPayload = {}, previousOperationsPayload = {}, trendOperationsPayloads = [] } = {}) {
   const byKey = new Map();
   const pushPayload = (targetPeriod = {}, payload = {}) => {
@@ -1010,12 +1063,21 @@ function buildWeeklyTrendRows({ period = {}, operationsPayload = {}, previousOpe
       businessRevenue: finance.businessRevenue,
       cashReceived: finance.cashReceived,
       courtUtilizationRate: numberValue(sections.court?.utilizationRate || 0),
-      coachHours: numberValue(sections.coach?.totalHours || 0)
+      coachHours: numberValue(sections.revenue?.course?.completedHours ?? sections.coach?.totalHours ?? 0)
     });
   };
   pushPayload({ startDate: period.previousStartDate, endDate: period.previousEndDate }, previousOperationsPayload);
   pushPayload(period, operationsPayload);
   normalizeRows(trendOperationsPayloads).forEach(item => pushPayload(item.period || {}, item.payload || item));
+  const raw = operationsPayload.weeklyReportRaw || {};
+  if (byKey.size < 8 && weeklyRawHasFactsInPeriod(raw, {})) {
+    resolveTrailingWeeklyPeriods(period, 8).forEach(targetPeriod => {
+      const key = `${targetPeriod.startDate}:${targetPeriod.endDate}`;
+      if (!byKey.has(key) && weeklyRawHasFactsInPeriod(raw, targetPeriod)) {
+        pushPayload(targetPeriod, { operations: {}, weeklyReportRaw: raw });
+      }
+    });
+  }
   return Array.from(byKey.values()).sort((a, b) => String(a.endDate).localeCompare(String(b.endDate))).slice(-8);
 }
 
@@ -1042,7 +1104,11 @@ function buildWeeklyBusinessReportSnapshot({
   const totalLeads = cardValue(operations, ['conversion', 'cards', 'totalLeads']);
   const reportSections = buildWeeklyReportSections(operations, previous, { period, raw, previousRaw, financeSummary, trendOperationsPayloads });
   const utilizationRate = numberValue(reportSections.court?.utilizationRate ?? cardValue(operations, ['court', 'cards', 'utilizationRate']));
-  const coachHours = numberValue(reportSections.coach?.totalHours ?? cardValue(operations, ['coach', 'cards', 'usedHours']));
+  const completedCourseHours = optionalNumber(reportSections.revenue?.course?.completedHours);
+  const coachHours = numberValue(completedCourseHours ?? reportSections.coach?.totalHours ?? cardValue(operations, ['coach', 'cards', 'usedHours']));
+  const coachHoursCompare = completedCourseHours !== null && reportSections.revenue?.course?.compare?.completedHours
+    ? reportSections.revenue.course.compare.completedHours
+    : (reportSections.coach?.compare?.totalHours || compareMetric(coachHours, cardValue(previous, ['coach', 'cards', 'usedHours'])));
   const lifetimeTotalIncome = cardValue(totalOperations, ['overview', 'cards', 'totalIncome']);
   const lifetimeCourtUtilizationRate = cardValue(totalOperations, ['court', 'cards', 'utilizationRate']) || utilizationRate;
   const lifetimePrivateCoursePeople = buildLifetimePrivateCoursePeople(totalRaw)
@@ -1069,7 +1135,7 @@ function buildWeeklyBusinessReportSnapshot({
       recognizedRevenue: { value: financeSummary.businessRevenue, compare: financeSummary.compare.businessRevenue },
       courtUsageHours: { value: numberValue(reportSections.court?.actualUsedHours || 0) },
       courtUtilizationRate: { value: utilizationRate, compare: reportSections.court?.compare?.utilizationRate || compareMetric(utilizationRate, cardValue(previous, ['court', 'cards', 'utilizationRate'])) },
-      coachHours: { value: coachHours, compare: reportSections.coach?.compare?.totalHours || compareMetric(coachHours, cardValue(previous, ['coach', 'cards', 'usedHours'])) },
+      coachHours: { value: coachHours, compare: coachHoursCompare },
       totalLeads: { value: totalLeads, compare: compareMetric(totalLeads, cardValue(previous, ['conversion', 'cards', 'totalLeads'])) }
     },
     sections: {

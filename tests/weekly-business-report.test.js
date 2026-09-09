@@ -562,6 +562,91 @@ assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.newAmou
 assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.redeemedAmount, 300, 'stored value report should fall back to indexed member booking amount for current-week redemption');
 assert.strictEqual(storedValueIndexSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 2.5, 'court usage should use indexed member booking hours when court history is not loaded');
 
+const realDataHardGatePeriods = [
+  ['2026-07-02', '2026-07-09'],
+  ['2026-07-10', '2026-07-17'],
+  ['2026-07-18', '2026-07-25'],
+  ['2026-07-26', '2026-08-02'],
+  ['2026-08-03', '2026-08-10'],
+  ['2026-08-11', '2026-08-18']
+];
+const realDataHardGateFinanceRows = [
+  ...realDataHardGatePeriods.flatMap(([startDate]) => [
+    { id: `trend-cash-${startDate}`, campusName: '顺义马坡', businessDate: startDate, businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0 },
+    { id: `trend-consume-${startDate}`, campusName: '顺义马坡', businessDate: startDate, businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 800 },
+    { id: `trend-booking-${startDate}`, campusName: '顺义马坡', businessDate: startDate, businessType: '散客订场', displayBusinessType: '场地 / 散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200, timeText: '10:00-11:00' }
+  ]),
+  { id: 'previous-course-cash', campusName: '顺义马坡', businessDate: '2026-08-20', businessType: '课程', action: '收款', cashDelta: 19131, recognizedRevenueDelta: 0 },
+  { id: 'previous-stored-cash', campusName: '顺义马坡', businessDate: '2026-08-21', businessType: '会员储值', action: '收款', cashDelta: 6000, recognizedRevenueDelta: 0 },
+  { id: 'previous-guest-cash', campusName: '顺义马坡', businessDate: '2026-08-22', businessType: '散客订场', displayBusinessType: '场地 / 散客订场', action: '收款', cashDelta: 7686, recognizedRevenueDelta: 7686, timeText: '10:00-11:00' },
+  { id: 'previous-course-consume', campusName: '顺义马坡', businessDate: '2026-08-23', businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 40518 },
+  { id: 'previous-member-consume', campusName: '顺义马坡', businessDate: '2026-08-24', businessType: '会员订场', displayBusinessType: '场地 / 会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 8025, timeText: '11:00-12:00' },
+  { id: 'real-course-cash', campusName: '顺义马坡', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 37991.99, recognizedRevenueDelta: 0 },
+  { id: 'real-stored-cash', campusName: '顺义马坡', businessDate: '2026-08-29', businessType: '会员储值', action: '收款', cashDelta: 4000, recognizedRevenueDelta: 0 },
+  { id: 'real-guest-cash', campusName: '顺义马坡', businessDate: '2026-08-30', businessType: '散客订场', displayBusinessType: '场地 / 散客订场', action: '收款', cashDelta: 6424, recognizedRevenueDelta: 6424, timeText: '10:00-11:00' },
+  { id: 'real-course-booking-cash', campusName: '顺义马坡', businessDate: '2026-08-31', businessType: '课程订场', displayBusinessType: '场地 / 课程订场', action: '收款', cashDelta: 880, recognizedRevenueDelta: 880, timeText: '12:00-16:00' },
+  { id: 'real-course-consume', campusName: '顺义马坡', businessDate: '2026-09-01', businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 26658.39 },
+  { id: 'real-member-consume', campusName: '顺义马坡', businessDate: '2026-09-02', businessType: '会员订场', displayBusinessType: '场地 / 会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 4557, timeText: '17:00-18:00' }
+];
+const realDataHardGateScheduleRows = [
+  ...realDataHardGatePeriods.map(([startDate]) => ({ id: `trend-schedule-${startDate}`, coach: '朝珺教练', studentName: '趋势学员', courseType: '私教课', startTime: `${startDate} 10:00:00`, endTime: `${startDate} 11:00:00`, status: '已下课', campus: 'shunyi_mapo', venue: '1号场' })),
+  { id: 'previous-schedule', coach: '朝珺教练', studentName: '上周学员', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已下课', campus: 'shunyi_mapo', venue: '1号场' },
+  { id: 'real-schedule-a', coach: '朝珺教练', studentName: '本周学员A', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 10:30:00', status: '已下课', campus: 'shunyi_mapo', venue: '1号场', durationHours: 40.5 },
+  { id: 'real-schedule-b', coach: '刘润扬教练', studentName: '本周学员B', courseType: '小班课', startTime: '2026-08-29 10:00:00', endTime: '2026-08-29 10:30:00', status: '已下课', campus: 'shunyi_mapo', venue: '2号场', durationHours: 40 },
+  { id: 'real-schedule-xiaolu', coach: '小鹿教练', studentName: '本周学员C', courseType: '私教课', startTime: '2026-08-30 10:00:00', endTime: '2026-08-30 12:00:00', status: '已下课', campus: 'shunyi_mapo', venue: '3号场', durationHours: 2 }
+];
+const realDataHardGateSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {
+      overview: { cards: { totalIncome: { value: 29199 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } },
+      coach: { cards: { usedHours: { value: 80.5 } } },
+      court: { cards: { utilizationRate: { value: 29.46 } } }
+    },
+    weeklyReportRaw: {
+      coaches: [{ name: '朝珺', status: '在职' }, { name: '刘润扬', status: '在职' }, { name: '小鹿', status: '在职' }],
+      schedule: realDataHardGateScheduleRows,
+      courts: [
+        { id: 'real-internal-court', campus: 'shunyi_mapo', history: [
+          { id: 'real-renovation-0831', type: '消费', category: '全天装修锁场', date: '2026-08-31', startTime: '2026-08-31 08:00:00', endTime: '2026-08-31 22:00:00', amount: 0 },
+          { id: 'real-renovation-0901', type: '消费', category: '装修维护内部使用', date: '2026-09-01', startTime: '2026-09-01 08:00:00', endTime: '2026-09-01 22:00:00', amount: 0 }
+        ] }
+      ],
+      financialLedger: [
+        { id: 'incomplete-ledger-a', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-27', businessType: '课程订场', action: '收款', cashDelta: 22000, recognizedRevenueDelta: 22000 },
+        { id: 'incomplete-ledger-b', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-29', businessType: '课程订场', action: '收款', cashDelta: 22000, recognizedRevenueDelta: 22000 },
+        { id: 'incomplete-ledger-c', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-29', businessType: '课程订场', action: '收款', cashDelta: 22000, recognizedRevenueDelta: 22000 },
+        { id: 'incomplete-ledger-d', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-29', businessType: '课程订场', action: '收款', cashDelta: 22000, recognizedRevenueDelta: 22000 },
+        { id: 'incomplete-ledger-e', status: 'active', campus: 'shunyi_mapo', businessDate: '2026-08-30', businessType: '课程订场', action: '收款', cashDelta: 44000, recognizedRevenueDelta: 44000 }
+      ],
+      financeNormalizedRows: realDataHardGateFinanceRows
+    }
+  },
+  previousOperationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } } },
+    weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows }
+  },
+  shareToken: 'real-data-hard-gate',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.receipts.totalAmount, 49295.99, 'real hard gate: weekly cash received must use the complete platform finance facts');
+assert.strictEqual(realDataHardGateSnapshot.summary.totalIncome.value, 38519.39, 'real hard gate: weekly business revenue must use complete recognized revenue facts');
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.courseConsumedRevenue, 26658.39, 'real hard gate: course consumed revenue must not drop to zero');
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.memberBookingConsumedRevenue, 4557, 'real hard gate: member booking consumed revenue must use finance facts');
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.receipts.bookingAmount, 7304, 'real hard gate: weekly booking receipts should include guest bookings and course court fees');
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.guestBookingRevenue, 7304, 'real hard gate: paid booking revenue should include course court fees');
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.receipts.storedValueAmount, 4000, 'real hard gate: stored value receipts must use finance facts');
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.course.completedHours, 82.5, 'real hard gate: completed course hours must use all valid finished calendar lessons');
+assert.strictEqual(realDataHardGateSnapshot.summary.coachHours.value, 82.5, 'real hard gate: top completed hours must not keep the stale 80.5 card');
+assert.strictEqual(realDataHardGateSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 82.5, 'real hard gate: course court occupancy must equal completed schedule hours');
+assert.strictEqual(realDataHardGateSnapshot.sections.court.usageRows.find(row => row.key === 'free')?.hours, 28, 'real hard gate: renovation and locked courts must be counted as internal use');
+assert.strictEqual(realDataHardGateSnapshot.sections.trends.length, 8, 'real hard gate: weekly trends must be rebuilt to eight periods from facts');
+realDataHardGateSnapshot.sections.trends.forEach(row => {
+  ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours'].forEach(key => {
+    assert.ok(Number(row[key]) > 0, `real hard gate: ${key} must not be zero for ${row.label}`);
+  });
+});
+
 const html = renderWeeklyBusinessReportHtml(snapshot, { remark: '本周雨天影响场地。' });
 assert.match(html, /顺义马坡周报/, 'HTML should render the report title');
 assert.match(html, /2026-08-27 - 2026-09-03（第 36 周）/, 'HTML should render the period week number in the top-right date pill');
