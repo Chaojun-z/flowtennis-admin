@@ -627,7 +627,7 @@ function trendLabelVisible(key = '', view = 'week', index = 0, total = 0) {
 
 function trendValueText(units = 0, view = 'week') {
   const n = Number(units) || 0;
-  if (!n || view === 'month' || view === 'all') return '';
+  if (!n || view === 'month') return '';
   return formatCoachStatsNumber(n);
 }
 
@@ -642,6 +642,41 @@ function coachStatsInlineLocationText(value = '') {
   return String(value || '').trim()
     .replace(/\s*·\s*/g, ' ')
     .replace(/(\d+)号场/g, '$1 号场');
+}
+
+function coachStatsLooksLikeInternalId(value = '') {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{8,12}$/i.test(String(value || '').trim());
+}
+
+function coachStatsStudentNameMap(students = []) {
+  const map = new Map();
+  (students || []).forEach(item => {
+    const name = firstNonEmpty(item && item.name, item && item.studentName, item && item.studentDisplayName);
+    if (!name || coachStatsLooksLikeInternalId(name)) return;
+    [item.id, item.studentId, item.courseStudentId].map(value => String(value || '').trim()).filter(Boolean).forEach(id => map.set(id, name));
+  });
+  return map;
+}
+
+function coachStatsCompactStudentText(names = []) {
+  const uniqueNames = [...new Set((names || []).map(item => String(item || '').trim()).filter(Boolean))];
+  if (uniqueNames.length > 2) return `${uniqueNames.slice(0, 2).join('、')} 等${uniqueNames.length}人`;
+  return uniqueNames.join('、') || '未填写学员';
+}
+
+function coachStatsStudentText(item = {}, studentNameMap = new Map()) {
+  const ids = [
+    ...studentIdsOf(item),
+    item.studentId,
+    item.courseStudentId,
+    item.primaryStudentId
+  ].map(value => String(value || '').trim()).filter(Boolean);
+  const idNames = ids.map(id => studentNameMap.get(id)).filter(Boolean);
+  const rawNames = String(firstNonEmpty(item.studentText, item.student, item.studentName, item.studentDisplayName))
+    .split(/[、,，|/]/)
+    .map(name => name.trim())
+    .filter(name => name && !coachStatsLooksLikeInternalId(name));
+  return coachStatsCompactStudentText([...idNames, ...rawNames]);
 }
 
 function coachStatsTrendUiState(view = 'week', trendCount = 0) {
@@ -756,8 +791,9 @@ function coachStatsTimeText(item = {}) {
   return start && end ? `${start}-${end}` : start || end || '';
 }
 
-function buildLocalCoachStatsData({ schedule = [], campuses = [], view = 'all', offset = 0, now = new Date() } = {}) {
+function buildLocalCoachStatsData({ schedule = [], campuses = [], students = [], view = 'all', offset = 0, now = new Date() } = {}) {
   const range = coachStatsRangeBounds(view, offset, now);
+  const studentNameMap = coachStatsStudentNameMap(students);
   const normalized = (schedule || [])
     .filter(item => scheduleEnded(item, now))
     .filter(item => {
@@ -772,7 +808,7 @@ function buildLocalCoachStatsData({ schedule = [], campuses = [], view = 'all', 
       dateKey: coachStatsDateKey(item),
       timeText: coachStatsTimeText(item),
       locationText: String(item.locationText || item.loc || scheduleLocationText(item) || '').trim(),
-      studentText: String(item.studentText || item.student || item.studentName || '').trim() || '未填写学员',
+      studentText: coachStatsStudentText(item, studentNameMap),
       courseTypeText: String(item.courseType || item.type || item.title || item.standardCourseType || item.experienceType || '').trim() || '私教课'
     }));
   const totalLessonUnits = normalized.reduce((sum, item) => sum + Number(item.lessonUnits || 0), 0);
@@ -2534,6 +2570,7 @@ Page({
       const fallback = buildLocalCoachStatsData({
         schedule: this.data.schedule || [],
         campuses: this.data.campusesRaw || [],
+        students: this.data.studentsRaw || [],
         view: this.data.coachStatsView,
         offset: this.data.coachStatsOffset,
         now: new Date()

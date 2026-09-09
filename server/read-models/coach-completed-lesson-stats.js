@@ -30,6 +30,35 @@ function parseArr(value) {
   return raw.split(/[,，、]/).map(item => text(item)).filter(Boolean);
 }
 
+function looksLikeInternalId(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{8,12}$/i.test(text(value));
+}
+
+function studentIdsOf(row = {}) {
+  return [
+    row.studentId,
+    row.courseStudentId,
+    row.primaryStudentId,
+    ...parseArr(row.studentIds)
+  ].map(text).filter(Boolean);
+}
+
+function buildStudentNameMap(students = []) {
+  const map = new Map();
+  (students || []).forEach(row => {
+    const name = text(row.name || row.studentName || row.studentDisplayName);
+    if (!name || looksLikeInternalId(name)) return;
+    [row.id, row.studentId, row.courseStudentId].map(text).filter(Boolean).forEach(id => map.set(id, name));
+  });
+  return map;
+}
+
+function compactStudentNames(names = []) {
+  const uniqueNames = [...new Set((names || []).map(text).filter(Boolean))];
+  if (uniqueNames.length > 2) return `${uniqueNames.slice(0, 2).join('、')} 等${uniqueNames.length}人`;
+  return uniqueNames.join('、') || '未填写学员';
+}
+
 function dateMs(value) {
   if (!value) return NaN;
   if (value instanceof Date) return value.getTime();
@@ -167,11 +196,13 @@ function preciseCourseType(row = {}) {
   return text(row.standardCourseType) || text(row.courseType) || normalizeCoachCourseType(row);
 }
 
-function studentText(row = {}) {
-  const names = [...parseArr(row.studentNames), row.studentName, row.studentDisplayName]
+function studentText(row = {}, studentNameMap = new Map()) {
+  const idNames = studentIdsOf(row).map(id => studentNameMap.get(id)).filter(Boolean);
+  const names = [...idNames, ...parseArr(row.studentNames), row.studentName, row.studentDisplayName]
     .map(text)
+    .filter(name => !looksLikeInternalId(name))
     .filter(Boolean);
-  return [...new Set(names)].join('、') || '未填写学员';
+  return compactStudentNames(names);
 }
 
 function buildCampusMap(campuses = []) {
@@ -227,9 +258,10 @@ function inRange(row = {}, range = {}) {
   return !!key && key >= range.startDate && key <= range.endDate;
 }
 
-function buildCoachCompletedLessonStats({ schedule = [], campuses = [], user = {}, coachName = '', view = 'week', startDate = '', endDate = '', now = new Date(), offset = 0 } = {}) {
+function buildCoachCompletedLessonStats({ schedule = [], campuses = [], students = [], user = {}, coachName = '', view = 'week', startDate = '', endDate = '', now = new Date(), offset = 0 } = {}) {
   const range = normalizeRange({ view, startDate, endDate, now, offset });
   const campusMap = buildCampusMap(campuses);
+  const studentNameMap = buildStudentNameMap(students);
   const rows = (Array.isArray(schedule) ? schedule : [])
     .filter(row => matchesCoach(row, user, coachName))
     .filter(row => effectiveScheduleStatus(row, now) === '已结束')
@@ -287,7 +319,7 @@ function buildCoachCompletedLessonStats({ schedule = [], campuses = [], user = {
           lessonUnits: row.lessonUnits,
           courseTypeText: preciseCourseType(row),
           courseTypeGroup: row.courseTypeGroup,
-          studentText: studentText(row),
+          studentText: studentText(row, studentNameMap),
           locationText: locationText(row, campusMap)
         }))
       };

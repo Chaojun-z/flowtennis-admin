@@ -91,11 +91,39 @@ const schedule = [
     status: '已结束',
     courseType: '私教课',
     lessonCount: 1
+  },
+  {
+    id: 'member-student-name',
+    coach: '朝珺',
+    studentId: 'student-member-001',
+    studentName: 'c5282446-d54b-4d72-92c3-b264c9000000',
+    startTime: '2026-09-08 06:00:00',
+    endTime: '2026-09-08 07:00:00',
+    status: '已结束',
+    courseType: '私教课',
+    campusName: '顺义马坡',
+    venue: '3号场',
+    lessonCount: 1
+  },
+  {
+    id: 'small-group-many',
+    coach: '朝珺',
+    studentNames: ['艾斯', 'Jerry', 'Jerry老婆', '陈雨莹'],
+    startTime: '2026-09-08 07:00:00',
+    endTime: '2026-09-08 08:00:00',
+    status: '已结束',
+    courseType: '小班课',
+    campusName: '顺义马坡',
+    venue: '4号场',
+    lessonCount: 1
   }
 ];
 
 const result = buildCoachCompletedLessonStats({
   schedule,
+  students: [
+    { id: 'student-member-001', name: '会员小王' }
+  ],
   user: { role: 'editor', name: '朝珺', coachName: '朝珺', coachId: 'coach-001' },
   view: 'week',
   startDate: '2026-09-07',
@@ -104,12 +132,12 @@ const result = buildCoachCompletedLessonStats({
 });
 
 assert.strictEqual(result.metricSource.matchesAdminMetric, true, 'stats should declare admin metric alignment');
-assert.strictEqual(result.summary.totalLessonUnits, 4.5, 'total should sum lessonCount first and only fall back to duration when lessonCount is missing');
+assert.strictEqual(result.summary.totalLessonUnits, 6.5, 'total should sum lessonCount first and only fall back to duration when lessonCount is missing');
 assert.deepStrictEqual(
   result.summary.typeHighlights,
   [
-    { type: '私教课', lessonUnits: 3 },
-    { type: '小班课', lessonUnits: 1 },
+    { type: '私教课', lessonUnits: 4 },
+    { type: '小班课', lessonUnits: 2 },
     { type: '体验课', lessonUnits: 0.5 }
   ],
   'type highlights should use admin coach course grouping and lesson units'
@@ -117,9 +145,9 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
   result.byType.map(row => ({ type: row.type, lessonUnits: row.lessonUnits, percent: row.percent })),
   [
-    { type: '私教课', lessonUnits: 3, percent: 66.7 },
-    { type: '小班课', lessonUnits: 1, percent: 22.2 },
-    { type: '体验课', lessonUnits: 0.5, percent: 11.1 }
+    { type: '私教课', lessonUnits: 4, percent: 61.5 },
+    { type: '小班课', lessonUnits: 2, percent: 30.8 },
+    { type: '体验课', lessonUnits: 0.5, percent: 7.7 }
   ],
   'byType should expose admin grouped course mix'
 );
@@ -127,7 +155,7 @@ assert.deepStrictEqual(
   result.trend.map(row => ({ key: row.key, lessonUnits: row.lessonUnits })),
   [
     { key: '2026-09-07', lessonUnits: 1 },
-    { key: '2026-09-08', lessonUnits: 3.5 },
+    { key: '2026-09-08', lessonUnits: 5.5 },
     { key: '2026-09-09', lessonUnits: 0 },
     { key: '2026-09-10', lessonUnits: 0 },
     { key: '2026-09-11', lessonUnits: 0 },
@@ -139,7 +167,7 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
   result.detailGroups.map(group => ({ key: group.key, lessonUnits: group.lessonUnits, count: group.items.length })),
   [
-    { key: '2026-09-08', lessonUnits: 3.5, count: 4 },
+    { key: '2026-09-08', lessonUnits: 5.5, count: 6 },
     { key: '2026-09-07', lessonUnits: 1, count: 1 }
   ],
   'detail groups should be ordered newest date first and include completed lessons only'
@@ -153,6 +181,21 @@ assert.strictEqual(
   result.detailGroups[0].items.find(item => item.courseTypeText === '大师课').courseTypeText,
   '大师课',
   'detail can show the precise course type while summary groups as 小班课'
+);
+assert.strictEqual(
+  result.detailGroups[0].items.find(item => item.id === 'member-student-name').studentText,
+  '会员小王',
+  'detail should map student ids to real student names instead of exposing internal ids'
+);
+assert.strictEqual(
+  result.detailGroups[0].items.find(item => item.id === 'small-group-many').studentText,
+  '艾斯、Jerry 等4人',
+  'small group detail should keep the row compact when more than two students attend'
+);
+assert.doesNotMatch(
+  result.detailGroups[0].items.find(item => item.id === 'small-group-many').studentText,
+  /Jerry老婆|陈雨莹/,
+  'small group compact text should not list every student'
 );
 
 console.log('coach completed lesson stats tests passed');

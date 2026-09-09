@@ -12,6 +12,11 @@ function readText(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
+function cssBlock(source, selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return (source.match(new RegExp(`${escaped}\\s*\\{[^}]*\\}`)) || [''])[0];
+}
+
 const projectConfig = readJson('wechat-miniprogram/project.config.json');
 assert.strictEqual(projectConfig.miniprogramRoot, 'miniprogram/', 'project.config.json should point to miniprogram/');
 assert.strictEqual(projectConfig.appid, 'wx7acb7603ee803923', 'project.config.json should use the real mini program AppID');
@@ -612,13 +617,21 @@ assert.match(scheduleWxss, /\.students-summary\s*\{[\s\S]*width:\s*361px;[\s\S]*
 assert.match(scheduleWxss, /\.stats-summary-card\s*\{[\s\S]*height:\s*150px;/i, 'stats summary card should keep enough stable height for the total and highlights');
 assert.doesNotMatch(scheduleWxss.match(/\.stats-summary-value\s*\{[^}]*\}/)[0], /font-family:\s*Courier,\s*monospace;/, 'stats summary number should reuse the same font family as dashboard metrics');
 assert.match(scheduleJs, /if \(view === 'year'\)[\s\S]*`\$\{month\}月`/, 'year trend should render compact month labels on mobile');
-assert.match(scheduleJs, /if \(!n \|\| view === 'month' \|\| view === 'all'\) return '';/, 'monthly and all-time trends should prioritize readable x-axis labels over dense value text');
 assert.match(scheduleJs, /function coachStatsDetailDateLabel[\s\S]*`\$\{month\}\.\$\{day\} 日`/, 'stats detail date groups should use compact mobile date labels');
 assert.match(scheduleJs, /function coachStatsInlineLocationText[\s\S]*·[\s\S]*号场[\s\S]*'\$1 号场'/, 'stats detail location should be compacted for a single mobile row');
 assert.match(scheduleWxss, /\.stats-trend-month\s+\.stats-trend-label\.is-hidden\s*\{[\s\S]*visibility:\s*hidden;/, 'month trend should keep daily bars while sampling x-axis labels');
 assert.match(scheduleJs, /coachStatsTrendStyle:\s*safeView === 'all' \? `width:\$\{Math\.max\(361, count \* 46\)\}px;` : ''/, 'all-time trend should aggregate by month and scroll with a concrete mini-program width');
-assert.match(scheduleWxss, /\.stats-trend-all\s+\.stats-trend-value\s*\{[\s\S]*display:\s*none;/, 'all-time trend should show month nodes instead of unlabeled value rows');
+assert.match(scheduleJs, /if \(!n \|\| view === 'month'\) return '';/, 'all-time trend should show values like year view while monthly view still samples labels');
+assert.doesNotMatch(cssBlock(scheduleWxss, '.stats-trend-all .stats-trend-value'), /display:\s*none;/, 'all-time trend should not hide value text');
+assert.match(cssBlock(scheduleWxss, '.stats-trend-all .stats-trend-value'), /display:\s*block;/, 'all-time trend should show lesson values above month labels');
 assert.match(scheduleWxss, /\.stats-detail-item\s*\{[\s\S]*height:\s*34px;[\s\S]*flex-wrap:\s*nowrap;[\s\S]*overflow:\s*hidden;/, 'stats detail rows should stay on one line');
+assert.match(cssBlock(scheduleWxss, '.stats-detail-item'), /gap:\s*8px;/, 'stats detail rows should leave readable spacing between time, course, student, and location');
+assert.doesNotMatch(cssBlock(scheduleWxss, '.stats-detail-time'), /font-family:/, 'stats detail time should reuse the same app font instead of introducing a new font');
+assert.match(cssBlock(scheduleWxss, '.stats-detail-time'), /font-size:\s*11px;/, 'stats detail time should use the same compact size as the row');
+assert.match(cssBlock(scheduleWxss, '.stats-detail-title'), /font-size:\s*11px;/, 'stats detail course and student should use the same compact size as the row');
+assert.match(cssBlock(scheduleWxss, '.stats-detail-location'), /font-size:\s*11px;/, 'stats detail location should use the same compact size as the row');
+assert.match(cssBlock(scheduleWxss, '.stats-detail-location'), /margin-left:\s*auto;/, 'stats detail location should sit on the right side of the row');
+assert.match(cssBlock(scheduleWxss, '.stats-detail-location'), /text-align:\s*right;/, 'stats detail location text should align right');
 assert.match(scheduleWxss, /\.custom-nav-title\s*\{[\s\S]*font-size:\s*20px;[\s\S]*line-height:\s*26px;/i, 'top tab titles should use the requested 20px typography');
 assert.match(scheduleWxss, /\.loading-shell-top\s*\{[\s\S]*height:\s*210px;[\s\S]*background:\s*linear-gradient\(135deg,\s*#2b3a55 0%,\s*#1e2a38 100%\)/i, 'loading shell should keep the same dark header height and gradient');
 assert.match(scheduleWxss, /\.loading-shell-summary\s*\{[\s\S]*width:\s*361px;[\s\S]*height:\s*90px;[\s\S]*margin:\s*-45px auto 0;/i, 'loading shell summary card should overlap the header by 45px with the same 361x90 footprint');

@@ -702,18 +702,20 @@ function createCorePageDataRoutes(deps={}){
         const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
         const coachRefs=buildCoachRefs({coaches,users});
         const scheduleRowsPromise=user.role==='admin'?getScheduleListRows():getCoachScheduleRowsForUser(user,coachRefs);
-        const [campuses,schedule,feedbacks]=await Promise.all([
+        const [campuses,students,schedule,feedbacks]=await Promise.all([
           listCampusesWithDefaults(),
+          getFastStudentsRead({columns:COACH_SCHEDULE_STUDENT_PROJECTION_FIELDS}).catch(()=>cappedScan(T_STUDENTS)),
           scheduleRowsPromise,
           cappedScan(T_FEEDBACKS)
         ]);
-        const scoped=filterLoadAllForUser({campuses,schedule,feedbacks,coaches},user,coachRefs);
+        const scoped=filterLoadAllForUser({campuses,students,schedule,feedbacks,coaches},user,coachRefs);
         const now=new Date();
         const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
         const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,[],now).filter(row=>!row.isCancelled);
         return sendJson(res,buildCoachCompletedLessonStats({
           schedule:decoratedSchedule,
           campuses:scoped.campuses||[],
+          students:scoped.students||[],
           user,
           coachName:String(query?.get('coachName')||query?.get('coach')||'').trim(),
           view:String(query?.get('view')||'week').trim(),

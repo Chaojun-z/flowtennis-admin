@@ -2262,7 +2262,7 @@ button::after {
 }
 
 .stats-trend-all .stats-trend-value {
-  display: none;
+  display: block;
 }
 
 .stats-type-row {
@@ -2341,36 +2341,41 @@ button::after {
   padding: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   box-sizing: border-box;
   flex-wrap: nowrap;
   overflow: hidden;
 }
 
 .stats-detail-time {
-  width: 68px;
+  width: 76px;
   color: #64748b;
   font-size: 11px;
   line-height: 16px;
-  font-family: Courier, monospace;
   flex-shrink: 0;
   white-space: nowrap;
 }
 
 .stats-detail-title {
   color: #18233d;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 16px;
   font-weight: 600;
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stats-detail-location {
-  min-width: 0;
+  width: 104px;
+  margin-left: auto;
   color: #94a3b8;
   font-size: 11px;
   line-height: 16px;
+  text-align: right;
+  flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
