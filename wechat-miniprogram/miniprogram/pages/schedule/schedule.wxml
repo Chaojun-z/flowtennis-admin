@@ -320,7 +320,16 @@
           <view class="stats-view-segment">
             <view wx:for="{{coachStatsViewTabs}}" wx:key="key" class="stats-view-item {{item.className}}" data-view="{{item.key}}" bindtap="onCoachStatsViewTap">{{item.label}}</view>
           </view>
-          <view class="stats-range-row">
+          <view wx:if="{{coachStatsView === 'all'}}" class="stats-range-row stats-range-custom">
+            <picker mode="date" value="{{coachStatsAllStartDate}}" bindchange="onCoachStatsAllStartDateChange">
+              <text class="stats-range-date">{{coachStatsAllStartText}}</text>
+            </picker>
+            <text class="stats-range-separator">~</text>
+            <picker mode="date" value="{{coachStatsAllEndDate}}" bindchange="onCoachStatsAllEndDateChange">
+              <text class="stats-range-date">{{coachStatsAllEndText}}</text>
+            </picker>
+          </view>
+          <view wx:else class="stats-range-row">
             <view class="stats-range-btn" bindtap="prevCoachStatsRange"></view>
             <text class="stats-range-text">{{coachStatsRangeText}}</text>
             <view class="stats-range-btn stats-range-next" bindtap="nextCoachStatsRange"></view>

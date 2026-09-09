@@ -198,4 +198,40 @@ assert.doesNotMatch(
   'small group compact text should not list every student'
 );
 
+const defaultAllResult = buildCoachCompletedLessonStats({
+  schedule,
+  students: [
+    { id: 'student-member-001', name: '会员小王' }
+  ],
+  user: { role: 'editor', name: '朝珺', coachName: '朝珺', coachId: 'coach-001' },
+  view: 'all',
+  now
+});
+assert.strictEqual(defaultAllResult.range.startDate, '2026-09-07', 'all-time default range should expose the first completed lesson date');
+assert.strictEqual(defaultAllResult.range.endDate, '2026-09-08', 'all-time default range should expose the last completed lesson date');
+assert.deepStrictEqual(
+  defaultAllResult.trend.map(row => row.key),
+  ['2026-09'],
+  'all-time trend should aggregate completed lessons by month'
+);
+
+const customAllResult = buildCoachCompletedLessonStats({
+  schedule,
+  students: [
+    { id: 'student-member-001', name: '会员小王' }
+  ],
+  user: { role: 'editor', name: '朝珺', coachName: '朝珺', coachId: 'coach-001' },
+  view: 'all',
+  startDate: '2026-09-08',
+  endDate: '2026-09-08',
+  now
+});
+assert.strictEqual(customAllResult.range.startDate, '2026-09-08', 'custom all-time start date should be kept');
+assert.strictEqual(customAllResult.range.endDate, '2026-09-08', 'custom all-time end date should be kept');
+assert.deepStrictEqual(
+  customAllResult.detailGroups.map(group => group.key),
+  ['2026-09-08'],
+  'custom all-time range should filter detail rows by selected dates'
+);
+
 console.log('coach completed lesson stats tests passed');

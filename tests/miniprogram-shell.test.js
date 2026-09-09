@@ -166,6 +166,8 @@ assert.match(scheduleWxml, /shift-detail-sheet[\s\S]*班级详情[\s\S]*基础�
 assert.match(scheduleWxml, /wx:if="\{\{isStats\}\}"[\s\S]*已完成课时[\s\S]*课时趋势[\s\S]*课程类型[\s\S]*上课明细/, 'stats tab should render the completed lesson stats sections');
 assert.doesNotMatch(scheduleWxml, /统一口径/, 'stats tab should not expose internal metric wording to coaches');
 assert.match(scheduleWxml, /scroll-x="\{\{coachStatsTrendScrollable\}\}"[\s\S]*class="stats-trend-scroll \{\{coachStatsTrendScrollClass\}\}"/, 'stats trend should use controlled horizontal scrolling for long-cycle data');
+assert.match(scheduleWxml, /wx:if="\{\{coachStatsView === 'all'\}\}"[\s\S]*picker mode="date" value="\{\{coachStatsAllStartDate\}\}" bindchange="onCoachStatsAllStartDateChange"[\s\S]*picker mode="date" value="\{\{coachStatsAllEndDate\}\}" bindchange="onCoachStatsAllEndDateChange"/, 'all-time range should expose two date pickers for custom start and end dates');
+assert.match(scheduleWxml, /wx:else[\s\S]*stats-range-btn[\s\S]*coachStatsRangeText[\s\S]*stats-range-next/, 'week month and year ranges should keep previous and next controls');
 assert.match(scheduleWxml, /class="\{\{coachStatsTrendClass\}\}" style="\{\{coachStatsTrendStyle\}\}"/, 'stats trend should use a concrete width for all-time horizontal scrolling');
 assert.match(scheduleWxml, /stats-detail-date[\s\S]*item\.displayDate[\s\S]*item\.lessonUnitsText[\s\S]*stats-detail-item[\s\S]*lesson\.timeText[\s\S]*lesson\.courseTypeText\}\}·\{\{lesson\.studentText[\s\S]*lesson\.locationInlineText/, 'stats detail rows should render date totals and single-line lesson rows');
 assert.doesNotMatch(scheduleWxml, /stats-detail-units/, 'stats detail rows should not render right-side lesson units for each class');
@@ -293,8 +295,18 @@ assert.match(scheduleJs, /packagePercent:\s*Number\.isFinite\(Number\(student\.p
 assert.match(scheduleJs, /const studentsRaw = studentRosterItems\(studentRoster\);[\s\S]*const studentsList = buildStudentCards\(studentsRaw\)/, 'student cards should consume backend roster items only');
 assert.doesNotMatch(scheduleJs, /packageText:\s*totalLessons \? `\$\{usedLessons\}\/\$\{totalLessons\}`/, 'student cards should not derive package progress from class usedLessons');
 assert.match(scheduleJs, /scheduleConsumedLessonText\(selectedClass, entitlementLedger\)/, 'schedule detail should derive consumed lessons from entitlement ledger rows');
-assert.match(scheduleJs, /loadCoachStats\(\{[\s\S]*view: this\.data\.coachStatsView[\s\S]*offset: this\.data\.coachStatsOffset/, 'stats tab should load backend coach stats instead of local class data');
+assert.match(scheduleJs, /const requestParams = \{[\s\S]*view:\s*this\.data\.coachStatsView[\s\S]*offset:\s*this\.data\.coachStatsOffset[\s\S]*\};[\s\S]*loadCoachStats\(requestParams\)/, 'stats tab should load backend coach stats instead of local class data');
+assert.match(scheduleJs, /const requestParams = \{[\s\S]*startDate:\s*this\.data\.coachStatsView === 'all' \? this\.data\.coachStatsAllStartDate : ''[\s\S]*endDate:\s*this\.data\.coachStatsView === 'all' \? this\.data\.coachStatsAllEndDate : ''/, 'all-time stats should send the custom date range to the backend');
 assert.match(scheduleJs, /coachStatsView:\s*'all'/, 'stats tab should default to all completed lessons');
+assert.match(scheduleJs, /coachStatsAllStartDate:/, 'stats tab should keep a custom all-time start date');
+assert.match(scheduleJs, /coachStatsAllEndDate:/, 'stats tab should keep a custom all-time end date');
+assert.match(scheduleJs, /function coachStatsCacheKey/, 'stats tab should cache each view and range response');
+assert.match(scheduleJs, /this\._coachStatsCache\.get\(cacheKey\)/, 'stats tab should render cached stats immediately when switching tabs');
+assert.match(scheduleJs, /this\._coachStatsCache\.set\(cacheKey,\s*adapted\)/, 'stats tab should store backend stats by view and range');
+assert.match(scheduleJs, /function coachStatsRangeText[\s\S]*range\.view === 'month'[\s\S]*`\$\{year\} 年 \$\{month\} 月`/, 'month range label should render as YYYY 年 M 月');
+assert.match(scheduleJs, /function coachStatsRangeText[\s\S]*range\.view === 'year'[\s\S]*`\$\{year\} 年`/, 'year range label should render as YYYY 年');
+assert.match(scheduleJs, /function coachStatsRangeText[\s\S]*range\.view === 'all'[\s\S]*coachStatsSlashDateText\(range\.startDate\)[\s\S]*~/, 'all-time range label should render as a slash date range');
+assert.match(scheduleJs, /function trendLabel[\s\S]*view === 'all'[\s\S]*`\$\{year\}年\$\{month\}月`/, 'all-time trend labels should explicitly include month text');
 assert.match(scheduleJs, /catch \(error\) \{[\s\S]*buildLocalCoachStatsData\(\{[\s\S]*schedule: this\.data\.schedule \|\| \[\][\s\S]*coachStatsError:\s*''/, 'stats tab should fall back to loaded schedule data without showing a blocking error card');
 assert.match(scheduleJs, /STUDENT_DETAIL_RECORD_PREVIEW_COUNT\s*=\s*5/, 'student detail should default to showing the latest five lesson records');
 assert.match(scheduleJs, /lessonRecordsShown/, 'student detail should keep a visible subset of lesson records for collapsed state');
@@ -620,7 +632,7 @@ assert.match(scheduleJs, /if \(view === 'year'\)[\s\S]*`\$\{month\}月`/, 'year 
 assert.match(scheduleJs, /function coachStatsDetailDateLabel[\s\S]*`\$\{month\}\.\$\{day\} 日`/, 'stats detail date groups should use compact mobile date labels');
 assert.match(scheduleJs, /function coachStatsInlineLocationText[\s\S]*·[\s\S]*号场[\s\S]*'\$1 号场'/, 'stats detail location should be compacted for a single mobile row');
 assert.match(scheduleWxss, /\.stats-trend-month\s+\.stats-trend-label\.is-hidden\s*\{[\s\S]*visibility:\s*hidden;/, 'month trend should keep daily bars while sampling x-axis labels');
-assert.match(scheduleJs, /coachStatsTrendStyle:\s*safeView === 'all' \? `width:\$\{Math\.max\(361, count \* 46\)\}px;` : ''/, 'all-time trend should aggregate by month and scroll with a concrete mini-program width');
+assert.match(scheduleJs, /coachStatsTrendStyle:\s*safeView === 'all' \? `width:\$\{Math\.max\(361, count \* 54\)\}px;` : ''/, 'all-time trend should aggregate by month and scroll with a concrete mini-program width');
 assert.match(scheduleJs, /if \(!n \|\| view === 'month'\) return '';/, 'all-time trend should show values like year view while monthly view still samples labels');
 assert.doesNotMatch(cssBlock(scheduleWxss, '.stats-trend-all .stats-trend-value'), /display:\s*none;/, 'all-time trend should not hide value text');
 assert.match(cssBlock(scheduleWxss, '.stats-trend-all .stats-trend-value'), /display:\s*block;/, 'all-time trend should show lesson values above month labels');

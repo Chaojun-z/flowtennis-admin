@@ -91,12 +91,12 @@ function endOfMonth(date) {
 
 function normalizeRange({ view = 'week', startDate = '', endDate = '', now = new Date(), offset = 0 } = {}) {
   const normalizedView = ['day', 'week', 'month', 'year', 'all'].includes(text(view)) ? text(view) : 'week';
+  if (normalizedView === 'all') return { view: normalizedView, startDate: text(startDate), endDate: text(endDate) };
   if (startDate && endDate) {
     return { view: normalizedView, startDate: text(startDate), endDate: text(endDate) };
   }
   const base = now instanceof Date ? new Date(now.getTime()) : new Date(now);
   const safeOffset = Number.isFinite(Number(offset)) ? Number(offset) : 0;
-  if (normalizedView === 'all') return { view: normalizedView, startDate: '', endDate: '' };
   if (normalizedView === 'day') {
     const date = addDays(base, safeOffset);
     const key = formatDateKey(date);
@@ -253,9 +253,22 @@ function trendBucketKey(row = {}, view = 'week') {
 }
 
 function inRange(row = {}, range = {}) {
-  if (range.view === 'all') return true;
   const key = dateKey(row.startTime || row.start);
+  if (range.view === 'all') {
+    if (!key) return false;
+    if (range.startDate && key < range.startDate) return false;
+    if (range.endDate && key > range.endDate) return false;
+    return true;
+  }
   return !!key && key >= range.startDate && key <= range.endDate;
+}
+
+function completedDateRange(range = {}, rows = []) {
+  if (range.view !== 'all') return range;
+  if (range.startDate && range.endDate) return range;
+  const keys = rows.map(row => row.dateKey).filter(Boolean).sort();
+  if (!keys.length) return range;
+  return { ...range, startDate: keys[0], endDate: keys[keys.length - 1] };
 }
 
 function buildCoachCompletedLessonStats({ schedule = [], campuses = [], students = [], user = {}, coachName = '', view = 'week', startDate = '', endDate = '', now = new Date(), offset = 0 } = {}) {
@@ -273,6 +286,7 @@ function buildCoachCompletedLessonStats({ schedule = [], campuses = [], students
       dateKey: dateKey(row.startTime || row.start),
       startMs: dateMs(row.startTime || row.start)
     }));
+  const responseRange = completedDateRange(range, rows);
   const totalLessonUnits = round(rows.reduce((sum, row) => sum + row.lessonUnits, 0), 2);
   const byTypeMap = new Map();
   rows.forEach(row => {
@@ -297,7 +311,7 @@ function buildCoachCompletedLessonStats({ schedule = [], campuses = [], students
     const key = trendBucketKey(row, range.view);
     trendMap.set(key, round((trendMap.get(key) || 0) + row.lessonUnits, 2));
   });
-  const trend = trendKeys(range, rows).map(key => ({ key, lessonUnits: trendMap.get(key) || 0 }));
+  const trend = trendKeys(responseRange, rows).map(key => ({ key, lessonUnits: trendMap.get(key) || 0 }));
   const detailMap = new Map();
   rows.forEach(row => {
     const key = row.dateKey;
@@ -331,7 +345,7 @@ function buildCoachCompletedLessonStats({ schedule = [], campuses = [], students
       statusRule: 'effectiveScheduleStatus(row, now) === 已结束',
       lessonUnitRule: '按全平台 COACH_LESSON_HOURS 口径优先汇总 lessonCount，缺失时按实际时长兜底'
     },
-    range,
+    range: responseRange,
     summary: {
       totalLessonUnits,
       typeHighlights: byType.slice(0, 3).map(row => ({ type: row.type, lessonUnits: row.lessonUnits }))

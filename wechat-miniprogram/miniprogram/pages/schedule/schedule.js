@@ -591,8 +591,29 @@ function shortDateText(value = '') {
   return raw ? raw.slice(5).replace('-', '.') : '';
 }
 
+function coachStatsSlashDateText(value = '') {
+  const parts = String(value || '').slice(0, 10).split('-').map(part => Number(part));
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+  return year && month && day ? `${year}/${month}/${day}` : String(value || '');
+}
+
 function coachStatsRangeText(range = {}) {
-  if (!range || range.view === 'all') return '全部已完成课程';
+  if (!range) return '';
+  if (range.view === 'month') {
+    const year = Number(String(range.startDate || '').slice(0, 4));
+    const month = Number(String(range.startDate || '').slice(5, 7));
+    return year && month ? `${year} 年 ${month} 月` : '';
+  }
+  if (range.view === 'year') {
+    const year = Number(String(range.startDate || '').slice(0, 4));
+    return year ? `${year} 年` : '';
+  }
+  if (range.view === 'all') {
+    if (range.startDate && range.endDate) return `${coachStatsSlashDateText(range.startDate)} ~ ${coachStatsSlashDateText(range.endDate)}`;
+    return '暂无已完成课程';
+  }
   if (range.startDate && range.startDate === range.endDate) return range.startDate;
   if (range.startDate && range.endDate) return `${range.startDate} 至 ${range.endDate}`;
   return '';
@@ -612,7 +633,9 @@ function trendLabel(key = '', view = 'week') {
   }
   if (view === 'all') {
     const raw = String(key || '');
-    return raw.length >= 7 ? raw.slice(2, 7).replace('-', '.') : raw.replace('-', '.');
+    const year = raw.slice(2, 4);
+    const month = Number(raw.slice(5, 7));
+    return year && month ? `${year}年${month}月` : raw.replace('-', '.');
   }
   return shortDateText(key);
 }
@@ -686,8 +709,23 @@ function coachStatsTrendUiState(view = 'week', trendCount = 0) {
     coachStatsTrendClass: `stats-trend stats-trend-${safeView}`,
     coachStatsTrendScrollClass: safeView === 'all' ? 'is-scrollable' : '',
     coachStatsTrendScrollable: safeView === 'all',
-    coachStatsTrendStyle: safeView === 'all' ? `width:${Math.max(361, count * 46)}px;` : ''
+    coachStatsTrendStyle: safeView === 'all' ? `width:${Math.max(361, count * 54)}px;` : ''
   };
+}
+
+function coachStatsAllRangeState(range = {}) {
+  const startDate = String(range.startDate || '').trim();
+  const endDate = String(range.endDate || '').trim();
+  return {
+    coachStatsAllStartDate: startDate,
+    coachStatsAllEndDate: endDate,
+    coachStatsAllStartText: startDate ? coachStatsSlashDateText(startDate) : '开始日期',
+    coachStatsAllEndText: endDate ? coachStatsSlashDateText(endDate) : '结束日期'
+  };
+}
+
+function coachStatsCacheKey({ view = 'all', offset = 0, startDate = '', endDate = '' } = {}) {
+  return [view, offset, startDate, endDate].map(value => String(value || '')).join('|');
 }
 
 function adaptCoachStatsData(data = {}) {
@@ -697,6 +735,7 @@ function adaptCoachStatsData(data = {}) {
   const maxTrend = Math.max(0, ...trend.map(item => Number(item.lessonUnits) || 0));
   return {
     ...coachStatsTrendUiState(range.view, trend.length),
+    ...(range.view === 'all' ? coachStatsAllRangeState(range) : {}),
     coachStatsRangeText: coachStatsRangeText(range),
     coachStatsSummary: {
       totalLessonUnits: Number(summary.totalLessonUnits) || 0,
@@ -739,7 +778,7 @@ function adaptCoachStatsData(data = {}) {
   };
 }
 
-function coachStatsRangeBounds(view = 'all', offset = 0, now = new Date()) {
+function coachStatsRangeBounds(view = 'all', offset = 0, now = new Date(), options = {}) {
   const base = now instanceof Date ? new Date(now.getTime()) : new Date(now);
   const safeOffset = Number.isFinite(Number(offset)) ? Number(offset) : 0;
   const pad = value => String(value).padStart(2, '0');
@@ -761,14 +800,30 @@ function coachStatsRangeBounds(view = 'all', offset = 0, now = new Date()) {
     const year = base.getFullYear() + safeOffset;
     return { view, startDate: `${year}-01-01`, endDate: `${year}-12-31` };
   }
-  return { view: 'all', startDate: '', endDate: '' };
+  return { view: 'all', startDate: String(options.startDate || '').trim(), endDate: String(options.endDate || '').trim() };
 }
 
 function coachStatsRangeLabel(range = {}) {
-  if (!range || range.view === 'all') return '全部已完成课程';
-  if (range.startDate && range.startDate === range.endDate) return range.startDate;
-  if (range.startDate && range.endDate) return `${range.startDate} 至 ${range.endDate}`;
-  return '';
+  return coachStatsRangeText(range);
+}
+
+function coachStatsEffectiveRange(range = {}, rows = []) {
+  if (range.view !== 'all') return range;
+  if (range.startDate && range.endDate) return range;
+  const keys = (rows || []).map(item => item.dateKey).filter(Boolean).sort();
+  if (!keys.length) return range;
+  return { ...range, startDate: keys[0], endDate: keys[keys.length - 1] };
+}
+
+function coachStatsInRange(item = {}, range = {}) {
+  const key = coachStatsDateKey(item);
+  if (range.view === 'all') {
+    if (!key) return false;
+    if (range.startDate && key < range.startDate) return false;
+    if (range.endDate && key > range.endDate) return false;
+    return true;
+  }
+  return key >= range.startDate && key <= range.endDate;
 }
 
 function coachStatsCourseGroup(item = {}) {
@@ -791,16 +846,12 @@ function coachStatsTimeText(item = {}) {
   return start && end ? `${start}-${end}` : start || end || '';
 }
 
-function buildLocalCoachStatsData({ schedule = [], campuses = [], students = [], view = 'all', offset = 0, now = new Date() } = {}) {
-  const range = coachStatsRangeBounds(view, offset, now);
+function buildLocalCoachStatsData({ schedule = [], campuses = [], students = [], view = 'all', offset = 0, startDate = '', endDate = '', now = new Date() } = {}) {
+  const range = coachStatsRangeBounds(view, offset, now, { startDate, endDate });
   const studentNameMap = coachStatsStudentNameMap(students);
   const normalized = (schedule || [])
     .filter(item => scheduleEnded(item, now))
-    .filter(item => {
-      if (range.view === 'all') return true;
-      const key = coachStatsDateKey(item);
-      return key >= range.startDate && key <= range.endDate;
-    })
+    .filter(item => coachStatsInRange(item, range))
     .map(item => ({
       ...item,
       lessonUnits: scheduleLessonUnits(item),
@@ -811,6 +862,7 @@ function buildLocalCoachStatsData({ schedule = [], campuses = [], students = [],
       studentText: coachStatsStudentText(item, studentNameMap),
       courseTypeText: String(item.courseType || item.type || item.title || item.standardCourseType || item.experienceType || '').trim() || '私教课'
     }));
+  const effectiveRange = coachStatsEffectiveRange(range, normalized);
   const totalLessonUnits = normalized.reduce((sum, item) => sum + Number(item.lessonUnits || 0), 0);
   const typeMap = new Map();
   normalized.forEach(item => {
@@ -870,7 +922,8 @@ function buildLocalCoachStatsData({ schedule = [], campuses = [], students = [],
   const maxTrend = Math.max(0, ...trendKeys.map(key => Number(trendMap.get(key) || 0)));
   return {
     ...coachStatsTrendUiState(range.view, trendKeys.length),
-    coachStatsRangeText: coachStatsRangeLabel(range),
+    ...(effectiveRange.view === 'all' ? coachStatsAllRangeState(effectiveRange) : {}),
+    coachStatsRangeText: coachStatsRangeLabel(effectiveRange),
     coachStatsSummary: {
       totalLessonUnits: Number(totalLessonUnits.toFixed(2)),
       totalLessonUnitsText: lessonUnitsText(totalLessonUnits),
@@ -2253,6 +2306,10 @@ Page({
     coachStatsOffset: 0,
     coachStatsViewTabs: coachStatsTabOptions('all'),
     coachStatsRangeText: '',
+    coachStatsAllStartDate: '',
+    coachStatsAllEndDate: '',
+    coachStatsAllStartText: '开始日期',
+    coachStatsAllEndText: '结束日期',
     coachStatsSummary: { totalLessonUnits: 0, totalLessonUnitsText: '0', typeHighlights: [] },
     coachStatsTypeRows: [],
     coachStatsTrendRows: [],
@@ -2417,7 +2474,7 @@ Page({
         hasLoaded: true
       });
       this.renderWeek();
-      if (this.data.activeTab === 'stats') this.loadCoachStatsView();
+      if (this.data.activeTab === 'stats' && !options.skipStats) this.loadCoachStatsView();
       this.tryOpenPendingRouteAction();
     } catch (err) {
       if (handleCoachAuthError(err)) return;
@@ -2537,11 +2594,22 @@ Page({
   onCoachStatsViewTap(event) {
     const coachStatsView = event.currentTarget.dataset.view || 'week';
     if (coachStatsView === this.data.coachStatsView) return;
+    const cacheKey = coachStatsCacheKey({
+      view: coachStatsView,
+      offset: 0,
+      startDate: coachStatsView === 'all' ? this.data.coachStatsAllStartDate : '',
+      endDate: coachStatsView === 'all' ? this.data.coachStatsAllEndDate : ''
+    });
+    const cached = this._coachStatsCache && this._coachStatsCache.get(cacheKey);
     this.setData({
       coachStatsView,
       coachStatsOffset: 0,
-      coachStatsViewTabs: coachStatsTabOptions(coachStatsView)
-    }, () => this.loadCoachStatsView());
+      coachStatsViewTabs: coachStatsTabOptions(coachStatsView),
+      ...(cached || {})
+    }, () => {
+      if (cached) return;
+      this.loadCoachStatsView();
+    });
   },
 
   prevCoachStatsRange() {
@@ -2552,17 +2620,81 @@ Page({
     this.setData({ coachStatsOffset: this.data.coachStatsOffset + 1 }, () => this.loadCoachStatsView());
   },
 
+  onCoachStatsAllStartDateChange(event) {
+    const value = event.detail.value || '';
+    const next = {
+      coachStatsAllStartDate: value,
+      coachStatsAllStartText: value ? coachStatsSlashDateText(value) : '开始日期'
+    };
+    if (this.data.coachStatsAllEndDate && value > this.data.coachStatsAllEndDate) {
+      next.coachStatsAllEndDate = value;
+      next.coachStatsAllEndText = coachStatsSlashDateText(value);
+    }
+    this.setData(next, () => this.loadCoachStatsView({ force: true }));
+  },
+
+  onCoachStatsAllEndDateChange(event) {
+    const value = event.detail.value || '';
+    const next = {
+      coachStatsAllEndDate: value,
+      coachStatsAllEndText: value ? coachStatsSlashDateText(value) : '结束日期'
+    };
+    if (this.data.coachStatsAllStartDate && value < this.data.coachStatsAllStartDate) {
+      next.coachStatsAllStartDate = value;
+      next.coachStatsAllStartText = coachStatsSlashDateText(value);
+    }
+    this.setData(next, () => this.loadCoachStatsView({ force: true }));
+  },
+
   async loadCoachStatsView(options = {}) {
-    this.setData({ coachStatsLoading: true, coachStatsError: '' });
+    this._coachStatsCache = this._coachStatsCache || new Map();
+    const requestParams = {
+      view: this.data.coachStatsView,
+      offset: this.data.coachStatsOffset,
+      startDate: this.data.coachStatsView === 'all' ? this.data.coachStatsAllStartDate : '',
+      endDate: this.data.coachStatsView === 'all' ? this.data.coachStatsAllEndDate : ''
+    };
+    const cacheKey = coachStatsCacheKey(requestParams);
+    const cached = !options.force && this._coachStatsCache.get(cacheKey);
+    if (cached) {
+      this.setData({ ...cached, coachStatsLoading: false, coachStatsError: '' });
+      if (options.stopPullDown) wx.stopPullDownRefresh();
+      return;
+    }
+    if ((this.data.schedule || []).length) {
+      this.setData({
+        ...buildLocalCoachStatsData({
+          schedule: this.data.schedule || [],
+          campuses: this.data.campusesRaw || [],
+          students: this.data.studentsRaw || [],
+          view: this.data.coachStatsView,
+          offset: this.data.coachStatsOffset,
+          startDate: requestParams.startDate,
+          endDate: requestParams.endDate,
+          now: new Date()
+        }),
+        coachStatsLoading: false,
+        coachStatsError: ''
+      });
+    } else {
+      this.setData({ coachStatsLoading: true, coachStatsError: '' });
+    }
     try {
       await ensureCoachSession();
-      if (!this.data.schedule.length && !this.data.loading) await this.load({ keepLoading: true });
-      const data = await loadCoachStats({
-        view: this.data.coachStatsView,
-        offset: this.data.coachStatsOffset
-      });
+      if (!this.data.schedule.length && !this.data.loading) await this.load({ keepLoading: true, skipStats: true });
+      const data = await loadCoachStats(requestParams);
+      const adapted = adaptCoachStatsData(data);
+      this._coachStatsCache.set(cacheKey, adapted);
+      if (this.data.coachStatsView === 'all') {
+        const range = data && data.range ? data.range : {};
+        this._coachStatsCache.set(coachStatsCacheKey({
+          ...requestParams,
+          startDate: range.startDate || requestParams.startDate,
+          endDate: range.endDate || requestParams.endDate
+        }), adapted);
+      }
       this.setData({
-        ...adaptCoachStatsData(data),
+        ...adapted,
         coachStatsLoading: false
       });
     } catch (error) {
@@ -2573,6 +2705,8 @@ Page({
         students: this.data.studentsRaw || [],
         view: this.data.coachStatsView,
         offset: this.data.coachStatsOffset,
+        startDate: requestParams.startDate,
+        endDate: requestParams.endDate,
         now: new Date()
       });
       this.setData({

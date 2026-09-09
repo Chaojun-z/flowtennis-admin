@@ -22,10 +22,13 @@ for (const route of [
   '/page-data/courts',
   '/page-data/memberships',
   '/page-data/coach-schedule',
+  '/page-data/coach-stats',
   '/page-data/workbench'
 ]) {
   assert.match(routesSource, new RegExp(`path==='${route.replace(/\//g, '\\/')}'`), `core page-data module should own ${route}`);
   assert.doesNotMatch(apiSource, new RegExp(`if\\(path==='${route.replace(/\//g, '\\/')}'`), `api/index.js should not keep ${route} inline`);
 }
+const coachStatsRoute = (routesSource.match(/if\(path==='\/page-data\/coach-stats'&&method==='GET'\)\{[\s\S]*?if\(path==='\/page-data\/workbench'/) || [''])[0];
+assert.doesNotMatch(coachStatsRoute, /T_FEEDBACKS|decorateWorkbenchFeedbacks|decorateWorkbenchScheduleRows/, 'coach stats route should not read feedback or decorate workbench cards for a stats-only response');
 
 console.log('core page-data routes layer split tests passed');

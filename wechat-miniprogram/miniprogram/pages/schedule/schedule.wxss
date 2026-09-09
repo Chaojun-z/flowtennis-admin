@@ -2093,6 +2093,32 @@ button::after {
   text-align: center;
 }
 
+.stats-range-custom {
+  justify-content: center;
+  gap: 8px;
+}
+
+.stats-range-date {
+  display: block;
+  min-width: 104px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 16px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  line-height: 32px;
+  text-align: center;
+  box-shadow: 0 6rpx 14rpx rgba(43, 58, 85, 0.05);
+  box-sizing: border-box;
+}
+
+.stats-range-separator {
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 32px;
+}
+
 .stats-range-btn {
   width: 36px;
   height: 36px;
@@ -2252,17 +2278,21 @@ button::after {
 }
 
 .stats-trend-all .stats-trend-item {
-  width: 38px;
-  flex: 0 0 38px;
+  width: 46px;
+  flex: 0 0 46px;
 }
 
 .stats-trend-all .stats-trend-track {
-  width: 14px;
-  border-radius: 7px;
+  width: 12px;
+  border-radius: 6px;
 }
 
 .stats-trend-all .stats-trend-value {
   display: block;
+}
+
+.stats-trend-all .stats-trend-label {
+  font-size: 9px;
 }
 
 .stats-type-row {
