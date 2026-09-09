@@ -11,8 +11,8 @@ const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'pa
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
-assert.match(indexHtml, /state\.js\?v=20260909-mutation-freshness-v1/, 'state script version should force a fresh browser load for mutation freshness fixes');
-assert.match(indexHtml, /schedule\.js\?v=20260909-mutation-freshness-v1/, 'schedule script version should force a fresh browser load after mutation freshness fixes');
+assert.match(indexHtml, /state\.js\?v=20260909-single-small-student-entitlement-v1/, 'state script version should force a fresh browser load after schedule renderer recovery asset updates');
+assert.match(indexHtml, /schedule\.js\?v=20260909-single-small-student-entitlement-v1/, 'schedule script version should force a fresh browser load after single-student small group entitlement fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
@@ -80,7 +80,7 @@ assert.match(source, /function appConfirm\([\s\S]*html=false[\s\S]*hideIcon=fals
 assert.match(styles, /\.schedule-confirm-box[\s\S]*\.schedule-confirm-charge/, 'schedule save confirm should have dedicated scoped styles');
 assert.match(styles, /\.schedule-confirm-box #confDesc[\s\S]*font-size:13px/, 'schedule save confirm should use compact 13px body text');
 assert.match(styles, /\.schedule-confirm-value[\s\S]*font-weight:400/, 'schedule save confirm values should use regular weight');
-assert.match(fnBody('refreshSchEntitlementOptions'), /setScheduleEntitlementDropdown\(\[\], '', ids\.length>1\?'正在匹配学员课包':'正在重新计算可用课包'\);[\s\S]*hint\.textContent='正在匹配可用课包…';/, 'refreshing schedule entitlements should clear stale package options before async recommend returns');
+assert.match(fnBody('refreshSchEntitlementOptions'), /setScheduleEntitlementDropdown\(\[\], '', useStudentEntitlementRows\?'正在匹配学员课包':'正在重新计算可用课包'\);[\s\S]*hint\.textContent='正在匹配可用课包…';/, 'refreshing schedule entitlements should clear stale package options before async recommend returns');
 assert.match(source, /function resetScheduleSaveButton\(/, 'schedule save should use a helper to restore the save button safely');
 assert.match(fnBody('saveSchedule'), /runStandardMutation\('scheduleSaveBtn'/, 'schedule save should restore the save button through the global mutation helper');
 assert.doesNotMatch(fnBody('saveSchedule'), /catch\(e\)\{toast\('保存失败：'\+e\.message,'error'\);btn\.disabled=false;btn\.textContent='保存';\}/, 'schedule save failure should not assume the save button exists');
@@ -136,6 +136,8 @@ assert.match(source, /function refreshScheduleStudentEntitlementRows\(/, 'schedu
 assert.match(fnBody('openScheduleModal'), /sch_studentEntitlementRows/, 'schedule modal should include a per-student package matching host');
 assert.match(fnBody('refreshSchEntitlementOptions'), /refreshScheduleStudentEntitlementRows\(/, 'multi-student package refresh should update per-student package rows');
 assert.doesNotMatch(fnBody('refreshSchEntitlementOptions'), /ids\.length>1\)\{setScheduleEntitlementDropdown\(\[\], '', '系统按参与学员自动扣课'\)/, 'multi-student package refresh should not hide package details behind one generic message');
+assert.match(fnBody('refreshSchEntitlementOptions'), /useStudentSettlementRows=scheduleUsesStudentSettlementRows\(\)/, 'single-student small group schedules should use per-student package matching instead of the normal single-student dropdown');
+assert.doesNotMatch(fnBody('refreshSchEntitlementOptions'), /if\(ids\.length>1\)applyScheduleMultiStudentEntitlementOptions\([^;]+;\s*else applySchEntitlementOptions/, 'schedule package matching must branch by settlement UI mode, not only by student count');
 assert.match(fnBody('openScheduleModal'), /上课教练[\s\S]*sch_coach[\s\S]*地点类型[\s\S]*sch_locationType[\s\S]*schedule-location-row[\s\S]*sch_ownLocationRow[\s\S]*sch_campus[\s\S]*sch_venue/, 'own campus location fields should sit after coach and location type');
 assert.match(source, /function scheduleVenueOptionsForCampus\(/, 'schedule page should expose venue options by campus');
 assert.match(fnBody('scheduleVenueOptionsForCampus'), /activeCampusVenueRows\(campusCode\)/, 'schedule page should read venue options from campus config');

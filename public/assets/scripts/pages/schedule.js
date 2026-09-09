@@ -1065,7 +1065,7 @@ async function refreshSchEntitlementOptions(){
     setScheduleSmallClassTypeReadonly(false);
     return;
   }
-  const ids=parseArr(document.getElementById('sch_stuIds')?.value||'[]');
+  const ids=parseArr(document.getElementById('sch_stuIds')?.value||'[]'),useStudentSettlementRows=scheduleUsesStudentSettlementRows(),useStudentEntitlementRows=ids.length>1||useStudentSettlementRows;
   const startRaw=scheduleComposeDateTime('sch_date','sch_startTime');
   const endRaw=scheduleComposeDateTime('sch_date','sch_endTime');
   if(!ids.length||!startRaw||!endRaw){setScheduleEntitlementDropdown([], '', '');setScheduleEntitlementAlert(hint);refreshScheduleStudentEntitlementRows({},[]);setScheduleCourseTypeReadonly(false);setScheduleSmallClassTypeReadonly(false);return;}
@@ -1079,13 +1079,13 @@ async function refreshSchEntitlementOptions(){
   const cached=schEntitlementCache.get(cacheKey);
   const now=Date.now();
   if(cached&&(now-cached.at)<30000){
-    if(ids.length>1)applyScheduleMultiStudentEntitlementOptions(cached.value,ids);
+    if(useStudentEntitlementRows)applyScheduleMultiStudentEntitlementOptions(cached.value,ids);
     else applySchEntitlementOptions(cached.value,keepValue);
     return;
   }
   clearTimeout(schEntitlementRefreshTimer);
   const refreshSeq=++schEntitlementRefreshSeq;
-  setScheduleEntitlementDropdown([], '', ids.length>1?'正在匹配学员课包':'正在重新计算可用课包');
+  setScheduleEntitlementDropdown([], '', useStudentEntitlementRows?'正在匹配学员课包':'正在重新计算可用课包');
   refreshScheduleStudentEntitlementRows({},[]);
   hint.textContent='正在匹配可用课包…';
   schEntitlementRefreshTimer=setTimeout(async ()=>{
@@ -1094,7 +1094,7 @@ async function refreshSchEntitlementOptions(){
       schEntitlementCache.set(cacheKey,{at:Date.now(),value:res});
       trimSchEntitlementCache();
       if(refreshSeq!==schEntitlementRefreshSeq)return;
-      if(ids.length>1)applyScheduleMultiStudentEntitlementOptions(res,ids);
+      if(useStudentEntitlementRows)applyScheduleMultiStudentEntitlementOptions(res,ids);
       else applySchEntitlementOptions(res,keepValue);
     }catch(e){
       if(refreshSeq!==schEntitlementRefreshSeq)return;

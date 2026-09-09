@@ -1691,7 +1691,7 @@ function normalizeCurrentPageForRole(){
 }
 const SCHEDULE_HELPERS_RENDERER_SRC='/assets/scripts/pages/schedule-helpers.js?v=20260817-detail-helper-split-v1';
 const SCHEDULE_SETTLEMENT_RENDERER_SRC='/assets/scripts/pages/schedule-settlement.js?v=20260830-schedule-student-settlement-v1';
-const SCHEDULE_RENDERER_SRC='/assets/scripts/pages/schedule.js?v=20260728-repeatable-schedule-renderer-v3';
+const SCHEDULE_RENDERER_SRC='/assets/scripts/pages/schedule.js?v=20260909-single-small-student-entitlement-v1';
 const COACH_OPS_RENDERER_SRC='/assets/scripts/pages/coachops.js?v=20260728-repeatable-coachops-renderer-v6';
 const PAGE_RENDERER_RECOVERY={
   schedule:{required:['renderSchedule'],scripts:[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC]},
