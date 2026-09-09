@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const { buildTeachingStudentViews } = require('../server/read-models/platform-metrics.js');
+const { buildTeachingStudentViews, TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 
 const studentId = 'wang-ziru';
 const now = new Date('2026-08-11 12:00:00');
@@ -480,5 +480,6 @@ assert.strictEqual(pendingCumulativeStudent.detailRecentLessonDate, '2026-08-28'
 assert.strictEqual(pendingFutureRow?.studentLessonSequenceText, '', 'future package occupations must not consume the completed cumulative sequence field');
 assert.strictEqual(pendingFutureRow?.pendingStudentLessonSequenceText, '[待上课｜预计累计第28-29节]', 'future package occupations should show a separate estimated cumulative sequence for operators');
 assert.strictEqual(pendingFutureRow?.lessonSourceText, '课包占用｜第1-1.5/10节｜预计剩8.5节', 'future package occupations should keep current-package progress separate from estimated cumulative sequence');
+assert.strictEqual(TEACHING_LESSON_DETAIL_SOURCE_VERSION, 'lesson-record-v8', 'adding pendingStudentLessonSequenceText changes summary shape and must invalidate lesson-record-v7 cached summaries');
 
 console.log('student lesson record source read model tests passed');
