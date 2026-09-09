@@ -1228,10 +1228,11 @@ function studentLessonRecordFilterBannerHtml(stu,rows=[]){
   return `<div class="student-lesson-filter-banner"><span>正在查看：${esc(name)}</span><span>共${lessonQty(totalUnits)}课时</span><button type="button" onclick="clearStudentLessonRecordPackageFilter(${jsArg(stu.id||stu.studentId)})">清除</button></div>`;
 }
 function studentLessonRecordTitleText(item={},rows=[],index=0){
+  const pendingSequenceText=String(item.pendingStudentLessonSequenceText||'').trim();
   const studentSequenceText=String(item.studentLessonSequenceText||'').trim();
   const packageText=String(item.className||item.packageName||item.courseDisplayName||item.courseType||'上课记录').trim();
   const fallbackSection=studentLessonRecordDetailSectionText(rows,index);
-  return [studentSequenceText||fallbackSection,packageText].filter(Boolean).join(' ');
+  return [pendingSequenceText||studentSequenceText||fallbackSection,packageText].filter(Boolean).join(' ');
 }
 function studentLessonRecordSourceText(item={},stu={},rows=[],index=0){
   const explicit=String(item.lessonSourceText||'').trim();

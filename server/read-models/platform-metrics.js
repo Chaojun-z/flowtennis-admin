@@ -842,6 +842,14 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     const [whole, decimal] = fixed.split('.');
     return `${String(Number(whole) || 0).padStart(2, '0')}.${decimal}`;
   };
+  const pendingStudentLessonSequenceText = (usedBefore, count) => {
+    const endNo = round((Number(usedBefore) || 0) + (Number(count) || 0), 1);
+    if (!endNo) return '';
+    const startNo = Math.floor(Number(usedBefore) || 0) + 1;
+    const startText = lessonSectionMarker(startNo, '节');
+    const endText = lessonSectionMarker(endNo, '节');
+    return `[待上课｜预计累计第${startText}${startText === endText ? '' : `-${endText}`}节]`;
+  };
   const lessonFactKey = (studentId, row = {}) => [
     text(studentId),
     dateOnly(row.startTime || row.relatedDate || row.scheduleTime || row.createdAt),
@@ -995,6 +1003,8 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           venue: text(row.venue || row.court),
           coach: text(row.coach || row.coachName),
           hasFeedback: lessonHasFeedback(scheduleId, row),
+          lessonUnits: scheduleLessonUnits(row),
+          lessonCount: row.lessonCount,
           lessonDelta: pending ? 0 : -Math.abs(scheduleLessonUnits(row)),
           settlementType: text(row.settlementType),
           paymentType: text(row.paymentType),
@@ -1109,7 +1119,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     let studentUsedBefore = 0;
     rows
       .filter(row => !courseRowIsTrial(row) && !courseRowIsCompanion(row))
-      .filter(row => row.countAsCompletedLesson !== false)
+      .filter(row => row.countAsCompletedLesson !== false || text(row.status) === '待上课')
       .sort((a, b) => text(a.sortTime).localeCompare(text(b.sortTime)))
       .forEach(row => {
         const pending = text(row.status) === '待上课';
@@ -1119,6 +1129,10 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
         if (!count) return;
         const startNo = studentUsedBefore + 1;
         const endNo = studentUsedBefore + count;
+        if (pending || row.countAsCompletedLesson === false) {
+          row.pendingStudentLessonSequenceText = pendingStudentLessonSequenceText(studentUsedBefore, count);
+          return;
+        }
         row.studentLessonSequenceText = `[累计第${lessonSectionMarker(startNo, '节')}${startNo === endNo ? '' : `-${lessonSectionMarker(endNo, '节')}`}节]`;
         studentUsedBefore = endNo;
       });
@@ -1126,6 +1140,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       ...row,
       lessonSectionText: row.lessonSectionText || '',
       studentLessonSequenceText: row.studentLessonSequenceText || '',
+      pendingStudentLessonSequenceText: row.pendingStudentLessonSequenceText || '',
       packageRecordKey: row.packageRecordKey || '',
       lessonSourceType: row.lessonSourceType || (courseRowIsTrial(row) ? 'trial' : (teachingPaymentIsDirect(row) ? 'direct' : 'history')),
       lessonSourceText: row.lessonSourceText || lessonPaymentSourceText(row)

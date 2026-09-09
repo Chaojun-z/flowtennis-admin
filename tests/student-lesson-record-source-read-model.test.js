@@ -385,4 +385,100 @@ assert.deepStrictEqual(
   'the drawer should show the edited final consume row once, not duplicate old and new deductions'
 );
 
+const pendingCumulativeViews = buildTeachingStudentViews([{
+  customerKey: 'student:pending-cumulative-student',
+  studentId: 'pending-cumulative-student',
+  displayName: '待上课累计学员',
+  studentStage: 'formal'
+}], {
+  students: [{ id: 'pending-cumulative-student', name: '待上课累计学员', type: '成人', campus: 'shunyi_mapo', primaryCoach: 'Siren 教练' }],
+  purchases: [
+    { id: 'pur-pending-old', studentId: 'pending-cumulative-student', packageName: '旧课包', courseType: '私教课', status: 'active', purchaseDate: '2026-05-01', actualAmount: 4500 },
+    { id: 'pur-pending-new', studentId: 'pending-cumulative-student', packageName: '新课包', courseType: '私教课', status: 'active', purchaseDate: '2026-09-09', actualAmount: 4500 }
+  ],
+  entitlements: [
+    { id: 'ent-pending-old', purchaseId: 'pur-pending-old', studentId: 'pending-cumulative-student', packageName: '旧课包', courseType: '私教课', totalLessons: 30, usedLessons: 27.5, remainingLessons: 2.5, status: 'active', ownerCoach: 'Siren 教练' },
+    { id: 'ent-pending-new', purchaseId: 'pur-pending-new', studentId: 'pending-cumulative-student', packageName: '新课包', courseType: '私教课', totalLessons: 10, usedLessons: 1.5, remainingLessons: 8.5, status: 'active', ownerCoach: 'Siren 教练' }
+  ],
+  entitlementLedger: [
+    ...Array.from({ length: 27 }, (_, index) => ({
+      id: `ledger-pending-old-${index + 1}`,
+      entitlementId: 'ent-pending-old',
+      purchaseId: 'pur-pending-old',
+      studentId: 'pending-cumulative-student',
+      scheduleId: `schedule-pending-old-${index + 1}`,
+      lessonDelta: -1,
+      relatedDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+      reason: '上课消耗'
+    })),
+    {
+      id: 'ledger-pending-old-half',
+      entitlementId: 'ent-pending-old',
+      purchaseId: 'pur-pending-old',
+      studentId: 'pending-cumulative-student',
+      scheduleId: 'schedule-pending-old-half',
+      lessonDelta: -0.5,
+      relatedDate: '2026-08-28',
+      reason: '上课消耗'
+    },
+    {
+      id: 'ledger-pending-future',
+      entitlementId: 'ent-pending-new',
+      purchaseId: 'pur-pending-new',
+      studentId: 'pending-cumulative-student',
+      scheduleId: 'schedule-pending-future',
+      lessonDelta: -1.5,
+      relatedDate: '2026-09-10',
+      reason: '未来预约占用'
+    }
+  ],
+  schedule: [
+    ...Array.from({ length: 27 }, (_, index) => ({
+      id: `schedule-pending-old-${index + 1}`,
+      studentId: 'pending-cumulative-student',
+      startTime: `2026-08-${String(index + 1).padStart(2, '0')} 15:30:00`,
+      endTime: `2026-08-${String(index + 1).padStart(2, '0')} 16:30:00`,
+      status: '已结束',
+      courseType: '私教课',
+      venue: '2号场',
+      coach: 'Siren 教练',
+      lessonCount: 1
+    })),
+    {
+      id: 'schedule-pending-old-half',
+      studentId: 'pending-cumulative-student',
+      startTime: '2026-08-28 15:30:00',
+      endTime: '2026-08-28 16:00:00',
+      status: '已结束',
+      courseType: '私教课',
+      venue: '2号场',
+      coach: 'Siren 教练',
+      lessonCount: 0.5
+    },
+    {
+      id: 'schedule-pending-future',
+      studentId: 'pending-cumulative-student',
+      entitlementId: 'ent-pending-new',
+      purchaseId: 'pur-pending-new',
+      startTime: '2026-09-10 15:30:00',
+      endTime: '2026-09-10 17:00:00',
+      status: '已排课',
+      courseType: '私教课',
+      venue: '2号场',
+      coach: 'Siren 教练',
+      lessonCount: 1.5
+    }
+  ],
+  now: new Date('2026-09-09 12:00:00')
+});
+const pendingCumulativeStudent = pendingCumulativeViews.historicalStudents.find(item => item.studentId === 'pending-cumulative-student')
+  || pendingCumulativeViews.activeStudents.find(item => item.studentId === 'pending-cumulative-student');
+assert.ok(pendingCumulativeStudent, 'pending cumulative student should be present');
+const pendingFutureRow = pendingCumulativeStudent.detailLessonRecordRows.find(item => item.scheduleId === 'schedule-pending-future');
+assert.strictEqual(pendingCumulativeStudent.completedLessons, 27.5, 'future package occupations must not change completed cumulative lessons');
+assert.strictEqual(pendingCumulativeStudent.detailRecentLessonDate, '2026-08-28', 'future package occupations must not replace the latest completed lesson date');
+assert.strictEqual(pendingFutureRow?.studentLessonSequenceText, '', 'future package occupations must not consume the completed cumulative sequence field');
+assert.strictEqual(pendingFutureRow?.pendingStudentLessonSequenceText, '[待上课｜预计累计第28-29节]', 'future package occupations should show a separate estimated cumulative sequence for operators');
+assert.strictEqual(pendingFutureRow?.lessonSourceText, '课包占用｜第1-1.5/10节｜预计剩8.5节', 'future package occupations should keep current-package progress separate from estimated cumulative sequence');
+
 console.log('student lesson record source read model tests passed');
