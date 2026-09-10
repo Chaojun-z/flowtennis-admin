@@ -1079,13 +1079,13 @@ function weeklyRawHasFactsInPeriod(raw = {}, period = {}) {
 
 function buildWeeklyTrendRows({ period = {}, operationsPayload = {}, previousOperationsPayload = {}, trendOperationsPayloads = [] } = {}) {
   const byKey = new Map();
-  const pushPayload = (targetPeriod = {}, payload = {}) => {
-    if (!targetPeriod.startDate || !targetPeriod.endDate || !payload) return;
+  const trendRowFromPayload = (targetPeriod = {}, payload = {}) => {
+    if (!targetPeriod.startDate || !targetPeriod.endDate || !payload) return null;
     const operations = payload.operations || {};
     const raw = payload.weeklyReportRaw || {};
     const finance = buildWeeklyFinanceSummary(raw, targetPeriod, {}, operations, {});
     const sections = buildWeeklyReportSections(operations, {}, { period: targetPeriod, raw, previousRaw: {}, skipTrends: true });
-    byKey.set(`${targetPeriod.startDate}:${targetPeriod.endDate}`, {
+    return {
       label: `${targetPeriod.startDate.slice(5)}-${targetPeriod.endDate.slice(5)}`,
       startDate: targetPeriod.startDate,
       endDate: targetPeriod.endDate,
@@ -1093,17 +1093,32 @@ function buildWeeklyTrendRows({ period = {}, operationsPayload = {}, previousOpe
       cashReceived: finance.cashReceived,
       courtUtilizationRate: numberValue(sections.court?.utilizationRate || 0),
       coachHours: numberValue(sections.revenue?.course?.completedHours ?? sections.coach?.totalHours ?? 0)
-    });
+    };
+  };
+  const pushPayload = (targetPeriod = {}, payload = {}) => {
+    const row = trendRowFromPayload(targetPeriod, payload);
+    if (!row) return null;
+    byKey.set(`${targetPeriod.startDate}:${targetPeriod.endDate}`, row);
+    return row;
+  };
+  const hasPositiveTrendValue = row => ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours']
+    .some(key => numberValue(row?.[key]) > 0);
+  const rawShouldReplaceTrendRow = (candidate = null, existing = null) => {
+    if (!candidate) return false;
+    if (!existing) return true;
+    if (!hasPositiveTrendValue(existing)) return true;
+    return numberValue(candidate.businessRevenue) > 0 && numberValue(existing.businessRevenue) <= 0;
   };
   pushPayload({ startDate: period.previousStartDate, endDate: period.previousEndDate }, previousOperationsPayload);
   pushPayload(period, operationsPayload);
   normalizeRows(trendOperationsPayloads).forEach(item => pushPayload(item.period || {}, item.payload || item));
   const raw = operationsPayload.weeklyReportRaw || {};
-  if (byKey.size < 8 && weeklyRawHasFactsInPeriod(raw, {})) {
+  if (weeklyRawHasFactsInPeriod(raw, {})) {
     resolveTrailingWeeklyPeriods(period, 8).forEach(targetPeriod => {
       const key = `${targetPeriod.startDate}:${targetPeriod.endDate}`;
-      if (!byKey.has(key) && weeklyRawHasFactsInPeriod(raw, targetPeriod)) {
-        pushPayload(targetPeriod, { operations: {}, weeklyReportRaw: raw });
+      if (weeklyRawHasFactsInPeriod(raw, targetPeriod)) {
+        const candidate = trendRowFromPayload(targetPeriod, { operations: {}, weeklyReportRaw: raw });
+        if (rawShouldReplaceTrendRow(candidate, byKey.get(key))) byKey.set(key, candidate);
       }
     });
   }

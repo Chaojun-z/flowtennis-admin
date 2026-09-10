@@ -661,6 +661,33 @@ realDataHardGateSnapshot.sections.trends.forEach(row => {
   });
 });
 
+const staleZeroTrendSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: operationsPayloadWithRawFacts,
+  previousOperationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } } },
+    weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows }
+  },
+  totalOperationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 989113.24 } } } }
+  },
+  trendOperationsPayloads: realDataHardGatePeriods.map(([startDate, endDate]) => ({
+    period: { startDate, endDate },
+    payload: {
+      operations: {
+        overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } },
+        court: { cards: { utilizationRate: { value: 0 } } },
+        coach: { cards: { usedHours: { value: 0 } } }
+      }
+    }
+  }))
+});
+staleZeroTrendSnapshot.sections.trends.forEach(row => {
+  ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours'].forEach(key => {
+    assert.ok(Number(row[key]) > 0, `stale zero trend snapshots should be replaced by raw facts for ${row.label} ${key}`);
+  });
+});
+
 const duplicateScheduleSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
   operationsPayload: {
