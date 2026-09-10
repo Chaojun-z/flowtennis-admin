@@ -110,6 +110,159 @@ assert.strictEqual(consumeTraceRow.operationId, 'op-ledger-1', 'entitlement ledg
 assert.strictEqual(consumeTraceRow.batchId, 'batch-ledger-1', 'entitlement ledger finance row should carry batchId from source ledger');
 assert.strictEqual(consumeTraceRow.recognizedRevenueDelta, 400, 'ledger trace passthrough must not change recognized amount');
 assert.strictEqual(consumeTraceRow.deferredRevenueDelta, -400, 'ledger trace passthrough must not change deferred amount');
+
+const packageNameLessonCountSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-package-name', campus:'shunyi_mapo' }],
+  purchases:[{
+    id:'purchase-package-name',
+    studentId:'stu-package-name',
+    studentName:'课包名学员',
+    packageName:'1v1私教课 · 10课时 · 黄金',
+    amountPaid:4500,
+    purchaseDate:'2026-08-20',
+    status:'active'
+  }],
+  entitlements:[{
+    id:'ent-package-name',
+    purchaseId:'purchase-package-name',
+    studentId:'stu-package-name',
+    studentName:'课包名学员',
+    packageName:'1v1私教课 · 10课时 · 黄金',
+    remainingLessons:9,
+    campusIds:['shunyi_mapo']
+  }],
+  entitlementLedger:[{
+    id:'ledger-package-name',
+    entitlementId:'ent-package-name',
+    studentId:'stu-package-name',
+    scheduleId:'sch-package-name',
+    lessonDelta:-1,
+    action:'consume',
+    relatedDate:'2026-08-27',
+    createdAt:'2026-08-27 10:00:00'
+  }],
+  schedule:[{
+    id:'sch-package-name',
+    studentName:'课包名学员',
+    coach:'王教练',
+    campus:'shunyi_mapo',
+    courseType:'私教',
+    lessonCount:1,
+    status:'已结束',
+    startTime:'2026-08-27 09:00:00',
+    endTime:'2026-08-27 10:00:00'
+  }]
+});
+const packageNameConsumeRow = packageNameLessonCountSnapshot.financeNormalizedRows.find(row=>row.id==='consume-ledger-package-name');
+assert.strictEqual(packageNameConsumeRow.recognizedRevenueDelta, 450, 'course consume revenue should divide paid package amount by lesson count parsed from package name when numeric fields are missing');
+assert.strictEqual(packageNameConsumeRow.deferredRevenueDelta, -450, 'course consume deferred revenue should mirror parsed package-name lesson count');
+
+const purchaseCampusFromUsageSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-usage-campus', name:'校区缺失学员' }],
+  purchases:[{
+    id:'purchase-usage-campus',
+    studentId:'stu-usage-campus',
+    studentName:'校区缺失学员',
+    packageName:'小班训练营 · 5次 · 黄金',
+    amountPaid:1799,
+    purchaseDate:'2026-08-06',
+    status:'active'
+  }],
+  entitlements:[{
+    id:'ent-usage-campus',
+    purchaseId:'purchase-usage-campus',
+    studentId:'stu-usage-campus',
+    studentName:'校区缺失学员',
+    packageName:'小班训练营 · 5次 · 黄金',
+    totalLessons:5,
+    remainingLessons:4,
+    campusIds:[]
+  }],
+  entitlementLedger:[{
+    id:'ledger-usage-campus',
+    entitlementId:'ent-usage-campus',
+    studentId:'stu-usage-campus',
+    scheduleId:'sch-usage-campus',
+    lessonDelta:-1,
+    action:'consume',
+    relatedDate:'2026-08-08',
+    createdAt:'2026-08-08 16:00:00'
+  }],
+  schedule:[{
+    id:'sch-usage-campus',
+    studentName:'校区缺失学员',
+    coach:'王教练',
+    campus:'shunyi_mapo',
+    courseType:'小班课',
+    lessonCount:1,
+    status:'已结束',
+    startTime:'2026-08-08 16:00:00',
+    endTime:'2026-08-08 17:00:00'
+  }]
+});
+const usageCampusReceiptRow = purchaseCampusFromUsageSnapshot.financeNormalizedRows.find(row=>row.id==='purchase-purchase-usage-campus');
+assert.strictEqual(usageCampusReceiptRow.campusName, '顺义马坡', 'course receipt with missing purchase campus should use the linked schedule campus through entitlement ledger');
+assert.strictEqual(usageCampusReceiptRow.cashDelta, 1799, 'course receipt campus fallback must keep the original received amount');
+
+const schedulePaidAmountSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-schedule-paid', campus:'shunyi_mapo' }],
+  schedule:[{
+    id:'schedule-paid-no-direct-type',
+    studentId:'stu-schedule-paid',
+    studentName:'排课收款学员',
+    coach:'王教练',
+    campus:'shunyi_mapo',
+    courseType:'陪打',
+    lessonCount:1,
+    status:'已排课',
+    startTime:'2026-08-27 09:00:00',
+    endTime:'2026-08-27 10:00:00',
+    paidAmount:300,
+    payMethod:'微信'
+  },{
+    id:'schedule-paid-cancelled',
+    studentId:'stu-schedule-paid',
+    studentName:'排课收款学员',
+    coach:'王教练',
+    campus:'shunyi_mapo',
+    courseType:'私教课',
+    lessonCount:1,
+    status:'已取消',
+    startTime:'2026-08-27 10:00:00',
+    endTime:'2026-08-27 11:00:00',
+    paidAmount:199,
+    payMethod:'微信'
+  }]
+}, { campus:'shunyi_mapo', startDate:'2026-08-27', endDate:'2026-08-27' });
+const schedulePaidRows = schedulePaidAmountSnapshot.financeNormalizedRows.filter(row=>row.id.startsWith('schedule-direct-'));
+assert.strictEqual(schedulePaidRows.length, 1, 'non-cancelled schedule paidAmount should become a course receipt even when settlementType is omitted');
+assert.strictEqual(schedulePaidRows[0].cashDelta, 300, 'schedule paidAmount receipt should keep the actual received amount');
+assert.strictEqual(schedulePaidRows[0].recognizedRevenueDelta, 300, 'schedule paidAmount receipt should recognize direct course income for that schedule');
+
+const pendingSchedulePaidAmountSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  schedule:[{
+    id:'schedule-paid-pending-confirm',
+    studentName:'待确认排课',
+    coach:'王教练',
+    campus:'shunyi_mapo',
+    courseType:'私教课',
+    lessonCount:1,
+    status:'已排课',
+    confirmStatus:'待确认',
+    startTime:'2026-08-27 09:00:00',
+    endTime:'2026-08-27 10:00:00',
+    paidAmount:300,
+    payMethod:'微信'
+  }]
+}, { campus:'shunyi_mapo', startDate:'2026-08-27', endDate:'2026-08-27' });
+const pendingSchedulePaidRow = pendingSchedulePaidAmountSnapshot.financeNormalizedRows.find(row=>row.id==='schedule-direct-schedule-paid-pending-confirm');
+assert.strictEqual(pendingSchedulePaidRow.cashDelta, 300, 'pending-confirm schedule paidAmount should still count as received cash');
+assert.strictEqual(pendingSchedulePaidRow.recognizedRevenueDelta, 0, 'pending-confirm schedule paidAmount must not be recognized as completed service revenue');
+
 const courtTraceRow = snapshot.financeNormalizedRows.find(row=>row.id==='court-court-1-court-row-1');
 assert.strictEqual(courtTraceRow.operationId, 'op-court-1', 'court history finance row should carry operationId from source history row');
 assert.strictEqual(courtTraceRow.batchId, 'batch-court-1', 'court history finance row should carry batchId from source history row');

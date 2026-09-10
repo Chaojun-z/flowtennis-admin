@@ -4382,15 +4382,17 @@ const {
   parseLessonValue,
   computeCourtFinance
 });
-async function buildOperationsSnapshotPayload({user,scope,baseRowsOverride}){
+async function buildOperationsSnapshotPayload({user,scope,baseRowsOverride,weeklyReportLiveSource=false}){
+  const useWeeklyReportFullRead=weeklyReportLiveSource&&scope?.view==='weekly-report';
+  const weeklyReportFullScan=(table,options={})=>getCachedScan(table,{...options,pageLimit:500,fresh:true});
   return buildOperationsPagePayload({
     scope,
     dateRange:scope?.dateRange||{},
     user,
     listCampusesWithDefaults,
     getCachedScan,
-    scanFirstRows,
-    getScheduleListRows,
+    scanFirstRows:useWeeklyReportFullRead?weeklyReportFullScan:scanFirstRows,
+    getScheduleListRows:useWeeklyReportFullRead?null:getScheduleListRows,
     isProductionRuntime,
     filterLoadAllForUser,
     mergeDuplicateLeadRows,

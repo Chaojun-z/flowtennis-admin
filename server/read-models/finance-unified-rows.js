@@ -93,12 +93,54 @@ function cleanMembershipFinanceNote(value=''){
   if(/马坡订场会员开卡\/续充|会员储值补足|系统导入|马坡补账/.test(note))return '';
   return note;
 }
+function positiveNumber(...values){
+  for(const value of values){
+    const number=Number(value);
+    if(Number.isFinite(number)&&number>0)return number;
+  }
+  return 0;
+}
+function packageLessonCountFromText(...values){
+  for(const value of values){
+    const text=String(value||'').trim();
+    if(!text)continue;
+    const match=text.match(/(\d+(?:\.\d+)?)\s*(?:课时|节课|节|次)/);
+    const number=match?Number(match[1]):0;
+    if(Number.isFinite(number)&&number>0)return number;
+  }
+  return 0;
+}
+function packageLessonCount(entitlement={},purchase={},fallback=0){
+  return positiveNumber(
+    entitlement.totalLessons,
+    purchase.packageLessons,
+    purchase.totalLessons,
+    purchase.lessonCount,
+    packageLessonCountFromText(
+      entitlement.packageName,
+      entitlement.productName,
+      entitlement.notes,
+      purchase.packageName,
+      purchase.productName,
+      purchase.coachPriceName,
+      purchase.notes
+    ),
+    fallback
+  );
+}
 function financeRecognizedAmountForConsumeRow(row,entitlement,purchase){
   const lessonDelta=Math.abs(Number(row?.lessonDelta)||0);
-  const totalLessons=Math.max(1,Number(entitlement?.totalLessons)||Number(purchase?.packageLessons)||lessonDelta||1);
+  const totalLessons=Math.max(1,packageLessonCount(entitlement,purchase,lessonDelta)||1);
   const amountPaid=Number(purchase?.amountPaid)||0;
   if(!amountPaid||!lessonDelta)return 0;
   return Math.round((amountPaid/totalLessons)*lessonDelta*100)/100;
+}
+function scheduleDirectPaidAmount(row={}){
+  return roundMoney(row.paidAmount||row.paymentAmount);
+}
+function scheduleDirectRecognizedAmount(row={}){
+  if(String(row.confirmStatus||'').trim()==='待确认')return 0;
+  return scheduleDirectPaidAmount(row);
 }
 function financeOperationTraceFields(source={}){
   const trace={};
@@ -150,6 +192,39 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   const purchaseMap=new Map((purchases||[]).map(item=>[String(item.id||''),item]));
   const scheduleMap=new Map((schedule||[]).map(item=>[String(item.id||''),item]));
   const courtMap=new Map((courts||[]).map(item=>[String(item.id||''),item]));
+  const entitlementsByPurchaseId=new Map();
+  (entitlements||[]).forEach(item=>{
+    const purchaseId=String(item?.purchaseId||'').trim();
+    if(!purchaseId)return;
+    const rows=entitlementsByPurchaseId.get(purchaseId)||[];
+    rows.push(item);
+    entitlementsByPurchaseId.set(purchaseId,rows);
+  });
+  const ledgerByPurchaseId=new Map();
+  (entitlementLedger||[]).forEach(item=>{
+    const entitlement=entitlementMap.get(String(item?.entitlementId||''))||{};
+    const purchaseId=String(item?.purchaseId||entitlement.purchaseId||'').trim();
+    if(!purchaseId)return;
+    const rows=ledgerByPurchaseId.get(purchaseId)||[];
+    rows.push(item);
+    ledgerByPurchaseId.set(purchaseId,rows);
+  });
+  const purchaseUsageCampusName=purchaseId=>{
+    const id=String(purchaseId||'').trim();
+    if(!id)return '';
+    const entitlementRows=entitlementsByPurchaseId.get(id)||[];
+    for(const entitlement of entitlementRows){
+      const resolved=campusName.fromHints(parseArr(entitlement.campusIds)[0],entitlement.campus,entitlement.campusName);
+      if(resolved)return resolved;
+    }
+    const usageRows=ledgerByPurchaseId.get(id)||[];
+    for(const row of usageRows){
+      const scheduleRow=scheduleMap.get(String(row.scheduleId||''))||{};
+      const resolved=campusName.fromHints(row.campus,row.campusName,row.sourceLocation,row.sourceVenue,row.venue,row.courtName,row.court,scheduleRow.campus,scheduleRow.campusName,scheduleRow.venue);
+      if(resolved)return resolved;
+    }
+    return '';
+  };
   const courtMembershipOrderIds=new Set();
   const membershipRechargeKeys=new Set();
   (membershipOrders||[]).forEach(order=>{
@@ -170,7 +245,10 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     const rowCampusName=campusName.fromHints(
       parseArr(entitlement.campusIds)[0]||entitlement.campus||'',
       purchase.campus,
+      purchase.campusName,
+      purchaseUsageCampusName(purchase.id),
       student.campus,
+      student.campusName,
       purchase.notes,
       purchase.packageName,
       purchase.productName
@@ -322,8 +400,9 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         };
       });
     }
-    if(isDirectPaidSchedule(item)&&!isStoredValuePayMethod(item.payMethod||item.paymentChannel)&&roundMoney(item.paidAmount||item.paymentAmount)>0){
-      const amount=roundMoney(item.paidAmount||item.paymentAmount);
+    if(!isStoredValuePayMethod(item.payMethod||item.paymentChannel)&&scheduleDirectPaidAmount(item)>0){
+      const amount=scheduleDirectPaidAmount(item);
+      const recognizedAmount=scheduleDirectRecognizedAmount(item);
       const payMethod=String(item.payMethod||item.paymentChannel||'').trim()||'—';
       const businessDate=financeBusinessDateTime(item.startTime,item.paidAt,item.paymentTime,item.createdAt);
       const courseLabel=item.courseType==='体验课'?(item.experienceType||'体验课'):(item.courseType||'课程');
@@ -338,7 +417,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         businessType:'课程',
         action:'收款',
         cashDelta:amount,
-        recognizedRevenueDelta:amount,
+        recognizedRevenueDelta:recognizedAmount,
         deferredRevenueDelta:0,
         paymentChannel:payMethod,
         sourceDocument:`排课 ${item.id}`,

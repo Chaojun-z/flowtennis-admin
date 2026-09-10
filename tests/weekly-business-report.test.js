@@ -23,6 +23,7 @@ const bootstrapSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scrip
 const componentsSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/components.js'), 'utf8');
 const publicApiSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/api.js'), 'utf8');
 const operationsPageSource = fs.readFileSync(path.join(repoRoot, 'server/page-data/operations-page.js'), 'utf8');
+const operationsSource = fs.readFileSync(path.join(repoRoot, 'server/read-models/operations-source.js'), 'utf8');
 const operationsSnapshotWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/operations-snapshot-rebuild.yml'), 'utf8');
 const operationsSnapshotRunnerSource = fs.readFileSync(path.join(repoRoot, 'scripts/rebuild-operations-snapshot.js'), 'utf8');
 
@@ -571,6 +572,7 @@ const realDataHardGatePeriods = [
   ['2026-08-11', '2026-08-18']
 ];
 const realDataHardGateFinanceRows = [
+  { id: 'historical-total-cash', campusName: '顺义马坡', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1656878.24, recognizedRevenueDelta: 0 },
   ...realDataHardGatePeriods.flatMap(([startDate]) => [
     { id: `trend-cash-${startDate}`, campusName: '顺义马坡', businessDate: startDate, businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0 },
     { id: `trend-consume-${startDate}`, campusName: '顺义马坡', businessDate: startDate, businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 800 },
@@ -585,7 +587,7 @@ const realDataHardGateFinanceRows = [
   { id: 'real-stored-cash', campusName: '顺义马坡', businessDate: '2026-08-29', businessType: '会员储值', action: '收款', cashDelta: 4000, recognizedRevenueDelta: 0 },
   { id: 'real-guest-cash', campusName: '顺义马坡', businessDate: '2026-08-30', businessType: '散客订场', displayBusinessType: '场地 / 散客订场', action: '收款', cashDelta: 6424, recognizedRevenueDelta: 6424, timeText: '10:00-11:00' },
   { id: 'real-course-booking-cash', campusName: '顺义马坡', businessDate: '2026-08-31', businessType: '课程订场', displayBusinessType: '场地 / 课程订场', action: '收款', cashDelta: 880, recognizedRevenueDelta: 880, timeText: '12:00-16:00' },
-  { id: 'real-course-consume', campusName: '顺义马坡', businessDate: '2026-09-01', businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 26658.39 },
+  { id: 'real-course-consume', campusName: '顺义马坡', businessDate: '2026-09-01', businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 26650.4 },
   { id: 'real-member-consume', campusName: '顺义马坡', businessDate: '2026-09-02', businessType: '会员订场', displayBusinessType: '场地 / 会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 4557, timeText: '17:00-18:00' }
 ];
 const realDataHardGateScheduleRows = [
@@ -595,6 +597,14 @@ const realDataHardGateScheduleRows = [
   { id: 'real-schedule-b', coach: '刘润扬教练', studentName: '本周学员B', courseType: '小班课', startTime: '2026-08-29 10:00:00', endTime: '2026-08-29 10:30:00', status: '已下课', campus: 'shunyi_mapo', venue: '2号场', durationHours: 40 },
   { id: 'real-schedule-xiaolu', coach: '小鹿教练', studentName: '本周学员C', courseType: '私教课', startTime: '2026-08-30 10:00:00', endTime: '2026-08-30 12:00:00', status: '已下课', campus: 'shunyi_mapo', venue: '3号场', durationHours: 2 }
 ];
+const operationsPayloadWithRawFacts = {
+  ...operationsPayload,
+  weeklyReportRaw: {
+    financeNormalizedRows: realDataHardGateFinanceRows,
+    schedule: realDataHardGateScheduleRows,
+    coaches: [{ name: '朝珺', status: '在职' }, { name: '刘润扬', status: '在职' }]
+  }
+};
 const realDataHardGateSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
   operationsPayload: {
@@ -626,12 +636,16 @@ const realDataHardGateSnapshot = buildWeeklyBusinessReportSnapshot({
     operations: { overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } } },
     weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows }
   },
+  totalOperationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 989113.24 }, recognizedRevenue: { value: 0 } } } }
+  },
   shareToken: 'real-data-hard-gate',
   baseUrl: 'https://www.flowtennis.cn'
 });
+assert.strictEqual(realDataHardGateSnapshot.lifetimeSummary.totalIncome.value, 1746191.23, 'real hard gate: lifetime income must use complete finance facts through report end date instead of the stale 989113 operations card');
 assert.strictEqual(realDataHardGateSnapshot.sections.revenue.receipts.totalAmount, 49295.99, 'real hard gate: weekly cash received must use the complete platform finance facts');
-assert.strictEqual(realDataHardGateSnapshot.summary.totalIncome.value, 38519.39, 'real hard gate: weekly business revenue must use complete recognized revenue facts');
-assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.courseConsumedRevenue, 26658.39, 'real hard gate: course consumed revenue must not drop to zero');
+assert.strictEqual(realDataHardGateSnapshot.summary.totalIncome.value, 38511.4, 'real hard gate: weekly business revenue must use complete recognized revenue facts');
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.courseConsumedRevenue, 26650.4, 'real hard gate: course consumed revenue must not drop to zero');
 assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.memberBookingConsumedRevenue, 4557, 'real hard gate: member booking consumed revenue must use finance facts');
 assert.strictEqual(realDataHardGateSnapshot.sections.revenue.receipts.bookingAmount, 7304, 'real hard gate: weekly booking receipts should include guest bookings and course court fees');
 assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.guestBookingRevenue, 7304, 'real hard gate: paid booking revenue should include course court fees');
@@ -646,6 +660,41 @@ realDataHardGateSnapshot.sections.trends.forEach(row => {
     assert.ok(Number(row[key]) > 0, `real hard gate: ${key} must not be zero for ${row.label}`);
   });
 });
+
+const duplicateScheduleSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {},
+    weeklyReportRaw: {
+      schedule: [
+        { id:'schedule-primary', campus:'shunyi_mapo', coach:'杨教练', studentName:'M.Z', courseType:'私教课', status:'已排课', startTime:'2026-08-28 11:00:00', endTime:'2026-08-28 12:00:00' },
+        { id:'third-party-duplicate', campus:'shunyi_mapo', coach:'杨教练', studentName:'M.Z', courseType:'私教课', status:'已排课', startTime:'2026-08-28 11:00:00', endTime:'2026-08-28 12:00:00', scheduleSource:'第三方同步排课' }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: { schedule: [] } },
+  totalOperationsPayload: { operations: {}, weeklyReportRaw: { schedule: [] } }
+});
+assert.strictEqual(duplicateScheduleSnapshot.summary.coachHours.value, 1, 'weekly report completed hours should count duplicate calendar schedule rows only once');
+
+const lifetimeCutoffSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {},
+    weeklyReportRaw: {
+      financeNormalizedRows: [
+        { id: 'lifetime-mapo-before', campusName: '顺义马坡', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0 },
+        { id: 'lifetime-unknown-before', campusName: '—', businessDate: '2026-06-02', businessType: '课程', action: '收款', cashDelta: 200, recognizedRevenueDelta: 0 },
+        { id: 'lifetime-chaojun-before', campusName: '朝珺私教', businessDate: '2026-06-03', businessType: '课程', action: '收款', cashDelta: 300, recognizedRevenueDelta: 0 },
+        { id: 'lifetime-other-before', campusName: '朝阳十里堡', businessDate: '2026-06-04', businessType: '课程订场', action: '收款', cashDelta: 50, recognizedRevenueDelta: 50 },
+        { id: 'lifetime-after-period', campusName: '顺义马坡', businessDate: '2026-09-04', businessType: '课程', action: '收款', cashDelta: 9999, recognizedRevenueDelta: 0 }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: {} },
+  totalOperationsPayload: { operations: { overview: { cards: { totalIncome: { value: 989113.24 } } } } }
+});
+assert.strictEqual(lifetimeCutoffSnapshot.lifetimeSummary.totalIncome.value, 1550, 'weekly report lifetime income should use platform receipts through report end date instead of stale cards or campus-only filters');
 
 const html = renderWeeklyBusinessReportHtml(snapshot, { remark: '本周雨天影响场地。' });
 assert.match(html, /顺义马坡周报/, 'HTML should render the report title');
@@ -716,7 +765,9 @@ assert.match(weeklyReportSource, /weeklyRawToBaseRows[\s\S]*baseRowsOverride[\s\
 assert.match(weeklyReportSource, /loadOperationsSnapshot[\s\S]*allowRefreshing:\s*generationMode === 'manual'/, 'manual weekly report regeneration should allow the latest published snapshot while it is refreshing');
 assert.match(apiSource, /loadOperationsSnapshot:operationsSnapshotSync\.loadSnapshot/, 'weekly report routes should receive the operations snapshot loader');
 assert.match(operationsPageSource, /baseRowsOverride = null[\s\S]*const baseRows = baseRowsOverride \|\| await loadBaseRows/, 'operations page payload should allow weekly report to reuse loaded base rows');
-assert.match(apiSource, /async function buildOperationsSnapshotPayload\(\{user,scope,baseRowsOverride\}\)/, 'operations payload wrapper should pass through reusable base rows');
+assert.match(apiSource, /async function buildOperationsSnapshotPayload\(\{user,scope,baseRowsOverride,weeklyReportLiveSource=false\}\)/, 'operations payload wrapper should pass through reusable base rows and explicit weekly live fallback mode');
+assert.match(apiSource, /weeklyReportLiveSource&&scope\?\.view==='weekly-report'[\s\S]*scanFirstRows:useWeeklyReportFullRead\?weeklyReportFullScan:scanFirstRows[\s\S]*getScheduleListRows:useWeeklyReportFullRead\?null:getScheduleListRows/, 'weekly report live fallback should use full paged source reads without changing normal page reads');
+assert.match(operationsSource, /const OPERATIONS_WEEKLY_REPORT_SCHEDULE_FIELDS = \[[\s\S]*'confirmStatus'[\s\S]*'paidAmount'[\s\S]*'paymentAmount'[\s\S]*'payMethod'[\s\S]*'paymentChannel'[\s\S]*getOperationsWeeklyReportBaseRows[\s\S]*columns:\s*OPERATIONS_WEEKLY_REPORT_SCHEDULE_FIELDS/, 'weekly report source rows must read schedule payment fields for direct course receipts');
 assert.match(apiSource, /FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK/, 'weekly report should use a dedicated Feishu webhook env');
 assert.match(weeklyWorkflow, /cron: '0 0 \* \* 5'/, 'weekly report workflow should run Friday 08:00 Beijing time');
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
@@ -804,7 +855,7 @@ async function callSnapshotFirstGeneration() {
     put: async (_table, _id, row) => { savedRows.push(row); },
     loadOperationsPayload: async () => {
       liveLoads += 1;
-      throw new Error('重新生成不应默认现场读取大量数据');
+      return operationsPayloadWithRawFacts;
     },
     loadOperationsSnapshot: async ({ scope }) => {
       if (scope?.dateRange?.startDate === period.previousStartDate) {
@@ -831,6 +882,34 @@ async function callSnapshotFirstGeneration() {
   return { result, savedRows, liveLoads, elapsedMs: Date.now() - startedAt };
 }
 
+async function callSnapshotWithoutRawFallbackGeneration() {
+  let liveLoads = 0;
+  const savedRows = [];
+  const result = await generateWeeklyBusinessReport({
+    period,
+    baseUrl: 'https://www.flowtennis.cn',
+    mkTable: async () => {},
+    get: async () => ({ shareToken: 'raw-fallback-token' }),
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    loadOperationsPayload: async ({ scope }) => {
+      liveLoads += 1;
+      if (scope?.dateRange?.startDate === period.startDate) return operationsPayloadWithRawFacts;
+      if (scope?.dateRange?.startDate === period.previousStartDate) return { operations: { overview: { cards: { totalIncome: { value: 100 } } } }, weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows } };
+      return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
+    },
+    loadOperationsSnapshot: async ({ scope }) => {
+      if (scope?.dateRange?.startDate === period.startDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } } } };
+      }
+      if (scope?.dateRange?.startDate === period.previousStartDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } } } };
+      }
+      return { operations: { overview: { cards: { totalIncome: { value: 989113.24 } } } } };
+    }
+  });
+  return { result, savedRows, liveLoads };
+}
+
 async function callExistingReportManualRegeneration() {
   let liveLoads = 0;
   let snapshotLoads = 0;
@@ -846,14 +925,14 @@ async function callExistingReportManualRegeneration() {
     put: async (_table, _id, row) => { savedRows.push(row); },
     loadOperationsPayload: async ({ scope }) => {
       liveLoads += 1;
-      if (scope?.dateRange?.startDate === period.startDate) return operationsPayload;
+      if (scope?.dateRange?.startDate === period.startDate) return operationsPayloadWithRawFacts;
       if (scope?.dateRange?.startDate === period.previousStartDate) return { operations: { overview: { cards: { totalIncome: { value: 100 } } } } };
       return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
     },
     loadOperationsSnapshot: async ({ scope }) => {
       snapshotLoads += 1;
       snapshotScopes.push(scope?.dateRange?.startDate || 'lifetime');
-      if (scope?.dateRange?.startDate === period.startDate) return operationsPayload;
+        if (scope?.dateRange?.startDate === period.startDate) return operationsPayloadWithRawFacts;
       if (scope?.dateRange?.startDate === period.previousStartDate) {
         return {
           operations: {
@@ -889,6 +968,54 @@ async function callExistingReportManualRegeneration() {
   return { result, savedRows, liveLoads, snapshotLoads, snapshotScopes, elapsedMs: Date.now() - startedAt };
 }
 
+async function callSnapshotFailureLiveFallbackGeneration() {
+  let liveLoads = 0;
+  let snapshotLoads = 0;
+  const savedRows = [];
+  const startedAt = Date.now();
+  const livePayload = {
+    operations: {
+      overview: { cards: { totalIncome: { value: 29199 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } },
+      coach: { cards: { usedHours: { value: 80.5 } } },
+      court: { cards: { utilizationRate: { value: 29.46 } } }
+    },
+    weeklyReportRaw: {
+      coaches: [{ name: '朝珺', status: '在职' }, { name: '刘润扬', status: '在职' }, { name: '小鹿', status: '在职' }],
+      schedule: realDataHardGateScheduleRows,
+      courts: [
+        { id: 'real-internal-court', campus: 'shunyi_mapo', history: [
+          { id: 'real-renovation-0831', type: '消费', category: '全天装修锁场', date: '2026-08-31', startTime: '2026-08-31 08:00:00', endTime: '2026-08-31 22:00:00', amount: 0 },
+          { id: 'real-renovation-0901', type: '消费', category: '装修维护内部使用', date: '2026-09-01', startTime: '2026-09-01 08:00:00', endTime: '2026-09-01 22:00:00', amount: 0 }
+        ] }
+      ],
+      financeNormalizedRows: realDataHardGateFinanceRows
+    }
+  };
+  const result = await generateWeeklyBusinessReport({
+    period,
+    generationMode: 'manual',
+    baseUrl: 'https://www.flowtennis.cn',
+    mkTable: async () => {},
+    get: async () => ({ id: 'weekly:顺义马坡:2026-08-27:2026-09-03', shareToken: 'fallback-token', status: 'success' }),
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    loadOperationsPayload: async ({ scope }) => {
+      liveLoads += 1;
+      if (!scope?.dateRange?.startDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 989113.24 } } } } };
+      }
+      return livePayload;
+    },
+    loadOperationsSnapshot: async () => {
+      snapshotLoads += 1;
+      const err = new Error('经营分析快照正在刷新，请稍后重试');
+      err.code = 'OPERATIONS_SNAPSHOT_NOT_READY';
+      err.statusCode = 503;
+      throw err;
+    }
+  });
+  return { result, savedRows, liveLoads, snapshotLoads, elapsedMs: Date.now() - startedAt };
+}
+
 async function callManualRegenerationWithoutSnapshot() {
   let liveLoads = 0;
   let json = null;
@@ -898,9 +1025,11 @@ async function callManualRegenerationWithoutSnapshot() {
     get: async () => null,
     put: async () => {},
     mkTable: async () => {},
-    buildOperationsPayload: async () => {
+    buildOperationsPayload: async ({ scope }) => {
       liveLoads += 1;
-      throw new Error('missing snapshot must not fall back to slow live reads');
+      if (scope?.dateRange?.startDate === '2026-08-27') return operationsPayload;
+      if (scope?.dateRange?.startDate === '2026-08-19') return { operations: { overview: { cards: { totalIncome: { value: 100 } } } } };
+      return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
     },
     loadOperationsSnapshot: async () => null,
     table: 'ft_weekly_business_reports'
@@ -935,9 +1064,9 @@ async function callTargetPeriodRegenerationRoute() {
     loadOperationsSnapshot: async ({ scope }) => {
       if (scope?.dateRange?.startDate === '2026-08-27') {
         generatedPeriod = scope.dateRange;
-        return operationsPayload;
+        return operationsPayloadWithRawFacts;
       }
-      if (scope?.dateRange?.startDate === '2026-08-19') return { operations: { overview: { cards: { totalIncome: { value: 100 } } } } };
+      if (scope?.dateRange?.startDate === '2026-08-19') return { operations: { overview: { cards: { totalIncome: { value: 100 } } } }, weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows } };
       return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
     },
     webhook: 'https://example.invalid/webhook',
@@ -965,14 +1094,14 @@ async function callSequentialSnapshotGeneration() {
     get: async () => null,
     put: async () => {},
     mkTable: async () => {},
-    loadOperationsPayload: async () => { throw new Error('snapshot generation should not fall back to live reads'); },
+    loadOperationsPayload: async () => operationsPayloadWithRawFacts,
     loadOperationsSnapshot: async ({ scope }) => {
       activeLoads += 1;
       maxActiveLoads = Math.max(maxActiveLoads, activeLoads);
       await new Promise(resolve => setTimeout(resolve, 5));
       activeLoads -= 1;
-      if (scope?.dateRange?.startDate === period.startDate) return operationsPayload;
-      if (scope?.dateRange?.startDate === period.previousStartDate) return { operations: { overview: { cards: { totalIncome: { value: 100 } } } } };
+      if (scope?.dateRange?.startDate === period.startDate) return operationsPayloadWithRawFacts;
+      if (scope?.dateRange?.startDate === period.previousStartDate) return { operations: { overview: { cards: { totalIncome: { value: 100 } } } }, weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows } };
       return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
     },
     period
@@ -980,7 +1109,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callExistingReportManualRegeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, generationResult, existingGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -989,10 +1118,14 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(editResult.json.success, true, 'public weekly report edit route should save editable values');
   assert.strictEqual(editResult.saved.publicEdits['summary.totalIncome'], '44,072 元', 'public weekly report edits should persist saved values');
   assert.doesNotMatch(editResult.saved.publicEdits.bad, /[<>]/, 'public weekly report edits should strip HTML tags');
-  assert.strictEqual(generationResult.liveLoads, 0, 'manual weekly report regeneration should not live-load when snapshots are available');
+  assert.ok(generationResult.liveLoads >= 1, 'weekly report generation should live-load when the available snapshot does not include raw facts');
   assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
   assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
+  assert.ok(rawFallbackGenerationResult.liveLoads >= 2, 'weekly report snapshots without raw facts must fall back to the live source for current and previous facts');
+  assert.strictEqual(rawFallbackGenerationResult.result.shareToken, 'raw-fallback-token', 'raw-less snapshot fallback should preserve the existing share link');
+  assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.cashReceived.value, 49295.99, 'raw-less snapshot fallback must not save zero cash received');
+  assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.totalIncome.value, 38511.4, 'raw-less snapshot fallback must not save zero recognized revenue');
   assert.strictEqual(existingGenerationResult.liveLoads, 0, 'manual regeneration should not live-read source tables inside the request');
   assert.strictEqual(existingGenerationResult.snapshotLoads, 9, 'manual regeneration should use fast snapshots for current, previous, lifetime and the older six trend weeks');
   assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), ['2026-07-02', '2026-07-10', '2026-07-18', '2026-07-26', '2026-08-03', '2026-08-11', period.startDate, period.previousStartDate, 'lifetime'].sort(), 'manual regeneration must use the weekly report snapshot scope for all report contexts and trend weeks');
@@ -1005,9 +1138,24 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
     });
   });
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
-  assert.strictEqual(missingSnapshotResult.liveLoads, 0, 'missing weekly report snapshots must fail fast instead of scanning live source tables');
-  assert.strictEqual(missingSnapshotResult.json.statusCode, 503, 'missing weekly report snapshot should return a controlled retry status');
-  assert.match(missingSnapshotResult.json.value.error, /周报数据快照未就绪/, 'missing weekly report snapshot should explain that data snapshot is not ready');
+  assert.ok(fallbackGenerationResult.snapshotLoads >= 1, 'snapshot failure fallback should first try the fast snapshot path');
+  assert.ok(fallbackGenerationResult.liveLoads >= 1, 'snapshot failure fallback should read the live weekly report source instead of returning 503');
+  assert.strictEqual(fallbackGenerationResult.result.shareToken, 'fallback-token', 'snapshot failure fallback should preserve the existing share link');
+  assert.strictEqual(fallbackGenerationResult.savedRows.length, 1, 'snapshot failure fallback should save one corrected weekly report row');
+  assert.strictEqual(fallbackGenerationResult.savedRows[0].summary.cashReceived.value, 49295.99, 'snapshot failure fallback should save the confirmed weekly cash received value');
+  assert.strictEqual(fallbackGenerationResult.savedRows[0].summary.totalIncome.value, 38511.4, 'snapshot failure fallback should save the confirmed recognized business revenue value');
+  assert.strictEqual(fallbackGenerationResult.savedRows[0].lifetimeSummary.totalIncome.value, 1746191.23, 'snapshot failure fallback should save confirmed lifetime received income through report end date instead of the stale 989113 card');
+  assert.strictEqual(fallbackGenerationResult.savedRows[0].sections.revenue.recognized.courseConsumedRevenue, 26650.4, 'snapshot failure fallback should not save zero course consumed revenue');
+  assert.strictEqual(fallbackGenerationResult.savedRows[0].sections.trends.length, 8, 'snapshot failure fallback should rebuild eight trend points from live facts');
+  fallbackGenerationResult.savedRows[0].sections.trends.forEach(row => {
+    ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours'].forEach(key => {
+      assert.ok(Number(row[key]) > 0, `snapshot failure fallback should not save a zero ${key} trend for ${row.label}`);
+    });
+  });
+  assert.ok(fallbackGenerationResult.elapsedMs < 10000, `snapshot failure fallback should finish within 10 seconds in the hard gate, got ${fallbackGenerationResult.elapsedMs}ms`);
+  assert.ok(missingSnapshotResult.liveLoads > 0, 'missing weekly report snapshots should fall back to the live weekly report source instead of returning 503');
+  assert.strictEqual(missingSnapshotResult.json.statusCode, 200, 'missing weekly report snapshot should still return a successful regeneration response when live facts are available');
+  assert.strictEqual(missingSnapshotResult.json.value.success, true, 'missing weekly report snapshot fallback should generate the weekly report');
   assert.strictEqual(targetPeriodResult.generatedPeriod.startDate, '2026-08-27', 'row regenerate route should use the requested report period');
   assert.strictEqual(targetPeriodResult.generatedPeriod.endDate, '2026-09-03', 'row regenerate route should use the requested report end date');
   assert.strictEqual(targetPeriodResult.json.success, true, 'row regenerate route should return success for the requested period');

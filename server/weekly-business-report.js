@@ -225,6 +225,27 @@ function courseScheduleRows(raw = {}, period = {}) {
   return normalizeRows(raw.schedule).filter(row => isValidSchedule(row, period));
 }
 
+function scheduleDedupeKey(row = {}) {
+  return [
+    normalizeCampusValue(row.campus || row.campusName || ''),
+    String(row.startTime || '').slice(0, 16),
+    String(row.endTime || '').slice(0, 16),
+    cleanCoachName(row.coach || row.coachName),
+    String(row.studentId || row.studentName || row.studentNames || '').trim(),
+    String(row.courseType || row.standardCourseType || row.experienceType || '').trim()
+  ].join('|');
+}
+
+function dedupeScheduleRows(rows = []) {
+  const seen = new Set();
+  return normalizeRows(rows).filter(row => {
+    const key = scheduleDedupeKey(row);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function isPrivateCoursePurchase(row = {}) {
   if (['voided', 'refunded', 'deleted'].includes(String(row.status || '').trim())) return false;
   const raw = `${row.courseType || ''} ${row.packageName || ''} ${row.productName || ''}`;
@@ -407,7 +428,7 @@ function customerTypeForRow(row = {}, maps = { byId: new Map(), byName: new Map(
 }
 
 function completedCourseScheduleRows(raw = {}, period = {}) {
-  return courseScheduleRows(raw, period).filter(isCompletedCalendarSchedule);
+  return dedupeScheduleRows(courseScheduleRows(raw, period).filter(isCompletedCalendarSchedule));
 }
 
 function scheduleStudentKey(row = {}) {
@@ -632,10 +653,11 @@ function normalizeFinancialLedgerRows(raw = {}) {
     }));
 }
 
-function financeRowsForPeriod(rows = [], period = {}) {
+function financeRowsForPeriod(rows = [], period = {}, options = {}) {
+  const campusScoped = options.campusScoped !== false;
   return normalizeRows(rows)
     .filter(row => !row.differenceReason)
-    .filter(row => financeCampusMatches(row))
+    .filter(row => !campusScoped || financeCampusMatches(row))
     .filter(row => inOptionalPeriod(row.businessDate || row.date || row.purchaseDate || row.relatedDate || row.createdAt, period));
 }
 
@@ -680,6 +702,13 @@ function selectWeeklyFinanceSourceRows(raw = {}, period = {}) {
 
 function weeklyFinanceRows(raw = {}, period = {}) {
   return financeRowsForPeriod(selectWeeklyFinanceSourceRows(raw, period), period);
+}
+
+function lifetimeCashReceivedFromRaw(raw = {}, period = {}) {
+  const endDate = String(period?.endDate || '').slice(0, 10);
+  const sourceRows = selectWeeklyFinanceSourceRows(raw, endDate ? { endDate } : {});
+  const receiptRows = financeRowsForPeriod(sourceRows, endDate ? { endDate } : {}, { campusScoped: false }).filter(isFinanceReceipt);
+  return receiptRows.length ? financeSum(receiptRows, 'cashDelta') : null;
 }
 
 function financeAction(row = {}) {
@@ -1109,7 +1138,9 @@ function buildWeeklyBusinessReportSnapshot({
   const coachHoursCompare = completedCourseHours !== null && reportSections.revenue?.course?.compare?.completedHours
     ? reportSections.revenue.course.compare.completedHours
     : (reportSections.coach?.compare?.totalHours || compareMetric(coachHours, cardValue(previous, ['coach', 'cards', 'usedHours'])));
-  const lifetimeTotalIncome = cardValue(totalOperations, ['overview', 'cards', 'totalIncome']);
+  const lifetimeTotalIncome = lifetimeCashReceivedFromRaw(totalRaw, period)
+    ?? lifetimeCashReceivedFromRaw(raw, period)
+    ?? cardValue(totalOperations, ['overview', 'cards', 'totalIncome']);
   const lifetimeCourtUtilizationRate = cardValue(totalOperations, ['court', 'cards', 'utilizationRate']) || utilizationRate;
   const lifetimePrivateCoursePeople = buildLifetimePrivateCoursePeople(totalRaw)
     || optionalCardNumber(totalOperations.overview || {}, ['courseIncomePeople', 'courseStudents'])
@@ -1143,6 +1174,38 @@ function buildWeeklyBusinessReportSnapshot({
       detailsMode: 'summary-only'
     }
   };
+}
+
+function assertWeeklyBusinessReportNotContradictingFacts(snapshot = {}, { raw = {}, period = {} } = {}) {
+  const financeRows = weeklyFinanceRows(raw, period);
+  const cashFromFacts = financeSum(financeRows.filter(isFinanceReceipt), 'cashDelta');
+  const recognizedFromFacts = financeSum(financeRows.filter(row => fieldNumber(row, ['recognizedRevenueDelta']) !== 0), 'recognizedRevenueDelta');
+  const completedHoursFromFacts = numberValue(completedCourseScheduleRows(raw, period).reduce((sum, row) => sum + scheduleHours(row), 0));
+  const trendRows = normalizeRows(snapshot.sections?.trends);
+  if (cashFromFacts > 0 && numberValue(snapshot.summary?.cashReceived?.value) <= 0) {
+    const err = new Error('周报生成结果异常：本周收款为 0，但原始财务流水存在收款');
+    err.code = 'WEEKLY_REPORT_FACT_CONTRADICTION';
+    err.statusCode = 422;
+    throw err;
+  }
+  if (recognizedFromFacts > 0 && numberValue(snapshot.summary?.totalIncome?.value) <= 0) {
+    const err = new Error('周报生成结果异常：营业收入为 0，但原始财务流水存在已入账收入');
+    err.code = 'WEEKLY_REPORT_FACT_CONTRADICTION';
+    err.statusCode = 422;
+    throw err;
+  }
+  if (completedHoursFromFacts > 0 && numberValue(snapshot.summary?.coachHours?.value) <= 0) {
+    const err = new Error('周报生成结果异常：完成课时为 0，但排课表存在已下课课程');
+    err.code = 'WEEKLY_REPORT_FACT_CONTRADICTION';
+    err.statusCode = 422;
+    throw err;
+  }
+  if (financeRows.length && trendRows.length && trendRows.every(row => numberValue(row.businessRevenue) <= 0)) {
+    const err = new Error('周报生成结果异常：经营趋势营业收入全为 0，但原始财务流水存在收入事实');
+    err.code = 'WEEKLY_REPORT_FACT_CONTRADICTION';
+    err.statusCode = 422;
+    throw err;
+  }
 }
 
 function rowLabel(row = {}, keys = [], fallback = '未记录') {
@@ -2029,6 +2092,25 @@ function weeklyRawToBaseRows(raw = {}) {
   };
 }
 
+function weeklyPayloadHasRawFacts(payload = {}) {
+  const raw = payload?.weeklyReportRaw;
+  if (!raw || typeof raw !== 'object') return false;
+  return [
+    raw.financeNormalizedRows,
+    raw.financialLedger,
+    raw.schedule,
+    raw.courts,
+    raw.purchases,
+    raw.entitlementLedger
+  ].some(rows => Array.isArray(rows) && rows.length > 0);
+}
+
+function weeklyPayloadReadyForScope(payload = {}, scope = {}) {
+  if (!payload) return false;
+  if (scope?.includeWeeklyReportRaw && !weeklyPayloadHasRawFacts(payload)) return false;
+  return true;
+}
+
 async function generateWeeklyBusinessReport({
   loadOperationsPayload,
   loadOperationsSnapshot,
@@ -2068,13 +2150,10 @@ async function generateWeeklyBusinessReport({
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
     return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: generationMode === 'manual' }).then(payload => {
-      if (!payload) throw new Error('经营分析快照为空');
+      if (!payload) return null;
       return payload;
     }).catch(err => {
-      const error = new Error(`周报数据快照未就绪，请等待后台快照生成后重试：${err?.message || err}`);
-      error.code = err?.code || 'WEEKLY_REPORT_SNAPSHOT_NOT_READY';
-      error.statusCode = err?.statusCode || 503;
-      throw error;
+      return null;
     });
   };
   const snapshotPayloads = [];
@@ -2086,15 +2165,15 @@ async function generateWeeklyBusinessReport({
   let operationsPayload = snapshotPayloads[0] || null;
   let previousOperationsPayload = snapshotPayloads[1] || null;
   let totalOperationsPayload = snapshotPayloads[2] || null;
-  if (!operationsPayload) {
-    operationsPayload = await loadOperationsPayload({ user, scope });
+  if (!weeklyPayloadReadyForScope(operationsPayload, scope)) {
+    operationsPayload = await loadOperationsPayload({ user, scope, weeklyReportLiveSource: true });
   }
   const baseRowsOverride = operationsPayload.weeklyReportRaw ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw) : null;
-  if (!previousOperationsPayload) {
-    previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride });
+  if (!weeklyPayloadReadyForScope(previousOperationsPayload, previousScope)) {
+    previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true });
   }
   if (!totalOperationsPayload) {
-    totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride }).catch(() => null);
+    totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
   }
   const trendOperationsPayloads = [];
   if (typeof loadOperationsSnapshot === 'function') {
@@ -2124,6 +2203,7 @@ async function generateWeeklyBusinessReport({
     baseUrl,
     generationMode
   });
+  assertWeeklyBusinessReportNotContradictingFacts(snapshot, { raw: operationsPayload.weeklyReportRaw || {}, period });
   const row = {
     ...snapshot,
     status: 'success',

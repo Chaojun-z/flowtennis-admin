@@ -68,6 +68,13 @@ const OPERATIONS_SCHEDULE_FIELDS = [
   'campus', 'campusName', 'venue', 'venueId', 'venueSpaceType',
   'locationType', 'externalVenueName', 'externalCourtName'
 ];
+const OPERATIONS_WEEKLY_REPORT_SCHEDULE_FIELDS = [
+  ...OPERATIONS_SCHEDULE_FIELDS,
+  'confirmStatus', 'settlementType', 'paymentType',
+  'paidAmount', 'paymentAmount', 'payMethod', 'paymentChannel',
+  'fieldFeeAmount', 'fieldFeePayMethod', 'fieldFeePaidAt', 'fieldFeePaymentTime',
+  'studentSettlementRows'
+];
 
 const OPERATIONS_CACHE_TTL_MS = Math.max(60 * 1000, parseInt(process.env.OPERATIONS_CACHE_TTL_MS || '60000', 10) || 60 * 1000);
 const operationsRowsCache = new Map();
@@ -329,7 +336,7 @@ async function getOperationsWeeklyReportBaseRows({
     T_FINANCIAL_LEDGER ? readOperationsRows({ table: T_FINANCIAL_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_FINANCIAL_LEDGER_FIELDS, limit: 5000 }) : Promise.resolve([]),
     T_COURT_ACCOUNT_LIST_INDEX ? getCachedScan(T_COURT_ACCOUNT_LIST_INDEX, { fresh: true }).catch(() => []) : Promise.resolve([]),
     getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
-    getOperationsScheduleRows({ getScheduleListRows, getCachedScan, scanFirstRows, table: T_SCHEDULE, columns: OPERATIONS_SCHEDULE_FIELDS }),
+    getOperationsScheduleRows({ getScheduleListRows, getCachedScan, scanFirstRows, table: T_SCHEDULE, columns: OPERATIONS_WEEKLY_REPORT_SCHEDULE_FIELDS }),
     T_FEEDBACKS ? readOperationsRows({ table: T_FEEDBACKS, getCachedScan, scanFirstRows, columns: OPERATIONS_FEEDBACK_FIELDS, limit: 2000 }) : Promise.resolve([]),
     useGlobalFinanceSnapshot && typeof getFinancePageSnapshotIfCached === 'function'
       ? Promise.resolve(getFinancePageSnapshotIfCached()).catch(() => null)
