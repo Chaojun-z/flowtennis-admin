@@ -600,7 +600,9 @@ function formatCoachStatsNumber(value) {
 
 function shortDateText(value = '') {
   const raw = String(value || '').trim();
-  return raw ? raw.slice(5).replace('-', '.') : '';
+  const month = Number(raw.slice(5, 7));
+  const day = Number(raw.slice(8, 10));
+  return month && day ? `${month}.${String(day).padStart(2, '0')}` : '';
 }
 
 function coachStatsSlashDateText(value = '') {
@@ -639,15 +641,21 @@ function coachStatsTabOptions(current = 'week') {
 }
 
 function trendLabel(key = '', view = 'week') {
-  if (view === 'year') {
-    const month = Number(String(key || '').slice(5, 7));
-    return month ? `${month}月` : '';
-  }
+  const raw = String(key || '');
   if (view === 'all') {
-    const raw = String(key || '');
-    const year = raw.slice(2, 4);
+    if (/^\d{4}$/.test(raw)) return `${raw}年`;
+    if (/^\d{4}-\d{2}$/.test(raw)) {
+      const month = Number(raw.slice(5, 7));
+      return month ? `${month}月` : raw;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      return shortDateText(raw);
+    }
+    return raw.replace('-', '.');
+  }
+  if (view === 'year') {
     const month = Number(raw.slice(5, 7));
-    return year && month ? `${year}年${month}月` : raw.replace('-', '.');
+    return month ? `${month}月` : '';
   }
   return shortDateText(key);
 }
@@ -663,7 +671,7 @@ function trendLabelVisible(key = '', view = 'week', index = 0, total = 0) {
 
 function trendValueText(units = 0, view = 'week') {
   const n = Number(units) || 0;
-  if (!n || view === 'month') return '';
+  if (!n) return '';
   return formatCoachStatsNumber(n);
 }
 
@@ -718,12 +726,58 @@ function coachStatsStudentText(item = {}, studentNameMap = new Map()) {
 function coachStatsTrendUiState(view = 'week', trendCount = 0) {
   const safeView = COACH_STATS_VIEW_OPTIONS.some(item => item.key === view) ? view : 'week';
   const count = Math.max(0, Number(trendCount) || 0);
+  const isScrollable = safeView === 'all' || safeView === 'month';
   return {
     coachStatsTrendClass: `stats-trend stats-trend-${safeView}`,
-    coachStatsTrendScrollClass: safeView === 'all' ? 'is-scrollable' : '',
-    coachStatsTrendScrollable: safeView === 'all',
-    coachStatsTrendStyle: safeView === 'all' ? `width:${Math.max(361, count * 54)}px;` : ''
+    coachStatsTrendScrollClass: isScrollable ? 'is-scrollable' : '',
+    coachStatsTrendScrollable: isScrollable,
+    coachStatsTrendStyle: safeView === 'all'
+      ? `width:${Math.max(361, count * 62)}px;`
+      : (safeView === 'month' ? `width:${Math.max(361, count * 28)}px;` : '')
   };
+}
+
+function coachStatsAllTrendBucketMode(startDate = '', endDate = '') {
+  const start = new Date(`${String(startDate || '').slice(0, 10)}T00:00:00`);
+  const end = new Date(`${String(endDate || '').slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return 'month';
+  const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+  if (days <= 31) return 'day';
+  if (days <= 730) return 'month';
+  return 'year';
+}
+
+function coachStatsTrendBucketKey(dateKey = '', mode = 'day') {
+  const raw = String(dateKey || '').slice(0, 10);
+  if (mode === 'year') return raw.slice(0, 4);
+  if (mode === 'month') return raw.slice(0, 7);
+  return raw;
+}
+
+function coachStatsAllTrendKeys(startDate = '', endDate = '', mode = 'day', rows = []) {
+  if (!startDate || !endDate) return [...new Set(rows.map(item => coachStatsTrendBucketKey(item.dateKey, mode)).filter(Boolean))].sort();
+  if (mode === 'year') {
+    const startYear = Number(String(startDate).slice(0, 4));
+    const endYear = Number(String(endDate).slice(0, 4));
+    if (!startYear || !endYear || endYear < startYear) return [];
+    return Array.from({ length: endYear - startYear + 1 }, (_, index) => String(startYear + index));
+  }
+  if (mode === 'month') {
+    const start = new Date(`${String(startDate).slice(0, 7)}-01T00:00:00`);
+    const end = new Date(`${String(endDate).slice(0, 7)}-01T00:00:00`);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return [];
+    const keys = [];
+    for (let date = start; date <= end; date.setMonth(date.getMonth() + 1)) {
+      keys.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return keys;
+  }
+  const start = new Date(`${String(startDate).slice(0, 10)}T00:00:00`);
+  const end = new Date(`${String(endDate).slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return [];
+  const keys = [];
+  for (let date = start; date <= end; date.setDate(date.getDate() + 1)) keys.push(date.toISOString().slice(0, 10));
+  return keys;
 }
 
 function coachStatsAllRangeState(range = {}) {
@@ -741,10 +795,39 @@ function coachStatsCacheKey({ view = 'all', offset = 0, startDate = '', endDate 
   return [view, offset, startDate, endDate].map(value => String(value || '')).join('|');
 }
 
+function coachStatsRequestParamsFromState(data = {}, overrides = {}) {
+  const view = Object.prototype.hasOwnProperty.call(overrides, 'view') ? overrides.view : data.coachStatsView;
+  const offset = Object.prototype.hasOwnProperty.call(overrides, 'offset') ? overrides.offset : data.coachStatsOffset;
+  const startDate = Object.prototype.hasOwnProperty.call(overrides, 'startDate') ? overrides.startDate : data.coachStatsAllStartDate;
+  const endDate = Object.prototype.hasOwnProperty.call(overrides, 'endDate') ? overrides.endDate : data.coachStatsAllEndDate;
+  return {
+    view,
+    offset,
+    startDate: view === 'all' ? startDate : '',
+    endDate: view === 'all' ? endDate : ''
+  };
+}
+
 function adaptCoachStatsData(data = {}) {
   const range = data.range || {};
   const summary = data.summary || {};
-  const trend = Array.isArray(data.trend) ? data.trend : [];
+  const detailGroups = (data.detailGroups || []).map(group => ({
+    ...group,
+    dateKey: String(group.key || group.date || '').slice(0, 10)
+  }));
+  const trend = (() => {
+    if (range.view !== 'all') return Array.isArray(data.trend) ? data.trend : [];
+    const sourceRows = detailGroups.filter(item => item.dateKey);
+    if (!sourceRows.length) return Array.isArray(data.trend) ? data.trend : [];
+    const mode = coachStatsAllTrendBucketMode(range.startDate, range.endDate);
+    const map = new Map();
+    sourceRows.forEach(item => {
+      const key = coachStatsTrendBucketKey(item.dateKey, mode);
+      map.set(key, (map.get(key) || 0) + (Number(item.lessonUnits) || 0));
+    });
+    return coachStatsAllTrendKeys(range.startDate, range.endDate, mode, sourceRows)
+      .map(key => ({ key, lessonUnits: Number((map.get(key) || 0).toFixed(2)) }));
+  })();
   const maxTrend = Math.max(0, ...trend.map(item => Number(item.lessonUnits) || 0));
   return {
     ...coachStatsTrendUiState(range.view, trend.length),
@@ -777,7 +860,7 @@ function adaptCoachStatsData(data = {}) {
         barStyle: `height:${height}%`
       };
     }),
-    coachStatsDetailGroups: (data.detailGroups || []).map(group => ({
+    coachStatsDetailGroups: detailGroups.map(group => ({
       ...group,
       displayDate: group.displayDate || coachStatsDetailDateLabel(group.key),
       lessonUnitsText: formatCoachStatsNumber(group.lessonUnits),
@@ -889,8 +972,11 @@ function buildLocalCoachStatsData({ schedule = [], campuses = [], students = [],
   }));
   typeRows.sort((a, b) => b.lessonUnits - a.lessonUnits || a.type.localeCompare(b.type, 'zh-Hans-CN'));
   const trendMap = new Map();
+  const allTrendMode = range.view === 'all' ? coachStatsAllTrendBucketMode(effectiveRange.startDate, effectiveRange.endDate) : '';
   normalized.forEach(item => {
-    const key = range.view === 'year' || range.view === 'all' ? item.dateKey.slice(0, 7) : item.dateKey;
+    const key = range.view === 'all'
+      ? coachStatsTrendBucketKey(item.dateKey, allTrendMode)
+      : (range.view === 'year' ? item.dateKey.slice(0, 7) : item.dateKey);
     trendMap.set(key, (trendMap.get(key) || 0) + Number(item.lessonUnits || 0));
   });
   const trendKeys = (() => {
@@ -899,7 +985,7 @@ function buildLocalCoachStatsData({ schedule = [], campuses = [], students = [],
       return Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`);
     }
     if (range.view === 'all') {
-      return [...new Set(normalized.map(item => item.dateKey.slice(0, 7)).filter(Boolean))].sort();
+      return coachStatsAllTrendKeys(effectiveRange.startDate, effectiveRange.endDate, allTrendMode, normalized);
     }
     const start = new Date(`${range.startDate}T00:00:00`);
     const end = new Date(`${range.endDate}T00:00:00`);
@@ -2607,12 +2693,12 @@ Page({
   onCoachStatsViewTap(event) {
     const coachStatsView = event.currentTarget.dataset.view || 'week';
     if (coachStatsView === this.data.coachStatsView) return;
-    const cacheKey = coachStatsCacheKey({
+    const requestParams = coachStatsRequestParamsFromState(this.data, {
       view: coachStatsView,
-      offset: 0,
-      startDate: coachStatsView === 'all' ? this.data.coachStatsAllStartDate : '',
-      endDate: coachStatsView === 'all' ? this.data.coachStatsAllEndDate : ''
+      offset: 0
     });
+    const cacheKey = coachStatsCacheKey(requestParams);
+    this._coachStatsActiveRequestKey = cacheKey;
     const cached = this._coachStatsCache && this._coachStatsCache.get(cacheKey);
     this.setData({
       coachStatsView,
@@ -2626,11 +2712,15 @@ Page({
   },
 
   prevCoachStatsRange() {
-    this.setData({ coachStatsOffset: this.data.coachStatsOffset - 1 }, () => this.loadCoachStatsView());
+    const coachStatsOffset = this.data.coachStatsOffset - 1;
+    this._coachStatsActiveRequestKey = coachStatsCacheKey(coachStatsRequestParamsFromState(this.data, { offset: coachStatsOffset }));
+    this.setData({ coachStatsOffset }, () => this.loadCoachStatsView());
   },
 
   nextCoachStatsRange() {
-    this.setData({ coachStatsOffset: this.data.coachStatsOffset + 1 }, () => this.loadCoachStatsView());
+    const coachStatsOffset = this.data.coachStatsOffset + 1;
+    this._coachStatsActiveRequestKey = coachStatsCacheKey(coachStatsRequestParamsFromState(this.data, { offset: coachStatsOffset }));
+    this.setData({ coachStatsOffset }, () => this.loadCoachStatsView());
   },
 
   onCoachStatsAllStartDateChange(event) {
@@ -2643,6 +2733,10 @@ Page({
       next.coachStatsAllEndDate = value;
       next.coachStatsAllEndText = coachStatsSlashDateText(value);
     }
+    this._coachStatsActiveRequestKey = coachStatsCacheKey(coachStatsRequestParamsFromState(this.data, {
+      startDate: next.coachStatsAllStartDate,
+      endDate: Object.prototype.hasOwnProperty.call(next, 'coachStatsAllEndDate') ? next.coachStatsAllEndDate : this.data.coachStatsAllEndDate
+    }));
     this.setData(next, () => this.loadCoachStatsView({ force: true }));
   },
 
@@ -2656,18 +2750,18 @@ Page({
       next.coachStatsAllStartDate = value;
       next.coachStatsAllStartText = coachStatsSlashDateText(value);
     }
+    this._coachStatsActiveRequestKey = coachStatsCacheKey(coachStatsRequestParamsFromState(this.data, {
+      startDate: Object.prototype.hasOwnProperty.call(next, 'coachStatsAllStartDate') ? next.coachStatsAllStartDate : this.data.coachStatsAllStartDate,
+      endDate: next.coachStatsAllEndDate
+    }));
     this.setData(next, () => this.loadCoachStatsView({ force: true }));
   },
 
   async loadCoachStatsView(options = {}) {
     this._coachStatsCache = this._coachStatsCache || new Map();
-    const requestParams = {
-      view: this.data.coachStatsView,
-      offset: this.data.coachStatsOffset,
-      startDate: this.data.coachStatsView === 'all' ? this.data.coachStatsAllStartDate : '',
-      endDate: this.data.coachStatsView === 'all' ? this.data.coachStatsAllEndDate : ''
-    };
+    const requestParams = coachStatsRequestParamsFromState(this.data);
     const cacheKey = coachStatsCacheKey(requestParams);
+    this._coachStatsActiveRequestKey = cacheKey;
     const cached = !options.force && this._coachStatsCache.get(cacheKey);
     if (cached) {
       this.setData({ ...cached, coachStatsLoading: false, coachStatsError: '' });
@@ -2675,30 +2769,34 @@ Page({
       return;
     }
     if ((this.data.schedule || []).length) {
+      const preview = buildLocalCoachStatsData({
+        schedule: this.data.schedule || [],
+        campuses: this.data.campusesRaw || [],
+        students: this.data.studentsRaw || [],
+        view: requestParams.view,
+        offset: requestParams.offset,
+        startDate: requestParams.startDate,
+        endDate: requestParams.endDate,
+        now: new Date()
+      });
+      if (this._coachStatsActiveRequestKey !== cacheKey) return;
       this.setData({
-        ...buildLocalCoachStatsData({
-          schedule: this.data.schedule || [],
-          campuses: this.data.campusesRaw || [],
-          students: this.data.studentsRaw || [],
-          view: this.data.coachStatsView,
-          offset: this.data.coachStatsOffset,
-          startDate: requestParams.startDate,
-          endDate: requestParams.endDate,
-          now: new Date()
-        }),
+        ...preview,
         coachStatsLoading: false,
         coachStatsError: ''
       });
     } else {
+      if (this._coachStatsActiveRequestKey !== cacheKey) return;
       this.setData({ coachStatsLoading: true, coachStatsError: '' });
     }
     try {
       await ensureCoachSession();
       if (!this.data.schedule.length && !this.data.loading) await this.load({ keepLoading: true, skipStats: true });
+      if (this._coachStatsActiveRequestKey !== cacheKey) return;
       const data = await loadCoachStats(requestParams);
       const adapted = adaptCoachStatsData(data);
       this._coachStatsCache.set(cacheKey, adapted);
-      if (this.data.coachStatsView === 'all') {
+      if (requestParams.view === 'all') {
         const range = data && data.range ? data.range : {};
         this._coachStatsCache.set(coachStatsCacheKey({
           ...requestParams,
@@ -2706,18 +2804,19 @@ Page({
           endDate: range.endDate || requestParams.endDate
         }), adapted);
       }
+      if (this._coachStatsActiveRequestKey !== cacheKey) return;
       this.setData({
         ...adapted,
         coachStatsLoading: false
       });
     } catch (error) {
-      const message = String(error.message || '').trim();
+      if (this._coachStatsActiveRequestKey !== cacheKey) return;
       const fallback = buildLocalCoachStatsData({
         schedule: this.data.schedule || [],
         campuses: this.data.campusesRaw || [],
         students: this.data.studentsRaw || [],
-        view: this.data.coachStatsView,
-        offset: this.data.coachStatsOffset,
+        view: requestParams.view,
+        offset: requestParams.offset,
         startDate: requestParams.startDate,
         endDate: requestParams.endDate,
         now: new Date()

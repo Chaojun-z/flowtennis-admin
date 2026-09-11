@@ -163,11 +163,11 @@ page {
 
 .mini-metrics {
   width: 361px;
-  height: 170px;
+  height: 98px;
   max-width: 100%;
   margin: 0 auto;
   padding: 16px;
-  border-radius: 36rpx;
+  border-radius: 30rpx;
   background: #ffffff;
   box-shadow: 0 14rpx 36rpx rgba(43, 58, 85, 0.04);
   display: grid;
@@ -211,38 +211,6 @@ page {
 
 .mini-metric text:last-child {
   margin-top: 8px;
-  color: #0f172a;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.mini-metric text.danger {
-  color: #D97706;
-}
-
-.mini-metric text.conversion-value {
-  color: #64748B;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.conversion-row {
-  display: inline-flex;
-  align-items: baseline;
-  flex-wrap: nowrap;
-  gap: 4rpx;
-  white-space: nowrap;
-  margin-top: 8px;
-  transform: translateY(-6px);
-}
-
-.conversion-row text {
-  transform: none;
-  margin-top: 0;
-}
-
-.mini-metric text.conversion-value.has-data {
   color: #0f172a;
   font-size: 24px;
   font-weight: 700;
@@ -302,14 +270,6 @@ page {
 .reminder-value {
   color: #0f172a;
   font-weight: 700;
-}
-
-.mini-metric text.conversion-unit {
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.2;
-  color: #64748B;
-  margin-top: 0;
 }
 
 .reminder-chip.is-danger .reminder-value {
@@ -1964,9 +1924,9 @@ button::after {
 .stats-summary-card {
   width: 361px;
   max-width: 100%;
-  height: 150px;
+  height: 168px;
   margin: 0 auto;
-  padding: 18px 16px;
+  padding: 18px 16px 20px;
   border-radius: 18px;
   background: #fff;
   box-shadow: 0 10rpx 24rpx rgba(43, 58, 85, 0.06);
@@ -2007,7 +1967,7 @@ button::after {
 }
 
 .stats-highlight-row {
-  margin-top: 14px;
+  margin-top: 16px;
   display: flex;
   gap: 6px;
 }
@@ -2015,8 +1975,8 @@ button::after {
 .stats-highlight-item {
   flex: 1;
   min-width: 0;
-  height: 52px;
-  padding: 9px 10px;
+  height: 58px;
+  padding: 10px;
   border-radius: 12px;
   background: #f8fafc;
   box-sizing: border-box;
@@ -2183,10 +2143,11 @@ button::after {
 
 .stats-trend-scroll {
   width: 100%;
+  height: 186px;
 }
 
 .stats-trend {
-  height: 150px;
+  height: 170px;
   margin-top: 16px;
   display: flex;
   align-items: flex-end;
@@ -2197,14 +2158,16 @@ button::after {
 .stats-trend-item {
   flex: 1;
   min-width: 0;
-  height: 150px;
+  height: 170px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .stats-trend-track {
-  flex: 1;
+  flex: 0 0 112px;
+  height: 112px;
   width: 18px;
   border-radius: 9px;
   background: #f1f5f9;
@@ -2221,24 +2184,27 @@ button::after {
 }
 
 .stats-trend-value {
+  display: block;
   color: #18233d;
   font-size: 11px;
   line-height: 14px;
   font-weight: 700;
   min-height: 14px;
+  text-align: center;
 }
 
 .stats-trend-label {
   margin-top: 2px;
-  color: #94a3b8;
-  font-size: 10px;
-  line-height: 12px;
-  min-height: 12px;
+  color: #475569;
+  font-size: 11px;
+  line-height: 16px;
+  min-height: 16px;
   white-space: nowrap;
+  text-align: center;
 }
 
 .stats-trend-axis {
-  height: 28px;
+  height: 44px;
   margin-top: 8px;
   display: flex;
   flex-direction: column;
@@ -2255,7 +2221,12 @@ button::after {
 }
 
 .stats-trend-month {
-  gap: 3px;
+  gap: 4px;
+}
+
+.stats-trend-month .stats-trend-item {
+  width: 24px;
+  flex: 0 0 24px;
 }
 
 .stats-trend-month .stats-trend-track {
@@ -2268,7 +2239,7 @@ button::after {
 }
 
 .stats-trend-month .stats-trend-value {
-  visibility: hidden;
+  display: block;
 }
 
 .stats-trend-year {
@@ -2286,8 +2257,8 @@ button::after {
 }
 
 .stats-trend-all .stats-trend-item {
-  width: 46px;
-  flex: 0 0 46px;
+  width: 54px;
+  flex: 0 0 54px;
 }
 
 .stats-trend-all .stats-trend-track {
@@ -2297,10 +2268,6 @@ button::after {
 
 .stats-trend-all .stats-trend-value {
   display: block;
-}
-
-.stats-trend-all .stats-trend-label {
-  font-size: 9px;
 }
 
 .stats-type-row {

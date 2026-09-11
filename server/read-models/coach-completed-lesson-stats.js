@@ -232,7 +232,9 @@ function timeText(row = {}) {
 
 function trendKeys(range = {}, rows = []) {
   if (range.view === 'all') {
-    const keys = [...new Set(rows.map(row => dateKey(row.startTime || row.start).slice(0, 7)).filter(Boolean))];
+    const mode = allTrendBucketMode(range.startDate, range.endDate);
+    if (range.startDate && range.endDate) return allTrendKeys(range.startDate, range.endDate, mode);
+    const keys = [...new Set(rows.map(row => trendBucketDateKey(row.dateKey || row.startTime || row.start, mode)).filter(Boolean))];
     return keys.sort();
   }
   if (range.view === 'year') {
@@ -249,7 +251,47 @@ function trendKeys(range = {}, rows = []) {
 
 function trendBucketKey(row = {}, view = 'week') {
   const key = dateKey(row.startTime || row.start);
-  return view === 'year' || view === 'all' ? key.slice(0, 7) : key;
+  return view === 'year' ? key.slice(0, 7) : key;
+}
+
+function allTrendBucketMode(startDate = '', endDate = '') {
+  const start = new Date(`${text(startDate).slice(0, 10)}T00:00:00`);
+  const end = new Date(`${text(endDate).slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return 'month';
+  const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+  if (days <= 31) return 'day';
+  if (days <= 730) return 'month';
+  return 'year';
+}
+
+function trendBucketDateKey(value = '', mode = 'day') {
+  const key = dateKey(value);
+  if (mode === 'year') return key.slice(0, 4);
+  if (mode === 'month') return key.slice(0, 7);
+  return key;
+}
+
+function allTrendKeys(startDate = '', endDate = '', mode = 'day') {
+  if (mode === 'year') {
+    const startYear = Number(text(startDate).slice(0, 4));
+    const endYear = Number(text(endDate).slice(0, 4));
+    if (!startYear || !endYear || endYear < startYear) return [];
+    return Array.from({ length: endYear - startYear + 1 }, (_, index) => String(startYear + index));
+  }
+  if (mode === 'month') {
+    const start = new Date(`${text(startDate).slice(0, 7)}-01T00:00:00`);
+    const end = new Date(`${text(endDate).slice(0, 7)}-01T00:00:00`);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return [];
+    const keys = [];
+    for (let date = start; date <= end; date.setMonth(date.getMonth() + 1)) keys.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    return keys;
+  }
+  const start = new Date(`${text(startDate).slice(0, 10)}T00:00:00`);
+  const end = new Date(`${text(endDate).slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return [];
+  const keys = [];
+  for (let date = start; date <= end; date = addDays(date, 1)) keys.push(formatDateKey(date));
+  return keys;
 }
 
 function inRange(row = {}, range = {}) {
@@ -307,8 +349,9 @@ function buildCoachCompletedLessonStats({ schedule = [], campuses = [], students
       return aIndex - bIndex || a.type.localeCompare(b.type, 'zh-Hans-CN');
     });
   const trendMap = new Map();
+  const allBucketMode = range.view === 'all' ? allTrendBucketMode(responseRange.startDate, responseRange.endDate) : '';
   rows.forEach(row => {
-    const key = trendBucketKey(row, range.view);
+    const key = range.view === 'all' ? trendBucketDateKey(row.dateKey, allBucketMode) : trendBucketKey(row, range.view);
     trendMap.set(key, round((trendMap.get(key) || 0) + row.lessonUnits, 2));
   });
   const trend = trendKeys(responseRange, rows).map(key => ({ key, lessonUnits: trendMap.get(key) || 0 }));

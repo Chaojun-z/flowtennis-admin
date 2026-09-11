@@ -211,8 +211,8 @@ assert.strictEqual(defaultAllResult.range.startDate, '2026-09-07', 'all-time def
 assert.strictEqual(defaultAllResult.range.endDate, '2026-09-08', 'all-time default range should expose the last completed lesson date');
 assert.deepStrictEqual(
   defaultAllResult.trend.map(row => row.key),
-  ['2026-09'],
-  'all-time trend should aggregate completed lessons by month'
+  ['2026-09-07', '2026-09-08'],
+  'short all-time trend should show date buckets'
 );
 
 const customAllResult = buildCoachCompletedLessonStats({
@@ -232,6 +232,58 @@ assert.deepStrictEqual(
   customAllResult.detailGroups.map(group => group.key),
   ['2026-09-08'],
   'custom all-time range should filter detail rows by selected dates'
+);
+
+const multiMonthAllResult = buildCoachCompletedLessonStats({
+  schedule: [
+    ...schedule,
+    {
+      id: 'jan-private',
+      coach: '朝珺',
+      studentName: '一月学员',
+      startTime: '2026-01-04 10:00:00',
+      endTime: '2026-01-04 11:00:00',
+      status: '已结束',
+      courseType: '私教课',
+      lessonCount: 10
+    }
+  ],
+  user: { role: 'editor', name: '朝珺', coachName: '朝珺', coachId: 'coach-001' },
+  view: 'all',
+  startDate: '2026-01-04',
+  endDate: '2026-09-09',
+  now
+});
+assert.deepStrictEqual(
+  multiMonthAllResult.trend.map(row => row.key),
+  ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'],
+  'multi-month all-time trend should show month buckets'
+);
+
+const multiYearAllResult = buildCoachCompletedLessonStats({
+  schedule: [
+    ...schedule,
+    {
+      id: 'old-private',
+      coach: '朝珺',
+      studentName: '历史学员',
+      startTime: '2024-01-04 10:00:00',
+      endTime: '2024-01-04 11:00:00',
+      status: '已结束',
+      courseType: '私教课',
+      lessonCount: 10
+    }
+  ],
+  user: { role: 'editor', name: '朝珺', coachName: '朝珺', coachId: 'coach-001' },
+  view: 'all',
+  startDate: '2024-01-04',
+  endDate: '2026-09-09',
+  now
+});
+assert.deepStrictEqual(
+  multiYearAllResult.trend.map(row => row.key),
+  ['2024', '2025', '2026'],
+  'multi-year all-time trend should show year buckets'
 );
 
 console.log('coach completed lesson stats tests passed');
