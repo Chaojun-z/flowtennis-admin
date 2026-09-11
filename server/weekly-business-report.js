@@ -9,6 +9,7 @@ const WEEKLY_REPORT_CAMPUS_NAME = '顺义马坡';
 const WEEKLY_REPORT_TIMEZONE = 'Asia/Shanghai';
 const WEEKLY_REPORT_TABLE = 'ft_weekly_business_reports';
 const WEEKLY_REPORT_OPERATIONS_VIEW = 'weekly-report';
+const WEEKLY_REPORT_NON_OVERLAP_START_END_DATE = '2026-09-10';
 const COURT_USAGE_TYPES = [
   { key: 'member', label: '会员订场' },
   { key: 'guest', label: '散客订场' },
@@ -56,14 +57,19 @@ function dayOfWeekUtc(day) {
   return new Date(ms).getUTCDay();
 }
 
+function weeklyReportStartDateForEndDate(endDate = '') {
+  const offset = String(endDate || '') >= WEEKLY_REPORT_NON_OVERLAP_START_END_DATE ? -6 : -7;
+  return addUtcDays(endDate, offset);
+}
+
 function resolveWeeklyBusinessReportPeriod(now = new Date()) {
   const today = beijingDateKey(now);
   const weekday = dayOfWeekUtc(today);
   const daysSinceThursday = (weekday - 4 + 7) % 7;
   const endDate = addUtcDays(today, -daysSinceThursday);
-  const startDate = addUtcDays(endDate, -7);
+  const startDate = weeklyReportStartDateForEndDate(endDate);
   const previousEndDate = addUtcDays(startDate, -1);
-  const previousStartDate = addUtcDays(previousEndDate, -7);
+  const previousStartDate = weeklyReportStartDateForEndDate(previousEndDate);
   return {
     startDate,
     endDate,
@@ -1064,7 +1070,7 @@ function resolveTrailingWeeklyPeriods(period = {}, count = 8) {
   const rows = [];
   let endDate = period.endDate || '';
   for (let index = 0; index < count && endDate; index += 1) {
-    const startDate = addUtcDays(endDate, -7);
+    const startDate = weeklyReportStartDateForEndDate(endDate);
     rows.unshift({ startDate, endDate });
     endDate = addUtcDays(startDate, -1);
   }
@@ -2267,6 +2273,7 @@ async function generateWeeklyBusinessReport({
 module.exports = {
   WEEKLY_REPORT_CAMPUS_NAME,
   WEEKLY_REPORT_TABLE,
+  weeklyReportStartDateForEndDate,
   resolveWeeklyBusinessReportPeriod,
   buildWeeklyBusinessReportSnapshot,
   renderWeeklyBusinessReportHtml,

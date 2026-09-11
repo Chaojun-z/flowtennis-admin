@@ -36,6 +36,15 @@ assert.deepStrictEqual(period, {
   timezone: 'Asia/Shanghai'
 }, 'weekly report should use Beijing natural days from previous Thursday through current Thursday');
 
+const nextPeriod = resolveWeeklyBusinessReportPeriod(new Date('2026-09-11T00:00:00.000Z'));
+assert.deepStrictEqual(nextPeriod, {
+  startDate: '2026-09-04',
+  endDate: '2026-09-10',
+  previousStartDate: '2026-08-27',
+  previousEndDate: '2026-09-03',
+  timezone: 'Asia/Shanghai'
+}, 'weekly report periods must not double-count the previous Thursday');
+
 const operationsPayload = {
   operations: {
     overview: {
@@ -796,7 +805,7 @@ assert.match(apiSource, /async function buildOperationsSnapshotPayload\(\{user,s
 assert.match(apiSource, /weeklyReportLiveSource&&scope\?\.view==='weekly-report'[\s\S]*scanFirstRows:useWeeklyReportFullRead\?weeklyReportFullScan:scanFirstRows[\s\S]*getScheduleListRows:useWeeklyReportFullRead\?null:getScheduleListRows/, 'weekly report live fallback should use full paged source reads without changing normal page reads');
 assert.match(operationsSource, /const OPERATIONS_WEEKLY_REPORT_SCHEDULE_FIELDS = \[[\s\S]*'confirmStatus'[\s\S]*'paidAmount'[\s\S]*'paymentAmount'[\s\S]*'payMethod'[\s\S]*'paymentChannel'[\s\S]*getOperationsWeeklyReportBaseRows[\s\S]*columns:\s*OPERATIONS_WEEKLY_REPORT_SCHEDULE_FIELDS/, 'weekly report source rows must read schedule payment fields for direct course receipts');
 assert.match(apiSource, /FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK/, 'weekly report should use a dedicated Feishu webhook env');
-assert.match(weeklyWorkflow, /cron: '0 0 \* \* 5'/, 'weekly report workflow should run Friday 08:00 Beijing time');
+assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow should run Friday 02:23 Beijing time to avoid hourly schedule delays');
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');

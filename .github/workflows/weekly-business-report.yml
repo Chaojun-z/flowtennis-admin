@@ -2,7 +2,7 @@ name: Weekly Business Report
 
 on:
   schedule:
-    - cron: '0 0 * * 5'
+    - cron: '23 18 * * 4'
   workflow_dispatch:
 
 permissions:

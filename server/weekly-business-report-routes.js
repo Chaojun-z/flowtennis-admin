@@ -1,5 +1,6 @@
 const {
   resolveWeeklyBusinessReportPeriod,
+  weeklyReportStartDateForEndDate,
   generateWeeklyBusinessReport,
   listWeeklyBusinessReports,
   findWeeklyBusinessReportByToken,
@@ -47,7 +48,7 @@ function createWeeklyBusinessReportRoutes({
       startDate,
       endDate,
       previousEndDate,
-      previousStartDate: addUtcDays(previousEndDate, -7),
+      previousStartDate: weeklyReportStartDateForEndDate(previousEndDate),
       timezone: 'Asia/Shanghai'
     };
   }
