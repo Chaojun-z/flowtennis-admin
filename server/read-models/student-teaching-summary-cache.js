@@ -444,10 +444,8 @@ async function upsertStudentProfileIntoTeachingSummary({
     }
     const profileRow = compactStudentProfileSummaryRow(student, now);
     const fullRows = upsertSummaryRow(studentTeachingSummaryBundleLogicalRows(fullBundle), profileRow);
-    const listRows = upsertSummaryRow(studentTeachingSummaryListBundleLogicalRows(listBundle), projectStudentTeachingSummaryListRow(profileRow))
-      .map(projectStudentTeachingSummaryListRow);
     const nextFullBundle = buildStudentTeachingSummaryBundleRow(fullRows, activeVersion);
-    const nextListBundle = buildStudentTeachingSummaryListBundleRow(listRows, activeVersion);
+    const nextListBundle = buildStudentTeachingSummaryListBundleRow(fullRows, activeVersion);
     const nextMeta = {
       ...meta,
       rowCount: fullRows.length,

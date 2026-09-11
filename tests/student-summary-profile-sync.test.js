@@ -1,4 +1,5 @@
 const assert = require('assert');
+const zlib = require('zlib');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const {
   STUDENT_TEACHING_SUMMARY_META_ID,
@@ -17,7 +18,87 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function bundleRows(row) {
+  if (!row?.rowsGzipBase64) return [];
+  return JSON.parse(zlib.gunzipSync(Buffer.from(row.rowsGzipBase64, 'base64')).toString('utf8'));
+}
+
 async function main() {
+  {
+    const mismatchVersion = 'profile-sync-recovers-list-bundle';
+    const fullRows = [
+      {
+        id: 'student-a',
+        studentId: 'student-a',
+        name: '学员A',
+        displayName: '学员A',
+        primaryCoach: '汤教练',
+        hasStudentProfile: true,
+        isHistoricalStudentRoster: true,
+        isActiveStudentRoster: true
+      },
+      {
+        id: 'student-b',
+        studentId: 'student-b',
+        name: '学员B',
+        displayName: '学员B',
+        primaryCoach: '汤教练',
+        hasStudentProfile: true,
+        isHistoricalStudentRoster: true,
+        isActiveStudentRoster: true
+      }
+    ];
+    const staleListRows = [fullRows[0]];
+    const mismatchTableRows = {
+      ft_student_teaching_summary: [
+        {
+          id: STUDENT_TEACHING_SUMMARY_META_ID,
+          kind: 'student-teaching-summary-meta',
+          status: 'ready',
+          rowCount: fullRows.length,
+          generation: 1,
+          batchId: mismatchVersion,
+          activeVersion: mismatchVersion,
+          sourceSnapshotAt: '2026-09-11T00:00:00.000Z',
+          completedAt: '2026-09-11T00:00:01.000Z',
+          checksum: buildStudentTeachingSummaryChecksum(fullRows),
+          updatedAt: '2026-09-11T00:00:01.000Z'
+        },
+        buildStudentTeachingSummaryBundleRow(fullRows, mismatchVersion),
+        buildStudentTeachingSummaryListBundleRow(staleListRows, mismatchVersion)
+      ]
+    };
+    const getCachedRow = async (table, id) => clone((mismatchTableRows[table] || []).find(row => String(row.id || '') === String(id || '')) || null);
+    const put = async (table, id, row) => {
+      const list = mismatchTableRows[table] || [];
+      const index = list.findIndex(item => String(item.id || '') === String(id || ''));
+      if (index >= 0) list[index] = clone(row);
+      else list.push(clone(row));
+      mismatchTableRows[table] = list;
+    };
+
+    await upsertStudentProfileIntoTeachingSummary({
+      tableName: 'ft_student_teaching_summary',
+      student: {
+        id: 'student-a',
+        name: '学员A改名',
+        primaryCoach: '汤教练',
+        updatedAt: '2026-09-11T04:00:00.000Z'
+      },
+      getCachedRow,
+      put,
+      now: new Date('2026-09-11T04:00:01.000Z')
+    });
+
+    const meta = mismatchTableRows.ft_student_teaching_summary.find(row => row.id === STUDENT_TEACHING_SUMMARY_META_ID);
+    const listBundle = mismatchTableRows.ft_student_teaching_summary.find(row => row.id === buildStudentTeachingSummaryListBundleId(mismatchVersion));
+    const listRows = bundleRows(listBundle);
+    assert.strictEqual(meta.rowCount, 2, 'meta 必须保持完整发布包行数');
+    assert.strictEqual(listBundle.rowCount, 2, '轻量 list bundle 缺行时，资料同步必须按完整发布包重建，避免 338/339');
+    assert.strictEqual(listRows.length, 2, '轻量 list bundle 解包后行数必须和 meta 一致');
+    assert.ok(listRows.some(row => String(row.studentId || row.id || '') === 'student-b'), '轻量 list bundle 不能丢失未被本次更新命中的学员');
+  }
+
   const version = 'profile-sync-version';
   const existingRows = Array.from({ length: 1200 }, (_, index) => ({
     id: `existing-student-${index + 1}`,
