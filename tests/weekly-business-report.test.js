@@ -995,6 +995,65 @@ async function callExistingReportManualRegeneration() {
   return { result, savedRows, liveLoads, snapshotLoads, snapshotScopes, elapsedMs: Date.now() - startedAt };
 }
 
+async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
+  let liveLoads = 0;
+  const savedRows = [];
+  const currentPeriodRows = {
+    operations: operationsPayloadWithRawFacts.operations,
+    weeklyReportRaw: {
+      financeNormalizedRows: realDataHardGateFinanceRows.filter(row => row.businessDate >= period.startDate && row.businessDate <= period.endDate),
+      schedule: realDataHardGateScheduleRows.filter(row => String(row.startTime || '').slice(0, 10) >= period.startDate && String(row.startTime || '').slice(0, 10) <= period.endDate),
+      coaches: [{ name: '朝珺', status: '在职' }, { name: '刘润扬', status: '在职' }]
+    }
+  };
+  const previousPeriodRows = {
+    operations: { overview: { cards: { totalIncome: { value: 100 } } } },
+    weeklyReportRaw: {
+      financeNormalizedRows: realDataHardGateFinanceRows.filter(row => row.businessDate >= period.previousStartDate && row.businessDate <= period.previousEndDate),
+      schedule: realDataHardGateScheduleRows.filter(row => String(row.startTime || '').slice(0, 10) >= period.previousStartDate && String(row.startTime || '').slice(0, 10) <= period.previousEndDate)
+    }
+  };
+  const result = await generateWeeklyBusinessReport({
+    period,
+    generationMode: 'manual',
+    baseUrl: 'https://www.flowtennis.cn',
+    mkTable: async () => {},
+    get: async () => ({ id: 'weekly:顺义马坡:2026-08-27:2026-09-03', shareToken: 'rawless-zero-trend-token', status: 'success' }),
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    loadOperationsPayload: async ({ scope }) => {
+      liveLoads += 1;
+      if (scope?.dateRange?.startDate === '2026-07-02' && scope?.dateRange?.endDate === period.endDate) {
+        return {
+          operations: {},
+          weeklyReportRaw: {
+            financeNormalizedRows: realDataHardGateFinanceRows,
+            schedule: realDataHardGateScheduleRows,
+            coaches: [{ name: '朝珺', status: '在职' }, { name: '刘润扬', status: '在职' }]
+          }
+        };
+      }
+      throw new Error(`unexpected live load ${scope?.dateRange?.startDate || ''}:${scope?.dateRange?.endDate || ''}`);
+    },
+    loadOperationsSnapshot: async ({ scope }) => {
+      if (scope?.dateRange?.startDate === period.startDate) return currentPeriodRows;
+      if (scope?.dateRange?.startDate === period.previousStartDate) {
+        return previousPeriodRows;
+      }
+      if (!scope?.dateRange?.startDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 1000 } } }, court: { cards: { utilizationRate: { value: 10 } } } } };
+      }
+      return {
+        operations: {
+          overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } },
+          court: { cards: { utilizationRate: { value: 0 } } },
+          coach: { cards: { usedHours: { value: 0 } } }
+        }
+      };
+    }
+  });
+  return { result, savedRows, liveLoads };
+}
+
 async function callSnapshotFailureLiveFallbackGeneration() {
   let liveLoads = 0;
   let snapshotLoads = 0;
@@ -1136,7 +1195,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -1165,6 +1224,14 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
     });
   });
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
+  assert.strictEqual(rawlessZeroTrendResult.liveLoads, 1, 'manual regeneration should live-load one trailing trend window when stored trend snapshots lack raw facts');
+  assert.strictEqual(rawlessZeroTrendResult.result.shareToken, 'rawless-zero-trend-token', 'rawless zero trend repair should preserve the existing share link');
+  assert.strictEqual(rawlessZeroTrendResult.savedRows[0].sections.trends.length, 8, 'rawless zero trend repair should save eight weekly trend points');
+  rawlessZeroTrendResult.savedRows[0].sections.trends.forEach(row => {
+    ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours'].forEach(key => {
+      assert.ok(Number(row[key]) > 0, `rawless zero trend repair should rebuild ${key} from live facts for ${row.label}`);
+    });
+  });
   assert.ok(fallbackGenerationResult.snapshotLoads >= 1, 'snapshot failure fallback should first try the fast snapshot path');
   assert.ok(fallbackGenerationResult.liveLoads >= 1, 'snapshot failure fallback should read the live weekly report source instead of returning 503');
   assert.strictEqual(fallbackGenerationResult.result.shareToken, 'fallback-token', 'snapshot failure fallback should preserve the existing share link');

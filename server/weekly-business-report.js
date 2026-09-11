@@ -1079,6 +1079,8 @@ function weeklyRawHasFactsInPeriod(raw = {}, period = {}) {
 
 function buildWeeklyTrendRows({ period = {}, operationsPayload = {}, previousOperationsPayload = {}, trendOperationsPayloads = [] } = {}) {
   const byKey = new Map();
+  const trailingPeriods = resolveTrailingWeeklyPeriods(period, 8);
+  const trailingKeys = new Set(trailingPeriods.map(item => `${item.startDate}:${item.endDate}`));
   const trendRowFromPayload = (targetPeriod = {}, payload = {}) => {
     if (!targetPeriod.startDate || !targetPeriod.endDate || !payload) return null;
     const operations = payload.operations || {};
@@ -1101,6 +1103,16 @@ function buildWeeklyTrendRows({ period = {}, operationsPayload = {}, previousOpe
     byKey.set(`${targetPeriod.startDate}:${targetPeriod.endDate}`, row);
     return row;
   };
+  const pushRawTrendRows = (raw = {}) => {
+    if (!weeklyRawHasFactsInPeriod(raw, {})) return;
+    trailingPeriods.forEach(targetPeriod => {
+      const key = `${targetPeriod.startDate}:${targetPeriod.endDate}`;
+      if (weeklyRawHasFactsInPeriod(raw, targetPeriod)) {
+        const candidate = trendRowFromPayload(targetPeriod, { operations: {}, weeklyReportRaw: raw });
+        if (rawShouldReplaceTrendRow(candidate, byKey.get(key))) byKey.set(key, candidate);
+      }
+    });
+  };
   const hasPositiveTrendValue = row => ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours']
     .some(key => numberValue(row?.[key]) > 0);
   const rawShouldReplaceTrendRow = (candidate = null, existing = null) => {
@@ -1111,17 +1123,13 @@ function buildWeeklyTrendRows({ period = {}, operationsPayload = {}, previousOpe
   };
   pushPayload({ startDate: period.previousStartDate, endDate: period.previousEndDate }, previousOperationsPayload);
   pushPayload(period, operationsPayload);
-  normalizeRows(trendOperationsPayloads).forEach(item => pushPayload(item.period || {}, item.payload || item));
-  const raw = operationsPayload.weeklyReportRaw || {};
-  if (weeklyRawHasFactsInPeriod(raw, {})) {
-    resolveTrailingWeeklyPeriods(period, 8).forEach(targetPeriod => {
-      const key = `${targetPeriod.startDate}:${targetPeriod.endDate}`;
-      if (weeklyRawHasFactsInPeriod(raw, targetPeriod)) {
-        const candidate = trendRowFromPayload(targetPeriod, { operations: {}, weeklyReportRaw: raw });
-        if (rawShouldReplaceTrendRow(candidate, byKey.get(key))) byKey.set(key, candidate);
-      }
-    });
-  }
+  normalizeRows(trendOperationsPayloads).forEach(item => {
+    const targetPeriod = item.period || {};
+    const payload = item.payload || item;
+    if (trailingKeys.has(`${targetPeriod.startDate}:${targetPeriod.endDate}`)) pushPayload(targetPeriod, payload);
+    pushRawTrendRows(payload.weeklyReportRaw || {});
+  });
+  pushRawTrendRows(operationsPayload.weeklyReportRaw || {});
   return Array.from(byKey.values()).sort((a, b) => String(a.endDate).localeCompare(String(b.endDate))).slice(-8);
 }
 
@@ -2126,6 +2134,10 @@ function weeklyPayloadReadyForScope(payload = {}, scope = {}) {
   return true;
 }
 
+function weeklyPayloadHasFinanceFactsInPeriod(payload = {}, period = {}) {
+  return weeklyFinanceRows(payload?.weeklyReportRaw || {}, period).length > 0;
+}
+
 async function generateWeeklyBusinessReport({
   loadOperationsPayload,
   loadOperationsSnapshot,
@@ -2198,6 +2210,7 @@ async function generateWeeklyBusinessReport({
     ]);
     const trendPeriods = resolveTrailingWeeklyPeriods(period, 8)
       .filter(item => !loadedTrendKeys.has(`${item.startDate}:${item.endDate}`));
+    let shouldLoadLiveTrendWindow = false;
     for (const trendPeriod of trendPeriods) {
       const trendScope = {
         ...scope,
@@ -2206,6 +2219,18 @@ async function generateWeeklyBusinessReport({
       };
       const payload = await loadOperationsSnapshot({ user, scope: trendScope, allowRefreshing: generationMode === 'manual' }).catch(() => null);
       if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
+      if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) shouldLoadLiveTrendWindow = true;
+    }
+    if (generationMode === 'manual' && shouldLoadLiveTrendWindow && trendPeriods.length) {
+      const trendWindowScope = {
+        ...scope,
+        dateRange: { startDate: trendPeriods[0].startDate, endDate: period.endDate },
+        metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriods[0].startDate, endDate: period.endDate }
+      };
+      const trendWindowPayload = await loadOperationsPayload({ user, scope: trendWindowScope, weeklyReportLiveSource: true }).catch(() => null);
+      if (weeklyPayloadHasRawFacts(trendWindowPayload)) {
+        trendOperationsPayloads.push({ period: trendWindowScope.dateRange, payload: trendWindowPayload });
+      }
     }
   }
   const snapshot = buildWeeklyBusinessReportSnapshot({
