@@ -359,6 +359,9 @@ const rawSnapshot = buildWeeklyBusinessReportSnapshot({
         { name: '小鹿', status: '在职' },
         { name: '宋教练', status: '离职' }
       ],
+      students: [
+        { id: 'e927ccc1-c1a7-4375-bff2-526b57b78ef7', name: '周阿龙（Along）' }
+      ],
       purchases: [
         { id: 'old-private', studentId: 'stu-a', courseType: '私教课', amountPaid: 1000, purchaseDate: '2026-08-20', status: 'active', campus: 'shunyi_mapo' },
         { id: 'first-private', studentId: 'stu-b', courseType: '私教课', amountPaid: 2000, purchaseDate: '2026-08-28', status: 'active', firstPurchase: true, campus: 'shunyi_mapo' },
@@ -386,7 +389,7 @@ const rawSnapshot = buildWeeklyBusinessReportSnapshot({
         { id: 'member-order-voided', membershipAccountId: 'member-account-voided', courtId: 'court-voided', status: 'voided', rechargeAmount: 9999, purchaseDate: '2026-08-28' }
       ],
       schedule: [
-        { id: 'coach-current', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已下课', campus: 'shunyi_mapo' },
+        { id: 'coach-current', coach: '朝珺教练', studentName: 'e927ccc1-c1a7-4375-bff2-526b57b78ef7', courseType: '私教课', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已下课', campus: 'shunyi_mapo' },
         { id: 'dirty-current', coach: '小鹿教练', lessonCount: 2, startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 12:00:00', status: '已排课', campus: 'shunyi_mapo' },
         { id: 'coach-prev', coach: '朝珺教练', courseType: '私教课', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已下课', campus: 'shunyi_mapo' },
         { id: 'inactive-coach', coach: '宋教练', courseType: '私教课', startTime: '2026-08-28 12:00:00', endTime: '2026-08-28 13:00:00', status: '已下课', campus: 'shunyi_mapo' }
@@ -440,6 +443,8 @@ assert.strictEqual(rawSnapshot.sections.coach.rows[0].coach, '朝珺教练', 'in
 assert.strictEqual(rawSnapshot.sections.coach.rows[0].scheduledCount, 2, 'coach current scheduled column should use current week hours');
 assert.strictEqual(rawSnapshot.sections.coach.rows[0].previousHours, 1, 'coach current/previous column should include previous week hours');
 assert.strictEqual(rawSnapshot.sections.coach.totalHours, 2, 'coach completed hours should only count lessons explicitly marked as completed');
+assert.strictEqual(rawSnapshot.sections.coach.rows[0].lessonRows[0].student, '周阿龙（Along）', 'coach lesson details should resolve UUID studentName values from the student source rows');
+assert.notStrictEqual(rawSnapshot.sections.coach.rows[0].lessonRows[0].student, 'e927ccc1-c1a7-4375-bff2-526b57b78ef7', 'coach lesson details must not expose dirty UUID student names');
 assert.strictEqual(rawSnapshot.sections.conversion.trialDeals, 1, 'conversion top trial deals should equal source row total');
 assert.ok(rawSnapshot.sections.conversion.sourceRows.find(row => row.source === '抖音' && row.leads === 0), 'conversion source table should include standard zero-value sources');
 
@@ -744,12 +749,17 @@ assert.match(html, /四、场地经营/, 'HTML should render court section');
 assert.match(html, /五、线索转化/, 'HTML should render lead conversion section');
 assert.match(html, /专项课/, 'HTML should render special course coach metric');
 assert.match(html, /donut|bar-row|cohort-cell/, 'HTML should render report charts');
+assert.match(html, /cdn\.jsdelivr\.net\/npm\/echarts@5\/dist\/echarts\.min\.js/, 'weekly report trend charts should load ECharts');
+assert.match(html, /echarts\.init/, 'weekly report trend charts should initialize ECharts');
+assert.match(html, /xAxis[\s\S]*yAxis|yAxis[\s\S]*xAxis/, 'weekly report trend charts should use standard x/y axes');
+assert.match(html, /tooltip/, 'weekly report trend charts should use standard chart tooltips');
+assert.doesNotMatch(html, /views-line|views-area|line-labels|<svg viewBox="0 0 100 100"/, 'weekly report trend charts must not keep the ugly hand-written SVG sparkline');
 assert.match(html, /cdn\.tailwindcss\.com[\s\S]*fontFamily[\s\S]*cyber:[\s\S]*volt: '#7CFF44'/, 'weekly report must load and reuse the provided cyber analytics template tokens');
 assert.match(html, /<body class="bg-grid-pattern text-white font-sans min-h-screen antialiased flex flex-col pb-16">/, 'weekly report body should reuse the provided template shell classes');
 assert.match(html, /<header data-section="global-header" class="border-b border-cyber-border bg-cyber-black\/95 sticky top-0 z-50 backdrop-blur-md">/, 'weekly report header should reuse the provided template header structure');
 assert.match(html, /<nav class="hidden md:flex items-center space-x-1 bg-black\/40 p-1 rounded-lg border border-cyber-border"[\s\S]*href="#overview"[\s\S]*Dashboard[\s\S]*href="#revenue"[\s\S]*Revenue[\s\S]*href="#private-course"[\s\S]*Private Course[\s\S]*href="#court"[\s\S]*Court Usage[\s\S]*href="#coach"[\s\S]*Coach/, 'top navigation should mirror the template segmented menu and jump to report sections');
 assert.match(html, /data-section="top-kpi-cards" class="lg:col-span-5 grid grid-cols-3 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border"[\s\S]*总收入[\s\S]*text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总场地利用率[\s\S]*text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总私教课人数[\s\S]*text-3xl font-mono font-bold text-white tracking-tight/, 'hero lifetime metrics should use the template large right-side KPI card');
-assert.match(html, /flex flex-wrap gap-3 pt-2[\s\S]*营业收入[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*上周/, 'weekly summary metrics should use the requested four metrics with previous-week comparison');
+assert.match(html, /flex flex-wrap gap-3 pt-2[\s\S]*核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*上周/, 'weekly summary metrics should use the requested four metrics with previous-week comparison');
 assert.match(html, /data-section="court-utilization-heatmap"[\s\S]*\/\/ COURT UTILIZATION HEATMAP[\s\S]*每天利用率[\s\S]*<th class="py-2 text-left font-sans"[\s\S]*日期[\s\S]*08\.27[\s\S]*09\.03[\s\S]*cohort-cell[\s\S]*41%[\s\S]*72%[\s\S]*61%/, 'daily court utilization should render as a date heatmap with real daily values');
 assert.doesNotMatch(html, /USER RETENTION MATRIX|核心客群生命周期存留分析|起始批次|Cohort|>W1<|>W5</, 'daily court utilization must not keep retention cohort wording');
 assert.doesNotMatch(html, /\[contenteditable=true\]\{outline:/, 'editable elements must not show dashed outlines by default');
@@ -760,7 +770,8 @@ assert.match(html, /contenteditable="true"[\s\S]*save-edit/, 'weekly report shou
 assert.match(html, /data-edit-key="section.revenue.title"[\s\S]*data-edit-key="section.course.title"[\s\S]*data-edit-key="course.totalPeople.label"[\s\S]*data-edit-key="court.heatmap.title"[\s\S]*data-edit-key="conversion.source.0.source"/, 'weekly report should make section titles, metric labels, charts and table cells editable');
 assert.match(html, /总场地利用率/, 'hero should show lifetime court utilization label');
 assert.match(html, /总私教课人数/, 'hero should show lifetime private course people label');
-assert.match(html, /营业收入[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时/, 'top weekly metrics should use requested labels');
+assert.match(html, /核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时/, 'top weekly metrics should use requested labels');
+assert.doesNotMatch(html, /营业收入|本周营业收入|2\.2 订场收款（散客）|2\.3 会员收款/, 'weekly report should not keep old revenue and booking section copy');
 assert.match(html, /12,000 元/, 'numbers should use thousands separators');
 assert.match(html, /会员订场[\s\S]*散客订场[\s\S]*课程订场[\s\S]*领导订场[\s\S]*内部使用[\s\S]*约球局/, 'HTML should render all standard court booking type rows');
 assert.match(html, /王教练/, 'HTML should render coach data rows');
@@ -771,6 +782,25 @@ assert.doesNotMatch(html, /订单ID|线索ID|流水ID/, 'HTML should not expose 
 assert.match(renderWeeklyBusinessReportHtml(noFakeSourceSnapshot), />-</, 'HTML should show a dash when a requested metric has no reliable source');
 const rawHtml = renderWeeklyBusinessReportHtml(rawSnapshot);
 assert.match(rawHtml, /2\.1 课程收款/, 'course income section should use the requested course receipt title');
+assert.match(rawHtml, /2\.2 散客订场收款/, 'guest booking section should use requested title');
+assert.match(rawHtml, /2\.3 订场会员收款/, 'stored value member section should use requested title');
+const storedDirtyLessonHtml = renderWeeklyBusinessReportHtml({
+  period,
+  summary: {},
+  sections: {
+    revenue: { storedValue: {}, receipts: {}, recognized: {}, course: {} },
+    court: {},
+    coach: {
+      rows: [{
+        coach: '朝珺教练',
+        lessonRows: [{ date: '2026-09-05', time: '08:00-10:00', student: 'e927ccc1-c1a7-4375-bff2-526b57b78ef7', courseType: '私教课', hours: 2, court: '1号场' }]
+      }]
+    },
+    conversion: {}
+  }
+});
+assert.doesNotMatch(storedDirtyLessonHtml, /e927ccc1-c1a7-4375-bff2-526b57b78ef7/, 'stored weekly report HTML must not expose dirty UUID student names');
+assert.match(storedDirtyLessonHtml, /未记录学员/, 'stored weekly report HTML should mask unresolved dirty UUID student names');
 assert.match(rawHtml, /私教课人数[\s\S]*私教课总收款[\s\S]*私教课总消耗金额/, 'private course income should show the requested total metrics');
 assert.match(rawHtml, /本周购课人数[\s\S]*本周课程销售收款[\s\S]*本周上课人数[\s\S]*本周完成课时[\s\S]*本周课程消耗收入/, 'private course income should show the requested weekly metrics');
 assert.match(rawHtml, /成人[\s\S]*青少年/, 'private course income should split current-week rows by adult and youth');
@@ -810,11 +840,12 @@ assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow sh
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260906-weekly-report-fix-v1/, 'admin shell should bust weekly report page script cache after weekly report fixes');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260911-weekly-report-copy-chart-v1/, 'admin shell should bust weekly report page script cache after weekly report copy and chart fixes');
 assert.match(indexHtml, /api\.js\?v=20260904-weekly-report-share-v1/, 'admin shell should bust public weekly report share script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
 assert.doesNotMatch(weeklyPageSource, /顺义马坡每周周报|重新生成本周周报|editWeeklyReportRemark/, 'admin weekly report list should remove the old title block, top regenerate button and remark action');
-assert.match(weeklyPageSource, /周次[\s\S]*营业收入[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*查看[\s\S]*复制链接[\s\S]*重新生成/, 'admin weekly report list should show the requested columns and row actions');
+assert.match(weeklyPageSource, /周次[\s\S]*核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*查看[\s\S]*复制链接[\s\S]*重新生成/, 'admin weekly report list should show the requested columns and row actions');
+assert.doesNotMatch(weeklyPageSource, /营业收入/, 'admin weekly report list should rename revenue copy to recognized revenue');
 assert.match(weeklyPageSource, /weekly-report-table[\s\S]*width:100%;min-width:1180px[\s\S]*table-layout:fixed/, 'admin weekly report list should fill the card while keeping compact fixed column widths');
 assert.match(weeklyPageSource, /toLocaleString\('zh-CN'[\s\S]*Asia\/Shanghai/, 'admin weekly report list should format generated time in Beijing time');
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');

@@ -136,6 +136,49 @@ function textValue(row = {}, keys = []) {
   return '';
 }
 
+function isTechnicalIdentifier(value = '') {
+  const text = String(value || '').trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(text);
+}
+
+function firstDisplayName(values = []) {
+  for (const value of values) {
+    const list = Array.isArray(value) ? value : [value];
+    for (const item of list) {
+      const text = String(item || '').trim();
+      if (text && !isTechnicalIdentifier(text)) return text;
+    }
+  }
+  return '';
+}
+
+function buildStudentNameMap(raw = {}) {
+  const map = new Map();
+  normalizeRows(raw.students).forEach(row => {
+    const name = firstDisplayName([row.name, row.studentName, row.customerName, row.displayName, row.leadName]);
+    if (!name) return;
+    [row.id, row.studentId, row.customerId, row.leadId, row.sourceLeadId].forEach(id => {
+      const key = String(id || '').trim();
+      if (key) map.set(key, name);
+    });
+  });
+  return map;
+}
+
+function scheduleStudentDisplayName(row = {}, studentNameMap = new Map()) {
+  const direct = firstDisplayName([row.studentName, row.studentNames, row.customerName, row.leadName, row.name]);
+  if (direct) return direct;
+  const lookupKeys = [row.studentId, row.customerId, row.studentName, row.studentNames, row.leadId, row.sourceLeadId]
+    .flatMap(value => Array.isArray(value) ? value : [value])
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+  for (const key of lookupKeys) {
+    const mapped = studentNameMap.get(key);
+    if (mapped) return mapped;
+  }
+  return lookupKeys.some(isTechnicalIdentifier) ? '未记录学员' : '-';
+}
+
 function inPeriod(day = '', period = {}) {
   const value = String(day || '').slice(0, 10);
   if (!value) return false;
@@ -525,8 +568,9 @@ function buildCourseRevenueFromRaw(raw = {}, period = {}, previousRaw = {}) {
 
 function buildCoachFromSchedules(raw = {}, period = {}, previousRaw = {}) {
   const activeNames = new Set(normalizeRows(raw.coaches).filter(isActiveCoach).map(row => cleanCoachName(row.name || row.coachName)).filter(Boolean));
+  const studentNameMap = buildStudentNameMap(raw);
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
-  const build = (rows = [], targetPeriod = {}) => {
+  const build = (rows = [], targetPeriod = {}, nameMap = studentNameMap) => {
     const map = new Map();
     normalizeRows(rows).filter(row => isValidSchedule(row, targetPeriod) && isCompletedCalendarSchedule(row)).forEach(row => {
       const clean = cleanCoachName(row.coach || row.coachName);
@@ -537,7 +581,7 @@ function buildCoachFromSchedules(raw = {}, period = {}, previousRaw = {}) {
       current.lessonRows.push({
         date: String(row.startTime || '').slice(0, 10),
         time: `${String(row.startTime || '').slice(11, 16)}-${String(row.endTime || '').slice(11, 16)}`,
-        student: row.studentName || row.leadName || '-',
+        student: scheduleStudentDisplayName(row, nameMap),
         courseType: row.courseType || row.experienceType || row.productName || row.packageName || '-',
         hours: scheduleHours(row),
         court: row.courtName || row.venue || row.location || row.court || '-'
@@ -550,7 +594,7 @@ function buildCoachFromSchedules(raw = {}, period = {}, previousRaw = {}) {
     }).filter(row => row.totalHours > 0);
   };
   const rows = build(raw.schedule, period);
-  const prevRows = build(previousRaw.schedule || raw.schedule, previousPeriod);
+  const prevRows = build(previousRaw.schedule || raw.schedule, previousPeriod, buildStudentNameMap(previousRaw));
   const prevMap = new Map(prevRows.map(row => [row.coach, row]));
   const rowsWithCompare = rows.map(row => ({ ...row, compare: compareValue(row.totalHours, prevMap.get(row.coach)?.totalHours || 0), previousHours: prevMap.get(row.coach)?.totalHours || 0 }));
   const total = rowsWithCompare.reduce((acc, row) => {
@@ -1218,7 +1262,7 @@ function assertWeeklyBusinessReportNotContradictingFacts(snapshot = {}, { raw = 
     throw err;
   }
   if (recognizedFromFacts > 0 && numberValue(snapshot.summary?.totalIncome?.value) <= 0) {
-    const err = new Error('周报生成结果异常：营业收入为 0，但原始财务流水存在已入账收入');
+    const err = new Error('周报生成结果异常：核销入账为 0，但原始财务流水存在已入账收入');
     err.code = 'WEEKLY_REPORT_FACT_CONTRADICTION';
     err.statusCode = 422;
     throw err;
@@ -1230,7 +1274,7 @@ function assertWeeklyBusinessReportNotContradictingFacts(snapshot = {}, { raw = 
     throw err;
   }
   if (financeRows.length && trendRows.length && trendRows.every(row => numberValue(row.businessRevenue) <= 0)) {
-    const err = new Error('周报生成结果异常：经营趋势营业收入全为 0，但原始财务流水存在收入事实');
+    const err = new Error('周报生成结果异常：经营趋势核销入账全为 0，但原始财务流水存在收入事实');
     err.code = 'WEEKLY_REPORT_FACT_CONTRADICTION';
     err.statusCode = 422;
     throw err;
@@ -1680,7 +1724,7 @@ function lineChart(rows = [], { valueKey = 'value', unit = '%' } = {}) {
   const clean = normalizeRows(rows).filter(row => row.label || row.date);
   if (!clean.length) return '<p class="empty">暂无可绘制数据</p>';
   const payload = clean.map(row => ({ label: row.label || String(row.date || '').slice(5), value: fieldNumber(row, [valueKey]) }));
-  return `<div class="line-chart template-interactive-chart" data-unit="${escapeHtml(unit)}" data-points="${escapeHtml(JSON.stringify(payload))}"><svg viewBox="0 0 100 100" role="img" aria-label="趋势图"><defs><linearGradient id="weeklyAreaGlowGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7CFF44" stop-opacity="0.16"></stop><stop offset="100%" stop-color="#7CFF44" stop-opacity="0"></stop></linearGradient></defs><path class="views-area" fill="url(#weeklyAreaGlowGradient)" d=""></path><path class="views-line" fill="none" stroke="#7CFF44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d=""></path><g class="dots"></g></svg><div class="line-labels">${payload.map(row => `<span>${escapeHtml(row.label)}<b>${escapeHtml(row.value)}${escapeHtml(unit)}</b></span>`).join('')}</div></div>`;
+  return `<div class="weekly-echarts-trend template-interactive-chart" role="img" aria-label="趋势图" data-unit="${escapeHtml(unit)}" data-points="${escapeHtml(JSON.stringify(payload))}"></div>`;
 }
 
 function trendMetricPanel(title, rows = [], valueKey = 'value', unit = '', edits = {}, key = '') {
@@ -1739,7 +1783,7 @@ function renderCoachLessonRows(rows = [], edits = {}, coachIndex = 0) {
   return `<details class="mt-2"><summary class="cursor-pointer text-cyber-volt text-xs">展开上课明细</summary>${renderRows(clean, [
     { key: 'date', label: '日期' },
     { key: 'time', label: '时间' },
-    { key: 'student', label: '学员' },
+    { key: 'student', label: '学员', render: row => isTechnicalIdentifier(row.student) ? '未记录学员' : displayMetricValue(row.student) },
     { key: 'courseType', label: '课程类型' },
     { key: 'hours', label: '课时', render: row => `${formatMetricValue(row.hours, '小时')}小时` },
     { key: 'court', label: '场地' }
@@ -1776,6 +1820,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
@@ -1810,7 +1855,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#070A08}::-webkit-scrollbar-thumb{background:#18221B;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#2C3D2F}
     [data-editable="true"]:hover,[data-editable="true"]:focus{outline:1px dashed #7CFF44;background-color:rgba(124,255,68,.05);padding-left:4px;padding-right:4px;border-radius:2px}
     .cohort-cell{transition:all .15s ease-out}.cohort-cell:hover{transform:scale(1.05);z-index:10;box-shadow:0 0 10px rgba(124,255,68,.2)}
-    .views-line,.views-area,.rate-line{transition:stroke-dasharray .3s ease}.interactive-dot{transition:r .2s cubic-bezier(.175,.885,.32,1.275),stroke-width .2s ease,fill .2s ease}
+    .weekly-echarts-trend{height:260px;min-height:260px;width:100%}
     .chart-tooltip{position:fixed;display:none;z-index:20;pointer-events:none;border:1px solid #7CFF44;background:#0D120F;color:#fff;border-radius:6px;padding:7px 9px;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
     .empty{color:#889E8D}.highlight-col{background:rgba(124,255,68,.08);color:#7CFF44}.remark{white-space:pre-wrap}
     .bars{display:grid;gap:11px}.bar-row{display:grid;grid-template-columns:132px 1fr 92px;gap:12px;align-items:center;font-size:13px}.bar-row span{color:#889E8D}.bar-row i{height:10px;background:#18221B;border-radius:3px;overflow:hidden}.bar-row b{display:block;height:100%;background:#7CFF44;border-radius:3px}.bar-row strong{font-family:ui-monospace,SFMono-Regular,monospace;color:#fff}
@@ -1826,7 +1871,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
       <div class="text-xs font-mono text-cyber-volt tracking-wider uppercase">${editableText(edits, 'overview.eyebrow', '// SHUNYI MAPO OVERVIEW')}</div>
       <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight">${editableText(edits, 'overview.title', `${snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME}周报`)}</h1>
       <div class="flex flex-wrap gap-3 pt-2">
-        ${summaryChip('营业收入', summary.totalIncome?.value || 0, ' 元', summary.totalIncome?.compare, edits, 'summary.totalIncome')}
+        ${summaryChip('核销入账', summary.totalIncome?.value || 0, ' 元', summary.totalIncome?.compare, edits, 'summary.totalIncome')}
         ${summaryChip('本周收款', summary.cashReceived?.value || 0, ' 元', summary.cashReceived?.compare, edits, 'summary.cashReceived')}
         ${summaryChip('场地利用率', summary.courtUtilizationRate?.value || 0, '%', summary.courtUtilizationRate?.compare, edits, 'summary.courtUtilizationRate')}
         ${summaryChip('完成课时', summary.coachHours?.value || 0, ' 小时', summary.coachHours?.compare, edits, 'summary.coachHours')}
@@ -1841,7 +1886,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
 
   ${editableSectionTitle('trend', '一、经营趋势', '// 8 WEEK TREND')}
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    ${trendMetricPanel('营业收入', sections.trends || [], 'businessRevenue', '元', edits, 'trend.businessRevenue')}
+    ${trendMetricPanel('核销入账', sections.trends || [], 'businessRevenue', '元', edits, 'trend.businessRevenue')}
     ${trendMetricPanel('本周收款', sections.trends || [], 'cashReceived', '元', edits, 'trend.cashReceived')}
     ${trendMetricPanel('场地利用率', sections.trends || [], 'courtUtilizationRate', '%', edits, 'trend.courtUtilizationRate')}
     ${trendMetricPanel('完成课时', sections.trends || [], 'coachHours', '小时', edits, 'trend.coachHours')}
@@ -1855,7 +1900,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${templateMetric('本周储值收款', revenue.receipts?.storedValueAmount, ' 元', revenue.receipts?.compare?.storedValueAmount, edits, 'receipts.storedValueAmount')}
   </div>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-    ${templateMetric('本周营业收入', revenue.recognized?.businessRevenue, ' 元', revenue.recognized?.compare?.businessRevenue, edits, 'recognized.businessRevenue')}
+    ${templateMetric('本周核销入账', revenue.recognized?.businessRevenue, ' 元', revenue.recognized?.compare?.businessRevenue, edits, 'recognized.businessRevenue')}
     ${templateMetric('课程消耗收入', revenue.recognized?.courseConsumedRevenue, ' 元', revenue.recognized?.compare?.courseConsumedRevenue, edits, 'recognized.courseConsumedRevenue')}
     ${templateMetric('会员订场消耗收入', revenue.recognized?.memberBookingConsumedRevenue, ' 元', revenue.recognized?.compare?.memberBookingConsumedRevenue, edits, 'recognized.memberBookingConsumedRevenue')}
     ${templateMetric('散客订场收入', revenue.recognized?.guestBookingRevenue, ' 元', revenue.recognized?.compare?.guestBookingRevenue, edits, 'recognized.guestBookingRevenue')}
@@ -1876,14 +1921,14 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   </div>
   ${renderCourseTypeRows(revenue.course?.typeRows || [], edits)}
 
-  <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, 'section.guestBooking.title', '2.2 订场收款（散客）')}</h3>
+  <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, 'section.guestBooking.title', '2.2 散客订场收款')}</h3>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     ${templateMetric('本周订场人数', (court.usageRows || []).find(row => row.key === 'guest')?.count, ' 人', null, edits, 'guestBooking.count')}
     ${templateMetric('本周订场时长', (court.usageRows || []).find(row => row.key === 'guest')?.hours, ' 小时', null, edits, 'guestBooking.hours')}
     ${templateMetric('本周订场收入', (court.usageRows || []).find(row => row.key === 'guest')?.amount, ' 元', null, edits, 'guestBooking.amount')}
   </div>
 
-  <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, 'section.storedValue.title', '2.3 会员收款')}</h3>
+  <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, 'section.storedValue.title', '2.3 订场会员收款')}</h3>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     ${templateMetric('会员总数', revenue.storedValue?.totalMembers, ' 人', null, edits, 'storedValue.totalMembers')}
     ${templateMetric('总储值金额', revenue.storedValue?.totalAmount, ' 元', null, edits, 'storedValue.totalAmount')}
@@ -1961,27 +2006,27 @@ document.querySelectorAll('[data-tooltip]').forEach(function(el){
   el.addEventListener('mousemove',function(e){if(!tooltip)return;tooltip.textContent=el.getAttribute('data-tooltip')||'';tooltip.style.display='block';tooltip.style.left=e.clientX+12+'px';tooltip.style.top=e.clientY+12+'px';});
   el.addEventListener('mouseleave',function(){if(tooltip)tooltip.style.display='none';});
 });
-document.querySelectorAll('.template-interactive-chart').forEach(function(chart){
+document.querySelectorAll('.weekly-echarts-trend').forEach(function(chart){
   var rows=[];
   try{rows=JSON.parse(chart.getAttribute('data-points')||'[]')}catch(e){}
-  var svg=chart.querySelector('svg');
-  var line=chart.querySelector('.views-line');
-  var area=chart.querySelector('.views-area');
-  var dots=chart.querySelector('.dots');
-  if(!rows.length||!svg||!line||!area||!dots)return;
-  var max=Math.max.apply(null,rows.map(function(row){return Number(row.value)||0}).concat([1]));
-  var points=rows.map(function(row,index){
-    var x=rows.length===1?50:8+index*(84/(rows.length-1));
-    var y=92-((Number(row.value)||0)/max)*76;
-    return {x:x,y:y,row:row};
+  if(!rows.length)return;
+  if(!window.echarts){chart.innerHTML='<p class="empty">图表加载失败</p>';return;}
+  var unit=chart.getAttribute('data-unit')||'';
+  var formatValue=function(value){
+    var n=Number(value)||0;
+    return n.toLocaleString('zh-CN',{maximumFractionDigits:unit==='%'||unit==='小时'?2:0});
+  };
+  var instance=echarts.init(chart);
+  instance.setOption({
+    backgroundColor:'transparent',
+    color:['#7CFF44'],
+    grid:{left:52,right:22,top:24,bottom:48,containLabel:false},
+    tooltip:{trigger:'axis',backgroundColor:'#0D120F',borderColor:'#7CFF44',textStyle:{color:'#fff'},valueFormatter:function(value){return formatValue(value)+unit;}},
+    xAxis:{type:'category',boundaryGap:false,data:rows.map(function(row){return row.label;}),axisLine:{lineStyle:{color:'#2C3D2F'}},axisTick:{show:false},axisLabel:{color:'#889E8D',fontSize:11,interval:0,rotate:28,margin:14}},
+    yAxis:{type:'value',splitNumber:4,axisLine:{show:true,lineStyle:{color:'#2C3D2F'}},axisTick:{show:false},axisLabel:{color:'#889E8D',fontSize:11,formatter:function(value){return formatValue(value)+unit;}},splitLine:{lineStyle:{color:'#18221B',type:'dashed'}}},
+    series:[{type:'line',data:rows.map(function(row){return Number(row.value)||0;}),smooth:false,symbol:'circle',symbolSize:8,lineStyle:{width:3,color:'#7CFF44'},itemStyle:{color:'#070A08',borderColor:'#7CFF44',borderWidth:2},areaStyle:{color:'rgba(124,255,68,.10)'}}]
   });
-  var path=points.map(function(point,index){return (index?'L':'M')+point.x+' '+point.y}).join(' ');
-  var fill='M '+points[0].x+' 92 L '+points.map(function(point){return point.x+' '+point.y}).join(' L ')+' L '+points[points.length-1].x+' 92 Z';
-  line.setAttribute('d',path);
-  area.setAttribute('d',fill);
-  dots.innerHTML=points.map(function(point){
-    return '<circle class="interactive-dot" cx="'+point.x+'" cy="'+point.y+'" r="2.8" fill="#070A08" stroke="#7CFF44" stroke-width="1.5"></circle>';
-  }).join('');
+  window.addEventListener('resize',function(){instance.resize();});
 });
 document.querySelector('.save-edit')?.addEventListener('click',async function(){
   var button=this;
