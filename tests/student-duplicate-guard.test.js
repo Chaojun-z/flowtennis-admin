@@ -18,6 +18,7 @@ function makeRes() {
 
 async function main() {
   const writes = [];
+  const summarySyncs = [];
   const rows = {
     ft_students: [
       { id: 'student-phone', name: '手机号重复', phone: '13800138000', campus: 'shunyi_mapo' },
@@ -48,6 +49,10 @@ async function main() {
     get: async (table, id) => (rows[table] || []).find((row) => row.id === id) || null,
     applyStudentIdentityUpdate: async () => ({ plans: [], schedule: [], purchases: [], entitlements: [], feedbacks: [] }),
     deleteStudentCascade: async () => ({}),
+    syncStudentProfileToTeachingSummary: async (student) => {
+      summarySyncs.push(student);
+      return { synced: true };
+    },
     T_STUDENTS: 'ft_students',
     T_SCHEDULE: 'ft_schedule',
     T_CLASSES: 'ft_classes',
@@ -76,6 +81,10 @@ async function main() {
   });
   assert.strictEqual(sameNameCampusRes.statusCode, 409, 'same name and same campus without phone should be rejected');
   assert.match(sameNameCampusRes.body.error, /同名同校区学员已存在/);
+  assert.ok(
+    summarySyncs.some(student => student.id === 'student-name-campus'),
+    '同名同校区重复命中时也要单条同步已有学员到历史学员快照，避免数据库已有但列表不可见'
+  );
 
   const sameNameOtherCampusRes = makeRes();
   await handle({
@@ -86,6 +95,10 @@ async function main() {
     res: sameNameOtherCampusRes
   });
   assert.strictEqual(sameNameOtherCampusRes.statusCode, 200, 'same name in another campus should still be allowed when phone is empty');
+  assert.ok(
+    summarySyncs.some(student => student.id === 'new-student'),
+    '新增学员保存成功后必须单条同步到历史学员快照'
+  );
 
   const skipDuplicateCheckHandle = createStudentRoutes({
     init: async () => {},

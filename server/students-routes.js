@@ -6,6 +6,7 @@ function createStudentRoutes(deps={}){
     assertStudentWriteAccess,uuidv4,assertPhone,put,get,buildStudentReminderBindToken,
     buildStudentReminderLinkUpdate,normalizeStudentReminderMode,normalizeStudentReminderCustomHours,
     buildStudentOfficialAccountUnboundUpdate,applyStudentIdentityUpdate,deleteStudentCascade,
+    syncStudentProfileToTeachingSummary=async()=>({synced:false,reason:'not-configured'}),
     T_STUDENTS,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
   }=deps;
 
@@ -33,6 +34,13 @@ function createStudentRoutes(deps={}){
     return rows.map(row=>({row,reason:studentDuplicateReason(input,row)}))
       .find(item=>item.reason&&String(item.row.id||'')!==String(editingId||''))||null;
   }
+  async function syncStudentProfileAfterWrite(row){
+    if(!row?.id)return null;
+    return syncStudentProfileToTeachingSummary(row).catch(err=>{
+      console.warn('[students] teaching summary profile sync failed',err?.message||err);
+      return null;
+    });
+  }
   function studentIdentityChanged(oldStudent={},nextStudent={}){
     if(!oldStudent)return false;
     return studentUniqueText(oldStudent.name)!==studentUniqueText(nextStudent.name)
@@ -59,11 +67,15 @@ function createStudentRoutes(deps={}){
         assertStudentWriteAccess(user);
         if(!body.skipDuplicateCheck){
           const duplicate=await findStudentDuplicate(body);
-          if(duplicate)return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
+          if(duplicate){
+            await syncStudentProfileAfterWrite(duplicate.row);
+            return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
+          }
         }
         const id=uuidv4();
         const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         await put(T_STUDENTS,id,r);
+        await syncStudentProfileAfterWrite(r);
         return sendJson(res,r);
       }
     }
@@ -113,8 +125,12 @@ function createStudentRoutes(deps={}){
         const old=await get(T_STUDENTS,id).catch(()=>null);
         const r={...(old||{}),...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};
         const duplicate=await findStudentDuplicate(r,id);
-        if(duplicate)return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
+        if(duplicate){
+          await syncStudentProfileAfterWrite(duplicate.row);
+          return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
+        }
         await put(T_STUDENTS,id,r);
+        await syncStudentProfileAfterWrite(r);
         const studentUpdates={plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[],courts:[],leads:[],leadFollowups:[]};
         const studentUpdatesPending=old&&studentIdentityChanged(old,r);
         if(studentUpdatesPending){

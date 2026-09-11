@@ -13,7 +13,7 @@ const { buildMembershipFinanceSummary } = require('../server/read-models/members
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
 const { buildOperationsPagePayload, invalidateOperationsPageDataCache, getOperationsPageScope } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js'), { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
-const { createStudentTeachingSummaryCache, readReadyStudentTeachingSummaryListRows } = require('../server/read-models/student-teaching-summary-cache.js');
+const { createStudentTeachingSummaryCache, readReadyStudentTeachingSummaryListRows, upsertStudentProfileIntoTeachingSummary } = require('../server/read-models/student-teaching-summary-cache.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
 const { createAuthServices } = require('../server/auth');
@@ -380,7 +380,7 @@ const {
 });
 const studentTeachingSummaryCache=createStudentTeachingSummaryCache({
   tables:{T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY},
-  getCachedScan,mkTable,put,del
+  getCachedScan,getCachedRow,mkTable,put,del
 });
 queueStudentTeachingSummaryRefresh=studentTeachingSummaryCache.queueStudentTeachingSummaryRefresh;
 function getMatchSqlPool(){
@@ -745,7 +745,7 @@ const handleMembershipRoutes=createMembershipRoutes({
 const handleStudentRoutes=createStudentRoutes({init,sendJson:routeSendJson,getFastStudentsRead,getCachedScan,scan,filterLoadAllForUser,buildCoachRefs,
   assertStudentWriteAccess,uuidv4,assertPhone,put,get,buildStudentReminderBindToken,buildStudentReminderLinkUpdate,
   normalizeStudentReminderMode,normalizeStudentReminderCustomHours,buildStudentOfficialAccountUnboundUpdate,
-  applyStudentIdentityUpdate,deleteStudentCascade,T_STUDENTS,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS});
+  applyStudentIdentityUpdate,deleteStudentCascade,syncStudentProfileToTeachingSummary:student=>upsertStudentProfileIntoTeachingSummary({tableName:T_STUDENT_TEACHING_SUMMARY,student,getCachedRow,put,now:new Date(),logger:console}),T_STUDENTS,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS});
 const handleFeedbackRoutes=createFeedbackRoutes({init,sendJson:routeSendJson,withTimeout,getCachedScan,filterLoadAllForUser,
   timedEndpointMetric,uuidv4,get,buildCoachRefs,assertCanWriteFeedback,buildFeedbackRecord,putFeedback,
   T_FEEDBACKS,T_SCHEDULE,T_COACHES,T_USERS});

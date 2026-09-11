@@ -216,6 +216,7 @@ const STUDENT_TEACHING_SUMMARY_LIST_ROW_FIELDS = [
   'campusName',
   'campusIds',
   'primaryCoach',
+  'hasStudentProfile',
   'notes',
   'profileNote',
   'studentStage',
@@ -321,6 +322,157 @@ function buildStudentTeachingSummaryListBundleRow(rows = [], publishVersion = ''
     rowsGzipBase64: zlib.gzipSync(rowsJson).toString('base64'),
     uncompressedBytes: Buffer.byteLength(rowsJson, 'utf8')
   };
+}
+
+function compactStudentProfileSummaryRow(student = {}, now = new Date()) {
+  const studentId = String(student.id || student.studentId || '').trim();
+  const updatedAt = String(student.updatedAt || now.toISOString()).trim();
+  return {
+    id: studentId,
+    studentId,
+    sourceLeadId: String(student.sourceLeadId || student.leadId || student.fromLeadId || '').trim(),
+    name: String(student.name || student.studentName || student.displayName || studentId).trim(),
+    displayName: String(student.displayName || student.name || student.studentName || studentId).trim(),
+    wechatName: String(student.wechatName || '').trim(),
+    nickName: String(student.nickName || '').trim(),
+    nickname: String(student.nickname || '').trim(),
+    phone: String(student.phone || '').trim(),
+    type: String(student.type || student.customerType || student.studentType || '').trim(),
+    source: String(student.source || '').trim(),
+    campus: String(student.campus || student.campusName || '').trim(),
+    campusId: String(student.campusId || '').trim(),
+    campusName: String(student.campusName || '').trim(),
+    campusIds: parseArr(student.campusIds),
+    primaryCoach: String(student.primaryCoach || student.coachName || student.coach || '').trim(),
+    hasStudentProfile: true,
+    notes: Object.prototype.hasOwnProperty.call(student, 'notes') ? String(student.notes || '') : '',
+    profileNote: String(student.profileNote || '').trim(),
+    studentStage: 'student',
+    courseDealPath: '',
+    trialStatus: '',
+    coursePurchaseCount: 0,
+    hasTrialExperience: false,
+    hasTrialAttended: false,
+    hasFormalAttended: false,
+    hasCourseConversion: false,
+    hasTrialToCourseConversion: false,
+    isHistoricalStudentRoster: true,
+    isActiveStudentRoster: false,
+    packageBalanceRemaining: 0,
+    packageBalanceTotal: 0,
+    detailPackageBalanceRemaining: 0,
+    detailPackageBalanceTotal: 0,
+    cumulativeCoursePaidAmount: 0,
+    completedLessons: 0,
+    teachingLessonDetailSourceVersion: String(require('./platform-metrics.js').TEACHING_LESSON_DETAIL_SOURCE_VERSION || '').trim(),
+    summaryUpdatedAt: now.toISOString(),
+    updatedAt,
+    leadDate: String(student.leadDate || student.createdAt || updatedAt).trim(),
+    createdAt: String(student.createdAt || updatedAt).trim()
+  };
+}
+
+function mergeStudentProfileSummaryRow(existing = null, profile = {}) {
+  if (!existing) return profile;
+  return {
+    ...existing,
+    sourceLeadId: profile.sourceLeadId || existing.sourceLeadId,
+    name: profile.name || existing.name,
+    displayName: profile.displayName || existing.displayName,
+    wechatName: profile.wechatName || existing.wechatName,
+    nickName: profile.nickName || existing.nickName,
+    nickname: profile.nickname || existing.nickname,
+    phone: profile.phone,
+    type: profile.type || existing.type,
+    source: profile.source || existing.source,
+    campus: profile.campus || existing.campus,
+    campusId: profile.campusId || existing.campusId,
+    campusName: profile.campusName || existing.campusName,
+    campusIds: profile.campusIds && profile.campusIds.length ? profile.campusIds : existing.campusIds,
+    primaryCoach: profile.primaryCoach || existing.primaryCoach,
+    hasStudentProfile: true,
+    notes: Object.prototype.hasOwnProperty.call(profile, 'notes') ? profile.notes : existing.notes,
+    profileNote: profile.profileNote || existing.profileNote,
+    updatedAt: profile.updatedAt || existing.updatedAt,
+    summaryUpdatedAt: profile.summaryUpdatedAt || existing.summaryUpdatedAt,
+    createdAt: existing.createdAt || profile.createdAt,
+    leadDate: existing.leadDate || profile.leadDate
+  };
+}
+
+function upsertSummaryRow(rows = [], row = {}) {
+  const studentId = String(row.studentId || row.id || '').trim();
+  if (!studentId) return Array.isArray(rows) ? rows : [];
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  let replaced = false;
+  const next = sourceRows.map(item => {
+    const itemId = String(item?.studentId || item?.id || '').trim();
+    if (itemId !== studentId) return item;
+    replaced = true;
+    return mergeStudentProfileSummaryRow(item, row);
+  });
+  if (!replaced) next.push(row);
+  return next;
+}
+
+async function upsertStudentProfileIntoTeachingSummary({
+  tableName,
+  student = {},
+  getCachedRow,
+  put,
+  now = new Date(),
+  logger = console
+} = {}) {
+  const studentId = String(student.id || student.studentId || '').trim();
+  if (!tableName || !studentId || typeof getCachedRow !== 'function' || typeof put !== 'function') {
+    return { synced: false, reason: 'not-configured' };
+  }
+  try {
+    const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
+    const activeVersion = String(meta?.activeVersion || '').trim();
+    if (!isReadyStudentTeachingSummaryMeta(meta) || !activeVersion) {
+      return { synced: false, reason: 'summary-not-ready' };
+    }
+    const fullBundleId = buildStudentTeachingSummaryBundleId(activeVersion);
+    const listBundleId = buildStudentTeachingSummaryListBundleId(activeVersion);
+    const [fullBundle, listBundle] = await Promise.all([
+      getCachedRow(tableName, fullBundleId).catch(() => null),
+      getCachedRow(tableName, listBundleId).catch(() => null)
+    ]);
+    if (!isStudentTeachingSummaryBundleRow(fullBundle) || !isStudentTeachingSummaryListBundleRow(listBundle)) {
+      return { synced: false, reason: 'bundle-missing' };
+    }
+    const profileRow = compactStudentProfileSummaryRow(student, now);
+    const fullRows = upsertSummaryRow(studentTeachingSummaryBundleLogicalRows(fullBundle), profileRow);
+    const listRows = upsertSummaryRow(studentTeachingSummaryListBundleLogicalRows(listBundle), projectStudentTeachingSummaryListRow(profileRow))
+      .map(projectStudentTeachingSummaryListRow);
+    const nextFullBundle = buildStudentTeachingSummaryBundleRow(fullRows, activeVersion);
+    const nextListBundle = buildStudentTeachingSummaryListBundleRow(listRows, activeVersion);
+    const nextMeta = {
+      ...meta,
+      rowCount: fullRows.length,
+      checksum: buildStudentTeachingSummaryChecksum(fullRows),
+      sourceTable: String(meta.sourceTable || 'ft_students'),
+      sourceOp: 'student-profile-sync',
+      sourceId: studentId,
+      updatedAt: now.toISOString()
+    };
+    const versionedRow = buildVersionedStudentTeachingSummaryRow(
+      mergeStudentProfileSummaryRow(fullRows.find(row => String(row.studentId || row.id || '') === studentId), profileRow),
+      activeVersion
+    );
+    await put(tableName, versionedRow.id, versionedRow);
+    await put(tableName, nextFullBundle.id, nextFullBundle);
+    await put(tableName, nextListBundle.id, nextListBundle);
+    await put(tableName, STUDENT_TEACHING_SUMMARY_META_ID, nextMeta);
+    readyStudentTeachingSummaryRowsCache.clear();
+    return { synced: true, studentId, rowCount: fullRows.length };
+  } catch (err) {
+    if (typeof logger?.warn === 'function') {
+      logger.warn('[student-teaching-summary] student profile sync skipped', err?.message || err);
+    }
+    return { synced: false, reason: 'sync-failed', error: String(err?.message || err) };
+  }
 }
 
 function studentTeachingSummaryBundleLogicalRows(row = {}) {
@@ -934,6 +1086,7 @@ module.exports = {
   buildStudentTeachingSummaryListBundleId,
   buildStudentTeachingSummaryBundleRow,
   buildStudentTeachingSummaryListBundleRow,
+  upsertStudentProfileIntoTeachingSummary,
   studentTeachingSummaryBundleLogicalRows,
   studentTeachingSummaryRowsToDeleteAfterPublish,
   rollbackStudentTeachingSummaryPublish,
