@@ -999,9 +999,12 @@ async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
   let liveLoads = 0;
   const savedRows = [];
   const currentPeriodRows = {
-    operations: operationsPayloadWithRawFacts.operations,
+    operations: {
+      overview: { cards: { totalIncome: { value: 29199 }, recognizedRevenue: { value: 0 }, courseRecognized: { value: 0 } } },
+      coach: { cards: { usedHours: { value: 81.5 } } },
+      court: { cards: { utilizationRate: { value: 29.46 } } }
+    },
     weeklyReportRaw: {
-      financeNormalizedRows: realDataHardGateFinanceRows.filter(row => row.businessDate >= period.startDate && row.businessDate <= period.endDate),
       schedule: realDataHardGateScheduleRows.filter(row => String(row.startTime || '').slice(0, 10) >= period.startDate && String(row.startTime || '').slice(0, 10) <= period.endDate),
       coaches: [{ name: '朝珺', status: '在职' }, { name: '刘润扬', status: '在职' }]
     }
@@ -1009,7 +1012,6 @@ async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
   const previousPeriodRows = {
     operations: { overview: { cards: { totalIncome: { value: 100 } } } },
     weeklyReportRaw: {
-      financeNormalizedRows: realDataHardGateFinanceRows.filter(row => row.businessDate >= period.previousStartDate && row.businessDate <= period.previousEndDate),
       schedule: realDataHardGateScheduleRows.filter(row => String(row.startTime || '').slice(0, 10) >= period.previousStartDate && String(row.startTime || '').slice(0, 10) <= period.previousEndDate)
     }
   };
@@ -1022,6 +1024,13 @@ async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
     put: async (_table, _id, row) => { savedRows.push(row); },
     loadOperationsPayload: async ({ scope }) => {
       liveLoads += 1;
+      if (scope?.dateRange?.startDate === period.startDate) return operationsPayloadWithRawFacts;
+      if (scope?.dateRange?.startDate === period.previousStartDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 100 } } } }, weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows } };
+      }
+      if (!scope?.dateRange?.startDate) {
+        return { operations: { overview: { cards: { totalIncome: { value: 1746191.23 } } }, court: { cards: { utilizationRate: { value: 10 } } } } };
+      }
       if (scope?.dateRange?.startDate === '2026-07-02' && scope?.dateRange?.endDate === period.endDate) {
         return {
           operations: {},
@@ -1040,7 +1049,7 @@ async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
         return previousPeriodRows;
       }
       if (!scope?.dateRange?.startDate) {
-        return { operations: { overview: { cards: { totalIncome: { value: 1000 } } }, court: { cards: { utilizationRate: { value: 10 } } } } };
+        return { operations: { overview: { cards: { totalIncome: { value: 1169231.24 } } }, court: { cards: { utilizationRate: { value: 10 } } } } };
       }
       return {
         operations: {
@@ -1224,8 +1233,12 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
     });
   });
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
-  assert.strictEqual(rawlessZeroTrendResult.liveLoads, 1, 'manual regeneration should live-load one trailing trend window when stored trend snapshots lack raw facts');
+  assert.strictEqual(rawlessZeroTrendResult.liveLoads, 3, 'manual regeneration should live-load current, previous and trailing trend windows when stored snapshots lack finance facts');
   assert.strictEqual(rawlessZeroTrendResult.result.shareToken, 'rawless-zero-trend-token', 'rawless zero trend repair should preserve the existing share link');
+  assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.cashReceived.value, 49295.99, 'rawless current snapshot repair should rebuild weekly cash received from live facts');
+  assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.totalIncome.value, 38511.4, 'rawless current snapshot repair should rebuild weekly recognized revenue from live facts');
+  assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.coachHours.value, 82.5, 'rawless current snapshot repair should rebuild completed hours from live facts');
+  assert.strictEqual(rawlessZeroTrendResult.savedRows[0].lifetimeSummary.totalIncome.value, 1746191.23, 'rawless current snapshot repair should rebuild lifetime income from live facts');
   assert.strictEqual(rawlessZeroTrendResult.savedRows[0].sections.trends.length, 8, 'rawless zero trend repair should save eight weekly trend points');
   rawlessZeroTrendResult.savedRows[0].sections.trends.forEach(row => {
     ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours'].forEach(key => {

@@ -2130,7 +2130,10 @@ function weeklyPayloadHasRawFacts(payload = {}) {
 
 function weeklyPayloadReadyForScope(payload = {}, scope = {}) {
   if (!payload) return false;
-  if (scope?.includeWeeklyReportRaw && !weeklyPayloadHasRawFacts(payload)) return false;
+  if (scope?.includeWeeklyReportRaw) {
+    if (!weeklyPayloadHasRawFacts(payload)) return false;
+    if (!weeklyPayloadHasFinanceFactsInPeriod(payload, scope.dateRange || {})) return false;
+  }
   return true;
 }
 
