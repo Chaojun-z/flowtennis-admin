@@ -2044,10 +2044,16 @@ function reportView(row = {}) {
   };
 }
 
+function isCanonicalWeeklyReportRow(row = {}) {
+  const startDate = String(row.period?.startDate || '').slice(0, 10);
+  const endDate = String(row.period?.endDate || '').slice(0, 10);
+  return Boolean(startDate && endDate && startDate === weeklyReportStartDateForEndDate(endDate));
+}
+
 async function listWeeklyBusinessReports({ scan, table = WEEKLY_REPORT_TABLE } = {}) {
   const rows = await scan(table).catch(() => []);
   return rows
-    .filter(row => row && row.status !== 'deleted')
+    .filter(row => row && row.status !== 'deleted' && isCanonicalWeeklyReportRow(row))
     .sort((a, b) => String(b.period?.endDate || b.generatedAt || '').localeCompare(String(a.period?.endDate || a.generatedAt || '')))
     .map(reportView);
 }

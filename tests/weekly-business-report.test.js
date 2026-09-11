@@ -6,6 +6,7 @@ const {
   resolveWeeklyBusinessReportPeriod,
   buildWeeklyBusinessReportSnapshot,
   generateWeeklyBusinessReport,
+  listWeeklyBusinessReports,
   renderWeeklyBusinessReportHtml,
   buildWeeklyBusinessReportFeishuText
 } = require('../server/weekly-business-report.js');
@@ -879,6 +880,32 @@ async function callPublicEditRoute() {
   return { handled, json, saved };
 }
 
+async function callListReportsWithOverlappingRows() {
+  return listWeeklyBusinessReports({
+    scan: async () => [
+      {
+        ...snapshot,
+        id: 'weekly:顺义马坡:2026-08-27:2026-09-03',
+        period: { startDate: '2026-08-27', endDate: '2026-09-03' },
+        status: 'success'
+      },
+      {
+        ...snapshot,
+        id: 'weekly:顺义马坡:2026-09-03:2026-09-10',
+        period: { startDate: '2026-09-03', endDate: '2026-09-10' },
+        status: 'success'
+      },
+      {
+        ...snapshot,
+        id: 'weekly:顺义马坡:2026-09-04:2026-09-10',
+        period: { startDate: '2026-09-04', endDate: '2026-09-10' },
+        status: 'success'
+      }
+    ],
+    table: 'ft_weekly_business_reports'
+  });
+}
+
 async function callSnapshotFirstGeneration() {
   let liveLoads = 0;
   const savedRows = [];
@@ -1219,7 +1246,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, listResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -1228,6 +1255,10 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callSnapshotFirstGenerati
   assert.strictEqual(editResult.json.success, true, 'public weekly report edit route should save editable values');
   assert.strictEqual(editResult.saved.publicEdits['summary.totalIncome'], '44,072 元', 'public weekly report edits should persist saved values');
   assert.doesNotMatch(editResult.saved.publicEdits.bad, /[<>]/, 'public weekly report edits should strip HTML tags');
+  assert.deepStrictEqual(listResult.map(row => row.id), [
+    'weekly:顺义马坡:2026-09-04:2026-09-10',
+    'weekly:顺义马坡:2026-08-27:2026-09-03'
+  ], 'weekly report list should hide non-canonical overlapping rows after the period boundary fix');
   assert.ok(generationResult.liveLoads >= 1, 'weekly report generation should live-load when the available snapshot does not include raw facts');
   assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
