@@ -2800,6 +2800,15 @@ function miniRosterTabKeysForRow(row = {}, coachName = '', schedule = []) {
   return [...new Set(keys)].filter(Boolean);
 }
 
+function miniRosterPrimaryTabKey(keys = [], row = {}, coachName = '', schedule = []) {
+  const keySet = new Set(keys.filter(Boolean));
+  if (keySet.has('substitute') && !miniRosterOwnedByCoach(row, coachName)) return 'substitute';
+  if (keySet.has('active')) return 'active';
+  if (keySet.has('ended')) return 'ended';
+  if (keySet.has('trial')) return 'trial';
+  return keys.find(Boolean) || 'ended';
+}
+
 function miniRosterOwnedByCoach(row = {}, coachName = '') {
   const coachKey = miniRosterCoachKey(coachName);
   if (!coachKey) return false;
@@ -2882,12 +2891,7 @@ function buildCoachMiniStudentRoster({
     const keySet = new Set(Array.isArray(existing.studentTabKeys) ? existing.studentTabKeys : []);
     miniRosterTabKeysForRow(next, coachName, schedule).forEach(key => keySet.add(key));
     if (tabKey) keySet.add(tabKey);
-    const order = { active: 3, trial: 2, ended: 1, substitute: 0 };
-    const nextRank = Math.max(...[...keySet].map(key => order[key] ?? -1));
-    const currentRank = order[existing.studentTabKey] ?? -1;
-    const primaryKey = nextRank >= currentRank
-      ? [...keySet].sort((a, b) => (order[b] ?? -1) - (order[a] ?? -1))[0] || existing.studentTabKey || tabKey || 'ended'
-      : existing.studentTabKey || tabKey || 'ended';
+    const primaryKey = miniRosterPrimaryTabKey([...keySet], next, coachName, schedule);
     byId.set(studentId, {
       ...next,
       relationLabels: [...relationSet],
@@ -2976,10 +2980,10 @@ function buildCoachMiniStudentRoster({
     totalCount: items.length,
     weekActiveCount: attendedIds(miniRosterCurrentWeek),
     monthActiveCount: attendedIds(miniRosterCurrentMonth),
-    activeCount: items.filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.includes('active')).length,
-    trialCount: items.filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.includes('trial')).length,
-    endedCount: items.filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.includes('ended')).length,
-    substituteCount: items.filter(row => Array.isArray(row.studentTabKeys) && row.studentTabKeys.includes('substitute')).length,
+    activeCount: items.filter(row => row.studentTabKey === 'active').length,
+    trialCount: items.filter(row => row.studentTabKey === 'trial').length,
+    endedCount: items.filter(row => row.studentTabKey === 'ended').length,
+    substituteCount: items.filter(row => row.studentTabKey === 'substitute').length,
     ownedCount: ownedItems.length
   };
   const order = { active: 0, trial: 1, substitute: 2, ended: 3 };

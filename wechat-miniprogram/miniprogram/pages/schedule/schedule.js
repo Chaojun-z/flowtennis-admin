@@ -295,6 +295,20 @@ function entitlementUsedLessons(item = {}) {
   return total > 0 ? Math.max(0, total - remaining) : 0;
 }
 
+function entitlementSummary(entitlements = []) {
+  return (entitlements || []).reduce((summary, item = {}) => {
+    const total = lessonValue(item.totalLessons);
+    const used = entitlementUsedLessons(item);
+    const hasRemaining = item.remainingLessons !== undefined && item.remainingLessons !== null && String(item.remainingLessons).trim() !== '';
+    const remaining = hasRemaining ? lessonValue(item.remainingLessons) : Math.max(0, total - used);
+    return {
+      total: summary.total + total,
+      used: summary.used + used,
+      remaining: summary.remaining + remaining
+    };
+  }, { total: 0, used: 0, remaining: 0 });
+}
+
 function scheduleEntitlements(schedule = {}, entitlements = []) {
   const ids = [
     ...studentIdsOf({ studentIds: schedule.entitlementIds }),
@@ -557,10 +571,8 @@ function buildStudentTabs(stats = {}, currentTab = 'all', backendTabs = []) {
 
 function studentMatchesTab(student = {}, tab = 'all') {
   if (!tab || tab === 'all') return true;
-  const keys = Array.isArray(student.studentTabKeys) && student.studentTabKeys.length
-    ? student.studentTabKeys
-    : [student.studentTabKey].filter(Boolean);
-  return keys.includes(tab);
+  const fallbackKey = Array.isArray(student.studentTabKeys) && student.studentTabKeys.length ? student.studentTabKeys[0] : '';
+  return firstNonEmpty(student.studentTabKey, fallbackKey) === tab;
 }
 
 function studentMatchesSearch(student = {}, keyword = '') {

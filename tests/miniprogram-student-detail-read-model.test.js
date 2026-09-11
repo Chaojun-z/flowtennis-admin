@@ -286,6 +286,14 @@ const rosterViews = buildTeachingStudentViews([{
   studentStage: 'trial',
   hasTrialExperience: true
 }, {
+  customerKey: 'student:trial-converted-active',
+  studentId: 'trial-converted-active',
+  displayName: '体验后转正式',
+  owner: '林铭教练',
+  formalCoach: '林铭教练',
+  studentStage: 'formal',
+  hasTrialExperience: true
+}, {
   customerKey: 'student:substitute',
   studentId: 'substitute',
   displayName: '代课学员',
@@ -304,17 +312,20 @@ const rosterViews = buildTeachingStudentViews([{
     { id: 'owned-active', name: '归属在期', primaryCoach: '林铭教练', type: '青少年' },
     { id: 'owned-ended', name: '归属结课', primaryCoach: '林铭教练', type: '成人' },
     { id: 'trial-only', name: '体验未转', primaryCoach: '林铭教练', type: '青少年' },
+    { id: 'trial-converted-active', name: '体验后转正式', primaryCoach: '林铭教练', type: '成人' },
     { id: 'substitute', name: '代课学员', primaryCoach: '岳克舟教练', type: '成人' },
     { id: 'empty-shell', name: '空壳学员', primaryCoach: '林铭教练', type: '青少年' }
   ],
   purchases: [
     { id: 'p-owned-active', studentId: 'owned-active', packageName: '青少年私教课包', status: 'active' },
     { id: 'p-owned-ended', studentId: 'owned-ended', packageName: '成人私教课包', status: 'active' },
+    { id: 'p-trial-converted-active', studentId: 'trial-converted-active', packageName: '成人私教课包', status: 'active' },
     { id: 'p-substitute', studentId: 'substitute', packageName: '成人私教课包', ownerCoach: '岳克舟教练', status: 'active' }
   ],
   entitlements: [
     { id: 'e-owned-active', purchaseId: 'p-owned-active', studentId: 'owned-active', packageName: '青少年私教课包', totalLessons: 10, remainingLessons: 7, usedLessons: 3, ownerCoach: '林铭教练', status: 'active' },
     { id: 'e-owned-ended', purchaseId: 'p-owned-ended', studentId: 'owned-ended', packageName: '成人私教课包', totalLessons: 10, remainingLessons: 0, usedLessons: 10, ownerCoach: '林铭教练', status: 'active' },
+    { id: 'e-trial-converted-active', purchaseId: 'p-trial-converted-active', studentId: 'trial-converted-active', packageName: '成人私教课包', totalLessons: 10, remainingLessons: 9, usedLessons: 1, ownerCoach: '林铭教练', status: 'active' },
     { id: 'e-substitute', purchaseId: 'p-substitute', studentId: 'substitute', packageName: '成人私教课包', totalLessons: 10, remainingLessons: 5, usedLessons: 5, ownerCoach: '岳克舟教练', status: 'active' }
   ],
   schedule: [
@@ -322,7 +333,8 @@ const rosterViews = buildTeachingStudentViews([{
     { id: 's-owned-future', studentId: 'owned-active', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', courseType: '私教课', venue: '3号场', coach: '林铭教练', lessonCount: 1 },
     { id: 's-owned-cancelled', studentId: 'owned-ended', startTime: '2026-08-18 12:00:00', endTime: '2026-08-18 13:00:00', status: '已取消', courseType: '私教课', venue: '4号场', coach: '林铭教练', lessonCount: 1 },
     { id: 's-substitute-week', studentId: 'substitute', startTime: '2026-08-18 14:00:00', endTime: '2026-08-18 15:00:00', status: '已结束', courseType: '私教课', venue: '5号场', coach: '林铭教练', lessonCount: 1 },
-    { id: 's-trial', studentId: 'trial-only', startTime: '2026-08-18 16:00:00', endTime: '2026-08-18 17:00:00', status: '已结束', courseType: '体验课', venue: '6号场', coach: '林铭教练', lessonCount: 1 }
+    { id: 's-trial', studentId: 'trial-only', startTime: '2026-08-18 16:00:00', endTime: '2026-08-18 17:00:00', status: '已结束', courseType: '体验课', venue: '6号场', coach: '林铭教练', lessonCount: 1 },
+    { id: 's-trial-converted', studentId: 'trial-converted-active', startTime: '2026-08-18 18:00:00', endTime: '2026-08-18 19:00:00', status: '已结束', courseType: '私教课', venue: '7号场', coach: '林铭教练', lessonCount: 1 }
   ],
   now: new Date('2026-08-19 10:00:00')
 });
@@ -341,7 +353,8 @@ const miniRoster = buildCoachMiniStudentRoster({
     { id: 's-owned-future', studentId: 'owned-active', startTime: '2026-08-20 10:00:00', endTime: '2026-08-20 11:00:00', status: '已排课', coach: '林铭教练' },
     { id: 's-owned-cancelled', studentId: 'owned-ended', startTime: '2026-08-18 12:00:00', endTime: '2026-08-18 13:00:00', status: '已取消', coach: '林铭教练' },
     { id: 's-substitute-week', studentId: 'substitute', startTime: '2026-08-18 14:00:00', endTime: '2026-08-18 15:00:00', status: '已结束', coach: '林铭教练' },
-    { id: 's-trial', studentId: 'trial-only', startTime: '2026-08-18 16:00:00', endTime: '2026-08-18 17:00:00', status: '已结束', coach: '林铭教练' }
+    { id: 's-trial', studentId: 'trial-only', startTime: '2026-08-18 16:00:00', endTime: '2026-08-18 17:00:00', status: '已结束', coach: '林铭教练' },
+    { id: 's-trial-converted', studentId: 'trial-converted-active', startTime: '2026-08-18 18:00:00', endTime: '2026-08-18 19:00:00', status: '已结束', coach: '林铭教练' }
   ],
   now: new Date('2026-08-19 10:00:00')
 });
@@ -349,16 +362,16 @@ const miniRoster = buildCoachMiniStudentRoster({
 assert.deepStrictEqual(
   miniRoster.stats,
   {
-    totalCount: 4,
-    weekActiveCount: 3,
-    monthActiveCount: 3,
+    totalCount: 5,
+    weekActiveCount: 4,
+    monthActiveCount: 4,
     activeCount: 2,
     trialCount: 1,
     endedCount: 1,
     substituteCount: 1,
-    ownedCount: 2
+    ownedCount: 3
   },
-  'mini roster stats should keep trial-only students unassigned while still counting every coach-visible relation'
+  'mini roster stats should count each student by primary tab only so converted trial students do not also inflate trial'
 );
 
 assert.deepStrictEqual(
@@ -366,7 +379,8 @@ assert.deepStrictEqual(
   [
     ['owned-active', 'active', '青少年', '归属 / 正式', '7/10'],
     ['owned-ended', 'ended', '成人', '归属 / 正式', '0/10'],
-    ['substitute', 'active', '成人', '正式 / 代课', '5/10'],
+    ['substitute', 'substitute', '成人', '正式 / 代课', '5/10'],
+    ['trial-converted-active', 'active', '成人', '归属 / 体验 / 正式', '9/10'],
     ['trial-only', 'trial', '青少年', '体验', '']
   ],
   'mini roster items should keep student type separate from ownership, leave trial-only students unassigned, and show package balance for substitute students'

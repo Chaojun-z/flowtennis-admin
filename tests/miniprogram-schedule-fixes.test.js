@@ -54,6 +54,18 @@ assert.match(
 );
 
 assert.match(
+  scheduleJs,
+  /function entitlementSummary\(entitlements = \[\]\)/,
+  'mini schedule detail and feedback entries should keep the entitlement summary helper used by buildDetailData'
+);
+
+assert.doesNotMatch(
+  scheduleJs.match(/function studentMatchesTab\(student = \{\}, tab = 'all'\) \{[\s\S]*?\n\}/)?.[0] || '',
+  /studentTabKeys[\s\S]*includes\(tab\)/,
+  'student tab filtering should use the primary tab key so active and trial lists stay mutually exclusive'
+);
+
+assert.match(
   scheduleWxss,
   /\.tt-course-ended\b/,
   'mini timetable stylesheet should define the gray ended card style'
