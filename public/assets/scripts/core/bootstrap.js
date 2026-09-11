@@ -73,7 +73,6 @@ function goPage(pg,el,skipRender=false){
     if(pg==='coachschedule'&&typeof prepareCoachSchedulePageOpen==='function')prepareCoachSchedulePageOpen();
     localStorage.setItem(PAGE_KEY,currentPage);
     document.body.classList.toggle('is-packages-page',pg==='packages');
-    document.body.classList.toggle('is-active-students-page',pg==='package-students');
     document.body.classList.toggle('is-coachschedule-page',pg==='coachschedule');
     document.getElementById('campusTabs').style.display=globalTopFilterPages().includes(pg)||['coachschedule','coachops','courts','packages','purchases','matches'].includes(pg)?'flex':'none';
     if(typeof buildCampusTabs==='function')buildCampusTabs();
