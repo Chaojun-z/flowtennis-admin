@@ -896,7 +896,10 @@ async function callSnapshotFirstGeneration() {
           weeklyReportRaw: {
             coaches: [{ name: '朝珺', status: '在职' }],
             schedule: [{ id: 'manual-prev-trend-schedule', coach: '朝珺教练', studentId: 'manual-prev-student', studentName: '上周学员', courseType: '私教课', startTime: `${period.previousStartDate} 10:00:00`, endTime: `${period.previousStartDate} 11:00:00`, status: '已排课', campus: 'shunyi_mapo', venue: '1号场' }],
-            financeNormalizedRows: [{ id: 'manual-prev-trend-cash', campusName: '顺义马坡', businessDate: period.previousStartDate, businessType: '课程', action: '收款', cashDelta: 100, recognizedRevenueDelta: 0 }]
+            financeNormalizedRows: [
+              { id: 'manual-prev-trend-cash', campusName: '顺义马坡', businessDate: period.previousStartDate, businessType: '课程', action: '收款', cashDelta: 100, recognizedRevenueDelta: 0 },
+              { id: 'manual-prev-trend-recognized', campusName: '顺义马坡', businessDate: period.previousStartDate, businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 80 }
+            ]
           }
         };
       }
@@ -971,7 +974,10 @@ async function callExistingReportManualRegeneration() {
           weeklyReportRaw: {
             coaches: [{ name: '朝珺', status: '在职' }],
             schedule: [{ id: 'manual-prev-trend-schedule', coach: '朝珺教练', studentId: 'manual-prev-student', studentName: '上周学员', courseType: '私教课', startTime: `${period.previousStartDate} 10:00:00`, endTime: `${period.previousStartDate} 11:00:00`, status: '已排课', campus: 'shunyi_mapo', venue: '1号场' }],
-            financeNormalizedRows: [{ id: 'manual-prev-trend-cash', campusName: '顺义马坡', businessDate: period.previousStartDate, businessType: '课程', action: '收款', cashDelta: 100, recognizedRevenueDelta: 0 }]
+            financeNormalizedRows: [
+              { id: 'manual-prev-trend-cash', campusName: '顺义马坡', businessDate: period.previousStartDate, businessType: '课程', action: '收款', cashDelta: 100, recognizedRevenueDelta: 0 },
+              { id: 'manual-prev-trend-recognized', campusName: '顺义马坡', businessDate: period.previousStartDate, businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 80 }
+            ]
           }
         };
       }

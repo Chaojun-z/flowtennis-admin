@@ -2132,7 +2132,12 @@ function weeklyPayloadReadyForScope(payload = {}, scope = {}) {
   if (!payload) return false;
   if (scope?.includeWeeklyReportRaw) {
     if (!weeklyPayloadHasRawFacts(payload)) return false;
-    if (!weeklyPayloadHasFinanceFactsInPeriod(payload, scope.dateRange || {})) return false;
+    const period = scope.dateRange || {};
+    if (!weeklyPayloadHasFinanceFactsInPeriod(payload, period)) return false;
+    const raw = payload.weeklyReportRaw || {};
+    const hasServiceFacts = completedCourseScheduleRows(raw, period).length > 0 || courtHistoryRows(raw, period).length > 0;
+    const recognizedRevenue = financeSum(weeklyFinanceRows(raw, period).filter(row => fieldNumber(row, ['recognizedRevenueDelta']) !== 0), 'recognizedRevenueDelta');
+    if (hasServiceFacts && recognizedRevenue <= 0) return false;
   }
   return true;
 }
