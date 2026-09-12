@@ -2,8 +2,6 @@ const crypto = require('crypto');
 const { effectiveScheduleStatus } = require('./schedule.js');
 const { bookingDurationHours, normalizeCourtHistory, courtHistoryBusinessDate, buildCourtAccountListViewFromData } = require('./page-data/court-account-read-model.js');
 const { buildCourtAccountListViewFromIndexRows } = require('./page-data/court-account-list-index.js');
-const { buildCustomerLifecycleRows } = require('./read-models/customer-lifecycle.js');
-const { buildTeachingStudentViews } = require('./read-models/platform-metrics.js');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
@@ -1114,11 +1112,6 @@ function buildLifetimePrivateCoursePeople(raw = {}) {
     .filter(Boolean)).size;
 }
 
-function reportEndAsBeijingDate(endDate = '') {
-  const day = String(endDate || '').slice(0, 10);
-  return day ? new Date(`${day}T23:59:59+08:00`) : new Date();
-}
-
 function privateCoursePackageLabel(row = {}, purchase = {}) {
   return [
     row.courseType,
@@ -1148,28 +1141,10 @@ function buildActivePrivatePackagePeople(raw = {}, period = {}) {
   const entitlementRows = normalizeRows(raw.entitlements).filter(row => campusMatches(row));
   if (!entitlementRows.length) return 0;
   const purchaseById = new Map(normalizeRows(raw.purchases).map(row => [String(row.id || row.purchaseId || '').trim(), row]).filter(([id]) => id));
-  const customerLifecycleRows = buildCustomerLifecycleRows({
-    leads: normalizeRows(raw.leads),
-    students: normalizeRows(raw.students),
-    purchases: normalizeRows(raw.purchases),
-    entitlements: entitlementRows,
-    schedule: normalizeRows(raw.schedule),
-    feedbacks: normalizeRows(raw.feedbacks),
-    courts: normalizeRows(raw.courts),
-    membershipAccounts: normalizeRows(raw.membershipAccounts),
-    membershipOrders: normalizeRows(raw.membershipOrders)
-  });
-  const teachingViews = buildTeachingStudentViews(customerLifecycleRows, {
-    ...raw,
-    entitlements: entitlementRows,
-    customerLifecycleRows,
-    now: reportEndAsBeijingDate(period.endDate)
-  });
-  const activeIds = new Set(normalizeRows(teachingViews.activeStudents).map(row => String(row.studentId || row.id || '').trim()).filter(Boolean));
   const people = new Set();
   entitlementRows.forEach(row => {
     const studentId = String(row.studentId || row.customerId || '').trim();
-    if (!studentId || !activeIds.has(studentId)) return;
+    if (!studentId) return;
     if (invalidBusinessStatus(row.status)) return;
     if (fieldNumber(row, ['remainingLessons']) <= 0) return;
     const purchase = purchaseById.get(String(row.purchaseId || '').trim()) || {};

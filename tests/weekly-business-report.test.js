@@ -780,7 +780,34 @@ const privateActivePackageSnapshot = buildWeeklyBusinessReportSnapshot({
   },
   previousOperationsPayload: { operations: {}, weeklyReportRaw: {} }
 });
-assert.strictEqual(privateActivePackageSnapshot.sections.revenue.course.activePrivatePackagePeople, 1, 'private active package people should reuse active students then filter private package, remaining lessons and report-end validity');
+assert.strictEqual(privateActivePackageSnapshot.sections.revenue.course.activePrivatePackagePeople, 1, 'private active package people should count only private packages with remaining lessons and report-end validity');
+assert.match(operationsSource, /OPERATIONS_ENTITLEMENT_FIELDS[\s\S]*'courseType'[\s\S]*'packageName'[\s\S]*'validUntil'/, 'weekly report raw entitlement rows must include course type and validity fields for fast private active package counting');
+assert.doesNotMatch(weeklyReportSource, /buildTeachingStudentViews|buildCustomerLifecycleRows/, 'weekly report generation must not rebuild the full active-student read model during regeneration');
+
+const largePrivatePackageRows = Array.from({ length: 6000 }, (_, index) => {
+  const isPrivate = index % 3 === 0;
+  return {
+    id: `large-ent-${index}`,
+    studentId: `large-student-${index}`,
+    purchaseId: `large-purchase-${index}`,
+    courseType: isPrivate ? '私教课' : '小班课',
+    packageName: isPrivate ? '成人1v1私教课' : '小班课',
+    totalLessons: 10,
+    remainingLessons: isPrivate ? 3 : 5,
+    validUntil: index % 6 === 0 ? '2026-09-02' : '2026-12-31',
+    status: 'active',
+    campus: 'shunyi_mapo'
+  };
+});
+const largePrivatePackageStartedAt = Date.now();
+const largePrivatePackageSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: { operations: {}, weeklyReportRaw: { entitlements: largePrivatePackageRows } },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: {} }
+});
+const largePrivatePackageElapsedMs = Date.now() - largePrivatePackageStartedAt;
+assert.strictEqual(largePrivatePackageSnapshot.sections.revenue.course.activePrivatePackagePeople, 1000, 'large active private package count should still apply private package and report-end validity filters');
+assert.ok(largePrivatePackageElapsedMs < 500, `active private package count must stay on the fast path, got ${largePrivatePackageElapsedMs}ms`);
 
 const html = renderWeeklyBusinessReportHtml(snapshot, { remark: '本周雨天影响场地。' });
 const requestedStructureHtml = renderWeeklyBusinessReportHtml(requestedStructureSnapshot);

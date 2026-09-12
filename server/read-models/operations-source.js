@@ -25,7 +25,10 @@ const OPERATIONS_PURCHASE_FIELDS = [
 ];
 const OPERATIONS_ENTITLEMENT_FIELDS = [
   'id', 'studentId', 'purchaseId', 'packageId', 'campus', 'campusName', 'campusIds',
-  'remainingLessons', 'depletedAt', 'updatedAt', 'lastConsumedAt', 'createdAt'
+  'courseType', 'standardCourseType', 'experienceType', 'packageName', 'productName',
+  'validFrom', 'startDate', 'purchaseDate', 'validUntil', 'expireAt', 'expiredAt',
+  'expiryDate', 'endDate', 'hardExpireAt', 'status',
+  'remainingLessons', 'totalLessons', 'depletedAt', 'updatedAt', 'lastConsumedAt', 'createdAt'
 ];
 const OPERATIONS_ENTITLEMENT_LEDGER_FIELDS = [
   'id', 'entitlementId', 'studentId', 'purchaseId', 'scheduleId',
