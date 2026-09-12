@@ -148,6 +148,15 @@ const pricedXiaozhePrecheck = precheckThirdPartyRecords([
 ], { batchId: 'price-fallback', now: '2026-09-02T00:00:00+08:00', pricePlans: thirdPartyPricePlans }).items[0];
 assert.strictEqual(pricedXiaozhePrecheck.amount, 224, 'xiaozhe booking without third-party amount should use price plans and apply 80% discount');
 assert.strictEqual(pricedXiaozhePrecheck.recommendedType, 'auto_import', 'xiaozhe booking with price fallback should not require daily manual amount confirmation');
+const legacyMapoPricePrecheck = precheckThirdPartyRecords([
+  { id: 'xiaozhe-legacy-mabao-price-lock', sourceType: 'lock', bookingDate: '2026-09-10', venue: '4号场', startTime: '10:00', endTime: '12:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '晓哲定场' }
+], {
+  batchId: 'legacy-mabao-price-fallback',
+  now: '2026-09-10T00:00:00+08:00',
+  pricePlans: thirdPartyPricePlans.map(row => ({ ...row, campus: 'mabao' }))
+}).items[0];
+assert.strictEqual(legacyMapoPricePrecheck.amount, 224, 'xiaozhe fallback should match legacy mabao price plans through the canonical Shunyi Mapo campus alias');
+assert.strictEqual(legacyMapoPricePrecheck.recommendedType, 'auto_import', 'legacy mabao price plans should not leave xiaozhe bookings waiting for manual amount confirmation');
 const perfRecords = Array.from({ length: 5000 }, (_, index) => ({
   id: `perf-lock-${index}`,
   sourceType: 'lock',

@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const axios = require('axios');
 const { parseBookingStructureFromText, enrichCourtBookingStructure, missingCourtBookingStructure } = require('./booking-structure-parser.js');
+const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
 const T_THIRD_PARTY_SYNC_BATCHES = 'ft_third_party_sync_batches';
 const T_THIRD_PARTY_SYNC_RAW_RECORDS = 'ft_third_party_sync_raw_records';
@@ -249,10 +250,10 @@ function quoteThirdPartyVenueAmount(pricePlans = [], record = {}, memberDiscount
   const end = timeMinutes(endTimeOf(record));
   const dateType = priceDateType(date);
   if (!date || !dateType || !start || !end || end <= start) return 0;
-  const campus = cleanText(record.campus || record.campusId || record.campusCode) || THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS;
+  const campus = normalizeCampusValue(cleanText(record.campus || record.campusId || record.campusCode) || THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS);
   const candidates = (pricePlans || []).filter(plan => {
     if (cleanText(plan.type) !== 'venue_rate' || cleanText(plan.status) === 'inactive') return false;
-    const planCampus = cleanText(plan.campus || plan.campusId || plan.campusCode) || THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS;
+    const planCampus = normalizeCampusValue(cleanText(plan.campus || plan.campusId || plan.campusCode) || THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS);
     if (planCampus !== campus) return false;
     if (cleanText(plan.dateType) !== dateType) return false;
     if (plan.effectiveFrom && date < cleanText(plan.effectiveFrom).slice(0, 10)) return false;
