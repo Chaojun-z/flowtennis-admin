@@ -97,7 +97,7 @@ async function regenerateWeeklyReport(id) {
   if (!row) return toast('周报不存在', 'error');
   const pendingToast = toast('正在生成周报...', '', { sticky: true });
   try {
-    await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, 10000);
+    await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, 60000);
     pendingToast.update('周报已生成', 'success');
     setTimeout(() => pendingToast.close(), 3000);
     renderWeeklyReports();
