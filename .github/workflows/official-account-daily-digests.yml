@@ -21,8 +21,29 @@ jobs:
       - name: Trigger digest endpoint
         shell: bash
         run: |
-          curl_args=(-fsS -X GET "$TARGET_URL" -H "User-Agent: vercel-cron")
+          curl_args=(-sS -X GET "$TARGET_URL" -H "User-Agent: vercel-cron")
           if [ -n "${CRON_SECRET:-}" ]; then
             curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
           fi
-          curl "${curl_args[@]}"
+          response_file="$(mktemp)"
+          http_status="$(curl -sS -o "$response_file" -w "%{http_code}" "${curl_args[@]}")"
+          cat "$response_file"
+          if [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "Digest endpoint returned HTTP $http_status"
+            exit 1
+          fi
+          node - "$response_file" <<'NODE'
+          const fs = require('fs');
+          const body = fs.readFileSync(process.argv[2], 'utf8');
+          let payload;
+          try {
+            payload = JSON.parse(body);
+          } catch (err) {
+            console.error('Digest endpoint returned non-JSON response');
+            process.exit(1);
+          }
+          if (payload.success!==true) {
+            console.error(`Digest endpoint reported unsuccessful result: ${body}`);
+            process.exit(1);
+          }
+          NODE

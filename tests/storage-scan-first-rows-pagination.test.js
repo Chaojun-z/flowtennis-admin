@@ -25,6 +25,16 @@ const fakeTableStore = {
       if (!page) return callback(new Error('unexpected getRange call'));
       callback(null, page);
     }
+
+    putRow(request, callback) {
+      this.calls.push(request);
+      callback(null, { ok: true });
+    }
+
+    deleteRow(request, callback) {
+      this.calls.push(request);
+      callback(null, { ok: true });
+    }
   }
 };
 
@@ -98,6 +108,42 @@ function row(id, attrs = {}) {
     console.warn = originalWarn;
   }
   assert.strictEqual(clients[0].calls.length, 2, '跨页超过上限时也必须真的读到溢出证据');
+
+  const writeEvents = [];
+  const writeStorage = createStorageServices({
+    onTableWrite: async (table, meta) => writeEvents.push({ table, meta })
+  });
+  await writeStorage.put(
+    'ft_schedule',
+    'schedule-1',
+    { id: 'schedule-1', studentId: 'student-1' },
+    { skipStudentTeachingSummaryRefresh: true, writeReason: 'official-account-daily-digest-marker' }
+  );
+  await writeStorage.del('ft_schedule', 'schedule-1', { writeReason: 'cleanup-marker' });
+  assert.deepStrictEqual(
+    writeEvents,
+    [
+      {
+        table: 'ft_schedule',
+        meta: {
+          skipStudentTeachingSummaryRefresh: true,
+          writeReason: 'official-account-daily-digest-marker',
+          op: 'put',
+          id: 'schedule-1',
+          attrs: { id: 'schedule-1', studentId: 'student-1' }
+        }
+      },
+      {
+        table: 'ft_schedule',
+        meta: {
+          writeReason: 'cleanup-marker',
+          op: 'delete',
+          id: 'schedule-1'
+        }
+      }
+    ],
+    'storage writes should pass non-secret write context to the table-write hook'
+  );
 
   console.log('storage scanFirstRows pagination tests passed');
 })().catch(error => {

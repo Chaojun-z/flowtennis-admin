@@ -207,6 +207,8 @@ assert.doesNotMatch(studentDetailRouteSource, /cappedScan\(T_SCHEDULE|cappedScan
 assert.doesNotMatch(fnBodyFrom(studentsSource, 'ensureStudentDetailDatasets'), /purchasesPage/, 'student detail must not load the full purchases aggregate');
 assert.match(apiSource, /T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary'/, 'api should declare the student teaching summary read model table');
 assert.match(apiSource, /queueStudentTeachingSummaryRefresh\(t,meta\)/, 'source table writes should queue student teaching summary refreshes outside the first-screen read path');
+assert.match(apiSource, /if\(meta\?\.skipStudentTeachingSummaryRefresh\)return;/, 'notification marker writes should be able to skip the heavy student teaching summary refresh');
+assert.match(apiSource, /if\(t!==T_STUDENT_TEACHING_SUMMARY&&!OPERATIONS_SNAPSHOT_INTERNAL_TABLES\.has\(t\)\)await queueStudentTeachingSummaryRefresh\(t,meta\)/, 'normal source table writes should still queue student teaching summary refreshes');
 assert.match(apiSource, /let customerCenterFactCacheVersion=0;/, 'api should keep a version marker for customer center fact cache invalidation');
 assert.match(apiSource, /if\(\[T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY\]\.includes\(t\)\)customerCenterFactCacheVersion\+\+/, 'customer center fact cache must be invalidated on every related source-table write');
 assert.match(apiSource, /getCustomerCenterFactCacheVersion:\(\)=>customerCenterFactCacheVersion/, 'customer center page-data route should receive the fact cache version reader');

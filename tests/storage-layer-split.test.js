@@ -16,7 +16,7 @@ assert.match(storageSource, /function scan\(t,options=\{\}\)/, 'storage module s
 assert.match(storageSource, /function scanFirstRows\(t, \{limit=200, columns=\[\],detectOverflow=false\}=\{\}\)/, 'storage module should own capped production reads');
 assert.match(storageSource, /function getCachedScan\(t,options=\{\}\)/, 'storage module should own hot scan cache reads');
 assert.match(storageSource, /function getCachedRow\(t,id\)/, 'storage module should own hot row cache reads');
-assert.match(storageSource, /function put\(t,id,attrs\)/, 'storage module should own writes and cache invalidation');
-assert.match(storageSource, /function del\(t,id\)/, 'storage module should own deletes and cache invalidation');
+assert.match(storageSource, /function put\(t,id,attrs,options=\{\}\)/, 'storage module should own writes and cache invalidation');
+assert.match(storageSource, /function del\(t,id,options=\{\}\)/, 'storage module should own deletes and cache invalidation');
 
 console.log('storage layer split tests passed');

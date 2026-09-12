@@ -27,5 +27,9 @@ assert.match(digestWorkflow, /workflow_dispatch:/, 'digest workflow should keep 
 assert.match(digestWorkflow, /cron:\s*'2 12 \* \* \*'/, 'digest workflow should run daily at 20:02 from GitHub Actions');
 assert.match(digestWorkflow, /TARGET_URL:\s*https:\/\/www\.flowtennis\.cn\/api\/cron\/official-account-daily-digests/, 'digest workflow should call the digest endpoint');
 assert.match(digestWorkflow, /User-Agent:\s*vercel-cron/, 'digest workflow should mimic Vercel cron user agent');
+assert.match(digestWorkflow, /response_file="\$\(mktemp\)"/, 'digest workflow should keep the endpoint response body for failure diagnosis');
+assert.match(digestWorkflow, /cat "\$response_file"/, 'digest workflow should print the endpoint response body into Actions logs');
+assert.match(digestWorkflow, /JSON\.parse\(body\)/, 'digest workflow should parse the response body instead of treating every HTTP 200 as success');
+assert.match(digestWorkflow, /payload\.success!==true/, 'digest workflow should fail loudly when the digest endpoint returns an unsuccessful JSON payload');
 
 console.log('official account cron workflow tests passed');

@@ -375,7 +375,7 @@ const {
       if(operationsSnapshotSync?.recordSourceChange)await operationsSnapshotSync.recordSourceChange({...meta,sourceTable:t}).catch(err=>console.warn('[operations-snapshot] source marker failed:',err?.message||err));
     }
     if([T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY].includes(t))customerCenterFactCacheVersion++;
-    if(t!==T_STUDENT_TEACHING_SUMMARY&&!OPERATIONS_SNAPSHOT_INTERNAL_TABLES.has(t))await queueStudentTeachingSummaryRefresh(t,meta);
+    if(meta?.skipStudentTeachingSummaryRefresh)return;if(t!==T_STUDENT_TEACHING_SUMMARY&&!OPERATIONS_SNAPSHOT_INTERNAL_TABLES.has(t))await queueStudentTeachingSummaryRefresh(t,meta);
   }
 });
 const studentTeachingSummaryCache=createStudentTeachingSummaryCache({
@@ -3880,7 +3880,7 @@ async function sendOfficialAccountReminderJobs({now=new Date()}={}){
   const [coach,students,feedback]=await Promise.all([sendOfficialAccountCourseReminders({now}),sendOfficialAccountStudentCourseReminders({now}),sendOfficialAccountCoachFeedbackReminders({now})]);
   return {success:!!(coach?.success&&students?.success&&feedback?.success),coach,students,feedback};
 }
-async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,miniProgramAppId=WECHAT_MINIPROGRAM_APPID,templateId=WECHAT_OFFICIAL_ACCOUNT_DIGEST_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
+async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),putSchedule=(id,row,options)=>put(T_SCHEDULE,id,row,options),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,miniProgramAppId=WECHAT_MINIPROGRAM_APPID,templateId=WECHAT_OFFICIAL_ACCOUNT_DIGEST_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
   const [nextRows,nextUsers]=await Promise.all([rows||loadRows(),users||loadUsers()]);
   const resolvedRows=rows||nextRows;
   const resolvedUsers=users||nextUsers;
@@ -3916,7 +3916,7 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
         ...(((resolvedRows||[]).find(row=>String(row.id||'')===String(scheduleId)))||{}),
         coachDailyDigestSentDate:item.digestDate,
         coachDailyDigestSentAt:new Date(now).toISOString()
-      })));
+      },{skipStudentTeachingSummaryRefresh:true,writeReason:'official-account-daily-digest-marker'})));
       result.sent++;
       result.items.push({coachId:item.coachId,sent:true,lessonCount:item.lessonCount});
     }catch(err){

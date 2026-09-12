@@ -1946,7 +1946,7 @@ assert.strictEqual(
       templateId: 'tpl',
       forceMock: false,
       sendTemplate: async message => sent.push(message),
-      putSchedule: async (id,row) => writes.push([id,row])
+      putSchedule: async (id,row,options) => writes.push([id,row,options])
     });
 
     assert.strictEqual(result.sent, 1, 'official account daily digest should send once per coach');
@@ -1956,6 +1956,14 @@ assert.strictEqual(
       writes.map(item => [item[0], item[1].coachDailyDigestSentDate]).sort(),
       [['dig-1', '2026-05-20'], ['dig-2', '2026-05-20']],
       'official account daily digest should mark every schedule in the coach group'
+    );
+    assert.deepStrictEqual(
+      writes.map(item => item[2]),
+      [
+        { skipStudentTeachingSummaryRefresh: true, writeReason: 'official-account-daily-digest-marker' },
+        { skipStudentTeachingSummaryRefresh: true, writeReason: 'official-account-daily-digest-marker' }
+      ],
+      'official account digest sent markers must not synchronously trigger the heavy student teaching summary refresh'
     );
   }
 
