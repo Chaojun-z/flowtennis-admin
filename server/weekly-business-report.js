@@ -1598,6 +1598,13 @@ function formatMetricValue(value, unit = '') {
   return String(value);
 }
 
+function formatChartAxisValue(value, unit = '') {
+  const numeric = numberValue(value);
+  if (String(unit).includes('%')) return `${formatMetricValue(numeric, '%')}%`;
+  if (numeric >= 10000) return numeric.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return formatMetricValue(numeric, unit);
+}
+
 function editableValue(edits = {}, key = '', value = '') {
   const edited = edits && Object.prototype.hasOwnProperty.call(edits, key) ? edits[key] : value;
   return `<span data-edit-key="${escapeHtml(key)}" data-editable="true" contenteditable="true">${escapeHtml(edited)}</span>`;
@@ -1720,15 +1727,91 @@ function courtUsageMatrix(rows = [], edits = {}) {
   }).join('')}</tr></tbody></table></div></div><div class="text-[10px] text-cyber-darkMuted mt-4 border-t border-cyber-border/40 pt-3">${editableText(edits, 'court.heatmap.note', '* 每天利用率 = 当天收费场地使用小时 / 当天可售小时，不包含内部使用和领导订场，最高按 100% 展示。')}</div></div>`;
 }
 
-function lineChart(rows = [], { valueKey = 'value', unit = '%' } = {}) {
+function lineChart(rows = [], { valueKey = 'value', unit = '%', title = '', chartId = '' } = {}) {
   const clean = normalizeRows(rows).filter(row => row.label || row.date);
   if (!clean.length) return '<p class="empty">暂无可绘制数据</p>';
-  const payload = clean.map(row => ({ label: row.label || String(row.date || '').slice(5), value: fieldNumber(row, [valueKey]) }));
-  return `<div class="weekly-echarts-trend template-interactive-chart" role="img" aria-label="趋势图" data-unit="${escapeHtml(unit)}" data-points="${escapeHtml(JSON.stringify(payload))}"></div>`;
+  const values = clean.map(row => fieldNumber(row, [valueKey]));
+  const primaryMax = Math.max(...values, 1);
+  const chartMax = primaryMax <= 100 && String(unit).includes('%') ? 100 : Math.max(1, Math.ceil(primaryMax * 1.15));
+  const axisLabels = [chartMax, chartMax * 0.75, chartMax * 0.5, chartMax * 0.25, 0].map(value => formatChartAxisValue(value, unit));
+  const peakValue = Math.max(...values);
+  const payload = clean.map((row, index) => {
+    const value = fieldNumber(row, [valueKey]);
+    const previous = index > 0 ? values[index - 1] : null;
+    const changeRate = previous && previous !== 0 ? numberValue(((value - previous) / Math.abs(previous)) * 100) : 0;
+    const label = row.label || String(row.date || '').slice(5).replace('-', '.');
+    return {
+      date: label,
+      views: value,
+      rate: changeRate,
+      desc: `${title || '趋势'}：${label}`,
+      isPeak: value === peakValue && peakValue > 0
+    };
+  });
+  const safeChartId = String(chartId || valueKey || 'trend').replace(/[^a-zA-Z0-9_-]/g, '-');
+  return `<div class="weekly-template-trend template-interactive-chart" role="img" aria-label="${escapeHtml(title || '趋势图')}" data-primary-label="${escapeHtml(title || '指标')}" data-secondary-label="环比变化" data-unit="${escapeHtml(unit)}" data-primary-max="${escapeHtml(chartMax)}" data-points="${escapeHtml(JSON.stringify(payload))}">
+          <!-- The Chart Container & Axis Coordinates -->
+          <div class="relative w-full h-64 flex-grow flex" id="chart-main-container-${escapeHtml(safeChartId)}">
+            <!-- Y-Axis Labels -->
+            <div class="w-12 h-full flex flex-col justify-between text-[9px] font-mono text-cyber-darkMuted pointer-events-none pb-6 select-none">
+              ${axisLabels.map(label => `<span>${escapeHtml(label)}</span>`).join('')}
+            </div>
+
+            <!-- Dynamic SVG Chart Wrapper -->
+            <div class="flex-grow h-full relative" id="svg-chart-wrapper-${escapeHtml(safeChartId)}">
+              <!-- Grid Lines Background -->
+              <div class="absolute inset-x-0 top-0 bottom-6 flex flex-col justify-between pointer-events-none">
+                <div class="w-full border-t border-cyber-border/40 h-0"></div>
+                <div class="w-full border-t border-cyber-border/20 h-0"></div>
+                <div class="w-full border-t border-cyber-border/20 h-0"></div>
+                <div class="w-full border-t border-cyber-border/20 h-0"></div>
+                <div class="w-full border-t border-cyber-border/40 h-0"></div>
+              </div>
+
+              <!-- Absolute SVG Canvas (Regenerated dynamically by JS) -->
+              <svg id="interactive-svg-canvas-${escapeHtml(safeChartId)}" class="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
+                <defs>
+                  <!-- Area Gradient Color -->
+                  <linearGradient id="areaGlowGradient-${escapeHtml(safeChartId)}" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#7CFF44" stop-opacity="0.12"></stop>
+                    <stop offset="100%" stop-color="#7CFF44" stop-opacity="0.0"></stop>
+                  </linearGradient>
+                  <!-- Glow shadow for peak point -->
+                  <filter id="peakGlowFilter-${escapeHtml(safeChartId)}" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="5" result="blur"></feGaussianBlur>
+                    <feMerge>
+                      <feMergeNode in="blur"></feMergeNode>
+                      <feMergeNode in="SourceGraphic"></feMergeNode>
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                <!-- Placeholder routes which are fully initialized on runtime -->
+                <path id="svg-fill-area-${escapeHtml(safeChartId)}" fill="url(#areaGlowGradient-${escapeHtml(safeChartId)})" d=""></path>
+                <path id="svg-views-path-${escapeHtml(safeChartId)}" fill="none" stroke="#7CFF44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d=""></path>
+                <path id="svg-rates-path-${escapeHtml(safeChartId)}" fill="none" stroke="#3E5244" stroke-width="1.5" stroke-dasharray="3,3" stroke-linecap="round" d=""></path>
+
+                <!-- Vertical crosshair guide -->
+                <line id="svg-guide-line-${escapeHtml(safeChartId)}" x1="0" y1="0" x2="0" y2="0" stroke="#7CFF44" stroke-opacity="0.25" stroke-width="1" stroke-dasharray="2,2" class="opacity-0 transition-opacity duration-150"></line>
+
+                <!-- Dynamic dots placeholder -->
+                <g id="svg-dots-group-${escapeHtml(safeChartId)}"></g>
+              </svg>
+
+              <!-- Absolute High-Tech Interactive Hover Tooltip Box -->
+              <div id="chart-tooltip-${escapeHtml(safeChartId)}" class="absolute bg-cyber-card/95 border border-cyber-volt/30 rounded px-3 py-2 text-left shadow-[0_4px_20px_rgba(7,10,8,0.8)] pointer-events-none opacity-0 transition-opacity duration-150 z-20 w-44"></div>
+            </div>
+          </div>
+
+          <!-- X-Axis Dates -->
+          <div class="w-full flex pl-12 h-6 items-end justify-between text-[9px] font-mono text-cyber-darkMuted pointer-events-none select-none">
+            ${payload.map(row => `<span>${escapeHtml(row.date)}</span>`).join('')}
+          </div>
+        </div>`;
 }
 
 function trendMetricPanel(title, rows = [], valueKey = 'value', unit = '', edits = {}, key = '') {
-  return `<section class="bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all"><h3 class="text-xs font-bold text-white mb-4">${editableText(edits, `${key}.title`, title)}</h3>${lineChart(rows, { valueKey, unit })}</section>`;
+  return `<section data-section="trend-analysis" id="trend-analysis-card-${escapeHtml(valueKey)}" class="bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all relative overflow-hidden flex flex-col justify-between"><div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 space-y-2 sm:space-y-0"><div><span class="text-xs font-mono text-cyber-muted uppercase tracking-wider block">${editableText(edits, `${key}.eyebrow`, '// GROWTH TRENDS')}</span><h3 class="text-xs font-bold text-white">${editableText(edits, `${key}.title`, title)}</h3></div><div class="flex space-x-4 text-[10px]"><div class="flex items-center space-x-1.5"><span class="w-2.5 h-0.5 bg-cyber-volt inline-block"></span><span class="text-cyber-muted">${editableText(edits, `${key}.primaryLabel`, title)}</span></div><div class="flex items-center space-x-1.5"><span class="w-2.5 h-0.5 bg-[#3E5244] inline-block"></span><span class="text-cyber-muted">${editableText(edits, `${key}.secondaryLabel`, '环比变化')}</span></div></div></div>${lineChart(rows, { valueKey, unit, title, chartId: key || valueKey })}</section>`;
 }
 
 function renderCourseTypeRows(rows = [], edits = {}) {
@@ -1820,7 +1903,6 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(snapshot.campusName || WEEKLY_REPORT_CAMPUS_NAME)}周报</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
@@ -1855,7 +1937,6 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#070A08}::-webkit-scrollbar-thumb{background:#18221B;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#2C3D2F}
     [data-editable="true"]:hover,[data-editable="true"]:focus{outline:1px dashed #7CFF44;background-color:rgba(124,255,68,.05);padding-left:4px;padding-right:4px;border-radius:2px}
     .cohort-cell{transition:all .15s ease-out}.cohort-cell:hover{transform:scale(1.05);z-index:10;box-shadow:0 0 10px rgba(124,255,68,.2)}
-    .weekly-echarts-trend{height:260px;min-height:260px;width:100%}
     .chart-tooltip{position:fixed;display:none;z-index:20;pointer-events:none;border:1px solid #7CFF44;background:#0D120F;color:#fff;border-radius:6px;padding:7px 9px;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
     .empty{color:#889E8D}.highlight-col{background:rgba(124,255,68,.08);color:#7CFF44}.remark{white-space:pre-wrap}
     .bars{display:grid;gap:11px}.bar-row{display:grid;grid-template-columns:132px 1fr 92px;gap:12px;align-items:center;font-size:13px}.bar-row span{color:#889E8D}.bar-row i{height:10px;background:#18221B;border-radius:3px;overflow:hidden}.bar-row b{display:block;height:100%;background:#7CFF44;border-radius:3px}.bar-row strong{font-family:ui-monospace,SFMono-Regular,monospace;color:#fff}
@@ -2006,28 +2087,167 @@ document.querySelectorAll('[data-tooltip]').forEach(function(el){
   el.addEventListener('mousemove',function(e){if(!tooltip)return;tooltip.textContent=el.getAttribute('data-tooltip')||'';tooltip.style.display='block';tooltip.style.left=e.clientX+12+'px';tooltip.style.top=e.clientY+12+'px';});
   el.addEventListener('mouseleave',function(){if(tooltip)tooltip.style.display='none';});
 });
-document.querySelectorAll('.weekly-echarts-trend').forEach(function(chart){
-  var rows=[];
-  try{rows=JSON.parse(chart.getAttribute('data-points')||'[]')}catch(e){}
-  if(!rows.length)return;
-  if(!window.echarts){chart.innerHTML='<p class="empty">图表加载失败</p>';return;}
+function formatTrendNumber(value, unit){
+  var n=Number(value)||0;
+  var suffix=unit||'';
+  var text=n.toLocaleString('zh-CN',{maximumFractionDigits:suffix==='%'||suffix==='小时'?2:0});
+  return text+suffix;
+}
+function renderInteractiveChart(chart){
+  var chartData=[];
+  try{chartData=JSON.parse(chart.getAttribute('data-points')||'[]')}catch(e){}
+  if(!chartData.length)return;
+  var container=chart.querySelector('[id^="svg-chart-wrapper"]');
+  var svg=chart.querySelector('[id^="interactive-svg-canvas"]');
+  var fillArea=chart.querySelector('[id^="svg-fill-area"]');
+  var viewsPath=chart.querySelector('[id^="svg-views-path"]');
+  var ratesPath=chart.querySelector('[id^="svg-rates-path"]');
+  var dotsGroup=chart.querySelector('[id^="svg-dots-group"]');
+  var guideLine=chart.querySelector('[id^="svg-guide-line"]');
+  var tooltipBox=chart.querySelector('[id^="chart-tooltip"]');
+  if(!container||!svg||!fillArea||!viewsPath||!ratesPath||!dotsGroup||!guideLine||!tooltipBox)return;
+  var width=container.clientWidth||container.getBoundingClientRect().width;
+  var height=container.clientHeight||container.getBoundingClientRect().height;
+  if(!width||!height)return;
+  svg.setAttribute('viewBox','0 0 '+width+' '+height);
+  var padding={top:15,right:10,bottom:24,left:10};
+  var plotWidth=width-padding.left-padding.right;
+  var plotHeight=height-padding.top-padding.bottom;
   var unit=chart.getAttribute('data-unit')||'';
-  var formatValue=function(value){
-    var n=Number(value)||0;
-    return n.toLocaleString('zh-CN',{maximumFractionDigits:unit==='%'||unit==='小时'?2:0});
-  };
-  var instance=echarts.init(chart);
-  instance.setOption({
-    backgroundColor:'transparent',
-    color:['#7CFF44'],
-    grid:{left:52,right:22,top:24,bottom:48,containLabel:false},
-    tooltip:{trigger:'axis',backgroundColor:'#0D120F',borderColor:'#7CFF44',textStyle:{color:'#fff'},valueFormatter:function(value){return formatValue(value)+unit;}},
-    xAxis:{type:'category',boundaryGap:false,data:rows.map(function(row){return row.label;}),axisLine:{lineStyle:{color:'#2C3D2F'}},axisTick:{show:false},axisLabel:{color:'#889E8D',fontSize:11,interval:0,rotate:28,margin:14}},
-    yAxis:{type:'value',splitNumber:4,axisLine:{show:true,lineStyle:{color:'#2C3D2F'}},axisTick:{show:false},axisLabel:{color:'#889E8D',fontSize:11,formatter:function(value){return formatValue(value)+unit;}},splitLine:{lineStyle:{color:'#18221B',type:'dashed'}}},
-    series:[{type:'line',data:rows.map(function(row){return Number(row.value)||0;}),smooth:false,symbol:'circle',symbolSize:8,lineStyle:{width:3,color:'#7CFF44'},itemStyle:{color:'#070A08',borderColor:'#7CFF44',borderWidth:2},areaStyle:{color:'rgba(124,255,68,.10)'}}]
+  var primaryLabel=chart.getAttribute('data-primary-label')||'指标';
+  var secondaryLabel=chart.getAttribute('data-secondary-label')||'环比变化';
+  var primaryMax=Math.max(Number(chart.getAttribute('data-primary-max'))||0,Math.max.apply(null,chartData.map(function(d){return Number(d.views)||0;})),1);
+  var rateValues=chartData.map(function(d){return Number(d.rate)||0;});
+  var minRate=Math.min.apply(null,rateValues.concat([0]));
+  var maxRate=Math.max.apply(null,rateValues.concat([0]));
+  if(maxRate===minRate){maxRate+=1;minRate-=1;}
+  var getX=function(idx){return padding.left+(chartData.length===1?0.5:idx/(chartData.length-1))*plotWidth;};
+  var getYViews=function(val){return padding.top+plotHeight-(Math.max(0,Number(val)||0)/primaryMax)*plotHeight;};
+  var getYRates=function(val){return padding.top+((maxRate-(Number(val)||0))/(maxRate-minRate))*plotHeight;};
+  var points=chartData.map(function(d,idx){
+    return Object.assign({x:getX(idx),yViews:getYViews(d.views),yRate:getYRates(d.rate)},d);
   });
-  window.addEventListener('resize',function(){instance.resize();});
-});
+  var pathD='';
+  var fillD='';
+  var ratePathD='';
+  points.forEach(function(pt,idx){
+    if(idx===0){
+      pathD='M '+pt.x+' '+pt.yViews;
+      fillD='M '+pt.x+' '+(padding.top+plotHeight)+' L '+pt.x+' '+pt.yViews;
+      ratePathD='M '+pt.x+' '+pt.yRate;
+    }else{
+      pathD+=' L '+pt.x+' '+pt.yViews;
+      fillD+=' L '+pt.x+' '+pt.yViews;
+      ratePathD+=' L '+pt.x+' '+pt.yRate;
+    }
+    if(idx===points.length-1)fillD+=' L '+pt.x+' '+(padding.top+plotHeight)+' Z';
+  });
+  fillArea.setAttribute('d',fillD);
+  viewsPath.setAttribute('d',pathD);
+  ratesPath.setAttribute('d',ratePathD);
+  dotsGroup.innerHTML='';
+  points.forEach(function(pt,idx){
+    var dotG=document.createElementNS('http://www.w3.org/2000/svg','g');
+    dotG.setAttribute('class','interactive-dot-group cursor-pointer');
+    dotG.setAttribute('data-index',idx);
+    var touchCircle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    touchCircle.setAttribute('cx',pt.x);
+    touchCircle.setAttribute('cy',pt.yViews);
+    touchCircle.setAttribute('r',16);
+    touchCircle.setAttribute('fill','transparent');
+    touchCircle.setAttribute('pointer-events','all');
+    var coreCircle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    coreCircle.setAttribute('data-chart-dot',idx);
+    coreCircle.setAttribute('cx',pt.x);
+    coreCircle.setAttribute('cy',pt.yViews);
+    coreCircle.setAttribute('class','interactive-dot');
+    if(pt.isPeak){
+      coreCircle.setAttribute('r',5);
+      coreCircle.setAttribute('fill','#ffffff');
+      coreCircle.setAttribute('stroke','#7CFF44');
+      coreCircle.setAttribute('stroke-width','2.5');
+      coreCircle.setAttribute('filter','url(#'+chart.querySelector('filter[id^="peakGlowFilter"]').id+')');
+    }else{
+      coreCircle.setAttribute('r',3.5);
+      coreCircle.setAttribute('fill','#070A08');
+      coreCircle.setAttribute('stroke','#7CFF44');
+      coreCircle.setAttribute('stroke-width','1.5');
+    }
+    dotG.appendChild(touchCircle);
+    dotG.appendChild(coreCircle);
+    dotsGroup.appendChild(dotG);
+  });
+  function resetHoverState(){
+    guideLine.classList.add('opacity-0');
+    tooltipBox.style.opacity='0';
+    points.forEach(function(pt,idx){
+      var dot=chart.querySelector('[data-chart-dot="'+idx+'"]');
+      if(!dot)return;
+      if(pt.isPeak){
+        dot.setAttribute('r',5);
+        dot.setAttribute('stroke-width','2.5');
+        dot.setAttribute('fill','#ffffff');
+      }else{
+        dot.setAttribute('r',3.5);
+        dot.setAttribute('stroke-width','1.5');
+        dot.setAttribute('fill','#070A08');
+      }
+    });
+  }
+  function handleChartHover(clientX){
+    var rect=container.getBoundingClientRect();
+    var relativeX=clientX-rect.left;
+    if(relativeX<padding.left-10||relativeX>padding.left+plotWidth+10){
+      resetHoverState();
+      return;
+    }
+    var calculatedIndex=Math.round(((relativeX-padding.left)/plotWidth)*(chartData.length-1));
+    var activeIdx=Math.max(0,Math.min(chartData.length-1,calculatedIndex));
+    var activePt=points[activeIdx];
+    guideLine.setAttribute('x1',activePt.x);
+    guideLine.setAttribute('x2',activePt.x);
+    guideLine.setAttribute('y1',padding.top);
+    guideLine.setAttribute('y2',padding.top+plotHeight);
+    guideLine.classList.remove('opacity-0');
+    points.forEach(function(pt,idx){
+      var dot=chart.querySelector('[data-chart-dot="'+idx+'"]');
+      if(!dot)return;
+      if(idx===activeIdx){
+        dot.setAttribute('r',pt.isPeak?7:5.5);
+        dot.setAttribute('stroke-width',pt.isPeak?'3.5':'3');
+        dot.setAttribute('fill',pt.isPeak?'#ffffff':'#7CFF44');
+      }else if(pt.isPeak){
+        dot.setAttribute('r',5);
+        dot.setAttribute('stroke-width','2.5');
+        dot.setAttribute('fill','#ffffff');
+      }else{
+        dot.setAttribute('r',3.5);
+        dot.setAttribute('stroke-width','1.5');
+        dot.setAttribute('fill','#070A08');
+      }
+    });
+    var rateSign=Number(activePt.rate)>0?'+':'';
+    tooltipBox.innerHTML='<div class="text-[10px] font-mono text-cyber-muted mb-1">'+activePt.date+' 数据快照</div>'+
+      '<div class="text-xs font-bold text-white mb-2 truncate">'+activePt.desc+'</div>'+
+      '<div class="flex justify-between items-center text-[11px] mb-1"><span class="text-cyber-muted">'+primaryLabel+'</span><span class="font-mono text-cyber-volt font-bold">'+formatTrendNumber(activePt.views,unit)+'</span></div>'+
+      '<div class="flex justify-between items-center text-[11px]"><span class="text-cyber-muted">'+secondaryLabel+'</span><span class="font-mono text-white font-semibold">'+rateSign+Number(activePt.rate||0).toLocaleString('zh-CN',{maximumFractionDigits:2})+'%</span></div>';
+    var tooltipLeft=activePt.x-88;
+    if(tooltipLeft<5)tooltipLeft=5;
+    if(tooltipLeft+180>width)tooltipLeft=width-180;
+    tooltipBox.style.left=tooltipLeft+'px';
+    tooltipBox.style.top=Math.max(5,activePt.yViews-82)+'px';
+    tooltipBox.style.opacity='1';
+  }
+  container.onmousemove=function(e){handleChartHover(e.clientX);};
+  container.onmouseleave=resetHoverState;
+  container.ontouchmove=function(e){if(e.touches&&e.touches[0])handleChartHover(e.touches[0].clientX);};
+  container.ontouchend=resetHoverState;
+}
+function renderAllInteractiveCharts(){
+  document.querySelectorAll('.weekly-template-trend').forEach(renderInteractiveChart);
+}
+renderAllInteractiveCharts();
+window.addEventListener('resize',renderAllInteractiveCharts);
 document.querySelector('.save-edit')?.addEventListener('click',async function(){
   var button=this;
   var values={};
