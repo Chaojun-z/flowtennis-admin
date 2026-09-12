@@ -6,10 +6,12 @@ const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../vercel.json')
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 const feishuScheduleSyncSource = fs.readFileSync(path.join(__dirname, '../server/feishu-schedule-sync-routes.js'), 'utf8');
 const feishuDailyWorkflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/feishu-daily-report.yml'), 'utf8');
+const feishuBusinessDailyWorkflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/feishu-business-daily-report.yml'), 'utf8');
 const officialRemindersWorkflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/official-account-reminders.yml'), 'utf8');
 const officialDigestsWorkflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/official-account-daily-digests.yml'), 'utf8');
 const feishuCoachDigestsWorkflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/feishu-coach-daily-digests.yml'), 'utf8');
 const feishuScheduleSyncWorkflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/feishu-schedule-sync.yml'), 'utf8');
+const thirdPartySyncWorkflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/third-party-sync-center.yml'), 'utf8');
 const operationsSnapshotWorkflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/operations-snapshot-rebuild.yml'), 'utf8');
 const matchKeepaliveWorkflowPath = path.join(__dirname, '../.github/workflows/match-supabase-keepalive.yml');
 
@@ -17,7 +19,11 @@ assert.strictEqual(config.crons, undefined, 'Vercel 不配置 Cron，定时任�
 assert.strictEqual(fs.existsSync(matchKeepaliveWorkflowPath), true, '约球 Supabase 保活应由 GitHub Actions 定时触发，不使用 Vercel Cron');
 
 assert.match(feishuDailyWorkflow, /workflow_dispatch:/, '飞书排课日报应保留手动触发入口');
-assert.doesNotMatch(feishuDailyWorkflow, /cron:/, '飞书排课日报不应再使用 GitHub Actions 定时触发');
+assert.match(feishuDailyWorkflow, /cron:\s*'13 12 \* \* \*'/, '飞书排课日报应每天北京时间 20:13 自动触发');
+assert.match(feishuDailyWorkflow, /TARGET_URL:\s*https:\/\/www\.flowtennis\.cn\/api\/cron\/feishu-daily-report/, '飞书排课日报应触发线上排课日报接口');
+assert.match(feishuDailyWorkflow, /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, '飞书排课日报应使用线上 cron 鉴权');
+assert.match(feishuBusinessDailyWorkflow, /workflow_dispatch:/, '飞书经营日报应保留手动触发入口');
+assert.doesNotMatch(feishuBusinessDailyWorkflow, /^\s*schedule:/m, '飞书经营日报应暂停自动定时推送');
 assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-coach-reminders/, '服务号教练课前提醒应由 GitHub Actions 单独触发');
 assert.match(officialRemindersWorkflow, /\/api\/cron\/official-account-student-reminders/, '服务号学员课前提醒应由 GitHub Actions 单独触发');
 assert.doesNotMatch(officialRemindersWorkflow, /\/api\/cron\/official-account-feedback-reminders/, '服务号课前提醒 workflow 不应被课后反馈提醒拖慢');
@@ -31,6 +37,9 @@ assert.match(apiSource, /x-feishu-coach-digest-open-id-overrides/, '飞书教练
 assert.doesNotMatch(feishuScheduleSyncWorkflow, /^\s*schedule:/m, '飞书排课表同步不应再自动定时扫描');
 assert.match(feishuScheduleSyncWorkflow, /workflow_dispatch:/, '飞书排课表同步应保留手动触发入口');
 assert.match(feishuScheduleSyncWorkflow, /\/api\/cron\/feishu-schedule-sync/, '飞书排课表同步手动运行时应由 GitHub Actions 触发');
+assert.doesNotMatch(thirdPartySyncWorkflow, /^\s*schedule:/m, '场小二订场数据处理应暂停自动群推');
+assert.match(thirdPartySyncWorkflow, /workflow_dispatch:/, '场小二订场数据处理应保留手动检查入口');
+assert.match(thirdPartySyncWorkflow, /\/api\/cron\/third-party-sync-center/, '场小二手动检查仍应能触发同步中心接口');
 assert.match(operationsSnapshotWorkflow, /cron: '5,20,35,50 \* \* \* \*'/, '经营分析快照应由 GitHub Actions 高频重建');
 assert.match(operationsSnapshotWorkflow, /node scripts\/rebuild-operations-snapshot\.js --write --view coach/, '经营分析教练人效快照 workflow 应优先重建轻量教练视图');
 assert.doesNotMatch(operationsSnapshotWorkflow, /--process-queued/, '经营分析教练人效主刷新链路不应被历史队列拖慢');

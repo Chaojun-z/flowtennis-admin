@@ -5,6 +5,8 @@ const path = require('path');
 const workflowPath = path.join(__dirname, '..', '.github', 'workflows', 'third-party-sync-center.yml');
 const source = fs.readFileSync(workflowPath, 'utf8');
 
+assert.doesNotMatch(source, /^\s*schedule:/m, 'third-party sync workflow should pause automatic group pushes');
+assert.match(source, /workflow_dispatch:/, 'third-party sync workflow should keep a manual entry');
 assert.match(source, /run_sync_once\(\)/, 'third-party sync workflow should wrap the cron call in a verifiable function');
 assert.match(source, /notification\.sent === true/, 'third-party sync workflow must require Feishu delivery before success');
 assert.match(source, /notification sent=\$\{sent\}/, 'third-party sync workflow should log Feishu delivery state');

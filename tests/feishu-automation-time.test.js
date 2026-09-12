@@ -6,6 +6,14 @@ const dailyWorkflow = fs.readFileSync(
   path.join(__dirname, '..', '.github', 'workflows', 'feishu-daily-report.yml'),
   'utf8'
 );
+const businessDailyWorkflow = fs.readFileSync(
+  path.join(__dirname, '..', '.github', 'workflows', 'feishu-business-daily-report.yml'),
+  'utf8'
+);
+const thirdPartySyncWorkflow = fs.readFileSync(
+  path.join(__dirname, '..', '.github', 'workflows', 'third-party-sync-center.yml'),
+  'utf8'
+);
 const monitorWorkflow = fs.readFileSync(
   path.join(__dirname, '..', '.github', 'workflows', 'feishu-monitor.yml'),
   'utf8'
@@ -21,14 +29,26 @@ const changelogWorkflow = fs.readFileSync(
 
 assert.match(
   dailyWorkflow,
-  /workflow_dispatch:/,
-  '日报 GitHub workflow 应只保留手动触发，正式定时交给 Vercel Cron'
+  /cron:\s*'13 12 \* \* \*'/,
+  '排课日报应每天北京时间 20:13 触发'
+);
+
+assert.match(
+  dailyWorkflow,
+  /TARGET_URL:\s*https:\/\/www\.flowtennis\.cn\/api\/cron\/feishu-daily-report/,
+  '排课日报应由 GitHub Actions 定时触发线上接口'
 );
 
 assert.doesNotMatch(
-  dailyWorkflow,
-  /cron:/,
-  '日报 GitHub workflow 不应再使用 schedule，避免延迟到 23-24 点推送'
+  businessDailyWorkflow,
+  /^\s*schedule:/m,
+  '经营日报应暂停自动定时推送'
+);
+
+assert.doesNotMatch(
+  thirdPartySyncWorkflow,
+  /^\s*schedule:/m,
+  '场小二订场数据处理应暂停自动群推'
 );
 
 assert.match(

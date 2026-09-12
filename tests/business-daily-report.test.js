@@ -98,10 +98,12 @@ assert.strictEqual(card.msg_type, 'interactive');
 assert.match(card.card.header.title.content, /经营日报/);
 assert.match(JSON.stringify(card), /今日实收/);
 
-assert.ok(fs.existsSync(workflowPath), '应提供飞书经营日报 GitHub Actions 定时任务');
+assert.ok(fs.existsSync(workflowPath), '应提供飞书经营日报 GitHub Actions 手动任务');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
+assert.match(workflow, /workflow_dispatch:/, '经营日报应保留手动触发入口');
+assert.doesNotMatch(workflow, /^\s*schedule:/m, '经营日报应暂停自动定时推送');
 assert.match(workflow, /FEISHU_BUSINESS_DAILY_REPORT_WEBHOOK/, '经营日报应使用独立飞书 webhook secret');
-assert.match(workflow, /export-business-daily-report-json\.js/, '定时任务应先导出经营日报数据快照');
-assert.match(workflow, /feishu-business-report\.js/, '定时任务应发送经营日报飞书消息');
+assert.match(workflow, /export-business-daily-report-json\.js/, '手动任务应先导出经营日报数据快照');
+assert.match(workflow, /feishu-business-report\.js/, '手动任务应发送经营日报飞书消息');
 
 console.log('business daily report tests passed');
