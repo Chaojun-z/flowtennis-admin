@@ -1110,7 +1110,7 @@ async function refreshSchEntitlementOptions(){
 function scheduleSaveConfirmText(data,selectedEntitlement){
   const absent=parseArr(data.absentStudentIds);
   const studentSettlementRows=parseArr(data.studentSettlementRows||'[]');
-  const packageText=studentSettlementRows.length>1
+  const packageText=studentSettlementRows.length
     ?summarizeStudentSettlementRows(studentSettlementRows)
     :(data.settlementType==='direct'?`${data.payMethod} ¥${fmt(data.paidAmount||0)}`:data.settlementType==='gift'?'赠送/免费，收入 ¥0':(data.studentIds.length>1?'按每个学员的可用课包自动扣课':(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName):'未选择可用课包，本次不会扣减课包余额')));
   const chargeLabel=scheduleSaveChargeLabel(data);
@@ -1161,7 +1161,8 @@ async function saveSchedule(){
   const classId=document.getElementById('sch_classId')?.value||'';
   const lc=scheduleCurrentLessonCount();
   const studentIds=parseArr(document.getElementById('sch_stuIds').value);
-  const studentSettlementRows=serializeStudentSettlementRows(parseArr(document.getElementById('sch_studentSettlementRows')?.value||'[]'));
+  const useStudentSettlementRows=scheduleUsesStudentSettlementRows();
+  const studentSettlementRows=serializeStudentSettlementRows(useStudentSettlementRows?captureScheduleStudentSettlementRows():parseArr(document.getElementById('sch_studentSettlementRows')?.value||'[]'));
   const scheduleSourceValue=document.getElementById('sch_scheduleSource')?.value||'排课表',sourceLeadName=document.getElementById('sch_sourceLeadName')?.value||'',isLeadCompanionSchedule=scheduleSourceValue==='线索陪打';
   const expectedStudentIds=parseArr(document.getElementById('sch_expectedStuIds')?.value||'[]'),expectedBase=expectedStudentIds.length?expectedStudentIds:studentIds;
   const absentStudentIds=expectedBase.filter(id=>!studentIds.includes(id));
@@ -1188,7 +1189,6 @@ async function saveSchedule(){
   if(locationType==='external'&&!externalCourtName){toast('请填写外部场地号或说明','warn');return;}
   if(!venue){toast('请选择场地','warn');return;}
   const selectedEntitlement=scheduleSelectedEntitlementOption()||entitlements.find(x=>x.id===selectedEntitlementId);
-  const useStudentSettlementRows=scheduleUsesStudentSettlementRows();
   const studentSettlementSummary=scheduleStudentSettlementSummaryForSave(studentSettlementRows);
   const schedulePaymentMethod=document.getElementById('sch_payMethod')?.value||'';
   const paidAmount=useStudentSettlementRows?studentSettlementRows.reduce((sum,row)=>sum+(row.settlementType==='direct'?(Number(row.amount)||0):0),0):(settlementType==='direct'?parseFloat(document.getElementById('sch_paidAmount')?.value||'0'):0);

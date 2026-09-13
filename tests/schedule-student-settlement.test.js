@@ -106,9 +106,11 @@ assert.match(scheduleSource, /function setScheduleStudentSettlementType\(/, 'sch
 assert.match(fnBody('onScheduleStudentSettlementTypeChange'), /custom:true/, 'manually changed student rows should be treated as overrides');
 assert.match(fnBody('handleScheduleSettlementTypeChange'), /refreshScheduleStudentSettlementSection\(\)/, 'changing the default settlement type should refresh per-student rows');
 assert.match(fnBody('saveSchedule'), /studentSettlementRows=serializeStudentSettlementRows/, 'saving should serialize per-student settlement rows');
+assert.match(fnBody('saveSchedule'), /const useStudentSettlementRows=scheduleUsesStudentSettlementRows\(\);[\s\S]*serializeStudentSettlementRows\(useStudentSettlementRows\?captureScheduleStudentSettlementRows\(\):parseArr/, 'saving small group schedules should capture each student package before serializing');
 assert.match(fnBody('saveSchedule'), /scheduleUsesStudentSettlementRows\(\)[\s\S]*studentSettlementRows\.reduce/, 'small group save should derive totals from per-student rows');
 assert.match(fnBody('saveSchedule'), /notes:document\.getElementById\('sch_notes'\)\.value\.trim\(\),studentSettlementRows/, 'saved schedule payload should include per-student settlement rows');
-assert.match(fnBody('scheduleSaveConfirmText'), /studentSettlementRows\.length>1[\s\S]*summarizeStudentSettlementRows/, 'confirm copy should use per-student settlement summary for small groups');
+assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /studentSettlementRows\.length\s*>\s*1[\s\S]*summarizeStudentSettlementRows/, 'single-student small group confirm must not fall back to the public entitlement dropdown');
+assert.match(fnBody('scheduleSaveConfirmText'), /studentSettlementRows\.length\s*\?[\s\S]*summarizeStudentSettlementRows/, 'confirm copy should use per-student settlement summary for every small group row, including one student');
 assert.match(apiSource, /SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'studentSettlementRows'/, 'schedule list projection should preserve per-student settlement rows for edit');
 
 assert.match(styles, /\.schedule-quick-student-overlay/, 'quick-create stacked overlay should have scoped styles');
