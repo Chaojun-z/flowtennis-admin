@@ -17,6 +17,24 @@ function createScheduleRoutes(deps={}){
     T_SCHEDULE,T_COACHES,T_USERS,T_ENTITLEMENTS,T_COURTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ACCOUNTS
   }=deps;
 
+  function normalizeScheduleAuthorizedUseFields(row = {}) {
+    const studentIds = parseArr(row.studentIds).map(id => String(id || '').trim()).filter(Boolean);
+    const usedById = String(row.usedByStudentId || row.authorizedStudentId || '').trim();
+    const ownerId = String(row.packageOwnerStudentId || '').trim();
+    const isValidAuthorizedUse = !!(usedById && ownerId && usedById !== ownerId && studentIds.includes(usedById));
+    if (isValidAuthorizedUse) return row;
+    return {
+      ...row,
+      authorizationId: '',
+      packageOwnerStudentId: '',
+      packageOwnerStudentName: '',
+      usedByStudentId: '',
+      usedByStudentName: '',
+      authorizedStudentId: '',
+      authorizedStudentName: ''
+    };
+  }
+
   async function syncScheduleListSnapshotDelta(row, options = {}) {
     if (!scheduleListSnapshotSync || typeof scheduleListSnapshotSync.recordDelta !== 'function') return null;
     return scheduleListSnapshotSync.recordDelta(row, options).catch((err) => {
@@ -63,7 +81,7 @@ function createScheduleRoutes(deps={}){
           const now=new Date().toISOString();
           const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now});
           const linkedScheduleGroupId=body.allowLinkedVenueConflict?String(body.linkedScheduleGroupId||id).trim():'';
-          const r=withOperationTrace({...body,...normalizeCoachLateInfo(body),...normalizeScheduleFieldFee(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',allowLinkedVenueConflict:!!body.allowLinkedVenueConflict,linkedScheduleGroupId,createdBy:user.name,createdAt:now,updatedAt:now},operationTrace);
+          const r=normalizeScheduleAuthorizedUseFields(withOperationTrace({...body,...normalizeCoachLateInfo(body),...normalizeScheduleFieldFee(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',allowLinkedVenueConflict:!!body.allowLinkedVenueConflict,linkedScheduleGroupId,createdBy:user.name,createdAt:now,updatedAt:now},operationTrace));
           let validation;
           try{validation=await timed('schedule create validate',async()=>{
             const risk=await validateScheduleSave(r,null);
@@ -157,7 +175,7 @@ function createScheduleRoutes(deps={}){
           const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now:new Date().toISOString()});
           const allowLinkedVenueConflict=!!(body.allowLinkedVenueConflict??ex?.allowLinkedVenueConflict);
           const linkedScheduleGroupId=allowLinkedVenueConflict?String(body.linkedScheduleGroupId||ex?.linkedScheduleGroupId||id).trim():'';
-          const r=withOperationTrace({...ex,...body,...normalizeCoachLateInfo({...ex,...body}),...normalizeScheduleFieldFee({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),allowLinkedVenueConflict,linkedScheduleGroupId,id,updatedAt:new Date().toISOString()},operationTrace);
+          const r=normalizeScheduleAuthorizedUseFields(withOperationTrace({...ex,...body,...normalizeCoachLateInfo({...ex,...body}),...normalizeScheduleFieldFee({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),allowLinkedVenueConflict,linkedScheduleGroupId,id,updatedAt:new Date().toISOString()},operationTrace));
           if(Object.prototype.hasOwnProperty.call(body,'entitlementIds'))r.entitlementIds=parseArr(body.entitlementIds).filter(Boolean);
           else if(Object.prototype.hasOwnProperty.call(body,'entitlementId'))r.entitlementIds=String(body.entitlementId||'').trim()?[String(body.entitlementId).trim()]:[];
           const oldDelta=scheduleLessonDelta(ex);

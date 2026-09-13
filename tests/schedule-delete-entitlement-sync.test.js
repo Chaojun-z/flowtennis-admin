@@ -7,6 +7,7 @@ const rules = api._test;
 
 async function run(){
   await runEditEntitlementChangeTest();
+  await runEditClearsStaleAuthorizedUseFieldsTest();
   await runCancelEntitlementSummarySyncTest();
   await runDeleteEntitlementSyncTest();
   await runManualEntitlementSummarySyncTest('manual_consume', -1);
@@ -125,6 +126,130 @@ async function runEditEntitlementChangeTest(){
   assert.strictEqual(summarySyncCalls[0].previousSchedule.id, 'sch-edit-1');
   assert.strictEqual(summarySyncCalls[0].nextSchedule.id, 'sch-edit-1');
   assert.strictEqual(summarySyncCalls[0].operationId, 'op-edit-test');
+}
+
+async function runEditClearsStaleAuthorizedUseFieldsTest(){
+  const persisted = [];
+  const summarySyncCalls = [];
+  const response = {};
+  const oldSchedule = {
+    id: 'sch-stale-auth-1',
+    status: '已排课',
+    settlementType: 'package',
+    studentIds: ['stu-wrong'],
+    studentName: '李先生（李俊泽）',
+    courseType: '私教课',
+    entitlementId: 'ent-wrong',
+    entitlementIds: ['ent-wrong'],
+    authorizationId: 'stale-auth',
+    packageOwnerStudentId: 'stu-correct',
+    packageOwnerStudentName: '李先生',
+    usedByStudentId: 'stu-wrong',
+    usedByStudentName: '李先生（李俊泽）',
+    lessonCount: 1,
+    startTime: '2026-07-15 15:00',
+    endTime: '2026-07-15 16:00'
+  };
+  const entitlements = [
+    { id: 'ent-wrong', studentId: 'stu-wrong', status: 'active', courseType: '私教课', totalLessons: 10, remainingLessons: 8 },
+    { id: 'ent-correct', studentId: 'stu-correct', status: 'active', courseType: '私教课', totalLessons: 10, remainingLessons: 10 }
+  ];
+  const handler = createScheduleRoutes({
+    init: async () => {},
+    sendJson: (res, payload, status = 200) => {
+      res.status = status;
+      res.payload = payload;
+      return true;
+    },
+    get: async (table, id) => (table === 'ft_schedule' && id === 'sch-stale-auth-1' ? oldSchedule : null),
+    scan: async () => [],
+    scanFeedbacks: async () => [],
+    timedEndpointMetric: async (label, fn) => fn(),
+    assertCanWriteSchedule: () => {},
+    buildOperationTrace: ({ now }) => ({ operationId: 'op-stale-auth-test', operationAt: now }),
+    withOperationTrace: (row, trace) => ({ ...row, ...trace }),
+    normalizeCoachLateInfo: () => ({}),
+    normalizeScheduleFieldFee: () => ({}),
+    parseArr: (value) => Array.isArray(value) ? value : [],
+    normalizeVenue: value => value,
+    timed: async (label, fn) => fn(),
+    validateScheduleSave: async () => ({ warnings: [] }),
+    assertScheduleEntitlementRequired: () => {},
+    assertScheduleFieldFeeInput: () => {},
+    assertScheduleEditableAfterFeedback: () => {},
+    withRequiredStorageTimeout: promise => promise,
+    getCachedScan: async table => table === 'ft_entitlements' ? entitlements : [],
+    buildCoachRefs: () => [],
+    resolveScheduleEntitlementDeltas: rules.resolveScheduleEntitlementDeltas,
+    assertScheduleEntitlementCapacity: async () => [],
+    scheduleStoredValuePaymentAmount: () => 0,
+    getFastStudentsRead: async () => [],
+    buildScheduleStoredValueCourtUpdate: ({ nextSchedule }) => ({ schedule: nextSchedule, courts: [], originalCourts: [], historyRows: [] }),
+    put: async (table, id, row) => {
+      if (table === 'ft_schedule') persisted.push(row);
+    },
+    scheduleLessonDelta: () => null,
+    applyEntitlementDelta: async (entitlementId, scheduleId, delta, action, reason, user, operationTrace, schedule) => ({
+      entitlement: { id: entitlementId, studentId: 'stu-correct', remainingLessons: 9, totalLessons: 10 },
+      ledger: {
+        id: `${action}-${entitlementId}`,
+        entitlementId,
+        scheduleId,
+        lessonDelta: delta,
+        action,
+        usedByStudentId: schedule.usedByStudentId || '',
+        packageOwnerStudentId: schedule.packageOwnerStudentId || ''
+      }
+    }),
+    applySmallGroupFreeAbsences: async () => [],
+    applyLessonDelta: async () => null,
+    syncScheduleFieldFeeFinancialLedger: async () => null,
+    persistScheduleStoredValueCourts: async () => [],
+    syncCoachScheduleIndexes: async () => {},
+    syncScheduleConflictIndexes: async () => {},
+    syncStudentTeachingSummaryDelta: async payload => {
+      summarySyncCalls.push(payload);
+      return { synced: true };
+    },
+    rollbackScheduleStoredValueCourts: async () => {},
+    rollbackSmallGroupFreeAbsences: async () => {},
+    restoreSmallGroupFreeAbsenceLedgerRows: async () => {},
+    scheduleSaveErrorStatus: () => 400,
+    withTimeout: promise => promise,
+    scheduleEntitlementDeltas: rules.scheduleEntitlementDeltas,
+    parseLessonValue: rules.parseLessonValue || (value => Number(value) || 0),
+    returnEntitlementFreeAbsence: row => row,
+    diffScheduleEntitlementDeltas: rules.diffScheduleEntitlementDeltas,
+    T_SCHEDULE: 'ft_schedule',
+    T_ENTITLEMENTS: 'ft_entitlements',
+    T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger',
+    T_COURTS: 'ft_courts'
+  });
+
+  await handler({
+    path: '/schedule/sch-stale-auth-1',
+    method: 'PUT',
+    body: {
+      status: '已排课',
+      settlementType: 'package',
+      studentIds: ['stu-correct'],
+      studentName: '李先生',
+      courseType: '私教课',
+      entitlementId: 'ent-correct',
+      lessonCount: 1,
+      startTime: '2026-07-15 15:00',
+      endTime: '2026-07-15 16:00'
+    },
+    user: { role: 'admin', name: '测试运营' },
+    res: response
+  });
+
+  assert.strictEqual(response.status, 200, `editing stale authorized schedule should save: ${JSON.stringify(response.payload)}`);
+  assert.strictEqual(persisted[0].usedByStudentId, '', 'saved schedule should clear stale usedByStudentId when the used-by student is no longer selected');
+  assert.strictEqual(persisted[0].authorizationId, '', 'saved schedule should clear stale authorizationId when editing back to owner package use');
+  assert.strictEqual(summarySyncCalls[0].nextSchedule.usedByStudentId, '', 'summary sync should not see stale usedByStudentId');
+  const consumeLedger = summarySyncCalls[0].changedLedgers.find(row => Number(row.lessonDelta) < 0);
+  assert.strictEqual(consumeLedger.usedByStudentId, '', 'new consume ledger should not re-add the old student as actual attendee');
 }
 
 async function runCancelEntitlementSummarySyncTest(){
