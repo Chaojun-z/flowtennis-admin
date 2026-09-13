@@ -235,6 +235,138 @@ async function requestGhostLessonSummaryStudentDetail() {
   return { res, calls };
 }
 
+async function requestGhostLessonCustomerCenterList() {
+  const calls = { cappedScan: 0, scheduleGets: 0 };
+  const activeVersion = 'test-ghost-list-version';
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_SCHEDULE: 'schedule'
+  };
+  const lessonRows = [
+    ...Array.from({ length: 9 }, (_, index) => ({
+      kind: 'ledger',
+      scheduleId: `sch-own-${index + 1}`,
+      time: `2026-07-${String(index + 1).padStart(2, '0')} 10:00-11:00`,
+      courseType: '私教课',
+      packageName: '成人1v1 黄金时间10课时',
+      entitlementId: 'ent-own',
+      packageOwnerStudentId: 'stu-wrong',
+      lessonDelta: -1,
+      countAsCompletedLesson: true
+    })),
+    {
+      kind: 'ledger',
+      scheduleId: 'sch-ghost-715',
+      time: '2026-07-15 15:00-16:00',
+      courseType: '私教课',
+      packageName: '成人1v1 非黄金时间10课时（补录）',
+      entitlementId: 'ent-other',
+      packageOwnerStudentId: 'stu-correct',
+      lessonRelationText: '使用 李先生 的课包',
+      lessonDelta: -1,
+      countAsCompletedLesson: true
+    },
+    {
+      kind: 'ledger',
+      scheduleId: 'sch-ghost-720',
+      time: '2026-07-20 10:00-11:00',
+      courseType: '私教课',
+      packageName: '成人1v1 非黄金时间10课时（补录）',
+      entitlementId: 'ent-other',
+      packageOwnerStudentId: 'stu-correct',
+      lessonRelationText: '使用 李先生 的课包',
+      lessonDelta: -1,
+      countAsCompletedLesson: true
+    }
+  ];
+  const fullSummary = {
+    id: 'stu-wrong',
+    studentId: 'stu-wrong',
+    name: '李先生（李俊泽）',
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    activityStatusLabel: '近30天活跃',
+    completedLessons: 11,
+    packageBalanceText: '0/10',
+    packageBalanceRemaining: 0,
+    packageBalanceTotal: 10,
+    detailPackageBalanceText: '0/10',
+    detailPackageBalanceRemaining: 0,
+    detailPackageBalanceTotal: 10,
+    detailPackageOrderRows: [{ entitlementId: 'ent-own', packageName: '成人1v1 黄金时间10课时', remainingLessons: 0, totalLessons: 10, usedLessons: 10 }],
+    detailLessonRecordRows: lessonRows
+  };
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      throw new Error(`unexpected full scan: ${table}`);
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === '__student_teaching_summary_meta__') {
+        return buildStudentTeachingSummaryMetaRow({
+          status: 'ready',
+          activeVersion,
+          rowCount: 1,
+          checksum: buildStudentTeachingSummaryChecksum([fullSummary])
+        });
+      }
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id.includes(`${activeVersion}:stu-wrong`)) {
+        return buildVersionedStudentTeachingSummaryRow(fullSummary, activeVersion);
+      }
+      if (table === tables.T_SCHEDULE && /^sch-ghost-/.test(id)) {
+        calls.scheduleGets += 1;
+        return { id, studentIds: ['stu-correct'], studentId: 'stu-wrong', status: '已排课' };
+      }
+      return null;
+    },
+    studentRosterIndexReader: {
+      readCustomerCenterList: async () => ({
+        listPage: {
+          view: 'activeStudents',
+          page: 1,
+          pageSize: 15,
+          total: 1,
+          pages: 1,
+          rows: [{
+            id: 'stu-wrong',
+            studentId: 'stu-wrong',
+            name: '李先生（李俊泽）',
+            completedLessons: 11,
+            packageBalanceRemaining: 0,
+            packageBalanceTotal: 10,
+            packageBalanceText: '0/10',
+            detailPackageBalanceText: '0/10'
+          }]
+        },
+        teachingStudentViews: {
+          activeStudents: [{
+            id: 'stu-wrong',
+            studentId: 'stu-wrong',
+            name: '李先生（李俊泽）',
+            completedLessons: 11,
+            packageBalanceRemaining: 0,
+            packageBalanceTotal: 10,
+            packageBalanceText: '0/10',
+            detailPackageBalanceText: '0/10'
+          }]
+        },
+        standardLifecycleMetrics: {}
+      })
+    },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/customer-center-list', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('view=activeStudents&paged=1&page=1&pageSize=15&q=李俊泽') });
+  return { res, calls };
+}
+
 async function requestPublishedSummaryBeatsStaleDirectRowStudentDetail() {
   const calls = { cappedScan: 0, prefixScan: 0, summaryScan: 0 };
   const tables = {
@@ -976,6 +1108,14 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.completedLessons, 9, 'drawer should remove ghost lessons whose current schedule belongs to another student');
   assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.packageBalanceText, '1/10', 'drawer should recover own package balance after removing ghost lessons');
   assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.detailLessonRecordRows.length, 9, 'drawer should only keep the valid own-package lesson records');
+
+  const ghostLessonList = await requestGhostLessonCustomerCenterList();
+  assert.strictEqual(ghostLessonList.res.statusCode, 200);
+  assert.strictEqual(ghostLessonList.calls.cappedScan, 0, 'ghost lesson list calibration must not scan production fact tables');
+  assert.strictEqual(ghostLessonList.calls.scheduleGets, 2, 'ghost lesson list calibration should only read suspicious schedule rows exactly');
+  assert.strictEqual(ghostLessonList.res.body.listPage.rows[0].completedLessons, 9, 'list page should remove ghost lessons from the visible row');
+  assert.strictEqual(ghostLessonList.res.body.listPage.rows[0].packageBalanceText, '1/10', 'list page should recover own package balance after removing ghost lessons');
+  assert.strictEqual(ghostLessonList.res.body.teachingStudentViews.activeStudents[0].packageBalanceText, '1/10', 'projected active student row should use calibrated package balance');
 
   const emptySummary = await requestEmptySummaryWithTrialFactsStudentDetail();
   assert.strictEqual(emptySummary.res.statusCode, 200);

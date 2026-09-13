@@ -187,6 +187,67 @@ async function sanitizeStudentDetailTeachingSummary(summary=null,studentId='',{g
   return nextSummary;
 }
 
+function studentListRowNeedsDetailCalibration(row={}){
+  const total=Number(row.packageBalanceTotal||row.detailPackageBalanceTotal)||0;
+  const remaining=Number(row.packageBalanceRemaining||row.detailPackageBalanceRemaining)||0;
+  const completed=Number(row.completedLessons)||0;
+  return total>0&&remaining<=0&&completed>=total;
+}
+
+function projectCalibratedStudentListRow(row={},summary={}){
+  const patch={};
+  [
+    'completedLessons',
+    'packageBalanceRemaining',
+    'packageBalanceTotal',
+    'packageBalanceText',
+    'packageBalancePercent',
+    'detailPackageBalanceRemaining',
+    'detailPackageBalanceTotal',
+    'detailPackageBalanceText',
+    'detailPackageBalancePercent',
+    'detailRecentLessonDate',
+    'lastFormalLessonAt',
+    'packageStatusLabel',
+    'activityStatusLabel',
+    'lessonVolumeLabel'
+  ].forEach(key=>{
+    if(Object.prototype.hasOwnProperty.call(summary,key))patch[key]=summary[key];
+  });
+  return {...row,...patch};
+}
+
+async function calibrateCustomerCenterListPayload(payload={},query,{readStudentTeachingSummaryRow,sanitizeStudentDetailTeachingSummary,getCachedRow,T_SCHEDULE}={}){
+  const listRows=Array.isArray(payload?.listPage?.rows)?payload.listPage.rows:[];
+  if(!listRows.length||typeof readStudentTeachingSummaryRow!=='function'||typeof sanitizeStudentDetailTeachingSummary!=='function')return payload;
+  const hasSearch=!!String(query?.get('q')||'').trim();
+  const candidates=listRows.filter(row=>hasSearch||studentListRowNeedsDetailCalibration(row));
+  if(!candidates.length)return payload;
+  const byId=new Map();
+  await Promise.all(candidates.map(async row=>{
+    const studentId=String(row.studentId||row.id||'').trim();
+    if(!studentId)return;
+    const raw=await readStudentTeachingSummaryRow(studentId).catch(()=>null);
+    const summary=await sanitizeStudentDetailTeachingSummary(raw,studentId,{getCachedRow,T_SCHEDULE}).catch(()=>null);
+    if(summary)byId.set(studentId,summary);
+  }));
+  if(!byId.size)return payload;
+  const patchRows=rows=>(Array.isArray(rows)?rows:[]).map(row=>{
+    const studentId=String(row.studentId||row.id||'').trim();
+    const summary=byId.get(studentId);
+    return summary?projectCalibratedStudentListRow(row,summary):row;
+  });
+  const view=String(payload?.listPage?.view||'').trim();
+  return {
+    ...payload,
+    listPage:{...payload.listPage,rows:patchRows(payload.listPage.rows)},
+    teachingStudentViews:{
+      ...(payload.teachingStudentViews||{}),
+      ...(view?{[view]:patchRows(payload.teachingStudentViews?.[view])}:{})
+    }
+  };
+}
+
 function buildStudentDetailFastPayload({student={},studentTeachingSummary=null,studentId='',needsRefresh=false}={}){
   const summary=studentTeachingSummary||{};
   const hasTrustedSummary=!!studentTeachingSummary;
@@ -308,7 +369,17 @@ function createCorePageDataRoutes(deps={}){
   });
   async function sendCustomerCenterTeachingSummary(res,user,query){
     try{
-      return sendJson(res,await studentRosterIndexReader.readCustomerCenterList({user,query}));
+      const payload=await studentRosterIndexReader.readCustomerCenterList({user,query});
+      const calibrated=await calibrateCustomerCenterListPayload(payload,query,{
+        readStudentTeachingSummaryRow,
+        sanitizeStudentDetailTeachingSummary,
+        getCachedRow,
+        T_SCHEDULE
+      }).catch(err=>{
+        console.warn('[customer-center-list] current page calibration skipped',err?.message||err);
+        return payload;
+      });
+      return sendJson(res,calibrated);
     }catch(err){
       if(err?.code==='STUDENT_TEACHING_SUMMARY_NOT_READY'){
         console.warn('[customer-center-list] student teaching summary unavailable',err?.message||err);
