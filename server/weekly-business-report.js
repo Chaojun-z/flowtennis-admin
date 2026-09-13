@@ -1782,7 +1782,8 @@ function barChart(rows = [], { labelKey = 'name', valueKey = 'value', unit = '',
   return `<div class="bars">${clean.map((row, index) => {
     const value = fieldNumber(row, [valueKey]);
     const label = rowLabel(row, [labelKey, 'label', 'type']);
-    return `<div class="bar-row" data-tooltip="${escapeHtml(`${label} ${formatMetricValue(value, unit)}${unit}`)}"><span>${editableText(edits, keyPrefix ? `${keyPrefix}.${index}.label` : '', label)}</span><i><b style="width:${Math.max(4, percent(value, max))}%"></b></i><strong>${editableText(edits, keyPrefix ? `${keyPrefix}.${index}.value` : '', `${formatMetricValue(value, unit)}${unit}`)}</strong></div>`;
+    const width = value > 0 ? Math.max(4, percent(value, max)) : 0;
+    return `<div class="bar-row" data-tooltip="${escapeHtml(`${label} ${formatMetricValue(value, unit)}${unit}`)}"><span>${editableText(edits, keyPrefix ? `${keyPrefix}.${index}.label` : '', label)}</span><i><b style="width:${width}%"></b></i><strong>${editableText(edits, keyPrefix ? `${keyPrefix}.${index}.value` : '', `${formatMetricValue(value, unit)}${unit}`)}</strong></div>`;
   }).join('')}</div>`;
 }
 
@@ -1988,7 +1989,8 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   const conversion = sections.conversion || {};
   const coachRows = normalizeRows(coach.rows);
   const coachLessonRows = coachRows.filter(row => normalizeRows(row.lessonRows).length);
-  const sourceRows = normalizeRows(conversion.sourceRows);
+  const sourceRows = normalizeRows(conversion.sourceRows)
+    .sort((a, b) => fieldNumber(b, ['leads']) - fieldNumber(a, ['leads']));
   const lifetime = snapshot.lifetimeSummary || {};
   const edits = snapshot.publicEdits || {};
   const editableSectionTitle = (key, text, mark) => `<div id="${escapeHtml(key)}" class="flex justify-between items-center pt-8 scroll-mt-24"><h2 class="text-base font-bold text-white">${editableText(edits, `section.${key}.title`, text)}</h2><span class="text-xs font-mono text-cyber-volt uppercase tracking-wider">${editableText(edits, `section.${key}.mark`, mark)}</span></div>`;
@@ -2035,7 +2037,8 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     .cohort-cell{transition:all .15s ease-out}.cohort-cell:hover{transform:scale(1.05);z-index:10;box-shadow:0 0 10px rgba(124,255,68,.2)}
     .chart-tooltip{position:fixed;display:none;z-index:20;pointer-events:none;border:1px solid #7CFF44;background:#0D120F;color:#fff;border-radius:6px;padding:7px 9px;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
     .empty{color:#889E8D}.highlight-col{background:rgba(124,255,68,.08);color:#7CFF44}.remark{white-space:pre-wrap}
-    .bars{display:grid;gap:11px}.bar-row{display:grid;grid-template-columns:132px 1fr 92px;gap:12px;align-items:center;font-size:13px}.bar-row span{color:#889E8D}.bar-row i{height:10px;background:#18221B;border-radius:3px;overflow:hidden}.bar-row b{display:block;height:100%;background:#7CFF44;border-radius:3px}.bar-row strong{font-family:ui-monospace,SFMono-Regular,monospace;color:#fff}
+    .bars{display:grid;grid-auto-rows:minmax(0,1fr);gap:0;height:100%}.bar-row{display:grid;grid-template-columns:132px 1fr 92px;gap:12px;align-items:center;font-size:13px}.bar-row span{color:#889E8D}.bar-row i{height:10px;background:#18221B;border-radius:3px;overflow:hidden}.bar-row b{display:block;height:100%;background:#7CFF44;border-radius:3px}.bar-row strong{font-family:ui-monospace,SFMono-Regular,monospace;color:#fff}
+    .conversion-panel{height:100%;min-height:520px}.conversion-panel>.bars,.conversion-panel>.overflow-x-auto{flex:1;min-height:0}.conversion-panel>.overflow-x-auto table{height:100%;margin-top:0}
     .donut-wrap{display:flex;align-items:center;gap:20px}.donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:"";position:absolute;inset:35px;border-radius:50%;background:#0D120F}.legend{display:grid;gap:9px;font-size:13px}.legend span{display:flex;align-items:center;gap:8px;color:#889E8D}.legend i{width:10px;height:10px;border-radius:50%}
     .progress-list{display:grid;gap:14px}.progress-item div{display:flex;justify-content:space-between;color:#889E8D;font-size:12px;margin-bottom:6px}.progress-item strong{color:#fff;font-family:ui-monospace,SFMono-Regular,monospace}.progress-item i{display:block;height:10px;background:#18221B;border-radius:3px;overflow:hidden}.progress-item b{display:block;height:100%;background:#7CFF44}
     .hero-kpi-value [data-editable="true"]{white-space:nowrap}
@@ -2166,7 +2169,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${reportMetric('本周体验线索', conversion.trialLeads || 0, ' 条', conversion.compare?.trialLeads, edits, 'conversion.trialLeads')}
     ${reportMetric('体验后报名', conversion.trialDeals || 0, ' 人', conversion.compare?.trialDeals, edits, 'conversion.trialDeals')}
   </div>
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6"><div class="lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all">${barChart(sourceRows.map(row => ({ name: row.source, value: row.leads })), { labelKey: 'name', valueKey: 'value', unit: '条', edits, keyPrefix: 'conversion.leads.bar' })}</div><div class="lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all">${renderRows(sourceRows, [
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch"><div class="conversion-panel lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all flex flex-col">${barChart(sourceRows.map(row => ({ name: row.source, value: row.leads })), { labelKey: 'name', valueKey: 'value', unit: '条', edits, keyPrefix: 'conversion.leads.bar' })}</div><div class="conversion-panel lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all flex flex-col">${renderRows(sourceRows, [
     { key: 'source', label: '渠道' },
     { key: 'leads', label: '线索数' },
     { key: 'trial', label: '体验线索' },

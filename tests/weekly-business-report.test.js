@@ -166,6 +166,26 @@ const sortedLeadSourceHtml = renderWeeklyBusinessReportHtml(sortedLeadSourceSnap
 assert.doesNotMatch(sortedLeadSourceHtml, /conversion\.deals\.progress/, 'weekly report should remove the old right-side channel progress list');
 assert.match(sortedLeadSourceHtml, /conversion\.source[\s\S]*大众点评[\s\S]*小红书[\s\S]*抖音/, 'weekly report should move the channel conversion table into the upper conversion grid');
 assert.match(sortedLeadSourceHtml, /<div class="bars">[\s\S]*大众点评[\s\S]*9条[\s\S]*线下到店[\s\S]*0条/, 'weekly report lead chart should keep zero-value channels and use the lead-count order');
+assert.match(sortedLeadSourceHtml, /大众点评[\s\S]*<b style="width:100%"><\/b>/, 'weekly report lead chart should put the highest lead source first');
+assert.match(sortedLeadSourceHtml, /线下到店[\s\S]*<b style="width:0%"><\/b>/, 'weekly report lead chart should not fill zero-value channels');
+assert.match(sortedLeadSourceHtml, /\.bars\{display:grid;grid-auto-rows:minmax\(0,1fr\);gap:0;height:100%\}/, 'weekly report lead chart should distribute rows across the panel height');
+assert.match(sortedLeadSourceHtml, /\.conversion-panel\{height:100%;min-height:520px\}[\s\S]*conversion-panel>.overflow-x-auto table\{height:100%;margin-top:0\}/, 'weekly report conversion table should share the panel height');
+
+const staleOrderHtml = renderWeeklyBusinessReportHtml({
+  ...sortedLeadSourceSnapshot,
+  sections: {
+    ...sortedLeadSourceSnapshot.sections,
+    conversion: {
+      ...sortedLeadSourceSnapshot.sections.conversion,
+      sourceRows: [
+        { source: '转介绍', leads: 1, trial: 0, deals: 0, compare: {} },
+        { source: '线下到店', leads: 0, trial: 0, deals: 0, compare: {} },
+        { source: '大众点评', leads: 7, trial: 0, deals: 0, compare: {} }
+      ]
+    }
+  }
+});
+assert.match(staleOrderHtml, /<div class="bars">[\s\S]*大众点评[\s\S]*转介绍[\s\S]*线下到店/, 'weekly report HTML should re-sort legacy snapshots before rendering');
 
 const requestedStructureSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
