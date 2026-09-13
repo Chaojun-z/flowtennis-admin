@@ -14,7 +14,7 @@ const {
   };
 })();
 
-const COURT_ACCOUNT_LIST_SNAPSHOT_VERSION = 'court-account-list-snapshot-v1';
+const COURT_ACCOUNT_LIST_SNAPSHOT_VERSION = 'court-account-list-snapshot-v2';
 const SNAPSHOT_ACTIVE_META_ID = 'active:meta';
 const SNAPSHOT_ACTIVE_DELTA_ID = 'active:delta';
 const SNAPSHOT_LAST_MERGE_TASK_ID = '__last_snapshot_auto_merge__';
@@ -85,6 +85,8 @@ function buildSnapshotRows(indexRows = [], options = {}) {
   const versionId = options.versionId || `snapshot:${now.replace(/[^0-9A-Za-z]/g, '')}`;
   const bundleId = `${versionId}:bundle`;
   const rows = buildSnapshotBundleRows(indexRows);
+  const staleVersionRow = rows.find((row) => text(row?.version) !== COURT_ACCOUNT_LIST_INDEX_VERSION);
+  if (staleVersionRow) throw snapshotNotReadyError('订场会员列表索引口径版本已过期，请重建索引');
   const checksum = checksumRows(rows);
   const bundle = {
     id: bundleId,
@@ -174,6 +176,12 @@ function createCourtAccountListSnapshotLoader(deps = {}) {
     const meta = await readRow(SNAPSHOT_ACTIVE_META_ID);
     if (meta?.status !== 'done' || !meta?.bundleId || !(Number(meta?.total) > 0)) {
       throw snapshotNotReadyError('订场会员列表快照未完成首轮重建');
+    }
+    if (meta.snapshotVersion !== COURT_ACCOUNT_LIST_SNAPSHOT_VERSION) {
+      throw snapshotNotReadyError('订场会员列表快照口径版本已过期，请重建快照');
+    }
+    if (meta.indexVersion !== COURT_ACCOUNT_LIST_INDEX_VERSION) {
+      throw snapshotNotReadyError('订场会员列表索引口径版本已过期，请重建索引');
     }
     let rows = null;
     const cacheKey = `${meta.bundleId}:${meta.checksum || ''}:${meta.total || ''}`;

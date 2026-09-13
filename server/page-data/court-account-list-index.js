@@ -10,7 +10,7 @@ const {
   sortCourtAccountItems
 } = require('./court-account-read-model.js');
 
-const COURT_ACCOUNT_LIST_INDEX_VERSION = 'court-account-list-index-v1';
+const COURT_ACCOUNT_LIST_INDEX_VERSION = 'court-account-list-index-v2';
 const COURT_ACCOUNT_LIST_INDEX_NOT_READY_CODE = 'COURT_ACCOUNT_LIST_INDEX_NOT_READY';
 const COURT_ACCOUNT_LIST_INDEX_NOT_READY_TTL_MS = 60000;
 const COURT_ACCOUNT_INDEX_COURT_COLUMNS = [
@@ -257,6 +257,9 @@ function createCourtAccountListIndexLoader(deps = {}) {
     if (!Array.isArray(rows) || !rows.length) {
       throw rememberNotReady('订场会员列表索引为空，请先完成索引重建和口径校验');
     }
+    if (rows.some((row) => text(row?.version) !== COURT_ACCOUNT_LIST_INDEX_VERSION)) {
+      throw rememberNotReady('订场会员列表索引口径版本已过期，请重建索引');
+    }
     if (typeof getCachedRow === 'function' && tables.courtAccountListIndexTasks) {
       const marker = await getCachedRow(tables.courtAccountListIndexTasks, '__last_full_rebuild__').catch(() => null);
       const expectedTotal = Number(marker?.total) || 0;
@@ -398,6 +401,13 @@ function createCourtAccountListIndexSync(deps = {}) {
     await ensureIndexTables();
     const rows = await loadAllRowsFromFacts();
     await Promise.all(rows.map((row) => put(tables.courtAccountListIndex, row.id, row)));
+    if (tables.courtAccountListIndexTasks) await put(tables.courtAccountListIndexTasks, '__last_full_rebuild__', {
+      id: '__last_full_rebuild__',
+      status: 'done',
+      version: COURT_ACCOUNT_LIST_INDEX_VERSION,
+      total: rows.length,
+      updatedAt: new Date().toISOString()
+    }).catch(() => null);
     return { total: rows.length, rows };
   }
   return {

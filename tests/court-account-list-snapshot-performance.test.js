@@ -1,6 +1,9 @@
 const assert = require('assert');
 
 const {
+  COURT_ACCOUNT_LIST_INDEX_VERSION
+} = require('../server/page-data/court-account-list-index.js');
+const {
   SNAPSHOT_ACTIVE_DELTA_ID,
   SNAPSHOT_ACTIVE_META_ID,
   buildSnapshotRows,
@@ -14,6 +17,7 @@ const rows = Array.from({ length: 5000 }, (_, index) => {
   return {
     id: `court-${n}`,
     courtId: `court-${n}`,
+    version: COURT_ACCOUNT_LIST_INDEX_VERSION,
     item: {
       id: `court-${n}`,
       displayName: n % 10 === 0 ? `搜索目标${n}` : `订场用户${n}`,

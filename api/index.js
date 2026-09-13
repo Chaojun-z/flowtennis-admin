@@ -375,7 +375,9 @@ const {
       if(operationsSnapshotSync?.recordSourceChange)await operationsSnapshotSync.recordSourceChange({...meta,sourceTable:t}).catch(err=>console.warn('[operations-snapshot] source marker failed:',err?.message||err));
     }
     if([T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY].includes(t))customerCenterFactCacheVersion++;
-    if(meta?.skipStudentTeachingSummaryRefresh||/^(?:lesson-consume|manual-lesson-)/.test(String(meta?.attrs?.operationType||'')))return;if(t!==T_STUDENT_TEACHING_SUMMARY&&!OPERATIONS_SNAPSHOT_INTERNAL_TABLES.has(t))await queueStudentTeachingSummaryRefresh(t,meta);
+    if(meta?.skipStudentTeachingSummaryRefresh)return;
+    if(/^(?:lesson-consume|manual-lesson-)/.test(String(meta?.attrs?.operationType||'')))return;
+    if(t!==T_STUDENT_TEACHING_SUMMARY&&!OPERATIONS_SNAPSHOT_INTERNAL_TABLES.has(t))await queueStudentTeachingSummaryRefresh(t,meta);
   }
 });
 const studentTeachingSummaryCache=createStudentTeachingSummaryCache({

@@ -1,9 +1,11 @@
 const assert = require('assert');
 
 const {
+  COURT_ACCOUNT_LIST_INDEX_VERSION,
   buildCourtAccountListViewFromIndexRows
 } = require('../server/page-data/court-account-list-index.js');
 const {
+  COURT_ACCOUNT_LIST_SNAPSHOT_VERSION,
   SNAPSHOT_ACTIVE_META_ID,
   SNAPSHOT_ACTIVE_DELTA_ID,
   SNAPSHOT_DELTA_MERGE_THRESHOLD,
@@ -21,6 +23,7 @@ function makeRows(count = 120) {
     return {
       id: `court-${n}`,
       courtId: `court-${n}`,
+      version: COURT_ACCOUNT_LIST_INDEX_VERSION,
       item: {
         id: `court-${n}`,
         displayName: n % 10 === 0 ? `搜索目标${n}` : `订场用户${n}`,
@@ -70,6 +73,8 @@ async function main() {
   const { meta, bundle } = buildSnapshotRows(indexRows, { versionId: 'test-snapshot' });
   assert.strictEqual(meta.id, SNAPSHOT_ACTIVE_META_ID, '快照应使用 active meta 作为唯一启用开关');
   assert.strictEqual(meta.status, 'done', '快照 meta 必须写 done 后才可用');
+  assert.strictEqual(meta.snapshotVersion, COURT_ACCOUNT_LIST_SNAPSHOT_VERSION, '快照 meta 应写入当前快照口径版本');
+  assert.strictEqual(meta.indexVersion, COURT_ACCOUNT_LIST_INDEX_VERSION, '快照 meta 应写入当前索引口径版本');
   assert.strictEqual(meta.bundleId, bundle.id, 'meta 应指向版本化 bundle');
   assert.ok(bundle.payload.length < JSON.stringify(indexRows).length, '快照包应压缩保存，避免大 JSON 远程传输');
 
@@ -117,6 +122,20 @@ async function main() {
   const secondView = await loader({ ...options, page: 2 });
   assert.strictEqual(secondView.meta.source, 'court-account-list-snapshot', '翻页仍应走快照包');
   assert.ok(getCalls.filter((call) => call.id === bundle.id).length === 1, '同进程内翻页应复用内存快照包');
+
+  const oldVersionLoader = createCourtAccountListSnapshotLoader({
+    getCachedRow: async (table, id) => {
+      if (id === SNAPSHOT_ACTIVE_META_ID) return { ...meta, snapshotVersion: 'court-account-list-snapshot-v0', indexVersion: 'court-account-list-index-v0' };
+      if (id === bundle.id) return bundle;
+      return null;
+    },
+    tables: { courtAccountListSnapshot: 'snapshot' }
+  });
+  await assert.rejects(
+    () => oldVersionLoader(options),
+    /快照口径版本已过期|索引口径版本已过期/,
+    '余额口径升级后，旧版列表快照不能继续当作健康数据返回'
+  );
 
   const factsLike = buildCourtAccountListViewFromIndexRows(indexRows, options);
   const noDeltaRows = new Map([[meta.id, meta], [bundle.id, bundle]]);

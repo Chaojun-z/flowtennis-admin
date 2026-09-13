@@ -283,7 +283,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   leads:[],
   packages:[],
   purchases:[],
-  schedule:['students','courts','coaches','coachProposals','classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage'],
+  schedule:['students','courts','coaches','coachProposals','classes','feedbacks','entitlements','entitlementLedger','lifecycleMetricsPage','financePage','courtAccountListViewPage'],
   coachschedule:['entitlements','entitlementLedger'],
   finance:['financePage'],
   courts:['courtsPage'],
@@ -444,6 +444,15 @@ function financePageDataUrl(){
   return scopedPageDataUrl('/page-data/finance');
 }
 function courtAccountListViewQueryParams(){
+  if(currentPage==='schedule'){
+    return {
+      page:1,
+      accountType:'会员账户',
+      pageSize:5000,
+      sortKey:'firstOpenDate',
+      sortDir:'desc'
+    };
+  }
   if(currentPage==='memberships'){
     return {
       page:membershipPage,
