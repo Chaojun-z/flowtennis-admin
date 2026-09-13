@@ -142,6 +142,30 @@ assert.strictEqual(snapshot.sections.court.weekdayRows.find(row => row.label ===
 assert.strictEqual(snapshot.sections.revenue.course.consumedAmount, 3200, 'course consumed amount must use course recognized revenue only');
 assert.strictEqual(snapshot.sections.conversion.sourceRows.find(row => row.source === '小红书')?.deals, 2, 'weekly report should keep source conversion data');
 
+const sortedLeadSourceSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {
+      conversion: {
+        sourceRows: [
+          { source: '抖音', totalLeads: 2, trialAttended: 1, trialPathDealCustomers: 1 },
+          { source: '转介绍', totalLeads: 9, trialAttended: 3, trialPathDealCustomers: 2 },
+          { source: '小红书', totalLeads: 5, trialAttended: 2, trialPathDealCustomers: 1 }
+        ]
+      }
+    }
+  },
+  previousOperationsPayload: { operations: {} }
+});
+assert.deepStrictEqual(
+  sortedLeadSourceSnapshot.sections.conversion.sourceRows.slice(0, 3).map(row => row.source),
+  ['转介绍', '小红书', '抖音'],
+  'weekly report channel rows should sort by lead count descending'
+);
+const sortedLeadSourceHtml = renderWeeklyBusinessReportHtml(sortedLeadSourceSnapshot);
+assert.doesNotMatch(sortedLeadSourceHtml, /conversion\.deals\.progress/, 'weekly report should remove the old right-side channel progress list');
+assert.match(sortedLeadSourceHtml, /conversion\.source[\s\S]*转介绍[\s\S]*小红书[\s\S]*抖音/, 'weekly report should move the channel conversion table into the upper conversion grid');
+
 const requestedStructureSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
   operationsPayload: {

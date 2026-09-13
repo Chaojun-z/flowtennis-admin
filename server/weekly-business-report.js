@@ -1435,7 +1435,7 @@ function normalizeLeadSourceRows(currentRows = [], previousRows = [], allSources
         deals: comparisonFor(row, previous, ['trialPathDealCustomers', 'deals', 'converted'])
       }
     };
-  });
+  }).sort((a, b) => b.leads - a.leads);
 }
 
 function normalizeCourtUsageRows(currentCourt = {}, previousCourt = {}) {
@@ -2166,14 +2166,13 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${reportMetric('本周体验线索', conversion.trialLeads || 0, ' 条', conversion.compare?.trialLeads, edits, 'conversion.trialLeads')}
     ${reportMetric('体验后报名', conversion.trialDeals || 0, ' 人', conversion.compare?.trialDeals, edits, 'conversion.trialDeals')}
   </div>
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6"><div class="lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all">${barChart(sourceRows.map(row => ({ name: row.source, value: row.leads })), { labelKey: 'name', valueKey: 'value', unit: '条', edits, keyPrefix: 'conversion.leads.bar' })}</div><div class="lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all">${progressPanel(sourceRows.map(row => ({ label: row.source, value: row.deals })), { labelKey: 'label', valueKey: 'value', unit: '人', edits, keyPrefix: 'conversion.deals.progress' })}</div></div>
-  ${renderRows(sourceRows, [
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6"><div class="lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all">${barChart(sourceRows.map(row => ({ name: row.source, value: row.leads })), { labelKey: 'name', valueKey: 'value', unit: '条', edits, keyPrefix: 'conversion.leads.bar' })}</div><div class="lg:col-span-6 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all">${renderRows(sourceRows, [
     { key: 'source', label: '渠道' },
     { key: 'leads', label: '线索数' },
     { key: 'trial', label: '体验线索' },
     { key: 'deals', label: '体验后报名' },
     { key: 'compare', label: '环比', render: row => trendText(row.compare?.leads) }
-  ], { edits, keyPrefix: 'conversion.source' })}
+  ], { edits, keyPrefix: 'conversion.source' })}</div></div>
   ${editableSectionTitle('remark', '备注', '// REMARK')}
   <p class="remark bg-cyber-card rounded-xl border border-cyber-border p-5 text-cyber-muted">${editableValue(edits, 'remark', remark || '暂无备注')}</p>
 </main>
