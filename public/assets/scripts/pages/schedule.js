@@ -210,6 +210,7 @@ function scheduleStoredValueNormalizePhone(value){let phone=String(value||'').re
 function scheduleStoredValueNameKeys(value){const raw=String(value||'').trim().replace(/\s+/g,'');if(!raw)return[];const keys=new Set([raw]),withoutAlias=raw.replace(/[（(][^）)]*[）)]/g,'');if(withoutAlias)keys.add(withoutAlias);[...raw.matchAll(/[（(]([^）)]+)[）)]/g)].forEach(match=>{if(match[1])keys.add(match[1].replace(/\s+/g,''));});return[...keys].filter(Boolean);}
 function scheduleStoredValueNameMatches(a,b){const bKeys=new Set(scheduleStoredValueNameKeys(b));return scheduleStoredValueNameKeys(a).some(key=>bKeys.has(key));}
 function scheduleStoredValueActiveMembership(court){if(court?.accountType==='会员账户'&&!['voided','cleared','inactive','deleted'].includes(String(court?.membershipStatus||court?.status||'active')))return court.membershipAccount||court;return membershipAccounts.find(account=>String(account?.courtId||'')===String(court?.id||'')&&!['voided','cleared','inactive','deleted'].includes(String(account?.status||'active')));}
+function scheduleStoredValueCourtBalance(court){if(court?.__membershipReadModel&&court?.accountType==='会员账户')return Number(court.balance)||0;return courtFinanceLocal(court).balance||0;}
 function scheduleStoredValueCourtScore(court,student){
   if(!court||['inactive','deleted'].includes(String(court.status||'active'))||court.deletedAt||court.mergedIntoCourtId)return 0;
   const studentId=String(student?.id||'').trim(),studentPhone=scheduleStoredValueNormalizePhone(scheduleStudentPhone(student)),studentName=scheduleStudentDisplayName(student);
@@ -221,6 +222,7 @@ function scheduleStoredValueCourtScore(court,student){
   if(studentName&&courtName&&scheduleStoredValueNameMatches(courtName,studentName))score+=120;
   if(!score)return 0;
   const finance=courtFinanceLocal(court);
+  if(court.__membershipReadModel)score+=2000;
   if(scheduleStoredValueActiveMembership(court))score+=1000;
   if((Number(court.cachedBalance??finance.balance)||0)>0)score+=300;
   if((Number(court.cachedTotalDeposit??finance.totalDeposit)||0)>0)score+=100;
@@ -228,7 +230,7 @@ function scheduleStoredValueCourtScore(court,student){
 }
 function scheduleStoredValueCourtForStudent(student){
   const byId=new Map((courts||[]).map(court=>[String(court?.id||''),court]).filter(([id])=>id));
-  (courtAccountListViewData?.items||[]).filter(item=>item?.accountType==='会员账户').forEach(item=>{const id=String(item?.id||'');if(id)byId.set(id,item);});
+  (courtAccountListViewData?.items||[]).filter(item=>item?.accountType==='会员账户').forEach(item=>{const id=String(item?.id||'');if(id)byId.set(id,{...item,__membershipReadModel:true});});
   return [...byId.values()].map(court=>({court,score:scheduleStoredValueCourtScore(court,student)})).filter(item=>item.score>0).sort((a,b)=>b.score-a.score||String(b.court.updatedAt||b.court.createdAt||'').localeCompare(String(a.court.updatedAt||a.court.createdAt||'')))[0]?.court||null;}
 function scheduleStudentSearchTokens(student){
   const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;
@@ -542,7 +544,7 @@ function scheduleStoredValuePaymentState(kind='lesson'){
   if(studentIds.length>1)return {active:true,valid:false,message:'储值卡扣款请只选择 1 名学员'};
   const student=students.find(s=>s.id===studentIds[0]),court=scheduleStoredValueCourtForStudent(student);
   if(!court)return {active:true,valid:false,message:'未找到该学员的会员储值卡'};
-  const balance=courtFinanceLocal(court).balance||0,lessonStored=currentScheduleSettlementType()==='direct'&&isStoredValuePayMethod(document.getElementById('sch_payMethod')?.value||'')?(parseFloat(document.getElementById('sch_paidAmount')?.value||'0')||0):0;
+  const balance=scheduleStoredValueCourtBalance(court),lessonStored=currentScheduleSettlementType()==='direct'&&isStoredValuePayMethod(document.getElementById('sch_payMethod')?.value||'')?(parseFloat(document.getElementById('sch_paidAmount')?.value||'0')||0):0;
   const fieldFeeStored=currentScheduleFieldFeeMode()==='separate'&&isStoredValuePayMethod(document.getElementById('sch_fieldFeePayMethod')?.value||'')?(parseFloat(document.getElementById('sch_fieldFeeAmount')?.value||'0')||0):0,total=Math.round((lessonStored+fieldFeeStored)*100)/100;
   const after=Math.round((balance-total)*100)/100,label=isFieldFee?'场地费扣款':'课时费扣款';
   if(total>0&&after<0)return {active:true,valid:false,balance,amount,total,after,message:`余额不足，当前储值卡余额：¥${fmt(balance)}，本次合计需扣 ¥${fmt(total)}`};

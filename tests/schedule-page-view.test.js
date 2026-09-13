@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const { appSource: source } = require('./helpers/read-index-bundle');
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
@@ -11,8 +12,8 @@ const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'pa
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
-assert.match(indexHtml, /state\.js\?v=20260913-student-teaching-summary-delta-v1/, 'state script version should force a fresh browser load after schedule renderer recovery asset updates');
-assert.match(indexHtml, /schedule\.js\?v=20260913-stored-value-balance-v1/, 'schedule script version should force a fresh browser load after stored-value balance fixes');
+assert.match(indexHtml, /state\.js\?v=20260913-stored-value-balance-v2/, 'state script version should force a fresh browser load after schedule renderer recovery asset updates');
+assert.match(indexHtml, /schedule\.js\?v=20260913-stored-value-balance-v2/, 'schedule script version should force a fresh browser load after stored-value balance fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
@@ -42,6 +43,53 @@ function helperFnBody(name){
   const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
   const next = candidates.length ? Math.min(...candidates) : -1;
   return scheduleHelperSource.slice(start, next === -1 ? scheduleHelperSource.length : next);
+}
+
+function scheduleVmContext(){
+  const elements = {
+    sch_stuIds: { value: JSON.stringify(['stu-along']) },
+    sch_settlementType: { value: 'direct' },
+    sch_payMethod: { value: '储值卡' },
+    sch_paidAmount: { value: '352' },
+    sch_fieldFeeMode: { value: 'none' },
+    sch_fieldFeePayMethod: { value: '' },
+    sch_fieldFeeAmount: { value: '' }
+  };
+  const context = {
+    window: {},
+    console,
+    document: {
+      addEventListener() {},
+      getElementById(id) { return elements[id] || null; }
+    },
+    requestAnimationFrame(fn) { return fn(); },
+    parseArr(value) { return Array.isArray(value) ? value : JSON.parse(value || '[]'); },
+    courtFinanceLocal(court) { return { balance: Number(court.cachedBalance || 0), totalDeposit: Number(court.cachedTotalDeposit || 0) }; },
+    isStoredValuePayMethod(value) { return String(value || '').includes('储值卡'); },
+    fmt(value) { return Number(value || 0).toLocaleString('zh-CN'); },
+    students: [{ id: 'stu-along', name: '周阿龙', phone: '' }],
+    courts: [{
+      id: 'court-along',
+      name: '周阿龙（Along）',
+      cachedBalance: 5000,
+      cachedTotalDeposit: 5000,
+      updatedAt: '2026-09-13T01:00:00.000Z'
+    }],
+    membershipAccounts: [{ id: 'account-along', courtId: 'court-along', status: 'active' }],
+    courtAccountListViewData: {
+      items: [{
+        id: 'court-along',
+        name: '周阿龙（Along）',
+        accountType: '会员账户',
+        balance: 5146,
+        status: 'active',
+        updatedAt: '2026-09-13T00:00:00.000Z'
+      }]
+    }
+  };
+  vm.createContext(context);
+  vm.runInContext(scheduleSource, context);
+  return context;
 }
 
 assert.match(source, /function buildRepeatScheduleSeeds\(/, 'schedule page should expose a repeat schedule helper');
@@ -386,12 +434,21 @@ assert.match(fnBody('openScheduleModal'), /sch_payMethod[\s\S]*refreshScheduleSt
 assert.match(source, /function refreshScheduleStoredValueHint\(/, 'schedule page should refresh stored-value balance hint');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /isStoredValuePayMethod[\s\S]*scheduleStoredValueCourtForStudent/, 'stored-value hint should read the selected student membership balance');
 assert.match(scheduleSource, /function scheduleStoredValueNameKeys\(/, 'stored-value matching should normalize aliases such as 周阿龙（Along）');
+assert.match(scheduleSource, /function scheduleStoredValueCourtBalance\(/, 'stored-value hint should centralize membership read-model balance lookup');
 assert.match(fnBody('scheduleStoredValueCourtForStudent'), /courtAccountListViewData\?\.items/, 'stored-value hint should also use the unified court account read model already loaded by membership pages');
+assert.match(fnBody('scheduleStoredValueCourtForStudent'), /__membershipReadModel:true/, 'stored-value hint should mark unified membership rows before scoring and balance display');
 assert.doesNotMatch(fnBody('scheduleStoredValueCourtForStudent'), /!byId\.has\(id\)\)byId\.set\(id,item\)/, 'stored-value hint should let the unified membership read model override stale raw court rows for the same court id');
+assert.match(fnBody('scheduleStoredValueCourtScore'), /court\.__membershipReadModel[\s\S]*score\+=2000/, 'stored-value hint should prefer unified membership rows over stale raw court rows');
 assert.match(fnBody('scheduleStoredValueCourtScore'), /scheduleStoredValueActiveMembership[\s\S]*cachedBalance[\s\S]*cachedTotalDeposit/, 'stored-value hint should prefer active member accounts with balance over stale same-name courts');
+assert.match(fnBody('scheduleStoredValuePaymentState'), /scheduleStoredValueCourtBalance\(court\)/, 'stored-value hint should display the unified membership read-model balance instead of recomputing from stale raw history');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /当前储值卡余额/, 'stored-value hint should show current balance copy');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /扣后余额/, 'stored-value hint should show after-balance copy');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /余额不足/, 'stored-value hint should show insufficient-balance copy');
+const storedValueContext = scheduleVmContext();
+const storedValueCourt = storedValueContext.scheduleStoredValueCourtForStudent(storedValueContext.students[0]);
+assert.strictEqual(storedValueCourt.__membershipReadModel, true, 'stored-value student match should return the unified membership read model when raw court data is stale');
+assert.strictEqual(storedValueContext.scheduleStoredValueCourtBalance(storedValueCourt), 5146, 'membership read-model balance 5146 should override stale raw cached balance 5000');
+assert.strictEqual(storedValueContext.scheduleStoredValuePaymentState().balance, 5146, 'schedule payment hint should show the membership read-model balance 5146');
 assert.match(fnBody('setScheduleStudentSelection'), /refreshScheduleStoredValueHint\(\)/, 'changing schedule students should refresh stored-value balance hint');
 assert.match(fnBody('saveSchedule'), /scheduleStoredValuePaymentState\('lesson'\)[\s\S]*scheduleStoredValuePaymentState\('fieldFee'\)[\s\S]*储值卡余额不足/, 'saving stored-value lesson or field fee payment should block insufficient balance');
 assert.match(fnBody('mergeScheduleSaveResult'), /result\?\.courts[\s\S]*courts\.findIndex/, 'schedule save should merge returned court account updates so stored-value balance refreshes locally');
