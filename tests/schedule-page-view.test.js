@@ -9,11 +9,12 @@ const stateSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets
 const scheduleSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'schedule.js'), 'utf8');
 const scheduleHelperSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'schedule-helpers.js'), 'utf8');
 const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
+const asyncAssertions = [];
 
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
-assert.match(indexHtml, /state\.js\?v=20260913-stored-value-balance-v2/, 'state script version should force a fresh browser load after schedule renderer recovery asset updates');
-assert.match(indexHtml, /schedule\.js\?v=20260913-stored-value-balance-v2/, 'schedule script version should force a fresh browser load after stored-value balance fixes');
+assert.match(indexHtml, /state\.js\?v=20260913-stored-value-balance-v3/, 'state script version should force a fresh browser load after schedule renderer recovery asset updates');
+assert.match(indexHtml, /schedule\.js\?v=20260913-stored-value-balance-v3/, 'schedule script version should force a fresh browser load after stored-value balance fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
@@ -45,7 +46,7 @@ function helperFnBody(name){
   return scheduleHelperSource.slice(start, next === -1 ? scheduleHelperSource.length : next);
 }
 
-function scheduleVmContext(){
+function scheduleVmContext(overrides = {}){
   const elements = {
     sch_stuIds: { value: JSON.stringify(['stu-along']) },
     sch_settlementType: { value: 'direct' },
@@ -55,6 +56,7 @@ function scheduleVmContext(){
     sch_fieldFeePayMethod: { value: '' },
     sch_fieldFeeAmount: { value: '' }
   };
+  Object.assign(elements, overrides.elements || {});
   const context = {
     window: {},
     console,
@@ -87,6 +89,7 @@ function scheduleVmContext(){
       }]
     }
   };
+  Object.assign(context, { ...overrides, elements: undefined });
   vm.createContext(context);
   vm.runInContext(scheduleSource, context);
   return context;
@@ -444,13 +447,38 @@ assert.match(fnBody('scheduleStoredValuePaymentState'), /scheduleStoredValueCour
 assert.match(fnBody('scheduleStoredValuePaymentState'), /当前储值卡余额/, 'stored-value hint should show current balance copy');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /扣后余额/, 'stored-value hint should show after-balance copy');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /余额不足/, 'stored-value hint should show insufficient-balance copy');
+assert.match(source, /async function ensureScheduleStoredValueCourtForStudent\(/, 'stored-value schedules should load the selected student membership account before reporting it missing');
+assert.match(fnBody('ensureScheduleStoredValueCourtForStudent'), /\/page-data\/court-account-list-view[\s\S]*accountType[\s\S]*会员账户[\s\S]*scheduleStoredValueMergeCourtAccountItems/, 'stored-value membership lookup should use the court account read model with a targeted member query');
 const storedValueContext = scheduleVmContext();
 const storedValueCourt = storedValueContext.scheduleStoredValueCourtForStudent(storedValueContext.students[0]);
 assert.strictEqual(storedValueCourt.__membershipReadModel, true, 'stored-value student match should return the unified membership read model when raw court data is stale');
 assert.strictEqual(storedValueContext.scheduleStoredValueCourtBalance(storedValueCourt), 5146, 'membership read-model balance 5146 should override stale raw cached balance 5000');
 assert.strictEqual(storedValueContext.scheduleStoredValuePaymentState().balance, 5146, 'schedule payment hint should show the membership read-model balance 5146');
+let storedValueLookupUrl = '';
+const storedValueRemoteContext = scheduleVmContext({
+  elements: { sch_stuIds: { value: JSON.stringify(['stu-nono']) } },
+  students: [{ id: 'stu-nono', name: '王先生（nono）', phone: '13800000000' }],
+  courts: [],
+  membershipAccounts: [],
+  courtAccountListViewData: { items: [] },
+  apiCall(method, url) {
+    storedValueLookupUrl = url;
+    return Promise.resolve({ items: [{ id: 'court-nono', name: '王先生（nono）', phone: '13800000000', accountType: '会员账户', balance: 3566, status: 'active' }] });
+  },
+  appendPageDataQuery(url, params = {}) {
+    const query = Object.entries(params).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+    return `${url}?${query}`;
+  }
+});
+assert.strictEqual(storedValueRemoteContext.scheduleStoredValuePaymentState().valid, false, 'stored-value hint should initially report missing membership when the read model is not loaded');
+asyncAssertions.push(storedValueRemoteContext.ensureScheduleStoredValueCourtForStudent(storedValueRemoteContext.students[0]).then(court => {
+  assert.strictEqual(court?.id, 'court-nono', 'stored-value lookup should merge the targeted membership account into schedule state');
+  assert.match(storedValueLookupUrl, /\/page-data\/court-account-list-view\?/, 'stored-value lookup should request the court account read model');
+  assert.match(storedValueLookupUrl, /accountType=%E4%BC%9A%E5%91%98%E8%B4%A6%E6%88%B7/, 'stored-value lookup should request only membership accounts');
+  assert.strictEqual(storedValueRemoteContext.scheduleStoredValuePaymentState().balance, 3566, 'stored-value hint should show the remotely loaded membership balance');
+}));
 assert.match(fnBody('setScheduleStudentSelection'), /refreshScheduleStoredValueHint\(\)/, 'changing schedule students should refresh stored-value balance hint');
-assert.match(fnBody('saveSchedule'), /scheduleStoredValuePaymentState\('lesson'\)[\s\S]*scheduleStoredValuePaymentState\('fieldFee'\)[\s\S]*储值卡余额不足/, 'saving stored-value lesson or field fee payment should block insufficient balance');
+assert.match(fnBody('saveSchedule'), /await ensureScheduleStoredValueCourtForStudent[\s\S]*scheduleStoredValuePaymentState\('lesson'\)[\s\S]*await ensureScheduleStoredValueCourtForStudent[\s\S]*scheduleStoredValuePaymentState\('fieldFee'\)[\s\S]*储值卡余额不足/, 'saving stored-value lesson or field fee payment should load missing membership data before blocking insufficient balance');
 assert.match(fnBody('mergeScheduleSaveResult'), /result\?\.courts[\s\S]*courts\.findIndex/, 'schedule save should merge returned court account updates so stored-value balance refreshes locally');
 assert.match(fnBody('renderCourtHistoryItems'), /sourceType==='schedule'[\s\S]*扣款时间/, 'schedule stored-value history rows should show the actual deduction time');
 assert.match(styles, /\.schedule-stored-value-hint\{[\s\S]*font-size:12px/, 'stored-value balance hint should use compact helper text style');
@@ -566,4 +594,9 @@ assert.doesNotMatch(fnBody('openFeedbackModal'), /知识点（非必填）|体�
 assert.doesNotMatch(fnBody('openFeedbackModal'), /复制给学员/, 'feedback modal should not keep copy action after poster entry exists');
 assert.doesNotMatch(fnBody('saveFeedback'), /openFeedbackPosterModal\(/, 'saving feedback should not force coach into poster generation');
 
-console.log('schedule page view tests passed');
+Promise.all(asyncAssertions).then(() => {
+  console.log('schedule page view tests passed');
+}).catch(err => {
+  console.error(err);
+  process.exitCode = 1;
+});

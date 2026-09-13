@@ -232,6 +232,18 @@ function scheduleStoredValueCourtForStudent(student){
   const byId=new Map((courts||[]).map(court=>[String(court?.id||''),court]).filter(([id])=>id));
   (courtAccountListViewData?.items||[]).filter(item=>item?.accountType==='会员账户').forEach(item=>{const id=String(item?.id||'');if(id)byId.set(id,{...item,__membershipReadModel:true});});
   return [...byId.values()].map(court=>({court,score:scheduleStoredValueCourtScore(court,student)})).filter(item=>item.score>0).sort((a,b)=>b.score-a.score||String(b.court.updatedAt||b.court.createdAt||'').localeCompare(String(a.court.updatedAt||a.court.createdAt||'')))[0]?.court||null;}
+var scheduleStoredValueLookupPromises=new Map(),scheduleStoredValueHintSeq=0;
+function scheduleStoredValueSelectedStudent(){const ids=parseArr(document.getElementById('sch_stuIds')?.value||'[]');if(ids.length!==1)return null;let row=null;if(typeof scheduleStudentById==='function'){try{row=scheduleStudentById(ids[0]);}catch(e){row=null;}}return row||students.find(s=>String(s.id||'')===String(ids[0]))||{id:ids[0]};}
+function scheduleStoredValueLookupQuery(student){return scheduleStudentPhone(student)||scheduleStudentDisplayName(student)||String(student?.id||'').trim();}
+function scheduleStoredValueMergeCourtAccountItems(items=[]){const current=Array.isArray(courtAccountListViewData?.items)?courtAccountListViewData.items:[],map=new Map(current.map(item=>[String(item?.id||''),item]).filter(([id])=>id));(items||[]).filter(item=>item?.accountType==='会员账户').forEach(item=>{const id=String(item?.id||'');if(id)map.set(id,item);});courtAccountListViewData={...(courtAccountListViewData||{}),items:[...map.values()]};window.__courtAccountListViewData=courtAccountListViewData;}
+function scheduleStoredValueNeedsRemoteLookup(state){return !!(state?.active&&!state.valid&&/未找到该学员/.test(String(state.message||'')));}
+async function ensureScheduleStoredValueCourtForStudent(student){
+  const existing=scheduleStoredValueCourtForStudent(student);if(existing)return existing;
+  const q=scheduleStoredValueLookupQuery(student);if(!q||typeof apiCall!=='function')return null;
+  const key=String(q).trim().toLowerCase();if(scheduleStoredValueLookupPromises.has(key))return scheduleStoredValueLookupPromises.get(key);
+  const promise=apiCall('GET',appendPageDataQuery('/page-data/court-account-list-view',{page:1,pageSize:8,q,accountType:'会员账户',sortKey:'firstOpenDate',sortDir:'desc'})).then(view=>{scheduleStoredValueMergeCourtAccountItems(view?.items||[]);return scheduleStoredValueCourtForStudent(student);}).finally(()=>scheduleStoredValueLookupPromises.delete(key));
+  scheduleStoredValueLookupPromises.set(key,promise);return promise;
+}
 function scheduleStudentSearchTokens(student){
   const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;
   return [scheduleStudentDisplayName(student),scheduleStudentPhone(student),cn(lifecycleCampus),lifecycleCampus].filter(Boolean);
@@ -542,7 +554,7 @@ function scheduleStoredValuePaymentState(kind='lesson'){
   if(!enabled||!isStoredValuePayMethod(payMethod))return {active:false};
   if(!studentIds.length)return {active:true,valid:false,message:'请选择学员后查看储值卡余额'};
   if(studentIds.length>1)return {active:true,valid:false,message:'储值卡扣款请只选择 1 名学员'};
-  const student=students.find(s=>s.id===studentIds[0]),court=scheduleStoredValueCourtForStudent(student);
+  const student=scheduleStoredValueSelectedStudent(),court=scheduleStoredValueCourtForStudent(student);
   if(!court)return {active:true,valid:false,message:'未找到该学员的会员储值卡'};
   const balance=scheduleStoredValueCourtBalance(court),lessonStored=currentScheduleSettlementType()==='direct'&&isStoredValuePayMethod(document.getElementById('sch_payMethod')?.value||'')?(parseFloat(document.getElementById('sch_paidAmount')?.value||'0')||0):0;
   const fieldFeeStored=currentScheduleFieldFeeMode()==='separate'&&isStoredValuePayMethod(document.getElementById('sch_fieldFeePayMethod')?.value||'')?(parseFloat(document.getElementById('sch_fieldFeeAmount')?.value||'0')||0):0,total=Math.round((lessonStored+fieldFeeStored)*100)/100;
@@ -551,10 +563,12 @@ function scheduleStoredValuePaymentState(kind='lesson'){
   return {active:true,valid:true,balance,amount,total,after,message:amount>0?`当前储值卡余额：¥${fmt(balance)}，本次${label} ¥${fmt(amount)}，扣后余额 ¥${fmt(after)}`:`当前储值卡余额：¥${fmt(balance)}`};
 }
 function refreshScheduleStoredValueHint(){
+  const seq=++scheduleStoredValueHintSeq;
   [['sch_storedValueHint','lesson'],['sch_fieldFeeStoredValueHint','fieldFee']].forEach(([id,kind])=>{
     const hint=document.getElementById(id);if(!hint)return;
     const state=scheduleStoredValuePaymentState(kind);hint.classList.toggle('is-error',state.active&&!state.valid);
     if(!state.active){hint.style.display='none';hint.textContent='';return;}hint.style.display='block';hint.textContent=state.message||'';
+    if(scheduleStoredValueNeedsRemoteLookup(state)){hint.classList.remove('is-error');hint.textContent='正在匹配会员储值卡...';ensureScheduleStoredValueCourtForStudent(scheduleStoredValueSelectedStudent()).then(()=>{if(seq!==scheduleStoredValueHintSeq)return;const next=scheduleStoredValuePaymentState(kind);hint.classList.toggle('is-error',next.active&&!next.valid);hint.style.display=next.active?'block':'none';hint.textContent=next.message||'';}).catch(()=>{if(seq!==scheduleStoredValueHintSeq)return;hint.classList.add('is-error');hint.textContent=state.message||'';});}
   });
 }
 function handleScheduleSettlementTypeChange(value){setStandardDropdownValue('sch_fieldFeeMode',scheduleDefaultFieldFeeMode(value));toggleScheduleSettlementFields();refreshScheduleStudentSettlementSection();}
@@ -1198,7 +1212,8 @@ async function saveSchedule(){
   if(!useStudentSettlementRows&&settlementType==='direct'&&!payMethod){toast('请选择支付方式','warn');return;}
   if(!useStudentSettlementRows&&settlementType==='direct'&&!(paidAmount>0)){toast('请输入支付金额','warn');return;}
   if(!useStudentSettlementRows&&settlementType==='direct'&&isStoredValuePayMethod(payMethod)){
-    const storedValueState=scheduleStoredValuePaymentState('lesson');
+    let storedValueState=scheduleStoredValuePaymentState('lesson');
+    if(scheduleStoredValueNeedsRemoteLookup(storedValueState)){await ensureScheduleStoredValueCourtForStudent(scheduleStoredValueSelectedStudent());storedValueState=scheduleStoredValuePaymentState('lesson');}
     refreshScheduleStoredValueHint();
     if(!storedValueState.valid){toast(storedValueState.after<0?'储值卡余额不足':(storedValueState.message||'储值卡余额不足'),'warn');return;}
   }
@@ -1208,7 +1223,8 @@ async function saveSchedule(){
   const fieldFeeNote=fieldFeeEnabled?(document.getElementById('sch_fieldFeeNote')?.value.trim()||'排课场地费'):'';
   if(!useStudentSettlementRows&&fieldFeeEnabled&&!fieldFeePayMethod){toast('请选择场地费支付方式','warn');return;}
   if(!useStudentSettlementRows&&fieldFeeEnabled&&isStoredValuePayMethod(fieldFeePayMethod)){
-    const fieldFeeStoredValueState=scheduleStoredValuePaymentState('fieldFee');
+    let fieldFeeStoredValueState=scheduleStoredValuePaymentState('fieldFee');
+    if(scheduleStoredValueNeedsRemoteLookup(fieldFeeStoredValueState)){await ensureScheduleStoredValueCourtForStudent(scheduleStoredValueSelectedStudent());fieldFeeStoredValueState=scheduleStoredValuePaymentState('fieldFee');}
     refreshScheduleStoredValueHint();
     if(!fieldFeeStoredValueState.valid){toast(fieldFeeStoredValueState.after<0?'储值卡余额不足':(fieldFeeStoredValueState.message||'储值卡余额不足'),'warn');return;}
   }
