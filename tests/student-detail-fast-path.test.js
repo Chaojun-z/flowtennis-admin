@@ -220,7 +220,7 @@ async function requestGhostLessonSummaryStudentDetail() {
       }
       if (table === tables.T_SCHEDULE && /^sch-ghost-/.test(id)) {
         calls.scheduleGets += 1;
-        return { id, studentIds: ['stu-correct'], studentId: 'stu-correct', status: '已结束' };
+        return { id, studentIds: ['stu-correct'], studentId: 'stu-wrong', status: '已结束' };
       }
       if (table === tables.T_SCHEDULE && /^sch-own-/.test(id)) {
         calls.scheduleGets += 1;

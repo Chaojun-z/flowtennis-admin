@@ -92,7 +92,10 @@ function pageDataFormalLessonRow(row={}){
 }
 
 function pageDataScheduleStudentIds(row={}){
-  return [...new Set([...parseSnapshotArray(row.studentIds),String(row.studentId||'').trim()].filter(Boolean))];
+  const ids=parseSnapshotArray(row.studentIds).map(id=>String(id||'').trim()).filter(Boolean);
+  if(ids.length)return [...new Set(ids)];
+  const legacyId=String(row.studentId||'').trim();
+  return legacyId?[legacyId]:[];
 }
 
 function reconcileStudentDetailPackageRows(summary={},lessonRows=[],studentId=''){

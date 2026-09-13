@@ -383,7 +383,7 @@ function buildScopedLifecycleSource(data = {}, scope = {}) {
     entitlements: (data.entitlements || []).filter(row => studentIds.has(text(row.studentId)) && (!text(row.purchaseId) || scopedPurchaseIds.has(text(row.purchaseId)))),
     entitlementLedger: (data.entitlementLedger || []).filter(row => entitlementLedgerStudentIds(row, entitlementsById, purchasesById, schedulesById).some(id => studentIds.has(id)) && scopeMatchesDate(rowScopeDate(row), scope)),
     schedule: (data.schedule || []).filter(row => {
-      const ids = parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean);
+      const ids = teachingScheduleStudentIds(row);
       return ids.some(id => studentIds.has(id)) && scopeMatchesDate(rowScopeDate(row), scope);
     }),
     customerLifecycleRows: scopedLifecycleRows
@@ -419,7 +419,7 @@ function scheduleMatchesLedgerRow(schedule = {}, ledger = {}, studentIds = []) {
   const ledgerDate = dateOnly(ledger.relatedDate || ledger.sourceDate || ledger.scheduleTime || ledger.createdAt);
   const scheduleDate = dateOnly(schedule.startTime || schedule.endTime || schedule.createdAt);
   if (!ledgerDate || !scheduleDate || ledgerDate !== scheduleDate) return false;
-  const scheduleStudentIds = parseArr(schedule.studentIds).concat(text(schedule.studentId)).map(text).filter(Boolean);
+  const scheduleStudentIds = teachingScheduleStudentIds(schedule);
   if (studentIds.length && scheduleStudentIds.length && !studentIds.some(id => scheduleStudentIds.includes(id))) return false;
   const ledgerCoach = text(ledger.coach || ledger.coachName);
   const scheduleCoach = text(schedule.coach || schedule.coachName);
@@ -705,7 +705,7 @@ function buildTeachingStudentCompletedLessonMap(data = {}) {
   });
   (data.schedule || [])
     .filter(row => teachingScheduleLessonFact(row, data.now || new Date()))
-    .forEach(row => parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean).forEach(studentId => {
+    .forEach(row => teachingScheduleStudentIds(row).forEach(studentId => {
       if (ledgerScheduleStudentKeys.has(`${studentId}|${text(row.id)}`)) return;
       completedByStudent.set(studentId, (completedByStudent.get(studentId) || 0) + scheduleLessonUnits(row));
     }));
@@ -987,7 +987,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       const purchaseId = text(row.purchaseId || linkedLedger.purchaseId);
       if (pending && !text(entitlementId || purchaseId)) return;
       const sortTime = text(row.startTime || row.endTime || row.createdAt);
-      parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean).forEach(studentId => {
+      teachingScheduleStudentIds(row).forEach(studentId => {
         if (ledgerScheduleStudentKeys.has(`${studentId}|${text(row.id)}`)) return;
         if (ledgerScheduleFactKeys.has(lessonFactKey(studentId, row))) return;
         push(studentId, {
@@ -2036,7 +2036,10 @@ function teachingSchedulePendingLessonFact(row = {}, now = new Date()) {
 }
 
 function teachingScheduleStudentIds(row = {}) {
-  return [...new Set(parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean))];
+  const ids = parseArr(row.studentIds).map(text).filter(Boolean);
+  if (ids.length) return [...new Set(ids)];
+  const legacyId = text(row.studentId);
+  return legacyId ? [legacyId] : [];
 }
 
 function teachingScheduleStudentName(row = {}, index = 0) {

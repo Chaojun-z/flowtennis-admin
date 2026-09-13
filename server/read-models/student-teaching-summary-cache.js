@@ -481,12 +481,9 @@ async function upsertStudentProfileIntoTeachingSummary({
 function summaryDeltaStudentIds(...rows) {
   return uniqueStudentIds(rows.flatMap(row => {
     if (!row) return [];
-    return [
-      row.studentId,
-      row.usedByStudentId,
-      row.authorizedStudentId,
-      ...parseArr(row.studentIds)
-    ];
+    const studentIds = parseArr(row.studentIds);
+    if (studentIds.length) return studentIds;
+    return [row.studentId, row.usedByStudentId, row.authorizedStudentId];
   }));
 }
 
