@@ -1263,12 +1263,18 @@ async function syncScheduleFieldFeeFinancialLedger(schedule,user={},now=new Date
 }
 async function persistScheduleStoredValueCourts(update){
   const rows=Array.isArray(update?.courts)?update.courts:[];
-  for(const court of rows)await put(T_COURTS,court.id,court);
+  for(const court of rows){
+    await put(T_COURTS,court.id,court);
+    await courtAccountListIndexSync.rebuildCourt(court.id,'schedule-stored-value').catch(err=>console.error('[schedule-stored-value] court account index sync failed:',err?.message||err));
+  }
   return rows;
 }
 async function rollbackScheduleStoredValueCourts(update){
   const rows=Array.isArray(update?.originalCourts)?update.originalCourts:[];
-  for(const court of rows)await put(T_COURTS,court.id,court).catch(()=>null);
+  for(const court of rows){
+    await put(T_COURTS,court.id,court).catch(()=>null);
+    await courtAccountListIndexSync.rebuildCourt(court.id,'schedule-stored-value-rollback').catch(()=>null);
+  }
 }
 function validateEntitlementForSchedule(entitlement,schedule,options={}){
   if(!isBillableSchedule(schedule))return;

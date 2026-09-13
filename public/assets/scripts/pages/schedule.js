@@ -228,7 +228,7 @@ function scheduleStoredValueCourtScore(court,student){
 }
 function scheduleStoredValueCourtForStudent(student){
   const byId=new Map((courts||[]).map(court=>[String(court?.id||''),court]).filter(([id])=>id));
-  (courtAccountListViewData?.items||[]).filter(item=>item?.accountType==='会员账户').forEach(item=>{const id=String(item?.id||'');if(id&&!byId.has(id))byId.set(id,item);});
+  (courtAccountListViewData?.items||[]).filter(item=>item?.accountType==='会员账户').forEach(item=>{const id=String(item?.id||'');if(id)byId.set(id,item);});
   return [...byId.values()].map(court=>({court,score:scheduleStoredValueCourtScore(court,student)})).filter(item=>item.score>0).sort((a,b)=>b.score-a.score||String(b.court.updatedAt||b.court.createdAt||'').localeCompare(String(a.court.updatedAt||a.court.createdAt||'')))[0]?.court||null;}
 function scheduleStudentSearchTokens(student){
   const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;

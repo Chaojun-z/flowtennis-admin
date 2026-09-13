@@ -21,9 +21,49 @@ assert.ok(!sampleRows.some((row) => row.id === '0167fe2a-09e0-4c26-b692-c801dee4
 assert.ok(sampleRows.some((row) => row.id === 'a65ca92b-6d83-4106-965d-9a21d09e7af7'), '固定验收样本应替换成当前有效的活跃订场用户');
 
 const {
+  buildCourtAccountListViewFromData,
   createCourtAccountListViewLoader,
   createCourtAccountListCompareLoader
 } = require(modulePath);
+
+const duplicateRechargeView = buildCourtAccountListViewFromData({
+  campuses: [{ code: 'shunyi_mapo', name: '马坡' }],
+  students: [{ id: 'stu-along', name: '周阿龙（Along）' }],
+  courts: [{
+    id: 'court-along',
+    name: '周阿龙（Along）',
+    phone: '18600446701',
+    status: 'active',
+    studentId: 'stu-along',
+    cachedBalance: 5498,
+    cachedTotalDeposit: 5000,
+    history: [
+      { id: 'active-import-history', date: '2026-05-01', type: '充值', category: '会员充值', payMethod: '会员充值', amount: 5000, bonusAmount: 498 },
+      { id: 'voided-third-party-history', date: '2026-05-01', type: '充值', category: '会员充值', payMethod: '会员充值', amount: 5000, bonusAmount: 498, note: '第三方会员流水导入' },
+      { id: 'stored-field-fee-a', date: '2026-09-12', type: '消费', category: '课程订场', payMethod: '储值卡', amount: 352, sourceCategory: '排课场地费储值卡扣款' },
+      { id: 'stored-field-fee-return', date: '2026-09-12', type: '冲正', category: '课程订场', payMethod: '储值卡', amount: 176, sourceCategory: '排课场地费储值卡扣款' },
+      { id: 'stored-field-fee-b', date: '2026-09-12', type: '消费', category: '课程订场', payMethod: '储值卡', amount: 176, sourceCategory: '排课场地费储值卡扣款' }
+    ],
+    updatedAt: '2026-09-12T13:34:37.113Z',
+    createdAt: '2026-05-01T05:59:00.000Z'
+  }],
+  membershipAccounts: [{
+    id: 'member-along',
+    courtId: 'court-along',
+    status: 'active',
+    memberLabel: '马坡订场会员',
+    tierCode: '黄金卡',
+    discountRate: 0.8
+  }],
+  membershipOrders: [
+    { id: 'voided-duplicate-recharge', courtId: 'court-along', membershipAccountId: 'member-along', status: 'voided', rechargeAmount: 5000, bonusAmount: 498, purchaseDate: '2026-05-01' },
+    { id: 'active-recharge', courtId: 'court-along', membershipAccountId: 'member-along', status: 'active', rechargeAmount: 5000, bonusAmount: 498, purchaseDate: '2026-05-01' }
+  ],
+  membershipPlans: []
+});
+assert.strictEqual(duplicateRechargeView.items[0].balance, 5146, '会员余额应以有效会员订单减储值扣款计算，不能把已作废重复充值流水继续算入余额');
+assert.strictEqual(duplicateRechargeView.items[0].totalDeposit, 5000, '会员累计充值应排除已作废重复充值订单');
+assert.strictEqual(duplicateRechargeView.summary.membershipFinanceSummary.pendingAmount, 5146, '会员列表顶部余额汇总也应排除已作废重复充值并扣减排课储值消费');
 
 assert.strictEqual(typeof createCourtAccountListViewLoader, 'function', '订场用户读模型模块应导出 createCourtAccountListViewLoader');
 assert.strictEqual(typeof createCourtAccountListCompareLoader, 'function', '订场用户读模型模块应导出 createCourtAccountListCompareLoader');

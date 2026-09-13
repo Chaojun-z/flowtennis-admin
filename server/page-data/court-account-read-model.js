@@ -421,6 +421,33 @@ function bookingRowsForCourt(court) {
     }));
 }
 
+function membershipOrderFinanceForCourt({ court = {}, account = null, rechargeRows = [], legacy = {} } = {}) {
+  if (!account || ['voided', 'cleared', 'inactive', 'deleted'].includes(String(account?.status || 'active'))) return null;
+  if (!rechargeRows.length) return null;
+  const history = normalizeCourtHistory(court?.history);
+  const hasScheduleStoredValueRows = history.some((row) => isStoredValuePayMethod(row?.payMethod) && String(row?.sourceCategory || '').includes('排课'));
+  const activeRechargeCount = rechargeRows.length;
+  const historyRechargeCount = history.filter((row) => row?.type === '充值').length;
+  if (!hasScheduleStoredValueRows && historyRechargeCount <= activeRechargeCount) return null;
+  const totalDeposit = money(rechargeRows.reduce((sum, row) => sum + money(row?.paidAmount ?? row?.rechargeAmount ?? row?.finalAmount ?? row?.amount), 0));
+  const bonusAmount = money(rechargeRows.reduce((sum, row) => sum + money(row?.bonusAmount), 0));
+  const storedValueSpent = money(history.reduce((sum, row) => {
+    const amount = money(row?.amount);
+    if (row?.type === '消费' && !String(row?.category || '').includes('内部占用') && isStoredValuePayMethod(row?.payMethod)) return sum + amount;
+    if (row?.type === '冲正' && isStoredValuePayMethod(row?.payMethod)) return sum - amount;
+    if (row?.type === '退款' && row?.payMethod === '储值退款') return sum + amount;
+    return sum;
+  }, 0));
+  return {
+    balance: money(totalDeposit + bonusAmount - storedValueSpent),
+    totalDeposit,
+    totalSpent: money(legacy.totalSpent),
+    totalReceived: totalDeposit,
+    bonusAmount,
+    storedValueSpent
+  };
+}
+
 function cachedFinanceOrLegacy(cachedValue, legacyValue) {
   if (cachedValue === '' || cachedValue == null) return money(legacyValue);
   const cached = money(cachedValue);
@@ -508,10 +535,11 @@ function buildReadModelItem(court, ctx) {
   const ledgerRows = ledgerRowsForAccount(account, ctx.membershipBenefitLedger);
   const bookingRows = bookingRowsForCourt(court);
   const firstOpenDate = rechargeRows.map((row) => String(row.purchaseDate || '').slice(0, 10)).filter(Boolean).sort()[0] || account?.cycleStartDate || account?.createdAt || '';
-  const balance = cachedFinanceOrLegacy(court?.cachedBalance, legacy.balance);
-  const totalDeposit = cachedFinanceOrLegacy(court?.cachedTotalDeposit, legacy.totalDeposit);
-  const totalSpent = cachedFinanceOrLegacy(court?.cachedTotalSpent, legacy.totalSpent);
-  const totalReceived = cachedFinanceOrLegacy(court?.cachedTotalReceived, legacy.totalReceived);
+  const membershipOrderFinance = membershipOrderFinanceForCourt({ court, account, rechargeRows, legacy });
+  const balance = membershipOrderFinance ? membershipOrderFinance.balance : cachedFinanceOrLegacy(court?.cachedBalance, legacy.balance);
+  const totalDeposit = membershipOrderFinance ? membershipOrderFinance.totalDeposit : cachedFinanceOrLegacy(court?.cachedTotalDeposit, legacy.totalDeposit);
+  const totalSpent = membershipOrderFinance ? membershipOrderFinance.totalSpent : cachedFinanceOrLegacy(court?.cachedTotalSpent, legacy.totalSpent);
+  const totalReceived = membershipOrderFinance ? membershipOrderFinance.totalReceived : cachedFinanceOrLegacy(court?.cachedTotalReceived, legacy.totalReceived);
   const item = {
     ...legacy,
     membershipAccount: membershipAccountPayload(account),
