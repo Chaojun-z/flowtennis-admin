@@ -149,7 +149,7 @@ const sortedLeadSourceSnapshot = buildWeeklyBusinessReportSnapshot({
       conversion: {
         sourceRows: [
           { source: '抖音', totalLeads: 2, trialAttended: 1, trialPathDealCustomers: 1 },
-          { source: '转介绍', totalLeads: 9, trialAttended: 3, trialPathDealCustomers: 2 },
+          { source: '大众点评', totalLeads: 9, trialAttended: 3, trialPathDealCustomers: 2 },
           { source: '小红书', totalLeads: 5, trialAttended: 2, trialPathDealCustomers: 1 }
         ]
       }
@@ -159,12 +159,13 @@ const sortedLeadSourceSnapshot = buildWeeklyBusinessReportSnapshot({
 });
 assert.deepStrictEqual(
   sortedLeadSourceSnapshot.sections.conversion.sourceRows.slice(0, 3).map(row => row.source),
-  ['转介绍', '小红书', '抖音'],
+  ['大众点评', '小红书', '抖音'],
   'weekly report channel rows should sort by lead count descending'
 );
 const sortedLeadSourceHtml = renderWeeklyBusinessReportHtml(sortedLeadSourceSnapshot);
 assert.doesNotMatch(sortedLeadSourceHtml, /conversion\.deals\.progress/, 'weekly report should remove the old right-side channel progress list');
-assert.match(sortedLeadSourceHtml, /conversion\.source[\s\S]*转介绍[\s\S]*小红书[\s\S]*抖音/, 'weekly report should move the channel conversion table into the upper conversion grid');
+assert.match(sortedLeadSourceHtml, /conversion\.source[\s\S]*大众点评[\s\S]*小红书[\s\S]*抖音/, 'weekly report should move the channel conversion table into the upper conversion grid');
+assert.match(sortedLeadSourceHtml, /<div class="bars">[\s\S]*大众点评[\s\S]*9条[\s\S]*线下到店[\s\S]*0条/, 'weekly report lead chart should keep zero-value channels and use the lead-count order');
 
 const requestedStructureSnapshot = buildWeeklyBusinessReportSnapshot({
   period,

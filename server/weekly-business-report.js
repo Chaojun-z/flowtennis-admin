@@ -1776,7 +1776,7 @@ function summaryChip(label, value, unit, compare, edits, key) {
 }
 
 function barChart(rows = [], { labelKey = 'name', valueKey = 'value', unit = '', edits = {}, keyPrefix = '' } = {}) {
-  const clean = normalizeRows(rows).filter(row => fieldNumber(row, [valueKey]) > 0);
+  const clean = normalizeRows(rows);
   if (!clean.length) return '<p class="empty">暂无可绘制数据</p>';
   const max = Math.max(...clean.map(row => fieldNumber(row, [valueKey])), 1);
   return `<div class="bars">${clean.map((row, index) => {
