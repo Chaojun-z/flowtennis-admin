@@ -239,7 +239,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     const membershipOrderRef=String(historyRow.membershipOrderRef||'').trim();
     if(membershipOrderRef)courtMembershipOrderIds.add(membershipOrderRef);
   }));
-  const courseReceiptRows=(purchases||[]).filter(purchase=>!['voided','refunded','deleted'].includes(String(purchase?.status||'active'))).map(purchase=>{
+  const courseReceiptRows=(purchases||[]).filter(purchase=>!['voided','deleted'].includes(String(purchase?.status||'active'))).map(purchase=>{
     const entitlement=entitlementByPurchaseId.get(String(purchase.id))||{};
     const student=studentMap.get(String(purchase.studentId||''))||{};
     const rowCampusName=campusName.fromHints(
@@ -272,6 +272,9 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       paymentChannel:purchase.payMethod||'—',
       sourceDocument:`购买记录 ${purchase.id}`,
       notes:differenceReason?`${differenceReason}；${purchase.notes||''}`:(purchase.notes||''),
+      courseType:purchase.courseType||purchase.standardCourseType||'',
+      standardCourseType:purchase.standardCourseType||purchase.courseType||'',
+      productName:purchase.productName||'',
       incomeType:purchase.packageName||purchase.productName||'课包购买',
       packageName:purchase.packageName||purchase.productName||'课包',
       collector:operator,
@@ -285,6 +288,57 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       debitTarget:purchase.packageName||purchase.productName||'课包'
     };
   });
+  const courseRefundRows=(purchases||[]).map(purchase=>{
+    const refundAmount=Number(purchase.refundAmount||purchase.refundedAmount||purchase.refundCashAmount||0)||0;
+    if(refundAmount<=0)return null;
+    if(['voided','deleted'].includes(String(purchase?.status||'active')))return null;
+    if(['personal_refund','owner_personal_refund'].includes(String(purchase.refundStatus||'').trim()))return null;
+    const entitlement=entitlementByPurchaseId.get(String(purchase.id))||{};
+    const student=studentMap.get(String(purchase.studentId||''))||{};
+    const rowCampusName=campusName.fromHints(
+      parseArr(entitlement.campusIds)[0]||entitlement.campus||'',
+      purchase.campus,
+      purchase.campusName,
+      purchaseUsageCampusName(purchase.id),
+      student.campus,
+      student.campusName,
+      purchase.notes,
+      purchase.packageName,
+      purchase.productName
+    )||'—';
+    const operator=operatorText(purchase.refundOperator,purchase.operator,purchase.createdBy,purchase.updatedBy);
+    return {
+      id:`refund-${purchase.id}`,
+      ...financeOperationTraceFields(purchase),
+      businessDate:financeBusinessDateTime(purchase.refundDate,purchase.refundedAt,purchase.updatedAt,purchase.createdAt),
+      weekdayText:financeWeekdayText(purchase.refundDate||purchase.refundedAt||purchase.updatedAt||purchase.createdAt),
+      timeText:'—',
+      customer:purchase.studentName||'—',
+      campusName:rowCampusName,
+      businessType:'课程',
+      action:'退款',
+      cashDelta:-refundAmount,
+      recognizedRevenueDelta:0,
+      deferredRevenueDelta:-refundAmount,
+      paymentChannel:purchase.refundPayMethod||purchase.payMethod||'—',
+      sourceDocument:`购买记录 ${purchase.id}`,
+      notes:purchase.refundReason||purchase.refundNote||'课程退款',
+      courseType:purchase.courseType||purchase.standardCourseType||'',
+      standardCourseType:purchase.standardCourseType||purchase.courseType||'',
+      productName:purchase.productName||'',
+      incomeType:purchase.packageName||purchase.productName||'课包退款',
+      packageName:purchase.packageName||purchase.productName||'课包',
+      collector:operator,
+      operator,
+      differenceReason:'',
+      systemStatus:'已退款',
+      totalLessons:Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0,
+      usedLessons:Math.max(0,(Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0)-(Number(entitlement.remainingLessons)||0)),
+      remainingLessons:Number(entitlement.remainingLessons)||0,
+      sourceProject:purchase.packageName||purchase.productName||'课包退款',
+      debitTarget:purchase.packageName||purchase.productName||'课包'
+    };
+  }).filter(Boolean);
   const membershipReceiptRows=(membershipOrders||[])
     .filter(order=>String(order?.status||'active')!=='voided')
     .map(order=>{
@@ -325,7 +379,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   const courseConsumeRows=aggregateFinanceHistoricalMonthlyLedgerRows(normalizeEntitlementLedgerRowsForView(entitlementLedger||[]).filter(row=>Number(row.lessonDelta||0)!==0)).map(row=>{
     const entitlement=entitlementMap.get(String(row.entitlementId||''))||{};
     const purchase=purchaseMap.get(String(entitlement.purchaseId||row.purchaseId||''))||{};
-    if(['voided','refunded','deleted'].includes(String(entitlement.status||''))||['voided','refunded','deleted'].includes(String(purchase.status||'')))return null;
+    const preserveHistoricalUsage=Number(entitlement.usedLessons||0)>0&&Number(purchase.refundAmount||purchase.refundedAmount||0)>0;
+    if((['voided','refunded','deleted'].includes(String(entitlement.status||''))&&!preserveHistoricalUsage)||(['voided','refunded','deleted'].includes(String(purchase.status||''))&&!preserveHistoricalUsage))return null;
     const scheduleRow=scheduleMap.get(String(row.scheduleId||''))||{};
     const student=studentMap.get(String(purchase.studentId||''))||{};
     const recognizedAmount=financeRecognizedAmountForConsumeRow(row,entitlement,purchase);
@@ -598,7 +653,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       };
     }).filter(Boolean);
   });
-  return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...directScheduleRows,...scheduleFieldFeeRows,...courtRows]
+  return [...courseReceiptRows,...courseRefundRows,...membershipReceiptRows,...courseConsumeRows,...directScheduleRows,...scheduleFieldFeeRows,...courtRows]
     .map(applyStandardFinanceFields)
     .sort((a,b)=>String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.id||'').localeCompare(String(a.id||'')));
 }

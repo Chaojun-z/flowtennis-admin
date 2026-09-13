@@ -487,9 +487,11 @@ function scheduleStudentKey(row = {}) {
 function buildCourseRevenueFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const maps = studentTypeMaps(raw);
   const privatePurchases = normalizeRows(raw.purchases).filter(row => campusMatches(row) && isPrivateCoursePurchase(row));
+  const privatePurchaseMap = new Map(privatePurchases.map(row => [String(row.id || '').trim(), row]).filter(([id]) => id));
   const currentPurchases = privatePurchases.filter(row => inPeriod(row.purchaseDate || row.createdAt, period));
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
   const previousPurchases = normalizeRows(previousRaw.purchases || raw.purchases).filter(row => campusMatches(row) && isPrivateCoursePurchase(row) && inPeriod(row.purchaseDate || row.createdAt, previousPeriod));
+  const previousPrivatePurchaseMap = new Map(normalizeRows(previousRaw.purchases || raw.purchases).filter(row => campusMatches(row) && isPrivateCoursePurchase(row)).map(row => [String(row.id || '').trim(), row]).filter(([id]) => id));
   const firstRows = currentPurchases.filter(row => isFirstPurchase(row, privatePurchases));
   const renewalRows = currentPurchases.filter(row => !isFirstPurchase(row, privatePurchases));
   const totalFirstRows = privatePurchases.filter(row => isFirstPurchase(row, privatePurchases));
@@ -501,12 +503,14 @@ function buildCourseRevenueFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const allFinanceRows = weeklyFinanceRows(raw, {});
   const financeRows = weeklyFinanceRows(raw, period);
   const previousFinanceRows = weeklyFinanceRows(previousRaw, previousPeriod);
-  const courseReceiptRows = financeRows.filter(row => isCourseFinanceRow(row) && isFinanceReceipt(row));
-  const previousCourseReceiptRows = previousFinanceRows.filter(row => isCourseFinanceRow(row) && isFinanceReceipt(row));
-  const allCourseReceiptRows = allFinanceRows.filter(row => isCourseFinanceRow(row) && isFinanceReceipt(row));
-  const consumedRows = financeRows.filter(row => isCourseFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0);
-  const totalConsumedRows = allFinanceRows.filter(row => isCourseFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0);
-  const previousConsumedRows = previousFinanceRows.filter(row => isCourseFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0);
+  const privateCashRow = (row, purchaseMap) => isCourseFinanceRow(row) && isPrivateCourseFinanceRow(row, purchaseMap) && (isFinanceReceipt(row) || isFinanceRefund(row));
+  const courseRecognizedRow = row => isCourseFinanceRow(row) && fieldNumber(row, ['recognizedRevenueDelta']) !== 0;
+  const courseReceiptRows = financeRows.filter(row => privateCashRow(row, privatePurchaseMap));
+  const previousCourseReceiptRows = previousFinanceRows.filter(row => privateCashRow(row, previousPrivatePurchaseMap));
+  const allCourseReceiptRows = allFinanceRows.filter(row => privateCashRow(row, privatePurchaseMap));
+  const consumedRows = financeRows.filter(courseRecognizedRow);
+  const totalConsumedRows = allFinanceRows.filter(courseRecognizedRow);
+  const previousConsumedRows = previousFinanceRows.filter(courseRecognizedRow);
   const currentAmount = courseReceiptRows.length ? financeSum(courseReceiptRows, 'cashDelta') : currentPurchases.reduce((sum, row) => sum + purchaseAmount(row), 0);
   const previousAmount = previousCourseReceiptRows.length ? financeSum(previousCourseReceiptRows, 'cashDelta') : previousPurchases.reduce((sum, row) => sum + purchaseAmount(row), 0);
   const totalReceiptAmount = allCourseReceiptRows.length ? financeSum(allCourseReceiptRows, 'cashDelta') : privatePurchases.reduce((sum, row) => sum + purchaseAmount(row), 0);
@@ -533,7 +537,7 @@ function buildCourseRevenueFromRaw(raw = {}, period = {}, previousRaw = {}) {
     return {
       type,
       paidPeople: new Set(purchaseRows.map(purchaseStudentKey).filter(Boolean)).size,
-      newAmount: financeSum(typeReceiptRows, 'cashDelta') || purchaseRows.reduce((sum, row) => sum + purchaseAmount(row), 0),
+      newAmount: typeReceiptRows.length ? financeSum(typeReceiptRows, 'cashDelta') : purchaseRows.reduce((sum, row) => sum + purchaseAmount(row), 0),
       lessonPeople: new Set(typeLessonRows.map(scheduleStudentKey).filter(Boolean)).size,
       completedHours: numberValue(typeLessonRows.reduce((sum, row) => sum + scheduleHours(row), 0)),
       consumedAmount: financeSum(typeConsumedRows, 'recognizedRevenueDelta')
@@ -774,8 +778,41 @@ function isFinanceReceipt(row = {}) {
   return financeAction(row) === '收款' && fieldNumber(row, ['cashDelta']) > 0;
 }
 
+function isFinanceRefund(row = {}) {
+  return financeAction(row) === '退款' && fieldNumber(row, ['cashDelta']) < 0;
+}
+
 function isCourseFinanceRow(row = {}) {
   return financeTypeText(row) === '课程' || String(row.businessTypeLevel1 || '').trim() === '课程';
+}
+
+function financeRowPurchaseId(row = {}) {
+  const source = String(row.sourceDocument || row.sourceId || row.purchaseId || '').trim();
+  const match = source.match(/购买记录\s+(.+)$/);
+  if (match) return match[1].trim();
+  return String(row.purchaseId || '').trim();
+}
+
+function isPrivateCourseFinanceRow(row = {}, purchaseMap = new Map()) {
+  const purchaseId = financeRowPurchaseId(row);
+  if (purchaseId && purchaseMap.has(purchaseId)) {
+    const purchase = purchaseMap.get(purchaseId);
+    const purchaseText = `${purchase.courseType || ''} ${purchase.packageName || ''} ${purchase.productName || ''}`;
+    return /私教/.test(purchaseText) && !/体验/.test(purchaseText);
+  }
+  const raw = [
+    row.courseType,
+    row.standardCourseType,
+    row.businessTypeLevel2,
+    row.businessTypeLevel3,
+    row.incomeType,
+    row.packageName,
+    row.productName,
+    row.sourceProject,
+    row.sourceDocument
+  ].map(value => String(value || '')).join(' ');
+  if (/体验|小班|班课|训练营|随到随学|专项|陪打/.test(raw)) return false;
+  return /私教|1\s*[vV对]\s*1|1\s*[vV对]\s*2/.test(raw);
 }
 
 function isStoredValueFinanceRow(row = {}) {

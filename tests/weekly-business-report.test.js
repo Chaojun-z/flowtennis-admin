@@ -217,6 +217,39 @@ assert.strictEqual(requestedStructureSnapshot.sections.court.revenueUsageHours, 
 assert.strictEqual(requestedStructureSnapshot.sections.court.dailyRows.find(row => row.date === '2026-09-01')?.value, 100, 'daily court utilization should be capped at 100%');
 assert.ok(requestedStructureSnapshot.summary.courtUtilizationRate.value <= 100, 'top court utilization must never exceed 100%');
 
+const privateCourseNetReceiptSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 1 }, recognizedRevenue: { value: 1 } } } },
+    weeklyReportRaw: {
+      students: [
+        { id: 'private-student', name: '私教学员', type: '成人', campus: 'shunyi_mapo' },
+        { id: 'small-student', name: '小班学员', type: '成人', campus: 'shunyi_mapo' },
+        { id: 'trial-student', name: '体验学员', type: '成人', campus: 'shunyi_mapo' },
+        { id: 'full-refund-student', name: '全额退款学员', type: '成人', campus: 'shunyi_mapo' }
+      ],
+      purchases: [
+        { id: 'private-purchase', studentId: 'private-student', studentName: '私教学员', courseType: '私教课', packageName: '成人1v1私教课 · 10课时 · 黄金', amountPaid: 4500, purchaseDate: '2026-08-28', status: 'partially_refunded', campus: 'shunyi_mapo' },
+        { id: 'small-purchase', studentId: 'small-student', studentName: '小班学员', courseType: '小班课', packageName: '小班课', amountPaid: 3000, purchaseDate: '2026-08-28', status: 'active', campus: 'shunyi_mapo' },
+        { id: 'trial-purchase', studentId: 'trial-student', studentName: '体验学员', courseType: '体验课', packageName: '私教体验课', amountPaid: 299, purchaseDate: '2026-08-28', status: 'active', campus: 'shunyi_mapo' },
+        { id: 'full-refund-purchase', studentId: 'full-refund-student', studentName: '全额退款学员', courseType: '私教课', packageName: '成人1v1私教课 · 10课时 · 黄金', amountPaid: 5000, purchaseDate: '2026-08-28', status: 'refunded', campus: 'shunyi_mapo' }
+      ],
+      financeNormalizedRows: [
+        { id: 'private-receipt', campusName: '顺义马坡', studentId: 'private-student', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 4500, sourceDocument: '购买记录 private-purchase', packageName: '成人1v1私教课 · 10课时 · 黄金', courseType: '私教课' },
+        { id: 'private-refund', campusName: '顺义马坡', studentId: 'private-student', businessDate: '2026-09-01', businessType: '课程', action: '退款', cashDelta: -1800, sourceDocument: '购买记录 private-purchase', packageName: '成人1v1私教课 · 10课时 · 黄金', courseType: '私教课' },
+        { id: 'small-receipt', campusName: '顺义马坡', studentId: 'small-student', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 3000, sourceDocument: '购买记录 small-purchase', packageName: '小班课', courseType: '小班课' },
+        { id: 'trial-receipt', campusName: '顺义马坡', studentId: 'trial-student', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 299, sourceDocument: '购买记录 trial-purchase', packageName: '私教体验课', courseType: '体验课' },
+        { id: 'full-refund-receipt', campusName: '顺义马坡', studentId: 'full-refund-student', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 5000, sourceDocument: '购买记录 full-refund-purchase', packageName: '成人1v1私教课 · 10课时 · 黄金', courseType: '私教课' },
+        { id: 'full-refund-row', campusName: '顺义马坡', studentId: 'full-refund-student', businessDate: '2026-09-01', businessType: '课程', action: '退款', cashDelta: -5000, sourceDocument: '购买记录 full-refund-purchase', packageName: '成人1v1私教课 · 10课时 · 黄金', courseType: '私教课' }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: { overview: { cards: { totalIncome: { value: 0 }, recognizedRevenue: { value: 0 } } } }, weeklyReportRaw: { financeNormalizedRows: [] } },
+  totalOperationsPayload: { operations: { overview: { cards: { totalIncome: { value: 1 } } } }, weeklyReportRaw: { financeNormalizedRows: [] } }
+});
+assert.strictEqual(privateCourseNetReceiptSnapshot.sections.revenue.course.newAmount, 2700, 'weekly private course revenue must use formal private net receipts and exclude small class/trial receipts');
+assert.strictEqual(privateCourseNetReceiptSnapshot.sections.revenue.course.typeRows.find(row => row.type === '成人')?.newAmount, 2700, 'weekly private course type rows must also use private net receipts');
+
 const financialLedgerSourceSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
   operationsPayload: {

@@ -21,7 +21,10 @@ function financeCourseRows(rows = []) {
 }
 
 function financePackageReceiptRows(rows = []) {
-  return financeCourseRows(rows).filter(row => row.action === '收款' && String(row.sourceDocument || '').startsWith('购买记录'));
+  return financeCourseRows(rows).filter(row => (
+    ['收款', '退款'].includes(String(row.action || row.transactionType || '')) &&
+    String(row.sourceDocument || '').startsWith('购买记录')
+  ));
 }
 
 function financePackageRecognizedRows(rows = []) {

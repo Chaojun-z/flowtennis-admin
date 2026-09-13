@@ -4315,6 +4315,8 @@ function financeBusinessDateTime(primary,...fallbacks){
   return day?`${day} 00:00:00`:'';
 }
 function financePurchaseStatusText(purchase){
+  if(purchase?.status==='refunded'||purchase?.refundStatus==='refunded')return '已退款';
+  if(purchase?.status==='partially_refunded'||purchase?.refundStatus==='partially_refunded')return '部分退款';
   return purchase?.status==='voided'?'已作废':'正常';
 }
 function buildFinanceCampusResolvers(campuses=[]){

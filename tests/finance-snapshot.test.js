@@ -111,6 +111,83 @@ assert.strictEqual(consumeTraceRow.batchId, 'batch-ledger-1', 'entitlement ledge
 assert.strictEqual(consumeTraceRow.recognizedRevenueDelta, 400, 'ledger trace passthrough must not change recognized amount');
 assert.strictEqual(consumeTraceRow.deferredRevenueDelta, -400, 'ledger trace passthrough must not change deferred amount');
 
+const refundedPurchaseSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-refund', campus:'shunyi_mapo' }],
+  purchases:[{
+    id:'purchase-refund',
+    studentId:'stu-refund',
+    studentName:'退款学员',
+    packageName:'成人1v1私教课 · 10课时 · 黄金',
+    courseType:'私教课',
+    amountPaid:4500,
+    refundAmount:1800,
+    refundDate:'2026-09-01',
+    refundReason:'剩余课时退费',
+    purchaseDate:'2026-05-14',
+    payMethod:'微信',
+    status:'partially_refunded'
+  }],
+  entitlements:[{
+    id:'ent-refund',
+    purchaseId:'purchase-refund',
+    studentId:'stu-refund',
+    studentName:'退款学员',
+    packageName:'成人1v1私教课 · 10课时 · 黄金',
+    totalLessons:10,
+    remainingLessons:4,
+    campusIds:['shunyi_mapo']
+  }]
+});
+const refundedPurchaseReceipt = refundedPurchaseSnapshot.financeNormalizedRows.find(row=>row.id==='purchase-purchase-refund');
+const refundedPurchaseRefund = refundedPurchaseSnapshot.financeNormalizedRows.find(row=>row.id==='refund-purchase-refund');
+assert.strictEqual(refundedPurchaseReceipt.cashDelta, 4500, 'partially refunded purchase should keep original receipt row');
+assert.strictEqual(refundedPurchaseRefund.action, '退款', 'purchase refund should create a standard finance refund row');
+assert.strictEqual(refundedPurchaseRefund.cashDelta, -1800, 'purchase refund should reduce standard finance cash by refund amount');
+assert.strictEqual(refundedPurchaseRefund.deferredRevenueDelta, -1800, 'purchase refund should reduce unfulfilled deferred revenue');
+assert.strictEqual(refundedPurchaseSnapshot.financeOverviewData.all.courseIncome, 2700, 'course income should be net of course refunds');
+assert.strictEqual(refundedPurchaseSnapshot.financeOverviewData.all.packageIncome, 2700, 'package income should be net of course refunds');
+
+const personalRefundSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-personal-refund', campus:'shunyi_mapo' }],
+  purchases:[{
+    id:'purchase-personal-refund',
+    studentId:'stu-personal-refund',
+    studentName:'瑶瑶',
+    packageName:'成人1v1私教课 · 10课时 · 非黄金',
+    courseType:'私教课',
+    amountPaid:4500,
+    refundAmount:1800,
+    refundStatus:'personal_refund',
+    refundPayer:'朝珺',
+    purchaseDate:'2026-05-14',
+    status:'active'
+  }],
+  entitlements:[{
+    id:'ent-personal-refund',
+    purchaseId:'purchase-personal-refund',
+    studentId:'stu-personal-refund',
+    studentName:'瑶瑶',
+    packageName:'成人1v1私教课 · 10课时 · 非黄金',
+    totalLessons:10,
+    usedLessons:6,
+    remainingLessons:4,
+    status:'voided',
+    campusIds:['shunyi_mapo']
+  }],
+  entitlementLedger:[{
+    id:'ledger-personal-refund',
+    entitlementId:'ent-personal-refund',
+    studentId:'stu-personal-refund',
+    lessonDelta:-1,
+    relatedDate:'2026-08-01',
+    createdAt:'2026-08-01 10:00:00'
+  }]
+});
+assert.strictEqual(personalRefundSnapshot.financeNormalizedRows.some(row=>row.id==='refund-purchase-personal-refund'), false, 'personal refund must not create company finance refund row');
+assert.strictEqual(personalRefundSnapshot.financeNormalizedRows.some(row=>row.id==='consume-ledger-personal-refund'), true, 'personal refund must retain historical course consumption');
+
 const packageNameLessonCountSnapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
   students:[{ id:'stu-package-name', campus:'shunyi_mapo' }],
