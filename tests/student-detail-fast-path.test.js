@@ -147,14 +147,18 @@ async function requestGhostLessonSummaryStudentDetail() {
     T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
     T_FEEDBACKS: 'feedbacks'
   };
+  const ownLessonDates = ['01', '02', '03', '04', '05', '06', '12', '17', '31'];
+  const staleStudentSequences = ['01', '02', '03', '04', '05', '06', '07', '09', '11'];
   const lessonRows = [
-    ...Array.from({ length: 9 }, (_, index) => ({
+    ...ownLessonDates.map((day, index) => ({
       kind: 'ledger',
       scheduleId: `sch-own-${index + 1}`,
-      time: `2026-07-${String(index + 1).padStart(2, '0')} 10:00-11:00`,
+      time: `2026-07-${day} 10:00-11:00`,
       courseType: '私教课',
       packageName: '成人1v1 黄金时间10课时',
       entitlementId: 'ent-own',
+      packageOwnerStudentId: 'stu-wrong',
+      studentLessonSequenceText: `[累计第${staleStudentSequences[index]}节]`,
       lessonDelta: -1,
       countAsCompletedLesson: true
     })),
@@ -213,6 +217,7 @@ async function requestGhostLessonSummaryStudentDetail() {
           detailPackageBalanceText: '0/10',
           detailPackageBalanceRemaining: 0,
           detailPackageBalanceTotal: 10,
+          packageStatusLabel: '课包已用完',
           detailPackageOrderRows: [{ entitlementId: 'ent-own', packageName: '成人1v1 黄金时间10课时', remainingLessons: 0, totalLessons: 10, usedLessons: 10 }],
           detailLessonRecordRows: lessonRows,
           detailBenefitRows: []
@@ -238,20 +243,23 @@ async function requestGhostLessonSummaryStudentDetail() {
 async function requestGhostLessonCustomerCenterList() {
   const calls = { cappedScan: 0, scheduleGets: 0 };
   const activeVersion = 'test-ghost-list-version';
+  const ownLessonDates = ['01', '02', '03', '04', '05', '06', '12', '17', '31'];
+  const staleStudentSequences = ['01', '02', '03', '04', '05', '06', '07', '09', '11'];
   const tables = {
     T_STUDENTS: 'students',
     T_STUDENT_TEACHING_SUMMARY: 'student_summary',
     T_SCHEDULE: 'schedule'
   };
   const lessonRows = [
-    ...Array.from({ length: 9 }, (_, index) => ({
+    ...ownLessonDates.map((day, index) => ({
       kind: 'ledger',
       scheduleId: `sch-own-${index + 1}`,
-      time: `2026-07-${String(index + 1).padStart(2, '0')} 10:00-11:00`,
+      time: `2026-07-${day} 10:00-11:00`,
       courseType: '私教课',
       packageName: '成人1v1 黄金时间10课时',
       entitlementId: 'ent-own',
       packageOwnerStudentId: 'stu-wrong',
+      studentLessonSequenceText: `[累计第${staleStudentSequences[index]}节]`,
       lessonDelta: -1,
       countAsCompletedLesson: true
     })),
@@ -293,6 +301,7 @@ async function requestGhostLessonCustomerCenterList() {
     detailPackageBalanceText: '0/10',
     detailPackageBalanceRemaining: 0,
     detailPackageBalanceTotal: 10,
+    packageStatusLabel: '课包已用完',
     detailPackageOrderRows: [{ entitlementId: 'ent-own', packageName: '成人1v1 黄金时间10课时', remainingLessons: 0, totalLessons: 10, usedLessons: 10 }],
     detailLessonRecordRows: lessonRows
   };
@@ -342,7 +351,8 @@ async function requestGhostLessonCustomerCenterList() {
             packageBalanceRemaining: 0,
             packageBalanceTotal: 10,
             packageBalanceText: '0/10',
-            detailPackageBalanceText: '0/10'
+            detailPackageBalanceText: '0/10',
+            packageStatusLabel: '课包已用完'
           }]
         },
         teachingStudentViews: {
@@ -354,7 +364,8 @@ async function requestGhostLessonCustomerCenterList() {
             packageBalanceRemaining: 0,
             packageBalanceTotal: 10,
             packageBalanceText: '0/10',
-            detailPackageBalanceText: '0/10'
+            detailPackageBalanceText: '0/10',
+            packageStatusLabel: '课包已用完'
           }]
         },
         standardLifecycleMetrics: {}
@@ -1107,7 +1118,10 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(ghostLessonSummary.calls.scheduleGets, 2, 'ghost lesson cleanup should only read suspicious schedule rows exactly');
   assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.completedLessons, 9, 'drawer should remove ghost lessons whose current schedule belongs to another student');
   assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.packageBalanceText, '1/10', 'drawer should recover own package balance after removing ghost lessons');
+  assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.packageStatusLabel, '课包即将耗尽', 'drawer should recover package status after removing ghost lessons');
   assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.detailLessonRecordRows.length, 9, 'drawer should only keep the valid own-package lesson records');
+  assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.detailLessonRecordRows.find(row => row.scheduleId === 'sch-own-8')?.studentLessonSequenceText, '[累计第08节]', 'drawer should renumber cumulative lesson sequence after removing the first ghost lesson');
+  assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.detailLessonRecordRows.find(row => row.scheduleId === 'sch-own-9')?.studentLessonSequenceText, '[累计第09节]', 'drawer should renumber cumulative lesson sequence after removing later ghost lessons');
 
   const ghostLessonList = await requestGhostLessonCustomerCenterList();
   assert.strictEqual(ghostLessonList.res.statusCode, 200);
@@ -1115,7 +1129,9 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(ghostLessonList.calls.scheduleGets, 2, 'ghost lesson list calibration should only read suspicious schedule rows exactly');
   assert.strictEqual(ghostLessonList.res.body.listPage.rows[0].completedLessons, 9, 'list page should remove ghost lessons from the visible row');
   assert.strictEqual(ghostLessonList.res.body.listPage.rows[0].packageBalanceText, '1/10', 'list page should recover own package balance after removing ghost lessons');
+  assert.strictEqual(ghostLessonList.res.body.listPage.rows[0].packageStatusLabel, '课包即将耗尽', 'list page should recover package status after removing ghost lessons');
   assert.strictEqual(ghostLessonList.res.body.teachingStudentViews.activeStudents[0].packageBalanceText, '1/10', 'projected active student row should use calibrated package balance');
+  assert.strictEqual(ghostLessonList.res.body.teachingStudentViews.activeStudents[0].packageStatusLabel, '课包即将耗尽', 'projected active student row should use calibrated package status');
 
   const emptySummary = await requestEmptySummaryWithTrialFactsStudentDetail();
   assert.strictEqual(emptySummary.res.statusCode, 200);

@@ -86,6 +86,23 @@ function pageDataLessonQty(value){
   return Number.isInteger(num)?String(num):String(Math.round(num*10)/10).replace(/\.0$/,'');
 }
 
+function pageDataLessonMarker(value){
+  const num=Number(value)||0;
+  if(Number.isInteger(num))return String(num).padStart(2,'0');
+  const fixed=String(Math.round(num*10)/10);
+  const [whole,decimal]=fixed.split('.');
+  return `${String(Number(whole)||0).padStart(2,'0')}.${decimal}`;
+}
+
+function pageDataPackageStatusLabel(remaining,total){
+  const totalValue=Number(total)||0;
+  const remainingValue=Number(remaining)||0;
+  if(totalValue<=0)return '未买过课包';
+  if(remainingValue>0&&remainingValue<=2)return '课包即将耗尽';
+  if(remainingValue>0)return '课包有余额';
+  return '课包已用完';
+}
+
 function pageDataFormalLessonRow(row={}){
   const label=String([row.courseType,row.standardCourseType,row.packageName,row.productName,row.className,row.courseName].filter(Boolean).join(' '));
   return !/体验|陪打/.test(label);
@@ -96,6 +113,23 @@ function pageDataScheduleStudentIds(row={}){
   if(ids.length)return [...new Set(ids)];
   const legacyId=String(row.studentId||'').trim();
   return legacyId?[legacyId]:[];
+}
+
+function normalizeStudentLessonSequenceRows(lessonRows=[]){
+  const nextRows=(Array.isArray(lessonRows)?lessonRows:[]).map(row=>({...row}));
+  let usedBefore=0;
+  nextRows
+    .filter(row=>row?.countAsCompletedLesson!==false&&Number(row?.lessonDelta)<0&&pageDataFormalLessonRow(row))
+    .sort((a,b)=>String(a.sortTime||a.time||'').localeCompare(String(b.sortTime||b.time||'')))
+    .forEach(row=>{
+      const count=Math.abs(Number(row.lessonDelta)||0);
+      if(!count)return;
+      const startNo=usedBefore+1;
+      const endNo=usedBefore+count;
+      row.studentLessonSequenceText=`[累计第${pageDataLessonMarker(startNo)}${startNo===endNo?'':`-${pageDataLessonMarker(endNo)}`}节]`;
+      usedBefore=endNo;
+    });
+  return nextRows;
 }
 
 function reconcileStudentDetailPackageRows(summary={},lessonRows=[],studentId=''){
@@ -147,6 +181,7 @@ function reconcileStudentDetailPackageRows(summary={},lessonRows=[],studentId=''
     packageBalanceTotal:displayTotal,
     packageBalanceText:displayTotal>0?`${pageDataLessonQty(displayRemaining)}/${pageDataLessonQty(displayTotal)}`:'-',
     packageBalancePercent:displayTotal>0?Math.max(0,Math.min(100,Math.round(displayRemaining/displayTotal*100))):0,
+    packageStatusLabel:pageDataPackageStatusLabel(displayRemaining,displayTotal),
     detailPackageBalanceRemaining:detailRemaining,
     detailPackageBalanceTotal:detailTotal,
     detailPackageBalanceText:detailTotal>0?`${pageDataLessonQty(detailRemaining)}/${pageDataLessonQty(detailTotal)}`:'-',
@@ -166,12 +201,12 @@ async function sanitizeStudentDetailTeachingSummary(summary=null,studentId='',{g
   if(!scheduleIds.length)return maybeReconciled;
   const schedules=new Map((await Promise.all(scheduleIds.map(id=>getCachedRow(T_SCHEDULE,id).catch(()=>null)))).filter(Boolean).map(row=>[String(row.id||'').trim(),row]));
   if(!schedules.size)return maybeReconciled;
-  const nextLessonRows=lessonRows.filter(row=>{
+  const nextLessonRows=normalizeStudentLessonSequenceRows(lessonRows.filter(row=>{
     const schedule=schedules.get(String(row?.scheduleId||'').trim());
     if(!schedule)return true;
     const ids=pageDataScheduleStudentIds(schedule);
     return !ids.length||ids.includes(sid);
-  });
+  }));
   if(nextLessonRows.length===lessonRows.length)return summary;
   const completedLessons=Math.round(nextLessonRows
     .filter(row=>row?.countAsCompletedLesson!==false&&Number(row?.lessonDelta)<0&&pageDataFormalLessonRow(row))
