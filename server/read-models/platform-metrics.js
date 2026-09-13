@@ -468,7 +468,16 @@ function packageAmount(row = {}, purchase = {}, fieldNames = []) {
 }
 
 function teachingPackageDate(row = {}, purchase = {}) {
-  return text(row.purchaseDate || row.businessDate || row.createdAt || purchase.purchaseDate || purchase.createdAt).slice(0, 10);
+  return text(
+    row.purchaseDate
+      || row.businessDate
+      || purchase.purchaseDate
+      || purchase.businessDate
+      || purchase.paidAt
+      || purchase.paymentDate
+      || row.createdAt
+      || purchase.createdAt
+  ).slice(0, 10);
 }
 
 function teachingPackageName(row = {}, purchase = {}) {
@@ -1252,9 +1261,10 @@ function teachingSummaryTrialAttendedSnapshot(row = {}) {
 }
 
 function teachingSummaryFormalAttendedSnapshot(row = {}, now = new Date()) {
+  if (teachingSummaryRowHasFormalLesson(row, now)) return true;
   const explicit = booleanSnapshotValue(row.hasFormalAttended);
   if (explicit !== undefined) return explicit;
-  return teachingSummaryRowHasFormalLesson(row, now);
+  return false;
 }
 
 function numberSnapshotValue(value, fallback = 0) {
@@ -1307,9 +1317,14 @@ function teachingSummaryRowHasConsumedTrialPackage(row = {}) {
 }
 
 function teachingSummaryRowHasFormalLesson(row = {}, now = new Date()) {
-  if (booleanSnapshotValue(row.hasFormalAttended) === true) return true;
   const lessonRows = arraySnapshotValue(row.detailLessonRecordRows);
-  if (lessonRows.some(item => text(item?.kind) === 'schedule' && item?.countAsCompletedLesson !== false && !courseRowIsTrial(item))) return true;
+  if (lessonRows.some(item => {
+    if (item?.countAsCompletedLesson === false || courseRowIsTrial(item) || courseRowIsCompanion(item)) return false;
+    const value = item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt;
+    return teachingDateOnOrBeforeNow(value, now)
+      && (text(item?.kind) === 'schedule' || text(item?.kind) === 'ledger' || Number(item?.lessonDelta) < 0);
+  })) return true;
+  if (booleanSnapshotValue(row.hasFormalAttended) === true) return true;
   if (lessonRows.length) return false;
   return teachingDateOnOrBeforeNow(row.lastFormalLessonAt, now);
 }
@@ -2399,7 +2414,12 @@ function teachingStudentDirectLessonsAfterLastPackage(data = {}, row = {}, now =
 }
 
 function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()) {
-  if (!hasFreshTeachingLessonFacts(data) && text(row.studentStatusLabel)) return text(row.studentStatusLabel);
+  if (!hasFreshTeachingLessonFacts(data) && text(row.studentStatusLabel)) {
+    const snapshotLabel = text(row.studentStatusLabel);
+    if (!(snapshotLabel === '已排课未上课' && teachingStudentHasFormalAttendedFact(data, row, now))) {
+      return snapshotLabel;
+    }
+  }
   const packageStatus = teachingStudentPackageStatusLabel(row);
   const activityStatus = teachingStudentActivityStatusLabel(data, row, now);
   const studentId = text(row.studentId);
