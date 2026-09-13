@@ -144,5 +144,11 @@ assert.strictEqual(plan.changedSummaryRows[0].after.detailLessonRecordRows[0].le
 assert.strictEqual(plan.changedSummaryRows[0].after.detailPackageOrderRows[0].purchaseDate, '2026-07-31');
 assert.strictEqual(plan.changedSummaryRows.find(item => item.id === '1bd6c3ab-c787-485c-85b2-d6f7cda7b31d').after.studentStatusLabel, '-');
 assert.strictEqual(plan.nextSummaryMeta.previousActiveVersion, summaryMeta.activeVersion);
+assert.strictEqual(plan.versionedSummaryRows.length, 7, '定点修复必须同步写入这 7 个学员的单个发布行');
+assert.strictEqual(
+  plan.versionedSummaryRows.find(item => item.studentId === 'b38a521d-7fc2-4e53-9e59-4224d530e680').id,
+  '__student_teaching_summary_version__:repair-selected-student-lesson-status-20260913:b38a521d-7fc2-4e53-9e59-4224d530e680',
+  '阳光正好的单个发布行必须指向新的摘要版本'
+);
 
 console.log('repair-selected-student-lesson-status script tests passed');

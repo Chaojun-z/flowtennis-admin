@@ -205,7 +205,10 @@ async function sanitizeStudentDetailTeachingSummary(summary=null,studentId='',{g
     const schedule=schedules.get(String(row?.scheduleId||'').trim());
     if(!schedule)return true;
     const ids=pageDataScheduleStudentIds(schedule);
-    return !ids.length||ids.includes(sid);
+    const actualStudentIds=pageDataArraySnapshot(row.actualStudentIds)
+      .map(id=>String(id||'').trim())
+      .filter(Boolean);
+    return !ids.length||ids.includes(sid)||actualStudentIds.includes(sid);
   }));
   if(nextLessonRows.length===lessonRows.length)return summary;
   const completedLessons=Math.round(nextLessonRows
@@ -1040,4 +1043,4 @@ function createCorePageDataRoutes(deps={}){
   };
 }
 
-module.exports={createCorePageDataRoutes};
+module.exports={createCorePageDataRoutes,sanitizeStudentDetailTeachingSummary};

@@ -481,6 +481,9 @@ function buildPlan({
     : text(summaryMeta.activeVersion);
   const nextSummaryBundle = summaryCache.buildStudentTeachingSummaryBundleRow(nextSummaryRows, SUMMARY_VERSION);
   const nextSummaryListBundle = summaryCache.buildStudentTeachingSummaryListBundleRow(nextSummaryRows, SUMMARY_VERSION);
+  const versionedSummaryRows = changedSummaryRows.map(item =>
+    summaryCache.buildVersionedStudentTeachingSummaryRow(item.after, SUMMARY_VERSION)
+  );
   const nextSummaryMeta = {
     ...clone(summaryMeta),
     id: summaryCache.STUDENT_TEACHING_SUMMARY_META_ID,
@@ -505,6 +508,7 @@ function buildPlan({
     entitlementUpdates,
     indexUpdates,
     changedSummaryRows,
+    versionedSummaryRows,
     nextSummaryRows,
     nextSummaryBundle,
     nextSummaryListBundle,
@@ -525,6 +529,7 @@ async function writePlan(client, plan) {
   for (const item of plan.indexUpdates) await putRow(client, TABLES.activeEntitlementIndex, item.after);
   for (const item of plan.scheduleUpdates) await putRow(client, TABLES.schedule, item.after);
 
+  for (const row of plan.versionedSummaryRows) await putRow(client, TABLES.teachingSummary, row);
   await putRow(client, TABLES.teachingSummary, plan.nextSummaryBundle);
   await putRow(client, TABLES.teachingSummary, plan.nextSummaryListBundle);
   await putRow(client, TABLES.teachingSummary, plan.nextSummaryMeta);
