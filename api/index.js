@@ -13,7 +13,7 @@ const { buildMembershipFinanceSummary } = require('../server/read-models/members
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
 const { buildOperationsPagePayload, invalidateOperationsPageDataCache, getOperationsPageScope } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js'), { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
-const { createStudentTeachingSummaryCache, readReadyStudentTeachingSummaryListRows, upsertStudentProfileIntoTeachingSummary } = require('../server/read-models/student-teaching-summary-cache.js');
+const { createStudentTeachingSummaryCache, readReadyStudentTeachingSummaryListRows, upsertStudentProfileIntoTeachingSummary, syncStudentTeachingSummaryDelta } = require('../server/read-models/student-teaching-summary-cache.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
 const { createAuthServices } = require('../server/auth');
@@ -375,7 +375,7 @@ const {
       if(operationsSnapshotSync?.recordSourceChange)await operationsSnapshotSync.recordSourceChange({...meta,sourceTable:t}).catch(err=>console.warn('[operations-snapshot] source marker failed:',err?.message||err));
     }
     if([T_LEADS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_FEEDBACKS,T_MEMBERSHIP_BENEFIT_LEDGER,T_STUDENT_TEACHING_SUMMARY].includes(t))customerCenterFactCacheVersion++;
-    if(meta?.skipStudentTeachingSummaryRefresh)return;if(t!==T_STUDENT_TEACHING_SUMMARY&&!OPERATIONS_SNAPSHOT_INTERNAL_TABLES.has(t))await queueStudentTeachingSummaryRefresh(t,meta);
+    if(meta?.skipStudentTeachingSummaryRefresh||/^(?:lesson-consume|manual-lesson-)/.test(String(meta?.attrs?.operationType||'')))return;if(t!==T_STUDENT_TEACHING_SUMMARY&&!OPERATIONS_SNAPSHOT_INTERNAL_TABLES.has(t))await queueStudentTeachingSummaryRefresh(t,meta);
   }
 });
 const studentTeachingSummaryCache=createStudentTeachingSummaryCache({
@@ -779,7 +779,7 @@ const handlePurchaseEntitlementRoutes=createPurchaseEntitlementRoutes({
   validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,buildStudentBenefitLedgerRecord,
   assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
   buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,normalizePurchasePayMethod,
-  validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,
+  validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,syncStudentTeachingSummaryDelta,refreshStudentTeachingSummaryRows:studentTeachingSummaryCache.refreshStudentTeachingSummaryRows,queueStudentTeachingSummaryRefresh,
   T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
 });
 const handleCorePageDataRoutes=createCorePageDataRoutes({
@@ -2113,8 +2113,7 @@ const handleScheduleRoutes=createScheduleRoutes({
   resolveScheduleEntitlementDeltas,assertScheduleEntitlementCapacity,scheduleStoredValuePaymentAmount,
   getFastStudentsRead,buildScheduleStoredValueCourtUpdate,put,scheduleLessonDelta,applyEntitlementDelta,
   applySmallGroupFreeAbsences,applyLessonDelta,syncScheduleFieldFeeFinancialLedger,persistScheduleStoredValueCourts,
-  syncCoachScheduleIndexes,syncScheduleConflictIndexes,del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,
-  scheduleListSnapshotSync,
+  syncCoachScheduleIndexes,syncScheduleConflictIndexes,del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,syncStudentTeachingSummaryDelta,refreshStudentTeachingSummaryRows:studentTeachingSummaryCache.refreshStudentTeachingSummaryRows,queueStudentTeachingSummaryRefresh,scheduleListSnapshotSync,
   scheduleSaveErrorStatus,get,withTimeout,scanFeedbacks,assertScheduleEditableAfterFeedback,scan,
   scheduleEntitlementDeltas,restoreSmallGroupFreeAbsenceLedgerRows,parseLessonValue,returnEntitlementFreeAbsence,
   diffScheduleEntitlementDeltas,effectiveScheduleStatus,assertCanDeleteSchedule,

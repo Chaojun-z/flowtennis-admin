@@ -8,6 +8,7 @@ function createScheduleRoutes(deps={}){
     scheduleStoredValuePaymentAmount,getFastStudentsRead,buildScheduleStoredValueCourtUpdate,
     put,scheduleLessonDelta,applyEntitlementDelta,applySmallGroupFreeAbsences,applyLessonDelta,
     syncScheduleFieldFeeFinancialLedger,persistScheduleStoredValueCourts,syncCoachScheduleIndexes,syncScheduleConflictIndexes=async()=>{},
+    syncStudentTeachingSummaryDelta=null,refreshStudentTeachingSummaryRows=null,queueStudentTeachingSummaryRefresh=null,
     scheduleListSnapshotSync=null,
     del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,scheduleSaveErrorStatus,
     get,withTimeout,scanFeedbacks,assertScheduleEditableAfterFeedback,scan,scheduleEntitlementDeltas,
@@ -22,6 +23,33 @@ function createScheduleRoutes(deps={}){
       console.error('schedule list snapshot delta sync failed:', err);
       return null;
     });
+  }
+
+  async function syncTeachingSummaryDelta({
+    previousSchedule = null,
+    nextSchedule = null,
+    entitlements = [],
+    entitlementLedger = [],
+    operationId = '',
+    now = new Date()
+  } = {}) {
+    if (typeof syncStudentTeachingSummaryDelta !== 'function') return null;
+    const result = await syncStudentTeachingSummaryDelta({
+      previousSchedule,
+      nextSchedule,
+      changedEntitlements: entitlements,
+      changedLedgers: entitlementLedger,
+      operationId,
+      now
+    }).catch(err => ({ synced: false, reason: 'sync-failed', error: String(err?.message || err) }));
+    if (result?.synced) return result;
+    if (typeof queueStudentTeachingSummaryRefresh === 'function') {
+      await queueStudentTeachingSummaryRefresh(T_SCHEDULE, {
+        attrs: nextSchedule || previousSchedule || {},
+        writeReason: 'schedule-delta-fallback'
+      }).catch(() => null);
+    }
+    return result;
   }
 
   return async function handleScheduleRoutes({path,method,body,user,res}){
@@ -95,6 +123,14 @@ function createScheduleRoutes(deps={}){
             await syncCoachScheduleIndexes(null,r).catch(err=>{
               notification={...(notification||{}),sent:false,indexError:err.message};
             });
+            await syncTeachingSummaryDelta({
+              previousSchedule:null,
+              nextSchedule:r,
+              entitlements,
+              entitlementLedger,
+              operationId:operationTrace.operationId,
+              now:new Date(r.updatedAt||now)
+            });
             await syncScheduleListSnapshotDelta(r,{reason:'schedule-create'});
             return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,financialLedger:financialLedger?[financialLedger]:[],courts:storedValueCourts,notification});
           }catch(err){
@@ -165,6 +201,14 @@ function createScheduleRoutes(deps={}){
               const storedValueCourts=await timed('schedule cancel stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
               await timed('schedule cancel conflict index write',()=>syncScheduleConflictIndexes(ex,r));
               await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule cancel index sync failed:',err));
+              await syncTeachingSummaryDelta({
+                previousSchedule:ex,
+                nextSchedule:r,
+                entitlements,
+                entitlementLedger,
+                operationId:operationTrace.operationId,
+                now:new Date(r.updatedAt)
+              });
               await syncScheduleListSnapshotDelta(r,{reason:'schedule-cancel'});
               return sendJson(res,{schedule:r,entitlements,entitlementLedger,...(lessonUpdate||{}),courts:storedValueCourts,warnings:[]});
             }catch(err){
@@ -250,6 +294,14 @@ function createScheduleRoutes(deps={}){
             const storedValueCourts=await timed('schedule update stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
             await timed('schedule update conflict index write',()=>syncScheduleConflictIndexes(ex,r));
             await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule update index sync failed:',err));
+            await syncTeachingSummaryDelta({
+              previousSchedule:ex,
+              nextSchedule:r,
+              entitlements,
+              entitlementLedger,
+              operationId:operationTrace.operationId,
+              now:new Date(r.updatedAt)
+            });
             await syncScheduleListSnapshotDelta(r,{reason:'schedule-update'});
             return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,financialLedger:financialLedger?[financialLedger]:[],courts:storedValueCourts,warnings:risk.warnings||[]});
           }catch(err){
@@ -284,6 +336,7 @@ function createScheduleRoutes(deps={}){
           storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:{...ex,status:'已取消'},courts:courtRows,students:studentRows,membershipAccounts,now:operationTrace.operationAt,operator:user.name||'',operationTrace});
         }
         const appliedEntitlements=[];
+        const updatedEntitlements=[];
         const deletedLedger=[];
         const generatedLedger=[];
         const appliedClassDeltas=[];
@@ -293,6 +346,7 @@ function createScheduleRoutes(deps={}){
             for(const oldEntDelta of oldEntDeltas){
               const updated=await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','删除排课退回权益',user,operationTrace,ex);
               if(updated?.ledger)generatedLedger.push(updated.ledger);
+              if(updated?.entitlement)updatedEntitlements.push(updated.entitlement);
               if(updated)appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'删除排课失败重新扣回权益'});
             }
             await rollbackSmallGroupFreeAbsences(oldFreeAbsenceLedger);
@@ -308,6 +362,14 @@ function createScheduleRoutes(deps={}){
           await del(T_SCHEDULE,id);
           await timed('schedule delete conflict index write',()=>syncScheduleConflictIndexes(ex,null));
           await syncCoachScheduleIndexes(ex,null).catch(err=>console.error('schedule delete index sync failed:',err));
+          await syncTeachingSummaryDelta({
+            previousSchedule:ex,
+            nextSchedule:null,
+            entitlements:updatedEntitlements,
+            entitlementLedger:deletedLedger,
+            operationId:operationTrace.operationId,
+            now:new Date(operationTrace.operationAt)
+          });
           await syncScheduleListSnapshotDelta(null,{scheduleId:id,deleted:true,reason:'schedule-delete'});
           return sendJson(res,{success:true,...(lessonUpdate||{}),entitlementLedger:deletedLedger,courts:storedValueCourts});
         }catch(err){

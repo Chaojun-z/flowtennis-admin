@@ -223,11 +223,25 @@ function createCorePageDataRoutes(deps={}){
       const meta=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,STUDENT_TEACHING_SUMMARY_META_ID).catch(()=>null);
       const activeVersion=String(meta?.activeVersion||'').trim();
       if(meta&&activeVersion){
-        const versionedId=`${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:${sid}`;
-        const versioned=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,versionedId).catch(()=>null);
-        const versionedStudentId=String(versioned?.publishedRowId||versioned?.studentId||'').trim();
-        if(versioned&&String(versioned.publishVersion||'').trim()===activeVersion&&versionedStudentId===sid&&isCurrentTeachingSummaryRow(versioned)){
-          return {...versioned,id:sid,publishedRowId:undefined,publishVersion:undefined};
+        const readPublishedRow=async(version)=>{
+          const versionedId=`${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${version}:${sid}`;
+          const versioned=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,versionedId).catch(()=>null);
+          const versionedStudentId=String(versioned?.publishedRowId||versioned?.studentId||'').trim();
+          if(versioned&&String(versioned.publishVersion||'').trim()===version&&versionedStudentId===sid&&isCurrentTeachingSummaryRow(versioned)){
+            return {...versioned,id:sid,publishedRowId:undefined,publishVersion:undefined};
+          }
+          return null;
+        };
+        const current=await readPublishedRow(activeVersion);
+        if(current)return current;
+        const previousVersion=String(meta.previousActiveVersion||'').trim();
+        if(previousVersion&&previousVersion!==activeVersion){
+          const previous=await readPublishedRow(previousVersion);
+          if(previous)return previous;
+          const previousBundle=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,buildStudentTeachingSummaryBundleId(previousVersion)).catch(()=>null);
+          const previousRows=studentTeachingSummaryBundleLogicalRows(previousBundle);
+          const previousBundleRow=previousRows.find(row=>String(row?.studentId||row?.id||'').trim()===sid);
+          if(previousBundleRow&&isCurrentTeachingSummaryRow(previousBundleRow))return {...previousBundleRow,id:sid};
         }
         return null;
       }

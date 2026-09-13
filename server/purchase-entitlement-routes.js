@@ -33,6 +33,7 @@ function createPurchaseEntitlementRoutes(deps={}){
     assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
     buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,normalizePurchasePayMethod,
     validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,
+    syncStudentTeachingSummaryDelta=null,refreshStudentTeachingSummaryRows=null,queueStudentTeachingSummaryRefresh=null,
     T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
   }=deps;
   const nextUuid=typeof uuidv4==='function'
@@ -512,6 +513,19 @@ function createPurchaseEntitlementRoutes(deps={}){
         await put(T_ENTITLEMENTS,id,next);
         await syncStudentActiveEntitlementIndexes(old,next);
         await put(T_ENTITLEMENT_LEDGER,ledger.id,ledger);
+        const summaryResult=typeof syncStudentTeachingSummaryDelta==='function'
+          ? await syncStudentTeachingSummaryDelta({
+            previousSchedule:null,
+            nextSchedule:null,
+            changedEntitlements:[next],
+            changedLedgers:[ledger],
+            operationId:operationTrace.operationId,
+            now:new Date(now)
+          }).catch(err=>({synced:false,error:String(err?.message||err)}))
+          : null;
+        if(summaryResult&&!summaryResult.synced&&typeof queueStudentTeachingSummaryRefresh==='function'){
+          await queueStudentTeachingSummaryRefresh(T_ENTITLEMENTS,{attrs:next,writeReason:'manual-entitlement-delta-fallback'}).catch(()=>null);
+        }
         return sendJson(res,{entitlement:next,ledger});
       }catch(err){
         await put(T_ENTITLEMENTS,id,old).catch(()=>null);

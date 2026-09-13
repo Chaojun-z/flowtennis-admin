@@ -776,6 +776,7 @@ function updateSchClassHint(){
   el.textContent=`当前班次课时：已上 ${used}/${total}，剩余 ${Math.max(0,total-used)} 节。共 ${count} 名学员，可取消勾选本次缺勤学员。`;
 }
 function mergeScheduleSaveResult(result,editingId){
+  const previousSchedule=editingId?schedules.find(x=>x.id===editingId):null,loadedDetailIds=[...new Set([...parseArr(previousSchedule?.studentIds),previousSchedule?.studentId,...parseArr(result?.schedule?.studentIds),result?.schedule?.studentId].map(id=>String(id||'').trim()).filter(Boolean))].filter(id=>typeof studentDetailViewForId==='function'&&studentDetailViewForId(id));if(loadedDetailIds.length)window.__pendingScheduleStudentDetailRefreshIds=[...new Set([...(window.__pendingScheduleStudentDetailRefreshIds||[]),...loadedDetailIds])];
   if(result?.schedule){
     const i=schedules.findIndex(x=>x.id===(editingId||result.schedule.id));
     if(i>=0)schedules[i]=result.schedule;else schedules.unshift(result.schedule);

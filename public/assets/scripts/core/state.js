@@ -1101,8 +1101,16 @@ async function ensureCourtAccountDetailData(courtId,{force=false}={}){
   return true;
 }
 function noteScheduleLocalMutation(){
+  const pendingDetailIds=[...(window.__pendingScheduleStudentDetailRefreshIds||[])].map(id=>String(id||'').trim()).filter(Boolean);
+  window.__pendingScheduleStudentDetailRefreshIds=[];
   scheduleLocalMutationAt=Date.now();
   markLearningDataStale();
+  pendingDetailIds.forEach(id=>{
+    if(typeof ensureStudentDetailData!=='function')return;
+    ensureStudentDetailData(id,{force:true,silent:false}).then(()=>{
+      if(typeof studentDetailDrawerIsOpenFor==='function'&&studentDetailDrawerIsOpenFor(id)&&typeof openStudentDetail==='function')openStudentDetail(id);
+    }).catch(error=>console.warn('schedule student detail refresh failed',error));
+  });
   loadedDatasets.delete('financePage');
   financeNormalizedLedgerRows=[];
   financeSettlementSummaryRows=[];

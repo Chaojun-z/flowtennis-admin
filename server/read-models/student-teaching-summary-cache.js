@@ -1,5 +1,8 @@
 const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
-const { buildStudentTeachingSummaryRows } = require('./platform-metrics.js');
+const {
+  buildStudentTeachingSummaryRows,
+  TEACHING_LESSON_DETAIL_SOURCE_VERSION
+} = require('./platform-metrics.js');
 const crypto = require('crypto');
 const zlib = require('zlib');
 
@@ -19,6 +22,7 @@ const READY_STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS = Math.max(
 );
 const readyStudentTeachingSummaryRowsCache = new Map();
 const studentTeachingSummaryListBundleRepairPromises = new Map();
+const studentTeachingSummaryDeltaSyncPromises = new Map();
 
 function parseArr(v) {
   if (Array.isArray(v)) return v;
@@ -271,6 +275,7 @@ const STUDENT_TEACHING_SUMMARY_META_FIELDS = [
   'sourceId',
   'batchId',
   'activeVersion',
+  'previousActiveVersion',
   'sourceSnapshotAt',
   'completedAt',
   'checksum',
@@ -470,6 +475,473 @@ async function upsertStudentProfileIntoTeachingSummary({
       logger.warn('[student-teaching-summary] student profile sync skipped', err?.message || err);
     }
     return { synced: false, reason: 'sync-failed', error: String(err?.message || err) };
+  }
+}
+
+function summaryDeltaStudentIds(...rows) {
+  return uniqueStudentIds(rows.flatMap(row => {
+    if (!row) return [];
+    return [
+      row.studentId,
+      row.usedByStudentId,
+      row.authorizedStudentId,
+      ...parseArr(row.studentIds)
+    ];
+  }));
+}
+
+function summaryDeltaScheduleIsActive(row = {}) {
+  const status = String(row.status || row.systemStatus || 'active').trim();
+  return !['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已取消', '已作废', '已删除'].includes(status);
+}
+
+function summaryDeltaIsTrial(row = {}) {
+  return /体验/.test([
+    row.courseType,
+    row.standardCourseType,
+    row.packageCourseType,
+    row.type,
+    row.experienceType,
+    row.packageName,
+    row.productName
+  ].filter(Boolean).join(' '));
+}
+
+function summaryDeltaIsCompanion(row = {}) {
+  return /陪打/.test([
+    row.courseType,
+    row.standardCourseType,
+    row.packageCourseType,
+    row.type,
+    row.packageName,
+    row.productName,
+    row.scheduleSource
+  ].filter(Boolean).join(' '));
+}
+
+function summaryDeltaPackageName(row = {}, fallback = {}) {
+  return String(
+    row.packageName
+    || row.productName
+    || row.name
+    || fallback.packageName
+    || fallback.productName
+    || fallback.name
+    || row.courseType
+    || fallback.courseType
+    || '课包'
+  ).trim();
+}
+
+function summaryDeltaPackageUnit(row = {}) {
+  const explicit = String(row.unit || row.balanceUnit || row.lessonUnit || '').trim();
+  if (explicit) return explicit;
+  return /小班|1v4|专项课/.test(summaryDeltaPackageName(row, row)) ? '次' : '节';
+}
+
+function summaryDeltaPackageDate(row = {}) {
+  return String(row.purchaseDate || row.businessDate || row.validFrom || row.createdAt || '').trim().slice(0, 10);
+}
+
+function summaryDeltaPackageRow(entitlement = {}, existing = {}) {
+  const totalLessons = Number(entitlement.totalLessons ?? existing.totalLessons) || 0;
+  const remainingLessons = Number(entitlement.remainingLessons ?? existing.remainingLessons) || 0;
+  const usedLessons = Number(entitlement.usedLessons ?? Math.max(0, totalLessons - remainingLessons)) || 0;
+  const status = String(entitlement.status || existing.status || 'active').trim();
+  const statusText = ['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status)
+    ? '已作废'
+    : (remainingLessons <= 0 ? '已用完' : '正常');
+  return {
+    ...existing,
+    studentId: String(existing.studentId || entitlement.usedByStudentId || entitlement.authorizedStudentId || entitlement.studentId || '').trim(),
+    entitlementId: String(entitlement.id || existing.entitlementId || '').trim(),
+    purchaseId: String(entitlement.purchaseId || existing.purchaseId || '').trim(),
+    packageId: String(entitlement.packageId || existing.packageId || '').trim(),
+    packageName: summaryDeltaPackageName(entitlement, existing),
+    courseType: String(entitlement.courseType || existing.courseType || '').trim(),
+    remainingLessons,
+    totalLessons,
+    usedLessons,
+    purchaseDate: summaryDeltaPackageDate(entitlement) || String(existing.purchaseDate || '').trim(),
+    statusText,
+    unit: summaryDeltaPackageUnit(entitlement),
+    ownerCoach: String(entitlement.ownerCoach || existing.ownerCoach || '').trim(),
+    packageOwnerStudentId: String(entitlement.packageOwnerStudentId || existing.packageOwnerStudentId || entitlement.studentId || '').trim(),
+    packageOwnerStudentName: String(entitlement.packageOwnerStudentName || existing.packageOwnerStudentName || '').trim(),
+    usedByStudentId: String(entitlement.usedByStudentId || entitlement.authorizedStudentId || existing.usedByStudentId || '').trim(),
+    usedByStudentName: String(entitlement.usedByStudentName || entitlement.authorizedStudentName || existing.usedByStudentName || '').trim()
+  };
+}
+
+function summaryDeltaPatchPackageRows(rows = [], entitlementsById = new Map(), studentId = '') {
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  const matched = new Set();
+  const next = sourceRows.map(row => {
+    const entitlementId = String(row?.entitlementId || '').trim();
+    const entitlement = entitlementsById.get(entitlementId);
+    if (!entitlement) return row;
+    matched.add(entitlementId);
+    return summaryDeltaPackageRow(entitlement, row);
+  });
+  entitlementsById.forEach((entitlement, entitlementId) => {
+    const ownerId = String(entitlement.studentId || '').trim();
+    const usedById = String(entitlement.usedByStudentId || entitlement.authorizedStudentId || '').trim();
+    if (matched.has(entitlementId) || (ownerId !== studentId && usedById !== studentId)) return;
+    next.push(summaryDeltaPackageRow(entitlement, { studentId }));
+  });
+  return next;
+}
+
+function summaryDeltaPackageFields(detailRows = [], listRows = [], base = {}) {
+  const sourceDetailRows = Array.isArray(detailRows) ? detailRows : [];
+  const eligibleRows = sourceDetailRows.filter(row => !summaryDeltaIsCompanion(row));
+  const formalRows = eligibleRows.filter(row => !summaryDeltaIsTrial(row));
+  const balanceRows = formalRows.length ? formalRows : eligibleRows;
+  const activeRows = balanceRows.filter(row => (Number(row.remainingLessons) || 0) > 0);
+  const displayRows = activeRows.length ? activeRows : balanceRows.slice(0, 1);
+  const detailRemaining = balanceRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
+  const detailTotal = balanceRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
+  const displayRemaining = displayRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
+  const displayTotal = displayRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
+  const packageListRows = (Array.isArray(listRows) && listRows.length ? listRows : sourceDetailRows)
+    .filter(row => !summaryDeltaIsCompanion(row));
+  const visibleRows = packageListRows.filter(row => (Number(row.remainingLessons) || 0) > 0);
+  const finalListRows = visibleRows.length ? visibleRows : packageListRows.slice(0, 1);
+  const packageStatusLabel = formalRows.length
+    ? (displayRemaining > 0 && displayRemaining <= 2 ? '课包即将耗尽' : (displayRemaining > 0 ? '课包有余额' : '课包已用完'))
+    : String(base.packageStatusLabel || '未买过课包').trim();
+  const progressText = sourceDetailRows
+    .map(row => `${Number(row.remainingLessons) || 0}/${Number(row.totalLessons) || 0}`)
+    .filter(Boolean)
+    .join(',');
+  const formatQuantity = value => Number.isInteger(Number(value)) ? String(Number(value)) : String(Math.round((Number(value) || 0) * 10) / 10);
+  return {
+    packageListRows: finalListRows,
+    detailPackageOrderRows: sourceDetailRows,
+    packageListText: finalListRows.length
+      ? finalListRows.map(row => `${summaryDeltaPackageName(row, row)} ${formatQuantity(row.remainingLessons)}/${formatQuantity(row.totalLessons)}`).join('\n')
+      : '-',
+    packageBalanceRemaining: displayRemaining,
+    packageBalanceTotal: displayTotal,
+    packageBalanceText: displayTotal > 0 ? `${formatQuantity(displayRemaining)}/${formatQuantity(displayTotal)}` : '-',
+    packageBalancePercent: displayTotal > 0 ? Math.max(0, Math.min(100, Math.round(displayRemaining / displayTotal * 100))) : 0,
+    detailPackageBalanceRemaining: detailRemaining,
+    detailPackageBalanceTotal: detailTotal,
+    detailPackageBalanceText: detailTotal > 0 ? `${formatQuantity(detailRemaining)}/${formatQuantity(detailTotal)}` : '-',
+    detailPackageBalancePercent: detailTotal > 0 ? Math.max(0, Math.min(100, Math.round(detailRemaining / detailTotal * 100))) : 0,
+    detailPackageProgressText: progressText || '-',
+    packagePurchaseDate: finalListRows.map(row => String(row.purchaseDate || '').trim()).filter(Boolean).sort()[0] || String(base.packagePurchaseDate || '').trim(),
+    packageStatusLabel
+  };
+}
+
+function summaryDeltaDateMs(value = '') {
+  const parsed = Date.parse(String(value || '').trim().replace(' ', 'T'));
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+function summaryDeltaScheduleTime(row = {}, fallback = {}) {
+  return String(row.startTime || row.endTime || row.relatedDate || row.sourceDate || row.scheduleTime || row.createdAt || fallback.startTime || fallback.createdAt || '').trim();
+}
+
+function summaryDeltaTimeText(row = {}, fallback = {}) {
+  const raw = summaryDeltaScheduleTime(row, fallback);
+  if (!raw) return '';
+  const date = raw.slice(0, 10);
+  const start = raw.slice(11, 16);
+  const end = String(row.endTime || fallback.endTime || '').slice(11, 16);
+  if (start && end) return `${date} ${start}-${end}`;
+  return start ? `${date} ${start}` : date;
+}
+
+function summaryDeltaLessonRow({ schedule = {}, ledger = {}, entitlement = {}, studentId = '', now = new Date() } = {}) {
+  const scheduleTime = summaryDeltaScheduleTime(schedule, ledger);
+  const lessonUnits = Math.abs(Number(ledger.lessonDelta) || Number(schedule.lessonCount) || 1);
+  const isPast = !scheduleTime || summaryDeltaDateMs(scheduleTime) <= (now instanceof Date ? now.getTime() : summaryDeltaDateMs(now));
+  const isLedger = !!String(ledger.id || '').trim();
+  const lessonDelta = isLedger ? Number(ledger.lessonDelta) || 0 : (isPast ? -lessonUnits : 0);
+  const courseType = String(schedule.courseType || entitlement.courseType || ledger.courseType || '课程').trim();
+  const packageName = summaryDeltaPackageName(entitlement, schedule);
+  const isTrial = summaryDeltaIsTrial({ ...entitlement, ...ledger, ...schedule });
+  const isCompanion = summaryDeltaIsCompanion({ ...entitlement, ...ledger, ...schedule });
+  const campus = String(schedule.campus || schedule.campusName || ledger.campus || entitlement.campus || '').trim();
+  const venue = String(schedule.venue || schedule.court || ledger.venue || ledger.court || '').trim();
+  const coach = String(schedule.coach || schedule.coachName || ledger.coach || ledger.coachName || entitlement.ownerCoach || '').trim();
+  const actualStudentIds = summaryDeltaStudentIds(schedule, ledger);
+  return {
+    kind: isLedger ? 'ledger' : 'schedule',
+    scheduleId: String(schedule.id || ledger.scheduleId || '').trim(),
+    entitlementId: String(ledger.entitlementId || entitlement.id || schedule.entitlementId || '').trim(),
+    purchaseId: String(ledger.purchaseId || entitlement.purchaseId || schedule.purchaseId || '').trim(),
+    packageRecordKey: String(ledger.entitlementId || entitlement.id || schedule.entitlementId || '').trim()
+      ? `ent:${String(ledger.entitlementId || entitlement.id || schedule.entitlementId).trim()}`
+      : (String(ledger.purchaseId || entitlement.purchaseId || schedule.purchaseId || '').trim()
+        ? `pur:${String(ledger.purchaseId || entitlement.purchaseId || schedule.purchaseId).trim()}`
+        : ''),
+    sortTime: scheduleTime,
+    time: summaryDeltaTimeText(schedule, ledger),
+    packageName,
+    packageOwnerStudentId: String(entitlement.packageOwnerStudentId || entitlement.studentId || '').trim(),
+    packageOwnerName: String(entitlement.packageOwnerStudentName || '').trim(),
+    actualStudentIds,
+    courseType,
+    campus,
+    venue,
+    coach,
+    lessonUnits,
+    lessonCount: schedule.lessonCount,
+    lessonDelta,
+    countAsCompletedLesson: lessonDelta < 0 && isPast && !isTrial && !isCompanion && (actualStudentIds.length ? actualStudentIds.includes(studentId) : true),
+    settlementType: String(schedule.settlementType || ledger.settlementType || '').trim(),
+    paymentType: String(schedule.paymentType || ledger.paymentType || '').trim(),
+    paymentMethod: String(schedule.paymentMethod || ledger.paymentMethod || '').trim(),
+    paidAmount: Number(schedule.paidAmount || ledger.paidAmount || 0) || 0,
+    status: isPast ? '已结束' : '待上课',
+    statusClass: isPast ? 'detail-tag-muted' : 'detail-tag-success',
+    metaParts: [campus && [campus, venue].filter(Boolean).join(' '), coach, courseType].filter(Boolean),
+    reason: String(ledger.reason || ledger.notes || schedule.notes || '').trim()
+  };
+}
+
+function summaryDeltaPatchRow(base = {}, {
+  previousSchedule = null,
+  nextSchedule = null,
+  changedEntitlements = [],
+  changedLedgers = [],
+  studentId = '',
+  now = new Date()
+} = {}) {
+  const nowDate = now instanceof Date ? now : new Date(now);
+  const scheduleId = String(previousSchedule?.id || nextSchedule?.id || '').trim();
+  const baseLessonRows = parseArr(base.detailLessonRecordRows);
+  const scheduleRowsToRemove = scheduleId
+    ? baseLessonRows.filter(row => String(row?.scheduleId || '').trim() === scheduleId)
+    : [];
+  let lessonRows = scheduleId
+    ? baseLessonRows.filter(row => String(row?.scheduleId || '').trim() !== scheduleId)
+    : [...baseLessonRows];
+  const addedLessonRows = [];
+  const oldCompletedUnits = scheduleRowsToRemove.reduce((sum, row) => {
+    if (row?.countAsCompletedLesson === false || Number(row?.lessonDelta) >= 0) return sum;
+    return sum + Math.abs(Number(row.lessonDelta) || 0);
+  }, 0);
+  const manualReturnUnits = changedLedgers
+    .filter(row => !String(row?.scheduleId || '').trim()
+      && summaryDeltaStudentIds(row).includes(studentId)
+      && Number(row?.lessonDelta) > 0
+      && String(row?.action || '').trim() !== 'free_absence')
+    .reduce((sum, row) => sum + (Number(row.lessonDelta) || 0), 0);
+  if (manualReturnUnits > 0) {
+    let unitsLeft = manualReturnUnits;
+    lessonRows = lessonRows.filter(row => {
+      if (!unitsLeft || String(row?.kind || '').trim() !== 'ledger'
+        || String(row?.entitlementId || '').trim() !== String(changedLedgers.find(item => Number(item?.lessonDelta) > 0)?.entitlementId || '').trim()
+        || Number(row?.lessonDelta) >= 0) return true;
+      const rowUnits = Math.abs(Number(row.lessonDelta) || 0);
+      if (rowUnits <= unitsLeft) {
+        unitsLeft -= rowUnits;
+        return false;
+      }
+      row.lessonDelta = -(rowUnits - unitsLeft);
+      unitsLeft = 0;
+      return true;
+    });
+  }
+  const nextStudentIds = summaryDeltaScheduleIsActive(nextSchedule || {})
+    ? summaryDeltaStudentIds(nextSchedule)
+    : [];
+  const nextLedger = changedLedgers
+    .filter(row => String(row?.scheduleId || '').trim() === scheduleId)
+    .filter(row => summaryDeltaStudentIds(row).includes(studentId))
+    .filter(row => Number(row?.lessonDelta) < 0)
+    .sort((a, b) => String(b?.createdAt || b?.updatedAt || b?.id || '').localeCompare(String(a?.createdAt || a?.updatedAt || a?.id || '')))[0];
+  const manualLedger = !scheduleId
+    ? changedLedgers
+      .filter(row => !String(row?.scheduleId || '').trim() && summaryDeltaStudentIds(row).includes(studentId))
+      .filter(row => Number(row?.lessonDelta) < 0)
+      .sort((a, b) => String(b?.createdAt || b?.updatedAt || b?.id || '').localeCompare(String(a?.createdAt || a?.updatedAt || a?.id || '')))[0]
+    : null;
+  const nextEntitlement = changedEntitlements.find(row => {
+    const entitlementId = String(nextLedger?.entitlementId || manualLedger?.entitlementId || nextSchedule?.entitlementId || '').trim();
+    return entitlementId && String(row?.id || '').trim() === entitlementId;
+  }) || {};
+  const nextLessonIsCompanion = summaryDeltaIsCompanion({ ...nextEntitlement, ...(nextLedger || manualLedger || {}), ...(nextSchedule || {}) });
+  if (!nextLessonIsCompanion && ((nextSchedule && nextStudentIds.includes(studentId) && summaryDeltaScheduleIsActive(nextSchedule))
+    || manualLedger)) {
+    const row = summaryDeltaLessonRow({
+      schedule: nextSchedule || {},
+      ledger: nextLedger || manualLedger || {},
+      entitlement: nextEntitlement,
+      studentId,
+      now: nowDate
+    });
+    if (row.lessonDelta < 0 || row.status === '待上课') {
+      lessonRows.push(row);
+      addedLessonRows.push(row);
+    }
+  }
+  lessonRows.sort((a, b) => String(b?.sortTime || b?.time || '').localeCompare(String(a?.sortTime || a?.time || '')));
+
+  const entitlementMap = new Map(
+    changedEntitlements
+      .map(item => item?.entitlement || item)
+      .filter(row => row && String(row.id || '').trim())
+      .map(row => [String(row.id).trim(), row])
+  );
+  const existingDetailPackages = parseArr(base.detailPackageOrderRows);
+  const existingListPackages = parseArr(base.packageListRows);
+  const hasPackageFacts = existingDetailPackages.length
+    || existingListPackages.length
+    || [...entitlementMap.values()].some(row => summaryDeltaStudentIds(row).includes(studentId));
+  const detailPackageRows = summaryDeltaPatchPackageRows(
+    existingDetailPackages.length ? existingDetailPackages : existingListPackages,
+    entitlementMap,
+    studentId
+  );
+  const listPackageRows = summaryDeltaPatchPackageRows(
+    existingListPackages.length ? existingListPackages : detailPackageRows,
+    entitlementMap,
+    studentId
+  );
+  const packageFields = hasPackageFacts ? summaryDeltaPackageFields(detailPackageRows, listPackageRows, base) : {};
+  const addedCompletedUnits = addedLessonRows.reduce((sum, row) => {
+    if (row?.countAsCompletedLesson === false || Number(row?.lessonDelta) >= 0) return sum;
+    return sum + Math.abs(Number(row.lessonDelta) || 0);
+  }, 0);
+  const previousCompletedLessons = Number(base.completedLessons) || 0;
+  const completedLessons = Math.max(0, Math.round((previousCompletedLessons - oldCompletedUnits - manualReturnUnits + addedCompletedUnits) * 10) / 10);
+  const latestFormalLesson = lessonRows
+    .filter(row => row?.countAsCompletedLesson !== false && !summaryDeltaIsTrial(row) && !summaryDeltaIsCompanion(row))
+    .map(row => String(row.time || row.sortTime || '').trim().slice(0, 10))
+    .filter(Boolean)
+    .sort()
+    .pop() || '';
+  const hasTrialAttended = !!base.hasTrialAttended || lessonRows
+    .some(row => summaryDeltaIsTrial(row) && Number(row?.lessonDelta) < 0);
+  const previousRecent = String(base.detailRecentLessonDate || base.lastFormalLessonAt || '').trim();
+  const detailRecentLessonDate = latestFormalLesson || (previousRecent === String(scheduleRowsToRemove[0]?.time || '').slice(0, 10) ? '' : previousRecent);
+  const packageBalanceRemaining = Number(packageFields.packageBalanceRemaining) || 0;
+  const isHistorical = !!base.isHistoricalStudentRoster || !!base.hasStudentProfile || completedLessons > 0 || Number(packageFields.packageBalanceTotal) > 0;
+  const isActive = packageBalanceRemaining > 0
+    || (!!detailRecentLessonDate && summaryDeltaDateMs(detailRecentLessonDate) >= summaryDeltaDateMs(new Date(nowDate.getTime() - 90 * 86400000)));
+  const nextRow = {
+    ...base,
+    ...packageFields,
+    detailLessonRecordRows: lessonRows,
+    detailRecentLessonDate,
+    lastFormalLessonAt: detailRecentLessonDate,
+    completedLessons,
+    hasTrialAttended,
+    hasTrialExperience: !!base.hasTrialExperience || hasTrialAttended,
+    hasFormalAttended: completedLessons > 0,
+    isHistoricalStudentRoster: isHistorical,
+    isActiveStudentRoster: isActive,
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+    summaryUpdatedAt: nowDate.toISOString(),
+    updatedAt: nowDate.toISOString()
+  };
+  return nextRow;
+}
+
+function summaryDeltaSafeBundleRows(bundle = {}) {
+  const rows = studentTeachingSummaryBundleLogicalRows(bundle);
+  if (!rows.length && Number(bundle?.rowCount) !== 0) return null;
+  if (Number(bundle?.rowCount) !== rows.length) return null;
+  if (!String(bundle?.checksum || '').trim() || String(bundle.checksum) !== buildStudentTeachingSummaryChecksum(rows)) return null;
+  return rows;
+}
+
+function summaryDeltaVersion(operationId = '') {
+  const suffix = String(operationId || '').trim().replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80);
+  return `student-teaching-summary-delta-${Date.now()}${suffix ? `-${suffix}` : ''}`;
+}
+
+async function syncStudentTeachingSummaryDelta({
+  tableName,
+  getCachedRow,
+  put,
+  previousSchedule = null,
+  nextSchedule = null,
+  changedEntitlements = [],
+  changedLedgers = [],
+  now = new Date(),
+  operationId = '',
+  logger = console
+} = {}) {
+  if (!tableName || typeof getCachedRow !== 'function' || typeof put !== 'function') {
+    return { synced: false, reason: 'not-configured' };
+  }
+  const key = String(tableName);
+  const previous = studentTeachingSummaryDeltaSyncPromises.get(key) || Promise.resolve();
+  const run = previous.catch(() => null).then(async () => {
+    const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
+    const activeVersion = String(meta?.activeVersion || '').trim();
+    if (!isReadyStudentTeachingSummaryMeta(meta) || !activeVersion) return { synced: false, reason: 'summary-not-ready' };
+    const currentBundle = await getCachedRow(tableName, buildStudentTeachingSummaryBundleId(activeVersion)).catch(() => null);
+    const currentRows = summaryDeltaSafeBundleRows(currentBundle);
+    if (!currentRows) return { synced: false, reason: 'bundle-not-ready' };
+    if (Number(meta.rowCount) !== currentRows.length) return { synced: false, reason: 'row-count-mismatch' };
+    const affectedIds = summaryDeltaStudentIds(previousSchedule, nextSchedule, ...changedEntitlements, ...changedLedgers);
+    if (!affectedIds.length) return { synced: true, affectedStudentIds: [], rowCount: currentRows.length };
+    const currentById = new Map(currentRows.map(row => [String(row?.studentId || row?.id || '').trim(), row]));
+    const missing = affectedIds.filter(studentId => !currentById.has(studentId));
+    if (missing.length) return { synced: false, reason: `summary-row-missing:${missing.join(',')}` };
+    const patchedRows = currentRows.map(row => {
+      const studentId = String(row?.studentId || row?.id || '').trim();
+      if (!affectedIds.includes(studentId)) return row;
+      return summaryDeltaPatchRow(row, {
+        previousSchedule,
+        nextSchedule,
+        changedEntitlements,
+        changedLedgers,
+        studentId,
+        now
+      });
+    });
+    const version = summaryDeltaVersion(operationId);
+    const nextBundle = buildStudentTeachingSummaryBundleRow(patchedRows, version);
+    const nextListBundle = buildStudentTeachingSummaryListBundleRow(patchedRows, version);
+    const affectedRows = patchedRows.filter(row => affectedIds.includes(String(row?.studentId || row?.id || '').trim()));
+    for (const row of affectedRows) {
+      const versionedRow = buildVersionedStudentTeachingSummaryRow(row, version);
+      await put(tableName, versionedRow.id, versionedRow);
+    }
+    await put(tableName, nextBundle.id, nextBundle);
+    await put(tableName, nextListBundle.id, nextListBundle);
+    const nextMeta = buildStudentTeachingSummaryMetaRow({
+      ...meta,
+      status: STUDENT_TEACHING_SUMMARY_READY,
+      generation: Number(meta.generation) + 1 || Date.now(),
+      batchId: version,
+      activeVersion: version,
+      previousActiveVersion: activeVersion,
+      sourceTable: String(meta.sourceTable || 'student-teaching-summary'),
+      sourceOp: 'schedule-delta',
+      sourceId: String(operationId || nextSchedule?.id || previousSchedule?.id || '').trim(),
+      sourceSnapshotAt: now.toISOString(),
+      completedAt: now.toISOString(),
+      rowCount: patchedRows.length,
+      checksum: buildStudentTeachingSummaryChecksum(patchedRows)
+    });
+    nextMeta.previousActiveVersion = activeVersion;
+    await put(tableName, STUDENT_TEACHING_SUMMARY_META_ID, nextMeta);
+    readyStudentTeachingSummaryRowsCache.clear();
+    return {
+      synced: true,
+      activeVersion: version,
+      previousActiveVersion: activeVersion,
+      affectedStudentIds: affectedIds,
+      rowCount: patchedRows.length
+    };
+  });
+  studentTeachingSummaryDeltaSyncPromises.set(key, run);
+  try {
+    return await run;
+  } catch (error) {
+    if (typeof logger?.warn === 'function') logger.warn('[student-teaching-summary] delta sync skipped', error?.message || error);
+    return { synced: false, reason: 'sync-failed', error: String(error?.message || error) };
+  } finally {
+    if (studentTeachingSummaryDeltaSyncPromises.get(key) === run) studentTeachingSummaryDeltaSyncPromises.delete(key);
   }
 }
 
@@ -755,11 +1227,34 @@ async function readReadyStudentTeachingSummaryRows({
         if (cachedRows) return [meta, ...cachedRows];
         const shouldReadBundle = preferBundle && !(Array.isArray(columns) && columns.length);
         const bundle = shouldReadBundle ? await getCachedRow(tableName, buildStudentTeachingSummaryBundleId(activeVersion)).catch(() => null) : null;
+        let invalidActiveBundleRows = null;
         if (shouldReadBundle && bundle && isStudentTeachingSummaryBundleRow(bundle)) {
           const rows = studentTeachingSummaryBundleLogicalRows(bundle);
-          writeReadyStudentTeachingSummaryRowsCache(tableName, meta, rows, readOptions);
-          return [meta, ...rows].filter(Boolean);
+          if (summaryDeltaSafeBundleRows(bundle)) {
+            writeReadyStudentTeachingSummaryRowsCache(tableName, meta, rows, readOptions);
+            return [meta, ...rows].filter(Boolean);
+          }
+          invalidActiveBundleRows = rows;
+          console.warn('[student-teaching-summary] active bundle failed validation', { activeVersion });
         }
+        const previousVersion = String(meta?.previousActiveVersion || '').trim();
+        if (shouldReadBundle && previousVersion && previousVersion !== activeVersion) {
+          const previousBundle = await getCachedRow(tableName, buildStudentTeachingSummaryBundleId(previousVersion)).catch(() => null);
+          const previousRows = summaryDeltaSafeBundleRows(previousBundle);
+          if (previousRows) {
+            const fallbackMeta = {
+              ...meta,
+              status: STUDENT_TEACHING_SUMMARY_READY,
+              batchId: previousVersion,
+              activeVersion: previousVersion,
+              rowCount: previousRows.length,
+              checksum: buildStudentTeachingSummaryChecksum(previousRows)
+            };
+            writeReadyStudentTeachingSummaryRowsCache(tableName, fallbackMeta, previousRows, readOptions);
+            return [fallbackMeta, ...previousRows].filter(Boolean);
+          }
+        }
+        if (invalidActiveBundleRows) return [meta, ...invalidActiveBundleRows].filter(Boolean);
         const rows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`, { columns });
         writeReadyStudentTeachingSummaryRowsCache(tableName, meta, Array.isArray(rows) ? rows : [], readOptions);
         return [meta, ...(Array.isArray(rows) ? rows : [])].filter(Boolean);
@@ -845,6 +1340,20 @@ async function readReadyStudentTeachingSummaryListRows({
           bundleVersion,
           bundleSchemaVersion
         });
+      }
+      const previousVersion = String(meta?.previousActiveVersion || '').trim();
+      if (previousVersion && previousVersion !== activeVersion) {
+        const previousBundle = await getCachedRow(tableName, buildStudentTeachingSummaryListBundleId(previousVersion)).catch(() => null);
+        const previousRows = studentTeachingSummaryListBundleLogicalRows(previousBundle);
+        if (isStudentTeachingSummaryListBundleRow(previousBundle)
+          && String(previousBundle.publishVersion || '').trim() === previousVersion
+          && String(previousBundle.schemaVersion || '').trim() === STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_SCHEMA_VERSION
+          && Number(previousBundle.rowCount) === previousRows.length
+          && expectedCount === previousRows.length
+          && String(previousBundle.checksum || '').trim() === buildStudentTeachingSummaryChecksum(previousRows)) {
+          requireReadyStudentTeachingSummaryRows([meta, ...previousRows], { verifyChecksum: false, verifyLessonDetailSourceVersion: false });
+          return previousRows;
+        }
       }
       if (typeof scanByIdPrefix === 'function') {
         const versionRows = await scanByIdPrefix(tableName, `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:`, {
@@ -1085,6 +1594,7 @@ module.exports = {
   buildStudentTeachingSummaryBundleRow,
   buildStudentTeachingSummaryListBundleRow,
   upsertStudentProfileIntoTeachingSummary,
+  syncStudentTeachingSummaryDelta,
   studentTeachingSummaryBundleLogicalRows,
   studentTeachingSummaryRowsToDeleteAfterPublish,
   rollbackStudentTeachingSummaryPublish,

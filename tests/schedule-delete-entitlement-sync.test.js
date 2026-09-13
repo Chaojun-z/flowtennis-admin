@@ -1,16 +1,21 @@
 const assert = require('assert');
 const { createScheduleRoutes } = require('../server/schedule-routes');
+const { createPurchaseEntitlementRoutes } = require('../server/purchase-entitlement-routes');
 const api = require('../api/index.js');
 
 const rules = api._test;
 
 async function run(){
   await runEditEntitlementChangeTest();
+  await runCancelEntitlementSummarySyncTest();
   await runDeleteEntitlementSyncTest();
+  await runManualEntitlementSummarySyncTest('manual_consume', -1);
+  await runManualEntitlementSummarySyncTest('manual_return', 1);
 }
 
 async function runEditEntitlementChangeTest(){
   const persisted = [];
+  const summarySyncCalls = [];
   const response = {};
   const oldSchedule = {
     id: 'sch-edit-1',
@@ -76,6 +81,10 @@ async function runEditEntitlementChangeTest(){
     persistScheduleStoredValueCourts: async () => [],
     syncCoachScheduleIndexes: async () => {},
     syncScheduleConflictIndexes: async () => {},
+    syncStudentTeachingSummaryDelta: async payload => {
+      summarySyncCalls.push(payload);
+      return { synced: true, affectedStudentIds: ['stu-brother'] };
+    },
     rollbackScheduleStoredValueCourts: async () => {},
     rollbackSmallGroupFreeAbsences: async () => {},
     restoreSmallGroupFreeAbsenceLedgerRows: async () => {},
@@ -112,10 +121,96 @@ async function runEditEntitlementChangeTest(){
 
   assert.strictEqual(response.status, 200, `editing a trial schedule to use a private package should save: ${JSON.stringify(response.payload)}`);
   assert.strictEqual(persisted[0].entitlementId, 'ent-private', 'saved schedule should use the new selected entitlement');
+  assert.strictEqual(summarySyncCalls.length, 1, 'schedule edit should synchronously point-sync the teaching summary once');
+  assert.strictEqual(summarySyncCalls[0].previousSchedule.id, 'sch-edit-1');
+  assert.strictEqual(summarySyncCalls[0].nextSchedule.id, 'sch-edit-1');
+  assert.strictEqual(summarySyncCalls[0].operationId, 'op-edit-test');
+}
+
+async function runCancelEntitlementSummarySyncTest(){
+  const calls = [];
+  const response = {};
+  const oldSchedule = {
+    id: 'sch-cancel-1',
+    status: '已排课',
+    settlementType: 'package',
+    studentIds: ['stu-cancel'],
+    entitlementId: 'ent-cancel',
+    entitlementIds: ['ent-cancel'],
+    lessonCount: 1
+  };
+  const handler = createScheduleRoutes({
+    init: async () => {},
+    sendJson: (res, payload, status = 200) => {
+      res.status = status;
+      res.payload = payload;
+      return true;
+    },
+    get: async () => oldSchedule,
+    scan: async () => [],
+    scanFeedbacks: async () => [],
+    timedEndpointMetric: async (label, fn) => fn(),
+    assertCanWriteSchedule: () => {},
+    buildOperationTrace: ({ now }) => ({ operationId: 'op-cancel-test', operationAt: now }),
+    withOperationTrace: (row, trace) => ({ ...row, ...trace }),
+    normalizeCoachLateInfo: () => ({}),
+    normalizeScheduleFieldFee: () => ({}),
+    parseArr: (value) => Array.isArray(value) ? value : [],
+    normalizeVenue: value => value,
+    timed: async (label, fn) => fn(),
+    assertScheduleEditableAfterFeedback: () => {},
+    withTimeout: promise => promise,
+    scheduleEntitlementDeltas: () => [{ entitlementId: 'ent-cancel', delta: 1 }],
+    scheduleLessonDelta: () => null,
+    applyEntitlementDelta: async (entitlementId, scheduleId, delta, action) => ({
+      entitlement: { id: entitlementId, studentId: 'stu-cancel', remainingLessons: 10, totalLessons: 10 },
+      ledger: { id: `ledger-${action}-${entitlementId}`, entitlementId, studentId: 'stu-cancel', scheduleId, lessonDelta: delta, action }
+    }),
+    scheduleStoredValuePaymentAmount: () => 0,
+    put: async () => {},
+    applyLessonDelta: async () => null,
+    persistScheduleStoredValueCourts: async () => [],
+    syncCoachScheduleIndexes: async () => {},
+    syncScheduleConflictIndexes: async () => {},
+    rollbackScheduleStoredValueCourts: async () => {},
+    rollbackSmallGroupFreeAbsences: async () => {},
+    restoreSmallGroupFreeAbsenceLedgerRows: async () => {},
+    syncStudentTeachingSummaryDelta: async payload => {
+      calls.push(['summaryDelta', payload.previousSchedule?.id, payload.nextSchedule?.status, payload.changedLedgers?.[0]?.lessonDelta]);
+      return { synced: false, reason: 'bundle-not-ready' };
+    },
+    refreshStudentTeachingSummaryRows: async () => {
+      throw new Error('schedule cancel must not synchronously rebuild teaching summary');
+    },
+    queueStudentTeachingSummaryRefresh: async (table, meta) => calls.push(['queueSummary', table, meta.writeReason]),
+    T_SCHEDULE: 'ft_schedule',
+    T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger'
+  });
+
+  await handler({
+    path: '/schedule/sch-cancel-1',
+    method: 'PUT',
+    body: { status: '已取消', cancelReason: '测试取消' },
+    user: { role: 'admin', name: '测试运营' },
+    res: response
+  });
+
+  assert.strictEqual(response.status, 200, 'cancel route should return success');
+  assert.deepStrictEqual(
+    calls.filter(row => row[0] === 'summaryDelta'),
+    [['summaryDelta', 'sch-cancel-1', '已取消', 1]],
+    'schedule cancel should point-sync old schedule removal and returned entitlement'
+  );
+  assert.deepStrictEqual(
+    calls.filter(row => row[0] === 'queueSummary'),
+    [['queueSummary', 'ft_schedule', 'schedule-delta-fallback']],
+    'failed schedule cancel point-sync should only queue async retry, not rebuild during save'
+  );
 }
 
 async function runDeleteEntitlementSyncTest(){
   const calls = [];
+  const summarySyncCalls = [];
   const response = {};
   const schedule = {
     id: 'sch-1',
@@ -169,6 +264,10 @@ async function runDeleteEntitlementSyncTest(){
     rollbackScheduleStoredValueCourts: async () => {},
     syncScheduleConflictIndexes: async () => calls.push(['syncScheduleConflictIndexes']),
     syncCoachScheduleIndexes: async () => {},
+    syncStudentTeachingSummaryDelta: async payload => {
+      summarySyncCalls.push(payload);
+      return { synced: true };
+    },
     parseArr: (value) => Array.isArray(value) ? value : [],
     withRequiredStorageTimeout: (promise) => promise,
     getCachedScan: async () => [],
@@ -204,6 +303,96 @@ async function runDeleteEntitlementSyncTest(){
   assert.ok(
     calls.some(row => row[0] === 'del' && row[1] === 'ft_schedule' && row[2] === 'sch-1'),
     'active schedule delete should delete the schedule after balance and ledger cleanup'
+  );
+  assert.strictEqual(summarySyncCalls.length, 1, 'schedule delete should point-sync the teaching summary once');
+  assert.strictEqual(summarySyncCalls[0].previousSchedule.id, 'sch-1');
+  assert.strictEqual(summarySyncCalls[0].nextSchedule, null);
+  assert.deepStrictEqual(
+    summarySyncCalls[0].changedLedgers.map(row => row.id).sort(),
+    ['ledger-consume-1', 'ledger-return-1'],
+    'schedule delete summary sync should see both removed consume and generated return ledgers'
+  );
+}
+
+async function runManualEntitlementSummarySyncTest(action, expectedDelta){
+  const calls = [];
+  const response = {};
+  const oldEntitlement = {
+    id: `ent-${action}`,
+    studentId: `stu-${action}`,
+    purchaseId: `pur-${action}`,
+    packageName: '成人1v1 10课时',
+    courseType: '私教课',
+    totalLessons: 10,
+    usedLessons: action === 'manual_return' ? 2 : 1,
+    remainingLessons: action === 'manual_return' ? 8 : 9,
+    status: 'active'
+  };
+  const handler = createPurchaseEntitlementRoutes({
+    init: async () => {},
+    sendJson: (res, payload, status = 200) => {
+      res.status = status;
+      res.payload = payload;
+      return true;
+    },
+    get: async (table, id) => {
+      if (table === 'ft_entitlements' && id === oldEntitlement.id) return oldEntitlement;
+      if (table === 'ft_purchases') return { id: oldEntitlement.purchaseId, studentId: oldEntitlement.studentId };
+      if (table === 'ft_packages') return { id: 'pkg-1', packageName: oldEntitlement.packageName };
+      if (table === 'ft_students') return { id: oldEntitlement.studentId, name: '测试学员' };
+      return null;
+    },
+    put: async (table, id, row) => calls.push(['put', table, id, row.lessonDelta ?? row.remainingLessons]),
+    del: async (table, id) => calls.push(['del', table, id]),
+    parseLessonValue: (value) => Number(value) || 0,
+    validateManualEntitlementAdjustment: () => {},
+    applyEntitlementLessonDelta: rules.applyEntitlementLessonDelta,
+    buildManualEntitlementLedgerRecord: ({ entitlement, lessonDelta, relatedDate, reason, operationTrace }, { now }) => ({
+      id: `ledger-${action}`,
+      entitlementId: entitlement.id,
+      studentId: entitlement.studentId,
+      purchaseId: entitlement.purchaseId,
+      scheduleId: '',
+      lessonDelta,
+      action,
+      reason,
+      relatedDate,
+      createdAt: now,
+      ...operationTrace
+    }),
+    buildOperationTrace: ({ now }) => ({ operationId: `op-${action}`, operationAt: now }),
+    withOperationTrace: (row, trace) => ({ ...row, ...trace }),
+    syncStudentActiveEntitlementIndexes: async () => {},
+    syncStudentTeachingSummaryDelta: async payload => {
+      calls.push(['summaryDelta', payload.changedLedgers[0].lessonDelta, payload.changedEntitlements[0].remainingLessons]);
+      return { synced: false, reason: 'summary-not-ready' };
+    },
+    refreshStudentTeachingSummaryRows: async () => {
+      throw new Error('manual adjustment must not synchronously rebuild teaching summary');
+    },
+    queueStudentTeachingSummaryRefresh: async (table, meta) => calls.push(['queueSummary', table, meta.writeReason]),
+    T_PURCHASES: 'ft_purchases',
+    T_PACKAGES: 'ft_packages',
+    T_STUDENTS: 'ft_students',
+    T_ENTITLEMENTS: 'ft_entitlements',
+    T_ENTITLEMENT_LEDGER: 'ft_entitlement_ledger'
+  });
+
+  await handler({
+    path: `/entitlements/${oldEntitlement.id}/manual-adjust`,
+    method: 'POST',
+    body: { action, count: 1, relatedDate: '2026-09-13', reason: '路由反例测试' },
+    user: { role: 'admin', name: '测试运营' },
+    res: response,
+    query: new URLSearchParams()
+  });
+
+  assert.strictEqual(response.status, 200, `manual ${action} should return success`);
+  assert.ok(calls.some(row => row[0] === 'summaryDelta' && row[1] === expectedDelta), `manual ${action} should point-sync the ledger delta`);
+  assert.deepStrictEqual(
+    calls.filter(row => row[0] === 'queueSummary'),
+    [['queueSummary', 'ft_entitlements', 'manual-entitlement-delta-fallback']],
+    `manual ${action} failed point-sync should only queue async retry`
   );
 }
 
