@@ -461,6 +461,89 @@ assert.strictEqual(
   'student detail fast path must reject summaries where cumulative lessons exceed formal package consumed lessons'
 );
 
+const overDeductedPackagePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-over-deducted-package', name: '历史多扣课包学员' }],
+  purchases: [
+    { id: 'purchase-over-deducted', studentId: 'student-over-deducted-package', packageName: '成人1v1黄金时间10课时', courseType: '私教课', status: 'active', actualAmount: 3500, purchaseDate: '2026-05-19' }
+  ],
+  entitlements: [
+    { id: 'ent-over-deducted', purchaseId: 'purchase-over-deducted', studentId: 'student-over-deducted-package', packageName: '成人1v1黄金时间10课时', courseType: '私教课', totalLessons: 10, remainingLessons: 0, usedLessons: 10, status: 'active' }
+  ],
+  entitlementLedger: Array.from({ length: 9 }, (_, index) => {
+    const no = index + 1;
+    return {
+      id: `ledger-over-deducted-${no}`,
+      entitlementId: 'ent-over-deducted',
+      purchaseId: 'purchase-over-deducted',
+      studentId: 'student-over-deducted-package',
+      scheduleId: `schedule-over-deducted-${no}`,
+      lessonDelta: -1,
+      relatedDate: `2026-07-${String(no).padStart(2, '0')}`,
+      reason: '上课消耗'
+    };
+  }),
+  schedule: Array.from({ length: 9 }, (_, index) => {
+    const no = index + 1;
+    return {
+      id: `schedule-over-deducted-${no}`,
+      studentId: 'student-over-deducted-package',
+      startTime: `2026-07-${String(no).padStart(2, '0')} 10:00:00`,
+      endTime: `2026-07-${String(no).padStart(2, '0')} 11:00:00`,
+      status: '已结束',
+      courseType: '私教课',
+      coach: 'Siren 教练',
+      venue: '2号场',
+      lessonCount: 1
+    };
+  }),
+  feedbacks: [],
+  now: new Date('2026-08-01 00:00:00')
+});
+const overDeductedPackageStudent = overDeductedPackagePlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-over-deducted-package');
+assert.ok(overDeductedPackageStudent, 'over-deducted package student should enter formal view');
+assert.strictEqual(overDeductedPackageStudent.completedLessons, 9, 'over-deducted package student should only count the 9 valid package lessons');
+assert.strictEqual(overDeductedPackageStudent.packageBalanceText, '1/10', 'student list balance should recover one lesson when package entity is over-deducted');
+assert.strictEqual(overDeductedPackageStudent.detailPackageBalanceText, '1/10', 'student drawer package order should recover one lesson when valid records only consumed 9');
+assert.strictEqual(overDeductedPackageStudent.detailPackageOrderRows[0]?.remainingLessons, 1, 'package order row should not keep the polluted zero balance');
+
+const staleUsedByLedgerPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [
+    { id: 'student-stale-used-by', name: '李先生（李俊泽）' },
+    { id: 'student-current-owner', name: '李先生' }
+  ],
+  purchases: [
+    { id: 'purchase-current-owner', studentId: 'student-current-owner', packageName: '成人1v1非黄金时间10课时', courseType: '私教课', status: 'active', actualAmount: 3500, purchaseDate: '2026-05-19' }
+  ],
+  entitlements: [
+    { id: 'ent-current-owner', purchaseId: 'purchase-current-owner', studentId: 'student-current-owner', packageName: '成人1v1非黄金时间10课时', courseType: '私教课', totalLessons: 10, remainingLessons: 8, usedLessons: 2, status: 'active' }
+  ],
+  entitlementLedger: [
+    {
+      id: 'ledger-stale-used-by',
+      entitlementId: 'ent-current-owner',
+      purchaseId: 'purchase-current-owner',
+      studentId: 'student-stale-used-by',
+      usedByStudentId: 'student-stale-used-by',
+      packageOwnerStudentId: 'student-current-owner',
+      scheduleId: 'schedule-stale-used-by',
+      lessonDelta: -1,
+      relatedDate: '2026-07-15',
+      reason: '编辑排课消课'
+    }
+  ],
+  schedule: [
+    { id: 'schedule-stale-used-by', studentId: 'student-current-owner', studentIds: ['student-current-owner'], startTime: '2026-07-15 15:00:00', endTime: '2026-07-15 16:00:00', status: '已结束', courseType: '私教课', coach: '岳克舟教练', venue: '3号场', lessonCount: 1 }
+  ],
+  feedbacks: [],
+  now: new Date('2026-08-01 00:00:00')
+});
+const staleUsedByWrongStudent = staleUsedByLedgerPlatform.teachingStudentViews.historicalStudents.find(row => row.studentId === 'student-stale-used-by');
+const staleUsedByCorrectStudent = staleUsedByLedgerPlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-current-owner');
+assert.strictEqual((staleUsedByWrongStudent?.detailLessonRecordRows || []).length, 0, 'stale usedBy ledger must not create a ghost lesson under the old student when schedule now points to another student');
+assert.ok(staleUsedByCorrectStudent?.detailLessonRecordRows.some(row => row.scheduleId === 'schedule-stale-used-by'), 'current schedule student should own the edited lesson record');
+
 const smallClassPackagePlatform = buildPlatformMetrics({
   leads: [],
   students: [{ id: 'student-small-class-package', name: '小班课包学员' }],

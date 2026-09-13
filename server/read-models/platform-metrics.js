@@ -493,6 +493,7 @@ function entitlementLedgerStudentIds(row = {}, entitlementsById = new Map(), pur
   const scheduleIds = teachingScheduleStudentIds(schedule);
   const explicitIds = teachingScheduleStudentIds(row);
   const attendeeRelationIds = [row.usedByStudentId, row.authorizedStudentId].map(text).filter(Boolean);
+  if (scheduleIds.length) return scheduleIds;
   if (attendeeRelationIds.length) {
     return [...new Set([...scheduleIds, ...explicitIds, ...attendeeRelationIds].filter(Boolean))];
   }
@@ -624,7 +625,8 @@ function reconcileTeachingPackageFields(packageFields = {}, completedLessons = 0
   if (!total) return packageFields;
   const packageCompleted = Math.max(0, Math.min(total, round((Number(completedLessons) || 0) - (Number(directFormalCompleted) || 0), 1)));
   const currentConsumed = teachingStudentPackageConsumedUnits(packageFields);
-  if (!(packageCompleted > (Number(currentConsumed) || 0))) return packageFields;
+  if (packageCompleted === (Number(currentConsumed) || 0)) return packageFields;
+  if (packageCompleted < (Number(currentConsumed) || 0) && formalRows.some(row => (Number(row.remainingLessons) || 0) > 0)) return packageFields;
   const ordered = [...formalRows].sort((a, b) => (
     text(a.purchaseDate).localeCompare(text(b.purchaseDate))
     || text(a.purchaseId || a.entitlementId).localeCompare(text(b.purchaseId || b.entitlementId))

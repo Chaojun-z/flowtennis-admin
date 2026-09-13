@@ -134,6 +134,107 @@ async function requestBundleSummaryStudentDetail() {
   return { res, calls };
 }
 
+async function requestGhostLessonSummaryStudentDetail() {
+  const calls = { cappedScan: 0, scheduleGets: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const lessonRows = [
+    ...Array.from({ length: 9 }, (_, index) => ({
+      kind: 'ledger',
+      scheduleId: `sch-own-${index + 1}`,
+      time: `2026-07-${String(index + 1).padStart(2, '0')} 10:00-11:00`,
+      courseType: '私教课',
+      packageName: '成人1v1 黄金时间10课时',
+      entitlementId: 'ent-own',
+      lessonDelta: -1,
+      countAsCompletedLesson: true
+    })),
+    {
+      kind: 'ledger',
+      scheduleId: 'sch-ghost-715',
+      time: '2026-07-15 15:00-16:00',
+      courseType: '私教课',
+      packageName: '成人1v1 非黄金时间10课时（补录）',
+      entitlementId: 'ent-other',
+      packageOwnerStudentId: 'stu-correct',
+      lessonRelationText: '使用 李先生 的课包',
+      lessonDelta: -1,
+      countAsCompletedLesson: true
+    },
+    {
+      kind: 'ledger',
+      scheduleId: 'sch-ghost-720',
+      time: '2026-07-20 10:00-11:00',
+      courseType: '私教课',
+      packageName: '成人1v1 非黄金时间10课时（补录）',
+      entitlementId: 'ent-other',
+      packageOwnerStudentId: 'stu-correct',
+      lessonRelationText: '使用 李先生 的课包',
+      lessonDelta: -1,
+      countAsCompletedLesson: true
+    }
+  ];
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      throw new Error(`unexpected full scan: ${table}`);
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-wrong') {
+        return { id: 'stu-wrong', name: '李先生（李俊泽）', phone: '13800000000', campus: 'mapo', type: '成人' };
+      }
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === 'stu-wrong') {
+        return {
+          id: 'stu-wrong',
+          studentId: 'stu-wrong',
+          name: '李先生（李俊泽）',
+          teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+          activityStatusLabel: '近30天活跃',
+          completedLessons: 11,
+          packageBalanceText: '0/10',
+          packageBalanceRemaining: 0,
+          packageBalanceTotal: 10,
+          detailPackageBalanceText: '0/10',
+          detailPackageBalanceRemaining: 0,
+          detailPackageBalanceTotal: 10,
+          detailPackageOrderRows: [{ entitlementId: 'ent-own', packageName: '成人1v1 黄金时间10课时', remainingLessons: 0, totalLessons: 10, usedLessons: 10 }],
+          detailLessonRecordRows: lessonRows,
+          detailBenefitRows: []
+        };
+      }
+      if (table === tables.T_SCHEDULE && /^sch-ghost-/.test(id)) {
+        calls.scheduleGets += 1;
+        return { id, studentIds: ['stu-correct'], studentId: 'stu-correct', status: '已结束' };
+      }
+      if (table === tables.T_SCHEDULE && /^sch-own-/.test(id)) {
+        calls.scheduleGets += 1;
+        return { id, studentIds: ['stu-wrong'], studentId: 'stu-wrong', status: '已结束' };
+      }
+      return null;
+    },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-wrong') });
+  return { res, calls };
+}
+
 async function requestPublishedSummaryBeatsStaleDirectRowStudentDetail() {
   const calls = { cappedScan: 0, prefixScan: 0, summaryScan: 0 };
   const tables = {
@@ -867,6 +968,14 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(inconsistent.res.body.studentDetailSummaryNeedsRefresh, true, 'inconsistent teaching summary should open the drawer with a refresh marker');
   assert.ok(Array.isArray(inconsistent.res.body.detailStudentView.detailPackageOrderRows), 'drawer fallback must keep package rows as an array');
   assert.ok(Array.isArray(inconsistent.res.body.detailStudentView.detailLessonRecordRows), 'drawer fallback must keep lesson rows as an array');
+
+  const ghostLessonSummary = await requestGhostLessonSummaryStudentDetail();
+  assert.strictEqual(ghostLessonSummary.res.statusCode, 200);
+  assert.strictEqual(ghostLessonSummary.calls.cappedScan, 0, 'ghost lesson cleanup must not scan production fact tables from the drawer');
+  assert.strictEqual(ghostLessonSummary.calls.scheduleGets, 2, 'ghost lesson cleanup should only read suspicious schedule rows exactly');
+  assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.completedLessons, 9, 'drawer should remove ghost lessons whose current schedule belongs to another student');
+  assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.packageBalanceText, '1/10', 'drawer should recover own package balance after removing ghost lessons');
+  assert.strictEqual(ghostLessonSummary.res.body.detailStudentView.detailLessonRecordRows.length, 9, 'drawer should only keep the valid own-package lesson records');
 
   const emptySummary = await requestEmptySummaryWithTrialFactsStudentDetail();
   assert.strictEqual(emptySummary.res.statusCode, 200);

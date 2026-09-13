@@ -81,6 +81,109 @@ function pageDataArraySnapshot(value){
   return Array.isArray(value)?value:parseSnapshotArray(value);
 }
 
+function pageDataLessonQty(value){
+  const num=Number(value)||0;
+  return Number.isInteger(num)?String(num):String(Math.round(num*10)/10).replace(/\.0$/,'');
+}
+
+function pageDataFormalLessonRow(row={}){
+  const label=String([row.courseType,row.standardCourseType,row.packageName,row.productName,row.className,row.courseName].filter(Boolean).join(' '));
+  return !/体验|陪打/.test(label);
+}
+
+function pageDataScheduleStudentIds(row={}){
+  return [...new Set([...parseSnapshotArray(row.studentIds),String(row.studentId||'').trim()].filter(Boolean))];
+}
+
+function reconcileStudentDetailPackageRows(summary={},lessonRows=[],studentId=''){
+  const detailRows=pageDataArraySnapshot(summary.detailPackageOrderRows);
+  if(!detailRows.length)return summary;
+  const ownPackageCompleted=lessonRows
+    .filter(row=>row?.countAsCompletedLesson!==false&&Number(row?.lessonDelta)<0&&pageDataFormalLessonRow(row))
+    .filter(row=>{
+      const ownerId=String(row.packageOwnerStudentId||'').trim();
+      return !ownerId||ownerId===studentId;
+    })
+    .reduce((sum,row)=>sum+Math.abs(Number(row.lessonDelta)||0),0);
+  const formalRows=detailRows.filter(row=>pageDataFormalLessonRow(row)&&(Number(row.totalLessons)||0)>0);
+  if(!formalRows.length)return summary;
+  const currentConsumed=formalRows.reduce((sum,row)=>sum+Math.max(0,(Number(row.totalLessons)||0)-(Number(row.remainingLessons)||0)),0);
+  if(ownPackageCompleted>=currentConsumed)return summary;
+  if(formalRows.some(row=>(Number(row.remainingLessons)||0)>0))return summary;
+  const ordered=[...formalRows].sort((a,b)=>String(a.purchaseDate||'').localeCompare(String(b.purchaseDate||''))||String(a.entitlementId||a.purchaseId||a.packageName||'').localeCompare(String(b.entitlementId||b.purchaseId||b.packageName||'')));
+  const adjustedByKey=new Map();
+  let usedLeft=ownPackageCompleted;
+  ordered.forEach(row=>{
+    const total=Number(row.totalLessons)||0;
+    const used=Math.max(0,Math.min(total,usedLeft));
+    usedLeft=Math.max(0,Math.round((usedLeft-used)*10)/10);
+    adjustedByKey.set(String(row.entitlementId||row.purchaseId||row.packageName||''),{
+      remainingLessons:Math.round((total-used)*10)/10,
+      usedLessons:Math.round(used*10)/10
+    });
+  });
+  const patchPackageRow=row=>{
+    const adjusted=adjustedByKey.get(String(row.entitlementId||row.purchaseId||row.packageName||''));
+    if(!adjusted)return row;
+    return {...row,...adjusted,statusText:adjusted.remainingLessons<=0?'已用完':(String(row.statusText||'')&&String(row.statusText)!=='已用完'?row.statusText:'正常')};
+  };
+  const nextDetailRows=detailRows.map(patchPackageRow);
+  const sourceListRows=pageDataArraySnapshot(summary.packageListRows);
+  const nextListRows=(sourceListRows.length?sourceListRows:nextDetailRows).map(patchPackageRow);
+  const activeRows=nextListRows.filter(row=>pageDataFormalLessonRow(row)&&(Number(row.remainingLessons)||0)>0);
+  const displayRows=activeRows.length?activeRows:nextListRows.filter(pageDataFormalLessonRow).slice(0,1);
+  const displayRemaining=displayRows.reduce((sum,row)=>sum+(Number(row.remainingLessons)||0),0);
+  const displayTotal=displayRows.reduce((sum,row)=>sum+(Number(row.totalLessons)||0),0);
+  const detailRemaining=nextDetailRows.filter(pageDataFormalLessonRow).reduce((sum,row)=>sum+(Number(row.remainingLessons)||0),0);
+  const detailTotal=nextDetailRows.filter(pageDataFormalLessonRow).reduce((sum,row)=>sum+(Number(row.totalLessons)||0),0);
+  return {
+    ...summary,
+    packageListRows:displayRows,
+    detailPackageOrderRows:nextDetailRows,
+    packageBalanceRemaining:displayRemaining,
+    packageBalanceTotal:displayTotal,
+    packageBalanceText:displayTotal>0?`${pageDataLessonQty(displayRemaining)}/${pageDataLessonQty(displayTotal)}`:'-',
+    packageBalancePercent:displayTotal>0?Math.max(0,Math.min(100,Math.round(displayRemaining/displayTotal*100))):0,
+    detailPackageBalanceRemaining:detailRemaining,
+    detailPackageBalanceTotal:detailTotal,
+    detailPackageBalanceText:detailTotal>0?`${pageDataLessonQty(detailRemaining)}/${pageDataLessonQty(detailTotal)}`:'-',
+    detailPackageBalancePercent:detailTotal>0?Math.max(0,Math.min(100,Math.round(detailRemaining/detailTotal*100))):0
+  };
+}
+
+async function sanitizeStudentDetailTeachingSummary(summary=null,studentId='',{getCachedRow,T_SCHEDULE}={}){
+  if(!summary)return summary;
+  const sid=String(studentId||'').trim();
+  const lessonRows=pageDataArraySnapshot(summary.detailLessonRecordRows);
+  if(!sid)return summary;
+  const maybeReconciled=reconcileStudentDetailPackageRows(summary,lessonRows,sid);
+  if(!T_SCHEDULE||typeof getCachedRow!=='function')return maybeReconciled;
+  const suspiciousRows=lessonRows.filter(row=>String(row?.scheduleId||'').trim()&&String(row?.packageOwnerStudentId||'').trim()&&String(row.packageOwnerStudentId).trim()!==sid);
+  const scheduleIds=[...new Set(suspiciousRows.map(row=>String(row?.scheduleId||'').trim()).filter(Boolean))];
+  if(!scheduleIds.length)return maybeReconciled;
+  const schedules=new Map((await Promise.all(scheduleIds.map(id=>getCachedRow(T_SCHEDULE,id).catch(()=>null)))).filter(Boolean).map(row=>[String(row.id||'').trim(),row]));
+  if(!schedules.size)return maybeReconciled;
+  const nextLessonRows=lessonRows.filter(row=>{
+    const schedule=schedules.get(String(row?.scheduleId||'').trim());
+    if(!schedule)return true;
+    const ids=pageDataScheduleStudentIds(schedule);
+    return !ids.length||ids.includes(sid);
+  });
+  if(nextLessonRows.length===lessonRows.length)return summary;
+  const completedLessons=Math.round(nextLessonRows
+    .filter(row=>row?.countAsCompletedLesson!==false&&Number(row?.lessonDelta)<0&&pageDataFormalLessonRow(row))
+    .reduce((sum,row)=>sum+Math.abs(Number(row.lessonDelta)||0),0)*10)/10;
+  const nextSummary=reconcileStudentDetailPackageRows({
+    ...summary,
+    detailLessonRecordRows:nextLessonRows,
+    completedLessons,
+    hasFormalAttended:completedLessons>0,
+    detailRecentLessonDate:nextLessonRows[0]?.time?String(nextLessonRows[0].time).slice(0,10):'',
+    lastFormalLessonAt:nextLessonRows[0]?.time?String(nextLessonRows[0].time).slice(0,10):''
+  },nextLessonRows,sid);
+  return nextSummary;
+}
+
 function buildStudentDetailFastPayload({student={},studentTeachingSummary=null,studentId='',needsRefresh=false}={}){
   const summary=studentTeachingSummary||{};
   const hasTrustedSummary=!!studentTeachingSummary;
@@ -426,7 +529,8 @@ function createCorePageDataRoutes(deps={}){
       if(!studentId)return sendJson(res,{error:'缺少学员 ID'},400);
       const student=await getCachedRow(T_STUDENTS,studentId).catch(()=>null);
       if(!student)return sendJson(res,{error:'学员不存在'},404);
-      const studentTeachingSummary=await readStudentTeachingSummaryRow(studentId);
+      const rawStudentTeachingSummary=await readStudentTeachingSummaryRow(studentId);
+      const studentTeachingSummary=await sanitizeStudentDetailTeachingSummary(rawStudentTeachingSummary,studentId,{getCachedRow,T_SCHEDULE});
       const needsRefresh=!studentTeachingSummary
         || String(studentTeachingSummary.teachingLessonDetailSourceVersion||'').trim()!==TEACHING_LESSON_DETAIL_SOURCE_VERSION
         || studentTeachingSummaryStaleForStudent(studentTeachingSummary,student)
