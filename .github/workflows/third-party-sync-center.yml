@@ -1,6 +1,8 @@
 name: Third Party Sync Center
 
 on:
+  schedule:
+    - cron: '0 16 * * *'
   workflow_dispatch:
 
 permissions:

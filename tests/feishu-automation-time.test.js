@@ -45,10 +45,10 @@ assert.doesNotMatch(
   '经营日报应暂停自动定时推送'
 );
 
-assert.doesNotMatch(
+assert.match(
   thirdPartySyncWorkflow,
-  /^\s*schedule:/m,
-  '场小二订场数据处理应暂停自动群推'
+  /cron:\s*'0 16 \* \* \*'/,
+  '场小二订场数据应每天北京时间 0 点自动同步'
 );
 
 assert.match(
