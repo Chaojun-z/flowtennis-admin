@@ -20,6 +20,13 @@ function createStudentRoutes(deps={}){
   function studentUniqueCampus(value){
     return normalizeCampusValue(studentUniqueText(value)).toLowerCase();
   }
+  function hiddenStudentProfile(row={}){
+    const status=studentUniqueText(row.status);
+    return ['merged','archived','deleted','inactive'].includes(status)
+      ||!!studentUniqueText(row.mergedIntoStudentId)
+      ||!!studentUniqueText(row.deletedAt)
+      ||!!studentUniqueText(row.archivedAt);
+  }
   function studentDuplicateReason(input,row){
     const phone=studentUniquePhone(input.phone);
     const rowPhone=studentUniquePhone(row.phone);
@@ -31,7 +38,7 @@ function createStudentRoutes(deps={}){
   }
   async function findStudentDuplicate(input,editingId=''){
     const rows=await getFastStudentsRead().catch(()=>[]);
-    return rows.map(row=>({row,reason:studentDuplicateReason(input,row)}))
+    return rows.filter(row=>!hiddenStudentProfile(row)).map(row=>({row,reason:studentDuplicateReason(input,row)}))
       .find(item=>item.reason&&String(item.row.id||'')!==String(editingId||''))||null;
   }
   async function syncStudentProfileAfterWrite(row){

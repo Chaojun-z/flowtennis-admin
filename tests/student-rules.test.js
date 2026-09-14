@@ -85,6 +85,8 @@ assert.deepStrictEqual(cascadePlan.deletes.financialLedger.sort(), ['finance-sch
 
 const emptyPlan = rules.buildStudentCascadeDeletePlan('stu-empty',{},'2026-06-12 00:00:00');
 assert.strictEqual(rules.studentCascadeDeletePlanHasHistory(emptyPlan), false, 'empty mistaken student profile can still be physically deleted');
+assert.match(fnBody('deleteStudentCascade'), /studentCascadeDeletePlanHasHistory/, 'student delete should choose physical delete only after checking whether the student has business history');
+assert.match(fnBody('deleteStudentCascade'), /deleteStudentRow=targetId=>del\(T_STUDENTS,targetId\)/, 'student without business history should default to physically deleting from ft_students');
 
 const archivedStudent = rules.buildArchivedStudentRecord(oldStudent,{name:'管理员'},'2026-06-12 00:00:00');
 assert.strictEqual(archivedStudent.status, 'archived');
@@ -92,4 +94,57 @@ assert.strictEqual(archivedStudent.deletedAt, '2026-06-12 00:00:00');
 assert.strictEqual(archivedStudent.archivedAt, '2026-06-12 00:00:00');
 assert.strictEqual(archivedStudent.archivedBy, '管理员');
 
-console.log('student rules tests passed');
+async function runDeleteBehaviorTests(){
+  assert.strictEqual(typeof rules.deleteStudentCascade, 'function', 'api._test should expose deleteStudentCascade for no-history physical delete coverage');
+  const emptyReferenceData = {
+    classes: [],
+    schedule: [],
+    plans: [],
+    purchases: [],
+    entitlements: [],
+    entitlementLedger: [],
+    membershipBenefitLedger: [],
+    financialLedger: [],
+    feedbacks: [],
+    courts: [],
+    leads: [],
+    leadFollowups: []
+  };
+  const deleted = [];
+  const archived = [];
+  const deleteRes = await rules.deleteStudentCascade('stu-lijunze-empty', {
+    confirm: 'DELETE_STUDENT_HISTORY',
+    user: { role: 'admin', name: '管理员' },
+    loadStudentRow: async () => ({ id: 'stu-lijunze-empty', name: '李俊泽', campus: 'shunyi_mapo' }),
+    loadReferenceData: async () => emptyReferenceData,
+    deleteStudentRow: async id => deleted.push(['students', id]),
+    deleteActiveEntitlementIndex: async id => deleted.push(['studentActiveEntitlementIndex', id]),
+    archiveStudentRow: async (id, row) => archived.push([id, row])
+  });
+  assert.strictEqual(deleteRes.archived, false, '李俊泽这种无业务关联误建学员应真实删除');
+  assert.deepStrictEqual(deleted, [['students', 'stu-lijunze-empty'], ['studentActiveEntitlementIndex', 'stu-lijunze-empty']]);
+  assert.deepStrictEqual(archived, [], '无业务关联学员不应写成 archived 隐藏档案');
+
+  const historyDeleted = [];
+  const historyArchived = [];
+  const archiveRes = await rules.deleteStudentCascade('stu-lijunze-history', {
+    confirm: 'DELETE_STUDENT_HISTORY',
+    user: { role: 'admin', name: '管理员' },
+    loadStudentRow: async () => ({ id: 'stu-lijunze-history', name: '李俊泽', campus: 'shunyi_mapo' }),
+    loadReferenceData: async () => ({ ...emptyReferenceData, purchases: [{ id: 'pur-lijunze', studentId: 'stu-lijunze-history' }] }),
+    deleteStudentRow: async id => historyDeleted.push(['students', id]),
+    deleteActiveEntitlementIndex: async id => historyDeleted.push(['studentActiveEntitlementIndex', id]),
+    archiveStudentRow: async (id, row) => historyArchived.push([id, row])
+  });
+  assert.strictEqual(archiveRes.archived, true, '有业务历史的李俊泽仍应归档隐藏');
+  assert.deepStrictEqual(historyDeleted, [], '有业务历史学员不能真实删除');
+  assert.strictEqual(historyArchived[0][0], 'stu-lijunze-history');
+  assert.strictEqual(historyArchived[0][1].status, 'archived');
+}
+
+runDeleteBehaviorTests()
+  .then(()=>console.log('student rules tests passed'))
+  .catch(err=>{
+    console.error(err&&err.stack?err.stack:String(err));
+    process.exit(1);
+  });

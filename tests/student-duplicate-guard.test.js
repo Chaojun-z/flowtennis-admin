@@ -22,7 +22,8 @@ async function main() {
   const rows = {
     ft_students: [
       { id: 'student-phone', name: '手机号重复', phone: '13800138000', campus: 'shunyi_mapo' },
-      { id: 'student-name-campus', name: '一帆（YING）', phone: '', campus: 'shunyi_mapo' }
+      { id: 'student-name-campus', name: '一帆（YING）', phone: '', campus: 'shunyi_mapo' },
+      { id: 'student-archived-lijunze', name: '李俊泽', phone: '', campus: 'shunyi_mapo', status: 'archived', deletedAt: '2026-09-14 10:00:00', archivedAt: '2026-09-14 10:00:00' }
     ]
   };
   const handle = createStudentRoutes({
@@ -99,6 +100,17 @@ async function main() {
     summarySyncs.some(student => student.id === 'new-student'),
     '新增学员保存成功后必须单条同步到历史学员快照'
   );
+
+  const archivedNameReuseRes = makeRes();
+  await handle({
+    path: '/students/student-phone',
+    method: 'PUT',
+    body: { name: '李俊泽', phone: '13800138000', campus: 'shunyi_mapo', notes: '复用隐藏学员姓名' },
+    user: { role: 'admin' },
+    res: archivedNameReuseRes
+  });
+  assert.strictEqual(archivedNameReuseRes.statusCode, 200, 'archived hidden student should not block reusing 李俊泽 in the same campus');
+  assert.strictEqual(archivedNameReuseRes.body.name, '李俊泽');
 
   const skipDuplicateCheckHandle = createStudentRoutes({
     init: async () => {},

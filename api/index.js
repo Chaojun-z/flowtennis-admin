@@ -6917,15 +6917,49 @@ function buildArchivedStudentRecord(student={},user={},now=new Date().toISOStrin
   const operator=String(user?.name||user?.id||user?.username||'').trim();
   return {...student,status:'archived',deletedAt:student.deletedAt||now,archivedAt:student.archivedAt||now,archivedBy:student.archivedBy||operator,updatedAt:now};
 }
-async function deleteStudentCascade(studentId,{confirm='',user={}}={}){
+async function loadStudentDeleteReferenceData(){
+  const safeRows=table=>getCachedScan(table).catch(()=>[]);
+  const [
+    classes,schedule,plans,purchases,entitlements,entitlementLedger,membershipBenefitLedger,financialLedger,feedbacks,courts,leads,leadFollowups
+  ]=await Promise.all([
+    safeRows(T_CLASSES),
+    safeRows(T_SCHEDULE),
+    safeRows(T_PLANS),
+    safeRows(T_PURCHASES),
+    safeRows(T_ENTITLEMENTS),
+    safeRows(T_ENTITLEMENT_LEDGER),
+    safeRows(T_MEMBERSHIP_BENEFIT_LEDGER),
+    safeRows(T_FINANCIAL_LEDGER),
+    safeRows(T_FEEDBACKS),
+    safeRows(T_COURTS),
+    safeRows(T_LEADS),
+    safeRows(T_LEAD_FOLLOWUPS)
+  ]);
+  return {classes,schedule,plans,purchases,entitlements,entitlementLedger,membershipBenefitLedger,financialLedger,feedbacks,courts,leads,leadFollowups};
+}
+async function deleteStudentCascade(studentId,{
+  confirm='',
+  user={},
+  loadStudentRow=targetId=>get(T_STUDENTS,targetId).catch(()=>null),
+  loadReferenceData=loadStudentDeleteReferenceData,
+  deleteStudentRow=targetId=>del(T_STUDENTS,targetId),
+  deleteActiveEntitlementIndex=targetId=>del(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,targetId).catch(()=>null),
+  archiveStudentRow=(targetId,row)=>put(T_STUDENTS,targetId,row)
+}={}){
   assertStudentWriteAccess(user);
   const id=String(studentId||'').trim();
   if(!id)throw new Error('缺少学员ID');
   if(confirm!=='DELETE_STUDENT_HISTORY')throw new Error('缺少删除确认');
-  const student=await get(T_STUDENTS,id).catch(()=>null);
+  const student=await loadStudentRow(id);
   if(!student)throw new Error('学员不存在');
+  const plan=buildStudentCascadeDeletePlan(id,await loadReferenceData());
+  if(!studentCascadeDeletePlanHasHistory(plan)){
+    await deleteStudentRow(id);
+    await deleteActiveEntitlementIndex(id);
+    return {success:true,archived:false,deleted:{students:[id],studentActiveEntitlementIndex:[id]},updated:{}};
+  }
   const archivedStudent=buildArchivedStudentRecord(student,user);
-  await put(T_STUDENTS,id,archivedStudent);
+  await archiveStudentRow(id,archivedStudent);
   return {success:true,archived:true,student:archivedStudent,deleted:{},updated:{}};
 }
 function assertStudentWriteAccess(user){
@@ -7688,6 +7722,7 @@ module.exports._test={
   buildStudentCascadeDeletePlan,
   studentCascadeDeletePlanHasHistory,
   buildArchivedStudentRecord,
+  deleteStudentCascade,
   assertCanDeleteCourt,
   courtDeleteAction,
   assertCanDeleteCampus,

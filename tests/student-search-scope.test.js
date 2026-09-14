@@ -21,11 +21,13 @@ const context = {
   teachingStudentViews: {
     activeStudents: [
       { id: 'active-real-mira', studentId: 'active-real-mira', name: 'Mira Chen', displayName: 'Mira Chen', phone: '13800000001', isActiveStudentRoster: true },
-      { id: 'active-alice', studentId: 'active-alice', name: 'Alice', displayName: 'Alice', phone: '13800000002', isActiveStudentRoster: true }
+      { id: 'active-alice', studentId: 'active-alice', name: 'Alice', displayName: 'Alice', phone: '13800000002', isActiveStudentRoster: true },
+      { id: 'archived-lijunze', studentId: 'archived-lijunze', name: '李俊泽', displayName: '李俊泽', phone: '', status: 'active', deletedAt: '', archivedAt: '', isActiveStudentRoster: true }
     ],
     historicalStudents: [
       { id: 'active-real-mira', studentId: 'active-real-mira', name: 'Mira Chen', displayName: 'Mira Chen', phone: '13800000001', isActiveStudentRoster: true, isHistoricalStudentRoster: true },
-      { id: 'ended-owner-mira', studentId: 'ended-owner-mira', name: 'Bob', displayName: 'Bob', phone: '13800000003', primaryCoach: 'Mira', searchText: 'Bob Mira', isHistoricalStudentRoster: true, isActiveStudentRoster: false }
+      { id: 'ended-owner-mira', studentId: 'ended-owner-mira', name: 'Bob', displayName: 'Bob', phone: '13800000003', primaryCoach: 'Mira', searchText: 'Bob Mira', isHistoricalStudentRoster: true, isActiveStudentRoster: false },
+      { id: 'archived-lijunze', studentId: 'archived-lijunze', name: '李俊泽', displayName: '李俊泽', phone: '', status: 'active', deletedAt: '', archivedAt: '', isHistoricalStudentRoster: true, isActiveStudentRoster: false }
     ],
     searchableStudents: [
       { id: 'active-real-mira', studentId: 'active-real-mira', name: 'Mira Chen', displayName: 'Mira Chen', phone: '13800000001', primaryCoach: 'Other', searchText: 'Mira Chen Other', isActiveStudentRoster: true },
@@ -39,7 +41,7 @@ const context = {
   customerLifecycleStudentStage: () => '',
   customerLifecycleByStudentId: () => null,
   teachingStudentViewRows: mode => mode === 'trial' ? context.teachingStudentViews.historicalStudents : context.teachingStudentViews.activeStudents,
-  isHiddenStudentProfile: () => false,
+  isHiddenStudentProfile: student => ['archived','deleted','inactive','merged'].includes(String(student?.status || '').trim()) || !!student?.deletedAt || !!student?.archivedAt,
   parseArr: value => Array.isArray(value) ? value : [],
   sameCampusValue: (a, b) => String(a || '') === String(b || ''),
   cn: value => String(value || ''),
@@ -62,7 +64,8 @@ vm.createContext(context);
 vm.runInContext(source, context, { filename: 'public/assets/scripts/pages/students.js' });
 
 context.students = [
-  { id: 'profile-only-hu', name: '胡振浩', phone: '', campus: 'shunyi_mapo' }
+  { id: 'profile-only-hu', name: '胡振浩', phone: '', campus: 'shunyi_mapo' },
+  { id: 'archived-lijunze', name: '李俊泽', phone: '', campus: 'shunyi_mapo', status: 'archived', deletedAt: '2026-09-14 10:00:00', archivedAt: '2026-09-14 10:00:00' }
 ];
 
 elements.stuSearch.value = 'Mira';
@@ -83,6 +86,14 @@ assert.deepStrictEqual(
   historicalResults,
   ['active-real-mira'],
   '历史学员搜 Mira 不能命中负责教练/隐藏搜索字段里的 Mira'
+);
+
+elements.stuSearch.value = '李俊泽';
+const archivedHistoricalResults = JSON.parse(vm.runInContext('JSON.stringify(getFilteredStudents().map(row => row.id))', context));
+assert.deepStrictEqual(
+  archivedHistoricalResults,
+  [],
+  '历史学员旧读模型里还有李俊泽时，事实表已归档隐藏的李俊泽不能继续展示'
 );
 
 elements.stuSearch.value = '胡振浩';
