@@ -146,6 +146,31 @@ async function runDeleteBehaviorTests(){
   assert.deepStrictEqual(archiveRes.deleted.studentTeachingSummary, ['stu-lijunze-history'], '归档删除返回结果应告诉前端同步移除教学摘要列表行');
   assert.strictEqual(historyArchived[0][0], 'stu-lijunze-history');
   assert.strictEqual(historyArchived[0][1].status, 'archived');
+
+  const leadOnlyDeleted = [];
+  const leadOnlyArchived = [];
+  const leadUpdates = [];
+  const leadFollowupUpdates = [];
+  const leadOnlyRes = await rules.deleteStudentCascade('stu-lijunze-lead-only', {
+    confirm: 'DELETE_STUDENT_HISTORY',
+    user: { role: 'admin', name: '管理员' },
+    loadStudentRow: async () => ({ id: 'stu-lijunze-lead-only', name: '李俊泽', campus: 'shunyi_mapo' }),
+    loadReferenceData: async () => ({
+      ...emptyReferenceData,
+      leads: [{ id: 'lead-lijunze', studentId: 'stu-lijunze-lead-only', studentMatchId: 'stu-lijunze-lead-only', studentName: '李俊泽', studentMatchName: '李俊泽', isCourseConverted: true }],
+      leadFollowups: [{ id: 'follow-lijunze', studentId: 'stu-lijunze-lead-only', studentName: '李俊泽' }]
+    }),
+    deleteStudentRow: async id => leadOnlyDeleted.push(['students', id]),
+    deleteActiveEntitlementIndex: async id => leadOnlyDeleted.push(['studentActiveEntitlementIndex', id]),
+    deleteTeachingSummaryRow: async id => leadOnlyDeleted.push(['studentTeachingSummary', id]),
+    updateLeadRow: async row => leadUpdates.push(row),
+    updateLeadFollowupRow: async row => leadFollowupUpdates.push(row),
+    archiveStudentRow: async (id, row) => leadOnlyArchived.push([id, row])
+  });
+  assert.strictEqual(leadOnlyRes.archived, false, '只有线索关联、没有课包排课财务历史的误建学员应真实删除');
+  assert.deepStrictEqual(leadOnlyArchived, [], '只有线索关联的误建学员不应显示已隐藏');
+  assert.deepStrictEqual(leadUpdates.map(row => [row.id, row.studentId, row.studentMatchId, row.studentName, row.studentMatchName, row.isCourseConverted]), [['lead-lijunze', '', '', '', '', false]]);
+  assert.deepStrictEqual(leadFollowupUpdates.map(row => [row.id, row.studentId, row.studentName]), [['follow-lijunze', '', '']]);
 }
 
 async function runTeachingSummaryBundleDeleteTests(){

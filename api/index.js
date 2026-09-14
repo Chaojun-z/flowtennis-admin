@@ -6912,7 +6912,12 @@ function buildStudentCascadeDeletePlan(studentId,data={},now=new Date().toISOStr
   Object.keys(deletes).forEach(key=>{deletes[key]=[...new Set((deletes[key]||[]).map(value=>String(value||'')).filter(Boolean))];});
   return {deletes,updates};
 }
-function studentCascadeDeletePlanHasHistory(plan={}){const deletes=plan.deletes||{},updates=plan.updates||{};return Object.keys(deletes).some(key=>!['students','studentActiveEntitlementIndex'].includes(key)&&(deletes[key]||[]).length)||Object.keys(updates).some(key=>(updates[key]||[]).length);}
+function studentCascadeDeletePlanHasHistory(plan={}){
+  const deletes=plan.deletes||{},updates=plan.updates||{};
+  const hasBusinessDeletes=Object.keys(deletes).some(key=>!['students','studentActiveEntitlementIndex'].includes(key)&&(deletes[key]||[]).length);
+  const hasBusinessUpdates=Object.keys(updates).some(key=>!['leads','leadFollowups'].includes(key)&&(updates[key]||[]).length);
+  return hasBusinessDeletes||hasBusinessUpdates;
+}
 function buildArchivedStudentRecord(student={},user={},now=new Date().toISOString()){
   const operator=String(user?.name||user?.id||user?.username||'').trim();
   return {...student,status:'archived',deletedAt:student.deletedAt||now,archivedAt:student.archivedAt||now,archivedBy:student.archivedBy||operator,updatedAt:now};
@@ -6945,6 +6950,8 @@ async function deleteStudentCascade(studentId,{
   deleteStudentRow=targetId=>del(T_STUDENTS,targetId),
   deleteActiveEntitlementIndex=targetId=>del(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,targetId).catch(()=>null),
   deleteTeachingSummaryRow=targetId=>deleteStudentFromTeachingSummary({tableName:T_STUDENT_TEACHING_SUMMARY,studentId:targetId,getCachedRow,put,del,now:new Date(),logger:console}).catch(()=>null),
+  updateLeadRow=row=>put(T_LEADS,row.id,row),
+  updateLeadFollowupRow=row=>put(T_LEAD_FOLLOWUPS,row.id,row),
   archiveStudentRow=(targetId,row)=>put(T_STUDENTS,targetId,row)
 }={}){
   assertStudentWriteAccess(user);
@@ -6958,7 +6965,11 @@ async function deleteStudentCascade(studentId,{
     await deleteStudentRow(id);
     await deleteActiveEntitlementIndex(id);
     await deleteTeachingSummaryRow(id);
-    return {success:true,archived:false,deleted:{students:[id],studentActiveEntitlementIndex:[id],studentTeachingSummary:[id]},updated:{}};
+    await Promise.all([
+      ...(plan.updates.leads||[]).map(updateLeadRow),
+      ...(plan.updates.leadFollowups||[]).map(updateLeadFollowupRow)
+    ]);
+    return {success:true,archived:false,deleted:{students:[id],studentActiveEntitlementIndex:[id],studentTeachingSummary:[id]},updated:{leads:plan.updates.leads||[],leadFollowups:plan.updates.leadFollowups||[]}};
   }
   const archivedStudent=buildArchivedStudentRecord(student,user);
   await archiveStudentRow(id,archivedStudent);
