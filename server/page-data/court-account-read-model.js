@@ -828,7 +828,7 @@ function filterCourtAccountItems(items = [], options = {}) {
     if (owner && String(item.owner || '').trim() !== owner) return false;
     if (accountType && String(item.accountType || '').trim() !== accountType) return false;
     if (membershipTier && String(item.membershipTierLabel || '').trim() !== membershipTier) return false;
-    return textSearchHit(q, item.displayName, item.sourceLeadName, item.phone, item.campusName, item.owner, item.depositAttitude, item.notesSummary, item.balance, item.totalDeposit, item.totalSpent, item.totalReceived, item.linkedStudentSummary, item.membershipTierLabel, item.membershipStatus);
+    return textSearchHit(q, item.displayName, item.notesSummary);
   });
 }
 
