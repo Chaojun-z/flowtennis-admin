@@ -77,6 +77,13 @@ function studentMatchesListPage(stu){
   const hasPackage=studentHasNonTrialPackage(stu);
   return studentListViewMode()==='trial'?studentHasTrialPath(stu)||hasPackage:hasPackage;
 }
+function teachingStudentRowHasBusinessFacts(row){
+  if(!row)return false;
+  const numericKeys=['lessonCount','totalLessonCount','totalLessons','trialLessonCount','formalLessonCount','purchaseCount','entitlementCount','remainingLessons','consumedLessons'];
+  if(numericKeys.some(key=>Number(row[key])>0))return true;
+  const dateKeys=['firstLessonDate','lastLessonDate','lastFormalLessonDate','lastTrialLessonDate','purchaseDate','latestPurchaseDate','lastPurchaseDate'];
+  return dateKeys.some(key=>String(row[key]||'').trim());
+}
 function studentUnifiedViewRows(){
   const rows=typeof teachingStudentViewRows==='function'?teachingStudentViewRows(studentListViewMode()):[];
   const baseRows=Array.isArray(rows)?rows:[];
@@ -84,6 +91,7 @@ function studentUnifiedViewRows(){
   const seen=new Set();
   return baseRows.map(row=>{
     const student=students.find(item=>String(item.id||'')===String(row.studentId||row.id||''))||{};
+    if(Array.isArray(students)&&students.length&&!student.id&&!teachingStudentRowHasBusinessFacts(row))return null;
     const studentHasNotes=Object.prototype.hasOwnProperty.call(student,'notes');
     const rowHasNotes=Object.prototype.hasOwnProperty.call(row,'notes');
     const notes=studentHasNotes?student.notes:(rowHasNotes?row.notes:(student.profileNote||row.profileNote||''));
@@ -107,6 +115,7 @@ function studentUnifiedViewRows(){
       __unifiedTeachingView:true
     };
   }).filter(row=>{
+    if(!row)return false;
     const id=String(row.id||'').trim();
     if(!id||seen.has(id))return false;
     seen.add(id);
@@ -1717,7 +1726,7 @@ async function saveStudent(){
   }
   const savedEditId=editId;
   await runStandardMutation(btn,async()=>{
-    if(savedEditId){const res=await apiCall('PUT','/students/'+savedEditId,data);const i=students.findIndex(x=>x.id===savedEditId);if(i>=0)students[i]={...students[i],...res,id:savedEditId};if(typeof mergeTeachingStudentDetail==='function')mergeTeachingStudentDetail({...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});mergeLinkedUpdates(res.studentUpdates||{});}
+    if(savedEditId){const res=await apiCall('PUT','/students/'+savedEditId,data);const i=students.findIndex(x=>x.id===savedEditId);if(i>=0)students[i]={...students[i],...res,id:savedEditId};if(typeof mergeTeachingStudentDetail==='function')mergeTeachingStudentDetail({...data,...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});if(typeof mergeTeachingStudentListProfile==='function')mergeTeachingStudentListProfile({...data,...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});mergeLinkedUpdates(res.studentUpdates||{});}
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
   },{
     successText:savedEditId?'修改成功 ✓':'添加成功 ✓',

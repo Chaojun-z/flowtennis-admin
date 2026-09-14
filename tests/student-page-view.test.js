@@ -463,6 +463,10 @@ assert.match(source, /学员会隐藏归档；课包、上课、权益、财务�
 assert.doesNotMatch(source, /完全空白误录会删除/, 'student delete confirmation should not promise physical deletion from the management page');
 assert.doesNotMatch(source, /及其课包订单、课包余额、扣课记录、单人排课、课后反馈和学员权益记录，并清理订场\/线索关联/, 'student delete confirmation must not promise destructive history deletion');
 assert.match(fnBody('applyStudentCascadeDeleteResult'), /result\.archived&&result\.student[\s\S]*students=students\.map[\s\S]*return/, 'student archived delete result should only update the hidden student profile locally');
+assert.match(source, /function removeTeachingStudentListRows\(/, 'student delete should provide a local helper to remove stale teaching summary list rows');
+assert.match(fnBody('applyStudentCascadeDeleteResult'), /removeTeachingStudentListRows\(studentId\)/, 'student delete result should immediately remove the student from active/historical list rows');
+assert.match(source, /function mergeTeachingStudentListProfile\(/, 'student edit should provide a local helper to update teaching summary list rows');
+assert.match(fnBody('saveStudent'), /mergeTeachingStudentListProfile\(\{[\s\S]*id:savedEditId[\s\S]*studentId:savedEditId[\s\S]*displayName:res\.name\|\|data\.name\|\|''[\s\S]*\}\)/, 'student edit save should immediately update active/historical list rows with the saved profile');
 assert.doesNotMatch(source, /课包消耗记录/, 'student detail should avoid a duplicate package consume record block');
 assert.match(source, /如需调整关联关系，请到「订场\/会员」页面编辑订场用户。/, 'student detail should explain where to adjust linked booking accounts');
 assert.doesNotMatch(source, /function openStudentModal[\s\S]*studentLinkedDetailHtml\(s\)/, 'student edit modal should not embed linked detail summary anymore');

@@ -188,11 +188,13 @@ function mergeRowsById(rows,updates){
 function applyStudentCascadeDeleteResult(studentId,result={}){
   if(result.archived&&result.student){
     students=students.map(row=>String(row?.id||'')===String(studentId)?result.student:row);
+    if(typeof removeTeachingStudentListRows==='function')removeTeachingStudentListRows(studentId);
     return;
   }
   const deleted=result.deleted||{};
   const updated=result.updated||{};
   students=removeRowsByIds(students,[studentId]);
+  if(typeof removeTeachingStudentListRows==='function')removeTeachingStudentListRows(studentId);
   classes=mergeRowsById(removeRowsByIds(classes,deleted.classes),updated.classes);
   schedules=mergeRowsById(removeRowsByIds(schedules,deleted.schedule),updated.schedule);
   plans=removeRowsByIds(plans,deleted.plans);

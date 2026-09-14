@@ -18,15 +18,16 @@ const context = {
   campus: 'all',
   students: [],
   coaches: [],
+  schedules: [],
   teachingStudentViews: {
     activeStudents: [
-      { id: 'active-real-mira', studentId: 'active-real-mira', name: 'Mira Chen', displayName: 'Mira Chen', phone: '13800000001', isActiveStudentRoster: true },
-      { id: 'active-alice', studentId: 'active-alice', name: 'Alice', displayName: 'Alice', phone: '13800000002', isActiveStudentRoster: true },
+      { id: 'active-real-mira', studentId: 'active-real-mira', name: 'Mira Chen', displayName: 'Mira Chen', phone: '13800000001', isActiveStudentRoster: true, totalLessonCount: 3 },
+      { id: 'active-alice', studentId: 'active-alice', name: 'Alice', displayName: 'Alice', phone: '13800000002', isActiveStudentRoster: true, totalLessonCount: 2 },
       { id: 'archived-lijunze', studentId: 'archived-lijunze', name: '李俊泽', displayName: '李俊泽', phone: '', status: 'active', deletedAt: '', archivedAt: '', isActiveStudentRoster: true }
     ],
     historicalStudents: [
-      { id: 'active-real-mira', studentId: 'active-real-mira', name: 'Mira Chen', displayName: 'Mira Chen', phone: '13800000001', isActiveStudentRoster: true, isHistoricalStudentRoster: true },
-      { id: 'ended-owner-mira', studentId: 'ended-owner-mira', name: 'Bob', displayName: 'Bob', phone: '13800000003', primaryCoach: 'Mira', searchText: 'Bob Mira', isHistoricalStudentRoster: true, isActiveStudentRoster: false },
+      { id: 'active-real-mira', studentId: 'active-real-mira', name: 'Mira Chen', displayName: 'Mira Chen', phone: '13800000001', isActiveStudentRoster: true, isHistoricalStudentRoster: true, totalLessonCount: 3 },
+      { id: 'ended-owner-mira', studentId: 'ended-owner-mira', name: 'Bob', displayName: 'Bob', phone: '13800000003', primaryCoach: 'Mira', searchText: 'Bob Mira', isHistoricalStudentRoster: true, isActiveStudentRoster: false, totalLessonCount: 1 },
       { id: 'archived-lijunze', studentId: 'archived-lijunze', name: '李俊泽', displayName: '李俊泽', phone: '', status: 'active', deletedAt: '', archivedAt: '', isHistoricalStudentRoster: true, isActiveStudentRoster: false }
     ],
     searchableStudents: [
@@ -50,6 +51,7 @@ const context = {
   studentTagFilterMatches: () => true,
   studentPaymentModeText: row => String(row.paymentModeLabel || ''),
   studentPackageStatusText: row => String(row.packageStatusLabel || ''),
+  studentPackageLessonMeta: () => ({ remaining: 0 }),
   studentActivityStatusText: row => String(row.activityStatusLabel || ''),
   studentLessonVolumeText: row => String(row.lessonVolumeLabel || ''),
   studentLifecycleStatusText: row => String(row.studentStatusLabel || ''),
@@ -94,6 +96,16 @@ assert.deepStrictEqual(
   archivedHistoricalResults,
   [],
   '历史学员旧读模型里还有李俊泽时，事实表已归档隐藏的李俊泽不能继续展示'
+);
+
+context.students = [
+  { id: 'profile-only-hu', name: '胡振浩', phone: '', campus: 'shunyi_mapo' }
+];
+const orphanSummaryResults = JSON.parse(vm.runInContext('JSON.stringify(getFilteredStudents().map(row => row.id))', context));
+assert.deepStrictEqual(
+  orphanSummaryResults,
+  [],
+  '李俊泽学员档案已真实删除但旧教学摘要还没刷新时，历史学员列表不能继续展示这条孤儿摘要'
 );
 
 elements.stuSearch.value = '胡振浩';

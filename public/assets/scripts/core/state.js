@@ -747,6 +747,41 @@ function mergeTeachingStudentDetail(row){
   if(!row?.id)return;
   studentDetailViewCache.set(String(row.id),row);
 }
+function teachingStudentListRowId(row){
+  return String(row?.studentId||row?.id||'').trim();
+}
+function removeTeachingStudentListRows(studentId){
+  const id=String(studentId||'').trim();
+  if(!id||!teachingStudentViews)return;
+  Object.keys(teachingStudentViews).forEach(key=>{
+    if(Array.isArray(teachingStudentViews[key]))teachingStudentViews[key]=teachingStudentViews[key].filter(row=>teachingStudentListRowId(row)!==id);
+  });
+}
+function mergeTeachingStudentListProfile(row){
+  const id=String(row?.studentId||row?.id||'').trim();
+  if(!id||!teachingStudentViews)return;
+  const displayName=row.name||row.displayName||'';
+  const patch={
+    studentId:id,
+    name:displayName,
+    displayName,
+    phone:row.phone||'',
+    type:row.type||'',
+    source:row.source||'',
+    campus:row.campus||'',
+    primaryCoach:row.primaryCoach||'',
+    notes:row.notes||'',
+    profileNote:row.profileNote||'',
+    status:row.status,
+    deletedAt:row.deletedAt,
+    archivedAt:row.archivedAt,
+    mergedIntoStudentId:row.mergedIntoStudentId
+  };
+  Object.keys(teachingStudentViews).forEach(key=>{
+    if(!Array.isArray(teachingStudentViews[key]))return;
+    teachingStudentViews[key]=teachingStudentViews[key].map(item=>teachingStudentListRowId(item)===id?{...item,...patch,id:item.id||id}:item);
+  });
+}
 function studentDetailViewForId(id){
   return studentDetailViewCache.get(String(id||''))||null;
 }

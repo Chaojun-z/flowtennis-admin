@@ -6944,6 +6944,7 @@ async function deleteStudentCascade(studentId,{
   loadReferenceData=loadStudentDeleteReferenceData,
   deleteStudentRow=targetId=>del(T_STUDENTS,targetId),
   deleteActiveEntitlementIndex=targetId=>del(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,targetId).catch(()=>null),
+  deleteTeachingSummaryRow=targetId=>del(T_STUDENT_TEACHING_SUMMARY,targetId).catch(()=>null),
   archiveStudentRow=(targetId,row)=>put(T_STUDENTS,targetId,row)
 }={}){
   assertStudentWriteAccess(user);
@@ -6956,11 +6957,13 @@ async function deleteStudentCascade(studentId,{
   if(!studentCascadeDeletePlanHasHistory(plan)){
     await deleteStudentRow(id);
     await deleteActiveEntitlementIndex(id);
-    return {success:true,archived:false,deleted:{students:[id],studentActiveEntitlementIndex:[id]},updated:{}};
+    await deleteTeachingSummaryRow(id);
+    return {success:true,archived:false,deleted:{students:[id],studentActiveEntitlementIndex:[id],studentTeachingSummary:[id]},updated:{}};
   }
   const archivedStudent=buildArchivedStudentRecord(student,user);
   await archiveStudentRow(id,archivedStudent);
-  return {success:true,archived:true,student:archivedStudent,deleted:{},updated:{}};
+  await deleteTeachingSummaryRow(id);
+  return {success:true,archived:true,student:archivedStudent,deleted:{studentTeachingSummary:[id]},updated:{}};
 }
 function assertStudentWriteAccess(user){
   if(user?.role!=='admin')throw new Error('无权限');
