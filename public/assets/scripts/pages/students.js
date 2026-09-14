@@ -46,6 +46,40 @@ function resetAllStudentListPages(){
 function setStudentServerListPage(page){
   studentServerListPage=page&&Array.isArray(page.rows)?page:null;
 }
+function studentListRowId(row){
+  return String(row?.studentId||row?.id||'').trim();
+}
+function removeStudentServerListPageRows(studentId){
+  const id=String(studentId||'').trim();
+  if(!id||!studentServerListPage||!Array.isArray(studentServerListPage.rows))return;
+  const before=studentServerListPage.rows.length;
+  studentServerListPage={...studentServerListPage,rows:studentServerListPage.rows.filter(row=>studentListRowId(row)!==id)};
+  const removed=before-studentServerListPage.rows.length;
+  if(removed>0){
+    const total=Number(studentServerListPage.total);
+    studentServerListPage.total=Number.isFinite(total)?Math.max(0,total-removed):studentServerListPage.rows.length;
+    const pageSize=Number(studentServerListPage.pageSize||stuPageSize)||studentServerListPage.rows.length||1;
+    studentServerListPage.pages=Math.max(1,Math.ceil(studentServerListPage.total/pageSize));
+  }
+}
+function mergeStudentServerListPageProfile(row){
+  const id=studentListRowId(row);
+  if(!id||!studentServerListPage||!Array.isArray(studentServerListPage.rows))return;
+  const displayName=row.name||row.displayName||'';
+  const patch={
+    studentId:id,
+    name:displayName,
+    displayName,
+    phone:row.phone||'',
+    type:row.type||'',
+    source:row.source||'',
+    campus:row.campus||'',
+    primaryCoach:row.primaryCoach||'',
+    notes:row.notes||'',
+    profileNote:row.profileNote||''
+  };
+  studentServerListPage={...studentServerListPage,rows:studentServerListPage.rows.map(item=>studentListRowId(item)===id?{...item,...patch,id:item.id||id}:item)};
+}
 function reloadStudentListPageData(){
   if(typeof ensureDatasetsByName!=='function')return renderStudents();
   return ensureDatasetsByName(['customerCenterPage'],{force:true}).then(()=>renderStudents());
@@ -1726,7 +1760,7 @@ async function saveStudent(){
   }
   const savedEditId=editId;
   await runStandardMutation(btn,async()=>{
-    if(savedEditId){const res=await apiCall('PUT','/students/'+savedEditId,data);const i=students.findIndex(x=>x.id===savedEditId);if(i>=0)students[i]={...students[i],...res,id:savedEditId};if(typeof mergeTeachingStudentDetail==='function')mergeTeachingStudentDetail({...data,...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});if(typeof mergeTeachingStudentListProfile==='function')mergeTeachingStudentListProfile({...data,...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});mergeLinkedUpdates(res.studentUpdates||{});}
+    if(savedEditId){const res=await apiCall('PUT','/students/'+savedEditId,data);const i=students.findIndex(x=>x.id===savedEditId);if(i>=0)students[i]={...students[i],...res,id:savedEditId};if(typeof mergeTeachingStudentDetail==='function')mergeTeachingStudentDetail({...data,...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});if(typeof mergeTeachingStudentListProfile==='function')mergeTeachingStudentListProfile({...data,...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});if(typeof mergeStudentServerListPageProfile==='function')mergeStudentServerListPageProfile({...data,...res,id:savedEditId,studentId:savedEditId,displayName:res.name||data.name||''});mergeLinkedUpdates(res.studentUpdates||{});}
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
   },{
     successText:savedEditId?'修改成功 ✓':'添加成功 ✓',

@@ -13,7 +13,7 @@ const { buildMembershipFinanceSummary } = require('../server/read-models/members
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
 const { buildOperationsPagePayload, invalidateOperationsPageDataCache, getOperationsPageScope } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js'), { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
-const { createStudentTeachingSummaryCache, readReadyStudentTeachingSummaryListRows, upsertStudentProfileIntoTeachingSummary, syncStudentTeachingSummaryDelta } = require('../server/read-models/student-teaching-summary-cache.js');
+const { createStudentTeachingSummaryCache, readReadyStudentTeachingSummaryListRows, upsertStudentProfileIntoTeachingSummary, deleteStudentFromTeachingSummary, syncStudentTeachingSummaryDelta } = require('../server/read-models/student-teaching-summary-cache.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
 const { createAuthServices } = require('../server/auth');
@@ -6944,7 +6944,7 @@ async function deleteStudentCascade(studentId,{
   loadReferenceData=loadStudentDeleteReferenceData,
   deleteStudentRow=targetId=>del(T_STUDENTS,targetId),
   deleteActiveEntitlementIndex=targetId=>del(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,targetId).catch(()=>null),
-  deleteTeachingSummaryRow=targetId=>del(T_STUDENT_TEACHING_SUMMARY,targetId).catch(()=>null),
+  deleteTeachingSummaryRow=targetId=>deleteStudentFromTeachingSummary({tableName:T_STUDENT_TEACHING_SUMMARY,studentId:targetId,getCachedRow,put,del,now:new Date(),logger:console}).catch(()=>null),
   archiveStudentRow=(targetId,row)=>put(T_STUDENTS,targetId,row)
 }={}){
   assertStudentWriteAccess(user);

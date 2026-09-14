@@ -449,6 +449,9 @@ function createCorePageDataRoutes(deps={}){
         };
         const current=await readPublishedRow(activeVersion);
         if(current)return current;
+        const currentBundle=await getCachedRow(T_STUDENT_TEACHING_SUMMARY,buildStudentTeachingSummaryBundleId(activeVersion)).catch(()=>null);
+        const currentBundleRows=studentTeachingSummaryBundleLogicalRows(currentBundle);
+        if(currentBundleRows.length&&!currentBundleRows.some(row=>String(row?.studentId||row?.id||'').trim()===sid))return null;
         const previousVersion=String(meta.previousActiveVersion||'').trim();
         if(previousVersion&&previousVersion!==activeVersion){
           const previous=await readPublishedRow(previousVersion);

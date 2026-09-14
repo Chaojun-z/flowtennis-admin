@@ -478,6 +478,69 @@ async function upsertStudentProfileIntoTeachingSummary({
   }
 }
 
+async function deleteStudentFromTeachingSummary({
+  tableName,
+  studentId = '',
+  getCachedRow,
+  put,
+  del,
+  now = new Date(),
+  logger = console
+} = {}) {
+  const sid = String(studentId || '').trim();
+  if (!tableName || !sid || typeof getCachedRow !== 'function') {
+    return { synced: false, reason: 'not-configured' };
+  }
+  const deleteRow = typeof del === 'function' ? del : async () => null;
+  try {
+    const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
+    const activeVersion = String(meta?.activeVersion || '').trim();
+    const directIds = [sid, activeVersion ? `${STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:${sid}` : ''].filter(Boolean);
+    if (!isReadyStudentTeachingSummaryMeta(meta) || !activeVersion || typeof put !== 'function') {
+      await Promise.all(directIds.map(id => deleteRow(tableName, id).catch(() => null)));
+      readyStudentTeachingSummaryRowsCache.clear();
+      return { synced: false, reason: 'summary-not-ready', studentId: sid };
+    }
+    const fullBundleId = buildStudentTeachingSummaryBundleId(activeVersion);
+    const fullBundle = await getCachedRow(tableName, fullBundleId).catch(() => null);
+    if (!isStudentTeachingSummaryBundleRow(fullBundle)) {
+      await Promise.all(directIds.map(id => deleteRow(tableName, id).catch(() => null)));
+      readyStudentTeachingSummaryRowsCache.clear();
+      return { synced: false, reason: 'bundle-missing', studentId: sid };
+    }
+    const currentRows = studentTeachingSummaryBundleLogicalRows(fullBundle);
+    const nextRows = currentRows.filter(row => String(row?.studentId || row?.id || '').trim() !== sid);
+    if (nextRows.length === currentRows.length) {
+      await Promise.all(directIds.map(id => deleteRow(tableName, id).catch(() => null)));
+      readyStudentTeachingSummaryRowsCache.clear();
+      return { synced: true, studentId: sid, rowCount: nextRows.length, removed: false };
+    }
+    const nextFullBundle = buildStudentTeachingSummaryBundleRow(nextRows, activeVersion);
+    const nextListBundle = buildStudentTeachingSummaryListBundleRow(nextRows, activeVersion);
+    const nextMeta = buildStudentTeachingSummaryMetaRow({
+      ...meta,
+      rowCount: nextRows.length,
+      checksum: buildStudentTeachingSummaryChecksum(nextRows),
+      sourceTable: String(meta.sourceTable || 'ft_students'),
+      sourceOp: 'student-delete',
+      sourceId: sid,
+      updatedAt: now.toISOString(),
+      completedAt: now.toISOString()
+    });
+    await put(tableName, nextFullBundle.id, nextFullBundle);
+    await put(tableName, nextListBundle.id, nextListBundle);
+    await put(tableName, STUDENT_TEACHING_SUMMARY_META_ID, nextMeta);
+    await Promise.all(directIds.map(id => deleteRow(tableName, id).catch(() => null)));
+    readyStudentTeachingSummaryRowsCache.clear();
+    return { synced: true, studentId: sid, rowCount: nextRows.length, removed: true };
+  } catch (err) {
+    if (typeof logger?.warn === 'function') {
+      logger.warn('[student-teaching-summary] student delete sync skipped', err?.message || err);
+    }
+    return { synced: false, reason: 'sync-failed', error: String(err?.message || err), studentId: sid };
+  }
+}
+
 function summaryDeltaStudentIds(...rows) {
   return uniqueStudentIds(rows.flatMap(row => {
     if (!row) return [];
@@ -1591,6 +1654,7 @@ module.exports = {
   buildStudentTeachingSummaryBundleRow,
   buildStudentTeachingSummaryListBundleRow,
   upsertStudentProfileIntoTeachingSummary,
+  deleteStudentFromTeachingSummary,
   syncStudentTeachingSummaryDelta,
   studentTeachingSummaryBundleLogicalRows,
   studentTeachingSummaryRowsToDeleteAfterPublish,

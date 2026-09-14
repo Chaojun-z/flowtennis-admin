@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const api = require('../api/index.js');
+const studentSummaryCache = require('../server/read-models/student-teaching-summary-cache.js');
 
 const rules = api._test;
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
@@ -87,7 +88,7 @@ const emptyPlan = rules.buildStudentCascadeDeletePlan('stu-empty',{},'2026-06-12
 assert.strictEqual(rules.studentCascadeDeletePlanHasHistory(emptyPlan), false, 'empty mistaken student profile can still be physically deleted');
 assert.match(fnBody('deleteStudentCascade'), /studentCascadeDeletePlanHasHistory/, 'student delete should choose physical delete only after checking whether the student has business history');
 assert.match(fnBody('deleteStudentCascade'), /deleteStudentRow=targetId=>del\(T_STUDENTS,targetId\)/, 'student without business history should default to physically deleting from ft_students');
-assert.match(fnBody('deleteStudentCascade'), /deleteTeachingSummaryRow=targetId=>del\(T_STUDENT_TEACHING_SUMMARY,targetId\)/, 'student delete should also clear the teaching summary row used by historical/active student lists');
+assert.match(fnBody('deleteStudentCascade'), /deleteTeachingSummaryRow=targetId=>deleteStudentFromTeachingSummary\(\{tableName:T_STUDENT_TEACHING_SUMMARY,studentId:targetId/, 'student delete should also clear the teaching summary publish bundle used by historical/active student lists');
 
 const archivedStudent = rules.buildArchivedStudentRecord(oldStudent,{name:'管理员'},'2026-06-12 00:00:00');
 assert.strictEqual(archivedStudent.status, 'archived');
@@ -147,7 +148,58 @@ async function runDeleteBehaviorTests(){
   assert.strictEqual(historyArchived[0][1].status, 'archived');
 }
 
+async function runTeachingSummaryBundleDeleteTests(){
+  assert.strictEqual(typeof studentSummaryCache.deleteStudentFromTeachingSummary, 'function', 'student teaching summary cache should expose bundle-level student delete');
+  const table = new Map();
+  const activeVersion = 'batch-lijunze';
+  const sourceRows = [
+    { id: 'stu-keep', studentId: 'stu-keep', name: '王同学', teachingLessonDetailSourceVersion: 'student-detail-ledger-v4' },
+    { id: 'stu-lijunze-empty', studentId: 'stu-lijunze-empty', name: '李俊泽', teachingLessonDetailSourceVersion: 'student-detail-ledger-v4' }
+  ];
+  const meta = studentSummaryCache.buildStudentTeachingSummaryMetaRow({
+    status: studentSummaryCache.STUDENT_TEACHING_SUMMARY_READY,
+    activeVersion,
+    rowCount: sourceRows.length,
+    checksum: studentSummaryCache.buildStudentTeachingSummaryChecksum(sourceRows)
+  });
+  const fullBundle = studentSummaryCache.buildStudentTeachingSummaryBundleRow(sourceRows, activeVersion);
+  const listBundle = studentSummaryCache.buildStudentTeachingSummaryListBundleRow(sourceRows, activeVersion);
+  table.set(studentSummaryCache.STUDENT_TEACHING_SUMMARY_META_ID, meta);
+  table.set(fullBundle.id, fullBundle);
+  table.set(listBundle.id, listBundle);
+  table.set(`${studentSummaryCache.STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:stu-lijunze-empty`, {
+    ...sourceRows[1],
+    id: `${studentSummaryCache.STUDENT_TEACHING_SUMMARY_VERSION_PREFIX}${activeVersion}:stu-lijunze-empty`,
+    publishedRowId: 'stu-lijunze-empty',
+    publishVersion: activeVersion
+  });
+  const deleted = [];
+  const res = await studentSummaryCache.deleteStudentFromTeachingSummary({
+    tableName: 'ft_student_teaching_summary',
+    studentId: 'stu-lijunze-empty',
+    getCachedRow: async (_table, id) => table.get(id) || null,
+    put: async (_table, id, row) => table.set(id, row),
+    del: async (_table, id) => { deleted.push(id); table.delete(id); },
+    now: new Date('2026-09-14T08:00:00.000Z')
+  });
+  assert.strictEqual(res.synced, true, '删除学员时应同步删除教学摘要发布包里的同一学生');
+  assert.strictEqual(res.rowCount, 1);
+  assert.deepStrictEqual(
+    studentSummaryCache.studentTeachingSummaryBundleLogicalRows(table.get(fullBundle.id)).map(row => row.studentId),
+    ['stu-keep'],
+    '完整发布包里不能继续保留已删除的李俊泽'
+  );
+  const listRows = await studentSummaryCache.readReadyStudentTeachingSummaryListRows({
+    tableName: 'ft_student_teaching_summary',
+    getCachedRow: async (_table, id) => table.get(id) || null,
+    verifyChecksum: true
+  });
+  assert.deepStrictEqual(listRows.map(row => row.studentId), ['stu-keep'], '列表发布包里不能继续保留已删除的李俊泽');
+  assert.ok(deleted.some(id => id.includes('stu-lijunze-empty')), '当前版本的单行摘要也应被清理，避免详情校准读回旧行');
+}
+
 runDeleteBehaviorTests()
+  .then(runTeachingSummaryBundleDeleteTests)
   .then(()=>console.log('student rules tests passed'))
   .catch(err=>{
     console.error(err&&err.stack?err.stack:String(err));
