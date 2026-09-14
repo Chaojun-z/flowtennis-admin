@@ -1649,7 +1649,7 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
       })()
       : findMembershipTargetForImport(memberItem, courts, accounts);
     if (!target.court && !['会员储值充值', '会员储值赠送'].includes(item.finalType)) throw new Error('会员流水未匹配到唯一会员账户，需人工确认');
-    const court = target.court || { id: `third-party-court-${uuidv4()}`, name: memberItem.customerName || '场小二会员', phone: memberItem.phone || '', status: 'active', history: [], createdAt: now };
+    const court = target.court || { id: `third-party-court-${uuidv4()}`, name: memberItem.customerName || '场小二会员', phone: memberItem.phone || '', campus: THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS, campusName: THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS_NAME, status: 'active', history: [], createdAt: now };
     let account = target.account || accounts.find(row => cleanText(row.courtId) === cleanText(court.id) && activeMembershipAccount(row));
     if (!account) account = buildMembershipAccountForLedgerImport(memberItem, court, trace, now, uuidv4);
     else account = { ...account, thirdPartyMemberId: account.thirdPartyMemberId || item.thirdPartyMemberId || '', changxiaoerMemberId: account.changxiaoerMemberId || item.thirdPartyMemberId || '', phone: account.phone || memberItem.phone || court.phone || '', updatedAt: now, ...trace };
@@ -1730,7 +1730,7 @@ async function defaultWriteThirdPartyImportItem(item = {}, context = {}) {
   const court = courts.find(row => bindId && String(row.id) === bindId)
     || courts.find(row => bookingName && sameMemberName(row.name, bookingName))
     || (!bookingName ? courts.find(row => item.phone && String(row.phone || '').trim() === String(item.phone).trim()) : null)
-    || { id: bindId || `third-party-court-${uuidv4()}`, name: bookingName || '第三方订场用户', phone: item.phone || '', status: 'active', history: [], createdAt: now };
+    || { id: bindId || `third-party-court-${uuidv4()}`, name: bookingName || '第三方订场用户', phone: item.phone || '', campus: THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS, campusName: THIRD_PARTY_SCHEDULE_DEFAULT_CAMPUS_NAME, status: 'active', history: [], createdAt: now };
   const existingHistory = Array.isArray(court.history) ? court.history : [];
   const historyRow = buildCourtHistoryForImport(item, trace, now);
   const nextCourt = normalizeCourtRecord({ ...court, history: [...existingHistory.filter(row => String(row.sourceRecordId || '') !== item.sourceRecordId), historyRow], updatedAt: now }, { allowNegativeBalance: true });

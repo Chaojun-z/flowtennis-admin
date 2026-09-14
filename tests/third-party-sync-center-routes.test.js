@@ -589,6 +589,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(importRes.body.result.verification.membership.checked, 'membership verification should be recorded');
   assert.ok(importRes.body.result.verification.schedule.checked, 'schedule verification should be recorded');
   assert.ok(writes.some(row => row.table === 'ft_courts'), 'business import should write courts table');
+  assert.ok(writes.some(row => row.table === 'ft_courts' && row.row.history?.some(history => history.sourceRecordId === 'O1') && row.row.campus === 'shunyi_mapo' && row.row.campusName === '顺义马坡'), 'new third-party booking court users should default to Shunyi Mapo campus');
   assert.ok(writes.some(row => row.table === 'ft_financial_ledger'), 'business import should write finance ledger table');
   assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课' && row.row.coach === '小鹿' && row.row.studentName === '张三'), 'private lesson locks may create a schedule only after matching real coach and student');
   assert.ok(writes.some(row => row.table === 'ft_schedule' && row.row.scheduleSource === '第三方同步排课' && row.row.campus === 'shunyi_mapo' && row.row.campusName === '顺义马坡' && row.row.locationType === 'own'), 'third-party schedule imports should default to Shunyi Mapo campus');
@@ -723,6 +724,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   });
   assert.strictEqual(memberLedgerRechargeRes.body.result.status, 'completed', 'member recharge ledger should create the missing member account automatically');
   const newMemberCourt = scans.ft_courts.find(row => row.phone === '13900000001');
+  assert.strictEqual(newMemberCourt?.campus, 'shunyi_mapo', 'new third-party member court users should default to Shunyi Mapo campus');
+  assert.strictEqual(newMemberCourt?.campusName, '顺义马坡', 'new third-party member court users should keep Shunyi Mapo campus display name');
   assert.ok(newMemberCourt?.history?.some(row => row.sourceRecordId === 'ML-RECHARGE-1' && row.type === '充值' && row.amount === 2000 && row.bonusAmount === 166), 'member recharge ledger should write paid and bonus amounts into court history');
   assert.ok(scans.ft_membership_accounts.some(row => row.courtId === newMemberCourt.id && row.thirdPartyMemberId === 'cxe-member-2'), 'member recharge ledger should create a membership account');
   assert.ok(scans.ft_membership_orders.some(row => row.thirdPartySourceRecordId === 'ML-RECHARGE-1' && row.rechargeAmount === 2000 && row.bonusAmount === 166), 'member recharge ledger should create a membership order for finance/read models');
