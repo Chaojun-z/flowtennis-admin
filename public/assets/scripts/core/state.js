@@ -435,6 +435,8 @@ function customerCenterPageDataUrl({fresh=false}={}){
     if(type)params.type=type;
     if(source)params.source=source;
     if(coach)params.coach=coach;
+    if(typeof stuSortKey!=='undefined'&&stuSortKey)params.sortKey=stuSortKey;
+    if(typeof stuSortDir!=='undefined'&&stuSortDir)params.sortDir=stuSortDir;
     if(typeof studentTagFilterState==='object'&&studentTagFilterState&&typeof studentTagFilterCount==='function'&&studentTagFilterCount())params.tags=JSON.stringify(studentTagFilterState);
   }
   const next=appendPageDataQuery(url,params);

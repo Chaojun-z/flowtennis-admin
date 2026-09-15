@@ -635,7 +635,7 @@ function reconcileTeachingPackageFields(packageFields = {}, completedLessons = 0
   const packageCompleted = Math.max(0, Math.min(total, round((Number(completedLessons) || 0) - (Number(directFormalCompleted) || 0), 1)));
   const currentConsumed = teachingStudentPackageConsumedUnits(packageFields);
   if (packageCompleted === (Number(currentConsumed) || 0)) return packageFields;
-  if (packageCompleted < (Number(currentConsumed) || 0) && formalRows.some(row => (Number(row.remainingLessons) || 0) > 0)) return packageFields;
+  if (packageCompleted < (Number(currentConsumed) || 0)) return packageFields;
   const ordered = [...formalRows].sort((a, b) => (
     text(a.purchaseDate).localeCompare(text(b.purchaseDate))
     || text(a.purchaseId || a.entitlementId).localeCompare(text(b.purchaseId || b.entitlementId))
@@ -1318,15 +1318,25 @@ function teachingSummaryRowHasConsumedTrialPackage(row = {}) {
 
 function teachingSummaryRowHasFormalLesson(row = {}, now = new Date()) {
   const lessonRows = arraySnapshotValue(row.detailLessonRecordRows);
+  const hasScheduleLessonRow = lessonRows.some(item => text(item?.kind) === 'schedule');
   if (lessonRows.some(item => {
     if (item?.countAsCompletedLesson === false || courseRowIsTrial(item) || courseRowIsCompanion(item)) return false;
     const value = item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt;
     return teachingDateOnOrBeforeNow(value, now)
-      && (text(item?.kind) === 'schedule' || text(item?.kind) === 'ledger' || Number(item?.lessonDelta) < 0);
+      && (text(item?.kind) === 'schedule' || (!hasScheduleLessonRow && (text(item?.kind) === 'ledger' || Number(item?.lessonDelta) < 0)));
   })) return true;
   if (booleanSnapshotValue(row.hasFormalAttended) === true) return true;
   if (lessonRows.length) return false;
   return teachingDateOnOrBeforeNow(row.lastFormalLessonAt, now);
+}
+
+function teachingSummaryRowHasFormalDetailSignal(row = {}, now = new Date()) {
+  return arraySnapshotValue(row.detailLessonRecordRows).some(item => {
+    if (item?.countAsCompletedLesson === false || courseRowIsTrial(item) || courseRowIsCompanion(item)) return false;
+    const value = item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt;
+    return teachingDateOnOrBeforeNow(value, now)
+      && (text(item?.kind) === 'schedule' || text(item?.kind) === 'ledger' || Number(item?.lessonDelta) < 0);
+  });
 }
 
 function teachingSummaryRowIsFormalCourseItem(item = {}) {
@@ -2262,8 +2272,11 @@ function teachingStudentHasTrialAttendedFact(data = {}, row = {}, now = new Date
 }
 
 function teachingStudentHasFormalAttendedFact(data = {}, row = {}, now = new Date()) {
-  if (booleanSnapshotValue(row.hasFormalAttended) === true) return true;
   if (teachingStudentFormalLessonFactRows(data, text(row.studentId), now).length > 0) return true;
+  const explicit = booleanSnapshotValue(row.hasFormalAttended);
+  if (hasFreshTeachingLessonFacts(data) && explicit === true && !row.hasTeachingSummarySnapshot && teachingSummaryRowHasFormalDetailSignal(row, now)) return true;
+  if (hasFreshTeachingLessonFacts(data)) return false;
+  if (explicit === true) return true;
   return teachingSummaryFormalAttendedSnapshot(row, now);
 }
 
@@ -3111,7 +3124,7 @@ function buildStudentTeachingSummaryRows(customerLifecycleRows = [], data = {}) 
   return (views.historicalStudents || [])
     .map(row => {
       const hasTrialAttended = teachingStudentHasTrialAttendedFact(data, row, now);
-      const hasFormalAttended = teachingStudentHasFormalAttendedFact(data, row, now);
+      const hasFormalAttended = teachingStudentHasFormalAttendedFact(data, row, now) || booleanSnapshotValue(row.hasFormalAttended) === true;
       return teachingStudentSummarySnapshotRow({
         ...row,
         hasTrialAttended,

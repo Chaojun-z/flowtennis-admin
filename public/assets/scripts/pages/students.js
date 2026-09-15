@@ -46,6 +46,32 @@ function resetAllStudentListPages(){
 function setStudentServerListPage(page){
   studentServerListPage=page&&Array.isArray(page.rows)?page:null;
 }
+function studentServerListFacets(){
+  return studentServerListPage&&studentServerListPage.facets&&typeof studentServerListPage.facets==='object'?studentServerListPage.facets:null;
+}
+function studentServerFacetCount(section,value){
+  const facets=studentServerListFacets();
+  if(!facets)return null;
+  if(!section)return Number(facets.total)||0;
+  const counts=facets[section]||{};
+  return Number(counts[value])||0;
+}
+function studentServerTagFacetCount(groupKey,value){
+  const facets=studentServerListFacets();
+  if(!facets)return null;
+  return Number(facets.tags?.[groupKey]?.[value])||0;
+}
+function studentOptionsWithServerFacetCounts(options,section,currentValue){
+  const facets=studentServerListFacets();
+  if(!facets)return null;
+  const total=Number(facets.total)||0;
+  return (options||[]).map(opt=>{
+    const item=typeof opt==='string'?{value:opt,label:opt}:opt;
+    const value=String(item.value||'');
+    const count=value?studentServerFacetCount(section,value):total;
+    return {...item,count};
+  }).filter(opt=>String(opt.value||'')===''||opt.count>0||String(opt.value||'')===String(currentValue||''));
+}
 function studentListRowId(row){
   return String(row?.studentId||row?.id||'').trim();
 }
@@ -232,6 +258,8 @@ function clearStudentTagFilters(){
   onStudentTagFilterChange();
 }
 function studentTagOptionCount(baseRows,group,value){
+  const serverCount=studentServerTagFacetCount(group.key,value);
+  if(serverCount!==null)return serverCount;
   return baseRows.filter(s=>group.getter(s)===value).length;
 }
 function studentTagCascaderActiveGroup(){
@@ -451,10 +479,18 @@ function renderStudentToolbarFilters(){
   const sourceValue=document.getElementById('stuSourceFilter')?.value||'';
   const coachValue=document.getElementById('stuCoachFilter')?.value||'';
   const baseRows=getStudentBaseList().filter(s=>globalDateWithinRange(studentGlobalDateValue(s)));
-  const linked=withLinkedFilterCounts([
-    {key:'type',value:typeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],match:(s,value)=>s.type===value},
-    {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...studentSourceOptions()],match:(s,value)=>studentSourceText(s)===value},
-    {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))],match:(s,value)=>value==='__unassigned__'?studentPrimaryCoachText(s)==='-':studentPrimaryCoachText(s)===value}
+  const typeOptions=[{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
+  const sourceOptions=[{value:'',label:'全部',emptyDisplay:'来源'},...studentSourceOptions()];
+  const coachOptions=[{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
+  const serverLinked=studentServerListFacets()?{
+    type:{value:typeValue,options:studentOptionsWithServerFacetCounts(typeOptions,'type',typeValue)},
+    source:{value:sourceValue,options:studentOptionsWithServerFacetCounts(sourceOptions,'source',sourceValue)},
+    coach:{value:coachValue,options:studentOptionsWithServerFacetCounts(coachOptions,'coach',coachValue)}
+  }:null;
+  const linked=serverLinked||withLinkedFilterCounts([
+    {key:'type',value:typeValue,options:typeOptions,match:(s,value)=>s.type===value},
+    {key:'source',value:sourceValue,options:sourceOptions,match:(s,value)=>studentSourceText(s)===value},
+    {key:'coach',value:coachValue,options:coachOptions,match:(s,value)=>value==='__unassigned__'?studentPrimaryCoachText(s)==='-':studentPrimaryCoachText(s)===value}
   ],baseRows);
   const wrapMap=[
     ['stuTypeFilterHost','stuTypeFilter','类型',linked.type.options,linked.type.value],
@@ -634,7 +670,7 @@ function cycleStudentSort(key){
   else if(stuSortDir==='asc')stuSortDir='desc';
   else {stuSortKey='';stuSortDir='';}
   resetCurrentStudentListPage();
-  renderStudents();
+  reloadStudentListPageData();
 }
 function updateStudentSortHeaders(){
   document.querySelectorAll('#page-students [data-student-sort]').forEach(btn=>{
@@ -683,7 +719,7 @@ function renderStudentPagerControls(total,pages){
 }
 function setStudentPage(value){
   syncStudentPageGlobalsFromMode();
-  const total=getFilteredStudents().length;
+  const total=studentServerListPage?.total??getFilteredStudents().length;
   stuPage=standardListPagination(total,value,stuPageSize).page;
   persistStudentPageGlobalsToMode();
   reloadStudentListPageData();
@@ -865,6 +901,7 @@ function studentLoadingStatsForMode(){
 }
 function studentPageStats(base){
   if(typeof customerCenterPageReady==='function'&&!customerCenterPageReady())return studentLoadingStatsForMode();
+  if(studentServerListPage)return studentStandardSummaryForMode();
   if(studentHasActiveSearchOrFilter())return studentFilteredSummaryForMode(base);
   return studentStandardSummaryForMode();
 }

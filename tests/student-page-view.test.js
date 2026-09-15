@@ -54,6 +54,7 @@ assert.match(fnBody('searchHit'), /includes\(compactKeyword\)/, 'global keyword 
 assert.match(source, /function onStudentFilterChange\(\)\{resetCurrentStudentListPage\(\);reloadStudentListPageData\(\);\}/, 'student filters should reset pagination and reload the server-side student page');
 assert.match(source, /function setStudentServerListPage\(page\)/, 'student page should store server-side pagination metadata');
 assert.match(source, /const serverPage=studentServerListPage&&Array\.isArray\(studentServerListPage\.rows\)\?studentServerListPage:null/, 'student render should use server-side pagination totals when available');
+assert.match(fnBody('setStudentPage'), /studentServerListPage\?\.total\?\?getFilteredStudents\(\)\.length/, 'student pagination click should use the backend full total before falling back to local rows');
 assert.match(fnBody('renderStudents'), /serverPage\?\{total:serverPage\.total,pages:serverPage\.pages,slice:serverPage\.rows,page:serverPage\.page\}/, 'student table must render the backend paged business rows instead of merged raw student profiles');
 assert.match(source, /let studentListPageStateByMode=\{package:\{page:1,pageSize:15\},trial:\{page:1,pageSize:15\}\}/, 'active and historical student pages should keep independent pagination state');
 assert.match(fnBody('setStudentPageSize'), /syncStudentPageGlobalsFromMode\(\)[\s\S]*stuPageSize=standardListPageSize\(value,stuPageSize\)[\s\S]*persistStudentPageGlobalsToMode\(\)/, 'changing page size on one student page should not leak into the other student page');
@@ -252,6 +253,8 @@ assert.match(css, /\.tms-sort-header\.asc \.tms-sort-up::before\{background-colo
 assert.match(css, /\.tms-sort-header\.desc \.tms-sort-down::before\{background-color:#887565\}/, 'descending sort should highlight only the lower half');
 assert.doesNotMatch(css, /\.tms-sort-up[^{}]*\{[^}]*border-bottom:4px solid/, 'shared sort icon should not use the old css triangle');
 assert.match(source, /function cycleStudentSort\([\s\S]*stuSortDir='asc'[\s\S]*stuSortDir='desc'[\s\S]*stuSortKey='';stuSortDir='';/, 'student sortable headers should cycle asc, desc, and no sort');
+assert.match(fnBody('cycleStudentSort'), /reloadStudentListPageData\(\)/, 'student sortable headers should reload the backend page so sorting applies to all rows');
+assert.match(source, /params\.sortKey=stuSortKey[\s\S]*params\.sortDir=stuSortDir/, 'student page data request should send sortKey and sortDir to the backend');
 assert.match(source, /function studentEmptyStateHtml\([\s\S]*没有匹配的学员[\s\S]*暂无学员[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加学员开始录入/, 'student empty state should distinguish filtered empty results from no data');
 assert.match(source, /function renderTableSkeletonLoading\(/, 'table loading should render through the shared full-table skeleton helper');
 assert.match(source, /function renderStudentTableLoading\([\s\S]*renderTableSkeletonLoading\('stuTbody',15,'学员数据加载中\.\.\.'\)/, 'student loading state should use the shared full-table skeleton');
@@ -507,7 +510,7 @@ assert.match(source, /function withLinkedFilterCounts\(/, 'standard dropdown fil
 assert.match(source, /function renderStandardOptionLabel\(/, 'shared dropdown renderer should format option counts centrally');
 assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuTagFilterHost','stuCoachFilterHost'\]/, 'student toolbar should expose compact common filters plus one student tag cascader');
 assert.match(source, /renderStudentToolbarFilters[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'type'[\s\S]*key:'source'[\s\S]*key:'coach'/, 'student toolbar common filters should keep linked count labels');
-assert.match(source, /renderStudentToolbarFilters[\s\S]*options:\[\{value:'',label:'全部',emptyDisplay:'来源'\},\.\.\.studentSourceOptions\(\)\][\s\S]*match:\(s,value\)=>studentSourceText\(s\)===value/, 'student source filter should use normalized source options and matching');
+assert.match(fnBody('renderStudentToolbarFilters'), /const sourceOptions=\[\{value:'',label:'全部',emptyDisplay:'来源'\},\.\.\.studentSourceOptions\(\)\][\s\S]*match:\(s,value\)=>studentSourceText\(s\)===value/, 'student source filter should use normalized source options and matching');
 assert.doesNotMatch(source, /stuTrialStatusFilterHost|stuDealPathFilterHost|thirdFilterIsTrial/, 'student toolbar should not keep old trial-status or deal-path filter hosts');
 assert.match(fnBody('getFilteredStudents'), /if\(!studentTagFilterMatches\(s\)\)return false/, 'student tag cascader selections should apply to the student list');
 assert.match(source, /renderStandardGroupedFilterHtml\(studentTagGroupedFilterConfig\(baseRows\)\)/, 'student tag cascader should reuse the standard grouped filter component');

@@ -33,9 +33,7 @@ function scheduleFeedbackStatusHtml(s){return scheduleChecklistStatusHtml(schedu
 function scheduleProposalStatusText(s){const status=String(s?.proposalStatus||'').trim();return status||(!isSmallGroupSchedule(s)?'-':(scheduleCoachProposal(s)?'已填写':'未填写'));}
 function scheduleProposalFilterValue(s){const status=String(s?.proposalStatus||'').trim();if(status)return status==='已填写'?'filled':'missing';return !isSmallGroupSchedule(s)?'none':(scheduleCoachProposal(s)?'filled':'missing');}
 function scheduleProposalStatusHtml(s){return scheduleChecklistStatusHtml(scheduleProposalStatusText(s));}
-function isExternalSchedule(s){
-  return s?.locationType==='external'||s?.campus==='__external__';
-}
+function isExternalSchedule(s){return s?.locationType==='external'||s?.campus==='__external__';}
 function scheduleLocationText(s){
   if(isExternalSchedule(s)){
     const name=s.externalVenueName||String(s.venue||'').split(' · ')[0]||'校区外';
@@ -46,25 +44,9 @@ function scheduleLocationText(s){
   if(campusName||venueText)return `${campusName||cn(s?.campus)||'—'} · ${venueText||s?.venue||'—'}`;
   return `${cn(s?.campus)||'—'} · ${s?.venue||'—'}`;
 }
-function scheduleLocationDetailParts(s){
-  if(isExternalSchedule(s)){
-    const parts=scheduleExternalVenueParts(s);
-    return {type:'校区外',place:parts.name||'校区外',court:parts.court||''};
-  }
-  return {type:'校区内',place:cn(s?.campus)||s?.campus||'',court:s?.venue||''};
-}
-function scheduleRepeatGroupRows(schedule){
-  if(!schedule||schedule.scheduleSource!=='循环排课')return [];
-  const key=scheduleRepeatIdentityKey(schedule);
-  return schedules.filter(item=>item.scheduleSource==='循环排课'&&scheduleRepeatIdentityKey(item)===key)
-    .sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
-}
-function scheduleRepeatDisplayText(schedule){
-  if(!schedule||schedule.scheduleSource!=='循环排课')return '-';
-  const repeatText=String(schedule?.repeatText||'').trim();if(repeatText)return repeatText;
-  const count=scheduleRepeatGroupRows(schedule).length;
-  return count>1?`循环${count}周`:'循环课';
-}
+function scheduleLocationDetailParts(s){if(isExternalSchedule(s)){const parts=scheduleExternalVenueParts(s);return {type:'校区外',place:parts.name||'校区外',court:parts.court||''};}return {type:'校区内',place:cn(s?.campus)||s?.campus||'',court:s?.venue||''};}
+function scheduleRepeatGroupRows(schedule){if(!schedule||schedule.scheduleSource!=='循环排课')return [];const key=scheduleRepeatIdentityKey(schedule);return schedules.filter(item=>item.scheduleSource==='循环排课'&&scheduleRepeatIdentityKey(item)===key).sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));}
+function scheduleRepeatDisplayText(schedule){if(!schedule||schedule.scheduleSource!=='循环排课')return '-';const repeatText=String(schedule?.repeatText||'').trim();if(repeatText)return repeatText;const count=scheduleRepeatGroupRows(schedule).length;return count>1?`循环${count}周`:'循环课';}
 function renderSchedulePagerControls(total,pages){
   const pageSizeHost=document.getElementById('schPageSize');
   if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('schPageSizeValue',schPageSize,'setSchedulePageSize');

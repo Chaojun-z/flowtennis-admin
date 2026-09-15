@@ -37,7 +37,7 @@ assert.match(apiSource, /x-feishu-coach-digest-open-id-overrides/, '飞书教练
 assert.doesNotMatch(feishuScheduleSyncWorkflow, /^\s*schedule:/m, '飞书排课表同步不应再自动定时扫描');
 assert.match(feishuScheduleSyncWorkflow, /workflow_dispatch:/, '飞书排课表同步应保留手动触发入口');
 assert.match(feishuScheduleSyncWorkflow, /\/api\/cron\/feishu-schedule-sync/, '飞书排课表同步手动运行时应由 GitHub Actions 触发');
-assert.doesNotMatch(thirdPartySyncWorkflow, /^\s*schedule:/m, '场小二订场数据处理应暂停自动群推');
+assert.match(thirdPartySyncWorkflow, /^\s*schedule:/m, '场小二订场数据处理应保留每日自动同步');
 assert.match(thirdPartySyncWorkflow, /workflow_dispatch:/, '场小二订场数据处理应保留手动检查入口');
 assert.match(thirdPartySyncWorkflow, /\/api\/cron\/third-party-sync-center/, '场小二手动检查仍应能触发同步中心接口');
 assert.match(operationsSnapshotWorkflow, /cron: '5,20,35,50 \* \* \* \*'/, '经营分析快照应由 GitHub Actions 高频重建');

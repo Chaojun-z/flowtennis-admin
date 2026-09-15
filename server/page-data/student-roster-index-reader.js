@@ -250,6 +250,61 @@ function buildListPage(rows = [], paging = null) {
   return { rows: list.slice(start, start + paging.pageSize), total, page, pageSize: paging.pageSize, pages };
 }
 
+function summaryRowSortValue(row = {}, key = '') {
+  if (key === 'packagePurchaseDate') return normalizedText(row.packagePurchaseDate);
+  if (key === 'lastLesson') return normalizedText(row.detailRecentLessonDate || row.lastFormalLessonAt);
+  if (key === 'completedLessons') return Number(row.completedLessons) || 0;
+  if (key === 'packageLessons') return Number(row.packageBalanceRemaining || row.detailPackageBalanceRemaining) || 0;
+  return '';
+}
+
+function sortSummaryRowsForQuery(rows = [], query) {
+  const key = normalizedText(query?.get('sortKey'));
+  const dir = normalizedText(query?.get('sortDir')) === 'asc' ? 1 : -1;
+  if (!key || !['packagePurchaseDate', 'lastLesson', 'completedLessons', 'packageLessons'].includes(key)) return rows;
+  return [...rows].map((row, index) => ({ row, index })).sort((a, b) => {
+    const av = summaryRowSortValue(a.row, key);
+    const bv = summaryRowSortValue(b.row, key);
+    const emptyA = av === '' || av === null || av === undefined;
+    const emptyB = bv === '' || bv === null || bv === undefined;
+    if (emptyA && emptyB) return a.index - b.index;
+    if (emptyA) return 1;
+    if (emptyB) return -1;
+    if (typeof av === 'number' || typeof bv === 'number') return ((Number(av) || 0) - (Number(bv) || 0)) * dir || a.index - b.index;
+    return String(av).localeCompare(String(bv)) * dir || a.index - b.index;
+  }).map(item => item.row);
+}
+
+function incrementCount(target = {}, key = '') {
+  const value = normalizedText(key);
+  if (!value) return;
+  target[value] = (Number(target[value]) || 0) + 1;
+}
+
+function buildStudentListFacets(rows = []) {
+  const list = Array.isArray(rows) ? rows : [];
+  const facets = {
+    total: list.length,
+    type: {},
+    source: {},
+    coach: {},
+    tags: {
+      packageStatus: {},
+      paymentMode: {},
+      activityStatus: {},
+      lessonVolume: {},
+      lifecycleStatus: {}
+    }
+  };
+  list.forEach(row => {
+    incrementCount(facets.type, row.type);
+    incrementCount(facets.source, row.source);
+    incrementCount(facets.coach, normalizedText(row.primaryCoach) || '__unassigned__');
+    Object.keys(facets.tags).forEach(key => incrementCount(facets.tags[key], summaryRowLabelForTag(row, key)));
+  });
+  return facets;
+}
+
 function summaryRowHasTrialLesson(row = {}) {
   return parseSnapshotArray(row.detailLessonRecordRows).some(item => /体验/.test(String([
     item.courseType,
@@ -382,8 +437,9 @@ function buildCustomerCenterListPage(teachingStudentViews = {}, query) {
   const q = String(query?.get('q') || '').trim();
   const studentRows = Array.isArray(teachingStudentViews[view]) ? teachingStudentViews[view] : [];
   if (!paging || !view) return null;
-  const page = buildListPage(studentRows.filter(row => textSearchHit(q, row.name, row.displayName, row.studentName, row.wechatName, row.nickName, row.nickname, row.phone)), paging);
-  return { view, ...page, rows: page.rows.map(projectCustomerCenterStudentRow) };
+  const filteredRows = studentRows.filter(row => textSearchHit(q, row.name, row.displayName, row.studentName, row.wechatName, row.nickName, row.nickname, row.phone));
+  const page = buildListPage(sortSummaryRowsForQuery(filteredRows, query), paging);
+  return { view, ...page, facets: buildStudentListFacets(filteredRows), rows: page.rows.map(projectCustomerCenterStudentRow) };
 }
 
 function projectCustomerCenterStudentRow(row = {}) {

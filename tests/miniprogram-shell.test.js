@@ -445,6 +445,7 @@ assert.doesNotMatch(configJs, /WEB_VIEW_URL/, 'mini program config should no lon
 const apiServerJs = readText('api/index.js');
 const authRoutesJs = readText('server/auth-routes.js');
 const corePageDataJs = readText('server/page-data/core-pages.js');
+const workbenchReadModelJs = readText('server/workbench-read-model.js');
 const workbenchRouteSource = corePageDataJs.slice(
   corePageDataJs.indexOf("path==='/page-data/workbench'&&method==='GET'"),
   corePageDataJs.indexOf('return false;', corePageDataJs.indexOf("path==='/page-data/workbench'&&method==='GET'"))
@@ -466,13 +467,13 @@ assert.match(apiServerJs, /remark:/, 'workbench API should decorate class data w
 assert.match(apiServerJs, /historyIssue:/, 'workbench API should decorate student data with a normalized historyIssue field');
 assert.match(apiServerJs, /focusNote:/, 'workbench API should decorate student and feedback data with a normalized focusNote field');
 assert.match(apiServerJs, /summary:/, 'workbench API should decorate feedback data with a normalized summary field');
-assert.match(apiServerJs, /monthFinishedLessonUnits/, 'workbench API should expose standard stats fields');
-assert.match(apiServerJs, /weekFinishedLessonUnits/, 'workbench API should expose standard stats fields');
-assert.match(apiServerJs, /todayFinishedLessonUnits/, 'workbench API should expose standard stats fields');
-assert.match(apiServerJs, /pendingFeedbackCount/, 'workbench API should expose standard stats fields');
-assert.match(apiServerJs, /trialConversionRate/, 'workbench API should expose standard stats fields');
-assert.match(apiServerJs, /overallTrialConversionRate/, 'workbench API should expose overall coach trial conversion stats for the mini program');
-assert.match(apiServerJs, /workbenchState:/, 'workbench API should expose standard state enum for each schedule');
+assert.match(workbenchReadModelJs, /monthFinishedLessonUnits/, 'workbench API should expose standard stats fields');
+assert.match(workbenchReadModelJs, /weekFinishedLessonUnits/, 'workbench API should expose standard stats fields');
+assert.match(workbenchReadModelJs, /todayFinishedLessonUnits/, 'workbench API should expose standard stats fields');
+assert.match(workbenchReadModelJs, /pendingFeedbackCount/, 'workbench API should expose standard stats fields');
+assert.match(workbenchReadModelJs, /trialConversionRate/, 'workbench API should expose standard stats fields');
+assert.match(workbenchReadModelJs, /overallTrialConversionRate/, 'workbench API should expose overall coach trial conversion stats for the mini program');
+assert.match(workbenchReadModelJs, /workbenchState:/, 'workbench API should expose standard state enum for each schedule');
 assert.match(apiServerJs, /studentTeachingSummaries:normalized\.studentTeachingSummaries\.filter\(row=>studentIds\.has\(String\(row\.studentId\|\|row\.id\|\|''\)\.trim\(\)\)\)/, 'coach-scoped workbench data should keep unified teaching summary rows for visible students');
 assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API should read entitlement balances for the mini program');
 assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS\.entitlementLedger\)/, 'workbench API should read entitlement consume ledger for the mini program');
