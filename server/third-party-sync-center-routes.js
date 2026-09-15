@@ -220,7 +220,7 @@ function operatorAccountOf(record = {}) {
 }
 
 function amountOf(record = {}) {
-  const raw = Math.abs(moneyNumber(record.amount ?? record.originalAmount ?? record.siteAmount ?? record.paidAmount ?? record.actualAmount ?? record.payAmount ?? record.priceAmount ?? record.changeAmount ?? record.flowAmount ?? 0));
+  const raw = Math.abs(moneyNumber(record.amount ?? record.money ?? record.originalAmount ?? record.siteAmount ?? record.paidAmount ?? record.actualAmount ?? record.payAmount ?? record.priceAmount ?? record.changeAmount ?? record.flowAmount ?? 0));
   const looksLikeCentAmount = raw >= 1000 && (Array.isArray(record.orderInfo) || record.siteAmount != null || record.wechatPaymentAmount != null || record.balancePaymentAmount != null);
   return looksLikeCentAmount ? Math.round(raw) / 100 : raw;
 }
@@ -284,6 +284,8 @@ function bookingAmountWithPriceFallback(record = {}, pricePlans = []) {
 function memberLedgerText(record = {}) {
   return [
     record.transactionType,
+    record.operation,
+    record.operationType,
     record.flowType,
     record.type,
     record.action,
@@ -292,6 +294,7 @@ function memberLedgerText(record = {}) {
     record.businessType,
     record.category,
     record.amount,
+    record.money,
     record.changeAmount,
     record.flowAmount,
     record.remark,
@@ -303,9 +306,9 @@ function memberLedgerText(record = {}) {
 }
 
 function memberLedgerDirection(record = {}) {
-  const signed = moneyNumber(record.amount ?? record.changeAmount ?? record.flowAmount ?? 0);
+  const signed = moneyNumber(record.amount ?? record.money ?? record.changeAmount ?? record.flowAmount ?? 0);
   if (signed < 0) return 'debit';
-  if (signed > 0 && /^[+＋]/.test(cleanText(record.amount ?? record.changeAmount ?? record.flowAmount))) return 'credit';
+  if (signed > 0 && /^[+＋]/.test(cleanText(record.amount ?? record.money ?? record.changeAmount ?? record.flowAmount))) return 'credit';
   const text = memberLedgerText(record);
   if (/支出|扣费|扣款|消费|消耗/.test(text) && !/取消|退回|退款|冲正|撤销/.test(text)) return 'debit';
   if (/收入|充值|赠送|补发|退回|退款|取消|冲正|撤销/.test(text)) return 'credit';
@@ -327,11 +330,11 @@ function memberLedgerBonusAmount(record = {}) {
 }
 
 function memberLedgerBalanceAfter(record = {}) {
-  return moneyNumber(record.balanceAfter ?? record.afterBalance ?? record.remainingBalance ?? record.balance ?? record.accountBalance ?? 0);
+  return moneyNumber(record.balanceAfter ?? record.newMoney ?? record.afterBalance ?? record.remainingBalance ?? record.balance ?? record.accountBalance ?? 0);
 }
 
 function memberLedgerRecordedAt(record = {}) {
-  return cleanText(record.recordedAt || record.transactionTime || record.occurredAt || record.createdAt || record.createTime || record.time || record.date);
+  return cleanText(record.recordedAt || record.transactionTime || record.payTime || record.occurredAt || record.createdAt || record.createTime || record.createDate || record.time || record.date);
 }
 
 function classifyMemberLedgerRecord(record = {}) {
@@ -1845,6 +1848,83 @@ async function fetchOptionalPaged(args = {}) {
   }
 }
 
+function cxeMemberId(member = {}) {
+  return cleanText(member.userId || member.id || member.memberId || member.uuid);
+}
+
+function cxeMemberLedgerEndpoint(env = process.env) {
+  const endpoint = cleanText(env.CXE_MEMBER_LEDGER_ENDPOINT);
+  if (endpoint && !/\/recharge\/accountLog(?:$|\?)/.test(endpoint)) return endpoint;
+  return 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userRechargePage';
+}
+
+function normalizeCxeMemberLedgerRow(row = {}, member = {}, userId = '') {
+  const rowUserId = cleanText(row.userId || row.memberId || userId);
+  return {
+    ...row,
+    ledgerId: row.ledgerId || row.id,
+    userId: row.userId || rowUserId,
+    memberId: row.memberId || rowUserId,
+    memberName: row.memberName || row.realName || row.basicName || member.realName || member.memberName || member.name,
+    memberPhone: row.memberPhone || row.phone || row.phoneNumber || member.phone || member.phoneNumber,
+    transactionTime: row.transactionTime || row.payTime || row.createDate || row.createTime,
+    transactionType: row.transactionType || row.operation || row.operationType || row.type,
+    amount: row.amount ?? row.money,
+    balanceAfter: row.balanceAfter ?? row.newMoney,
+    thirdPartyMemberId: rowUserId,
+    sourceType: 'member-ledger'
+  };
+}
+
+function cxeMemberLookup(members = []) {
+  const byId = new Map();
+  const byPhone = new Map();
+  for (const member of members) {
+    const id = cxeMemberId(member);
+    const phone = phoneOf(member);
+    if (id) byId.set(id, member);
+    if (phone) byPhone.set(phone, member);
+  }
+  return { byId, byPhone };
+}
+
+async function fetchMemberLedgerRows({ client, token, members = [], rangeStart = '', rangeEnd = '', endpoint = '' } = {}) {
+  const rows = [];
+  const startDate = cleanText(rangeStart).slice(0, 10);
+  const lookup = cxeMemberLookup(members);
+  for (let pageNum = 1; pageNum <= 100; pageNum++) {
+    const pageBody = { pageNum, pageSize: 100, dateFrom: rangeStart, dateTo: rangeEnd, startTime: rangeStart, endTime: rangeEnd };
+    const res = await client.post(endpoint, pageBody, { headers: cxeHeaders(token) });
+    const data = res.data?.data || res.data || {};
+    const list = data.list || data.records || data.rows || data.items || [];
+    if (!Array.isArray(list) || !list.length) break;
+    const normalized = list.map(row => {
+      const member = lookup.byId.get(cleanText(row.userId || row.memberId)) || lookup.byPhone.get(phoneOf(row)) || {};
+      return normalizeCxeMemberLedgerRow(row, member, cleanText(row.userId || row.memberId));
+    });
+    rows.push(...normalized.filter(row => recordWithinRange(row, rangeStart, rangeEnd)));
+    const pageDates = normalized.map(row => cleanText(memberLedgerRecordedAt(row)).slice(0, 10)).filter(Boolean);
+    if (startDate && pageDates.length && pageDates.every(date => date < startDate)) break;
+    const hasNext = data.hasNext ?? data.hasNextPage;
+    const totalPage = Number(data.totalPage || data.pages || 0);
+    if (hasNext === false || (totalPage && pageNum >= totalPage)) break;
+  }
+  return rows;
+}
+
+async function fetchMemberLedgerRowsForMembers({ client, token, members = [], rangeStart = '', rangeEnd = '', endpoint = '' } = {}) {
+  try {
+    const rows = await fetchMemberLedgerRows({ client, token, members, rangeStart, rangeEnd, endpoint });
+    return { rows, ok: true, warnings: [] };
+  } catch (err) {
+    return {
+      rows: [],
+      ok: false,
+      warnings: [{ type: 'member-ledger', reason: err.message || '第三方接口拉取失败' }]
+    };
+  }
+}
+
 function cxeHeaders(token = '') {
   return {
     'content-type': 'application/json;charset=UTF-8',
@@ -1861,13 +1941,13 @@ async function fetchChangxiaoerData({ rangeStart = '', rangeEnd = '', env = proc
   const login = await client.post('https://api.console.changxiaoer.cn/admin/merchantAdminLogin', { phone, pwd }, { headers: cxeHeaders() });
   const token = cleanText(login.data?.data?.token);
   if (!token) throw new Error('第三方登录未返回 token');
-  const memberLedgerEndpoint = cleanText(env.CXE_MEMBER_LEDGER_ENDPOINT) || 'https://api.console.changxiaoer.cn/merchantmanage/recharge/accountLog';
-  const [orders, locks, members, memberLedgerResult] = await Promise.all([
+  const memberLedgerEndpoint = cxeMemberLedgerEndpoint(env);
+  const [orders, locks, members] = await Promise.all([
     fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/basic/order', token, rangeStart, rangeEnd }),
     fetchPaged({ client, method: 'GET', url: 'https://api.console.changxiaoer.cn/merchants-management/data-analysis/occupy-space-period-records', token, rangeStart, rangeEnd }),
-    fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userList', token, rangeStart, rangeEnd }),
-    fetchOptionalPaged({ client, method: 'POST', url: memberLedgerEndpoint, token, rangeStart, rangeEnd })
+    fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userList', token, rangeStart, rangeEnd })
   ]);
+  const memberLedgerResult = await fetchMemberLedgerRowsForMembers({ client, token, members, rangeStart, rangeEnd, endpoint: memberLedgerEndpoint });
   return {
     records: [
       ...orders.map(row => ({ ...row, sourceType: 'order' })),
@@ -1876,7 +1956,7 @@ async function fetchChangxiaoerData({ rangeStart = '', rangeEnd = '', env = proc
       ...memberLedgerResult.rows.map(row => ({ ...row, sourceType: 'member-ledger' }))
     ],
     gaps: memberLedgerResult.ok ? [] : ['member-ledger'],
-    warnings: memberLedgerResult.ok ? [] : [{ type: 'member-ledger', reason: memberLedgerResult.error }]
+    warnings: memberLedgerResult.ok ? [] : memberLedgerResult.warnings
   };
 }
 

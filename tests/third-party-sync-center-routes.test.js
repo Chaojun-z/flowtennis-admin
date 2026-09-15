@@ -291,12 +291,35 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   const cxeFetched = await fetchChangxiaoerData({
     rangeStart: '2026-07-30 00:00:00',
     rangeEnd: '2026-07-31 00:00:00',
-    env: { CXE_USER: 'xiaolu99', CXE_PASS: 'xiaolu99' },
+    env: { CXE_USER: 'xiaolu99', CXE_PASS: 'xiaolu99', CXE_MEMBER_LEDGER_ENDPOINT: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/accountLog' },
     client: {
       post: async (url, body, options) => {
         cxeCalls.push({ method: 'POST', url, body, options });
         if (/merchantAdminLogin/.test(url)) return { data: { data: { token: 'token-1' } } };
-        if (/recharge\/accountLog/.test(url)) return { data: { data: { list: [{ ledgerId: 'LEDGER-FROM-API', transactionType: '会员充值', amount: '+100.00', balanceAfter: 100 }], hasNext: false } } };
+        if (/recharge\/userList/.test(url)) {
+          return {
+            data: {
+              data: {
+                list: body.pageNum === 1 ? [{ id: 'MEMBER-FROM-API', realName: '会员A', phone: '13900000000' }] : [],
+                hasNext: false
+              }
+            }
+          };
+        }
+        if (/recharge\/userRechargePage/.test(url)) return {
+          data: {
+            data: {
+              list: body.pageNum === 1
+                ? [{ id: 'LEDGER-FROM-API', userId: 'MEMBER-FROM-API', operation: '会员充值', money: '+100.00', newMoney: 100, payTime: '2026-07-30 09:00:00' }]
+                : body.pageNum === 2
+                  ? [{ id: 'LEDGER-OUT-OF-RANGE', userId: 'MEMBER-FROM-API', operation: '会员充值', money: '+50.00', newMoney: 150, createDate: '2026-07-29 09:00:00' }]
+                  : (() => { throw new Error('member ledger pagination should stop after older history page'); })(),
+              hasNextPage: true,
+              pages: 99
+            }
+          }
+        };
+        if (/recharge\/accountLog/.test(url)) throw new Error('accountLog should not be called');
         return { data: { data: { list: [], hasNext: false } } };
       },
       get: async (url, options) => {
@@ -310,8 +333,11 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.strictEqual(lockGetCall.options.params.dateTo, '2026-07-30', 'lock report fetch should pass date-only dateTo because the third-party API rejects timestamp ranges');
   assert.ok(!lockGetCall.options.params.startTime && !lockGetCall.options.params.endTime, 'lock report fetch should not pass startTime/endTime to the third-party lock API');
   assert.ok(cxeFetched.records.some(row => row.sourceType === 'lock' && row.id === 'LOCK-FROM-API'), 'lock report rows should be included in fetched source records');
-  assert.ok(cxeCalls.some(call => call.method === 'POST' && /recharge\/accountLog/.test(call.url)), 'changxiaoer fetch should request member stored-value ledger rows');
+  assert.ok(cxeCalls.some(call => call.method === 'POST' && /recharge\/userRechargePage/.test(call.url)), 'changxiaoer fetch should request member stored-value ledger rows');
+  assert.ok(!cxeCalls.some(call => call.method === 'POST' && /recharge\/userRechargePage/.test(call.url) && call.body.pageNum === 3), 'member ledger pagination should stop once the page is older than the requested date');
+  assert.ok(!cxeCalls.some(call => call.method === 'POST' && /recharge\/accountLog/.test(call.url)), 'changxiaoer fetch should not request the removed accountLog endpoint');
   assert.ok(cxeFetched.records.some(row => row.sourceType === 'member-ledger' && row.ledgerId === 'LEDGER-FROM-API'), 'member ledger rows should be included in fetched source records');
+  assert.ok(!cxeFetched.records.some(row => row.sourceType === 'member-ledger' && row.ledgerId === 'LEDGER-OUT-OF-RANGE'), 'member ledger rows outside the requested date should be filtered out because the third-party endpoint returns full member history');
   assert.deepStrictEqual(cxeFetched.gaps, [], 'member ledger should not be reported as a gap when the third-party endpoint responds');
 
   const feishuPosts = [];
