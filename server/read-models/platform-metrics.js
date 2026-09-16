@@ -502,10 +502,11 @@ function entitlementLedgerStudentIds(row = {}, entitlementsById = new Map(), pur
   const scheduleIds = teachingScheduleStudentIds(schedule);
   const explicitIds = teachingScheduleStudentIds(row);
   const attendeeRelationIds = [row.usedByStudentId, row.authorizedStudentId].map(text).filter(Boolean);
-  if (scheduleIds.length) return scheduleIds;
   if (attendeeRelationIds.length) {
-    return [...new Set([...scheduleIds, ...explicitIds, ...attendeeRelationIds].filter(Boolean))];
+    if (scheduleIds.length && attendeeRelationIds.every(id => scheduleIds.includes(id))) return scheduleIds;
+    return [...new Set([...explicitIds, ...attendeeRelationIds].filter(Boolean))];
   }
+  if (scheduleIds.length) return scheduleIds;
   if (scheduleIds.length === 1) return scheduleIds;
   if (explicitIds.length) return explicitIds;
   const ownerId = entitlementLedgerOwnerStudentId(row, entitlementsById, purchasesById);
@@ -1092,7 +1093,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       const packageKey = text(row.packageRecordKey);
       if (!packageKey) return;
       const usedBefore = usedBeforeByPackage.get(packageKey) || 0;
-      const pending = text(row.status) === '待上课' || row.countAsCompletedLesson === false;
+      const pending = text(row.status) === '待上课';
       const hasPackageReference = !!text(row.entitlementId || row.purchaseId);
       const count = Number(row.lessonDelta) < 0
         ? Math.abs(Number(row.lessonDelta) || 0)

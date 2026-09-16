@@ -50,6 +50,7 @@ assert.deepStrictEqual(
   [['授权学员 使用了 课包主人 的课包', false]],
   '课包主人只能看到扣自己课包的审计记录，不能被算成实际上课人'
 );
+assert.strictEqual(owner?.detailPackageBalanceText, '9/10', '授权使用后课包主人余额应读取课包事实余额');
 
 const pendingSectionResult = buildPlatformMetrics({
   leads: [],
@@ -152,5 +153,93 @@ assert.deepStrictEqual(
   ],
   '跨课包学员应保留课包内第几节，同时给出连续的学员累计第几节'
 );
+
+const authorizedSharedPackageResult = buildPlatformMetrics({
+  leads: [],
+  students: [
+    { id: 'student-shared-owner', name: '十一' },
+    { id: 'student-shared-user', name: '达达' }
+  ],
+  purchases: [
+    { id: 'purchase-shared-package', studentId: 'student-shared-owner', packageName: '1v1私教课 · 10课时 · 非黄金', courseType: '私教课', packageLessons: 10, amountPaid: 4000, status: 'active', purchaseDate: '2026-07-31' }
+  ],
+  entitlements: [
+    { id: 'ent-shared-package', studentId: 'student-shared-owner', purchaseId: 'purchase-shared-package', packageName: '1v1私教课 · 10课时 · 非黄金', courseType: '私教课', totalLessons: 10, remainingLessons: 0, usedLessons: 10, status: 'depleted' }
+  ],
+  entitlementLedger: [
+    ...Array.from({ length: 9 }, (_, index) => ({
+      id: `ledger-shared-owner-${index + 1}`,
+      studentId: 'student-shared-owner',
+      usedByStudentId: 'student-shared-owner',
+      packageOwnerStudentId: 'student-shared-owner',
+      entitlementId: 'ent-shared-package',
+      purchaseId: 'purchase-shared-package',
+      scheduleId: `schedule-shared-owner-${index + 1}`,
+      lessonDelta: -1,
+      relatedDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+      reason: '排课消课'
+    })),
+    {
+      id: 'ledger-shared-authorized',
+      studentId: 'student-shared-user',
+      usedByStudentId: 'student-shared-user',
+      packageOwnerStudentId: 'student-shared-owner',
+      entitlementId: 'ent-shared-package',
+      purchaseId: 'purchase-shared-package',
+      scheduleId: 'schedule-shared-authorized',
+      lessonDelta: -1,
+      relatedDate: '2026-08-18',
+      reason: '排课消课（达达 使用 十一 的课包）'
+    }
+  ],
+  schedule: [
+    ...Array.from({ length: 9 }, (_, index) => ({
+      id: `schedule-shared-owner-${index + 1}`,
+      studentId: 'student-shared-owner',
+      studentIds: ['student-shared-owner'],
+      startTime: `2026-08-${String(index + 1).padStart(2, '0')} 10:00:00`,
+      endTime: `2026-08-${String(index + 1).padStart(2, '0')} 11:00:00`,
+      status: '已结束',
+      courseType: '私教课',
+      coach: '林铭教练',
+      lessonCount: 1,
+      entitlementId: 'ent-shared-package',
+      purchaseId: 'purchase-shared-package'
+    })),
+    {
+      id: 'schedule-shared-authorized',
+      studentId: 'student-shared-owner',
+      studentIds: ['student-shared-owner'],
+      startTime: '2026-08-18 10:00:00',
+      endTime: '2026-08-18 11:00:00',
+      status: '已结束',
+      courseType: '私教课',
+      coach: '林铭教练',
+      lessonCount: 1,
+      entitlementId: 'ent-shared-package',
+      purchaseId: 'purchase-shared-package'
+    }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-09-16 00:00:00')
+});
+const sharedRows = [
+  ...authorizedSharedPackageResult.teachingStudentViews.historicalStudents,
+  ...authorizedSharedPackageResult.teachingStudentViews.activeStudents
+];
+const sharedOwner = sharedRows.find(row => row.studentId === 'student-shared-owner');
+const sharedUser = sharedRows.find(row => row.studentId === 'student-shared-user');
+assert.strictEqual(sharedOwner?.detailPackageBalanceText, '0/10', '授权使用课包后，课包主人余额必须按课包事实余额显示为 0/10');
+assert.strictEqual(sharedOwner?.completedLessons, 9, '授权学员上课不能增加课包主人的累计上课');
+assert.strictEqual(sharedUser?.completedLessons, 1, '授权学员上课必须计入实际使用人的累计上课');
+assert.ok(
+  sharedOwner?.detailLessonRecordRows.some(row => row.lessonRelationText === '达达 使用了 十一 的课包' && row.countAsCompletedLesson === false),
+  '课包主人应看到授权扣课审计记录，但不能被算成本人上课'
+);
+const sharedOwnerAuditRow = sharedOwner?.detailLessonRecordRows.find(row => row.lessonRelationText === '达达 使用了 十一 的课包');
+assert.strictEqual(sharedOwnerAuditRow?.packageLessonProgressText, '第10/10节', '课包主人审计记录仍应按课包整体进度展示第 10/10 节');
+assert.strictEqual(sharedOwnerAuditRow?.packageRemainingAfterText, '剩0节', '课包主人审计记录应显示已扣课后的真实剩余，而不是预计剩余');
 
 console.log('authorized package owner attendance tests passed');

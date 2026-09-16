@@ -545,9 +545,26 @@ function summaryDeltaStudentIds(...rows) {
   return uniqueStudentIds(rows.flatMap(row => {
     if (!row) return [];
     const studentIds = parseArr(row.studentIds);
-    if (studentIds.length) return studentIds;
-    return [row.studentId, row.usedByStudentId, row.authorizedStudentId];
+    return [
+      ...studentIds,
+      row.studentId,
+      row.usedByStudentId,
+      row.authorizedStudentId,
+      row.packageOwnerStudentId
+    ];
   }));
+}
+
+function summaryDeltaActualStudentIds(schedule = {}, ledger = {}) {
+  const ledgerIds = uniqueStudentIds([ledger.usedByStudentId, ledger.authorizedStudentId, ledger.studentId]);
+  const scheduleIds = uniqueStudentIds(parseArr(schedule.studentIds));
+  if (ledgerIds.length) {
+    if (scheduleIds.length && ledgerIds.every(id => scheduleIds.includes(id))) return scheduleIds;
+    return ledgerIds;
+  }
+  const scheduleRelationIds = uniqueStudentIds([schedule.usedByStudentId, schedule.authorizedStudentId]);
+  if (scheduleRelationIds.length) return scheduleRelationIds;
+  return summaryDeltaStudentIds(schedule);
 }
 
 function summaryDeltaScheduleIsActive(row = {}) {
@@ -727,7 +744,7 @@ function summaryDeltaLessonRow({ schedule = {}, ledger = {}, entitlement = {}, s
   const campus = String(schedule.campus || schedule.campusName || ledger.campus || entitlement.campus || '').trim();
   const venue = String(schedule.venue || schedule.court || ledger.venue || ledger.court || '').trim();
   const coach = String(schedule.coach || schedule.coachName || ledger.coach || ledger.coachName || entitlement.ownerCoach || '').trim();
-  const actualStudentIds = summaryDeltaStudentIds(schedule, ledger);
+  const actualStudentIds = summaryDeltaActualStudentIds(schedule, ledger);
   return {
     kind: isLedger ? 'ledger' : 'schedule',
     scheduleId: String(schedule.id || ledger.scheduleId || '').trim(),
