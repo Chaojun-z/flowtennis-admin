@@ -357,7 +357,8 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   const cxeFetched = await fetchChangxiaoerData({
     rangeStart: '2026-07-30 00:00:00',
     rangeEnd: '2026-07-31 00:00:00',
-    env: { CXE_USER: 'xiaolu99', CXE_PASS: 'xiaolu99', CXE_MEMBER_LEDGER_ENDPOINT: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/accountLog' },
+    env: { CXE_USER: 'xiaolu99', CXE_PASS: 'xiaolu99', CXE_MEMBER_LEDGER_ENDPOINT: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/accountLog', CXE_MEMBER_LEDGER_EXPORT_ENDPOINT: 'disabled' },
+    memberLedgerTasks: [{ thirdPartyMemberId: 'MEMBER-FROM-API', status: 'failed', reason: '上次补偿失败' }],
     client: {
       post: async (url, body, options) => {
         cxeCalls.push({ method: 'POST', url, body, options });
@@ -411,6 +412,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     rangeStart: '2026-09-10 00:00:00',
     rangeEnd: '2026-09-16 00:00:00',
     env: { CXE_USER: 'xiaolu99', CXE_PASS: 'xiaolu99' },
+    memberLedgerTasks: [{ thirdPartyMemberId: '555081', status: 'failed', reason: '上次补偿失败' }],
     client: {
       post: async (url, body, options) => {
         exportCalls.push({ method: 'POST', url, body, options });
@@ -438,6 +440,104 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.match(exportedMemberLedger.transactionType, /订场 支出\(扣费\)/, 'exported member ledger should keep booking debit type');
   assert.ok(exportCalls.some(call => /rechargeUser\/recordExcel/.test(call.url) && call.body.userId === '555081'), 'changxiaoer fetch should use per-member ledger export');
   assert.ok(!exportCalls.some(call => /recharge\/userRechargePage/.test(call.url)), 'complete member ledger export should avoid the incomplete pagination endpoint');
+  const exportedMemberLedgerPrecheck = precheckThirdPartyRecords([exportedMemberLedger], { batchId: 'exported-member-ledger' }).items[0];
+  assert.strictEqual(exportedMemberLedgerPrecheck.recommendedType, 'auto_import', 'exported member booking ledger should be auto importable');
+  assert.strictEqual(exportedMemberLedgerPrecheck.suggestedFinalType, '会员余额订场', 'exported booking debit should become member stored-value booking');
+  assert.strictEqual(exportedMemberLedgerPrecheck.date, '2026-09-18', 'exported booking ledger should parse booking date from product description');
+  assert.strictEqual(exportedMemberLedgerPrecheck.venue, '2号场', 'exported booking ledger should parse venue from product description');
+  assert.strictEqual(exportedMemberLedgerPrecheck.startTime, '10:00', 'exported booking ledger should parse start time from product description');
+  assert.strictEqual(exportedMemberLedgerPrecheck.endTime, '11:00', 'exported booking ledger should parse end time from product description');
+
+  const selectiveCalls = [];
+  const selectiveLedger = await fetchChangxiaoerData({
+    rangeStart: '2026-09-15 00:00:00',
+    rangeEnd: '2026-09-16 00:00:00',
+    env: { CXE_USER: 'xiaolu99', CXE_PASS: 'xiaolu99', CXE_MEMBER_LEDGER_EXPORT_DELAY_MS: '0' },
+    previousRawRecords: [
+      { sourceType: 'member', rawPayload: { id: 'UNCHANGED', realName: '安静会员', phone: '13900000001', balance: 100 } },
+      { sourceType: 'member', rawPayload: { id: 'CHANGED', realName: '余额变化会员', phone: '13900000002', balance: 80 } }
+    ],
+    courts: [
+      { id: 'court-mismatch', name: '余额不一致会员', phone: '13900000003', balance: 50, history: [] },
+      { id: 'court-booking', name: '最近订场会员', phone: '13900000004', balance: 70, history: [] }
+    ],
+    membershipAccounts: [
+      { id: 'account-mismatch', courtId: 'court-mismatch', phone: '13900000003', thirdPartyMemberId: 'MISMATCH', status: 'active' },
+      { id: 'account-booking', courtId: 'court-booking', phone: '13900000004', thirdPartyMemberId: 'BOOKING', status: 'active' }
+    ],
+    client: {
+      post: async (url, body, options) => {
+        selectiveCalls.push({ method: 'POST', url, body, options });
+        if (/merchantAdminLogin/.test(url)) return { data: { data: { token: 'token-1', adminId: 'admin-1' } } };
+        if (/recharge\/userList/.test(url)) return {
+          data: {
+            data: {
+              list: body.pageNum === 1 ? [
+                { id: 'UNCHANGED', realName: '安静会员', phone: '13900000001', balance: 100 },
+                { id: 'CHANGED', realName: '余额变化会员', phone: '13900000002', balance: 120 },
+                { id: 'MISMATCH', realName: '余额不一致会员', phone: '13900000003', balance: 90 },
+                { id: 'BOOKING', realName: '最近订场会员', phone: '13900000004', balance: 70 }
+              ] : [],
+              hasNext: false
+            }
+          }
+        };
+        if (/basic\/order/.test(url)) return {
+          data: {
+            data: {
+              list: body.pageNum === 1 ? [
+                { id: 'ORDER-MEMBER', realName: '最近订场会员', phone: '13900000004', bookingDate: '2026-09-15', venue: '1号场', startTime: '10:00', endTime: '11:00', payMethod: '储值扣款', amount: 88 }
+              ] : [],
+              hasNext: false
+            }
+          }
+        };
+        if (/rechargeUser\/recordExcel/.test(url)) {
+          return {
+            data: buildLedgerXlsx([
+              ['订单号', '时间', '业务', '交易类型', '操作人员', '商品说明', '数量', '金额变动', '场馆/门店', '备注', '余额'],
+              [`LEDGER-${body.userId}`, '2026-09-15 10:30:00', '会员', '充值', '用户', '', '1', '+40.00', '网球兄弟·马坡', '', '120.00']
+            ])
+          };
+        }
+        return { data: { data: { list: [], hasNext: false } } };
+      },
+      get: async () => ({ data: { data: { list: [], hasNext: false } } })
+    }
+  });
+  const exportedUserIds = selectiveCalls.filter(call => /rechargeUser\/recordExcel/.test(call.url)).map(call => call.body.userId).sort();
+  assert.deepStrictEqual(exportedUserIds, ['BOOKING', 'CHANGED', 'MISMATCH'], 'daily sync should export only changed, mismatched, or recently-booked member ledgers');
+  assert.ok(!exportedUserIds.includes('UNCHANGED'), 'daily sync must not export quiet unchanged members');
+  assert.strictEqual(selectiveLedger.memberLedgerCompensation.candidateCount, 3, 'compensation report should count selected member ledger tasks');
+  assert.ok(selectiveLedger.memberLedgerCompensation.tasks.every(task => task.status === 'completed'), 'successful selected exports should become completed compensation tasks');
+
+  const retryCalls = [];
+  const retryLedger = await fetchChangxiaoerData({
+    rangeStart: '2026-09-15 00:00:00',
+    rangeEnd: '2026-09-16 00:00:00',
+    env: { CXE_USER: 'xiaolu99', CXE_PASS: 'xiaolu99', CXE_MEMBER_LEDGER_EXPORT_DELAY_MS: '0' },
+    memberLedgerTasks: [{ thirdPartyMemberId: 'RETRY', status: 'failed', reason: '上次导出失败' }],
+    client: {
+      post: async (url, body) => {
+        retryCalls.push({ method: 'POST', url, body });
+        if (/merchantAdminLogin/.test(url)) return { data: { data: { token: 'token-1', adminId: 'admin-1' } } };
+        if (/recharge\/userList/.test(url)) return { data: { data: { list: body.pageNum === 1 ? [{ id: 'RETRY', realName: '重试会员', phone: '13900000005', balance: 200 }] : [], hasNext: false } } };
+        if (/rechargeUser\/recordExcel/.test(url)) throw new Error('第三方导出锁定');
+        return { data: { data: { list: [], hasNext: false } } };
+      },
+      get: async () => ({ data: { data: { list: [], hasNext: false } } })
+    }
+  });
+  assert.ok(retryCalls.some(call => /rechargeUser\/recordExcel/.test(call.url) && call.body.userId === 'RETRY'), 'failed member ledger tasks should be retried by the next daily sync');
+  assert.strictEqual(retryLedger.memberLedgerCompensation.tasks[0].status, 'failed', 'failed export should stay as an automatic compensation failure instead of disappearing');
+  assert.deepStrictEqual(retryLedger.gaps, [], 'single member ledger export failure should not become a manual member-ledger gap');
+
+  const unknownMemberLedgerPrecheck = precheckThirdPartyRecords([
+    { sourceType: 'member-ledger', ledgerId: 'UNKNOWN-LEDGER', userId: 'M-UNKNOWN', memberName: '未知流水会员', transactionTime: '2026-09-15 09:00:00', transactionType: '其他', amount: '0', balanceAfter: '100' }
+  ], { batchId: 'unknown-member-ledger' });
+  const unknownMemberLedgerPlan = buildThirdPartyImportPlan({ batchId: 'unknown-member-ledger', prechecks: unknownMemberLedgerPrecheck.items, confirmations: [], importResults: [] });
+  assert.strictEqual(unknownMemberLedgerPlan.blocked.length, 0, 'unrecognized member ledger rows should not wait for operator confirmation');
+  assert.ok(unknownMemberLedgerPlan.informational.some(row => /会员流水自动补偿失败/.test(row.reason)), 'unrecognized member ledger rows should be tracked as automatic compensation failures');
 
   const feishuPosts = [];
   const notifyRes = await defaultNotifyThirdPartySyncResult({
@@ -589,8 +689,9 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(!writes.some(row => ['ft_courts', 'ft_membership_accounts', 'ft_membership_orders', 'ft_financial_ledger'].includes(row.table)), 'pull must not write business or finance tables');
   const batchId = pullRes.body.batch.batchId;
 
+  const scanCountBeforeOverview = scanCalls.length;
   const listRes = await call(handler, { path: '/third-party-sync/overview', method: 'GET' });
-  const overviewScanCalls = scanCalls.slice();
+  const overviewScanCalls = scanCalls.slice(scanCountBeforeOverview);
   assert.ok(!overviewScanCalls.some(table => ['ft_courts', 'ft_financial_ledger', 'ft_schedule', 'ft_coaches', 'ft_students', 'ft_membership_accounts', 'ft_membership_orders'].includes(table)), 'overview must not scan business tables while refreshing third-party rule prechecks');
   assert.strictEqual(listRes.body.batches.length, 1, 'overview should return batches');
   assert.strictEqual(listRes.body.summary.rawCount, 4, 'overview should include source and gap raw records');

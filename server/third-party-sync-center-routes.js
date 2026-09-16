@@ -13,6 +13,7 @@ const T_THIRD_PARTY_SYNC_IMPORT_BACKUPS = 'ft_third_party_sync_import_backups';
 const T_THIRD_PARTY_SYNC_CHANGES = 'ft_third_party_sync_changes';
 const T_THIRD_PARTY_SYNC_ALERTS = 'ft_third_party_sync_alerts';
 const T_THIRD_PARTY_SYNC_ROLLBACKS = 'ft_third_party_sync_rollbacks';
+const T_THIRD_PARTY_SYNC_MEMBER_LEDGER_TASKS = 'ft_third_party_sync_member_ledger_tasks';
 const T_COURTS = 'ft_courts';
 const T_FINANCIAL_LEDGER = 'ft_financial_ledger';
 const T_SCHEDULE = 'ft_schedule';
@@ -32,7 +33,8 @@ const THIRD_PARTY_SYNC_TABLES = [
   T_THIRD_PARTY_SYNC_IMPORT_BACKUPS,
   T_THIRD_PARTY_SYNC_CHANGES,
   T_THIRD_PARTY_SYNC_ALERTS,
-  T_THIRD_PARTY_SYNC_ROLLBACKS
+  T_THIRD_PARTY_SYNC_ROLLBACKS,
+  T_THIRD_PARTY_SYNC_MEMBER_LEDGER_TASKS
 ];
 const THIRD_PARTY_LOCK_RULES = Object.freeze([
   { id: 'internal-occupancy', pattern: /清洗|打扫|维修|维护|施工|装修|领导|内部使用/, finalType: '内部占用', businessCategory: '内部占用', processLayer: 'occupancy', paymentMethod: '不涉及支付' },
@@ -196,6 +198,10 @@ function parsedBookingStructureOf(record = {}) {
     record.orderInfoText,
     record.bookingInfo,
     record.consumeInfo,
+    record.description,
+    record.productDescription,
+    record.goodsName,
+    record.productName,
     record.transactionContent,
     record.businessContent,
     record.time,
@@ -706,7 +712,7 @@ function precheckThirdPartyRecords(records = [], { batchId = '', now = new Date(
       sourceRecordId,
       sourceType,
       uniqueKey: key,
-      date: sourceType === 'member-ledger' ? (cleanText(memberLedgerRecordedAt(record)).slice(0, 10) || bookingDateOf(record)) : bookingDateOf(record),
+      date: sourceType === 'member-ledger' ? (bookingDateOf(record) || cleanText(memberLedgerRecordedAt(record)).slice(0, 10)) : bookingDateOf(record),
       startTime: startTimeOf(record),
       endTime: endTimeOf(record),
       venue: venueOf(record),
@@ -862,6 +868,10 @@ function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations
     }
     if (['duplicate_skip', 'do_not_import'].includes(precheck.recommendedType)) {
       plan.skipped.push({ ...precheck, sourceRecordId, reason: precheck.plannedAction || '不导入' });
+      continue;
+    }
+    if (normalizeSourceType(precheck.sourceType) === 'member-ledger' && precheck.needsConfirmation) {
+      plan.informational.push({ ...precheck, sourceRecordId, reason: `会员流水自动补偿失败：${precheck.riskReason || precheck.plannedAction || '无法自动识别流水类型'}` });
       continue;
     }
     const confirmation = latestConfirmationFor(precheck, confirmations);
@@ -1860,7 +1870,9 @@ function cxeMemberLedgerEndpoint(env = process.env) {
 }
 
 function cxeMemberLedgerExportEndpoint(env = process.env) {
-  return cleanText(env.CXE_MEMBER_LEDGER_EXPORT_ENDPOINT) || 'https://api.console.changxiaoer.cn/merchantmanage/rechargeUser/recordExcel';
+  const endpoint = cleanText(env.CXE_MEMBER_LEDGER_EXPORT_ENDPOINT);
+  if (/^(disabled|off|none)$/i.test(endpoint)) return '';
+  return endpoint || 'https://api.console.changxiaoer.cn/merchantmanage/rechargeUser/recordExcel';
 }
 
 function excelXmlUnescape(value = '') {
@@ -2009,6 +2021,121 @@ function cxeMemberLookup(members = []) {
   return { byId, byPhone };
 }
 
+function cxeMemberBalance(member = {}) {
+  return moneyNumber(member.balance ?? member.newMoney ?? member.afterBalance ?? member.remainingBalance ?? member.accountBalance ?? member.money ?? 0);
+}
+
+function memberMatchName(member = {}) {
+  return cleanText(member.realName || member.memberName || member.name || member.nickName || member.basicName);
+}
+
+function memberIdentityKey(member = {}) {
+  const id = cxeMemberId(member);
+  if (id) return `id:${id}`;
+  const phone = phoneOf(member);
+  if (phone) return `phone:${phone}`;
+  const name = memberMatchName(member);
+  return name ? `name:${compactName(name)}` : '';
+}
+
+function latestPreviousMemberByIdentity(previousRawRecords = []) {
+  const map = new Map();
+  for (const row of previousRawRecords || []) {
+    const sourceType = normalizeSourceType(row.sourceType || row.rawJson?.sourceType);
+    if (sourceType !== 'member') continue;
+    const member = row.rawJson && typeof row.rawJson === 'object' ? row.rawJson : row.rawPayload && typeof row.rawPayload === 'object' ? row.rawPayload : row;
+    const keys = [cxeMemberId(member) ? `id:${cxeMemberId(member)}` : '', phoneOf(member) ? `phone:${phoneOf(member)}` : '', memberMatchName(member) ? `name:${compactName(memberMatchName(member))}` : ''].filter(Boolean);
+    for (const key of keys) {
+      if (String(row.fetchedAt || '').localeCompare(String(map.get(key)?.fetchedAt || '')) >= 0) map.set(key, { ...row, member });
+    }
+  }
+  return map;
+}
+
+function courtStoredValueBalance(court = {}) {
+  if (court.balance !== undefined && court.balance !== null && cleanText(court.balance) !== '') return moneyNumber(court.balance);
+  return (court.history || []).reduce((sum, row) => {
+    const amount = Number(row.amount || 0) || 0;
+    const bonus = Number(row.bonusAmount || 0) || 0;
+    if (row.type === '充值') return sum + amount + bonus;
+    if (row.type === '消费' && /储值/.test(cleanText(row.payMethod))) return sum - amount;
+    if (row.type === '冲正' && /储值/.test(cleanText(row.payMethod))) return sum + amount;
+    if (row.type === '退款' && row.payMethod === '储值退款') return sum - amount;
+    return sum;
+  }, 0);
+}
+
+function findLocalMemberForCxeMember(member = {}, courts = [], accounts = []) {
+  const memberId = cxeMemberId(member);
+  const phone = phoneOf(member);
+  const name = memberMatchName(member);
+  const activeAccounts = (accounts || []).filter(activeMembershipAccount);
+  const courtById = new Map((courts || []).map(row => [cleanText(row.id), row]));
+  const matches = activeAccounts.filter(account => {
+    const court = courtById.get(cleanText(account.courtId)) || {};
+    if (memberId && [account.thirdPartyMemberId, account.changxiaoerMemberId, account.externalMemberId].map(cleanText).includes(memberId)) return true;
+    if (phone && (samePhone(account.phone, phone) || samePhone(court.phone, phone))) return true;
+    if (name && (sameMemberName(account.courtName, name) || sameMemberName(court.name, name))) return true;
+    return false;
+  });
+  const courtIds = [...new Set(matches.map(row => cleanText(row.courtId)).filter(Boolean))];
+  if (courtIds.length === 1) return { account: matches[0], court: courtById.get(courtIds[0]) || null };
+  if (courtIds.length > 1) return { ambiguous: true };
+  const courtMatches = (courts || []).filter(court => {
+    if (phone && samePhone(court.phone, phone)) return true;
+    if (name && sameMemberName(court.name, name)) return true;
+    return false;
+  });
+  const uniqueCourtIds = [...new Set(courtMatches.map(row => cleanText(row.id)).filter(Boolean))];
+  if (uniqueCourtIds.length === 1) return { account: null, court: courtMatches[0] };
+  return uniqueCourtIds.length > 1 ? { ambiguous: true } : { account: null, court: null };
+}
+
+function recordMatchesMember(record = {}, member = {}) {
+  const memberId = cxeMemberId(member);
+  const phone = phoneOf(member);
+  const name = memberMatchName(member);
+  if (memberId && [record.userId, record.memberId, record.thirdPartyMemberId, record.rechargeUserId].map(cleanText).includes(memberId)) return true;
+  if (phone && samePhone(phoneOf(record), phone)) return true;
+  if (name && sameMemberName(customerNameOf(record), name)) return true;
+  return false;
+}
+
+function recordLooksMemberStoredValueBooking(record = {}) {
+  const text = [record.payMethod, record.paymentMethod, record.orderType, record.businessType, record.category, record.remark, record.note, record.description, record.transactionType].map(cleanText).join(' ');
+  return /储值|余额|会员/.test(text) && /订场|定场|场地|扣款|扣费|消费/.test(text);
+}
+
+function openMemberLedgerTaskMatches(task = {}, member = {}) {
+  const status = cleanText(task.status || 'failed');
+  if (['completed', 'closed', 'ignored'].includes(status)) return false;
+  const memberId = cxeMemberId(member);
+  const phone = phoneOf(member);
+  if (memberId && cleanText(task.thirdPartyMemberId) === memberId) return true;
+  return !!phone && samePhone(task.phone, phone);
+}
+
+function selectMemberLedgerCompensationMembers({ members = [], orders = [], locks = [], courts = [], membershipAccounts = [], previousRawRecords = [], memberLedgerTasks = [] } = {}) {
+  const previousByIdentity = latestPreviousMemberByIdentity(previousRawRecords);
+  const selected = [];
+  for (const member of members || []) {
+    const reasons = [];
+    const key = memberIdentityKey(member);
+    const previous = key ? previousByIdentity.get(key) : null;
+    const currentBalance = cxeMemberBalance(member);
+    const previousBalance = previous ? cxeMemberBalance(previous.member) : null;
+    if (previous && Math.abs(currentBalance - previousBalance) > 0.01) reasons.push('balance_changed');
+    const local = findLocalMemberForCxeMember(member, courts, membershipAccounts);
+    if (local.court && Math.abs(courtStoredValueBalance(local.court) - currentBalance) > 0.01) reasons.push('balance_mismatch');
+    const recentMemberBooking = [...(orders || []), ...(locks || [])].some(record => recordMatchesMember(record, member) && recordLooksMemberStoredValueBooking(record));
+    if (recentMemberBooking) reasons.push('recent_member_booking');
+    const retryTask = (memberLedgerTasks || []).some(task => openMemberLedgerTaskMatches(task, member));
+    if (retryTask) reasons.push('retry_failed_task');
+    if (reasons.length) selected.push({ member, reasons: [...new Set(reasons)] });
+  }
+  return selected;
+}
+
 async function fetchMemberLedgerRows({ client, token, members = [], rangeStart = '', rangeEnd = '', endpoint = '' } = {}) {
   const rows = [];
   const startDate = cleanText(rangeStart).slice(0, 10);
@@ -2074,8 +2201,7 @@ async function fetchMemberLedgerRowsForMembers({ client, token, adminId = '', me
   try {
     if (exportEndpoint) {
       const result = await fetchMemberLedgerExportRowsForMembers({ client, token, adminId, members, rangeStart, rangeEnd, endpoint: exportEndpoint, delayMs: exportDelayMs });
-      if (result.rows.length || !result.warnings.length) return { rows: result.rows, ok: !result.warnings.length, warnings: result.warnings };
-      throw new Error(result.warnings[0]?.reason || '会员流水导出失败');
+      return { rows: result.rows, ok: !result.warnings.length, warnings: result.warnings };
     }
     const rows = await fetchMemberLedgerRows({ client, token, members, rangeStart, rangeEnd, endpoint });
     return { rows, ok: true, warnings: [] };
@@ -2093,6 +2219,30 @@ async function fetchMemberLedgerRowsForMembers({ client, token, adminId = '', me
   }
 }
 
+function buildMemberLedgerCompensationTasks({ batchId = '', members = [], selected = [], exportWarnings = [], now = new Date().toISOString() } = {}) {
+  const selectedById = new Map((selected || []).map(row => [cxeMemberId(row.member), row]));
+  const warningByUserId = new Map((exportWarnings || []).map(row => [cleanText(row.userId), row]));
+  return (members || []).map(member => {
+    const userId = cxeMemberId(member);
+    const selectedRow = selectedById.get(userId) || {};
+    const warning = warningByUserId.get(userId);
+    const reasons = selectedRow.reasons || [];
+    return {
+      id: `${batchId}-member-ledger-task-${stableHash({ userId, phone: phoneOf(member), reasons }).slice(0, 16)}`,
+      batchId,
+      thirdPartyMemberId: userId,
+      memberName: memberMatchName(member),
+      phone: phoneOf(member),
+      reasons,
+      status: warning ? 'failed' : 'completed',
+      reason: warning?.reason || '',
+      retryable: !!warning,
+      attemptedAt: now,
+      sourceSystem: 'changxiaoer'
+    };
+  });
+}
+
 function cxeHeaders(token = '') {
   return {
     'content-type': 'application/json;charset=UTF-8',
@@ -2102,7 +2252,7 @@ function cxeHeaders(token = '') {
   };
 }
 
-async function fetchChangxiaoerData({ rangeStart = '', rangeEnd = '', env = process.env, client = axios } = {}) {
+async function fetchChangxiaoerData({ rangeStart = '', rangeEnd = '', env = process.env, client = axios, previousRawRecords = [], courts = [], membershipAccounts = [], memberLedgerTasks = [], batchId = '', now = new Date().toISOString() } = {}) {
   const phone = cleanText(env.CXE_USER);
   const pwd = cleanText(env.CXE_PASS);
   if (!phone || !pwd) throw new Error('缺少 CXE_USER / CXE_PASS，不能拉取第三方数据');
@@ -2118,7 +2268,14 @@ async function fetchChangxiaoerData({ rangeStart = '', rangeEnd = '', env = proc
     fetchPaged({ client, method: 'GET', url: 'https://api.console.changxiaoer.cn/merchants-management/data-analysis/occupy-space-period-records', token, rangeStart, rangeEnd }),
     fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userList', token })
   ]);
-  const memberLedgerResult = await fetchMemberLedgerRowsForMembers({ client, token, adminId, members, rangeStart, rangeEnd, endpoint: memberLedgerEndpoint, exportEndpoint: memberLedgerExportEndpoint, exportDelayMs: memberLedgerExportDelayMs });
+  const selectedMemberLedgers = selectMemberLedgerCompensationMembers({ members, orders, locks, courts, membershipAccounts, previousRawRecords, memberLedgerTasks });
+  const ledgerMembers = selectedMemberLedgers.map(row => row.member);
+  const memberLedgerResult = await fetchMemberLedgerRowsForMembers({ client, token, adminId, members: ledgerMembers, rangeStart, rangeEnd, endpoint: memberLedgerEndpoint, exportEndpoint: memberLedgerExportEndpoint, exportDelayMs: memberLedgerExportDelayMs });
+  const memberLedgerCompensation = {
+    candidateCount: ledgerMembers.length,
+    tasks: buildMemberLedgerCompensationTasks({ batchId, members: ledgerMembers, selected: selectedMemberLedgers, exportWarnings: memberLedgerResult.warnings, now }),
+    warnings: memberLedgerResult.warnings || []
+  };
   return {
     records: [
       ...orders.map(row => ({ ...row, sourceType: 'order' })),
@@ -2126,8 +2283,9 @@ async function fetchChangxiaoerData({ rangeStart = '', rangeEnd = '', env = proc
       ...members.map(row => ({ ...row, sourceType: 'member' })),
       ...memberLedgerResult.rows.map(row => ({ ...row, sourceType: 'member-ledger' }))
     ],
-    gaps: memberLedgerResult.ok ? [] : ['member-ledger'],
-    warnings: memberLedgerResult.ok ? [] : memberLedgerResult.warnings
+    gaps: [],
+    warnings: memberLedgerResult.warnings || [],
+    memberLedgerCompensation
   };
 }
 
@@ -2341,17 +2499,20 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
   async function pullAndPrecheck({ rangeStart, rangeEnd, operator = 'system' } = {}) {
     await ensureTables();
     const pulledAt = now();
-    const fetched = await fetchThirdPartyData({ rangeStart, rangeEnd, env });
+    const batchId = `cxe-sync-${String(rangeStart).slice(0, 10).replace(/-/g, '')}-${uuidv4()}`;
+    const [previousRawRecords, pricePlans, courtRows, membershipAccountRows, memberLedgerTasks] = await Promise.all([
+      getCachedScan(T_THIRD_PARTY_SYNC_RAW_RECORDS).catch(() => []),
+      getCachedScan(tables.T_PRICE_PLANS || T_PRICE_PLANS).catch(() => []),
+      getCachedScan(tables.T_COURTS || T_COURTS).catch(() => []),
+      getCachedScan(tables.T_MEMBERSHIP_ACCOUNTS || T_MEMBERSHIP_ACCOUNTS).catch(() => []),
+      getCachedScan(T_THIRD_PARTY_SYNC_MEMBER_LEDGER_TASKS).catch(() => [])
+    ]);
+    const fetched = await fetchThirdPartyData({ rangeStart, rangeEnd, env, previousRawRecords, courts: courtRows, membershipAccounts: membershipAccountRows, memberLedgerTasks, batchId, now: pulledAt });
     const scopedRecords = (fetched.records || []).filter(record => recordWithinRange(record, rangeStart, rangeEnd));
     const sourceRecords = [
       ...scopedRecords,
       ...(fetched.gaps || []).map(gap => ({ sourceType: `${gap}-gap`, thirdPartyId: `${gap}-gap`, riskReason: '会员流水批量接口缺口' }))
     ];
-    const [previousRawRecords, pricePlans] = await Promise.all([
-      getCachedScan(T_THIRD_PARTY_SYNC_RAW_RECORDS).catch(() => []),
-      getCachedScan(tables.T_PRICE_PLANS || T_PRICE_PLANS).catch(() => [])
-    ]);
-    const batchId = `cxe-sync-${String(rangeStart).slice(0, 10).replace(/-/g, '')}-${uuidv4()}`;
     const precheck = precheckThirdPartyRecords(sourceRecords, { batchId, now: pulledAt, pricePlans });
     const changes = buildThirdPartyChangeRows({ sourceRecords, previousRawRecords, batchId, now: pulledAt });
     const financeImpact = precheck.items.reduce((acc, item) => ({
@@ -2368,8 +2529,9 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     }));
     await Promise.all(precheck.items.map(row => put(T_THIRD_PARTY_SYNC_PRECHECKS, row.id, row)));
     await Promise.all(changes.map(row => put(T_THIRD_PARTY_SYNC_CHANGES, row.id, row)));
+    await Promise.all((fetched.memberLedgerCompensation?.tasks || []).map(row => put(T_THIRD_PARTY_SYNC_MEMBER_LEDGER_TASKS, row.id, row)));
     const audit = buildThirdPartySyncAuditReport({ batch, precheck, changes });
-    return { batch, precheck, changes, audit };
+    return { batch, precheck, changes, audit, memberLedgerCompensation: fetched.memberLedgerCompensation || { candidateCount: 0, tasks: [], warnings: [] } };
   }
 
   async function buildCurrentFinanceSnapshot(importedAt = now()) {
@@ -2414,6 +2576,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     for (const row of plan.blocked || []) pushAlert(row.reason || row.riskReason || '低置信数据待确认', row);
     for (const row of plan.informational || []) {
       if (/缺口/.test(String(row.reason || row.riskReason || ''))) pushAlert(row.reason || row.riskReason, row);
+      if (/会员流水自动补偿失败/.test(String(row.reason || row.riskReason || ''))) pushAlert(row.reason || row.riskReason, row);
     }
     for (const row of plan.skipped || []) {
       if (/取消|退款|作废/.test(String(row.reason || row.riskReason || row.plannedAction || ''))) pushAlert(row.reason || row.riskReason || row.plannedAction, row);
