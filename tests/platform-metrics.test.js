@@ -858,6 +858,34 @@ assert.ok(oneTimeCourseStudent, 'paid one-time formal lesson should enter active
 assert.strictEqual(oneTimeCourseStudent.packageStatusLabel, '未买过课包', 'one-time 1-lesson products must not create formal package status');
 assert.strictEqual(oneTimeCourseStudent.paymentModeLabel, '单次付费学员', 'one-time 1-lesson products must be labeled as single-pay students');
 
+const sharedOneTimePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [
+    { id: 'student-one-time-owner', name: '单次权益本人' },
+    { id: 'student-one-time-attendee', name: '共同上课参与人' }
+  ],
+  purchases: [
+    { id: 'purchase-shared-one-time', studentId: 'student-one-time-owner', packageName: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元', courseType: '专项课', packageLessons: 1, amountPaid: 199, status: 'active', purchaseDate: '2026-08-01' }
+  ],
+  entitlements: [
+    { id: 'ent-shared-one-time', studentId: 'student-one-time-owner', purchaseId: 'purchase-shared-one-time', packageName: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元', courseType: '专项课', totalLessons: 1, remainingLessons: 0, usedLessons: 1, status: 'depleted' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-shared-one-time', studentId: 'student-one-time-owner', entitlementId: 'ent-shared-one-time', purchaseId: 'purchase-shared-one-time', scheduleId: 'schedule-shared-one-time', lessonDelta: -1, relatedDate: '2026-08-02', reason: '单次多人上课' }
+  ],
+  schedule: [
+    { id: 'schedule-shared-one-time', studentIds: ['student-one-time-owner', 'student-one-time-attendee'], startTime: '2026-08-02 10:00:00', endTime: '2026-08-02 11:00:00', status: '已结束', courseType: '专项课', coach: '王教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const sharedOneTimeAttendee = sharedOneTimePlatform.teachingStudentViews.activeStudents.find(row => row.studentId === 'student-one-time-attendee');
+assert.ok(sharedOneTimeAttendee, 'shared one-time attendee should enter active students through the lesson fact');
+assert.strictEqual(sharedOneTimeAttendee.paymentModeLabel, '单次付费学员', 'shared one-time attendee must not become a package student through polluted coursePurchaseCount');
+assert.strictEqual(sharedOneTimeAttendee.packageStatusLabel, '使用他人课包', 'shared one-time attendee should keep the shared-package context as package status only');
+
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(operations.conversion.cards.totalLeads.value, source.leads.length, 'operations conversion must count raw course leads, not the full searchable customer pool');

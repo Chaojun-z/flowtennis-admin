@@ -2345,8 +2345,7 @@ function teachingStudentHasFormalPackage(row = {}) {
   const knownPackageRows = [...packageListRows, ...detailPackageOrderRows];
   if (knownPackageRows.length) return knownPackageRows.some(courseRowIsFormalPackageProduct);
   return (Number(row.detailPackageBalanceTotal) || 0) > 1
-    || (Number(row.packageBalanceTotal) || 0) > 1
-    || ((Number(row.coursePurchaseCount) || 0) > 0 && !courseRowIsOneTimePaidProduct(row));
+    || (Number(row.packageBalanceTotal) || 0) > 1;
 }
 
 function teachingPaymentHasPackageFact(row = {}) {
