@@ -287,7 +287,7 @@ assert.match(source, /function renderStandardCellText[\s\S]*const muted=!raw\|\|
 assert.match(source, /function renderStandardEmptyText[\s\S]*return raw&&raw!=='—'\?raw:'-'/, 'empty values should render with the short dash');
 assert.doesNotMatch(source, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
 assert.doesNotMatch(source, /<th>关联账户<\/th>/, 'student table should replace account wording with booking membership summary');
-assert.match(source, /const STUDENT_PACKAGE_STATUS_OPTIONS=\['未买过课包','课包有余额','课包即将耗尽','课包已用完'\]/, 'student package status options should match the agreed labels');
+assert.match(source, /const STUDENT_PACKAGE_STATUS_OPTIONS=\['未买过课包','课包有余额','课包即将耗尽','课包已用完','使用他人课包'\]/, 'student package status options should match the agreed labels');
 assert.doesNotMatch(fnBody('studentHasFormalPackage'), /studentHasNonTrialPackage|studentLifecycleStage/, 'package status should not treat single-pay formal students as package students');
 assert.match(fnBody('studentHasFormalPackage'), /coursePurchaseCount/, 'package status should still recognize students who bought packages that are now used up');
 assert.match(source, /const STUDENT_PAYMENT_MODE_OPTIONS=\['课包学员','单次付费学员','课包\+单次付费','体验课'\]/, 'student payment mode options should match the agreed labels');

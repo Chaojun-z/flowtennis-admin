@@ -250,6 +250,25 @@ assert.deepStrictEqual(
   'student detail package orders should include depleted historical purchases and entitlements'
 );
 
+const depletedFormalPackagePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-depleted-formal-package', name: '已用完正式课包' }],
+  purchases: [
+    { id: 'purchase-depleted-formal', studentId: 'student-depleted-formal-package', packageName: '成人正式课包10次', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-04-01' }
+  ],
+  entitlements: [
+    { id: 'ent-depleted-formal', studentId: 'student-depleted-formal-package', purchaseId: 'purchase-depleted-formal', packageName: '成人正式课包10次', courseType: '私教课', totalLessons: 10, remainingLessons: 0, usedLessons: 10, status: 'depleted' }
+  ],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: []
+});
+const depletedFormalPackageStudent = depletedFormalPackagePlatform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-depleted-formal-package');
+assert.ok(depletedFormalPackageStudent, 'depleted formal package student should stay in formal student view');
+assert.strictEqual(depletedFormalPackageStudent.packageStatusLabel, '课包已用完', 'used-up multi-lesson products must stay formal packages');
+assert.strictEqual(depletedFormalPackageStudent.paymentModeLabel, '课包学员', 'used-up formal package purchase must still mark the student as package-paying');
+
 const trialPackagePlatform = buildPlatformMetrics({
   leads: [],
   students: [{ id: 'student-trial-package', name: '体验课学员' }],
@@ -811,8 +830,33 @@ const sharedPackagePlatform = buildPlatformMetrics({
 const sharedPackageUser = sharedPackagePlatform.teachingStudentViews.historicalStudents.find(row => row.studentId === 'student-package-user');
 assert.ok(sharedPackageUser, 'shared package user should enter the historical view through ledger facts');
 assert.strictEqual(sharedPackageUser.packageStatusLabel, '使用他人课包', 'student using another student package should not be shown as never having package context');
-assert.strictEqual(sharedPackageUser.paymentModeLabel, '课包学员', 'shared package consumption should count as package payment mode');
+assert.strictEqual(sharedPackageUser.paymentModeLabel, '-', 'shared package consumption should not mark the attendee as a package-paying student');
 assert.match(sharedPackageUser.detailLessonRecordRows[0]?.lessonRelationText || '', /使用 哥哥 的课包/, 'shared package lesson record should show the package owner relation');
+
+const oneTimeCoursePlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-one-time', name: '专项单次' }],
+  purchases: [
+    { id: 'purchase-one-time', studentId: 'student-one-time', packageName: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元', courseType: '专项课', packageLessons: 1, amountPaid: 199, status: 'active', purchaseDate: '2026-08-01' }
+  ],
+  entitlements: [
+    { id: 'ent-one-time', studentId: 'student-one-time', purchaseId: 'purchase-one-time', packageName: '专项课 · 零基础 · 初阶专项课 · 1次 · 199元', courseType: '专项课', totalLessons: 1, remainingLessons: 0, usedLessons: 1, status: 'depleted' }
+  ],
+  entitlementLedger: [
+    { id: 'ledger-one-time', studentId: 'student-one-time', entitlementId: 'ent-one-time', purchaseId: 'purchase-one-time', scheduleId: 'schedule-one-time', lessonDelta: -1, relatedDate: '2026-08-02', reason: '单次付费消课' }
+  ],
+  schedule: [
+    { id: 'schedule-one-time', studentId: 'student-one-time', startTime: '2026-08-02 10:00:00', endTime: '2026-08-02 11:00:00', status: '已结束', courseType: '专项课', coach: '王教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const oneTimeCourseStudent = oneTimeCoursePlatform.teachingStudentViews.activeStudents.find(row => row.studentId === 'student-one-time');
+assert.ok(oneTimeCourseStudent, 'paid one-time formal lesson should enter active students through recent lesson facts');
+assert.strictEqual(oneTimeCourseStudent.packageStatusLabel, '未买过课包', 'one-time 1-lesson products must not create formal package status');
+assert.strictEqual(oneTimeCourseStudent.paymentModeLabel, '单次付费学员', 'one-time 1-lesson products must be labeled as single-pay students');
 
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00:00:00') });
 

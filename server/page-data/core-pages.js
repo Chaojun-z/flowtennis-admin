@@ -718,15 +718,16 @@ function createCorePageDataRoutes(deps={}){
       const previousMeta=(previousSummaryRows||[]).find(row=>String(row?.id||'')==='__student_teaching_summary_meta__');
       const hasReadyMeta=String(previousMeta?.status||'')===STUDENT_TEACHING_SUMMARY_READY;
       try{
+        const scanSummarySource=(table)=>getCachedScan?getCachedScan(table,{fresh:true}):cappedScan(table);
         const [leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
-          T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads) : Promise.resolve([]),
-          cappedScan(T_STUDENTS),
-          cappedScan(T_PURCHASES),
-          cappedScan(T_ENTITLEMENTS),
-          cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
-          T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
-          T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER) : Promise.resolve([]),
-          T_FEEDBACKS ? cappedScan(T_FEEDBACKS) : Promise.resolve([])
+          T_LEADS ? scanSummarySource(T_LEADS) : Promise.resolve([]),
+          scanSummarySource(T_STUDENTS),
+          scanSummarySource(T_PURCHASES),
+          scanSummarySource(T_ENTITLEMENTS),
+          scanSummarySource(T_ENTITLEMENT_LEDGER),
+          T_SCHEDULE ? scanSummarySource(T_SCHEDULE) : Promise.resolve([]),
+          T_MEMBERSHIP_BENEFIT_LEDGER ? scanSummarySource(T_MEMBERSHIP_BENEFIT_LEDGER) : Promise.resolve([]),
+          T_FEEDBACKS ? scanSummarySource(T_FEEDBACKS) : Promise.resolve([])
         ]);
         const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
         const customerLifecycleRows=buildCustomerLifecycleRows({
@@ -788,29 +789,31 @@ function createCorePageDataRoutes(deps={}){
         }));
         return sendJson(res,{success:true,count:publishedRows.length,updatedAt:new Date().toISOString()});
       }catch(err){
-        try{
-          await rollbackStudentTeachingSummaryPublish({
-            tableName:T_STUDENT_TEACHING_SUMMARY,
-            previousRows:previousSummaryRows,
-            hasReadyMeta:String(previousMeta?.status||'')===STUDENT_TEACHING_SUMMARY_READY,
-            batchId,
-            getCachedScan,
-            put,
-            del,
-            logger:console
-          });
-        }catch(rollbackErr){
-          console.error('[student-teaching-summary] manual rollback failed',rollbackErr);
-        }
-        if(!hasReadyMeta){
-          await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
-            status:STUDENT_TEACHING_SUMMARY_FAILED,
-            batchId,
-            sourceSnapshotAt,
-            error:err?.message||String(err),
-            sourceTable:'manual-rebuild',
-            sourceOp:'rebuild-summary'
-          })).catch(()=>null);
+        if(!dryRun){
+          try{
+            await rollbackStudentTeachingSummaryPublish({
+              tableName:T_STUDENT_TEACHING_SUMMARY,
+              previousRows:previousSummaryRows,
+              hasReadyMeta:String(previousMeta?.status||'')===STUDENT_TEACHING_SUMMARY_READY,
+              batchId,
+              getCachedScan,
+              put,
+              del,
+              logger:console
+            });
+          }catch(rollbackErr){
+            console.error('[student-teaching-summary] manual rollback failed',rollbackErr);
+          }
+          if(!hasReadyMeta){
+            await put(T_STUDENT_TEACHING_SUMMARY,'__student_teaching_summary_meta__',buildStudentTeachingSummaryMetaRow({
+              status:STUDENT_TEACHING_SUMMARY_FAILED,
+              batchId,
+              sourceSnapshotAt,
+              error:err?.message||String(err),
+              sourceTable:'manual-rebuild',
+              sourceOp:'rebuild-summary'
+            })).catch(()=>null);
+          }
         }
         throw err;
       }
