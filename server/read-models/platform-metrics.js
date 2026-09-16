@@ -2381,6 +2381,7 @@ function teachingPaymentIsFormalPackage(row = {}) {
 }
 
 function teachingPaymentIsOwnFormalPackage(row = {}, studentId = '') {
+  if (courseRowIsOneTimePaidProduct(row)) return false;
   if (!teachingPaymentIsFormalPackage(row)) return false;
   const ownerId = text(row.packageOwnerStudentId || row.ownerStudentId);
   return !ownerId || !studentId || ownerId === text(studentId);
