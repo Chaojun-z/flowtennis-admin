@@ -71,9 +71,9 @@ const operations = buildOperationsMetrics({ ...sample, customerLifecycleRows }, 
 assert.strictEqual(standard.metrics.validLeads.value, 10, '有效线索必须按统一自然人线索池统计');
 assert.strictEqual(standard.metrics.courseChainStudents.value, 10, '普通学员必须包含已转化学员和有排课记录学员');
 assert.strictEqual(standard.metrics.formalStudents.value, 2, '正式学员必须来自统一教学链视图');
-assert.strictEqual(standard.metrics.trialAttendedStudents.value, 1, '上过体验课只认排课表里的有效已发生体验课');
+assert.strictEqual(standard.metrics.trialAttendedStudents.value, 2, '上过体验课应包含已绑定学员且时间已过去的未取消体验课');
 assert.strictEqual(standard.metrics.trialAttendedToFormalPurchase.value, 1, '体验后买正式课只统计上过体验课且买过正式课包的人');
-assert.strictEqual(standard.metrics.trialAttendedWithoutFormal.value, 0, '上过体验未买正式课来自同一份上过体验课集合');
+assert.strictEqual(standard.metrics.trialAttendedWithoutFormal.value, 1, '上过体验未买正式课来自同一份上过体验课集合');
 assert.strictEqual(standard.metrics.directCourseDeals.value, 1, '直接成交只统计没有上过体验课事实的正式成交');
 assert.strictEqual(standard.teachingSummary.coursePurchaseCount, 3, '正式学员购买次数必须累加正式课包购买笔数，不能用成交人数替代');
 assert.strictEqual(standard.teachingSummary.activePackageStudentCount, 1, '有效课包学员必须只统计仍有剩余正式课包的人');
@@ -105,8 +105,8 @@ assert.strictEqual(
 assert.strictEqual(formalViewRow.packagePurchaseDate, '2026-06-08', '正式学员课包购买时间必须由后端统一读模型按首次正式课包给出');
 assert.deepStrictEqual(
   standard.views.historicalStudents.map(row => row.studentId).sort(),
-  ['student-direct-course', 'student-formal-schedule-only', 'student-manual-course-converted', 'student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-91days', 'student-single-pay-active', 'student-single-pay-sleeping'],
-  '历史学员必须包含已成交课程关联学员、已买课包未排课、已排课、无档案排课、体验课、正式课包课和单次付费正式课'
+  ['student-direct-course', 'student-formal-schedule-only', 'student-manual-course-converted', 'student-orphan-schedule', 'student-real-trial-deal', 'student-real-trial-pending', 'student-single-pay-31days', 'student-single-pay-91days', 'student-single-pay-active', 'student-single-pay-sleeping'],
+  '历史学员必须包含已成交课程关联学员、已买课包未排课、已排课、无档案排课、已过时间体验课、正式课包课和单次付费正式课'
 );
 assert.deepStrictEqual(
   standard.views.activeStudents.map(row => row.studentId).sort(),
@@ -115,13 +115,13 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   standard.teachingSummary.historicalStudentCount,
-  9,
+  10,
   '历史学员顶部总数必须来自历史学员新视图'
 );
 assert.strictEqual(
   standard.teachingSummary.historicalTrialAttendedCount,
-  1,
-  '历史学员上过体验课必须只按排课表体验课事实统计'
+  2,
+  '历史学员上过体验课必须按已发生且未取消的排课表体验课事实统计'
 );
 assert.strictEqual(
   standard.teachingSummary.historicalFormalAttendedCount,
@@ -130,7 +130,7 @@ assert.strictEqual(
 );
 assert.strictEqual(
   standard.teachingSummary.historicalTrialWithoutFormalCount,
-  1,
+  2,
   '上过体验未上正式课必须等于有体验课排课事实且没有正式课排课事实的人'
 );
 assert.strictEqual(
@@ -302,6 +302,53 @@ const nameOnlyScheduleSummaryRows = buildStudentTeachingSummaryRows(
 assert.ok(
   nameOnlyScheduleSummaryRows.some(row => row.studentId === nameOnlyScheduleHistoricalRow.studentId && row.name === 'S' && row.hasFormalAttended),
   '历史学员缓存摘要重建时也必须保留 name-only 排课学员，避免线上搜索缓存漏人'
+);
+const bookedProfileTrialData = {
+  leads: [{
+    id: 'lead-booked-profile-trial',
+    displayName: '睿博（绊倒铁盒）',
+    source: '抖音',
+    campus: 'shunyi_mapo',
+    trialAtRaw: '2026-09-11 15:00'
+  }],
+  students: [{
+    id: 'student-booked-profile-trial',
+    name: '睿博（绊倒铁盒）',
+    sourceLeadId: 'lead-booked-profile-trial',
+    campus: 'shunyi_mapo'
+  }],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [{
+    id: 'schedule-booked-profile-trial',
+    studentIds: ['student-booked-profile-trial'],
+    studentName: '睿博',
+    courseType: '体验课',
+    startTime: '2026-09-11 15:00',
+    endTime: '2026-09-11 16:00',
+    status: '已排课',
+    campus: 'shunyi_mapo'
+  }],
+  feedbacks: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  membershipBenefitLedger: []
+};
+const bookedProfileTrialSummaryRows = buildStudentTeachingSummaryRows(
+  buildCustomerLifecycleRows(bookedProfileTrialData),
+  { ...bookedProfileTrialData, now: new Date('2026-09-16 12:00:00') }
+);
+const bookedProfileTrialRow = bookedProfileTrialSummaryRows.find(row => row.studentId === 'student-booked-profile-trial');
+assert.ok(
+  bookedProfileTrialRow,
+  '已建档且已约体验的学员必须进入历史学员摘要，不能因体验课未手工完结而被重建洗掉'
+);
+assert.strictEqual(
+  bookedProfileTrialRow.hasTrialAttended,
+  true,
+  '已绑定学员且时间已过去的体验课，即使状态仍是已排课，也应计入已体验'
 );
 const staleEmptyLessonSummaryRow = staleEmptyLessonSummaryStandard.views.formalStudents.find(row => row.studentId === 'student-real-trial-deal');
 assert.deepStrictEqual(

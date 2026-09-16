@@ -181,8 +181,8 @@ assert.strictEqual(
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.trialAttendedStudents.map(row => row.studentId).sort(),
-  ['stu-attended-only', 'stu-trial-course'],
-  '上过体验课只包含排课表里有效已发生体验课的人，不包含待上课、体验购买或手工邀约'
+  ['stu-attended-only', 'stu-booked-only', 'stu-trial-course'],
+  '上过体验课只包含排课表里有效已发生或已过期未取消的体验课，不包含体验购买或手工邀约'
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.trialAttendedToFormalPurchaseStudents.map(row => row.studentId).sort(),
@@ -196,8 +196,8 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.trialAttendedWithoutFormalStudents.map(row => row.studentId).sort(),
-  ['stu-attended-only'],
-  '上过体验未买正式课只统计有体验课排课事实但未买正式课包的人'
+  ['stu-attended-only', 'stu-booked-only'],
+  '上过体验未买正式课只统计有体验课排课事实或已过期未取消体验课但未买正式课包的人'
 );
 assert.ok(
   teachingPlatform.teachingStudentViews.historicalStudents.some(row => row.studentId === 'stu-manual-course'),
@@ -207,12 +207,12 @@ assert.ok(
   ['courseStudentCount', 7],
   ['trialStudentCount', 2],
   ['formalStudentCount', 3],
-  ['historicalStudentCount', 6],
+  ['historicalStudentCount', 7],
   ['activeStudentCount', 0],
   ['courseDealCustomers', 3],
-  ['trialAttendedStudentCount', 2],
+  ['trialAttendedStudentCount', 3],
   ['trialAttendedToFormalPurchaseCount', 1],
-  ['trialAttendedWithoutFormalCount', 1],
+  ['trialAttendedWithoutFormalCount', 2],
   ['trialToCourseCustomers', 1],
   ['directCourseCustomers', 2],
   ['coursePurchaseCount', 3],

@@ -2142,8 +2142,16 @@ function teachingStudentFormalLessonFactRows(data = {}, studentId = '', now = ne
   return teachingStudentScheduleRows(data, studentId, row => teachingScheduleLessonFact(row, now) && teachingScheduleFormal(row));
 }
 
+function teachingTrialScheduleLessonFact(row = {}, now = new Date()) {
+  if (!activeStatus(row) || !courseRowIsTrial(row) || courseRowIsCompanion(row)) return false;
+  if (teachingScheduleLessonFact(row, now)) return true;
+  const status = text(row.status || row.systemStatus);
+  if (!['已排课', '待上课', '待确认', '预约', '已预约'].includes(status)) return false;
+  return teachingDateTimeOnOrBeforeNow(row.endTime || row.startTime || row.createdAt, now);
+}
+
 function teachingStudentTrialLessonFactRows(data = {}, studentId = '', now = new Date()) {
-  return teachingStudentScheduleRows(data, studentId, row => teachingScheduleLessonFact(row, now) && courseRowIsTrial(row));
+  return teachingStudentScheduleRows(data, studentId, row => teachingTrialScheduleLessonFact(row, now));
 }
 
 function teachingStudentFormalLedgerRows(data = {}, studentId = '') {
@@ -2192,7 +2200,7 @@ function teachingStudentHasCourseRosterEntry(row = {}) {
 }
 
 function teachingStudentInHistoricalRoster(data = {}, row = {}, now = new Date()) {
-  if (text(row.studentId) && text(row.studentStage) === 'student' && row.hasStudentProfile === true) return true;
+  if (text(row.studentId) && row.hasStudentProfile === true) return true;
   if (teachingStudentHasCompletedLesson(data, row, now)
     || teachingStudentHasFormalPackage(row)
     || teachingStudentHasCourseRosterEntry(row)) return true;

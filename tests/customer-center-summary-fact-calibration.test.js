@@ -469,8 +469,8 @@ async function request(queryText = '', { legacyReady = false } = {}) {
   assert.strictEqual(rebuildDryRunRes.statusCode, 200, '手工重建摘要 dry-run 应成功返回');
   assert.strictEqual(rebuildDryRunRes.body.dryRun, true, 'dry-run 响应必须明确标记未写入');
   assert.strictEqual(rebuildDryRunRes.body.writePerformed, false, 'dry-run 不得写入摘要表');
-  assert.strictEqual(rebuildDryRunRes.body.count, 1, 'dry-run 必须返回将要发布的摘要行数，不能把已排课误算成已上课学员');
-  assert.strictEqual(rebuildDryRunRes.body.teachingSummary.historicalStudentCount, 1, 'dry-run 必须返回重建后的历史学员顶部数，已排课不计入累计上课口径');
+  assert.strictEqual(rebuildDryRunRes.body.count, 3, 'dry-run 必须返回将要发布的摘要行数，已过时间的未取消体验课应进入历史学员');
+  assert.strictEqual(rebuildDryRunRes.body.teachingSummary.historicalStudentCount, 3, 'dry-run 必须返回重建后的历史学员顶部数，未来和取消体验课不计入');
   assert.strictEqual(rebuildDryRunRes.body.teachingSummary.activeStudentCount, 0, 'dry-run 必须返回重建后的在期学员顶部数');
   assert.deepStrictEqual(rebuildDryRun.calls.puts, [], 'dry-run 不能写 meta、版本行或 bundle');
   assert.deepStrictEqual(rebuildDryRun.calls.deletes, [], 'dry-run 不能清理旧版本');
