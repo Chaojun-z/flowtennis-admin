@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const zlib = require('zlib');
 const axios = require('axios');
 const { parseBookingStructureFromText, enrichCourtBookingStructure, missingCourtBookingStructure } = require('./booking-structure-parser.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
@@ -1858,6 +1859,126 @@ function cxeMemberLedgerEndpoint(env = process.env) {
   return 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userRechargePage';
 }
 
+function cxeMemberLedgerExportEndpoint(env = process.env) {
+  return cleanText(env.CXE_MEMBER_LEDGER_EXPORT_ENDPOINT) || 'https://api.console.changxiaoer.cn/merchantmanage/rechargeUser/recordExcel';
+}
+
+function excelXmlUnescape(value = '') {
+  return cleanText(value)
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function zipEntriesFromBuffer(buffer = Buffer.alloc(0)) {
+  const source = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || []);
+  let eocd = -1;
+  for (let i = source.length - 22; i >= 0; i--) {
+    if (source.readUInt32LE(i) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error('会员流水导出文件不是有效 Excel');
+  const total = source.readUInt16LE(eocd + 10);
+  let offset = source.readUInt32LE(eocd + 16);
+  const entries = new Map();
+  for (let i = 0; i < total; i++) {
+    if (source.readUInt32LE(offset) !== 0x02014b50) break;
+    const method = source.readUInt16LE(offset + 10);
+    const compressedSize = source.readUInt32LE(offset + 20);
+    const fileNameLength = source.readUInt16LE(offset + 28);
+    const extraLength = source.readUInt16LE(offset + 30);
+    const commentLength = source.readUInt16LE(offset + 32);
+    const localOffset = source.readUInt32LE(offset + 42);
+    const name = source.slice(offset + 46, offset + 46 + fileNameLength).toString('utf8');
+    const localNameLength = source.readUInt16LE(localOffset + 26);
+    const localExtraLength = source.readUInt16LE(localOffset + 28);
+    const dataOffset = localOffset + 30 + localNameLength + localExtraLength;
+    const compressed = source.slice(dataOffset, dataOffset + compressedSize);
+    const data = method === 8 ? zlib.inflateRawSync(compressed) : compressed;
+    entries.set(name, data.toString('utf8'));
+    offset += 46 + fileNameLength + extraLength + commentLength;
+  }
+  return entries;
+}
+
+function parseXlsxSharedStrings(xml = '') {
+  const shared = [];
+  const cells = cleanText(xml).match(/<si[\s\S]*?<\/si>/g) || [];
+  for (const cell of cells) {
+    const parts = [];
+    cell.replace(/<t[^>]*>([\s\S]*?)<\/t>/g, (_, text) => {
+      parts.push(excelXmlUnescape(text));
+      return '';
+    });
+    shared.push(parts.join(''));
+  }
+  return shared;
+}
+
+function parseXlsxRows(buffer = Buffer.alloc(0)) {
+  const text = Buffer.isBuffer(buffer) ? buffer.slice(0, 200).toString('utf8') : '';
+  if (/^\s*\{/.test(text)) throw new Error(`会员流水导出失败：${text.slice(0, 120)}`);
+  const entries = zipEntriesFromBuffer(buffer);
+  const shared = parseXlsxSharedStrings(entries.get('xl/sharedStrings.xml') || '');
+  const sheetName = [...entries.keys()].find(name => /^xl\/worksheets\/sheet\d+\.xml$/.test(name));
+  const sheet = entries.get(sheetName || '') || '';
+  const rows = [];
+  for (const rowXml of sheet.match(/<row[\s\S]*?<\/row>/g) || []) {
+    const row = [];
+    for (const cellXml of rowXml.match(/<c\b[\s\S]*?<\/c>/g) || []) {
+      const type = (cellXml.match(/\bt="([^"]+)"/) || [])[1] || '';
+      const value = (cellXml.match(/<v>([\s\S]*?)<\/v>/) || [])[1];
+      if (type === 's') row.push(shared[Number(value)] || '');
+      else if (type === 'inlineStr') row.push(excelXmlUnescape((cellXml.match(/<t[^>]*>([\s\S]*?)<\/t>/) || [])[1] || ''));
+      else row.push(excelXmlUnescape(value || ''));
+    }
+    if (row.some(Boolean)) rows.push(row);
+  }
+  return rows;
+}
+
+function normalizeCxeMemberLedgerExportRows(buffer = Buffer.alloc(0), member = {}, userId = '') {
+  const rows = parseXlsxRows(buffer);
+  const header = rows[0] || [];
+  return rows.slice(1).map(row => {
+    const source = {};
+    header.forEach((key, index) => {
+      source[cleanText(key)] = row[index] || '';
+    });
+    const amountText = cleanText(source['金额变动']);
+    const description = cleanText(source['商品说明']);
+    const transactionType = cleanText(source['交易类型']);
+    const businessType = cleanText(source['业务']);
+    return normalizeCxeMemberLedgerRow({
+      rawPayload: source,
+      id: source['订单号'],
+      ledgerId: source['订单号'],
+      orderId: source['订单号'],
+      userId,
+      memberId: userId,
+      transactionTime: source['时间'],
+      transactionType: [businessType, transactionType].filter(Boolean).join(' '),
+      businessType,
+      operation: source['操作人员'],
+      description,
+      amount: amountText,
+      balanceAfter: source['余额'],
+      balance: source['余额'],
+      basicName: source['场馆/门店'],
+      remark: source['备注'],
+      quantity: source['数量']
+    }, member, userId);
+  });
+}
+
+function waitMs(ms = 0) {
+  return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+}
+
 function normalizeCxeMemberLedgerRow(row = {}, member = {}, userId = '') {
   const rowUserId = cleanText(row.userId || row.memberId || userId);
   return {
@@ -1865,7 +1986,7 @@ function normalizeCxeMemberLedgerRow(row = {}, member = {}, userId = '') {
     ledgerId: row.ledgerId || row.id,
     userId: row.userId || rowUserId,
     memberId: row.memberId || rowUserId,
-    memberName: row.memberName || row.realName || row.basicName || member.realName || member.memberName || member.name,
+    memberName: row.memberName || row.realName || member.realName || member.memberName || member.name || row.basicName,
     memberPhone: row.memberPhone || row.phone || row.phoneNumber || member.phone || member.phoneNumber,
     transactionTime: row.transactionTime || row.payTime || row.createDate || row.createTime,
     transactionType: row.transactionType || row.operation || row.operationType || row.type,
@@ -1912,16 +2033,63 @@ async function fetchMemberLedgerRows({ client, token, members = [], rangeStart =
   return rows;
 }
 
-async function fetchMemberLedgerRowsForMembers({ client, token, members = [], rangeStart = '', rangeEnd = '', endpoint = '' } = {}) {
+async function fetchMemberLedgerExportRowsForMembers({ client, token, adminId = '', members = [], rangeStart = '', rangeEnd = '', endpoint = '', delayMs = 0 } = {}) {
+  const rows = [];
+  const warnings = [];
+  for (let index = 0; index < members.length; index++) {
+    const member = members[index];
+    const userId = cxeMemberId(member);
+    if (!userId) continue;
+    const body = {
+      userId,
+      adminId,
+      balanceFlowType: '',
+      businessType: '',
+      endDate: '',
+      orderId: '',
+      pageNum: 1,
+      pageSize: 10,
+      startDate: ''
+    };
+    let lastError = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const res = await client.post(endpoint, body, { headers: { ...cxeHeaders(token), Token: token }, responseType: 'arraybuffer' });
+        const normalized = normalizeCxeMemberLedgerExportRows(Buffer.from(res.data || []), member, userId);
+        rows.push(...normalized.filter(row => recordWithinRange(row, rangeStart, rangeEnd)));
+        lastError = null;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < 2) await waitMs(delayMs || 1200);
+      }
+    }
+    if (lastError) warnings.push({ type: 'member-ledger-export', userId, reason: lastError.message || '会员流水导出失败' });
+    if (delayMs && index < members.length - 1) await waitMs(delayMs);
+  }
+  return { rows, warnings };
+}
+
+async function fetchMemberLedgerRowsForMembers({ client, token, adminId = '', members = [], rangeStart = '', rangeEnd = '', endpoint = '', exportEndpoint = '', exportDelayMs = 0 } = {}) {
   try {
+    if (exportEndpoint) {
+      const result = await fetchMemberLedgerExportRowsForMembers({ client, token, adminId, members, rangeStart, rangeEnd, endpoint: exportEndpoint, delayMs: exportDelayMs });
+      if (result.rows.length || !result.warnings.length) return { rows: result.rows, ok: !result.warnings.length, warnings: result.warnings };
+      throw new Error(result.warnings[0]?.reason || '会员流水导出失败');
+    }
     const rows = await fetchMemberLedgerRows({ client, token, members, rangeStart, rangeEnd, endpoint });
     return { rows, ok: true, warnings: [] };
   } catch (err) {
-    return {
-      rows: [],
-      ok: false,
-      warnings: [{ type: 'member-ledger', reason: err.message || '第三方接口拉取失败' }]
-    };
+    try {
+      const rows = await fetchMemberLedgerRows({ client, token, members, rangeStart, rangeEnd, endpoint });
+      return { rows, ok: true, warnings: [{ type: 'member-ledger-export', reason: err.message || '会员流水导出失败，已用分页接口兜底' }] };
+    } catch (fallbackErr) {
+      return {
+        rows: [],
+        ok: false,
+        warnings: [{ type: 'member-ledger', reason: fallbackErr.message || err.message || '第三方接口拉取失败' }]
+      };
+    }
   }
 }
 
@@ -1941,13 +2109,16 @@ async function fetchChangxiaoerData({ rangeStart = '', rangeEnd = '', env = proc
   const login = await client.post('https://api.console.changxiaoer.cn/admin/merchantAdminLogin', { phone, pwd }, { headers: cxeHeaders() });
   const token = cleanText(login.data?.data?.token);
   if (!token) throw new Error('第三方登录未返回 token');
+  const adminId = cleanText(login.data?.data?.adminId || login.data?.data?.id);
   const memberLedgerEndpoint = cxeMemberLedgerEndpoint(env);
+  const memberLedgerExportEndpoint = cxeMemberLedgerExportEndpoint(env);
+  const memberLedgerExportDelayMs = Number(env.CXE_MEMBER_LEDGER_EXPORT_DELAY_MS ?? 1200) || 0;
   const [orders, locks, members] = await Promise.all([
     fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/basic/order', token, rangeStart, rangeEnd }),
     fetchPaged({ client, method: 'GET', url: 'https://api.console.changxiaoer.cn/merchants-management/data-analysis/occupy-space-period-records', token, rangeStart, rangeEnd }),
-    fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userList', token, rangeStart, rangeEnd })
+    fetchPaged({ client, method: 'POST', url: 'https://api.console.changxiaoer.cn/merchantmanage/recharge/userList', token })
   ]);
-  const memberLedgerResult = await fetchMemberLedgerRowsForMembers({ client, token, members, rangeStart, rangeEnd, endpoint: memberLedgerEndpoint });
+  const memberLedgerResult = await fetchMemberLedgerRowsForMembers({ client, token, adminId, members, rangeStart, rangeEnd, endpoint: memberLedgerEndpoint, exportEndpoint: memberLedgerExportEndpoint, exportDelayMs: memberLedgerExportDelayMs });
   return {
     records: [
       ...orders.map(row => ({ ...row, sourceType: 'order' })),

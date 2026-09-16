@@ -1,4 +1,5 @@
 const assert = require('assert');
+const zlib = require('zlib');
 
 const {
   createThirdPartySyncCenterRoutes,
@@ -31,6 +32,71 @@ async function call(handler, req) {
   const handled = await handler({ user: { role: 'admin', name: '运营A' }, query: new URLSearchParams(), body: {}, ...req, res });
   assert.ok(handled, `${req.method} ${req.path} should be handled`);
   return res;
+}
+
+function xmlEscape(value = '') {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function buildZip(entries = {}) {
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+  for (const [name, content] of Object.entries(entries)) {
+    const nameBuffer = Buffer.from(name);
+    const raw = Buffer.from(content);
+    const compressed = zlib.deflateRawSync(raw);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(8, 8);
+    local.writeUInt32LE(0, 14);
+    local.writeUInt32LE(compressed.length, 18);
+    local.writeUInt32LE(raw.length, 22);
+    local.writeUInt16LE(nameBuffer.length, 26);
+    locals.push(local, nameBuffer, compressed);
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(8, 10);
+    central.writeUInt32LE(0, 16);
+    central.writeUInt32LE(compressed.length, 20);
+    central.writeUInt32LE(raw.length, 24);
+    central.writeUInt16LE(nameBuffer.length, 28);
+    central.writeUInt32LE(offset, 42);
+    centrals.push(central, nameBuffer);
+    offset += local.length + nameBuffer.length + compressed.length;
+  }
+  const centralOffset = offset;
+  const centralBuffer = Buffer.concat(centrals);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(Object.keys(entries).length, 8);
+  eocd.writeUInt16LE(Object.keys(entries).length, 10);
+  eocd.writeUInt32LE(centralBuffer.length, 12);
+  eocd.writeUInt32LE(centralOffset, 16);
+  return Buffer.concat([...locals, centralBuffer, eocd]);
+}
+
+function buildLedgerXlsx(rows = []) {
+  const values = rows.flat();
+  const shared = values.map(value => `<si><t>${xmlEscape(value)}</t></si>`).join('');
+  let index = 0;
+  const sheetRows = rows.map((row, rowIndex) => {
+    const cells = row.map((_, cellIndex) => `<c r="${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}" t="s"><v>${index++}</v></c>`).join('');
+    return `<row r="${rowIndex + 1}">${cells}</row>`;
+  }).join('');
+  return buildZip({
+    '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/></Types>',
+    'xl/sharedStrings.xml': `<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${values.length}" uniqueCount="${values.length}">${shared}</sst>`,
+    'xl/worksheets/sheet1.xml': `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>`
+  });
 }
 
 assert.strictEqual(
@@ -339,6 +405,39 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(cxeFetched.records.some(row => row.sourceType === 'member-ledger' && row.ledgerId === 'LEDGER-FROM-API'), 'member ledger rows should be included in fetched source records');
   assert.ok(!cxeFetched.records.some(row => row.sourceType === 'member-ledger' && row.ledgerId === 'LEDGER-OUT-OF-RANGE'), 'member ledger rows outside the requested date should be filtered out because the third-party endpoint returns full member history');
   assert.deepStrictEqual(cxeFetched.gaps, [], 'member ledger should not be reported as a gap when the third-party endpoint responds');
+
+  const exportCalls = [];
+  const exportedLedger = await fetchChangxiaoerData({
+    rangeStart: '2026-09-10 00:00:00',
+    rangeEnd: '2026-09-16 00:00:00',
+    env: { CXE_USER: 'xiaolu99', CXE_PASS: 'xiaolu99' },
+    client: {
+      post: async (url, body, options) => {
+        exportCalls.push({ method: 'POST', url, body, options });
+        if (/merchantAdminLogin/.test(url)) return { data: { data: { token: 'token-1', adminId: 'admin-1' } } };
+        if (/recharge\/userList/.test(url)) return { data: { data: { list: body.pageNum === 1 ? [{ id: '555081', realName: '兔子苏西🤱🏻', phone: '8613451340111' }] : [], hasNext: false } } };
+        if (/rechargeUser\/recordExcel/.test(url)) {
+          return {
+            data: buildLedgerXlsx([
+              ['订单号', '时间', '业务', '交易类型', '操作人员', '商品说明', '数量', '金额变动', '场馆/门店', '备注', '余额'],
+              ['2609150924219620780704', '2026-09-15 17:24:22', '订场', '支出(扣费)', '用户', '2026-09-18\n室内2号\n["10:00-10:30","10:30-11:00"]', '2', '-126.00(实充:116.34，赠送:9.66)', '网球兄弟·马坡', '', '1347.00']
+            ])
+          };
+        }
+        if (/recharge\/userRechargePage/.test(url)) throw new Error('exported member ledger should not need the incomplete pagination endpoint');
+        return { data: { data: { list: [], hasNext: false } } };
+      },
+      get: async () => ({ data: { data: { list: [], hasNext: false } } })
+    }
+  });
+  const exportedMemberLedger = exportedLedger.records.find(row => row.sourceType === 'member-ledger' && row.ledgerId === '2609150924219620780704');
+  assert.ok(exportedMemberLedger, 'member ledger should be parsed from the exported Excel file');
+  assert.strictEqual(exportedMemberLedger.memberName, '兔子苏西🤱🏻', 'exported member ledger should keep the member name from the member list');
+  assert.strictEqual(exportedMemberLedger.memberPhone, '8613451340111', 'exported member ledger should keep the member phone for matching');
+  assert.strictEqual(exportedMemberLedger.balanceAfter, '1347.00', 'exported member ledger should keep the third-party balance after transaction');
+  assert.match(exportedMemberLedger.transactionType, /订场 支出\(扣费\)/, 'exported member ledger should keep booking debit type');
+  assert.ok(exportCalls.some(call => /rechargeUser\/recordExcel/.test(call.url) && call.body.userId === '555081'), 'changxiaoer fetch should use per-member ledger export');
+  assert.ok(!exportCalls.some(call => /recharge\/userRechargePage/.test(call.url)), 'complete member ledger export should avoid the incomplete pagination endpoint');
 
   const feishuPosts = [];
   const notifyRes = await defaultNotifyThirdPartySyncResult({
