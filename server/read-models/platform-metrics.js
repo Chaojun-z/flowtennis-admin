@@ -2387,6 +2387,12 @@ function teachingPaymentIsOwnFormalPackage(row = {}, studentId = '') {
   return !ownerId || !studentId || ownerId === text(studentId);
 }
 
+function teachingPaymentIsOtherPackageUsage(row = {}, studentId = '') {
+  const ownerId = text(row.packageOwnerStudentId || row.ownerStudentId);
+  if (ownerId && studentId && ownerId !== text(studentId)) return true;
+  return /使用.+的课包/.test(text(row.lessonRelationText));
+}
+
 function teachingPaymentIsDirect(row = {}) {
   const value = text([
     row.settlementType,
@@ -2406,7 +2412,11 @@ function teachingPaymentIsDirect(row = {}) {
 function teachingStudentDirectFormalLessonRows(data = {}, studentId = '', now = new Date(), studentRow = {}) {
   const rows = teachingStudentFormalLessonFactRows(data, studentId, now);
   const detailRows = Array.isArray(studentRow.detailLessonRecordRows) ? studentRow.detailLessonRecordRows : [];
-  const hasPackage = teachingStudentHasFormalPackage(studentRow) || rows.some(teachingPaymentIsFormalPackage) || detailRows.some(teachingPaymentIsFormalPackage);
+  const hasPackage = teachingStudentHasFormalPackage(studentRow)
+    || rows.some(row => teachingPaymentIsOwnFormalPackage(row, studentId))
+    || detailRows.some(row => teachingPaymentIsOwnFormalPackage(row, studentId));
+  const hasOtherPackageUsage = detailRows.some(row => teachingPaymentIsOtherPackageUsage(row, studentId));
+  if (!hasPackage && hasOtherPackageUsage) return [];
   return rows.filter(row => teachingPaymentIsDirect(row) || (!hasPackage && !teachingPaymentIsFormalPackage(row)));
 }
 

@@ -883,7 +883,7 @@ const sharedOneTimePlatform = buildPlatformMetrics({
 });
 const sharedOneTimeAttendee = sharedOneTimePlatform.teachingStudentViews.activeStudents.find(row => row.studentId === 'student-one-time-attendee');
 assert.ok(sharedOneTimeAttendee, 'shared one-time attendee should enter active students through the lesson fact');
-assert.strictEqual(sharedOneTimeAttendee.paymentModeLabel, '单次付费学员', 'shared one-time attendee must not become a package student through polluted coursePurchaseCount');
+assert.strictEqual(sharedOneTimeAttendee.paymentModeLabel, '-', 'shared one-time attendee must not become a paid student through polluted coursePurchaseCount');
 assert.strictEqual(sharedOneTimeAttendee.packageStatusLabel, '使用他人课包', 'shared one-time attendee should keep the shared-package context as package status only');
 
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00:00:00') });
