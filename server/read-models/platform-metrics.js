@@ -2464,7 +2464,9 @@ function teachingStudentPaymentModeLabel(data = {}, row = {}, now = new Date()) 
   const studentId = text(row.studentId);
   const formalLessonRows = teachingStudentFormalLessonFactRows(data, studentId, now);
   const detailRows = Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [];
-  const hasPackage = teachingStudentHasFormalPackage(row) || formalLessonRows.some(item => teachingPaymentIsOwnFormalPackage(item, studentId)) || detailRows.some(item => teachingPaymentIsOwnFormalPackage(item, studentId));
+  const hasPackage = teachingStudentHasFormalPackage(row)
+    || detailRows.some(item => teachingPaymentIsOwnFormalPackage(item, studentId))
+    || (!detailRows.length && formalLessonRows.some(item => teachingPaymentIsOwnFormalPackage(item, studentId)));
   const hasDirect = teachingStudentDirectFormalLessonRows(data, studentId, now, row).length > 0;
   const hasDirectTrial = teachingStudentDirectTrialLessonRows(data, studentId, now).length > 0;
   const hasTrialPurchase = teachingStudentHasTrialCoursePurchase(row);
