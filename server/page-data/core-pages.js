@@ -136,7 +136,7 @@ function reconcileStudentDetailPackageRows(summary={},lessonRows=[],studentId=''
   const detailRows=pageDataArraySnapshot(summary.detailPackageOrderRows);
   if(!detailRows.length)return summary;
   const ownPackageCompleted=lessonRows
-    .filter(row=>row?.countAsCompletedLesson!==false&&Number(row?.lessonDelta)<0&&pageDataFormalLessonRow(row))
+    .filter(row=>Number(row?.lessonDelta)<0&&pageDataFormalLessonRow(row))
     .filter(row=>{
       const ownerId=String(row.packageOwnerStudentId||'').trim();
       return !ownerId||ownerId===studentId;
@@ -145,8 +145,8 @@ function reconcileStudentDetailPackageRows(summary={},lessonRows=[],studentId=''
   const formalRows=detailRows.filter(row=>pageDataFormalLessonRow(row)&&(Number(row.totalLessons)||0)>0);
   if(!formalRows.length)return summary;
   const currentConsumed=formalRows.reduce((sum,row)=>sum+Math.max(0,(Number(row.totalLessons)||0)-(Number(row.remainingLessons)||0)),0);
-  if(ownPackageCompleted>=currentConsumed)return summary;
-  if(formalRows.some(row=>(Number(row.remainingLessons)||0)>0))return summary;
+  if(ownPackageCompleted===currentConsumed)return summary;
+  if(ownPackageCompleted<currentConsumed&&formalRows.some(row=>(Number(row.remainingLessons)||0)>0))return summary;
   const ordered=[...formalRows].sort((a,b)=>String(a.purchaseDate||'').localeCompare(String(b.purchaseDate||''))||String(a.entitlementId||a.purchaseId||a.packageName||'').localeCompare(String(b.entitlementId||b.purchaseId||b.packageName||'')));
   const adjustedByKey=new Map();
   let usedLeft=ownPackageCompleted;

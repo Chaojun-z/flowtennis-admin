@@ -1052,6 +1052,89 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   return { res, calls };
 }
 
+async function requestAuthorizedOwnerAuditSummaryStudentDetail() {
+  const calls = { cappedScan: 0 };
+  const tables = {
+    T_STUDENTS: 'students',
+    T_STUDENT_TEACHING_SUMMARY: 'student_summary',
+    T_PURCHASES: 'purchases',
+    T_PACKAGES: 'packages',
+    T_ENTITLEMENTS: 'entitlements',
+    T_ENTITLEMENT_LEDGER: 'entitlement_ledger',
+    T_SCHEDULE: 'schedule',
+    T_MEMBERSHIP_BENEFIT_LEDGER: 'membership_benefit_ledger',
+    T_FEEDBACKS: 'feedbacks'
+  };
+  const detailLessonRecordRows = [
+    ...Array.from({ length: 9 }, (_, index) => ({
+      kind: 'ledger',
+      scheduleId: `sch-owner-${index + 1}`,
+      time: `2026-08-${String(index + 1).padStart(2, '0')} 10:00-11:00`,
+      courseType: '私教课',
+      lessonDelta: -1,
+      packageOwnerStudentId: 'stu-owner',
+      entitlementId: 'ent-owner',
+      lessonSectionText: `[第${index + 1}节]`,
+      countAsCompletedLesson: true
+    })),
+    {
+      kind: 'ledger',
+      scheduleId: 'sch-authorized',
+      time: '2026-08-18 10:00-11:00',
+      courseType: '私教课',
+      lessonDelta: -1,
+      packageOwnerStudentId: 'stu-owner',
+      entitlementId: 'ent-owner',
+      lessonRelationText: '达达 使用了 十一 的课包',
+      lessonSectionText: '[第10节]',
+      countAsCompletedLesson: false
+    }
+  ];
+  const handler = createCorePageDataRoutes({
+    init: async () => {},
+    sendJson: (res, body, status = 200) => {
+      res.statusCode = status;
+      res.body = body;
+      return body;
+    },
+    cappedScan: async table => {
+      calls.cappedScan += 1;
+      throw new Error(`unexpected full scan: ${table}`);
+    },
+    filterLoadAllForUser: data => data,
+    getCachedRow: async (table, id) => {
+      if (table === tables.T_STUDENTS && id === 'stu-owner') {
+        return { id: 'stu-owner', name: '十一', phone: '13800000000' };
+      }
+      if (table === tables.T_STUDENT_TEACHING_SUMMARY && id === 'stu-owner') {
+        return {
+          id: 'stu-owner',
+          studentId: 'stu-owner',
+          name: '十一',
+          teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
+          completedLessons: 9,
+          packageBalanceText: '1/10',
+          detailPackageBalanceText: '1/10',
+          packageBalanceRemaining: 1,
+          packageBalanceTotal: 10,
+          detailPackageBalanceRemaining: 1,
+          detailPackageBalanceTotal: 10,
+          packageStatusLabel: '课包即将耗尽',
+          detailPackageOrderRows: [{ entitlementId: 'ent-owner', packageName: '私教课', remainingLessons: 1, totalLessons: 10 }],
+          packageListRows: [{ entitlementId: 'ent-owner', packageName: '私教课', remainingLessons: 1, totalLessons: 10 }],
+          detailLessonRecordRows,
+          detailBenefitRows: []
+        };
+      }
+      return null;
+    },
+    tables
+  });
+  const res = {};
+  await handler({ path: '/page-data/student-detail', method: 'GET', user: { role: 'admin' }, res, query: new URLSearchParams('id=stu-owner') });
+  return { res, calls };
+}
+
 (async () => {
   const { res, calls } = await requestStudentDetail();
   assert.strictEqual(res.statusCode, 200);
@@ -1152,6 +1235,14 @@ async function requestMergedStudentWithStaleSummaryDetail() {
   assert.strictEqual(mergedStaleSummary.calls.cappedScan, 0, 'stale merged-student summaries must not trigger production fact scans from the drawer');
   assert.strictEqual(mergedStaleSummary.res.body.studentDetailSummaryNeedsRefresh, true, 'stale merged-student summary should open the drawer instead of failing');
   assert.strictEqual(mergedStaleSummary.res.body.detailStudentView.name, '王先生（阿萌）');
+
+  const authorizedOwnerAuditSummary = await requestAuthorizedOwnerAuditSummaryStudentDetail();
+  assert.strictEqual(authorizedOwnerAuditSummary.res.statusCode, 200);
+  assert.strictEqual(authorizedOwnerAuditSummary.calls.cappedScan, 0, 'authorized package audit summary must not scan production fact tables from the drawer');
+  assert.strictEqual(authorizedOwnerAuditSummary.res.body.detailStudentView.completedLessons, 9, 'authorized use should not increase the package owner completed lesson count');
+  assert.strictEqual(authorizedOwnerAuditSummary.res.body.detailStudentView.packageBalanceText, '0/10', 'authorized use should still reduce the package owner visible package balance');
+  assert.strictEqual(authorizedOwnerAuditSummary.res.body.detailStudentView.detailPackageOrderRows[0]?.remainingLessons, 0, 'authorized audit rows should reconcile the cached package card to zero remaining lessons');
+
   console.log('student detail fast path tests passed');
 })().catch(err => {
   console.error(err);
