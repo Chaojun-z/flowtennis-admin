@@ -2744,6 +2744,7 @@ module.exports = {
   buildThirdPartySyncNotificationCard,
   defaultNotifyThirdPartySyncResult,
   fetchChangxiaoerData,
+  fetchMemberLedgerExportRowsForMembers,
   defaultDailyRange,
   THIRD_PARTY_SYNC_TABLES,
   T_THIRD_PARTY_SYNC_BATCHES,
