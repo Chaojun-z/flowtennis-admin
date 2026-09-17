@@ -1,5 +1,6 @@
 const { buildTeachingStudentViews, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
 const { readReadyStudentTeachingSummaryListRows } = require('../read-models/student-teaching-summary-cache.js');
+const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 const CUSTOMER_CENTER_STUDENT_SUMMARY_LIST_COLUMNS = [
   'publishedRowId',
@@ -40,6 +41,7 @@ const CUSTOMER_CENTER_STUDENT_SUMMARY_LIST_COLUMNS = [
   'detailPackageBalanceTotal',
   'detailPackageBalanceText',
   'detailPackageBalancePercent',
+  'formalPackageCourseTypes',
   'packagePurchaseDate',
   'lastFormalLessonAt',
   'detailRecentLessonDate',
@@ -122,18 +124,64 @@ function balancePercent(value, remaining, total) {
   return Math.max(0, Math.min(100, Math.round(((Number(remaining) || 0) / totalValue) * 100)));
 }
 
+const FORMAL_PACKAGE_COURSE_TYPES = new Set(['私教课', '小班课', '专项课']);
+
+function packageRowLessonTotal(row = {}) {
+  const value = Number(row.totalLessons || row.packageLessons);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function packageRowLabel(row = {}) {
+  return normalizedText([
+    row.courseType,
+    row.standardCourseType,
+    row.packageCourseType,
+    row.type,
+    row.productType,
+    row.courseTypeLevel2,
+    row.packageName,
+    row.productName,
+    row.name
+  ].filter(Boolean).join(' '));
+}
+
+function packageRowIsTrial(row = {}) {
+  return businessTaxonomy.normalizeCourseType(row).level1 === '体验课' || /体验/.test(packageRowLabel(row));
+}
+
+function packageRowIsCompanion(row = {}) {
+  return businessTaxonomy.normalizeCourseType(row).level1 === '陪打' || /陪打/.test(packageRowLabel(row));
+}
+
+function packageRowIsSinglePaid(row = {}) {
+  return packageRowLessonTotal(row) === 1 || /单次|按次|1\s*(?:次|课时|节)|199\s*元|199元/.test(packageRowLabel(row));
+}
+
+function packageRowIsFormalPackage(row = {}) {
+  if (packageRowIsTrial(row) || packageRowIsCompanion(row) || packageRowIsSinglePaid(row)) return false;
+  const total = packageRowLessonTotal(row);
+  return total > 1 || /课包|私教|小班|专项|正式|成人|青少年/.test(packageRowLabel(row));
+}
+
 function formalPackageRows(row = {}) {
   return parseSnapshotArray(row.detailPackageOrderRows)
     .concat(parseSnapshotArray(row.packageListRows))
-    .filter(item => {
-      const label = normalizedText([
-        item.courseType,
-        item.standardCourseType,
-        item.packageName,
-        item.productName
-      ].filter(Boolean).join(' '));
-      return !/体验|陪打/.test(label) && (Number(item.totalLessons) || 0) > 0;
-    });
+    .filter(packageRowIsFormalPackage);
+}
+
+function formalPackageCourseType(row = {}) {
+  const type = businessTaxonomy.normalizeCourseType(row).level1;
+  return FORMAL_PACKAGE_COURSE_TYPES.has(type) ? type : '';
+}
+
+function formalPackageCourseTypesForRow(row = {}) {
+  const stored = Array.isArray(row.formalPackageCourseTypes) ? row.formalPackageCourseTypes : parseSnapshotArray(row.formalPackageCourseTypes);
+  const source = stored.length ? stored : formalPackageRows(row).map(formalPackageCourseType);
+  const result = [];
+  source.map(normalizedText).filter(type => FORMAL_PACKAGE_COURSE_TYPES.has(type)).forEach(type => {
+    if (!result.includes(type)) result.push(type);
+  });
+  return result;
 }
 
 function packageBalanceNumbers(row = {}) {
@@ -209,11 +257,13 @@ function summaryRowMatchesToolbar(row = {}, query) {
   const type = normalizedText(query?.get('type'));
   const source = normalizedText(query?.get('source'));
   const coach = normalizedText(query?.get('coach'));
+  const formalCourseType = normalizedText(query?.get('formalCourseType'));
   if (type && normalizedText(row.type) !== type) return false;
   if (source && normalizedText(row.source) !== source) return false;
   const primaryCoach = normalizedText(row.primaryCoach);
   if (coach === '__unassigned__' && primaryCoach) return false;
   if (coach && coach !== '__unassigned__' && primaryCoach !== coach) return false;
+  if (formalCourseType && !formalPackageCourseTypesForRow(row).includes(formalCourseType)) return false;
   return true;
 }
 
@@ -288,6 +338,7 @@ function buildStudentListFacets(rows = []) {
     type: {},
     source: {},
     coach: {},
+    courseTypes: {},
     tags: {
       packageStatus: {},
       paymentMode: {},
@@ -300,6 +351,7 @@ function buildStudentListFacets(rows = []) {
     incrementCount(facets.type, row.type);
     incrementCount(facets.source, row.source);
     incrementCount(facets.coach, normalizedText(row.primaryCoach) || '__unassigned__');
+    formalPackageCourseTypesForRow(row).forEach(type => incrementCount(facets.courseTypes, type));
     Object.keys(facets.tags).forEach(key => incrementCount(facets.tags[key], summaryRowLabelForTag(row, key)));
   });
   return facets;
@@ -409,6 +461,7 @@ function buildCustomerCenterSummaryLifecycleRows(summaryRows = []) {
       detailLessonRecordRows: Array.isArray(row.detailLessonRecordRows) ? row.detailLessonRecordRows : [],
       detailPackageOrderRows: Array.isArray(row.detailPackageOrderRows) ? row.detailPackageOrderRows : [],
       packageListRows: Array.isArray(row.packageListRows) ? row.packageListRows : [],
+      formalPackageCourseTypes: formalPackageCourseTypesForRow(row),
       lastFormalLessonAt: String(row.lastFormalLessonAt || row.detailRecentLessonDate || '').trim(),
       detailRecentLessonDate: String(row.detailRecentLessonDate || row.lastFormalLessonAt || '').trim(),
       packageBalanceRemaining: Number(row.packageBalanceRemaining) || 0,
@@ -435,9 +488,15 @@ function buildCustomerCenterListPage(teachingStudentViews = {}, query) {
   const paging = parseListPaging(query);
   const view = String(query?.get('view') || '').trim();
   const q = String(query?.get('q') || '').trim();
+  const formalCourseType = normalizedText(query?.get('formalCourseType'));
   const studentRows = Array.isArray(teachingStudentViews[view]) ? teachingStudentViews[view] : [];
   if (!paging || !view) return null;
   const filteredRows = studentRows.filter(row => textSearchHit(q, row.name, row.displayName, row.studentName, row.wechatName, row.nickName, row.nickname, row.phone));
+  if (formalCourseType) {
+    for (let index = filteredRows.length - 1; index >= 0; index -= 1) {
+      if (!formalPackageCourseTypesForRow(filteredRows[index]).includes(formalCourseType)) filteredRows.splice(index, 1);
+    }
+  }
   const page = buildListPage(sortSummaryRowsForQuery(filteredRows, query), paging);
   return { view, ...page, facets: buildStudentListFacets(filteredRows), rows: page.rows.map(projectCustomerCenterStudentRow) };
 }
@@ -485,7 +544,8 @@ function projectCustomerCenterStudentRow(row = {}) {
     paymentModeLabel: String(row.paymentModeLabel || '').trim(),
     activityStatusLabel: String(row.activityStatusLabel || '').trim(),
     lessonVolumeLabel: String(row.lessonVolumeLabel || '').trim(),
-    studentStatusLabel: String(row.studentStatusLabel || '').trim()
+    studentStatusLabel: String(row.studentStatusLabel || '').trim(),
+    formalPackageCourseTypes: formalPackageCourseTypesForRow(row)
   };
 }
 

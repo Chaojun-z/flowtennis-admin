@@ -53,6 +53,52 @@ function main() {
   assert.strictEqual(payload.listPage.facets.coach['__unassigned__'], 5, '未分配教练计数必须来自完整集合');
   assert.strictEqual(payload.listPage.facets.tags.packageStatus['课包有余额'], 13, '标签筛选计数必须来自完整集合');
 
+  const courseRows = [
+    {
+      ...studentRow(100),
+      id: 'course-private',
+      studentId: 'course-private',
+      name: '私教学员',
+      displayName: '私教学员',
+      detailPackageOrderRows: [{ courseType: '私教课', packageName: '成人私教正式课包', totalLessons: 10, remainingLessons: 8 }]
+    },
+    {
+      ...studentRow(101),
+      id: 'course-small',
+      studentId: 'course-small',
+      name: '小班学员',
+      displayName: '小班学员',
+      detailPackageOrderRows: [{ courseType: '小班课', courseTypeLevel2: '训练营', packageName: '青少年小班训练营课包', totalLessons: 12, remainingLessons: 10 }]
+    },
+    {
+      ...studentRow(102),
+      id: 'course-trial',
+      studentId: 'course-trial',
+      name: '体验学员',
+      displayName: '体验学员',
+      detailPackageOrderRows: [{ courseType: '体验课', experienceType: '私教体验课', packageName: '私教体验课', totalLessons: 1, remainingLessons: 0 }]
+    },
+    {
+      ...studentRow(103),
+      id: 'course-single',
+      studentId: 'course-single',
+      name: '单次学员',
+      displayName: '单次学员',
+      detailPackageOrderRows: [{ courseType: '小班课', courseTypeLevel2: '单次', packageName: '小班课单次', totalLessons: 1, remainingLessons: 0 }]
+    }
+  ];
+  const coursePayload = buildCustomerCenterPagePayload({
+    summaryRows: courseRows,
+    query: new URLSearchParams('view=activeStudents&paged=1&page=1&pageSize=10&formalCourseType=私教课')
+  });
+  assert.deepStrictEqual(
+    coursePayload.listPage.rows.map(row => row.studentId),
+    ['course-private'],
+    '课程类目筛选必须只命中买过对应正式课包的在期学员，并排除体验课和单次付费'
+  );
+  assert.strictEqual(coursePayload.listPage.facets.courseTypes['私教课'], 1, '课程类目筛选计数必须来自筛选后的完整集合');
+  assert.strictEqual(coursePayload.listPage.facets.courseTypes['小班课'] || 0, 0, '已选择私教课时小班课不应混入当前筛选结果');
+
   console.log('student server list sort pagination tests passed');
 }
 

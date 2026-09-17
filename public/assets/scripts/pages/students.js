@@ -219,6 +219,7 @@ const STUDENT_PAYMENT_MODE_OPTIONS=['课包学员','单次付费学员','课包+
 const STUDENT_ACTIVITY_STATUS_OPTIONS=['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'];
 const STUDENT_LESSON_VOLUME_OPTIONS=['历史课时30+','历史课时50+','历史课时100+'];
 const STUDENT_LIFECYCLE_STATUS_OPTIONS=['课包活跃中','课包待续费','已转单次付费','稳定单次付费','有余额未活跃'];
+const STUDENT_FORMAL_COURSE_TYPE_OPTIONS=['私教课','小班课','专项课'];
 const STUDENT_TAG_FILTER_GROUPS=[
   {key:'packageStatus',label:'课包状态',options:STUDENT_PACKAGE_STATUS_OPTIONS,getter:studentPackageStatusText},
   {key:'paymentMode',label:'付费方式',options:STUDENT_PAYMENT_MODE_OPTIONS,getter:studentPaymentModeText},
@@ -460,6 +461,9 @@ function studentLabelTagClass(value){
     '有余额未活跃':'tms-tag-tier-gold'
   })[raw]||'tms-tag-business-neutral';
 }
+function studentFormalPackageCourseTypes(stu){
+  return parseArr(stu?.formalPackageCourseTypes).map(value=>String(value||'').trim()).filter(Boolean);
+}
 function renderStudentLabelTag(value){
   const raw=String(value||'').trim();
   if(!raw||raw==='-'||raw==='—')return renderStandardCellText(raw,false);
@@ -479,30 +483,35 @@ function studentIsActiveRosterRow(stu){
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
   const sourceValue=document.getElementById('stuSourceFilter')?.value||'';
+  const courseTypeValue=studentListViewMode()==='package'?(document.getElementById('stuCourseTypeFilter')?.value||''):'';
   const coachValue=document.getElementById('stuCoachFilter')?.value||'';
   const baseRows=getStudentBaseList().filter(s=>globalDateWithinRange(studentGlobalDateValue(s)));
   const typeOptions=[{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
   const sourceOptions=[{value:'',label:'全部',emptyDisplay:'来源'},...studentSourceOptions()];
+  const courseTypeOptions=[{value:'',label:'全部',emptyDisplay:'课程类目'},...STUDENT_FORMAL_COURSE_TYPE_OPTIONS.map(value=>({value,label:value}))];
   const coachOptions=[{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const serverLinked=studentServerListFacets()?{
     type:{value:typeValue,options:studentOptionsWithServerFacetCounts(typeOptions,'type',typeValue)},
     source:{value:sourceValue,options:studentOptionsWithServerFacetCounts(sourceOptions,'source',sourceValue)},
+    courseType:{value:courseTypeValue,options:studentOptionsWithServerFacetCounts(courseTypeOptions,'courseTypes',courseTypeValue)},
     coach:{value:coachValue,options:studentOptionsWithServerFacetCounts(coachOptions,'coach',coachValue)}
   }:null;
   const linked=serverLinked||withLinkedFilterCounts([
     {key:'type',value:typeValue,options:typeOptions,match:(s,value)=>s.type===value},
     {key:'source',value:sourceValue,options:sourceOptions,match:(s,value)=>studentSourceText(s)===value},
+    {key:'courseType',value:courseTypeValue,options:courseTypeOptions,match:(s,value)=>studentFormalPackageCourseTypes(s).includes(value)},
     {key:'coach',value:coachValue,options:coachOptions,match:(s,value)=>value==='__unassigned__'?studentPrimaryCoachText(s)==='-':studentPrimaryCoachText(s)===value}
   ],baseRows);
   const wrapMap=[
     ['stuTypeFilterHost','stuTypeFilter','类型',linked.type.options,linked.type.value],
     ['stuSourceFilterHost','stuSourceFilter','来源',linked.source.options,linked.source.value],
+    ['stuCourseTypeFilterHost','stuCourseTypeFilter','课程类目',linked.courseType.options,linked.courseType.value],
     ['stuCoachFilterHost','stuCoachFilter','负责教练',linked.coach.options,linked.coach.value]
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(!host)return;
-    host.style.display='';
+    host.style.display=id==='stuCourseTypeFilter'&&studentListViewMode()!=='package'?'none':'';
     host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onStudentFilterChange');
   });
   const tagHost=document.getElementById('stuTagFilterHost');
@@ -749,6 +758,7 @@ function studentListPrewarmParams(){
     search:document.getElementById('stuSearch')?.value||'',
     type:document.getElementById('stuTypeFilter')?.value||'',
     source:document.getElementById('stuSourceFilter')?.value||'',
+    formalCourseType:studentListViewMode()==='package'?(document.getElementById('stuCourseTypeFilter')?.value||''):'',
     coach:document.getElementById('stuCoachFilter')?.value||'',
     tags:studentTagFilterState,
     sortKey:stuSortKey,
@@ -822,12 +832,14 @@ function getFilteredStudents(){
   const q=(document.getElementById('stuSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('stuTypeFilter')?.value||'';
   const sf=document.getElementById('stuSourceFilter')?.value||'';
+  const courseTypeFilter=studentListViewMode()==='package'?(document.getElementById('stuCourseTypeFilter')?.value||''):'';
   const coachFilter=document.getElementById('stuCoachFilter')?.value||'';
   return getStudentBaseList().filter(s=>{
     if(!searchHit(q,studentSearchText(s)))return false;
     if(!globalDateWithinRange(studentGlobalDateValue(s)))return false;
     if(tf&&s.type!==tf)return false;
     if(sf&&studentSourceText(s)!==sf)return false;
+    if(courseTypeFilter&&!studentFormalPackageCourseTypes(s).includes(courseTypeFilter))return false;
     if(!studentTagFilterMatches(s))return false;
     if(coachFilter==='__unassigned__'&&studentPrimaryCoachText(s)!=='-')return false;
     if(coachFilter&&coachFilter!=='__unassigned__'&&studentPrimaryCoachText(s)!==coachFilter)return false;
@@ -1364,6 +1376,7 @@ function studentHasActiveSearchOrFilter(){
   return !!((valueOf('stuSearch')||'').trim()
     ||valueOf('stuTypeFilter')
     ||valueOf('stuSourceFilter')
+    ||valueOf('stuCourseTypeFilter')
     ||studentTagFilterCount()
     ||valueOf('stuCoachFilter'));
 }

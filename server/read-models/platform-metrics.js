@@ -215,7 +215,6 @@ function courseRowIsOneTimePaidProduct(row = {}) {
 
 function courseRowIsFormalPackageProduct(row = {}) {
   if (!activeStatus(row) || courseRowIsTrial(row) || courseRowIsCompanion(row) || courseRowIsCourtFee(row)) return false;
-  if (courseRowIsOneTimePaidProduct(row)) return false;
   const total = courseRowPackageLessonTotal(row);
   if (total > 1) return true;
   const label = text([
@@ -229,7 +228,25 @@ function courseRowIsFormalPackageProduct(row = {}) {
     row.productName,
     row.name
   ].filter(Boolean).join(' '));
-  return coursePaymentAmount(row) > 0 && /课包|私教|小班|正式|成人|青少年/.test(label);
+  return coursePaymentAmount(row) > 0 && /课包|私教|小班|专项|正式|成人|青少年/.test(label);
+}
+
+const FORMAL_PACKAGE_COURSE_TYPES = new Set(['私教课', '小班课', '专项课']);
+
+function formalPackageCourseType(row = {}) {
+  const normalized = businessTaxonomy.normalizeCourseType(row);
+  return FORMAL_PACKAGE_COURSE_TYPES.has(normalized.level1) ? normalized.level1 : '';
+}
+
+function formalPackageCourseTypes(rows = []) {
+  const result = [];
+  (Array.isArray(rows) ? rows : [])
+    .filter(row => courseRowIsFormalPackageProduct(row) && !courseRowIsOneTimePaidProduct(row))
+    .forEach(row => {
+      const type = formalPackageCourseType(row);
+      if (type && !result.includes(type)) result.push(type);
+    });
+  return result;
 }
 
 function courseRowIsCourtFee(row = {}) {
@@ -545,7 +562,19 @@ function entitlementLedgerStudentIds(row = {}, entitlementsById = new Map(), pur
   const scheduleIds = teachingScheduleStudentIds(schedule);
   const explicitIds = teachingScheduleStudentIds(row);
   const attendeeRelationIds = [row.usedByStudentId, row.authorizedStudentId].map(text).filter(Boolean);
-  if (scheduleIds.length) return scheduleIds;
+  if (scheduleIds.length) {
+    const ownerId = entitlementLedgerOwnerStudentId(row, entitlementsById, purchasesById);
+    const scheduleRelationIds = [schedule.usedByStudentId, schedule.authorizedStudentId].map(text).filter(Boolean);
+    const relatedAttendeeIds = [...new Set([...attendeeRelationIds, ...scheduleRelationIds].filter(Boolean))];
+    const hasAuthorizedAttendee = relatedAttendeeIds.some(id => id && id !== ownerId);
+    const hasAttendeeMissingFromSchedule = relatedAttendeeIds.some(id => !scheduleIds.includes(id));
+    const relationLabel = text([row.reason, row.notes, schedule.reason, schedule.notes].filter(Boolean).join(' '));
+    if (hasAuthorizedAttendee && hasAttendeeMissingFromSchedule && (
+      scheduleRelationIds.length
+      || /授权|使用.*课包|课包.*使用/.test(relationLabel)
+    )) return relatedAttendeeIds;
+    return scheduleIds;
+  }
   if (attendeeRelationIds.length) {
     return [...new Set([...explicitIds, ...attendeeRelationIds].filter(Boolean))];
   }
@@ -588,6 +617,7 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
       linkedPurchaseIds.add(text(row.purchaseId));
       const purchase = purchasesById.get(text(row.purchaseId)) || {};
       if (!includeTrial && !courseRowIsFormalPackageProduct({ ...purchase, ...row })) return;
+      const normalizedCourse = businessTaxonomy.normalizeCourseType({ ...purchase, ...row });
       const list = entitlementsByStudent.get(studentId) || [];
       list.push({
         entitlementId: text(row.id),
@@ -595,6 +625,8 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
         packageRecordKey: teachingPackageRecordKey(row),
         packageId: text(row.packageId || row.originalPackageId || purchase.packageId || purchase.originalPackageId),
         packageName: teachingPackageName(row, purchase),
+        courseType: normalizedCourse.level1,
+        courseTypeLevel2: normalizedCourse.level2,
         remainingLessons: Number(row.remainingLessons) || 0,
         totalLessons: Number(row.totalLessons) || 0,
         usedLessons: Math.max(0, Number(row.usedLessons) || ((Number(row.totalLessons) || 0) - (Number(row.remainingLessons) || 0))),
@@ -614,6 +646,7 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
       const totalLessons = Number(row.totalLessons || row.packageLessons);
       if (!studentId || !Number.isFinite(totalLessons) || totalLessons <= 0) return;
       if (!includeTrial && !courseRowIsFormalPackageProduct(row)) return;
+      const normalizedCourse = businessTaxonomy.normalizeCourseType(row);
       const list = entitlementsByStudent.get(studentId) || [];
       list.push({
         entitlementId: '',
@@ -621,6 +654,8 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
         packageRecordKey: teachingPackageRecordKey({ purchaseId: text(row.id) }),
         packageId: text(row.packageId || row.originalPackageId),
         packageName: teachingPackageName(row, row),
+        courseType: normalizedCourse.level1,
+        courseTypeLevel2: normalizedCourse.level2,
         remainingLessons: Number(row.remainingLessons) || totalLessons,
         totalLessons,
         usedLessons: Math.max(0, totalLessons - (Number(row.remainingLessons) || totalLessons)),
@@ -654,6 +689,7 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
     details.set(studentId, {
       packageListRows: displayRows,
       detailPackageOrderRows: detailRows,
+      formalPackageCourseTypes: formalPackageCourseTypes(detailRows),
       detailPackageBalanceRemaining: detailRemaining,
       detailPackageBalanceTotal: detailTotal,
       detailPackageBalanceText: detailTotal > 0 ? `${lessonQty(detailRemaining)}/${lessonQty(detailTotal)}` : '-',
@@ -725,6 +761,7 @@ function reconcileTeachingPackageFields(packageFields = {}, completedLessons = 0
     ...packageFields,
     packageListRows: displayRows,
     detailPackageOrderRows: adjustedRows,
+    formalPackageCourseTypes: formalPackageCourseTypes(adjustedRows),
     detailPackageBalanceRemaining: round(detailRemaining, 1),
     detailPackageBalanceTotal: round(detailTotal, 1),
     detailPackageBalanceText: detailTotal > 0 ? `${lessonQty(detailRemaining)}/${lessonQty(detailTotal)}` : '-',
@@ -1438,6 +1475,9 @@ function buildTeachingStudentSummaryFieldMap(data = {}) {
         detailPackageBalancePercent: numberSnapshotValue(row.detailPackageBalancePercent),
         detailPackageProgressText: text(row.detailPackageProgressText || '-'),
         detailPackageOrderRows: arraySnapshotValue(row.detailPackageOrderRows),
+        formalPackageCourseTypes: Array.isArray(row.formalPackageCourseTypes) && row.formalPackageCourseTypes.length
+          ? row.formalPackageCourseTypes.map(text).filter(type => FORMAL_PACKAGE_COURSE_TYPES.has(type))
+          : formalPackageCourseTypes([...arraySnapshotValue(row.detailPackageOrderRows), ...arraySnapshotValue(row.packageListRows)]),
         detailLessonRecordRows: arraySnapshotValue(row.detailLessonRecordRows),
         detailRecentLessonDate: text(row.detailRecentLessonDate || row.lastFormalLessonAt),
         detailBenefitRows: arraySnapshotValue(row.detailBenefitRows),
@@ -1530,9 +1570,12 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       : rawSummaryLessonRows.length
         ? (summaryLessonRows.length ? packageConservedCompleted(Math.max(lessonRowCompleted, summaryCompleted)) : 0)
         : summaryCompleted;
+    const packageReconcileCompleted = packageConsumedLimit === null
+      ? completedLessons
+      : Math.max(completedLessons, round(packageConsumedLimit + directFormalCompleted, 1));
     const conservedPackageFields = options.includeTrial
       ? packageFields
-      : reconcileTeachingPackageFields(packageFields, completedLessons, directFormalCompleted);
+      : reconcileTeachingPackageFields(packageFields, packageReconcileCompleted, directFormalCompleted);
     details.set(studentId, {
       packageListRows: [],
       packageListText: '-',
@@ -1562,6 +1605,9 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
           : (Array.isArray(summaryFields.detailPackageOrderRows) ? summaryFields.detailPackageOrderRows : [])),
         ...(includeTrialDetails && Array.isArray(trialPackageFields.detailPackageOrderRows) ? trialPackageFields.detailPackageOrderRows : [])
       ],
+      formalPackageCourseTypes: Array.isArray(conservedPackageFields.formalPackageCourseTypes) && conservedPackageFields.formalPackageCourseTypes.length
+        ? conservedPackageFields.formalPackageCourseTypes
+        : (Array.isArray(summaryFields.formalPackageCourseTypes) ? summaryFields.formalPackageCourseTypes : []),
       ...benefitFields,
       detailLessonRecordRows: detailLessonRows,
       detailRecentLessonDate,
@@ -2040,6 +2086,7 @@ function teachingStudentViewRow(row = {}, listFields = {}) {
     studentStatusLabel: text(listFields.studentStatusLabel),
     isHistoricalStudentRoster: !!listFields.isHistoricalStudentRoster,
     isActiveStudentRoster: !!listFields.isActiveStudentRoster,
+    formalPackageCourseTypes: Array.isArray(listFields.formalPackageCourseTypes) ? listFields.formalPackageCourseTypes : [],
     packageListRows: Array.isArray(listFields.packageListRows) ? listFields.packageListRows : []
   };
 }
@@ -3176,6 +3223,7 @@ function teachingStudentSummarySnapshotRow(row = {}, now = new Date().toISOStrin
     detailPackageBalanceText: text(row.detailPackageBalanceText || row.packageBalanceText || '-'),
     detailPackageBalancePercent: numberSnapshotValue(row.detailPackageBalancePercent),
     detailPackageOrderRows: Array.isArray(row.detailPackageOrderRows) ? row.detailPackageOrderRows : [],
+    formalPackageCourseTypes: Array.isArray(row.formalPackageCourseTypes) ? row.formalPackageCourseTypes : [],
     detailRecentLessonDate: text(row.detailRecentLessonDate || row.lastFormalLessonAt),
     cumulativeCoursePaidAmount: money(row.cumulativeCoursePaidAmount || 0),
     cumulativeCoursePaidText: text(row.cumulativeCoursePaidText || moneyText(row.cumulativeCoursePaidAmount || 0)),

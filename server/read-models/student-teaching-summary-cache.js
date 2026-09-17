@@ -248,6 +248,7 @@ const STUDENT_TEACHING_SUMMARY_LIST_ROW_FIELDS = [
   'detailPackageBalanceTotal',
   'detailPackageBalanceText',
   'detailPackageBalancePercent',
+  'formalPackageCourseTypes',
   'packagePurchaseDate',
   'lastFormalLessonAt',
   'detailRecentLessonDate',

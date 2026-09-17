@@ -66,6 +66,7 @@ assert.match(source, /function studentSourceOptions\(\)[\s\S]*FlowTennisBusiness
 assert.match(source, /function studentSourceText\(s\)[\s\S]*customerLifecycleSource\(s,s\?\.source\)/, 'student source display should use the shared lifecycle source accessor before legacy source values');
 assert.match(source, /stuTagFilterHost[\s\S]*renderStudentTagCascader/, 'student tag filter should render through one cascader host');
 assert.doesNotMatch(source, /stuPackageStatusFilterHost|stuPaymentModeFilterHost|stuActivityStatusFilterHost|stuLessonVolumeFilterHost|stuLifecycleStatusFilterHost/, 'student individual tag filter hosts should be replaced by the cascader host');
+assert.match(source, /stuCourseTypeFilterHost[\s\S]*onStudentFilterChange/, 'active student page should expose a formal package course category filter');
 assert.match(source, /stuCoachFilterHost[\s\S]*onStudentFilterChange/, 'student primary coach filter should reset pagination before rendering');
 assert.match(source, /const STUDENT_TAG_FILTER_GROUPS=\[[\s\S]*key:'packageStatus'[\s\S]*key:'paymentMode'[\s\S]*key:'activityStatus'[\s\S]*key:'lessonVolume'[\s\S]*key:'lifecycleStatus'/, 'student tag cascader should group package, payment, activity, lesson volume, and lifecycle labels');
 assert.match(source, /const STUDENT_PAYMENT_MODE_OPTIONS=\['课包学员','单次付费学员','课包\+单次付费','体验课'\]/, 'student payment mode filter should include trial lessons after the backend labels them as 体验课');
@@ -76,7 +77,7 @@ assert.match(source, /function removeStudentTagFilter\(/, 'student tag cascader 
 assert.match(source, /function studentTagFilterMatches\([\s\S]*STUDENT_TAG_FILTER_GROUPS\.every[\s\S]*!selected\.length\|\|selected\.includes\(group\.getter\(s\)\)/, 'student tag filters should use OR within one group and AND across groups');
 assert.match(source, /let studentTagCascaderActiveGroupKey='packageStatus'/, 'student tag cascader should keep one active parent group');
 assert.match(source, /function setStudentTagCascaderActiveGroup\(/, 'student tag cascader should switch second-level options from the first-level group');
-assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuTagFilterHost','stuCoachFilterHost'\]/, 'student toolbar should expose type, source, tag cascader, and coach filters in order');
+assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuCourseTypeFilterHost','stuTagFilterHost','stuCoachFilterHost'\]/, 'student toolbar should expose type, source, formal package course category, tag cascader, and coach filters in order');
 assert.match(fnBody('renderStudentToolbarFilters'), /match:\(s,value\)=>value==='__unassigned__'\?studentPrimaryCoachText\(s\)==='-':studentPrimaryCoachText\(s\)===value/, 'student coach filter should use the same visible responsible-coach口径 as the list');
 assert.match(source, /function getStudentDuplicateCandidates\(/, 'student save flow should detect possible duplicates before submit');
 assert.match(source, /function isHiddenStudentProfile\([\s\S]*'merged'[\s\S]*'archived'[\s\S]*deletedAt[\s\S]*archivedAt/, 'student hidden profile helper should cover merged, archived, deleted, and inactive profiles');
@@ -508,9 +509,11 @@ assert.doesNotMatch(css, /\.tms-page-jump input/, 'purchase pager should not kee
 assert.match(source, /function withStandardFilterCounts\(/, 'standard dropdown filters should support count labels for all pages');
 assert.match(source, /function withLinkedFilterCounts\(/, 'standard dropdown filters should support linked count labels for all pages');
 assert.match(source, /function renderStandardOptionLabel\(/, 'shared dropdown renderer should format option counts centrally');
-assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuTagFilterHost','stuCoachFilterHost'\]/, 'student toolbar should expose compact common filters plus one student tag cascader');
-assert.match(source, /renderStudentToolbarFilters[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'type'[\s\S]*key:'source'[\s\S]*key:'coach'/, 'student toolbar common filters should keep linked count labels');
+assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuCourseTypeFilterHost','stuTagFilterHost','stuCoachFilterHost'\]/, 'student toolbar should expose compact common filters plus one student tag cascader');
+assert.match(source, /renderStudentToolbarFilters[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'type'[\s\S]*key:'source'[\s\S]*key:'courseType'[\s\S]*key:'coach'/, 'student toolbar common filters should keep linked count labels');
 assert.match(fnBody('renderStudentToolbarFilters'), /const sourceOptions=\[\{value:'',label:'全部',emptyDisplay:'来源'\},\.\.\.studentSourceOptions\(\)\][\s\S]*match:\(s,value\)=>studentSourceText\(s\)===value/, 'student source filter should use normalized source options and matching');
+assert.match(fnBody('customerCenterPageDataUrl'), /formalCourseType/, 'student list request should send the selected formal package course category to the backend');
+assert.match(fnBody('studentHasActiveSearchOrFilter'), /stuCourseTypeFilter/, 'student empty state should treat the course category selection as an active filter');
 assert.doesNotMatch(source, /stuTrialStatusFilterHost|stuDealPathFilterHost|thirdFilterIsTrial/, 'student toolbar should not keep old trial-status or deal-path filter hosts');
 assert.match(fnBody('getFilteredStudents'), /if\(!studentTagFilterMatches\(s\)\)return false/, 'student tag cascader selections should apply to the student list');
 assert.match(source, /renderStandardGroupedFilterHtml\(studentTagGroupedFilterConfig\(baseRows\)\)/, 'student tag cascader should reuse the standard grouped filter component');

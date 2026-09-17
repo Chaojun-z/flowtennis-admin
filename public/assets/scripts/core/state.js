@@ -431,10 +431,12 @@ function customerCenterPageDataUrl({fresh=false}={}){
     const type=typeof document!=='undefined'&&document.getElementById?document.getElementById('stuTypeFilter')?.value||'':'';
     const source=typeof document!=='undefined'&&document.getElementById?document.getElementById('stuSourceFilter')?.value||'':'';
     const coach=typeof document!=='undefined'&&document.getElementById?document.getElementById('stuCoachFilter')?.value||'':'';
+    const formalCourseType=mode==='trial'?'':(typeof document!=='undefined'&&document.getElementById?document.getElementById('stuCourseTypeFilter')?.value||'':'');
     if(q)params.q=q;
     if(type)params.type=type;
     if(source)params.source=source;
     if(coach)params.coach=coach;
+    if(formalCourseType)params.formalCourseType=formalCourseType;
     if(typeof stuSortKey!=='undefined'&&stuSortKey)params.sortKey=stuSortKey;
     if(typeof stuSortDir!=='undefined'&&stuSortDir)params.sortDir=stuSortDir;
     if(typeof studentTagFilterState==='object'&&studentTagFilterState&&typeof studentTagFilterCount==='function'&&studentTagFilterCount())params.tags=JSON.stringify(studentTagFilterState);
