@@ -263,7 +263,11 @@ function scheduleHasCourseEvidence(row = {}) {
 }
 
 function isValidSchedule(row = {}, period = {}) {
-  return inPeriod(row.startTime, period) && campusMatches(row) && effectiveScheduleStatus(row) !== '已取消' && scheduleHasCourseEvidence(row);
+  return inPeriod(row.startTime, period)
+    && campusMatches(row)
+    && cleanCoachName(row.coach || row.coachName) !== '小鹿'
+    && effectiveScheduleStatus(row) !== '已取消'
+    && scheduleHasCourseEvidence(row);
 }
 
 function isCompletedCalendarSchedule(row = {}) {
@@ -321,13 +325,33 @@ function membershipAccountDate(row = {}) {
   return textValue(row, ['firstOpenDate', 'openedAt', 'cycleStartDate', 'createdAt']).slice(0, 10);
 }
 
+function membershipAccountDateForReport(row = {}) {
+  const item = row.item && typeof row.item === 'object' ? row.item : row;
+  return textValue(item, ['firstOpenDate', 'openedAt', 'cycleStartDate', 'createdAt']).slice(0, 10)
+    || textValue(item.membershipAccount || {}, ['firstOpenDate', 'openedAt', 'cycleStartDate', 'createdAt']).slice(0, 10);
+}
+
+function membershipOpenedByReportEnd(row = {}, period = {}) {
+  const endDate = String(period.endDate || '').slice(0, 10);
+  if (!endDate) return true;
+  const openDate = membershipAccountDateForReport(row);
+  return !openDate || openDate <= endDate;
+}
+
+function membershipOrderInReportScope(row = {}, period = {}) {
+  const endDate = String(period.endDate || '').slice(0, 10);
+  if (!endDate) return true;
+  const orderDate = membershipOrderDate(row);
+  return !orderDate || orderDate <= endDate;
+}
+
 function isStoredValueBookingPayment(value = '') {
   const method = String(value || '').trim();
   return method === '储值扣款' || method === '储值卡' || method.includes('储值');
 }
 
 function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
-  const source = (sourceRaw = {}) => {
+  const source = (sourceRaw = {}, targetPeriod = {}) => {
     const courts = normalizeRows(sourceRaw.courts).filter(row => weeklyCampusMatchesStrict(row));
     const courtIds = new Set(courts.map(row => String(row?.id || '').trim()).filter(Boolean));
     return {
@@ -337,22 +361,22 @@ function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
       courts,
       membershipAccounts: normalizeRows(sourceRaw.membershipAccounts).filter(row => {
         const courtId = String(row?.courtId || '').trim();
-        return (courtId && courtIds.has(courtId)) || weeklyCampusMatchesStrict(row);
+        return (((courtId && courtIds.has(courtId)) || weeklyCampusMatchesStrict(row)) && membershipOpenedByReportEnd(row, targetPeriod));
       }),
-      membershipOrders: normalizeRows(sourceRaw.membershipOrders),
+      membershipOrders: normalizeRows(sourceRaw.membershipOrders).filter(row => membershipOrderInReportScope(row, targetPeriod)),
       membershipPlans: normalizeRows(sourceRaw.membershipPlans),
       membershipBenefitLedger: normalizeRows(sourceRaw.membershipBenefitLedger),
       membershipAccountEvents: normalizeRows(sourceRaw.membershipAccountEvents)
     };
   };
-  const indexedView = (sourceRaw = {}) => {
-    const rows = normalizeRows(sourceRaw.courtAccountListIndexRows);
+  const indexedView = (sourceRaw = {}, targetPeriod = {}) => {
+    const rows = normalizeRows(sourceRaw.courtAccountListIndexRows).filter(row => membershipOpenedByReportEnd(row, targetPeriod));
     return rows.length ? buildCourtAccountListViewFromIndexRows(rows, { accountType: '会员账户' }) : null;
   };
-  const view = indexedView(raw) || buildCourtAccountListViewFromData(source(raw), { includeDetails: true, accountType: '会员账户' });
-  const previousView = indexedView(previousRaw) || buildCourtAccountListViewFromData(source(previousRaw), { includeDetails: true, accountType: '会员账户' });
-  const memberItems = normalizeRows(view.items);
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
+  const view = indexedView(raw, period) || buildCourtAccountListViewFromData(source(raw, period), { includeDetails: true, accountType: '会员账户' });
+  const previousView = indexedView(previousRaw, previousPeriod) || buildCourtAccountListViewFromData(source(previousRaw, previousPeriod), { includeDetails: true, accountType: '会员账户' });
+  const memberItems = normalizeRows(view.items);
   const financeRedemptionAmount = (sourceRaw, targetPeriod) => {
     const rows = normalizeRows(sourceRaw.financeNormalizedRows).filter(row => {
       const type = String(row.businessType || row.displayBusinessType || '').trim();
@@ -373,9 +397,9 @@ function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
     .flatMap(row => normalizeRows(row.bookingDayStats))
     .filter(row => inPeriod(row.date, targetPeriod))
     .reduce((sum, row) => sum + fieldNumber(row, ['memberBookingAmount']), 0));
-  const ordersByAccountOrCourt = (sourceRaw = {}) => {
+  const ordersByAccountOrCourt = (sourceRaw = {}, targetPeriod = {}) => {
     const map = new Map();
-    normalizeRows(sourceRaw.membershipOrders).forEach(order => {
+    normalizeRows(sourceRaw.membershipOrders).filter(row => membershipOrderInReportScope(row, targetPeriod)).forEach(order => {
       [order.membershipAccountId, order.courtId].map(value => String(value || '').trim()).filter(Boolean).forEach(key => {
         const rows = map.get(key) || [];
         rows.push(order);
@@ -384,7 +408,7 @@ function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
     });
     return map;
   };
-  const currentOrderMap = ordersByAccountOrCourt(raw);
+  const currentOrderMap = ordersByAccountOrCourt(raw, period);
   const buildNewMemberRows = (items = [], targetPeriod = {}, orderMap = new Map()) => normalizeRows(items)
     .filter(item => inPeriod(item.firstOpenDate, targetPeriod))
     .map(item => {
@@ -402,7 +426,7 @@ function buildStoredValueReadModel(raw = {}, period = {}, previousRaw = {}) {
       };
     })
     .sort((a, b) => String(a.firstOpenDate || '').localeCompare(String(b.firstOpenDate || '')) || String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN'));
-  const previousOrderMap = ordersByAccountOrCourt(previousRaw);
+  const previousOrderMap = ordersByAccountOrCourt(previousRaw, previousPeriod);
   const newMemberRows = buildNewMemberRows(memberItems, period, currentOrderMap);
   const previousNewMemberRows = buildNewMemberRows(previousView.items || [], previousPeriod, previousOrderMap);
   const summary = view.summary?.membershipFinanceSummary || {};
@@ -478,6 +502,23 @@ function customerTypeForRow(row = {}, maps = { byId: new Map(), byName: new Map(
 
 function completedCourseScheduleRows(raw = {}, period = {}) {
   return dedupeScheduleRows(courseScheduleRows(raw, period).filter(isCompletedCalendarSchedule));
+}
+
+function leadCreatedDate(row = {}) {
+  return textValue(row, ['leadDate', 'createdDate', 'createdAt', 'updatedAt']).slice(0, 10);
+}
+
+function buildNewLeadRowsFromRaw(raw = {}, period = {}) {
+  return normalizeRows(raw.leads)
+    .filter(row => campusMatches(row) && inPeriod(leadCreatedDate(row), period))
+    .map(row => ({
+      name: firstDisplayName([row.displayName, row.name, row.leadName, row.customerName, row.nickname]) || '-',
+      date: leadCreatedDate(row) || '-',
+      source: rowLabel(row, ['source', 'channel', 'origin'], '-'),
+      owner: rowLabel(row, ['owner', 'ownerName', 'assignee', 'followUserName'], '-'),
+      stage: rowLabel(row, ['leadStage', 'stage', 'status', 'followStatus'], '-')
+    }))
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN'));
 }
 
 function scheduleStudentKey(row = {}) {
@@ -595,7 +636,12 @@ function buildCoachFromSchedules(raw = {}, period = {}, previousRaw = {}) {
     });
     return Array.from(map.values()).map(row => {
       const total = numberValue(row.privateHours + row.smallClassHours + row.trialHours + row.specialHours + row.sparringHours);
-      return { ...row, totalHours: total, scheduledCount: total };
+      return {
+        ...row,
+        lessonRows: normalizeRows(row.lessonRows).sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`)),
+        totalHours: total,
+        scheduledCount: total
+      };
     }).filter(row => row.totalHours > 0);
   };
   const rows = build(raw.schedule, period);
@@ -1551,7 +1597,7 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
   const prevRevenueMix = normalizeRows(prevOverview.revenueMix);
   const storedValueAmount = findRevenueMixValue(revenueMix, ['会员储值']) ?? optionalCardNumber(overview, ['storedValueIncome']);
   const prevStoredValueAmount = findRevenueMixValue(prevRevenueMix, ['会员储值']) ?? optionalCardNumber(prevOverview, ['storedValueIncome']);
-  const rawStoredValue = raw.membershipOrders || raw.membershipAccounts ? buildStoredValueFromRaw(raw, period, previousRaw) : null;
+  const rawStoredValue = raw.membershipOrders || raw.membershipAccounts || raw.courtAccountListIndexRows ? buildStoredValueFromRaw(raw, period, previousRaw) : null;
   const rawCourseRevenue = raw.purchases || raw.entitlements || raw.financeNormalizedRows || raw.schedule ? buildCourseRevenueFromRaw(raw, period, previousRaw) : null;
   const courseAmount = findRevenueMixValue(revenueMix, ['课程']) ?? optionalCardNumber(overview, ['courseIncome']);
   const prevCourseAmount = findRevenueMixValue(prevRevenueMix, ['课程']) ?? optionalCardNumber(prevOverview, ['courseIncome']);
@@ -1569,6 +1615,8 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
   const allLeadSources = businessTaxonomy.LEAD_SOURCE_OPTIONS.map(item => item.value);
   const leadSourceRows = normalizeLeadSourceRows(normalizeRows(conversion.sourceRows), normalizeRows(prevConversion.sourceRows), allLeadSources);
   const leadSourceDeals = leadSourceRows.reduce((sum, row) => sum + numberValue(row.deals), 0);
+  const newLeadRows = buildNewLeadRowsFromRaw(raw, period);
+  const previousNewLeadRows = buildNewLeadRowsFromRaw(previousRaw, { startDate: period.previousStartDate, endDate: period.previousEndDate });
   const trends = context.skipTrends ? [] : buildWeeklyTrendRows({
     period,
     operationsPayload: { operations, weeklyReportRaw: raw },
@@ -1656,15 +1704,16 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
     },
     conversion: {
       totalLeads: cardNumber(conversion, ['totalLeads']),
-      newLeads: cardNumber(conversion, ['totalLeads']),
+      newLeads: newLeadRows.length || cardNumber(conversion, ['totalLeads']),
       trialLeads: cardNumber(conversion, ['trialPathStudents']),
       trialDeals: leadSourceDeals || cardNumber(conversion, ['trialPathDealCustomers']),
       compare: {
-        newLeads: compareValue(cardNumber(conversion, ['totalLeads']), cardNumber(prevConversion, ['totalLeads'])),
+        newLeads: newLeadRows.length ? compareValue(newLeadRows.length, previousNewLeadRows.length) : compareValue(cardNumber(conversion, ['totalLeads']), cardNumber(prevConversion, ['totalLeads'])),
         trialLeads: compareValue(cardNumber(conversion, ['trialPathStudents']), cardNumber(prevConversion, ['trialPathStudents'])),
         trialDeals: compareValue(cardNumber(conversion, ['trialPathDealCustomers']), cardNumber(prevConversion, ['trialPathDealCustomers']))
       },
-      sourceRows: leadSourceRows
+      sourceRows: leadSourceRows,
+      newLeadRows
     }
   };
 }
@@ -1792,7 +1841,7 @@ function donutChart(rows = [], { labelKey = 'name', valueKey = 'value', edits = 
   const total = clean.reduce((sum, row) => sum + fieldNumber(row, [valueKey]), 0);
   if (!total) return '<p class="empty">暂无可绘制数据</p>';
   let acc = 0;
-  const colors = ['#7CFF44', '#46A758', '#889E8D', '#3E5244', '#243629'];
+  const colors = ['#72D94A', '#46A758', '#889E8D', '#3E5244', '#243629'];
   const stops = clean.map((row, index) => {
     const start = acc;
     acc += percent(fieldNumber(row, [valueKey]), total);
@@ -1870,8 +1919,8 @@ function lineChart(rows = [], { valueKey = 'value', unit = '%', title = '', char
                 <defs>
                   <!-- Area Gradient Color -->
                   <linearGradient id="areaGlowGradient-${escapeHtml(safeChartId)}" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#7CFF44" stop-opacity="0.12"></stop>
-                    <stop offset="100%" stop-color="#7CFF44" stop-opacity="0.0"></stop>
+                    <stop offset="0%" stop-color="#72D94A" stop-opacity="0.12"></stop>
+                    <stop offset="100%" stop-color="#72D94A" stop-opacity="0.0"></stop>
                   </linearGradient>
                   <!-- Glow shadow for peak point -->
                   <filter id="peakGlowFilter-${escapeHtml(safeChartId)}" x="-50%" y="-50%" width="200%" height="200%">
@@ -1885,11 +1934,11 @@ function lineChart(rows = [], { valueKey = 'value', unit = '%', title = '', char
 
                 <!-- Placeholder routes which are fully initialized on runtime -->
                 <path id="svg-fill-area-${escapeHtml(safeChartId)}" fill="url(#areaGlowGradient-${escapeHtml(safeChartId)})" d=""></path>
-                <path id="svg-views-path-${escapeHtml(safeChartId)}" fill="none" stroke="#7CFF44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d=""></path>
+                <path id="svg-views-path-${escapeHtml(safeChartId)}" fill="none" stroke="#72D94A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d=""></path>
                 <path id="svg-rates-path-${escapeHtml(safeChartId)}" fill="none" stroke="#3E5244" stroke-width="1.5" stroke-dasharray="3,3" stroke-linecap="round" d=""></path>
 
                 <!-- Vertical crosshair guide -->
-                <line id="svg-guide-line-${escapeHtml(safeChartId)}" x1="0" y1="0" x2="0" y2="0" stroke="#7CFF44" stroke-opacity="0.25" stroke-width="1" stroke-dasharray="2,2" class="opacity-0 transition-opacity duration-150"></line>
+                <line id="svg-guide-line-${escapeHtml(safeChartId)}" x1="0" y1="0" x2="0" y2="0" stroke="#72D94A" stroke-opacity="0.25" stroke-width="1" stroke-dasharray="2,2" class="opacity-0 transition-opacity duration-150"></line>
 
                 <!-- Dynamic dots placeholder -->
                 <g id="svg-dots-group-${escapeHtml(safeChartId)}"></g>
@@ -1957,6 +2006,28 @@ function renderStoredValueNewMembers(rows = [], edits = {}) {
   </div>`;
 }
 
+function renderLeadDetailRows(rows = [], edits = {}) {
+  return `<div class="bg-cyber-card rounded-xl border border-cyber-border p-5">
+    <div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${editableText(edits, 'conversion.newLeads.title', '本周新增线索明细')}</h4><span class="text-xs font-mono text-cyber-muted">${editableText(edits, 'conversion.newLeads.count', `${normalizeRows(rows).length} 条`)}</span></div>
+    ${renderRows(normalizeRows(rows), [
+      { key: 'date', label: '日期' },
+      { key: 'name', label: '线索' },
+      { key: 'source', label: '渠道' },
+      { key: 'owner', label: '负责人' },
+      { key: 'stage', label: '阶段' }
+    ], { edits, keyPrefix: 'conversion.newLeadRows' })}
+  </div>`;
+}
+
+function courseTypeTagHtml(value = '') {
+  const text = String(value || '-').trim() || '-';
+  let classes = 'border-cyber-border bg-cyber-pillBg text-cyber-muted';
+  if (/体验/.test(text)) classes = 'border-[#B8D96A]/40 bg-[#B8D96A]/10 text-[#B8D96A]';
+  else if (/小班/.test(text)) classes = 'border-[#6CC7D9]/40 bg-[#6CC7D9]/10 text-[#6CC7D9]';
+  else if (/私教/.test(text)) classes = 'border-[#72D94A]/40 bg-[#72D94A]/10 text-[#72D94A]';
+  return `<span class="inline-flex items-center rounded border px-2 py-0.5 font-sans text-[11px] ${classes}">${escapeHtml(text)}</span>`;
+}
+
 function renderCoachLessonRows(rows = [], edits = {}, coachIndex = 0) {
   const clean = normalizeRows(rows);
   if (!clean.length) return '';
@@ -1964,7 +2035,7 @@ function renderCoachLessonRows(rows = [], edits = {}, coachIndex = 0) {
     { key: 'date', label: '日期' },
     { key: 'time', label: '时间' },
     { key: 'student', label: '学员', render: row => isTechnicalIdentifier(row.student) ? '未记录学员' : displayMetricValue(row.student) },
-    { key: 'courseType', label: '课程类型' },
+    { key: 'courseType', label: '课程类型', html: true, render: row => courseTypeTagHtml(row.courseType) },
     { key: 'hours', label: '课时', render: row => `${formatMetricValue(row.hours, '小时')}小时` },
     { key: 'court', label: '场地' }
   ], { edits, keyPrefix: `coach.lessonRows.${coachIndex}` })}</details>`;
@@ -2014,12 +2085,12 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
           },
           colors: {
             cyber: {
-              black: '#070A08',
+              black: '#0B100D',
               grid: '#111813',
-              card: '#0D120F',
+              card: '#111813',
               border: '#18221B',
               borderHover: '#2C3D2F',
-              volt: '#7CFF44',
+              volt: '#72D94A',
               muted: '#889E8D',
               darkMuted: '#3E5244',
               pillBg: '#1E351A'
@@ -2031,16 +2102,17 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   </script>
   <style>
     html{scroll-behavior:smooth}
-    .bg-grid-pattern{background-color:#070A08;background-image:linear-gradient(to right,#111813 1px,transparent 1px),linear-gradient(to bottom,#111813 1px,transparent 1px);background-size:40px 40px}
-    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#070A08}::-webkit-scrollbar-thumb{background:#18221B;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#2C3D2F}
-    [data-editable="true"]:focus{outline:1px dashed #7CFF44;background-color:rgba(124,255,68,.05);padding-left:4px;padding-right:4px;border-radius:2px}
-    .cohort-cell{transition:all .15s ease-out}.cohort-cell:hover{transform:scale(1.05);z-index:10;box-shadow:0 0 10px rgba(124,255,68,.2)}
-    .chart-tooltip{position:fixed;display:none;z-index:20;pointer-events:none;border:1px solid #7CFF44;background:#0D120F;color:#fff;border-radius:6px;padding:7px 9px;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
-    .empty{color:#889E8D}.highlight-col{background:rgba(124,255,68,.08);color:#7CFF44}.remark{white-space:pre-wrap}
-    .bars{display:grid;grid-auto-rows:minmax(0,1fr);gap:0;height:100%}.bar-row{display:grid;grid-template-columns:132px 1fr 92px;gap:12px;align-items:center;font-size:13px}.bar-row span{color:#889E8D}.bar-row i{height:10px;background:#18221B;border-radius:3px;overflow:hidden}.bar-row b{display:block;height:100%;background:#7CFF44;border-radius:3px}.bar-row strong{font-family:ui-monospace,SFMono-Regular,monospace;color:#fff}
+    .bg-grid-pattern{background-color:#0B100D;background-image:linear-gradient(to right,#111813 1px,transparent 1px),linear-gradient(to bottom,#111813 1px,transparent 1px);background-size:40px 40px}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#0B100D}::-webkit-scrollbar-thumb{background:#18221B;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#2C3D2F}
+    .text-white{color:#D9E1DB!important}.hover\\:text-white:hover{color:#D9E1DB!important}
+    [data-editable="true"]:focus{outline:1px dashed #72D94A;background-color:rgba(114,217,74,.07);padding-left:4px;padding-right:4px;border-radius:2px}
+    .cohort-cell{transition:all .15s ease-out}.cohort-cell:hover{transform:scale(1.05);z-index:10;box-shadow:0 0 10px rgba(114,217,74,.18)}
+    .chart-tooltip{position:fixed;display:none;z-index:20;pointer-events:none;border:1px solid #72D94A;background:#111813;color:#D9E1DB;border-radius:6px;padding:7px 9px;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+    .empty{color:#889E8D}.highlight-col{background:rgba(114,217,74,.08);color:#72D94A}.remark{white-space:pre-wrap}
+    .bars{display:grid;grid-auto-rows:minmax(0,1fr);gap:0;height:100%}.bar-row{display:grid;grid-template-columns:132px 1fr 92px;gap:12px;align-items:center;font-size:13px}.bar-row span{color:#889E8D}.bar-row i{height:10px;background:#18221B;border-radius:3px;overflow:hidden}.bar-row b{display:block;height:100%;background:#72D94A;border-radius:3px}.bar-row strong{font-family:ui-monospace,SFMono-Regular,monospace;color:#D9E1DB}
     .conversion-panel{height:100%;min-height:520px}.conversion-panel>.bars,.conversion-panel>.overflow-x-auto{flex:1;min-height:0}.conversion-panel>.overflow-x-auto table{height:100%;margin-top:0}
-    .donut-wrap{display:flex;align-items:center;gap:20px}.donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:"";position:absolute;inset:35px;border-radius:50%;background:#0D120F}.legend{display:grid;gap:9px;font-size:13px}.legend span{display:flex;align-items:center;gap:8px;color:#889E8D}.legend i{width:10px;height:10px;border-radius:50%}
-    .progress-list{display:grid;gap:14px}.progress-item div{display:flex;justify-content:space-between;color:#889E8D;font-size:12px;margin-bottom:6px}.progress-item strong{color:#fff;font-family:ui-monospace,SFMono-Regular,monospace}.progress-item i{display:block;height:10px;background:#18221B;border-radius:3px;overflow:hidden}.progress-item b{display:block;height:100%;background:#7CFF44}
+    .donut-wrap{display:flex;align-items:center;gap:20px}.donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:"";position:absolute;inset:35px;border-radius:50%;background:#111813}.legend{display:grid;gap:9px;font-size:13px}.legend span{display:flex;align-items:center;gap:8px;color:#889E8D}.legend i{width:10px;height:10px;border-radius:50%}
+    .progress-list{display:grid;gap:14px}.progress-item div{display:flex;justify-content:space-between;color:#889E8D;font-size:12px;margin-bottom:6px}.progress-item strong{color:#D9E1DB;font-family:ui-monospace,SFMono-Regular,monospace}.progress-item i{display:block;height:10px;background:#18221B;border-radius:3px;overflow:hidden}.progress-item b{display:block;height:100%;background:#72D94A}
     .hero-kpi-value [data-editable="true"]{white-space:nowrap}
   </style>
 </head>
@@ -2176,6 +2248,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     { key: 'deals', label: '体验后报名' },
     { key: 'compare', label: '环比', render: row => trendText(row.compare?.leads) }
   ], { edits, keyPrefix: 'conversion.source' })}</div></div>
+  ${renderLeadDetailRows(conversion.newLeadRows || [], edits)}
   ${editableSectionTitle('remark', '备注', '// REMARK')}
   <p class="remark bg-cyber-card rounded-xl border border-cyber-border p-5 text-cyber-muted">${editableValue(edits, 'remark', remark || '暂无备注')}</p>
 </main>
@@ -2262,14 +2335,14 @@ function renderInteractiveChart(chart){
     coreCircle.setAttribute('class','interactive-dot');
     if(pt.isPeak){
       coreCircle.setAttribute('r',5);
-      coreCircle.setAttribute('fill','#ffffff');
-      coreCircle.setAttribute('stroke','#7CFF44');
+      coreCircle.setAttribute('fill','#D9E1DB');
+      coreCircle.setAttribute('stroke','#72D94A');
       coreCircle.setAttribute('stroke-width','2.5');
       coreCircle.setAttribute('filter','url(#'+chart.querySelector('filter[id^="peakGlowFilter"]').id+')');
     }else{
       coreCircle.setAttribute('r',3.5);
-      coreCircle.setAttribute('fill','#070A08');
-      coreCircle.setAttribute('stroke','#7CFF44');
+      coreCircle.setAttribute('fill','#0B100D');
+      coreCircle.setAttribute('stroke','#72D94A');
       coreCircle.setAttribute('stroke-width','1.5');
     }
     dotG.appendChild(touchCircle);
@@ -2285,11 +2358,11 @@ function renderInteractiveChart(chart){
       if(pt.isPeak){
         dot.setAttribute('r',5);
         dot.setAttribute('stroke-width','2.5');
-        dot.setAttribute('fill','#ffffff');
+        dot.setAttribute('fill','#D9E1DB');
       }else{
         dot.setAttribute('r',3.5);
         dot.setAttribute('stroke-width','1.5');
-        dot.setAttribute('fill','#070A08');
+        dot.setAttribute('fill','#0B100D');
       }
     });
   }
@@ -2314,15 +2387,15 @@ function renderInteractiveChart(chart){
       if(idx===activeIdx){
         dot.setAttribute('r',pt.isPeak?7:5.5);
         dot.setAttribute('stroke-width',pt.isPeak?'3.5':'3');
-        dot.setAttribute('fill',pt.isPeak?'#ffffff':'#7CFF44');
+        dot.setAttribute('fill',pt.isPeak?'#D9E1DB':'#72D94A');
       }else if(pt.isPeak){
         dot.setAttribute('r',5);
         dot.setAttribute('stroke-width','2.5');
-        dot.setAttribute('fill','#ffffff');
+        dot.setAttribute('fill','#D9E1DB');
       }else{
         dot.setAttribute('r',3.5);
         dot.setAttribute('stroke-width','1.5');
-        dot.setAttribute('fill','#070A08');
+        dot.setAttribute('fill','#0B100D');
       }
     });
     var rateSign=Number(activePt.rate)>0?'+':'';

@@ -667,6 +667,60 @@ assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.newAmou
 assert.strictEqual(storedValueIndexSnapshot.sections.revenue.storedValue.redeemedAmount, 300, 'stored value report should fall back to indexed member booking amount for current-week redemption');
 assert.strictEqual(storedValueIndexSnapshot.sections.court.usageRows.find(row => row.key === 'member')?.hours, 2.5, 'court usage should use indexed member booking hours when court history is not loaded');
 
+const storedValueIndexAsOfSnapshot = buildWeeklyBusinessReportSnapshot({
+  period: nextPeriod,
+  operationsPayload: {
+    operations: {},
+    weeklyReportRaw: {
+      courtAccountListIndexRows: [
+        {
+          id: 'member-before-cutoff',
+          courtId: 'member-before-cutoff',
+          item: {
+            id: 'member-before-cutoff',
+            displayName: '截止日前会员',
+            campusCode: 'shunyi_mapo',
+            accountType: '会员账户',
+            membershipStatusCode: 'active',
+            firstOpenDate: '2026-09-08',
+            membershipAccount: { id: 'account-before-cutoff', courtId: 'member-before-cutoff' },
+            totalDeposit: 2000,
+            balance: 2000
+          },
+          membershipFinanceStats: { memberCount: 1, paidAmount: 2000, bonusAmount: 0, consumableAmount: 2000, pendingAmount: 2000 }
+        },
+        {
+          id: 'member-after-cutoff',
+          courtId: 'member-after-cutoff',
+          item: {
+            id: 'member-after-cutoff',
+            displayName: '截止日后会员',
+            campusCode: 'shunyi_mapo',
+            accountType: '会员账户',
+            membershipStatusCode: 'active',
+            firstOpenDate: '2026-09-13',
+            membershipAccount: { id: 'account-after-cutoff', courtId: 'member-after-cutoff' },
+            totalDeposit: 3000,
+            balance: 3000
+          },
+          membershipFinanceStats: { memberCount: 1, paidAmount: 3000, bonusAmount: 0, consumableAmount: 3000, pendingAmount: 3000 }
+        }
+      ],
+      membershipAccounts: [
+        { id: 'account-before-cutoff', courtId: 'member-before-cutoff', status: 'active', firstOpenDate: '2026-09-08', createdAt: '2026-09-08' },
+        { id: 'account-after-cutoff', courtId: 'member-after-cutoff', status: 'active', firstOpenDate: '2026-09-13', createdAt: '2026-09-13' }
+      ],
+      membershipOrders: [
+        { id: 'order-before-cutoff', membershipAccountId: 'account-before-cutoff', courtId: 'member-before-cutoff', status: 'active', rechargeAmount: 2000, purchaseDate: '2026-09-08' },
+        { id: 'order-after-cutoff', membershipAccountId: 'account-after-cutoff', courtId: 'member-after-cutoff', status: 'active', rechargeAmount: 3000, purchaseDate: '2026-09-13' }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: {} }
+});
+assert.strictEqual(storedValueIndexAsOfSnapshot.sections.revenue.storedValue.totalMembers, 1, 'stored value total members must be counted as of the report end date, not the generation date');
+assert.strictEqual(storedValueIndexAsOfSnapshot.sections.revenue.storedValue.totalAmount, 2000, 'stored value total amount must exclude members opened after the report end date');
+
 const realDataHardGatePeriods = [
   ['2026-07-02', '2026-07-09'],
   ['2026-07-10', '2026-07-17'],
@@ -754,9 +808,9 @@ assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.memberBo
 assert.strictEqual(realDataHardGateSnapshot.sections.revenue.receipts.bookingAmount, 7304, 'real hard gate: weekly booking receipts should include guest bookings and course court fees');
 assert.strictEqual(realDataHardGateSnapshot.sections.revenue.recognized.guestBookingRevenue, 7304, 'real hard gate: paid booking revenue should include course court fees');
 assert.strictEqual(realDataHardGateSnapshot.sections.revenue.receipts.storedValueAmount, 4000, 'real hard gate: stored value receipts must use finance facts');
-assert.strictEqual(realDataHardGateSnapshot.sections.revenue.course.completedHours, 82.5, 'real hard gate: completed course hours must use all valid finished calendar lessons');
-assert.strictEqual(realDataHardGateSnapshot.summary.coachHours.value, 82.5, 'real hard gate: top completed hours must not keep the stale 80.5 card');
-assert.strictEqual(realDataHardGateSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 82.5, 'real hard gate: course court occupancy must equal completed schedule hours');
+assert.strictEqual(realDataHardGateSnapshot.sections.revenue.course.completedHours, 80.5, 'real hard gate: completed course hours must exclude dirty Xiaolu schedule rows');
+assert.strictEqual(realDataHardGateSnapshot.summary.coachHours.value, 80.5, 'real hard gate: top completed hours must match reportable coach hours');
+assert.strictEqual(realDataHardGateSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 80.5, 'real hard gate: course court occupancy must match reportable coach hours');
 assert.strictEqual(realDataHardGateSnapshot.sections.court.usageRows.find(row => row.key === 'free')?.hours, 28, 'real hard gate: renovation and locked courts must be counted as internal use');
 assert.strictEqual(realDataHardGateSnapshot.sections.trends.length, 8, 'real hard gate: weekly trends must be rebuilt to eight periods from facts');
 realDataHardGateSnapshot.sections.trends.forEach(row => {
@@ -807,6 +861,48 @@ const duplicateScheduleSnapshot = buildWeeklyBusinessReportSnapshot({
   totalOperationsPayload: { operations: {}, weeklyReportRaw: { schedule: [] } }
 });
 assert.strictEqual(duplicateScheduleSnapshot.summary.coachHours.value, 1, 'weekly report completed hours should count duplicate calendar schedule rows only once');
+
+const dirtyCoachScheduleSnapshot = buildWeeklyBusinessReportSnapshot({
+  period: nextPeriod,
+  operationsPayload: {
+    operations: {},
+    weeklyReportRaw: {
+      coaches: [{ name: '刘润扬', status: '在职' }, { name: '小鹿', status: '在职' }],
+      schedule: [
+        { id: 'valid-coach-lesson', campus: 'shunyi_mapo', coach: '刘润扬教练', studentName: '真实学员', courseType: '私教课', status: '已下课', startTime: '2026-09-09 14:00:00', endTime: '2026-09-09 15:00:00', venue: '1号场' },
+        { id: 'dirty-xiaolu-lesson', campus: 'shunyi_mapo', coach: '小鹿', studentName: '小鹿', courseType: '私教课', status: '已下课', startTime: '2026-09-09 16:00:00', endTime: '2026-09-09 18:00:00', venue: '2号场' }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: { schedule: [] } },
+  totalOperationsPayload: { operations: {}, weeklyReportRaw: { schedule: [] } }
+});
+assert.strictEqual(dirtyCoachScheduleSnapshot.sections.revenue.course.completedHours, 1, 'dirty Xiaolu schedule must not enter course completed hours');
+assert.strictEqual(dirtyCoachScheduleSnapshot.summary.coachHours.value, 1, 'dirty Xiaolu schedule must not enter top completed hours');
+assert.strictEqual(dirtyCoachScheduleSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 1, 'dirty Xiaolu schedule must not enter course court usage hours');
+assert.strictEqual(dirtyCoachScheduleSnapshot.sections.coach.rows.length, 1, 'dirty Xiaolu schedule must not render a coach row');
+
+const leadDetailsSnapshot = buildWeeklyBusinessReportSnapshot({
+  period: nextPeriod,
+  operationsPayload: {
+    operations: {
+      conversion: {
+        cards: { totalLeads: { value: 2 } },
+        sourceRows: [{ source: '大众点评', totalLeads: 1 }, { source: '抖音', totalLeads: 1 }]
+      }
+    },
+    weeklyReportRaw: {
+      leads: [
+        { id: 'lead-in-week-a', displayName: '本周线索A', leadDate: '2026-09-04', source: '大众点评', owner: 'Mira', leadStage: '跟进中', campus: 'shunyi_mapo' },
+        { id: 'lead-in-week-b', displayName: '本周线索B', createdAt: '2026-09-08 12:00:00', source: '抖音', owner: 'Mira', leadStage: '已约体验', campus: 'shunyi_mapo' },
+        { id: 'lead-after-week', displayName: '周后线索', leadDate: '2026-09-13', source: '大众点评', owner: 'Mira', leadStage: '跟进中', campus: 'shunyi_mapo' }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: {} }
+});
+assert.deepStrictEqual(leadDetailsSnapshot.sections.conversion.newLeadRows.map(row => row.name), ['本周线索A', '本周线索B'], 'weekly report should expose current-week lead detail rows only');
+assert.match(renderWeeklyBusinessReportHtml(leadDetailsSnapshot), /本周新增线索明细[\s\S]*本周线索A[\s\S]*本周线索B/, 'weekly report should render current-week lead details');
 
 const lifetimeCutoffSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
@@ -906,7 +1002,9 @@ assert.match(html, /handleChartHover/, 'weekly report trend charts should reuse 
 assert.match(html, /pointer-events[\s\S]*all/, 'weekly report trend charts should reuse the incoming wide hit-area interaction');
 assert.match(html, /data-primary-label="核销入账"[\s\S]*data-secondary-label="环比变化"/, 'weekly report trend chart data labels should be replaced with FlowTennis metrics');
 assert.doesNotMatch(html, /echarts|weekly-echarts-trend|views-line|views-area|line-labels|<svg viewBox="0 0 100 100"/, 'weekly report trend charts must not keep ECharts or the old ugly hand-written sparkline');
-assert.match(html, /cdn\.tailwindcss\.com[\s\S]*fontFamily[\s\S]*cyber:[\s\S]*volt: '#7CFF44'/, 'weekly report must load and reuse the provided cyber analytics template tokens');
+assert.match(html, /cdn\.tailwindcss\.com[\s\S]*fontFamily[\s\S]*cyber:[\s\S]*volt: '#72D94A'/, 'weekly report should use a calmer green token');
+assert.match(html, /text-white\{color:#D9E1DB!important\}/, 'weekly report should soften pure white text to reduce eye strain');
+assert.doesNotMatch(html, /#7CFF44/, 'weekly report should not keep the harsh neon green in charts or controls');
 assert.match(html, /<body class="bg-grid-pattern text-white font-sans min-h-screen antialiased flex flex-col pb-16">/, 'weekly report body should reuse the provided template shell classes');
 assert.match(html, /<header data-section="global-header" class="border-b border-cyber-border bg-cyber-black\/95 sticky top-0 z-50 backdrop-blur-md">/, 'weekly report header should reuse the provided template header structure');
 assert.match(html, /<nav class="hidden md:flex items-center space-x-1 bg-black\/40 p-1 rounded-lg border border-cyber-border"[\s\S]*href="#overview"[\s\S]*Dashboard[\s\S]*href="#revenue"[\s\S]*Revenue[\s\S]*href="#private-course"[\s\S]*Private Course[\s\S]*href="#court"[\s\S]*Court Usage[\s\S]*href="#coach"[\s\S]*Coach/, 'top navigation should mirror the template segmented menu and jump to report sections');
@@ -915,8 +1013,8 @@ assert.match(html, /flex flex-wrap gap-3 pt-2[\s\S]*核销入账[\s\S]*本周收
 assert.match(html, /data-section="court-utilization-heatmap"[\s\S]*\/\/ COURT UTILIZATION HEATMAP[\s\S]*每天利用率[\s\S]*<th class="py-2 text-left font-sans"[\s\S]*日期[\s\S]*08\.27[\s\S]*09\.03[\s\S]*cohort-cell[\s\S]*41%[\s\S]*72%[\s\S]*61%/, 'daily court utilization should render as a date heatmap with real daily values');
 assert.doesNotMatch(html, /USER RETENTION MATRIX|核心客群生命周期存留分析|起始批次|Cohort|>W1<|>W5</, 'daily court utilization must not keep retention cohort wording');
 assert.doesNotMatch(html, /\[contenteditable=true\]\{outline:/, 'editable elements must not show dashed outlines by default');
-assert.match(html, /\[data-editable="true"\]:focus\{[\s\S]*outline:1px dashed #7CFF44/, 'editable dashed outline should only appear after click focus');
-assert.doesNotMatch(html, /\[data-editable="true"\]:hover[\s\S]*outline:1px dashed #7CFF44/, 'editable dashed outline must not appear on hover');
+assert.match(html, /\[data-editable="true"\]:focus\{[\s\S]*outline:1px dashed #72D94A/, 'editable dashed outline should only appear after click focus');
+assert.doesNotMatch(html, /\[data-editable="true"\]:hover[\s\S]*outline:1px dashed #72D94A/, 'editable dashed outline must not appear on hover');
 assert.doesNotMatch(weeklyReportSource, /buildCourtUtilizationMatrixRows|weeklyMatrixRows|Cohort|USER RETENTION MATRIX|核心客群生命周期存留分析|起始批次/, 'weekly report source must not keep the old retention matrix implementation');
 assert.match(html, /chart-tooltip[\s\S]*data-tooltip/, 'charts and metrics should support hover tooltips');
 assert.match(html, /contenteditable="true"[\s\S]*save-edit/, 'weekly report should support direct editing and saving');
@@ -1501,7 +1599,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverla
   assert.strictEqual(rawlessZeroTrendResult.result.shareToken, 'rawless-zero-trend-token', 'rawless zero trend repair should preserve the existing share link');
   assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.cashReceived.value, 49295.99, 'rawless current snapshot repair should rebuild weekly cash received from live facts');
   assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.totalIncome.value, 38511.4, 'rawless current snapshot repair should rebuild weekly recognized revenue from live facts');
-  assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.coachHours.value, 82.5, 'rawless current snapshot repair should rebuild completed hours from live facts');
+  assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.coachHours.value, 80.5, 'rawless current snapshot repair should rebuild completed hours from live facts without dirty Xiaolu schedules');
   assert.strictEqual(rawlessZeroTrendResult.savedRows[0].lifetimeSummary.totalIncome.value, 1746191.23, 'rawless current snapshot repair should rebuild lifetime income from live facts');
   assert.strictEqual(rawlessZeroTrendResult.savedRows[0].sections.trends.length, 8, 'rawless zero trend repair should save eight weekly trend points');
   rawlessZeroTrendResult.savedRows[0].sections.trends.forEach(row => {
