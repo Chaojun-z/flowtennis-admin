@@ -2014,9 +2014,19 @@ function renderLeadDetailRows(rows = [], edits = {}) {
       { key: 'name', label: '线索' },
       { key: 'source', label: '渠道' },
       { key: 'owner', label: '负责人' },
-      { key: 'stage', label: '阶段' }
+      { key: 'stage', label: '阶段', html: true, render: row => leadStageTagHtml(row.stage) }
     ], { edits, keyPrefix: 'conversion.newLeadRows' })}
   </div>`;
+}
+
+function leadStageTagHtml(value = '') {
+  const text = String(value || '-').trim() || '-';
+  let classes = 'border-cyber-border bg-cyber-pillBg text-cyber-muted';
+  if (/已约|预约|体验/.test(text)) classes = 'border-[#6CC7D9]/40 bg-[#6CC7D9]/10 text-[#6CC7D9]';
+  else if (/报名|成交|购买|已转化/.test(text)) classes = 'border-[#72D94A]/40 bg-[#72D94A]/10 text-[#72D94A]';
+  else if (/无效|流失|放弃/.test(text)) classes = 'border-[#889E8D]/30 bg-[#889E8D]/10 text-[#889E8D]';
+  else if (/跟进|沟通|新线索/.test(text)) classes = 'border-[#B8D96A]/40 bg-[#B8D96A]/10 text-[#B8D96A]';
+  return `<span class="lead-stage-tag inline-flex items-center rounded border px-2 py-0.5 font-sans text-[11px] ${classes}">${escapeHtml(text)}</span>`;
 }
 
 function courseTypeTagHtml(value = '') {
@@ -2039,6 +2049,18 @@ function renderCoachLessonRows(rows = [], edits = {}, coachIndex = 0) {
     { key: 'hours', label: '课时', render: row => `${formatMetricValue(row.hours, '小时')}小时` },
     { key: 'court', label: '场地' }
   ], { edits, keyPrefix: `coach.lessonRows.${coachIndex}` })}</details>`;
+}
+
+function renderCoachDetailsTabs(rows = [], edits = {}) {
+  const clean = normalizeRows(rows).filter(row => normalizeRows(row.lessonRows).length);
+  if (!clean.length) return '';
+  return `<section class="bg-cyber-card rounded-xl border border-cyber-border p-5" data-coach-detail-tabs>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+      <h3 class="text-sm font-bold text-white">${editableText(edits, 'coach.details.title', '教练上课明细')}</h3>
+      <div class="flex flex-wrap gap-2">${clean.map((row, index) => `<button type="button" data-coach-tab="${index}" class="coach-tab px-3 py-1.5 rounded border text-xs font-sans ${index === 0 ? 'is-active border-cyber-volt bg-cyber-pillBg text-cyber-volt' : 'border-cyber-border bg-black/20 text-cyber-muted'}">${editableText(edits, `coach.details.${index}.title`, row.coach)}</button>`).join('')}</div>
+    </div>
+    ${clean.map((row, index) => `<div data-coach-panel="${index}" class="${index === 0 ? '' : 'hidden'}">${renderCoachLessonRows(row.lessonRows || [], edits, index)}</div>`).join('')}
+  </section>`;
 }
 
 function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
@@ -2114,6 +2136,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     .donut-wrap{display:flex;align-items:center;gap:20px}.donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:"";position:absolute;inset:35px;border-radius:50%;background:#111813}.legend{display:grid;gap:9px;font-size:13px}.legend span{display:flex;align-items:center;gap:8px;color:#889E8D}.legend i{width:10px;height:10px;border-radius:50%}
     .progress-list{display:grid;gap:14px}.progress-item div{display:flex;justify-content:space-between;color:#889E8D;font-size:12px;margin-bottom:6px}.progress-item strong{color:#D9E1DB;font-family:ui-monospace,SFMono-Regular,monospace}.progress-item i{display:block;height:10px;background:#18221B;border-radius:3px;overflow:hidden}.progress-item b{display:block;height:100%;background:#72D94A}
     .hero-kpi-value [data-editable="true"]{white-space:nowrap}
+    .coach-tab.is-active{border-color:#72D94A;background:#1E351A;color:#72D94A}
   </style>
 </head>
 <body class="bg-grid-pattern text-white font-sans min-h-screen antialiased flex flex-col pb-16">
@@ -2182,7 +2205,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   </div>
 
   <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, 'section.storedValue.title', '2.3 订场会员收款')}</h3>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
     ${templateMetric('会员总数', revenue.storedValue?.totalMembers, ' 人', null, edits, 'storedValue.totalMembers')}
     ${templateMetric('总储值金额', revenue.storedValue?.totalAmount, ' 元', null, edits, 'storedValue.totalAmount')}
     ${templateMetric('本周新增会员', revenue.storedValue?.newMembers, ' 人', revenue.storedValue?.compare?.newMembers, edits, 'storedValue.newMembers')}
@@ -2211,7 +2234,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     { key: 'specialHours', label: '专项课' },
     { key: 'sparringHours', label: '陪打' }
   ], { edits, keyPrefix: 'coach.rows' })}
-  ${coachLessonRows.length ? `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${coachLessonRows.map((row, index) => `<section class="bg-cyber-card rounded-xl border border-cyber-border p-5"><h3 class="text-sm font-bold text-white">${editableText(edits, `coach.details.${index}.title`, row.coach)}</h3>${renderCoachLessonRows(row.lessonRows || [], edits, index)}</section>`).join('')}</div>` : ''}
+  ${renderCoachDetailsTabs(coachLessonRows, edits)}
 
   ${editableSectionTitle('court', '四、场地经营', '// COURT USAGE')}
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -2420,6 +2443,26 @@ function renderAllInteractiveCharts(){
 }
 renderAllInteractiveCharts();
 window.addEventListener('resize',renderAllInteractiveCharts);
+document.querySelectorAll('[data-coach-detail-tabs]').forEach(function(group){
+  var tabs=Array.prototype.slice.call(group.querySelectorAll('[data-coach-tab]'));
+  var panels=Array.prototype.slice.call(group.querySelectorAll('[data-coach-panel]'));
+  tabs.forEach(function(tab){
+    tab.addEventListener('click',function(){
+      var target=tab.getAttribute('data-coach-tab');
+      tabs.forEach(function(item){
+        var active=item===tab;
+        item.classList.toggle('is-active',active);
+        item.classList.toggle('border-cyber-volt',active);
+        item.classList.toggle('bg-cyber-pillBg',active);
+        item.classList.toggle('text-cyber-volt',active);
+        item.classList.toggle('border-cyber-border',!active);
+        item.classList.toggle('bg-black/20',!active);
+        item.classList.toggle('text-cyber-muted',!active);
+      });
+      panels.forEach(function(panel){panel.classList.toggle('hidden',panel.getAttribute('data-coach-panel')!==target);});
+    });
+  });
+});
 document.querySelector('.save-edit')?.addEventListener('click',async function(){
   var button=this;
   var values={};
@@ -2633,6 +2676,7 @@ async function generateWeeklyBusinessReport({
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
+    if (generationMode === 'manual' && targetScope?.includeWeeklyReportRaw) return null;
     return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: generationMode === 'manual' }).then(payload => {
       if (!payload) return null;
       return payload;

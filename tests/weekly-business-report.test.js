@@ -902,7 +902,9 @@ const leadDetailsSnapshot = buildWeeklyBusinessReportSnapshot({
   previousOperationsPayload: { operations: {}, weeklyReportRaw: {} }
 });
 assert.deepStrictEqual(leadDetailsSnapshot.sections.conversion.newLeadRows.map(row => row.name), ['本周线索A', '本周线索B'], 'weekly report should expose current-week lead detail rows only');
-assert.match(renderWeeklyBusinessReportHtml(leadDetailsSnapshot), /本周新增线索明细[\s\S]*本周线索A[\s\S]*本周线索B/, 'weekly report should render current-week lead details');
+const leadDetailsHtml = renderWeeklyBusinessReportHtml(leadDetailsSnapshot);
+assert.match(leadDetailsHtml, /本周新增线索明细[\s\S]*本周线索A[\s\S]*本周线索B/, 'weekly report should render current-week lead details');
+assert.match(leadDetailsHtml, /lead-stage-tag[\s\S]*跟进中[\s\S]*lead-stage-tag[\s\S]*已约体验/, 'weekly report should render lead stages as quick-scan text tags');
 
 const lifetimeCutoffSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
@@ -1069,6 +1071,7 @@ const rawHtml = renderWeeklyBusinessReportHtml(rawSnapshot);
 assert.match(rawHtml, /2\.1 课程收款/, 'course income section should use the requested course receipt title');
 assert.match(rawHtml, /2\.2 散客订场收款/, 'guest booking section should use requested title');
 assert.match(rawHtml, /2\.3 订场会员收款/, 'stored value member section should use requested title');
+assert.match(rawHtml, /2\.3 订场会员收款[\s\S]*grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4[\s\S]*会员总数[\s\S]*总储值金额[\s\S]*本周新增会员[\s\S]*本周充值收款[\s\S]*本周订场消耗收入/, 'stored value member section should fit all five metric cards in one desktop row');
 const storedDirtyLessonHtml = renderWeeklyBusinessReportHtml({
   period,
   summary: {},
@@ -1079,6 +1082,9 @@ const storedDirtyLessonHtml = renderWeeklyBusinessReportHtml({
       rows: [{
         coach: '朝珺教练',
         lessonRows: [{ date: '2026-09-05', time: '08:00-10:00', student: 'e927ccc1-c1a7-4375-bff2-526b57b78ef7', courseType: '私教课', hours: 2, court: '1号场' }]
+      }, {
+        coach: '刘润扬教练',
+        lessonRows: [{ date: '2026-09-06', time: '09:00-10:00', student: '真实学员', courseType: '小班课', hours: 1, court: '2号场' }]
       }]
     },
     conversion: {}
@@ -1086,6 +1092,8 @@ const storedDirtyLessonHtml = renderWeeklyBusinessReportHtml({
 });
 assert.doesNotMatch(storedDirtyLessonHtml, /e927ccc1-c1a7-4375-bff2-526b57b78ef7/, 'stored weekly report HTML must not expose dirty UUID student names');
 assert.match(storedDirtyLessonHtml, /未记录学员/, 'stored weekly report HTML should mask unresolved dirty UUID student names');
+assert.match(storedDirtyLessonHtml, /data-coach-detail-tabs[\s\S]*data-coach-tab="0"[\s\S]*朝珺教练[\s\S]*data-coach-tab="1"[\s\S]*刘润扬教练[\s\S]*data-coach-panel="0"[\s\S]*data-coach-panel="1"/, 'coach lesson details should render one card with clickable coach tabs');
+assert.doesNotMatch(storedDirtyLessonHtml, /<div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><section class="bg-cyber-card[\s\S]*coach\.details/, 'coach lesson details should not render one card per coach');
 assert.match(rawHtml, /私教课人数[\s\S]*私教课总收款[\s\S]*私教课总消耗金额/, 'private course income should show the requested total metrics');
 assert.match(rawHtml, /本周购课人数[\s\S]*本周课程销售收款[\s\S]*本周上课人数[\s\S]*本周完成课时[\s\S]*本周课程消耗收入/, 'private course income should show the requested weekly metrics');
 assert.match(rawHtml, /成人[\s\S]*青少年/, 'private course income should split current-week rows by adult and youth');
@@ -1353,6 +1361,133 @@ async function callExistingReportManualRegeneration() {
   return { result, savedRows, liveLoads, snapshotLoads, snapshotScopes, elapsedMs: Date.now() - startedAt };
 }
 
+function weeklyRegenerationFreshnessPayload({ purchaseDates = {}, includeDirtyMember = false } = {}) {
+  const p1Date = purchaseDates.p1 || nextPeriod.startDate;
+  const p2Date = purchaseDates.p2 || nextPeriod.startDate;
+  const p3Date = purchaseDates.p3 || nextPeriod.startDate;
+  const rows = [
+    {
+      id: 'fresh-private-1',
+      studentId: 'fresh-student-1',
+      studentName: '高老师（暖暖爸爸）',
+      courseType: '私教课',
+      packageName: '成人1v1私教课',
+      amountPaid: 5000,
+      purchaseDate: p1Date,
+      status: 'active',
+      campus: 'shunyi_mapo'
+    },
+    {
+      id: 'fresh-private-2',
+      studentId: 'fresh-student-2',
+      studentName: '王先生（阿萌）',
+      courseType: '私教课',
+      packageName: '成人1v1私教课',
+      amountPaid: 5000,
+      purchaseDate: p2Date,
+      status: 'active',
+      campus: 'shunyi_mapo'
+    },
+    {
+      id: 'fresh-private-3',
+      studentId: 'fresh-student-3',
+      studentName: '晨熙',
+      courseType: '私教课',
+      packageName: '成人1v1私教课',
+      amountPaid: 5000,
+      purchaseDate: p3Date,
+      status: 'active',
+      campus: 'shunyi_mapo'
+    }
+  ];
+  const memberRows = [
+    {
+      id: 'valid-member',
+      courtId: 'valid-member',
+      item: {
+        id: 'valid-member',
+        displayName: '有效会员',
+        campusCode: 'shunyi_mapo',
+        accountType: '会员账户',
+        membershipStatusCode: 'active',
+        firstOpenDate: '2026-09-04',
+        membershipAccount: { id: 'valid-member-account', courtId: 'valid-member' },
+        totalDeposit: 2000,
+        balance: 2000
+      },
+      membershipFinanceStats: { memberCount: 1, paidAmount: 2000, bonusAmount: 0, consumableAmount: 2000, pendingAmount: 2000 }
+    }
+  ];
+  if (includeDirtyMember) {
+    memberRows.push({
+      id: 'dirty-zhenchaojun-member',
+      courtId: 'dirty-zhenchaojun-member',
+      item: {
+        id: 'dirty-zhenchaojun-member',
+        displayName: '甄朝珺',
+        campusCode: 'shunyi_mapo',
+        accountType: '会员账户',
+        membershipStatusCode: 'active',
+        firstOpenDate: '2026-09-04',
+        membershipAccount: { id: 'dirty-zhenchaojun-account', courtId: 'dirty-zhenchaojun-member' },
+        totalDeposit: 2000,
+        balance: 2000
+      },
+      membershipFinanceStats: { memberCount: 1, paidAmount: 2000, bonusAmount: 0, consumableAmount: 2000, pendingAmount: 2000 }
+    });
+  }
+  return {
+    operations: { overview: { cards: { totalIncome: { value: 1 }, recognizedRevenue: { value: 100 } } } },
+    weeklyReportRaw: {
+      purchases: rows,
+      courtAccountListIndexRows: memberRows,
+      financeNormalizedRows: [
+        { id: 'fresh-cash', campusName: '顺义马坡', businessDate: nextPeriod.startDate, businessType: '课程', action: '收款', cashDelta: 5000, recognizedRevenueDelta: 0 },
+        { id: 'fresh-recognized', campusName: '顺义马坡', businessDate: nextPeriod.startDate, businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 100 }
+      ]
+    }
+  };
+}
+
+async function callManualRegenerationIgnoresStaleCurrentSnapshot() {
+  let liveLoads = 0;
+  let snapshotLoads = 0;
+  const savedRows = [];
+  const staleSnapshotPayload = weeklyRegenerationFreshnessPayload({
+    purchaseDates: { p1: '2026-09-04', p2: '2026-09-05', p3: '2026-09-09' },
+    includeDirtyMember: true
+  });
+  const freshLivePayload = weeklyRegenerationFreshnessPayload({
+    purchaseDates: { p1: '2026-09-03', p2: '2026-09-05', p3: '2026-08-19' },
+    includeDirtyMember: false
+  });
+  const result = await generateWeeklyBusinessReport({
+    period: nextPeriod,
+    generationMode: 'manual',
+    baseUrl: 'https://www.flowtennis.cn',
+    mkTable: async () => {},
+    get: async () => ({ id: 'weekly:顺义马坡:2026-09-04:2026-09-10', shareToken: 'freshness-token', status: 'success' }),
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    loadOperationsPayload: async ({ scope }) => {
+      liveLoads += 1;
+      if (scope?.dateRange?.startDate === nextPeriod.startDate) return freshLivePayload;
+      if (scope?.dateRange?.startDate === nextPeriod.previousStartDate) {
+        return { operations: {}, weeklyReportRaw: { financeNormalizedRows: [{ id: 'fresh-prev', campusName: '顺义马坡', businessDate: nextPeriod.previousStartDate, businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 100 }] } };
+      }
+      return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } }, weeklyReportRaw: { financeNormalizedRows: [] } };
+    },
+    loadOperationsSnapshot: async ({ scope }) => {
+      snapshotLoads += 1;
+      if (scope?.dateRange?.startDate === nextPeriod.startDate) return staleSnapshotPayload;
+      if (scope?.dateRange?.startDate === nextPeriod.previousStartDate) {
+        return { operations: {}, weeklyReportRaw: { financeNormalizedRows: [{ id: 'stale-prev', campusName: '顺义马坡', businessDate: nextPeriod.previousStartDate, businessType: '课程', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 100 }] } };
+      }
+      return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } }, weeklyReportRaw: { financeNormalizedRows: [] } };
+    }
+  });
+  return { result, savedRows, liveLoads, snapshotLoads };
+}
+
 async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
   let liveLoads = 0;
   const savedRows = [];
@@ -1500,6 +1635,7 @@ async function callManualRegenerationWithoutSnapshot() {
 
 async function callTargetPeriodRegenerationRoute() {
   let generatedPeriod = null;
+  let liveLoads = 0;
   let webhookCalls = 0;
   const originalFetch = global.fetch;
   global.fetch = async () => {
@@ -1513,7 +1649,15 @@ async function callTargetPeriodRegenerationRoute() {
     get: async () => null,
     put: async () => {},
     mkTable: async () => {},
-    buildOperationsPayload: async () => { throw new Error('row regeneration must not live-read source tables'); },
+    buildOperationsPayload: async ({ scope }) => {
+      liveLoads += 1;
+      if (scope?.dateRange?.startDate === '2026-08-27') {
+        generatedPeriod = scope.dateRange;
+        return operationsPayloadWithRawFacts;
+      }
+      if (scope?.dateRange?.startDate === '2026-08-19') return { operations: { overview: { cards: { totalIncome: { value: 100 } } } }, weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows } };
+      return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
+    },
     loadOperationsSnapshot: async ({ scope }) => {
       if (scope?.dateRange?.startDate === '2026-08-27') {
         generatedPeriod = scope.dateRange;
@@ -1537,7 +1681,7 @@ async function callTargetPeriodRegenerationRoute() {
   } finally {
     global.fetch = originalFetch;
   }
-  return { json, generatedPeriod, webhookCalls };
+  return { json, generatedPeriod, liveLoads, webhookCalls };
 }
 
 async function callSequentialSnapshotGeneration() {
@@ -1562,7 +1706,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, listResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, listResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -1583,9 +1727,9 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverla
   assert.strictEqual(rawFallbackGenerationResult.result.shareToken, 'raw-fallback-token', 'raw-less snapshot fallback should preserve the existing share link');
   assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.cashReceived.value, 49295.99, 'raw-less snapshot fallback must not save zero cash received');
   assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.totalIncome.value, 38511.4, 'raw-less snapshot fallback must not save zero recognized revenue');
-  assert.strictEqual(existingGenerationResult.liveLoads, 0, 'manual regeneration should not live-read source tables inside the request');
-  assert.strictEqual(existingGenerationResult.snapshotLoads, 9, 'manual regeneration should use fast snapshots for current, previous, lifetime and the older six trend weeks');
-  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), ['2026-07-02', '2026-07-10', '2026-07-18', '2026-07-26', '2026-08-03', '2026-08-11', period.startDate, period.previousStartDate, 'lifetime'].sort(), 'manual regeneration must use the weekly report snapshot scope for all report contexts and trend weeks');
+  assert.ok(existingGenerationResult.liveLoads >= 2, 'manual regeneration should live-read current and previous weekly facts so edited purchases and members are refreshed');
+  assert.strictEqual(existingGenerationResult.snapshotLoads, 7, 'manual regeneration should keep fast snapshots for lifetime and older six trend weeks');
+  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), ['2026-07-02', '2026-07-10', '2026-07-18', '2026-07-26', '2026-08-03', '2026-08-11', 'lifetime'].sort(), 'manual regeneration should not reuse current or previous weekly raw snapshots');
   assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
   assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
   assert.strictEqual(existingGenerationResult.savedRows[0].sections.trends.length, 8, 'manual regeneration should save eight weekly trend points when platform snapshots exist');
@@ -1595,6 +1739,10 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverla
     });
   });
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
+  assert.ok(freshnessResult.liveLoads >= 2, 'manual regeneration freshness guard should use live weekly facts');
+  assert.strictEqual(freshnessResult.savedRows[0].sections.revenue.course.paidPeople, 1, 'manual regeneration must not keep stale 3-person course purchases after orders move outside the report period');
+  assert.strictEqual(freshnessResult.savedRows[0].sections.revenue.storedValue.totalMembers, 1, 'manual regeneration must not keep stale dirty membership rows after the source account is voided or no longer a member');
+  assert.strictEqual(freshnessResult.result.shareToken, 'freshness-token', 'manual regeneration freshness guard should preserve the existing share link');
   assert.strictEqual(rawlessZeroTrendResult.liveLoads, 3, 'manual regeneration should live-load current, previous and trailing trend windows when stored snapshots lack finance facts');
   assert.strictEqual(rawlessZeroTrendResult.result.shareToken, 'rawless-zero-trend-token', 'rawless zero trend repair should preserve the existing share link');
   assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.cashReceived.value, 49295.99, 'rawless current snapshot repair should rebuild weekly cash received from live facts');
@@ -1628,6 +1776,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverla
   assert.strictEqual(targetPeriodResult.generatedPeriod.startDate, '2026-08-27', 'row regenerate route should use the requested report period');
   assert.strictEqual(targetPeriodResult.generatedPeriod.endDate, '2026-09-03', 'row regenerate route should use the requested report end date');
   assert.strictEqual(targetPeriodResult.json.success, true, 'row regenerate route should return success for the requested period');
+  assert.ok(targetPeriodResult.liveLoads >= 2, 'row regenerate route should read live weekly facts for the requested period');
   assert.strictEqual(targetPeriodResult.webhookCalls, 0, 'manual regeneration route should not wait for Feishu webhook before responding');
   assert.strictEqual(sequentialResult.maxActiveLoads, 1, 'weekly report regeneration should load operation snapshots sequentially to avoid TableStore getRow timeout fan-out');
   console.log('weekly business report tests passed');
