@@ -289,7 +289,7 @@ function createPackageRules(deps={}){
     const purchaseUpdates=(purchases||[]).filter(p=>String(p.packageId||'')===packageId&&p.status!=='voided').map(p=>{
       const baseLessons=parseLessonValue(nextPackage.lessons);
       const giftLessons=parseLessonValue(p.giftLessons);
-      const next={...p,courseType:nextPackage.courseType||nextPackage.type||'',...specialCourseSnapshot(nextPackage),packageLessons:baseLessons,totalLessons:baseLessons+giftLessons,packagePrice:normalizeMoney(nextPackage.price),systemAmount:normalizeMoney(nextPackage.price),packageTimeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',validDays:0,saleStartDate:nextPackage.saleStartDate||'',saleEndDate:nextPackage.saleEndDate||'',usageStartDate:nextPackage.usageStartDate||'',usageEndDate:'',updatedAt:now};
+      const next={...p,courseType:nextPackage.courseType||nextPackage.type||'',...specialCourseSnapshot(nextPackage),packageLessons:baseLessons,totalLessons:baseLessons+giftLessons,packagePrice:normalizeMoney(nextPackage.price),systemAmount:normalizeMoney(nextPackage.price),packageTimeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',campusIds:parseArr(nextPackage.campusIds),validDays:0,saleStartDate:nextPackage.saleStartDate||'',saleEndDate:nextPackage.saleEndDate||'',usageStartDate:nextPackage.usageStartDate||'',usageEndDate:'',updatedAt:now};
       if(next.courseType!=='专项课'){delete next.skillLevelMin;delete next.skillLevelMax;delete next.specialTopic;delete next.courseDisplayName;}
       if(!giftLessons)delete next.totalLessons;
       if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
@@ -302,7 +302,7 @@ function createPackageRules(deps={}){
       const totalLessons=parseLessonValue(nextPackage.lessons)+parseLessonValue(purchase.giftLessons);
       const usedLessons=parseLessonValue(e.usedLessons,Math.max(0,parseLessonValue(e.totalLessons)-parseLessonValue(e.remainingLessons)));
       const remainingLessons=Math.max(0,totalLessons-usedLessons);
-      const next={...e,courseType:nextPackage.courseType||nextPackage.type||'',...specialCourseSnapshot(nextPackage),totalLessons,usedLessons,remainingLessons,timeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',...validity,status:remainingLessons<=0?'depleted':'active',updatedAt:now};
+      const next={...e,courseType:nextPackage.courseType||nextPackage.type||'',...specialCourseSnapshot(nextPackage),totalLessons,usedLessons,remainingLessons,timeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',campusIds:parseArr(nextPackage.campusIds),...validity,status:remainingLessons<=0?'depleted':'active',updatedAt:now};
       if(next.courseType!=='专项课'){delete next.skillLevelMin;delete next.skillLevelMax;delete next.specialTopic;delete next.courseDisplayName;}
       if(parseLessonValue(purchase.giftLessons)>0){
         next.basePackageLessons=parseLessonValue(nextPackage.lessons);

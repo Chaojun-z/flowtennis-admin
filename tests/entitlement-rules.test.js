@@ -1395,15 +1395,16 @@ assert.deepStrictEqual(
       saleEndDate: '2026-06-01',
       usageStartDate: '2026-05-10',
       usageEndDate: '',
+      campusIds: [],
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }]
     },
     [
-      { id: 'pur-1', packageId: 'pkg-1', purchaseDate: '2026-05-02', courseType: '私教课', packageTimeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', status: 'active' },
+      { id: 'pur-1', packageId: 'pkg-1', purchaseDate: '2026-05-02', courseType: '私教课', packageTimeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', campusIds: ['shunyi_mapo'], status: 'active' },
       { id: 'pur-voided', packageId: 'pkg-1', status: 'voided' },
       { id: 'pur-other', packageId: 'pkg-other', status: 'active' }
     ],
     [
-      { id: 'ent-1', packageId: 'pkg-1', purchaseId: 'pur-1', validFrom: '2026-05-02', validUntil: '2026-07-01', usageStartDate: '2026-05-01', usageEndDate: '2026-07-01', courseType: '私教课', timeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', status: 'active' },
+      { id: 'ent-1', packageId: 'pkg-1', purchaseId: 'pur-1', validFrom: '2026-05-02', validUntil: '2026-07-01', usageStartDate: '2026-05-01', usageEndDate: '2026-07-01', courseType: '私教课', timeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', campusIds: ['shunyi_mapo'], status: 'active' },
       { id: 'ent-voided', packageId: 'pkg-1', status: 'voided' },
       { id: 'ent-other', packageId: 'pkg-other', status: 'active' }
     ],
@@ -1418,6 +1419,7 @@ assert.deepStrictEqual(
       packageTimeBand: '全天',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
       ownerCoach: 'mira',
+      campusIds: [],
       packagePrice: 1000,
       systemAmount: 1000,
       validDays: 0,
@@ -1439,6 +1441,7 @@ assert.deepStrictEqual(
       timeBand: '全天',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
       ownerCoach: 'mira',
+      campusIds: [],
       purchaseId: 'pur-1',
       validFrom: '2026-05-02',
       validUntil: '',
