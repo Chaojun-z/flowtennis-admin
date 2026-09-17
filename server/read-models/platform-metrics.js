@@ -2145,7 +2145,6 @@ function teachingScheduleCompleted(row = {}) {
 
 function teachingScheduleElapsedCompletionSignal(row = {}) {
   if (teachingPaymentIsDirect(row) || coursePaymentAmount(row) > 0 || row.freeLesson === true) return true;
-  if (text(row.entitlementId || row.purchaseId)) return true;
   if (row.hasFeedback === true || row.feedbackId || row.feedbackAt || row.feedbackStatus === '已反馈') return true;
   const marker = text([
     row.settlementType,
