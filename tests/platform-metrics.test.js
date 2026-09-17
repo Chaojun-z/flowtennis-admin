@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const { buildPlatformMetrics, buildStudentTeachingSummaryRows, teachingSummaryNeedsLessonFacts, TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
+const { buildPlatformMetrics, buildStandardLifecycleMetrics, buildStudentTeachingSummaryRows, teachingSummaryNeedsLessonFacts, TEACHING_LESSON_DETAIL_SOURCE_VERSION } = require('../server/read-models/platform-metrics.js');
 const { buildOperationsMetrics } = require('../server/metrics/operations-metrics.js');
 
 const source = {
@@ -804,6 +804,24 @@ assert.ok(futureScheduleStudent, 'future scheduled package student should enter 
 assert.strictEqual(futureScheduleStudent.detailRecentLessonDate, '', 'future schedules must not be shown as the recent lesson');
 assert.deepStrictEqual(futureScheduleStudent.detailLessonRecordRows, [], 'future schedules must not enter completed lesson records');
 
+const elapsedScheduledPlatform = buildPlatformMetrics({
+  leads: [],
+  students: [{ id: 'student-elapsed-schedule', name: '已过时间排课' }],
+  purchases: [],
+  entitlements: [],
+  entitlementLedger: [],
+  schedule: [
+    { id: 'schedule-elapsed-formal', studentId: 'student-elapsed-schedule', startTime: '2026-08-09 10:00:00', endTime: '2026-08-09 11:00:00', status: '已排课', courseType: '私教课', settlementType: 'single', coach: '王教练', lessonCount: 1 }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-08-10 00:00:00')
+});
+const elapsedScheduledStudent = elapsedScheduledPlatform.teachingStudentViews.activeStudents.find(row => row.studentId === 'student-elapsed-schedule');
+assert.ok(elapsedScheduledStudent, 'elapsed scheduled formal lesson should enter active students');
+assert.strictEqual(elapsedScheduledStudent.completedLessons, 1, 'elapsed scheduled formal lesson should count as completed even when raw status is still scheduled');
+
 const sharedPackagePlatform = buildPlatformMetrics({
   leads: [],
   students: [
@@ -885,6 +903,29 @@ const sharedOneTimeAttendee = sharedOneTimePlatform.teachingStudentViews.activeS
 assert.ok(sharedOneTimeAttendee, 'shared one-time attendee should enter active students through the lesson fact');
 assert.strictEqual(sharedOneTimeAttendee.paymentModeLabel, '-', 'shared one-time attendee must not become a paid student through polluted coursePurchaseCount');
 assert.strictEqual(sharedOneTimeAttendee.packageStatusLabel, '使用他人课包', 'shared one-time attendee should keep the shared-package context as package status only');
+
+const projectedSharedPackageSummary = buildStandardLifecycleMetrics({
+  teachingStudentSummaryRows: [
+    {
+      id: 'projected-shared-package',
+      studentId: 'projected-shared-package',
+      name: '轻摘要使用他人',
+      hasTeachingSummarySnapshot: true,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: true,
+      completedLessons: 2,
+      detailRecentLessonDate: '2026-08-28',
+      lastFormalLessonAt: '2026-08-28',
+      packageStatusLabel: '使用他人课包',
+      paymentModeLabel: '-',
+      activityStatusLabel: '近30天活跃',
+      lessonVolumeLabel: '-',
+      studentStatusLabel: '-'
+    }
+  ],
+  now: new Date('2026-08-30 00:00:00')
+});
+assert.strictEqual(projectedSharedPackageSummary.teachingSummary.activeTagCounts.packageStatus['使用他人课包'], 1, 'projected list summary must preserve shared-package status counts');
 
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00:00:00') });
 
