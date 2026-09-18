@@ -819,6 +819,60 @@ function standardCourtUsageType(row = {}) {
   return match?.label || '';
 }
 
+function courtUsageInterval(row = {}) {
+  const start = clockMinutes(row.startTime);
+  const end = clockMinutes(row.endTime);
+  if (start === null || end === null || end <= start) return null;
+  return { start, end };
+}
+
+function courtUsageGroupKey(row = {}) {
+  const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
+  const venue = String(row.venue || row.court?.venue || row.court?.name || '').trim();
+  const fallback = String(row.court?.id || row.court?.name || '').trim();
+  return `${day}|${venue || fallback}`;
+}
+
+function dedupeCourtHistoryUsage(rows = []) {
+  const normalized = normalizeRows(rows).map(row => ({
+    ...row,
+    __weeklyReportUsageHours: bookingDurationHours(row)
+  }));
+  const groups = new Map();
+  normalized.forEach((row, index) => {
+    const interval = courtUsageInterval(row);
+    if (!interval) return;
+    const key = courtUsageGroupKey(row);
+    const group = groups.get(key) || { rows: [], boundaries: new Set() };
+    group.rows.push({ row, index, ...interval });
+    group.boundaries.add(interval.start);
+    group.boundaries.add(interval.end);
+    groups.set(key, group);
+  });
+  const usagePriority = { '会员订场': 1, '散客订场': 2, '约球局': 3, '课程订场': 4, '领导订场': 5, '内部使用': 6 };
+  groups.forEach(group => {
+    group.rows.forEach(item => {
+      item.row.__weeklyReportUsageHours = 0;
+    });
+    const boundaries = Array.from(group.boundaries).sort((left, right) => left - right);
+    for (let index = 0; index < boundaries.length - 1; index += 1) {
+      const start = boundaries[index];
+      const end = boundaries[index + 1];
+      if (end <= start) continue;
+      const candidates = group.rows.filter(item => item.start <= start && item.end >= end);
+      if (!candidates.length) continue;
+      candidates.sort((left, right) => {
+        const leftType = standardCourtUsageType(left.row);
+        const rightType = standardCourtUsageType(right.row);
+        return (usagePriority[leftType] || 99) - (usagePriority[rightType] || 99) || left.index - right.index;
+      });
+      const selected = candidates[0].row;
+      selected.__weeklyReportUsageHours = numberValue(selected.__weeklyReportUsageHours + (end - start) / 60);
+    }
+  });
+  return normalized;
+}
+
 function financeCampusMatches(row = {}) {
   const campusFields = [row.campus, row.campusName, row.campusCode, row.sourceCampus, row.location, row.venue]
     .map(value => String(value || '').trim())
@@ -1078,6 +1132,8 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
   const historyRows = courtHistoryRows(raw, period);
   const previousHistoryRows = courtHistoryRows(previousRaw, previousPeriod);
+  const historyUsageRows = dedupeCourtHistoryUsage(historyRows);
+  const previousHistoryUsageRows = dedupeCourtHistoryUsage(previousHistoryRows);
   const scheduleRows = courseScheduleRows(raw, period);
   const previousScheduleRows = courseScheduleRows(previousRaw, previousPeriod);
   const courtFinanceRow = row => /场地|订场|约球|内部使用|领导/.test(String(`${row.businessType || ''} ${row.displayBusinessType || ''} ${row.category || ''}`));
@@ -1094,10 +1150,12 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const scheduleCourseUsage = sumScheduleCourtUsage(scheduleRows);
   const previousScheduleCourseUsage = sumScheduleCourtUsage(previousScheduleRows);
   const paidCourtUsageType = row => !['领导订场', '内部使用'].includes(standardCourtUsageType(row));
+  const historyUsageHours = row => row.__weeklyReportUsageHours ?? bookingDurationHours(row);
+  const hasHistoryType = (rows, meta) => rows.some(row => standardCourtUsageType(row) === meta.label);
   const sumHistory = (rows, meta) => rows.filter(row => standardCourtUsageType(row) === meta.label)
     .reduce((acc, row) => ({
       count: acc.count + 1,
-      hours: acc.hours + bookingDurationHours(row),
+      hours: acc.hours + historyUsageHours(row),
       amount: acc.amount + (['free', 'leader'].includes(meta.key) ? 0 : fieldNumber(row, ['amount', 'actualAmount', 'cashAmount'])),
       receivableAmount: acc.receivableAmount + fieldNumber(row, ['receivableAmount', 'originalAmount', 'concessionAmount', 'discountAmount', 'amount'])
     }), { count: 0, hours: 0, amount: 0, receivableAmount: 0 });
@@ -1112,9 +1170,9 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const previousDailyUsedHours = new Map();
   const historyTypeLabels = new Set(historyRows.map(standardCourtUsageType).filter(Boolean));
   const previousHistoryTypeLabels = new Set(previousHistoryRows.map(standardCourtUsageType).filter(Boolean));
-  historyRows.forEach(row => {
+  historyUsageRows.forEach(row => {
     const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
-    if (day && paidCourtUsageType(row) && !(scheduleRows.length && standardCourtUsageType(row) === '课程订场')) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
+    if (day && paidCourtUsageType(row) && !(scheduleRows.length && standardCourtUsageType(row) === '课程订场')) dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + historyUsageHours(row)));
   });
   scheduleRows.forEach(row => {
     const day = String(row.startTime || row.date || row.createdAt || '').slice(0, 10);
@@ -1129,9 +1187,9 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   if (!historyRows.length && indexStats.daily.size) {
     indexStats.daily.forEach((hours, day) => dailyUsedHours.set(day, numberValue((dailyUsedHours.get(day) || 0) + hours)));
   }
-  previousHistoryRows.forEach(row => {
+  previousHistoryUsageRows.forEach(row => {
     const day = courtHistoryBusinessDate(row) || String(row.date || row.createdAt || '').slice(0, 10);
-    if (day && paidCourtUsageType(row) && !(previousScheduleRows.length && standardCourtUsageType(row) === '课程订场')) previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + bookingDurationHours(row)));
+    if (day && paidCourtUsageType(row) && !(previousScheduleRows.length && standardCourtUsageType(row) === '课程订场')) previousDailyUsedHours.set(day, numberValue((previousDailyUsedHours.get(day) || 0) + historyUsageHours(row)));
   });
   previousScheduleRows.forEach(row => {
     const day = String(row.startTime || row.date || row.createdAt || '').slice(0, 10);
@@ -1149,32 +1207,34 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const dailyRows = buildDailyCourtRows(raw, period, dailyUsedHours);
   const previousDailyRows = buildDailyCourtRows(previousRaw, previousPeriod, previousDailyUsedHours);
   const result = COURT_USAGE_TYPES.map(meta => {
-    const current = sumHistory(historyRows, meta);
-    const previous = sumHistory(previousHistoryRows, meta);
+    const current = sumHistory(historyUsageRows, meta);
+    const previous = sumHistory(previousHistoryUsageRows, meta);
     const financeCurrent = sumFinance(financeRows, meta);
     const financePrevious = sumFinance(previousFinanceRows, meta);
     const indexedCurrent = indexStats[meta.key] || {};
     const indexedPrevious = previousIndexStats[meta.key] || {};
-    if (!current.count && financeCurrent.count) current.count = financeCurrent.count;
-    if (!current.hours && financeCurrent.hours) current.hours = financeCurrent.hours;
-    if (!current.amount && financeCurrent.amount) current.amount = financeCurrent.amount;
-    if (!current.receivableAmount && financeCurrent.receivableAmount) current.receivableAmount = financeCurrent.receivableAmount;
-    if (!current.count && indexedCurrent.count) current.count = indexedCurrent.count;
-    if (!current.hours && indexedCurrent.hours) current.hours = indexedCurrent.hours;
-    if (!current.amount && indexedCurrent.amount) current.amount = indexedCurrent.amount;
-    if (!current.receivableAmount && indexedCurrent.receivableAmount) current.receivableAmount = indexedCurrent.receivableAmount;
+    const currentHasHistoryType = hasHistoryType(historyRows, meta);
+    const previousHasHistoryType = hasHistoryType(previousHistoryRows, meta);
+    if (!currentHasHistoryType && !current.count && financeCurrent.count) current.count = financeCurrent.count;
+    if (!currentHasHistoryType && !current.hours && financeCurrent.hours) current.hours = financeCurrent.hours;
+    if (!currentHasHistoryType && !current.amount && financeCurrent.amount) current.amount = financeCurrent.amount;
+    if (!currentHasHistoryType && !current.receivableAmount && financeCurrent.receivableAmount) current.receivableAmount = financeCurrent.receivableAmount;
+    if (!currentHasHistoryType && !current.count && indexedCurrent.count) current.count = indexedCurrent.count;
+    if (!currentHasHistoryType && !current.hours && indexedCurrent.hours) current.hours = indexedCurrent.hours;
+    if (!currentHasHistoryType && !current.amount && indexedCurrent.amount) current.amount = indexedCurrent.amount;
+    if (!currentHasHistoryType && !current.receivableAmount && indexedCurrent.receivableAmount) current.receivableAmount = indexedCurrent.receivableAmount;
     if (meta.key === 'course' && scheduleCourseUsage.count) {
       current.count = scheduleCourseUsage.count;
       current.hours = scheduleCourseUsage.hours;
     }
-    if (!previous.count && financePrevious.count) previous.count = financePrevious.count;
-    if (!previous.hours && financePrevious.hours) previous.hours = financePrevious.hours;
-    if (!previous.amount && financePrevious.amount) previous.amount = financePrevious.amount;
-    if (!previous.receivableAmount && financePrevious.receivableAmount) previous.receivableAmount = financePrevious.receivableAmount;
-    if (!previous.count && indexedPrevious.count) previous.count = indexedPrevious.count;
-    if (!previous.hours && indexedPrevious.hours) previous.hours = indexedPrevious.hours;
-    if (!previous.amount && indexedPrevious.amount) previous.amount = indexedPrevious.amount;
-    if (!previous.receivableAmount && indexedPrevious.receivableAmount) previous.receivableAmount = indexedPrevious.receivableAmount;
+    if (!previousHasHistoryType && !previous.count && financePrevious.count) previous.count = financePrevious.count;
+    if (!previousHasHistoryType && !previous.hours && financePrevious.hours) previous.hours = financePrevious.hours;
+    if (!previousHasHistoryType && !previous.amount && financePrevious.amount) previous.amount = financePrevious.amount;
+    if (!previousHasHistoryType && !previous.receivableAmount && financePrevious.receivableAmount) previous.receivableAmount = financePrevious.receivableAmount;
+    if (!previousHasHistoryType && !previous.count && indexedPrevious.count) previous.count = indexedPrevious.count;
+    if (!previousHasHistoryType && !previous.hours && indexedPrevious.hours) previous.hours = indexedPrevious.hours;
+    if (!previousHasHistoryType && !previous.amount && indexedPrevious.amount) previous.amount = indexedPrevious.amount;
+    if (!previousHasHistoryType && !previous.receivableAmount && indexedPrevious.receivableAmount) previous.receivableAmount = indexedPrevious.receivableAmount;
     if (meta.key === 'course' && previousScheduleCourseUsage.count) {
       previous.count = previousScheduleCourseUsage.count;
       previous.hours = previousScheduleCourseUsage.hours;
@@ -1193,16 +1253,15 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
       }
     };
   });
-  const totalHours = result.reduce((sum, row) => sum + row.hours, 0);
   const revenueUsageHours = result
     .filter(row => !['free', 'leader'].includes(row.key))
     .reduce((sum, row) => sum + row.hours, 0);
   const previousRevenueUsageHours = COURT_USAGE_TYPES.map(meta => {
-    const previous = sumHistory(previousHistoryRows, meta);
+    const previous = sumHistory(previousHistoryUsageRows, meta);
     const financePrevious = sumFinance(previousFinanceRows, meta);
     const indexedPrevious = previousIndexStats[meta.key] || {};
-    if (!previous.hours && financePrevious.hours) previous.hours = financePrevious.hours;
-    if (!previous.hours && indexedPrevious.hours) previous.hours = indexedPrevious.hours;
+    if (!hasHistoryType(previousHistoryRows, meta) && !previous.hours && financePrevious.hours) previous.hours = financePrevious.hours;
+    if (!hasHistoryType(previousHistoryRows, meta) && !previous.hours && indexedPrevious.hours) previous.hours = indexedPrevious.hours;
     if (meta.key === 'course' && previousScheduleCourseUsage.hours) previous.hours = previousScheduleCourseUsage.hours;
     return { key: meta.key, hours: previous.hours };
   }).filter(row => !['free', 'leader'].includes(row.key)).reduce((sum, row) => sum + row.hours, 0);
@@ -1220,7 +1279,7 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
     }), { count: 0, hours: 0, amount: 0, receivableAmount: 0 });
   return {
     totalAvailableHours,
-    actualUsedHours: numberValue(totalHours),
+    actualUsedHours: numberValue(revenueUsageHours),
     revenueUsageHours: numberValue(revenueUsageHours),
     utilizationRate,
     compare: {

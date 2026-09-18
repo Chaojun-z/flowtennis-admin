@@ -428,6 +428,30 @@ assert.strictEqual(financeOnlyCourtSnapshot.sections.court.usageRows.find(row =>
 assert.strictEqual(financeOnlyCourtSnapshot.sections.court.usageRows.find(row => row.key === 'match')?.hours, 1.5, 'weekly report should keep match booking as an independent standard court type from finance rows');
 assert.strictEqual(financeOnlyCourtSnapshot.sections.court.actualUsedHours, 2.5, 'weekly report should expose total court usage hours from finance-only court rows');
 
+const duplicateCourtUsageSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 1 } } } },
+    weeklyReportRaw: {
+      courts: [{
+        id: 'court-duplicate-usage',
+        campus: 'shunyi_mapo',
+        history: [
+          { id: 'duplicate-member', type: '消费', category: '会员订场', date: '2026-08-28', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 11:00:00', venue: '1号场', payMethod: '储值扣款', amount: 112 },
+          { id: 'duplicate-guest', type: '消费', category: '散客订场', date: '2026-08-28', startTime: '2026-08-28 10:00:00', endTime: '2026-08-28 11:00:00', venue: '1号场', payMethod: '微信转账', amount: 140 },
+          { id: 'free-usage', type: '消费', category: '内部占用', date: '2026-08-28', startTime: '2026-08-28 11:00:00', endTime: '2026-08-28 12:00:00', venue: '1号场', payMethod: '不涉及支付', amount: 0 }
+        ]
+      }]
+    }
+  },
+  previousOperationsPayload: { operations: {} },
+  shareToken: 'token-duplicate-court-usage',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(duplicateCourtUsageSnapshot.sections.court.actualUsedHours, 1, 'duplicate booking rows must count one physical occupied hour and exclude internal usage from total hours');
+assert.strictEqual(duplicateCourtUsageSnapshot.sections.court.revenueUsageHours, 1, 'duplicate booking rows must count one paid occupied hour for utilization');
+assert.strictEqual(duplicateCourtUsageSnapshot.sections.court.freeUsage.hours, 1, 'internal usage hours should remain visible as a separate free usage metric');
+
 const rawSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
   operationsPayload: {
@@ -523,7 +547,7 @@ assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 
 assert.deepStrictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'guest')?.compare?.count, { previousValue: 0, currentValue: 1, changeValue: 1, changeRate: null }, 'guest booking count should expose previous-week comparison');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.map(row => row.label).join('|'), '会员订场|散客订场|课程订场|领导订场|内部使用|约球局', 'weekly report should display the six standard court booking types');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'course')?.hours, 3, 'course court usage should come from schedule rows that occupy courts');
-assert.strictEqual(rawSnapshot.sections.court.actualUsedHours, 10, 'court usage hours should include schedule court occupancy while keeping internal and leader usage separate');
+assert.strictEqual(rawSnapshot.sections.court.actualUsedHours, 7, 'court usage hours should exclude internal and leader usage while keeping them in the separate free usage metric');
 assert.strictEqual(rawSnapshot.sections.court.utilizationRate, 1.56, 'court utilization should use paid court usage including course occupancy divided by actual report-period capacity');
 assert.strictEqual(rawSnapshot.sections.court.usageRows.find(row => row.key === 'free')?.amount, 0, 'free court usage actual amount should be zero');
 assert.strictEqual(rawSnapshot.summary.courtUsageHours.value, rawSnapshot.sections.court.actualUsedHours, 'weekly report list summary should expose court usage hours from report sections');
