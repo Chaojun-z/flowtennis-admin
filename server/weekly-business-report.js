@@ -2827,6 +2827,15 @@ function weeklyPayloadHasFinanceFactsInPeriod(payload = {}, period = {}) {
   return weeklyFinanceRows(payload?.weeklyReportRaw || {}, period).length > 0;
 }
 
+function weeklyReportSnapshotNotReadyError(scopes = [], user = {}) {
+  const err = new Error('周报数据正在准备中，请稍后重试');
+  err.code = 'WEEKLY_REPORT_SNAPSHOT_NOT_READY';
+  err.statusCode = 202;
+  err.scopes = scopes;
+  err.snapshotUser = user;
+  return err;
+}
+
 async function generateWeeklyBusinessReport({
   loadOperationsPayload,
   loadOperationsSnapshot,
@@ -2836,6 +2845,7 @@ async function generateWeeklyBusinessReport({
   period = resolveWeeklyBusinessReportPeriod(),
   baseUrl = 'https://www.flowtennis.cn',
   generationMode = 'auto',
+  allowLiveFallback = true,
   user = { id: 'weekly-report-system', role: 'admin', dataScope: 'all' },
   table = WEEKLY_REPORT_TABLE
 } = {}) {
@@ -2887,15 +2897,28 @@ async function generateWeeklyBusinessReport({
   let operationsPayload = snapshotPayloads[0] || null;
   let previousOperationsPayload = snapshotPayloads[1] || null;
   let totalOperationsPayload = snapshotPayloads[2] || null;
+  const missingSnapshotScopes = [];
   if (!weeklyPayloadReadyForScope(operationsPayload, scope)) {
-    operationsPayload = await loadOperationsPayload({ user, scope, weeklyReportLiveSource: true });
+    if (allowLiveFallback) {
+      operationsPayload = await loadOperationsPayload({ user, scope, weeklyReportLiveSource: true });
+    } else {
+      missingSnapshotScopes.push(scope);
+    }
   }
-  const baseRowsOverride = operationsPayload.weeklyReportRaw ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw) : null;
+  const baseRowsOverride = operationsPayload?.weeklyReportRaw ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw) : null;
   if (!weeklyPayloadReadyForScope(previousOperationsPayload, previousScope)) {
-    previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true });
+    if (allowLiveFallback) {
+      previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true });
+    } else {
+      missingSnapshotScopes.push(previousScope);
+    }
   }
   if (!totalOperationsPayload) {
-    totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
+    if (allowLiveFallback) {
+      totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
+    } else {
+      missingSnapshotScopes.push(totalScope);
+    }
   }
   const trendOperationsPayloads = [];
   if (typeof loadOperationsSnapshot === 'function') {
@@ -2914,9 +2937,12 @@ async function generateWeeklyBusinessReport({
       };
       const payload = await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: generationMode === 'manual' }).catch(() => null);
       if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
-      if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) shouldLoadLiveTrendWindow = true;
+      if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) {
+        shouldLoadLiveTrendWindow = true;
+        if (!allowLiveFallback) missingSnapshotScopes.push(trendScope);
+      }
     }
-    if (generationMode === 'manual' && shouldLoadLiveTrendWindow && trendPeriods.length) {
+    if (allowLiveFallback && generationMode === 'manual' && shouldLoadLiveTrendWindow && trendPeriods.length) {
       const trendWindowScope = {
         ...scope,
         dateRange: { startDate: trendPeriods[0].startDate, endDate: period.endDate },
@@ -2927,6 +2953,9 @@ async function generateWeeklyBusinessReport({
         trendOperationsPayloads.push({ period: trendWindowScope.dateRange, payload: trendWindowPayload });
       }
     }
+  }
+  if (missingSnapshotScopes.length) {
+    throw weeklyReportSnapshotNotReadyError(missingSnapshotScopes, snapshotUser);
   }
   const snapshot = buildWeeklyBusinessReportSnapshot({
     period,
@@ -2960,6 +2989,7 @@ module.exports = {
   renderWeeklyBusinessReportHtml,
   buildWeeklyBusinessReportFeishuText,
   sendWeeklyBusinessReportFeishuText,
+  weeklyReportSnapshotNotReadyError,
   listWeeklyBusinessReports,
   findWeeklyBusinessReportByToken,
   updateWeeklyBusinessReportRemark,

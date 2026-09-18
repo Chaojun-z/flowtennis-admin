@@ -21,6 +21,7 @@ function createWeeklyBusinessReportRoutes({
   mkTable,
   buildOperationsPayload,
   loadOperationsSnapshot,
+  queueOperationsSnapshotRebuild,
   table,
   webhook = '',
   publicBaseUrl = '',
@@ -65,6 +66,7 @@ function createWeeklyBusinessReportRoutes({
       period: targetPeriod,
       baseUrl: baseUrl(req || { headers: {} }),
       generationMode: mode,
+      allowLiveFallback: mode !== 'manual',
       table
     });
     if (mode === 'manual') {
@@ -135,6 +137,22 @@ function createWeeklyBusinessReportRoutes({
       try {
         return sendJson(res, await runReport({ req, mode: 'manual', period: periodFromRequest(body) }));
       } catch (err) {
+        if (err?.code === 'WEEKLY_REPORT_SNAPSHOT_NOT_READY' && typeof queueOperationsSnapshotRebuild === 'function') {
+          const scopes = Array.isArray(err.scopes) ? err.scopes : [];
+          const queued = await Promise.all(scopes.map(scope => queueOperationsSnapshotRebuild({
+            user: err.snapshotUser || user,
+            scope,
+            reason: 'weekly-report-manual-regeneration'
+          }).catch(queueErr => ({ error: String(queueErr?.message || queueErr) }))));
+          const queuedCount = queued.filter(item => !item?.error).length;
+          return sendJson(res, {
+            success: false,
+            preparing: true,
+            code: err.code,
+            error: '周报数据正在准备中，请稍后重试',
+            queuedScopes: queuedCount
+          }, 202);
+        }
         return sendJson(res, { success: false, error: String(err?.message || err), code: err?.code || '' }, err.statusCode || 500);
       }
     }
