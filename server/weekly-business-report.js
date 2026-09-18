@@ -2979,7 +2979,7 @@ async function generateWeeklyBusinessReport({
         dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
         metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
       };
-      const payload = await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: generationMode === 'manual' }).catch(() => null);
+      const payload = await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: false }).catch(() => null);
       if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
       if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) {
         shouldLoadLiveTrendWindow = true;

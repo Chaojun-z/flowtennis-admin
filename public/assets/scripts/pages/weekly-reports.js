@@ -1,5 +1,7 @@
 let weeklyReportsRows = [];
 const weeklyRegenerationJobs = new Set();
+const WEEKLY_REPORT_RETRY_LIMIT = 12;
+const WEEKLY_REPORT_REQUEST_TIMEOUT_MS = 15000;
 
 function weeklyReportMoney(value) {
   return `¥${fmt(Number(value) || 0)}`;
@@ -107,10 +109,16 @@ async function regenerateWeeklyReport(id, attempt = 0, pendingToast = null) {
   }
   const toastHandle = pendingToast || toast('正在生成周报...', '', { sticky: true });
   try {
-    const result = await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, 60000);
-    if (result?.preparing && attempt < 30) {
+    const result = await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, WEEKLY_REPORT_REQUEST_TIMEOUT_MS);
+    if (result?.preparing && attempt < WEEKLY_REPORT_RETRY_LIMIT) {
       toastHandle.update(`周报数据准备中，${Math.round((attempt + 1) * 5)} 秒后自动重试...`, '');
       setTimeout(() => regenerateWeeklyReport(id, attempt + 1, toastHandle), 5000);
+      return;
+    }
+    if (result?.preparing) {
+      weeklyRegenerationJobs.delete(id);
+      toastHandle.update('周报仍在后台生成，请稍后刷新列表；生成成功前不会更新生成时间', '');
+      setTimeout(() => toastHandle.close(), 8000);
       return;
     }
     if (!result?.success) throw new Error(result?.error || '周报生成失败');
@@ -119,9 +127,15 @@ async function regenerateWeeklyReport(id, attempt = 0, pendingToast = null) {
     setTimeout(() => toastHandle.close(), 3000);
     renderWeeklyReports();
   } catch (e) {
-    if (e.status === 202 && e.data?.preparing && attempt < 30) {
+    if (e.status === 202 && e.data?.preparing && attempt < WEEKLY_REPORT_RETRY_LIMIT) {
       toastHandle.update(`周报数据准备中，${Math.round((attempt + 1) * 5)} 秒后自动重试...`, '');
       setTimeout(() => regenerateWeeklyReport(id, attempt + 1, toastHandle), 5000);
+      return;
+    }
+    if (e.status === 202 && e.data?.preparing) {
+      weeklyRegenerationJobs.delete(id);
+      toastHandle.update('周报仍在后台生成，请稍后刷新列表；生成成功前不会更新生成时间', '');
+      setTimeout(() => toastHandle.close(), 8000);
       return;
     }
     weeklyRegenerationJobs.delete(id);
