@@ -25,7 +25,8 @@ function createWeeklyBusinessReportRoutes({
   table,
   webhook = '',
   publicBaseUrl = '',
-  isProductionRuntime = () => false
+  isProductionRuntime = () => false,
+  manualGenerationTimeoutMs = 9000
 } = {}) {
   function baseUrl(req) {
     return String(publicBaseUrl || process.env.PUBLIC_BASE_URL || 'https://www.flowtennis.cn').replace(/\/+$/, '');
@@ -57,7 +58,7 @@ function createWeeklyBusinessReportRoutes({
 
   async function runReport({ req, mode = 'auto', now = new Date(), period = null } = {}) {
     const targetPeriod = period || resolveWeeklyBusinessReportPeriod(now);
-    const snapshot = await generateWeeklyBusinessReport({
+    const generation = generateWeeklyBusinessReport({
       loadOperationsPayload: buildOperationsPayload,
       loadOperationsSnapshot,
       get,
@@ -67,8 +68,19 @@ function createWeeklyBusinessReportRoutes({
       baseUrl: baseUrl(req || { headers: {} }),
       generationMode: mode,
       allowLiveFallback: mode !== 'manual',
+      deadlineAt: mode === 'manual' ? Date.now() + manualGenerationTimeoutMs : 0,
       table
     });
+    let timeoutHandle = null;
+    const timeout = new Promise((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        const err = new Error('周报生成超过 10 秒，未更新原生成时间');
+        err.code = 'WEEKLY_REPORT_GENERATION_TIMEOUT';
+        err.statusCode = 504;
+        reject(err);
+      }, manualGenerationTimeoutMs);
+    });
+    const snapshot = await Promise.race([generation, timeout]).finally(() => clearTimeout(timeoutHandle));
     if (mode === 'manual') {
       return { success: true, report: snapshot, notification: { skipped: true, reason: 'manual-regeneration' } };
     }
@@ -137,22 +149,6 @@ function createWeeklyBusinessReportRoutes({
       try {
         return sendJson(res, await runReport({ req, mode: 'manual', period: periodFromRequest(body) }));
       } catch (err) {
-        if (err?.code === 'WEEKLY_REPORT_SNAPSHOT_NOT_READY' && typeof queueOperationsSnapshotRebuild === 'function') {
-          const scopes = Array.isArray(err.scopes) ? err.scopes : [];
-          const queued = await Promise.all(scopes.map(scope => queueOperationsSnapshotRebuild({
-            user: err.snapshotUser || user,
-            scope,
-            reason: 'weekly-report-manual-regeneration'
-          }).catch(queueErr => ({ error: String(queueErr?.message || queueErr) }))));
-          const queuedCount = queued.filter(item => !item?.error).length;
-          return sendJson(res, {
-            success: false,
-            preparing: true,
-            code: err.code,
-            error: '周报数据正在准备中，请稍后重试',
-            queuedScopes: queuedCount
-          }, 202);
-        }
         return sendJson(res, { success: false, error: String(err?.message || err), code: err?.code || '' }, err.statusCode || 500);
       }
     }

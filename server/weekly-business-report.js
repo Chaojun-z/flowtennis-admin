@@ -2871,9 +2871,9 @@ function weeklyPayloadHasFinanceFactsInPeriod(payload = {}, period = {}) {
 }
 
 function weeklyReportSnapshotNotReadyError(scopes = [], user = {}) {
-  const err = new Error('周报数据正在准备中，请稍后重试');
+  const err = new Error('周报数据未在 10 秒内准备完成');
   err.code = 'WEEKLY_REPORT_SNAPSHOT_NOT_READY';
-  err.statusCode = 202;
+  err.statusCode = 503;
   err.scopes = scopes;
   err.snapshotUser = user;
   return err;
@@ -2889,10 +2889,20 @@ async function generateWeeklyBusinessReport({
   baseUrl = 'https://www.flowtennis.cn',
   generationMode = 'auto',
   allowLiveFallback = true,
+  deadlineAt = 0,
   user = { id: 'weekly-report-system', role: 'admin', dataScope: 'all' },
   table = WEEKLY_REPORT_TABLE
 } = {}) {
   if (typeof loadOperationsPayload !== 'function') throw new Error('缺少周报数据读取器');
+  const assertBeforeDeadline = () => {
+    if (deadlineAt && Date.now() >= deadlineAt) {
+      const err = new Error('周报生成超过 10 秒，未更新原生成时间');
+      err.code = 'WEEKLY_REPORT_GENERATION_TIMEOUT';
+      err.statusCode = 504;
+      throw err;
+    }
+  };
+  assertBeforeDeadline();
   const snapshotUser = {
     ...user,
     role: 'admin',
@@ -2919,7 +2929,11 @@ async function generateWeeklyBusinessReport({
     view: WEEKLY_REPORT_OPERATIONS_VIEW,
     includeWeeklyReportRaw: true,
     dateRange: {},
-    metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME }
+    metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME },
+    weeklyReportRawWindow: {
+      startDate: addUtcDays(period.startDate, -70),
+      endDate: period.endDate
+    }
   };
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
   const loadSnapshotPayload = async targetScope => {
@@ -2932,27 +2946,35 @@ async function generateWeeklyBusinessReport({
       return null;
     });
   };
-  const snapshotPayloads = [];
+  let operationsPayload = null;
+  let previousOperationsPayload = null;
+  let totalOperationsPayload = null;
   if (typeof loadOperationsSnapshot === 'function') {
-    for (const targetScope of [scope, previousScope, totalScope]) {
-      snapshotPayloads.push(await loadSnapshotPayload(targetScope));
-    }
+    operationsPayload = await loadSnapshotPayload(scope);
+    previousOperationsPayload = await loadSnapshotPayload(previousScope);
+    totalOperationsPayload = await loadSnapshotPayload(totalScope);
   }
-  let operationsPayload = snapshotPayloads[0] || null;
-  let previousOperationsPayload = snapshotPayloads[1] || null;
-  let totalOperationsPayload = snapshotPayloads[2] || null;
   const missingSnapshotScopes = [];
+  const totalSnapshotBaseRows = totalOperationsPayload?.weeklyReportRaw
+    ? weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw)
+    : null;
   if (!weeklyPayloadReadyForScope(operationsPayload, scope)) {
-    if (allowLiveFallback) {
+    if (totalSnapshotBaseRows) {
+      operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride: totalSnapshotBaseRows, weeklyReportLiveSource: true }).catch(() => null);
+    } else if (allowLiveFallback) {
       operationsPayload = await loadOperationsPayload({ user, scope, weeklyReportLiveSource: true });
     } else {
       missingSnapshotScopes.push(scope);
     }
   }
-  const baseRowsOverride = operationsPayload?.weeklyReportRaw ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw) : null;
+  const baseRowsOverride = operationsPayload?.weeklyReportRaw
+    ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw)
+    : totalSnapshotBaseRows;
   if (!weeklyPayloadReadyForScope(previousOperationsPayload, previousScope)) {
-    if (allowLiveFallback) {
+    if (baseRowsOverride) {
       previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true });
+    } else if (allowLiveFallback) {
+      previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, weeklyReportLiveSource: true });
     } else {
       missingSnapshotScopes.push(previousScope);
     }
@@ -2979,11 +3001,20 @@ async function generateWeeklyBusinessReport({
         dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
         metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
       };
-      const payload = await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: false }).catch(() => null);
+      const payload = generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
+        ? null
+        : await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: false }).catch(() => null);
       if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
       if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) {
-        shouldLoadLiveTrendWindow = true;
-        if (!allowLiveFallback) missingSnapshotScopes.push(trendScope);
+        const derivedPayload = generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
+          ? await loadOperationsPayload({ user, scope: trendScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null)
+          : null;
+        if (weeklyPayloadHasFinanceFactsInPeriod(derivedPayload, trendPeriod)) {
+          trendOperationsPayloads.push({ period: trendPeriod, payload: derivedPayload });
+        } else {
+          shouldLoadLiveTrendWindow = true;
+          if (!allowLiveFallback) missingSnapshotScopes.push(trendScope);
+        }
       }
     }
     if (allowLiveFallback && generationMode === 'manual' && shouldLoadLiveTrendWindow && trendPeriods.length) {
@@ -3011,6 +3042,7 @@ async function generateWeeklyBusinessReport({
     baseUrl,
     generationMode
   });
+  assertBeforeDeadline();
   assertWeeklyBusinessReportNotContradictingFacts(snapshot, { raw: operationsPayload.weeklyReportRaw || {}, period });
   const row = {
     ...snapshot,
@@ -3020,6 +3052,7 @@ async function generateWeeklyBusinessReport({
     html: ''
   };
   row.html = renderWeeklyBusinessReportHtml(row, { remark: row.remark || '' });
+  assertBeforeDeadline();
   await put(table, row.id, row);
   return row;
 }

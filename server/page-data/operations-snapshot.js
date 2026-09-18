@@ -51,6 +51,7 @@ function checksumPayload(payload) {
 
 function normalizeScope(user = {}, scope = {}) {
   const dateRange = scope.dateRange || scope || {};
+  const weeklyReportRawWindow = scope.weeklyReportRawWindow || {};
   const normalized = {
     userScope: JSON.parse(getOperationsRowsCacheKey({ ...user, id: '', userId: '', username: '' })),
     campus: normalizeSnapshotCampusValue(scope.campus),
@@ -58,6 +59,12 @@ function normalizeScope(user = {}, scope = {}) {
     startDate: text(dateRange.startDate).slice(0, 10),
     endDate: text(dateRange.endDate).slice(0, 10)
   };
+  if (weeklyReportRawWindow.startDate || weeklyReportRawWindow.endDate) {
+    normalized.weeklyReportRawWindow = {
+      startDate: text(weeklyReportRawWindow.startDate).slice(0, 10),
+      endDate: text(weeklyReportRawWindow.endDate).slice(0, 10)
+    };
+  }
   if (text(scope.view)) normalized.view = text(scope.view);
   if (scope.includeWeeklyReportRaw === true) normalized.includeWeeklyReportRaw = true;
   return normalized;
@@ -584,6 +591,7 @@ function storedScopeForNormalized(normalized = {}) {
   };
   if (normalized.view) scope.view = normalized.view;
   if (normalized.includeWeeklyReportRaw) scope.includeWeeklyReportRaw = true;
+  if (normalized.weeklyReportRawWindow) scope.weeklyReportRawWindow = normalized.weeklyReportRawWindow;
   return scope;
 }
 

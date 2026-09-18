@@ -1,7 +1,6 @@
 let weeklyReportsRows = [];
 const weeklyRegenerationJobs = new Set();
-const WEEKLY_REPORT_RETRY_LIMIT = 12;
-const WEEKLY_REPORT_REQUEST_TIMEOUT_MS = 15000;
+const WEEKLY_REPORT_REQUEST_TIMEOUT_MS = 10000;
 
 function weeklyReportMoney(value) {
   return `¥${fmt(Number(value) || 0)}`;
@@ -100,46 +99,25 @@ async function copyWeeklyReportLink(url) {
   }
 }
 
-async function regenerateWeeklyReport(id, attempt = 0, pendingToast = null) {
+async function regenerateWeeklyReport(id) {
   const row = weeklyReportsRows.find(item => item.id === id);
   if (!row) return toast('周报不存在', 'error');
-  if (attempt === 0) {
-    if (weeklyRegenerationJobs.has(id)) return;
-    weeklyRegenerationJobs.add(id);
-  }
-  const toastHandle = pendingToast || toast('正在生成周报...', '', { sticky: true });
+  if (weeklyRegenerationJobs.has(id)) return;
+  weeklyRegenerationJobs.add(id);
+  const toastHandle = toast('正在生成周报...', '', { sticky: true });
   try {
     const result = await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, WEEKLY_REPORT_REQUEST_TIMEOUT_MS);
-    if (result?.preparing && attempt < WEEKLY_REPORT_RETRY_LIMIT) {
-      toastHandle.update(`周报数据准备中，${Math.round((attempt + 1) * 5)} 秒后自动重试...`, '');
-      setTimeout(() => regenerateWeeklyReport(id, attempt + 1, toastHandle), 5000);
-      return;
-    }
     if (result?.preparing) {
-      weeklyRegenerationJobs.delete(id);
-      toastHandle.update('周报仍在后台生成，请稍后刷新列表；生成成功前不会更新生成时间', '');
-      setTimeout(() => toastHandle.close(), 8000);
-      return;
+      throw new Error(result?.error || '周报数据未准备好');
     }
     if (!result?.success) throw new Error(result?.error || '周报生成失败');
-    weeklyRegenerationJobs.delete(id);
     toastHandle.update('周报已生成', 'success');
     setTimeout(() => toastHandle.close(), 3000);
-    renderWeeklyReports();
+    await renderWeeklyReports();
   } catch (e) {
-    if (e.status === 202 && e.data?.preparing && attempt < WEEKLY_REPORT_RETRY_LIMIT) {
-      toastHandle.update(`周报数据准备中，${Math.round((attempt + 1) * 5)} 秒后自动重试...`, '');
-      setTimeout(() => regenerateWeeklyReport(id, attempt + 1, toastHandle), 5000);
-      return;
-    }
-    if (e.status === 202 && e.data?.preparing) {
-      weeklyRegenerationJobs.delete(id);
-      toastHandle.update('周报仍在后台生成，请稍后刷新列表；生成成功前不会更新生成时间', '');
-      setTimeout(() => toastHandle.close(), 8000);
-      return;
-    }
-    weeklyRegenerationJobs.delete(id);
     toastHandle.update(`生成失败：${e.message || e}`, 'error');
     setTimeout(() => toastHandle.close(), 5000);
+  } finally {
+    weeklyRegenerationJobs.delete(id);
   }
 }

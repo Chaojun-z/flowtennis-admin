@@ -251,7 +251,16 @@ function buildWeeklyReportScopeArgs(args = {}, now = new Date()) {
   const campus = args.campus || '';
   return [
     ...resolveTrailingWeeklyPeriods(period, 8).map(item => ({ ...args, campus, campusName, startDate: item.startDate, endDate: item.endDate, view: 'weekly-report', includeWeeklyReportRaw: true })),
-    { ...args, campus, campusName, startDate: '', endDate: '', view: 'weekly-report', includeWeeklyReportRaw: true }
+    {
+      ...args,
+      campus,
+      campusName,
+      startDate: '',
+      endDate: '',
+      view: 'weekly-report',
+      includeWeeklyReportRaw: true,
+      weeklyReportRawWindow: { startDate: addDays(period.startDate, -70), endDate: period.endDate }
+    }
   ];
 }
 
@@ -279,6 +288,7 @@ function buildScope(args = {}) {
   const scope = getOperationsPageScope(query);
   if (args.view && args.view !== 'coach') scope.view = args.view;
   if (args.includeWeeklyReportRaw) scope.includeWeeklyReportRaw = true;
+  if (args.weeklyReportRawWindow) scope.weeklyReportRawWindow = args.weeklyReportRawWindow;
   return scope;
 }
 

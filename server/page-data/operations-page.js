@@ -74,6 +74,55 @@ function buildOperationsFinanceScope(scope = {}, campuses = []) {
   return financeScope;
 }
 
+function addUtcDays(day = '', offset = 0) {
+  const match = String(day || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return '';
+  const time = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) + offset * 86400000;
+  return new Date(time).toISOString().slice(0, 10);
+}
+
+function weeklyReportRawDate(row = {}, fields = []) {
+  for (const field of fields) {
+    const value = String(row?.[field] || '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  }
+  return '';
+}
+
+function compactWeeklyReportRows(rows = [], window = null, fields = []) {
+  if (!Array.isArray(rows) || !window) return Array.isArray(rows) ? rows : [];
+  return rows.filter(row => {
+    const date = weeklyReportRawDate(row, fields);
+    return !date || (date >= window.startDate && date <= window.endDate);
+  });
+}
+
+function compactWeeklyReportRaw(raw = {}, scope = {}) {
+  const rawWindow = scope?.weeklyReportRawWindow || null;
+  const dateRange = scope?.dateRange || {};
+  const endDate = String(rawWindow?.endDate || dateRange.endDate || '').slice(0, 10);
+  if (!endDate) return raw;
+  const startDate = String(rawWindow?.startDate || dateRange.startDate || '').slice(0, 10) || addUtcDays(endDate, -70);
+  const window = startDate ? { startDate, endDate } : null;
+  const courts = (Array.isArray(raw.courts) ? raw.courts : []).map(row => ({
+    ...row,
+    history: compactWeeklyReportRows(row?.history, window, ['date', 'startTime', 'createdAt', 'businessDate'])
+  })).filter(row => Array.isArray(row.history) && row.history.length);
+  return {
+    ...raw,
+    leads: compactWeeklyReportRows(raw.leads, window, ['leadDate', 'createdAt', 'updatedAt']),
+    leadFollowups: compactWeeklyReportRows(raw.leadFollowups, window, ['followupAt', 'createdAt']),
+    students: compactWeeklyReportRows(raw.students, window, ['leadDate', 'createdAt']),
+    entitlementLedger: compactWeeklyReportRows(raw.entitlementLedger, window, ['relatedDate', 'sourceDate', 'createdAt']),
+    courts,
+    membershipOrders: compactWeeklyReportRows(raw.membershipOrders, window, ['purchaseDate', 'paidAt', 'paymentTime', 'createdAt']),
+    membershipBenefitLedger: compactWeeklyReportRows(raw.membershipBenefitLedger, window, ['relatedDate', 'createdAt']),
+    membershipAccountEvents: compactWeeklyReportRows(raw.membershipAccountEvents, window, ['createdAt']),
+    schedule: compactWeeklyReportRows(raw.schedule, window, ['startTime', 'date', 'createdAt']),
+    feedbacks: compactWeeklyReportRows(raw.feedbacks, window, ['createdAt', 'updatedAt'])
+  };
+}
+
 async function buildOperationsPagePayload({
   scope,
   dateRange,
@@ -160,7 +209,7 @@ async function buildOperationsPagePayload({
   return {
     campuses: scoped.campuses,
     operations: projectOperationsPagePayload({ operations }, scope?.view || '').operations,
-    weeklyReportRaw: includeWeeklyReportRaw ? {
+    weeklyReportRaw: includeWeeklyReportRaw ? compactWeeklyReportRaw({
       campuses: scoped.campuses,
       leads: scoped.leads,
       leadFollowups: scoped.leadFollowups,
@@ -179,7 +228,7 @@ async function buildOperationsPagePayload({
       coaches: scoped.coaches,
       schedule: scoped.schedule,
       financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows || []
-    } : undefined,
+    }, scope) : undefined,
     generatedAt: operations.generatedAt
   };
 }
@@ -253,6 +302,7 @@ async function handleOperationsPageData({
 
 module.exports = {
   buildOperationsPagePayload,
+  compactWeeklyReportRaw,
   getOperationsPageScope,
   getOperationsResultCacheKey,
   handleOperationsPageData,
