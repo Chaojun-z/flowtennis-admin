@@ -864,7 +864,7 @@ const oneTimeCoursePlatform = buildPlatformMetrics({
     { id: 'ledger-one-time', studentId: 'student-one-time', entitlementId: 'ent-one-time', purchaseId: 'purchase-one-time', scheduleId: 'schedule-one-time', lessonDelta: -1, relatedDate: '2026-08-02', reason: '单次付费消课' }
   ],
   schedule: [
-    { id: 'schedule-one-time', studentId: 'student-one-time', startTime: '2026-08-02 10:00:00', endTime: '2026-08-02 11:00:00', status: '已结束', courseType: '专项课', coach: '王教练', lessonCount: 1 }
+    { id: 'schedule-one-time', studentId: 'student-one-time', startTime: '2026-08-02 10:00:00', endTime: '2026-08-02 11:00:00', status: '已结束', courseType: '专项课', coach: '王教练', lessonCount: 1, settlementType: 'package', entitlementId: 'ent-one-time' }
   ],
   courts: [],
   membershipAccounts: [],
@@ -901,8 +901,8 @@ const sharedOneTimePlatform = buildPlatformMetrics({
 });
 const sharedOneTimeAttendee = sharedOneTimePlatform.teachingStudentViews.activeStudents.find(row => row.studentId === 'student-one-time-attendee');
 assert.ok(sharedOneTimeAttendee, 'shared one-time attendee should enter active students through the lesson fact');
-assert.strictEqual(sharedOneTimeAttendee.paymentModeLabel, '-', 'shared one-time attendee must not become a paid student through polluted coursePurchaseCount');
-assert.strictEqual(sharedOneTimeAttendee.packageStatusLabel, '使用他人课包', 'shared one-time attendee should keep the shared-package context as package status only');
+assert.strictEqual(sharedOneTimeAttendee.paymentModeLabel, '单次付费学员', '共同上课者的非课包上课不能继承别人的权益');
+assert.strictEqual(sharedOneTimeAttendee.packageStatusLabel, '未买过课包', '只有共同上课，没有授权借用事实，不能标为使用他人课包');
 
 const projectedSharedPackageSummary = buildStandardLifecycleMetrics({
   teachingStudentSummaryRows: [
@@ -926,6 +926,29 @@ const projectedSharedPackageSummary = buildStandardLifecycleMetrics({
   now: new Date('2026-08-30 00:00:00')
 });
 assert.strictEqual(projectedSharedPackageSummary.teachingSummary.activeTagCounts.packageStatus['使用他人课包'], 1, 'projected list summary must preserve shared-package status counts');
+
+const projectedOneTimePackageSummary = buildStandardLifecycleMetrics({
+  teachingStudentSummaryRows: [
+    {
+      id: 'projected-one-time-package',
+      studentId: 'projected-one-time-package',
+      name: '轻摘要单次产品',
+      hasTeachingSummarySnapshot: true,
+      isHistoricalStudentRoster: true,
+      isActiveStudentRoster: true,
+      completedLessons: 1,
+      packageBalanceRemaining: 6,
+      packageBalanceTotal: 6,
+      packageStatusLabel: '未买过课包',
+      paymentModeLabel: '单次付费学员',
+      activityStatusLabel: '近30天活跃',
+      lessonVolumeLabel: '-',
+      studentStatusLabel: '-'
+    }
+  ],
+  now: new Date('2026-08-30 00:00:00')
+});
+assert.strictEqual(projectedOneTimePackageSummary.teachingSummary.activeTagCounts.packageStatus['未买过课包'], 1, '轻摘要不能把单次产品的余额数字反推成正式课包');
 
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00:00:00') });
 

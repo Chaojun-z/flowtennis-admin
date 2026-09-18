@@ -308,7 +308,10 @@ async function testReadySummaryListRowsUseListBundleOnly() {
     packagePurchaseDate: '2026-09-02',
     hasTrialAttended: false,
     teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
-    detailLessonRecordRows: [{ id: 'large-detail-row', courseType: '体验课' }],
+    detailLessonRecordRows: [
+      { id: 'large-detail-row', courseType: '体验课' },
+      { id: 'formal-detail-row', kind: 'schedule', courseType: '专项课', countAsCompletedLesson: true, time: '2026-09-03 10:00:00' }
+    ],
     detailPackageOrderRows: [{ id: 'large-package-row' }]
   }];
   const listBundle = buildStudentTeachingSummaryListBundleRow(logicalRows, version);
@@ -338,9 +341,39 @@ async function testReadySummaryListRowsUseListBundleOnly() {
   assert.deepStrictEqual(rows.map(row => row.studentId), ['list-student']);
   assert.strictEqual(rows[0].completedLessons, 67, '列表轻量包必须保留累计上课数');
   assert.strictEqual(rows[0].hasTrialAttended, true, '列表轻量包必须从旧完整摘要明细反推出真实上过体验课，不能被旧 false 覆盖');
+  assert.strictEqual(rows[0].hasFormalAttended, true, '列表轻量包必须从完整摘要明细反推出真实上过正式课，不能被旧 false 覆盖');
   assert.strictEqual(rows[0].hasTrialToCourseConversion, true, '列表轻量包必须保留体验后买正式课事实，供线索池 1s 顶部统计使用');
   assert.strictEqual(rows[0].detailLessonRecordRows, undefined, '列表轻量包不能携带上课明细大数组');
   assert.strictEqual(rows[0].detailPackageOrderRows, undefined, '列表轻量包不能携带课包明细大数组');
+
+  const explicitFalseRows = [{
+    id: 'explicit-false-formal',
+    studentId: 'explicit-false-formal',
+    name: '明确未完成正式课',
+    hasFormalAttended: false,
+    lastFormalLessonAt: '2026-09-03',
+    teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION
+  }];
+  const explicitFalseBundle = buildStudentTeachingSummaryListBundleRow(explicitFalseRows, version);
+  const explicitFalseMeta = buildStudentTeachingSummaryMetaRow({
+    status: STUDENT_TEACHING_SUMMARY_READY,
+    rowCount: 1,
+    checksum: buildStudentTeachingSummaryChecksum(explicitFalseRows),
+    batchId: version,
+    activeVersion: version,
+    sourceSnapshotAt: '2026-09-07T00:00:00.000Z',
+    completedAt: '2026-09-07T00:00:01.000Z'
+  });
+  const explicitFalseReadRows = await readReadyStudentTeachingSummaryListRows({
+    tableName,
+    getCachedRow: async (table, id) => {
+      if (id === STUDENT_TEACHING_SUMMARY_META_ID) return clone(explicitFalseMeta);
+      if (id === explicitFalseBundle.id) return clone(explicitFalseBundle);
+      return null;
+    },
+    timeoutMs: 50
+  });
+  assert.strictEqual(explicitFalseReadRows[0].hasFormalAttended, false, '明确未完成正式课不能被最近日期兼容推断覆盖');
 }
 
 async function testReadySummaryListRowsFallbackFromStaleListBundleSchema() {

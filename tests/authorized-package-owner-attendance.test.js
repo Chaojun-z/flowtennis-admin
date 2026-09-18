@@ -242,4 +242,46 @@ const sharedOwnerAuditRow = sharedOwner?.detailLessonRecordRows.find(row => row.
 assert.strictEqual(sharedOwnerAuditRow?.packageLessonProgressText, '第10/10节', '课包主人审计记录仍应按课包整体进度展示第 10/10 节');
 assert.strictEqual(sharedOwnerAuditRow?.packageRemainingAfterText, '剩0节', '课包主人审计记录应显示已扣课后的真实剩余，而不是预计剩余');
 
+const groupData = {
+  students: ['owner-a', 'owner-b', 'gift-user'].map(id => ({ id, name: id })),
+  purchases: ['owner-a', 'owner-b'].map(id => ({ id: `p-${id}`, studentId: id, packageName: '10课时私教课', courseType: '私教课', packageLessons: 10, amountPaid: 4000 })),
+  entitlements: ['owner-a', 'owner-b'].map(id => ({ id: `e-${id}`, purchaseId: `p-${id}`, studentId: id, packageName: '10课时私教课', courseType: '私教课', totalLessons: 10, remainingLessons: 9 })),
+  entitlementLedger: ['owner-a', 'owner-b'].map(id => ({ id: `l-${id}`, studentId: id, entitlementId: `e-${id}`, scheduleId: 'group', lessonDelta: -1, relatedDate: '2026-09-01', reason: '排课消课' })),
+  schedule: [{ id: 'group', studentIds: ['owner-a', 'owner-b', 'gift-user'], courseType: '私教课', startTime: '2026-09-01 10:00', endTime: '2026-09-01 11:00', status: '已排课', lessonCount: 1, settlementType: 'package', entitlementId: 'e-owner-a',
+    studentSettlementRows: [
+      { studentId: 'owner-a', settlementType: 'package', entitlementId: 'e-owner-a' },
+      { studentId: 'owner-b', settlementType: 'package', entitlementId: 'e-owner-b' },
+      { studentId: 'gift-user', settlementType: 'gift', amount: 0, entitlementId: 'unused-legacy-entitlement' }
+    ] }],
+  now: new Date('2026-09-18T00:00:00+08:00')
+};
+const groupRows = buildPlatformMetrics(groupData).teachingStudentViews.historicalStudents;
+for (const id of ['owner-a', 'owner-b', 'gift-user']) {
+  const row = groupRows.find(item => item.studentId === id);
+  assert.strictEqual(row?.completedLessons, 1, '同课多人分别结算，每人仅计算本人的一次上课');
+  assert.notStrictEqual(row?.packageStatusLabel, '使用他人课包', '同课并不代表借用其他人的课包');
+  assert.ok(row.detailLessonRecordRows.every(item => !item.packageOwnerStudentId || item.packageOwnerStudentId === id));
+}
+const giftUser = groupRows.find(row => row.studentId === 'gift-user');
+assert.strictEqual(giftUser.paymentModeLabel, '单次付费学员', '0元赠送课沿用单次标签');
+assert.strictEqual(giftUser.detailLessonRecordRows[0].entitlementId, '', '赠送课不能继承整节课或历史残留的权益ID');
+
+const mixedData = {
+  ...groupData,
+  entitlementLedger: [{ ...groupData.entitlementLedger[0], studentId: 'gift-user', usedByStudentId: 'gift-user', packageOwnerStudentId: 'owner-a' }],
+  schedule: [
+    { ...groupData.schedule[0], studentIds: ['gift-user'], studentSettlementRows: [{ studentId: 'gift-user', settlementType: 'package', entitlementId: 'e-owner-a' }], status: '已结束' },
+    { id: 'direct', studentIds: ['gift-user'], courseType: '私教课', startTime: '2026-09-02 10:00', endTime: '2026-09-02 11:00', status: '已结束', lessonCount: 1, settlementType: 'direct', paidAmount: 200 }
+  ]
+};
+const mixedUser = buildPlatformMetrics(mixedData).teachingStudentViews.historicalStudents.find(row => row.studentId === 'gift-user');
+assert.strictEqual(mixedUser.packageStatusLabel, '使用他人课包', '真实授权使用仍保留借用标签');
+assert.strictEqual(mixedUser.paymentModeLabel, '单次付费学员', '借用课包不能遮蔽独立的单次付费记录');
+assert.strictEqual(mixedUser.completedLessons, 2);
+
+const trialOnly = buildPlatformMetrics({ students: [{id:'trial-only',name:'体验学员'}], schedule:[{
+  id:'trial-only-schedule',studentId:'trial-only',courseType:'体验课',status:'已结束',startTime:'2026-09-01 10:00',endTime:'2026-09-01 11:00'
+}], now:groupData.now }).teachingStudentViews.historicalStudents.find(row=>row.studentId==='trial-only');
+assert.strictEqual(trialOnly.paymentModeLabel,'体验课','只有体验记录且没有购买记录时仍保留体验标签');
+
 console.log('authorized package owner attendance tests passed');

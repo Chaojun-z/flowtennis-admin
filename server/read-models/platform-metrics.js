@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../../public/assets/scripts/core/campus.js');
+const { normalizeStudentSettlementRows } = require('../schedule.js');
 
 const TEACHING_LESSON_DETAIL_SOURCE_VERSION = 'lesson-record-v8';
 
@@ -574,6 +575,15 @@ function entitlementLedgerStudentIds(row = {}, entitlementsById = new Map(), pur
       scheduleRelationIds.length
       || /授权|使用.*课包|课包.*使用/.test(relationLabel)
     )) return relatedAttendeeIds;
+    const settlements = parseArr(schedule.studentSettlementRows);
+    if (settlements.length) {
+      const matching = settlements.filter(item => text(item.settlementType) === 'package'
+        && text(item.entitlementId) && text(item.entitlementId) === text(row.entitlementId));
+      if (matching.length) return [...new Set(matching.map(item => text(item.studentId)).filter(id => scheduleIds.includes(id)))];
+      const eligible = settlements.filter(item => text(item.settlementType) === 'package').map(item => text(item.studentId));
+      return [...new Set([...relatedAttendeeIds, ...explicitIds].filter(id => scheduleIds.includes(id) && eligible.includes(id)))];
+    }
+    if (scheduleIds.length > 1 && explicitIds.length) return explicitIds.filter(id => scheduleIds.includes(id));
     return scheduleIds;
   }
   if (attendeeRelationIds.length) {
@@ -1074,16 +1084,24 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   (data.schedule || [])
     .filter(row => teachingScheduleLessonFact(row, data.now || new Date()) || teachingSchedulePendingLessonFact(row, data.now || new Date()))
     .filter(row => courseRowIsTrial(row) === includeTrial)
-    .forEach(row => {
+    .forEach(scheduleRow => teachingScheduleStudentIds(scheduleRow).forEach(studentId => {
+      const row = teachingScheduleForStudent(scheduleRow, studentId);
       const completedFact = teachingScheduleLessonFact(row, data.now || new Date());
       const pending = !completedFact && teachingSchedulePendingLessonFact(row, data.now || new Date());
       const scheduleId = text(row.id);
-      const linkedLedger = ledgersByScheduleId.get(scheduleId) || {};
-      const entitlementId = text(row.entitlementId || linkedLedger.entitlementId);
-      const purchaseId = text(row.purchaseId || linkedLedger.purchaseId);
+      const candidateLedger = ledgersByScheduleId.get(scheduleId) || {};
+      const linkedLedger = entitlementLedgerStudentIds(candidateLedger, entitlementsById, purchasesById, schedulesById).includes(studentId) ? candidateLedger : {};
+      const direct = teachingPaymentIsDirect(row);
+      const rowEntitlement = entitlementsById.get(text(row.entitlementId)) || {};
+      const unrelatedGroupPackage = teachingScheduleStudentIds(scheduleRow).length > 1
+        && !parseArr(scheduleRow.studentSettlementRows).length
+        && text(rowEntitlement.studentId) && text(rowEntitlement.studentId) !== studentId
+        && ![row.usedByStudentId, row.authorizedStudentId].map(text).includes(studentId);
+      const entitlementId = direct ? '' : text((unrelatedGroupPackage ? '' : row.entitlementId) || linkedLedger.entitlementId);
+      const purchaseId = direct ? '' : text((unrelatedGroupPackage ? '' : row.purchaseId) || linkedLedger.purchaseId);
+      const packageOwnerStudentId = text((entitlementsById.get(entitlementId) || {}).studentId || (purchasesById.get(purchaseId) || {}).studentId);
       if (pending && !text(entitlementId || purchaseId)) return;
       const sortTime = text(row.startTime || row.endTime || row.createdAt);
-      teachingScheduleStudentIds(row).forEach(studentId => {
         if (ledgerScheduleStudentKeys.has(`${studentId}|${text(row.id)}`)) return;
         if (ledgerScheduleFactKeys.has(lessonFactKey(studentId, row))) return;
         push(studentId, {
@@ -1091,6 +1109,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           scheduleId,
           entitlementId,
           purchaseId,
+          packageOwnerStudentId,
           packageRecordKey: teachingPackageRecordKey({ entitlementId, purchaseId }),
           sortTime,
           time: dateTimeText(row),
@@ -1120,8 +1139,7 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
           metaParts: teachingLessonRecordMetaParts(row),
           reason: text(row.notes)
         });
-      });
-    });
+    }));
 
   const lessonDetailDedupKey = (row = {}) => {
     const scheduleId = text(row.scheduleId);
@@ -1348,9 +1366,10 @@ function teachingSummaryTrialAttendedSnapshot(row = {}) {
 }
 
 function teachingSummaryFormalAttendedSnapshot(row = {}, now = new Date()) {
-  if (teachingSummaryRowHasFormalLesson(row, now)) return true;
+  if (teachingSummaryRowHasFormalLesson(row, now, false)) return true;
   const explicit = booleanSnapshotValue(row.hasFormalAttended);
   if (explicit !== undefined) return explicit;
+  if (teachingSummaryRowHasFormalLesson(row, now)) return true;
   return false;
 }
 
@@ -1403,7 +1422,7 @@ function teachingSummaryRowHasConsumedTrialPackage(row = {}) {
   });
 }
 
-function teachingSummaryRowHasFormalLesson(row = {}, now = new Date()) {
+function teachingSummaryRowHasFormalLesson(row = {}, now = new Date(), includeDateFallback = true) {
   const lessonRows = arraySnapshotValue(row.detailLessonRecordRows);
   const hasScheduleLessonRow = lessonRows.some(item => text(item?.kind) === 'schedule');
   if (lessonRows.some(item => {
@@ -1414,7 +1433,7 @@ function teachingSummaryRowHasFormalLesson(row = {}, now = new Date()) {
   })) return true;
   if (booleanSnapshotValue(row.hasFormalAttended) === true) return true;
   if (lessonRows.length) return false;
-  return teachingDateOnOrBeforeNow(row.lastFormalLessonAt, now);
+  return includeDateFallback && teachingDateOnOrBeforeNow(row.lastFormalLessonAt, now);
 }
 
 function teachingSummaryRowHasFormalDetailSignal(row = {}, now = new Date()) {
@@ -2191,6 +2210,23 @@ function teachingScheduleStudentIds(row = {}) {
   return legacyId ? [legacyId] : [];
 }
 
+function teachingScheduleForStudent(row = {}, studentId = '') {
+  const settlement = normalizeStudentSettlementRows(row).find(item => item.studentId === text(studentId));
+  if (!settlement) return row;
+  const raw = parseArr(row.studentSettlementRows).find(item => text(item.studentId) === text(studentId)) || {};
+  const usesPackage = settlement.settlementType === 'package';
+  return {
+    ...row,
+    settlementType: settlement.settlementType,
+    payMethod: settlement.payMethod,
+    paidAmount: settlement.amount,
+    paymentType: '', payType: '', paymentMethod: '', paymentChannel: '',
+    entitlementId: usesPackage ? text(raw.entitlementId) : '',
+    entitlementIds: usesPackage && raw.entitlementId ? [raw.entitlementId] : [],
+    purchaseId: usesPackage ? text(raw.purchaseId) : ''
+  };
+}
+
 function teachingScheduleStudentName(row = {}, index = 0) {
   const names = parseArr(row.studentNames).map(text).filter(Boolean);
   return names[index] || text(row.studentName || row.displayName || row.name);
@@ -2259,7 +2295,9 @@ function normalizeTeachingStudentData(data = {}, customerLifecycleRows = []) {
 
 function teachingStudentScheduleRows(data = {}, studentId = '', predicate = () => true) {
   return (data.schedule || [])
-    .filter(row => activeStatus(row) && rowHasStudent(row, studentId) && predicate(row));
+    .filter(row => activeStatus(row) && rowHasStudent(row, studentId))
+    .map(row => teachingScheduleForStudent(row, studentId))
+    .filter(predicate);
 }
 
 function teachingStudentFormalLessonFactRows(data = {}, studentId = '', now = new Date()) {
@@ -2413,6 +2451,7 @@ function teachingStudentHasFormalAttendedFact(data = {}, row = {}, now = new Dat
 }
 
 function teachingStudentHasFormalPackage(row = {}) {
+  if (row.hasTeachingSummarySnapshot && text(row.packageStatusLabel) === '未买过课包') return false;
   const packageListRows = Array.isArray(row.packageListRows) ? row.packageListRows : [];
   const detailPackageOrderRows = Array.isArray(row.detailPackageOrderRows) ? row.detailPackageOrderRows : [];
   const knownPackageRows = [...packageListRows, ...detailPackageOrderRows];
@@ -2488,9 +2527,9 @@ function teachingStudentDirectFormalLessonRows(data = {}, studentId = '', now = 
   const hasPackage = teachingStudentHasFormalPackage(studentRow)
     || rows.some(row => teachingPaymentIsOwnFormalPackage(row, studentId))
     || detailRows.some(row => teachingPaymentIsOwnFormalPackage(row, studentId));
-  const hasOtherPackageUsage = detailRows.some(row => teachingPaymentIsOtherPackageUsage(row, studentId));
-  if (!hasPackage && hasOtherPackageUsage) return [];
-  return rows.filter(row => teachingPaymentIsDirect(row) || (!hasPackage && !teachingPaymentIsFormalPackage(row)));
+  const borrowedScheduleIds = new Set(detailRows.filter(row => teachingPaymentIsOtherPackageUsage(row, studentId)).map(row => text(row.scheduleId)).filter(Boolean));
+  return rows.filter(row => teachingPaymentIsDirect(row)
+    || (!hasPackage && !borrowedScheduleIds.has(text(row.id)) && !teachingPaymentIsFormalPackage(row)));
 }
 
 function teachingStudentDirectTrialLessonRows(data = {}, studentId = '', now = new Date()) {
@@ -2541,7 +2580,9 @@ function teachingStudentPaymentModeLabel(data = {}, row = {}, now = new Date()) 
   const hasPackage = teachingStudentHasFormalPackage(row)
     || detailRows.some(item => teachingPaymentIsOwnFormalPackage(item, studentId))
     || (!detailRows.length && formalLessonRows.some(item => teachingPaymentIsOwnFormalPackage(item, studentId)));
-  const hasDirect = teachingStudentDirectFormalLessonRows(data, studentId, now, row).length > 0;
+  const hasDirect = teachingStudentDirectFormalLessonRows(data, studentId, now, row).length > 0
+    || detailRows.some(item => item.countAsCompletedLesson !== false && !courseRowIsTrial(item)
+      && courseRowIsOneTimePaidProduct(item) && !teachingPaymentIsOtherPackageUsage(item, studentId));
   const hasDirectTrial = teachingStudentDirectTrialLessonRows(data, studentId, now).length > 0;
   const hasTrialPurchase = teachingStudentHasTrialCoursePurchase(row);
   if (!hasFreshTeachingLessonFacts(data) && text(row.paymentModeLabel)) {
@@ -2553,7 +2594,7 @@ function teachingStudentPaymentModeLabel(data = {}, row = {}, now = new Date()) 
   if (hasPackage && hasDirect) return '课包+单次付费';
   if (hasDirect || hasDirectTrial) return '单次付费学员';
   if (hasPackage) return '课包学员';
-  if (hasTrialPurchase) return '体验课';
+  if (hasTrialPurchase || (teachingStudentHasTrialAttendedFact(data, row, now) && !detailRows.some(item => item.countAsCompletedLesson !== false))) return '体验课';
   return '-';
 }
 

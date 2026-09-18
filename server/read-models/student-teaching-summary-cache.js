@@ -18,7 +18,7 @@ const STUDENT_TEACHING_SUMMARY_LIST_BUNDLE_SCHEMA_VERSION = 'trial-facts-v2';
 const READY_STUDENT_TEACHING_SUMMARY_CACHE_TTL_MS = 30000;
 const READY_STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS = Math.max(
   1200,
-  parseInt(process.env.STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS || '2500', 10) || 2500
+  parseInt(process.env.STUDENT_TEACHING_SUMMARY_READ_TIMEOUT_MS || '5000', 10) || 5000
 );
 const readyStudentTeachingSummaryRowsCache = new Map();
 const studentTeachingSummaryListBundleRepairPromises = new Map();
@@ -183,7 +183,22 @@ function studentTeachingSummaryListHasTrialAttended(row = {}) {
 }
 
 function studentTeachingSummaryListHasFormalAttended(row = {}) {
-  if (studentTeachingSummaryListBool(row.hasFormalAttended) === true) return true;
+  const explicit = studentTeachingSummaryListBool(row.hasFormalAttended);
+  const lessonRows = parseArr(row.detailLessonRecordRows);
+  const hasScheduleLessonRow = lessonRows.some(item => studentTeachingSummaryListText(item?.kind) === 'schedule');
+  if (lessonRows.some(item => {
+    const label = studentTeachingSummaryListLabel(item);
+    if (item?.countAsCompletedLesson === false || /体验|陪打/.test(label)) return false;
+    const value = item?.time || item?.sortTime || item?.relatedDate || item?.scheduleTime || item?.createdAt;
+    const parsed = value ? Date.parse(String(value).replace(' ', 'T')) : NaN;
+    if (Number.isFinite(parsed) && parsed > Date.now()) return false;
+    return studentTeachingSummaryListText(item?.kind) === 'schedule'
+      || (!hasScheduleLessonRow && (
+        studentTeachingSummaryListText(item?.kind) === 'ledger'
+        || Number(item?.lessonDelta) < 0
+      ));
+  })) return true;
+  if (explicit !== undefined || lessonRows.length) return false;
   return !!studentTeachingSummaryListText(row.lastFormalLessonAt || row.detailRecentLessonDate);
 }
 
