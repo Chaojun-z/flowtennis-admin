@@ -6956,7 +6956,7 @@ module.exports = async (req, res) => {
     console.log('[campuses] GET bypass scheduleInitInBackground');
     return sendJson(res,DEFAULT_CAMPUSES);
   }
-  if(await weeklyBusinessReportRoutes.handlePublic({path,method,res}))return;
+  if(await weeklyBusinessReportRoutes.handlePublic({path,method,body,res}))return;
   if(path==='/match-diag'&&method==='GET'){
     if(!requireDiagnosticsAccess(req,res))return;
     return handleMatchDiag({res,sendJson,safeDatabaseUrlHost,MATCH_DATABASE_URL,getMatchSqlPool});

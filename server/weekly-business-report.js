@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { effectiveScheduleStatus } = require('./schedule.js');
 const { bookingDurationHours, normalizeCourtHistory, courtHistoryBusinessDate, buildCourtAccountListViewFromData } = require('./page-data/court-account-read-model.js');
 const { buildCourtAccountListViewFromIndexRows } = require('./page-data/court-account-list-index.js');
+const { buildFinanceOverviewDataFromRows } = require('./read-models/finance-summary.js');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
 
@@ -588,33 +589,64 @@ function buildTrialConversionRowsFromRaw(raw = {}, period = {}) {
 }
 
 function buildCourseReceiptDetailRowsFromRaw(raw = {}, period = {}) {
+  return buildPrivateCoursePurchaseListRowsFromRaw(raw, period);
+}
+
+function buildPrivateCoursePurchaseListRowsFromRaw(raw = {}, period = {}) {
   const maps = studentTypeMaps(raw);
   const studentNameMap = buildStudentNameMap(raw);
+  const purchases = normalizeRows(raw.purchases)
+    .filter(row => campusMatches(row) && isPrivateCoursePurchase(row) && inPeriod(row.purchaseDate || row.createdAt, period));
   const purchaseMap = new Map(normalizeRows(raw.purchases).map(row => [String(row.id || '').trim(), row]).filter(([id]) => id));
-  return weeklyFinanceRows(raw, period)
-    .filter(row => isCourseFinanceRow(row) && isFinanceReceipt(row))
-    .map(row => {
-      const purchase = purchaseMap.get(financeRowPurchaseId(row)) || {};
-      const studentId = String(row.studentId || purchase.studentId || '').trim();
-      const studentName = firstDisplayName([
-        row.studentName,
-        row.customerName,
-        row.name,
-        purchase.studentName,
-        purchase.customerName,
-        studentId ? studentNameMap.get(studentId) : ''
-      ]) || '-';
-      return {
-        id: String(row.id || row.ledgerId || row.sourceId || row.sourceDocument || `${row.businessDate || row.date}-${studentId || studentName}`).trim(),
-        date: String(row.businessDate || row.date || row.purchaseDate || row.createdAt || '').slice(0, 10),
+  const receiptRows = weeklyFinanceRows(raw, period)
+    .filter(row => isCourseFinanceRow(row) && isFinanceReceipt(row) && isPrivateCourseFinanceRow(row, purchaseMap));
+  const receiptsByPurchaseId = new Map();
+  receiptRows.forEach(row => {
+    const purchaseId = financeRowPurchaseId(row);
+    if (!purchaseId) return;
+    const rows = receiptsByPurchaseId.get(purchaseId) || [];
+    rows.push(row);
+    receiptsByPurchaseId.set(purchaseId, rows);
+  });
+  const grouped = new Map();
+  purchases.forEach(purchase => {
+    const studentKey = purchaseStudentKey(purchase);
+    if (!studentKey) return;
+    const purchaseId = String(purchase.id || '').trim();
+    const matchedReceipts = receiptsByPurchaseId.get(purchaseId) || [];
+    const amount = matchedReceipts.length ? financeSum(matchedReceipts, 'cashDelta') : purchaseAmount(purchase);
+    const date = String(purchase.purchaseDate || purchase.createdAt || '').slice(0, 10);
+    const studentId = String(purchase.studentId || '').trim();
+    const studentName = firstDisplayName([
+      purchase.studentName,
+      purchase.customerName,
+      purchase.name,
+      studentId ? studentNameMap.get(studentId) : '',
+      studentKey
+    ]) || '-';
+    const current = grouped.get(studentKey);
+    if (!current) {
+      grouped.set(studentKey, {
+        id: matchedReceipts[0]?.id || purchaseId || `purchase-${crypto.createHash('sha1').update(studentKey).digest('hex').slice(0, 16)}`,
+        date,
         student: studentName,
-        type: customerTypeForRow({ ...purchase, ...row, studentName }, maps),
-        product: rowLabel({ ...purchase, ...row }, ['packageName', 'productName', 'sourceProject', 'businessTypeLevel2', 'courseType'], '-'),
-        amount: fieldNumber(row, ['cashDelta']),
-        payMethod: rowLabel(row, ['paymentChannel', 'payMethod', 'paymentMethod'], '-'),
-        remark: ''
-      };
-    })
+        type: customerTypeForRow(purchase, maps),
+        product: rowLabel(purchase, ['packageName', 'productName', 'courseType'], '-'),
+        amount,
+        payMethod: new Set(matchedReceipts.map(row => rowLabel(row, ['paymentChannel', 'payMethod', 'paymentMethod'], '')).filter(Boolean)),
+        remark: rowLabel(purchase, ['remark', 'notes', 'note'], '')
+      });
+      return;
+    }
+    current.amount = numberValue(current.amount + amount);
+    if (!current.date || (date && date < current.date)) current.date = date;
+    matchedReceipts.forEach(row => {
+      const payMethod = rowLabel(row, ['paymentChannel', 'payMethod', 'paymentMethod'], '');
+      if (payMethod) current.payMethod.add(payMethod);
+    });
+  });
+  return Array.from(grouped.values())
+    .map(row => ({ ...row, payMethod: Array.from(row.payMethod).join('、') || '-' }))
     .sort((a, b) => `${a.date || ''} ${a.student || ''}`.localeCompare(`${b.date || ''} ${b.student || ''}`, 'zh-CN'));
 }
 
@@ -632,8 +664,10 @@ function buildCourseRevenueFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const totalRenewalRows = privatePurchases.filter(row => !isFirstPurchase(row, privatePurchases));
   const previousFirstRows = previousPurchases.filter(row => isFirstPurchase(row, privatePurchases));
   const previousRenewalRows = previousPurchases.filter(row => !isFirstPurchase(row, privatePurchases));
-  const paidPeople = new Set(currentPurchases.map(purchaseStudentKey).filter(Boolean)).size;
-  const previousPaidPeople = new Set(previousPurchases.map(purchaseStudentKey).filter(Boolean)).size;
+  const purchaseListRows = buildPrivateCoursePurchaseListRowsFromRaw(raw, period);
+  const previousPurchaseListRows = buildPrivateCoursePurchaseListRowsFromRaw(previousRaw, previousPeriod);
+  const paidPeople = purchaseListRows.length;
+  const previousPaidPeople = previousPurchaseListRows.length;
   const allFinanceRows = weeklyFinanceRows(raw, {});
   const financeRows = weeklyFinanceRows(raw, period);
   const previousFinanceRows = weeklyFinanceRows(previousRaw, previousPeriod);
@@ -684,6 +718,7 @@ function buildCourseRevenueFromRaw(raw = {}, period = {}, previousRaw = {}) {
     totalConsumedAmount: numberValue(totalConsumedAmount || consumedAmount),
     totalRepeatRate: percent(new Set(totalRenewalRows.map(purchaseStudentKey).filter(Boolean)).size, new Set(totalFirstRows.map(purchaseStudentKey).filter(Boolean)).size),
     paidPeople,
+    purchaseListRows,
     newPeople: new Set(firstRows.map(purchaseStudentKey).filter(Boolean)).size,
     newAmount: currentAmount,
     lessonPeople,
@@ -954,9 +989,15 @@ function weeklyFinanceRows(raw = {}, period = {}) {
 
 function lifetimeCashReceivedFromRaw(raw = {}, period = {}) {
   const endDate = String(period?.endDate || '').slice(0, 10);
-  const sourceRows = selectWeeklyFinanceSourceRows(raw, endDate ? { endDate } : {});
-  const receiptRows = financeRowsForPeriod(sourceRows, endDate ? { endDate } : {}, { campusScoped: false }).filter(isFinanceReceipt);
-  return receiptRows.length ? financeSum(receiptRows, 'cashDelta') : null;
+  const normalizedRows = normalizeRows(raw.financeNormalizedRows);
+  if (normalizedRows.length) {
+    const overview = buildFinanceOverviewDataFromRows(normalizedRows, endDate ? { endDate } : {});
+    const totalIncome = Number(overview?.all?.cash);
+    return Number.isFinite(totalIncome) ? numberValue(totalIncome) : null;
+  }
+  const sourceRows = normalizeFinancialLedgerRows(raw);
+  const scopedRows = financeRowsForPeriod(sourceRows, endDate ? { endDate } : {}, { campusScoped: false });
+  return scopedRows.length ? financeSum(scopedRows, 'cashDelta') : null;
 }
 
 function financeAction(row = {}) {
@@ -1816,7 +1857,7 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
         expiringPeople: rawCourseRevenue?.expiringPeople ?? optionalCardNumber(overview, ['expiringPeople', 'courseExpiringPeople']),
         expiringAmount: optionalCardNumber(overview, ['expiringAmount', 'courseExpiringAmount']),
         typeRows: rawCourseRevenue?.typeRows ?? [],
-        receiptRows: buildCourseReceiptDetailRowsFromRaw(raw, period),
+        receiptRows: rawCourseRevenue?.purchaseListRows || buildCourseReceiptDetailRowsFromRaw(raw, period),
         compare: {
           people: rawCourseRevenue?.compare?.people ?? null,
           paidPeople: rawCourseRevenue?.compare?.paidPeople ?? null,
@@ -2187,7 +2228,7 @@ function renderTrialConversionRows(rows = [], edits = {}) {
 function renderCourseReceiptRows(rows = [], edits = {}) {
   const clean = normalizeRows(rows);
   return `<div class="bg-cyber-card rounded-xl border border-cyber-border p-5">
-    <div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${editableText(edits, 'course.receipts.title', '新增收款明细表')}</h4><span class="text-xs font-mono text-cyber-muted">${editableText(edits, 'course.receipts.count', `${clean.length} 条`)}</span></div>
+    <div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${editableText(edits, 'course.receipts.title', '购买名单')}</h4><span class="text-xs font-mono text-cyber-muted">${editableText(edits, 'course.receipts.count', `${clean.length} 人`)}</span></div>
     ${clean.length ? `<div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs font-mono min-w-[820px] bg-cyber-card rounded-xl border border-cyber-border overflow-hidden mt-3"><thead><tr class="text-cyber-muted border-b border-cyber-border/40">${['日期', '学员', '类型', '产品', '金额', '支付方式', '备注'].map((label, index) => `<th class="py-2.5 px-3 font-sans">${editableText(edits, `course.receiptRows.header.${index}`, label)}</th>`).join('')}</tr></thead><tbody class="divide-y divide-cyber-border/20 text-white">${clean.map((row, index) => {
       const id = String(row.id || index).replace(/[.]/g, '_');
       return `<tr><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.date`, formatDateWithWeekday(row.date))}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.student`, row.student || '-')}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.type`, row.type || '-')}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.product`, row.product || '-')}</td><td class="py-3 px-3 highlight-col">${editableText(edits, `course.receiptRows.${id}.amount`, `${formatMetricValue(row.amount, '元')}元`)}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.payMethod`, row.payMethod || '-')}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.remark`, row.remark || '')}</td></tr>`;
@@ -2765,7 +2806,7 @@ async function updateWeeklyBusinessReportPublicEdits({ scan, put, token = '', ed
   });
   const next = {
     ...report,
-    publicEdits: safeEdits,
+    publicEdits: { ...(report.publicEdits || {}), ...safeEdits },
     publicEditsUpdatedAt: new Date().toISOString()
   };
   next.html = renderWeeklyBusinessReportHtml(next, { remark: next.remark || '' });

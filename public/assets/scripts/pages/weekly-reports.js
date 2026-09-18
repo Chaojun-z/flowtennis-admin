@@ -5,6 +5,11 @@ function weeklyReportMoney(value) {
   return `¥${fmt(Number(value) || 0)}`;
 }
 
+function weeklyReportHours(value) {
+  const number = Number(value) || 0;
+  return number.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+}
+
 function weeklyReportPeriodText(row = {}) {
   const period = row.period || {};
   return `${period.startDate || '-'} 至 ${period.endDate || '-'}`;
@@ -69,7 +74,7 @@ function weeklyReportRowHtml(row = {}) {
     <td>${weeklyReportMoney(weeklyReportSummaryValue(row, 'totalIncome'))}</td>
     <td>${weeklyReportMoney(weeklyReportSummaryValue(row, 'cashReceived'))}</td>
     <td>${fmt(weeklyReportSummaryValue(row, 'courtUtilizationRate'))}%</td>
-    <td>${fmt(weeklyReportSummaryValue(row, 'coachHours'))}</td>
+    <td>${weeklyReportHours(weeklyReportSummaryValue(row, 'coachHours'))}</td>
     <td class="tms-sticky-r tms-action-cell" style="width:264px;padding-right:20px;text-align:right">
       <span class="tms-action-link" onclick="openWeeklyReport('${esc(row.shareUrl || '')}')">查看</span>
       <span class="tms-action-link" onclick="copyWeeklyReportLink('${esc(row.shareUrl || '')}')">复制链接</span>

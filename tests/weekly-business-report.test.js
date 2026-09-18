@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const {
   resolveWeeklyBusinessReportPeriod,
@@ -954,8 +955,8 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   leadDetailsSnapshot.sections.revenue.course.receiptRows.map(row => [row.date, row.student, row.type, row.product, row.amount, row.payMethod]),
-  [['2026-09-08', '新增收款学员', '成人', '成人1v1私教课', 3000, '微信']],
-  'weekly report should expose current-week course receipt detail rows'
+  [['2026-09-07', '体验转化学员', '成人', '成人1v1私教课', 5000, '-'], ['2026-09-08', '新增收款学员', '成人', '成人1v1私教课', 3000, '微信']],
+  'weekly report should expose unique current-week private course purchase rows'
 );
 const leadDetailsHtml = renderWeeklyBusinessReportHtml(leadDetailsSnapshot);
 assert.match(leadDetailsHtml, /本周新增线索明细[\s\S]*本周线索A[\s\S]*本周线索B/, 'weekly report should render current-week lead details');
@@ -966,7 +967,7 @@ assert.match(leadDetailsHtml, /本周体验课转化明细[\s\S]*日期[\s\S]*�
 assert.match(leadDetailsHtml, /2026-09-05 周六[\s\S]*10:00-11:00[\s\S]*体验转化学员[\s\S]*成人[\s\S]*朝珺教练[\s\S]*是/, 'trial conversion detail should render paid conversion rows with weekday dates');
 assert.match(leadDetailsHtml, /2026-09-06 周日[\s\S]*15:30-16:30[\s\S]*未转化学员[\s\S]*青少年[\s\S]*刘润扬教练[\s\S]*否/, 'trial conversion detail should render non-conversion rows with weekday dates');
 assert.match(leadDetailsHtml, /data-edit-key="conversion\.trialConversionRows\.trial-schedule-paid\.remark"/, 'trial conversion remarks should use stable schedule id edit keys');
-assert.match(leadDetailsHtml, /2\.1 课程收款[\s\S]*新增收款明细表[\s\S]*2026-09-08 周二[\s\S]*新增收款学员[\s\S]*成人1v1私教课[\s\S]*3,000元/, 'course section should render current-week course receipt details');
+assert.match(leadDetailsHtml, /2\.1 课程收款[\s\S]*购买名单[\s\S]*2026-09-08 周二[\s\S]*新增收款学员[\s\S]*成人1v1私教课[\s\S]*3,000元/, 'course section should render the unique private course purchase list');
 assert.match(leadDetailsHtml, /data-edit-key="course\.receiptRows\.course-receipt-detail\.remark"/, 'course receipt remarks should use stable receipt id edit keys');
 const editedDetailHtml = renderWeeklyBusinessReportHtml({
   ...leadDetailsSnapshot,
@@ -996,6 +997,49 @@ const lifetimeCutoffSnapshot = buildWeeklyBusinessReportSnapshot({
   totalOperationsPayload: { operations: { overview: { cards: { totalIncome: { value: 989113.24 } } } } }
 });
 assert.strictEqual(lifetimeCutoffSnapshot.lifetimeSummary.totalIncome.value, 1550, 'weekly report lifetime income should use platform receipts through report end date instead of stale cards or campus-only filters');
+
+const lifetimeNetSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {},
+    weeklyReportRaw: {
+      financeNormalizedRows: [
+        { id: 'net-receipt', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0 },
+        { id: 'net-refund', businessDate: '2026-06-02', businessType: '课程', action: '退款', cashDelta: -200, recognizedRevenueDelta: 0 },
+        { id: 'net-after-period', businessDate: '2026-09-04', businessType: '课程', action: '收款', cashDelta: 9999, recognizedRevenueDelta: 0 }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: {} },
+  totalOperationsPayload: { operations: { overview: { cards: { totalIncome: { value: 989113.24 } } } } }
+});
+assert.strictEqual(lifetimeNetSnapshot.lifetimeSummary.totalIncome.value, 800, 'weekly report lifetime income should use net cash after refunds and exclude receipts after the report end date');
+
+const privatePurchaseListSnapshot = buildWeeklyBusinessReportSnapshot({
+  period,
+  operationsPayload: {
+    operations: {},
+    weeklyReportRaw: {
+      purchases: [
+        { id: 'private-purchase-1', studentId: 'student-1', studentName: '重复购买学员', courseType: '私教课', packageName: '成人1v1私教课', purchaseDate: '2026-08-28', amountPaid: 1000, campus: 'shunyi_mapo' },
+        { id: 'private-purchase-2', studentId: 'student-1', studentName: '重复购买学员', courseType: '私教课', packageName: '成人1v1私教课', purchaseDate: '2026-08-29', amountPaid: 1200, campus: 'shunyi_mapo' },
+        { id: 'private-purchase-3', studentId: 'student-2', studentName: '私教购买学员2', courseType: '私教课', packageName: '成人1v1私教课', purchaseDate: '2026-08-30', amountPaid: 2000, campus: 'shunyi_mapo' },
+        { id: 'private-purchase-4', studentId: 'student-3', studentName: '私教购买学员3', courseType: '私教课', packageName: '成人1v1私教课', purchaseDate: '2026-08-31', amountPaid: 3000, campus: 'shunyi_mapo' },
+        { id: 'small-class-purchase', studentId: 'student-4', studentName: '小班学员', courseType: '小班课', packageName: '小班课', purchaseDate: '2026-08-31', amountPaid: 4000, campus: 'shunyi_mapo' }
+      ],
+      financeNormalizedRows: [
+        { id: 'private-receipt-1', businessDate: '2026-08-28', businessType: '课程', action: '收款', cashDelta: 1000, sourceDocument: '购买记录 private-purchase-1', packageName: '成人1v1私教课', campusName: '顺义马坡' },
+        { id: 'private-receipt-2', businessDate: '2026-08-29', businessType: '课程', action: '收款', cashDelta: 1200, sourceDocument: '购买记录 private-purchase-2', packageName: '成人1v1私教课', campusName: '顺义马坡' },
+        { id: 'private-receipt-3', businessDate: '2026-08-30', businessType: '课程', action: '收款', cashDelta: 2000, sourceDocument: '购买记录 private-purchase-3', packageName: '成人1v1私教课', campusName: '顺义马坡' },
+        { id: 'private-receipt-4', businessDate: '2026-08-31', businessType: '课程', action: '收款', cashDelta: 3000, sourceDocument: '购买记录 private-purchase-4', packageName: '成人1v1私教课', campusName: '顺义马坡' },
+        { id: 'small-class-receipt', businessDate: '2026-08-31', businessType: '课程', action: '收款', cashDelta: 4000, sourceDocument: '购买记录 small-class-purchase', packageName: '小班课', campusName: '顺义马坡' }
+      ]
+    }
+  },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: {} }
+});
+assert.strictEqual(privatePurchaseListSnapshot.sections.revenue.course.paidPeople, 3, 'private course purchase people should deduplicate repeated purchases by student');
+assert.deepStrictEqual(privatePurchaseListSnapshot.sections.revenue.course.receiptRows.map(row => row.student), ['重复购买学员', '私教购买学员2', '私教购买学员3'], 'private course purchase list should use the same unique student set as the people metric');
 
 const privateActivePackageSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
@@ -1269,7 +1313,7 @@ async function callPublicEditRoute() {
   const routes = createWeeklyBusinessReportRoutes({
     init: async () => {},
     sendJson: (_res, value) => { json = value; return value; },
-    scan: async () => [{ ...snapshot, shareToken: 'public-token', status: 'success' }],
+    scan: async () => [{ ...snapshot, publicEdits: { remark: '原备注不可丢失' }, shareToken: 'public-token', status: 'success' }],
     put: async (_table, _id, row) => { saved = row; },
     table: 'ft_weekly_business_reports'
   });
@@ -1442,7 +1486,7 @@ async function callExistingReportManualRegeneration() {
     generationMode: 'manual',
     baseUrl: 'https://www.flowtennis.cn',
     mkTable: async () => {},
-    get: async () => ({ ...snapshot, id: 'weekly:顺义马坡:2026-08-27:2026-09-03', shareToken: 'existing-token', status: 'success' }),
+    get: async () => ({ ...snapshot, publicEdits: { remark: '重新生成也保留' }, id: 'weekly:顺义马坡:2026-08-27:2026-09-03', shareToken: 'existing-token', status: 'success' }),
     put: async (_table, _id, row) => { savedRows.push(row); },
     loadOperationsPayload: async ({ scope }) => {
       liveLoads += 1;
@@ -1901,7 +1945,10 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.deepStrictEqual(editResult.handled, { success: true }, 'public weekly report edit route should be handled by share token');
   assert.strictEqual(editResult.json.success, true, 'public weekly report edit route should save editable values');
   assert.strictEqual(editResult.saved.publicEdits['summary.totalIncome'], '44,072 元', 'public weekly report edits should persist saved values');
+  assert.strictEqual(editResult.saved.publicEdits.remark, '原备注不可丢失', 'public weekly report edits should merge with existing remarks instead of replacing them');
   assert.doesNotMatch(editResult.saved.publicEdits.bad, /[<>]/, 'public weekly report edits should strip HTML tags');
+  assert.match(apiSource, /weeklyBusinessReportRoutes\.handlePublic\(\{path,method,body,res\}\)/, 'public weekly report edit route should receive the parsed request body');
+  assert.strictEqual(vm.runInNewContext(`${weeklyPageSource}\nweeklyReportHours(67.5)`), '67.5', 'weekly report list should preserve half-hour values');
   assert.strictEqual(mapoListResult.statusCode, 200, 'Mapo campus users should access the weekly report list route');
   assert.strictEqual(mapoListResult.json.reports.length, 1, 'Mapo campus users should receive weekly report list rows');
   assert.strictEqual(otherCampusListResult.statusCode, 403, 'non-Mapo campus users should not access the weekly report list route');
@@ -1926,6 +1973,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), ['2026-07-02', '2026-07-10', '2026-07-18', '2026-07-26', '2026-08-03', '2026-08-11', period.startDate, period.previousStartDate, 'lifetime'].sort(), 'manual regeneration should reuse the weekly report snapshot scope for all report contexts and trend weeks');
   assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
   assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
+  assert.strictEqual(existingGenerationResult.savedRows[0].publicEdits.remark, '重新生成也保留', 'manual regeneration should preserve saved public remarks');
   assert.strictEqual(existingGenerationResult.savedRows[0].sections.trends.length, 8, 'manual regeneration should save eight weekly trend points when platform snapshots exist');
   existingGenerationResult.savedRows[0].sections.trends.forEach(row => {
     ['businessRevenue', 'cashReceived', 'courtUtilizationRate', 'coachHours'].forEach(key => {
