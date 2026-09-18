@@ -4,7 +4,7 @@ const { normalizePermissionProfile } = require('../permissions.js');
 const OPERATIONS_LEAD_FIELDS = [
   'id', 'displayName', 'name', 'source', 'campus', 'campusName', 'owner', 'coach', 'coachName',
   'primaryCoach', 'formalCoach', 'level', 'gender', 'sex', 'studentType', 'type', 'ageGroup', 'age', 'birthDate',
-  'consultType', 'leadStage', 'systemStatus', 'stage', 'rawStatus',
+  'demandProduct', 'consultType', 'leadStage', 'systemStatus', 'stage', 'rawStatus',
   'status', 'statusAfter', 'trialStatus', 'studentId', 'formalStudentId',
   'courseStudentId', 'courtId', 'bookingCourtId', 'membershipAccountId', 'memberId',
   'trialAtRaw', 'trialLessonAt', 'trialAt', 'leadDate', 'createdAt'

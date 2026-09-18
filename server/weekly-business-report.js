@@ -57,6 +57,15 @@ function dayOfWeekUtc(day) {
   return new Date(ms).getUTCDay();
 }
 
+function formatDateWithWeekday(day = '', { compact = false } = {}) {
+  const value = String(day || '').slice(0, 10);
+  if (!value) return '-';
+  const names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  const weekday = names[dayOfWeekUtc(value)] || '';
+  const dateText = compact ? value.slice(5).replace('-', '.') : value;
+  return weekday ? `${dateText} ${weekday}` : dateText;
+}
+
 function weeklyReportStartDateForEndDate(endDate = '') {
   const offset = String(endDate || '') >= WEEKLY_REPORT_NON_OVERLAP_START_END_DATE ? -6 : -7;
   return addUtcDays(endDate, offset);
@@ -516,13 +525,97 @@ function buildNewLeadRowsFromRaw(raw = {}, period = {}) {
       date: leadCreatedDate(row) || '-',
       source: rowLabel(row, ['source', 'channel', 'origin'], '-'),
       owner: rowLabel(row, ['owner', 'ownerName', 'assignee', 'followUserName'], '-'),
-      stage: rowLabel(row, ['leadStage', 'stage', 'status', 'followStatus'], '-')
+      stage: rowLabel(row, ['leadStage', 'stage', 'status', 'followStatus'], '-'),
+      demandProduct: rowLabel(row, ['demandProduct', 'consultType', 'productName', 'packageName'], '-')
     }))
     .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN'));
 }
 
 function scheduleStudentKey(row = {}) {
   return textValue(row, ['studentId', 'studentName', 'leadName', 'customerName', 'name']);
+}
+
+function studentTypeForSchedule(row = {}, maps = { byId: new Map(), byName: new Map() }) {
+  const raw = `${row.studentType || ''} ${row.type || ''} ${row.customerType || ''} ${row.experienceType || ''} ${row.courseType || ''} ${row.productName || ''} ${row.packageName || ''}`;
+  if (/青少年|少儿|儿童|孩子|小朋友/.test(raw)) return '青少年';
+  if (/成人/.test(raw)) return '成人';
+  return customerTypeForRow(row, maps);
+}
+
+function scheduleDate(row = {}) {
+  return String(row.startTime || row.date || row.createdAt || '').slice(0, 10);
+}
+
+function scheduleTimeText(row = {}) {
+  const start = String(row.startTime || '').slice(11, 16);
+  const end = String(row.endTime || '').slice(11, 16);
+  if (start && end) return `${start}-${end}`;
+  return start || String(row.timeText || row.time || '').trim() || '-';
+}
+
+function buildTrialConversionRowsFromRaw(raw = {}, period = {}) {
+  const maps = studentTypeMaps(raw);
+  const formalPurchases = normalizeRows(raw.purchases).filter(row => campusMatches(row) && isPrivateCoursePurchase(row));
+  const purchaseByStudent = new Map();
+  formalPurchases.forEach(row => {
+    const key = purchaseStudentKey(row);
+    if (!key) return;
+    const list = purchaseByStudent.get(key) || [];
+    list.push(row);
+    purchaseByStudent.set(key, list);
+  });
+  return dedupeScheduleRows(courseScheduleRows(raw, period).filter(row => /体验/.test(`${row.courseType || ''} ${row.experienceType || ''} ${row.productName || ''} ${row.packageName || ''}`)))
+    .map(row => {
+      const key = scheduleStudentKey(row);
+      const date = scheduleDate(row);
+      const formalRows = purchaseByStudent.get(key) || [];
+      const converted = formalRows.some(item => {
+        const purchaseDay = String(item.purchaseDate || item.paidAt || item.paymentTime || item.createdAt || '').slice(0, 10);
+        return !purchaseDay || !date || purchaseDay >= date;
+      });
+      return {
+        id: String(row.id || scheduleDedupeKey(row) || `${date}-${key}`).trim(),
+        date,
+        time: scheduleTimeText(row),
+        student: scheduleStudentDisplayName(row, buildStudentNameMap(raw)),
+        type: studentTypeForSchedule(row, maps),
+        coach: normalizeCoachDisplayName(row.coach || row.coachName) || '-',
+        converted: converted ? '是' : '否',
+        remark: ''
+      };
+    })
+    .sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
+}
+
+function buildCourseReceiptDetailRowsFromRaw(raw = {}, period = {}) {
+  const maps = studentTypeMaps(raw);
+  const studentNameMap = buildStudentNameMap(raw);
+  const purchaseMap = new Map(normalizeRows(raw.purchases).map(row => [String(row.id || '').trim(), row]).filter(([id]) => id));
+  return weeklyFinanceRows(raw, period)
+    .filter(row => isCourseFinanceRow(row) && isFinanceReceipt(row))
+    .map(row => {
+      const purchase = purchaseMap.get(financeRowPurchaseId(row)) || {};
+      const studentId = String(row.studentId || purchase.studentId || '').trim();
+      const studentName = firstDisplayName([
+        row.studentName,
+        row.customerName,
+        row.name,
+        purchase.studentName,
+        purchase.customerName,
+        studentId ? studentNameMap.get(studentId) : ''
+      ]) || '-';
+      return {
+        id: String(row.id || row.ledgerId || row.sourceId || row.sourceDocument || `${row.businessDate || row.date}-${studentId || studentName}`).trim(),
+        date: String(row.businessDate || row.date || row.purchaseDate || row.createdAt || '').slice(0, 10),
+        student: studentName,
+        type: customerTypeForRow({ ...purchase, ...row, studentName }, maps),
+        product: rowLabel({ ...purchase, ...row }, ['packageName', 'productName', 'sourceProject', 'businessTypeLevel2', 'courseType'], '-'),
+        amount: fieldNumber(row, ['cashDelta']),
+        payMethod: rowLabel(row, ['paymentChannel', 'payMethod', 'paymentMethod'], '-'),
+        remark: ''
+      };
+    })
+    .sort((a, b) => `${a.date || ''} ${a.student || ''}`.localeCompare(`${b.date || ''} ${b.student || ''}`, 'zh-CN'));
 }
 
 function buildCourseRevenueFromRaw(raw = {}, period = {}, previousRaw = {}) {
@@ -1537,25 +1630,23 @@ function normalizeWeekdayRows(court = {}) {
 
 function normalizeDailyCourtRows(court = {}, period = {}) {
   const byDate = new Map(normalizeRows(court.trends).map(row => [String(row.date || '').slice(0, 10), fieldNumber(row, ['utilizationRate'])]));
-  if (!period.startDate || !period.endDate) return Array.from(byDate.entries()).map(([date, value]) => ({ date, label: date.slice(5), value }));
+  if (!period.startDate || !period.endDate) return Array.from(byDate.entries()).map(([date, value]) => ({ date, label: formatDateWithWeekday(date, { compact: true }), value }));
   const rows = [];
-  const names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   for (let day = period.startDate; day && day <= period.endDate; day = addUtcDays(day, 1)) {
-    rows.push({ date: day, label: `${day.slice(5)} ${names[dayOfWeekUtc(day)]}`, value: numberValue(byDate.get(day) || 0) });
+    rows.push({ date: day, label: formatDateWithWeekday(day, { compact: true }), value: numberValue(byDate.get(day) || 0) });
   }
   return rows;
 }
 
 function buildDailyCourtRows(raw = {}, period = {}, usedHoursByDate = new Map()) {
   if (!period.startDate || !period.endDate) return [];
-  const names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   const rows = [];
   for (let day = period.startDate; day && day <= period.endDate; day = addUtcDays(day, 1)) {
     const usedHours = numberValue(usedHoursByDate.get(day) || 0);
     const availableHours = 4 * 14;
     rows.push({
       date: day,
-      label: `${day.slice(5)} ${names[dayOfWeekUtc(day)]}`,
+      label: formatDateWithWeekday(day, { compact: true }),
       value: cappedPercent(usedHours, availableHours),
       usedHours,
       availableHours
@@ -1617,6 +1708,7 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
   const leadSourceDeals = leadSourceRows.reduce((sum, row) => sum + numberValue(row.deals), 0);
   const newLeadRows = buildNewLeadRowsFromRaw(raw, period);
   const previousNewLeadRows = buildNewLeadRowsFromRaw(previousRaw, { startDate: period.previousStartDate, endDate: period.previousEndDate });
+  const trialConversionRows = buildTrialConversionRowsFromRaw(raw, period);
   const trends = context.skipTrends ? [] : buildWeeklyTrendRows({
     period,
     operationsPayload: { operations, weeklyReportRaw: raw },
@@ -1665,6 +1757,7 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
         expiringPeople: rawCourseRevenue?.expiringPeople ?? optionalCardNumber(overview, ['expiringPeople', 'courseExpiringPeople']),
         expiringAmount: optionalCardNumber(overview, ['expiringAmount', 'courseExpiringAmount']),
         typeRows: rawCourseRevenue?.typeRows ?? [],
+        receiptRows: buildCourseReceiptDetailRowsFromRaw(raw, period),
         compare: {
           people: rawCourseRevenue?.compare?.people ?? null,
           paidPeople: rawCourseRevenue?.compare?.paidPeople ?? null,
@@ -1713,7 +1806,8 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
         trialDeals: compareValue(cardNumber(conversion, ['trialPathDealCustomers']), cardNumber(prevConversion, ['trialPathDealCustomers']))
       },
       sourceRows: leadSourceRows,
-      newLeadRows
+      newLeadRows,
+      trialConversionRows
     }
   };
 }
@@ -1866,7 +1960,7 @@ function heatmapOpacityClass(value) {
 function courtUsageMatrix(rows = [], edits = {}) {
   const clean = normalizeRows(rows).filter(row => row.label || row.date);
   if (!clean.length) return '<p class="empty">暂无可绘制数据</p>';
-  return `<div data-section="court-utilization-heatmap" class="bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all flex flex-col justify-between"><div><div class="flex justify-between items-center mb-4"><span class="text-xs font-mono text-cyber-muted uppercase tracking-wider">${editableText(edits, 'court.heatmap.eyebrow', '// COURT UTILIZATION HEATMAP')}</span><span class="text-xs font-bold text-white">${editableText(edits, 'court.heatmap.title', '每天利用率')}</span></div><div class="overflow-x-auto"><table class="w-full text-center border-collapse text-[10px] font-mono min-w-[520px]"><thead><tr class="text-cyber-muted border-b border-cyber-border/40"><th class="py-2 text-left font-sans">${editableText(edits, 'court.heatmap.dateHeader', '日期')}</th>${clean.map((row, index) => `<th class="py-2">${editableText(edits, `court.heatmap.header.${index}`, String(row.date || row.label || '').slice(5).replace('-', '.'))}</th>`).join('')}</tr></thead><tbody class="divide-y divide-cyber-border/20 text-white"><tr><td class="py-2 text-left font-sans text-cyber-muted">${editableText(edits, 'court.heatmap.rowLabel', '利用率')}</td>${clean.map((row, index) => {
+  return `<div data-section="court-utilization-heatmap" class="bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all flex flex-col justify-between"><div><div class="flex justify-between items-center mb-4"><span class="text-xs font-mono text-cyber-muted uppercase tracking-wider">${editableText(edits, 'court.heatmap.eyebrow', '// COURT UTILIZATION HEATMAP')}</span><span class="text-xs font-bold text-white">${editableText(edits, 'court.heatmap.title', '每天利用率')}</span></div><div class="overflow-x-auto"><table class="w-full text-center border-collapse text-[10px] font-mono min-w-[520px]"><thead><tr class="text-cyber-muted border-b border-cyber-border/40"><th class="py-2 text-left font-sans">${editableText(edits, 'court.heatmap.dateHeader', '日期')}</th>${clean.map((row, index) => `<th class="py-2">${editableText(edits, `court.heatmap.header.${index}`, row.label || formatDateWithWeekday(row.date, { compact: true }))}</th>`).join('')}</tr></thead><tbody class="divide-y divide-cyber-border/20 text-white"><tr><td class="py-2 text-left font-sans text-cyber-muted">${editableText(edits, 'court.heatmap.rowLabel', '利用率')}</td>${clean.map((row, index) => {
     const value = fieldNumber(row, ['value', 'utilizationRate']);
     const text = `${formatMetricValue(value, '%')}%`;
     const tooltip = `${row.label || row.date || ''} 使用 ${formatMetricValue(row.usedHours || 0, '小时')}小时 / 可用 ${formatMetricValue(row.availableHours || 0, '小时')}小时 / 利用率 ${text}`;
@@ -2010,12 +2104,35 @@ function renderLeadDetailRows(rows = [], edits = {}) {
   return `<div class="bg-cyber-card rounded-xl border border-cyber-border p-5">
     <div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${editableText(edits, 'conversion.newLeads.title', '本周新增线索明细')}</h4><span class="text-xs font-mono text-cyber-muted">${editableText(edits, 'conversion.newLeads.count', `${normalizeRows(rows).length} 条`)}</span></div>
     ${renderRows(normalizeRows(rows), [
-      { key: 'date', label: '日期' },
+      { key: 'date', label: '日期', render: row => formatDateWithWeekday(row.date) },
       { key: 'name', label: '线索' },
+      { key: 'demandProduct', label: '需求产品' },
       { key: 'source', label: '渠道' },
       { key: 'owner', label: '负责人' },
       { key: 'stage', label: '阶段', html: true, render: row => leadStageTagHtml(row.stage) }
     ], { edits, keyPrefix: 'conversion.newLeadRows' })}
+  </div>`;
+}
+
+function renderTrialConversionRows(rows = [], edits = {}) {
+  const clean = normalizeRows(rows);
+  return `<div class="bg-cyber-card rounded-xl border border-cyber-border p-5">
+    <div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${editableText(edits, 'conversion.trialConversion.title', '本周体验课转化明细')}</h4><span class="text-xs font-mono text-cyber-muted">${editableText(edits, 'conversion.trialConversion.count', `${clean.length} 条`)}</span></div>
+    ${clean.length ? `<div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs font-mono min-w-[820px] bg-cyber-card rounded-xl border border-cyber-border overflow-hidden mt-3"><thead><tr class="text-cyber-muted border-b border-cyber-border/40">${['日期', '时间', '学员', '类型', '教练', '是否付费转化', '备注'].map((label, index) => `<th class="py-2.5 px-3 font-sans">${editableText(edits, `conversion.trialConversionRows.header.${index}`, label)}</th>`).join('')}</tr></thead><tbody class="divide-y divide-cyber-border/20 text-white">${clean.map((row, index) => {
+      const id = String(row.id || index).replace(/[.]/g, '_');
+      return `<tr><td class="py-3 px-3">${editableText(edits, `conversion.trialConversionRows.${id}.date`, formatDateWithWeekday(row.date))}</td><td class="py-3 px-3">${editableText(edits, `conversion.trialConversionRows.${id}.time`, row.time || '-')}</td><td class="py-3 px-3">${editableText(edits, `conversion.trialConversionRows.${id}.student`, row.student || '-')}</td><td class="py-3 px-3">${editableText(edits, `conversion.trialConversionRows.${id}.type`, row.type || '-')}</td><td class="py-3 px-3">${editableText(edits, `conversion.trialConversionRows.${id}.coach`, row.coach || '-')}</td><td class="py-3 px-3 highlight-col">${editableText(edits, `conversion.trialConversionRows.${id}.converted`, row.converted || '否')}</td><td class="py-3 px-3">${editableText(edits, `conversion.trialConversionRows.${id}.remark`, row.remark || '')}</td></tr>`;
+    }).join('')}</tbody></table></div>` : '<p class="empty">暂无数据</p>'}
+  </div>`;
+}
+
+function renderCourseReceiptRows(rows = [], edits = {}) {
+  const clean = normalizeRows(rows);
+  return `<div class="bg-cyber-card rounded-xl border border-cyber-border p-5">
+    <div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${editableText(edits, 'course.receipts.title', '新增收款明细表')}</h4><span class="text-xs font-mono text-cyber-muted">${editableText(edits, 'course.receipts.count', `${clean.length} 条`)}</span></div>
+    ${clean.length ? `<div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs font-mono min-w-[820px] bg-cyber-card rounded-xl border border-cyber-border overflow-hidden mt-3"><thead><tr class="text-cyber-muted border-b border-cyber-border/40">${['日期', '学员', '类型', '产品', '金额', '支付方式', '备注'].map((label, index) => `<th class="py-2.5 px-3 font-sans">${editableText(edits, `course.receiptRows.header.${index}`, label)}</th>`).join('')}</tr></thead><tbody class="divide-y divide-cyber-border/20 text-white">${clean.map((row, index) => {
+      const id = String(row.id || index).replace(/[.]/g, '_');
+      return `<tr><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.date`, formatDateWithWeekday(row.date))}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.student`, row.student || '-')}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.type`, row.type || '-')}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.product`, row.product || '-')}</td><td class="py-3 px-3 highlight-col">${editableText(edits, `course.receiptRows.${id}.amount`, `${formatMetricValue(row.amount, '元')}元`)}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.payMethod`, row.payMethod || '-')}</td><td class="py-3 px-3">${editableText(edits, `course.receiptRows.${id}.remark`, row.remark || '')}</td></tr>`;
+    }).join('')}</tbody></table></div>` : '<p class="empty">暂无数据</p>'}
   </div>`;
 }
 
@@ -2041,8 +2158,8 @@ function courseTypeTagHtml(value = '') {
 function renderCoachLessonRows(rows = [], edits = {}, coachIndex = 0) {
   const clean = normalizeRows(rows);
   if (!clean.length) return '';
-  return `<details class="mt-2"><summary class="cursor-pointer text-cyber-volt text-xs">展开上课明细</summary>${renderRows(clean, [
-    { key: 'date', label: '日期' },
+  return `<details class="mt-2" data-coach-lesson-details><summary class="cursor-pointer text-cyber-volt text-xs">展开上课明细</summary>${renderRows(clean, [
+    { key: 'date', label: '日期', render: row => formatDateWithWeekday(row.date) },
     { key: 'time', label: '时间' },
     { key: 'student', label: '学员', render: row => isTechnicalIdentifier(row.student) ? '未记录学员' : displayMetricValue(row.student) },
     { key: 'courseType', label: '课程类型', html: true, render: row => courseTypeTagHtml(row.courseType) },
@@ -2196,6 +2313,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${templateMetric('本周课程消耗收入', revenue.course?.consumedAmount, ' 元', revenue.course?.compare?.consumedAmount, edits, 'course.consumedAmount')}
   </div>
   ${renderCourseTypeRows(revenue.course?.typeRows || [], edits)}
+  ${renderCourseReceiptRows(revenue.course?.receiptRows || [], edits)}
 
   <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, 'section.guestBooking.title', '2.2 散客订场收款')}</h3>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2272,6 +2390,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     { key: 'compare', label: '环比', render: row => trendText(row.compare?.leads) }
   ], { edits, keyPrefix: 'conversion.source' })}</div></div>
   ${renderLeadDetailRows(conversion.newLeadRows || [], edits)}
+  ${renderTrialConversionRows(conversion.trialConversionRows || [], edits)}
   ${editableSectionTitle('remark', '备注', '// REMARK')}
   <p class="remark bg-cyber-card rounded-xl border border-cyber-border p-5 text-cyber-muted">${editableValue(edits, 'remark', remark || '暂无备注')}</p>
 </main>
@@ -2443,6 +2562,16 @@ function renderAllInteractiveCharts(){
 }
 renderAllInteractiveCharts();
 window.addEventListener('resize',renderAllInteractiveCharts);
+var coachLessonDetailsOpen=false;
+function setCoachLessonDetailsOpen(open){
+  coachLessonDetailsOpen=!!open;
+  document.querySelectorAll('[data-coach-lesson-details]').forEach(function(details){details.open=coachLessonDetailsOpen;});
+}
+document.querySelectorAll('[data-coach-lesson-details]').forEach(function(details){
+  details.addEventListener('toggle',function(){
+    if(details.open!==coachLessonDetailsOpen)setCoachLessonDetailsOpen(details.open);
+  });
+});
 document.querySelectorAll('[data-coach-detail-tabs]').forEach(function(group){
   var tabs=Array.prototype.slice.call(group.querySelectorAll('[data-coach-tab]'));
   var panels=Array.prototype.slice.call(group.querySelectorAll('[data-coach-panel]'));
@@ -2460,6 +2589,7 @@ document.querySelectorAll('[data-coach-detail-tabs]').forEach(function(group){
         item.classList.toggle('text-cyber-muted',!active);
       });
       panels.forEach(function(panel){panel.classList.toggle('hidden',panel.getAttribute('data-coach-panel')!==target);});
+      setCoachLessonDetailsOpen(coachLessonDetailsOpen);
     });
   });
 });

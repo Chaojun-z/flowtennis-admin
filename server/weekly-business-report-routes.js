@@ -10,6 +10,7 @@ const {
   buildWeeklyBusinessReportFeishuText,
   sendWeeklyBusinessReportFeishuText
 } = require('./weekly-business-report.js');
+const { userCanAccessWeeklyReports } = require('./permissions.js');
 
 function createWeeklyBusinessReportRoutes({
   init,
@@ -124,12 +125,12 @@ function createWeeklyBusinessReportRoutes({
 
   async function handleAdmin({ path, method, body, req, res, user } = {}) {
     if (path === '/weekly-business-reports' && method === 'GET') {
-      if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
+      if (!userCanAccessWeeklyReports(user)) return sendJson(res, { error: '无权限' }, 403);
       await init();
       return sendJson(res, { reports: await listWeeklyBusinessReports({ scan, table }) });
     }
     if (path === '/admin/weekly-business-reports/regenerate' && method === 'POST') {
-      if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
+      if (!userCanAccessWeeklyReports(user)) return sendJson(res, { error: '无权限' }, 403);
       await init();
       try {
         return sendJson(res, await runReport({ req, mode: 'manual', period: periodFromRequest(body) }));
@@ -138,7 +139,7 @@ function createWeeklyBusinessReportRoutes({
       }
     }
     if (path.startsWith('/admin/weekly-business-reports/') && path.endsWith('/remark') && method === 'POST') {
-      if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
+      if (!userCanAccessWeeklyReports(user)) return sendJson(res, { error: '无权限' }, 403);
       await init();
       const id = decodeURIComponent(path.slice('/admin/weekly-business-reports/'.length, -'/remark'.length));
       return sendJson(res, await updateWeeklyBusinessReportRemark({ get, put, id, remark: body?.remark || '', user, table }));

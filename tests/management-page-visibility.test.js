@@ -18,9 +18,21 @@ assert.match(
 );
 
 assert.match(
+  source,
+  /function clientUserCanAccessWeeklyReports\(/,
+  'frontend should expose a Mapo weekly report permission helper'
+);
+
+assert.match(
   fnBody('clientPageRequiresFullManagementAccess'),
-  /finance[\s\S]*operations[\s\S]*weekly-reports[\s\S]*coaches[\s\S]*admin-users[\s\S]*campusmgr/,
+  /finance[\s\S]*operations[\s\S]*coaches[\s\S]*admin-users[\s\S]*campusmgr/,
   'finance, operations and base settings pages should require full management access'
+);
+
+assert.doesNotMatch(
+  source,
+  /function clientPageRequiresFullManagementAccess\(page\)\{\s*return \[[^\]]*weekly-reports/,
+  'weekly reports should use the dedicated Mapo campus permission helper instead of full-management access'
 );
 
 assert.match(
@@ -39,6 +51,12 @@ assert.match(
   fnBody('clientUserCanOpenManagementPage'),
   /!clientPageIsHiddenManagementView\(page\)/,
   'direct page switching should reject globally hidden management pages before role checks'
+);
+
+assert.match(
+  fnBody('clientUserCanOpenManagementPage'),
+  /page==='weekly-reports'[\s\S]*clientUserCanAccessWeeklyReports\(user\)/,
+  'direct page switching should allow weekly reports through the dedicated Mapo campus permission helper'
 );
 
 assert.match(

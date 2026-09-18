@@ -487,7 +487,12 @@ function syncAdminMobileNavState(){
   if(items)items.innerHTML=renderAdminMobileDrawerSections();
 }
 function renderSidebarShell(){
-  const fullManagementHtml=clientUserHasFullManagementAccess(currentUser)?`
+  const hasFullManagementAccess=clientUserHasFullManagementAccess(currentUser);
+  const canAccessWeeklyReports=typeof clientUserCanAccessWeeklyReports==='function'&&clientUserCanAccessWeeklyReports(currentUser);
+  const weeklyReportHtml=!hasFullManagementAccess&&canAccessWeeklyReports?`
+  <div class="sb-sec">经营分析</div>
+  <div class="sb-item" data-nav-page="weekly-reports" onclick="goPage('weekly-reports',this)">${sidebarIcon('finance-ledger')}马坡周报</div>`:'';
+  const fullManagementHtml=hasFullManagementAccess?`
   <div class="sb-sec">财务中心</div>
   <div class="sb-item" data-nav-page="finance" data-finance-panel="ledger" onclick="setFinancePanel('ledger');goPage('finance',this)">${sidebarIcon('finance-ledger')}财务总览</div>
   <div class="sb-item" data-nav-page="finance" data-finance-panel="revenue" onclick="setFinancePanel('revenue');goPage('finance',this)">${sidebarIcon('finance-revenue')}收款流水</div>
@@ -527,6 +532,7 @@ function renderSidebarShell(){
   <div class="sb-sec">产品与定价</div>
   <div class="sb-item" onclick="goPage('packages',this)">${sidebarIcon('packages')}课包产品</div>
   <div class="sb-item" onclick="goPage('membership-plans',this)">${sidebarIcon('membership-plans')}会员方案</div>
+  ${weeklyReportHtml}
   ${fullManagementHtml}
   </div>
   </div>

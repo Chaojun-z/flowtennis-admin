@@ -893,18 +893,66 @@ const leadDetailsSnapshot = buildWeeklyBusinessReportSnapshot({
     },
     weeklyReportRaw: {
       leads: [
-        { id: 'lead-in-week-a', displayName: '本周线索A', leadDate: '2026-09-04', source: '大众点评', owner: 'Mira', leadStage: '跟进中', campus: 'shunyi_mapo' },
-        { id: 'lead-in-week-b', displayName: '本周线索B', createdAt: '2026-09-08 12:00:00', source: '抖音', owner: 'Mira', leadStage: '已约体验', campus: 'shunyi_mapo' },
+        { id: 'lead-in-week-a', displayName: '本周线索A', leadDate: '2026-09-04', source: '大众点评', owner: 'Mira', leadStage: '跟进中', demandProduct: '成人私教课', campus: 'shunyi_mapo' },
+        { id: 'lead-in-week-b', displayName: '本周线索B', createdAt: '2026-09-08 12:00:00', source: '抖音', owner: 'Mira', leadStage: '已约体验', consultType: '青少年体验课', campus: 'shunyi_mapo' },
         { id: 'lead-after-week', displayName: '周后线索', leadDate: '2026-09-13', source: '大众点评', owner: 'Mira', leadStage: '跟进中', campus: 'shunyi_mapo' }
+      ],
+      students: [
+        { id: 'trial-student-paid', name: '体验转化学员', type: '成人', campus: 'shunyi_mapo' },
+        { id: 'trial-student-unpaid', name: '未转化学员', studentType: '青少年', campus: 'shunyi_mapo' },
+        { id: 'receipt-student', name: '新增收款学员', type: '成人', campus: 'shunyi_mapo' }
+      ],
+      schedule: [
+        { id: 'trial-schedule-paid', studentId: 'trial-student-paid', studentName: '体验转化学员', coach: '朝珺教练', courseType: '体验课', experienceType: '成人体验课', startTime: '2026-09-05 10:00:00', endTime: '2026-09-05 11:00:00', status: '已下课', campus: 'shunyi_mapo' },
+        { id: 'trial-schedule-unpaid', studentId: 'trial-student-unpaid', studentName: '未转化学员', coach: '刘润扬教练', courseType: '体验课', experienceType: '青少年体验课', startTime: '2026-09-06 15:30:00', endTime: '2026-09-06 16:30:00', status: '已下课', campus: 'shunyi_mapo' }
+      ],
+      purchases: [
+        { id: 'formal-after-trial', studentId: 'trial-student-paid', studentName: '体验转化学员', courseType: '私教课', packageName: '成人1v1私教课', purchaseDate: '2026-09-07', amountPaid: 5000, status: 'active', campus: 'shunyi_mapo' },
+        { id: 'receipt-purchase', studentId: 'receipt-student', studentName: '新增收款学员', courseType: '私教课', packageName: '成人1v1私教课', purchaseDate: '2026-09-08', amountPaid: 3000, status: 'active', campus: 'shunyi_mapo' }
+      ],
+      financeNormalizedRows: [
+        { id: 'course-receipt-detail', campusName: '顺义马坡', studentId: 'receipt-student', customerType: '成人', businessDate: '2026-09-08', businessType: '课程', action: '收款', cashDelta: 3000, sourceDocument: '购买记录 receipt-purchase', packageName: '成人1v1私教课', paymentChannel: '微信' }
       ]
     }
   },
   previousOperationsPayload: { operations: {}, weeklyReportRaw: {} }
 });
 assert.deepStrictEqual(leadDetailsSnapshot.sections.conversion.newLeadRows.map(row => row.name), ['本周线索A', '本周线索B'], 'weekly report should expose current-week lead detail rows only');
+assert.strictEqual(leadDetailsSnapshot.sections.conversion.newLeadRows[0].demandProduct, '成人私教课', 'weekly lead detail rows should expose demand product from raw lead rows');
+assert.strictEqual(leadDetailsSnapshot.sections.conversion.newLeadRows[1].demandProduct, '青少年体验课', 'weekly lead detail rows should fall back to consult type when demand product is missing');
+assert.deepStrictEqual(
+  leadDetailsSnapshot.sections.conversion.trialConversionRows.map(row => [row.date, row.time, row.student, row.type, row.coach, row.converted]),
+  [
+    ['2026-09-05', '10:00-11:00', '体验转化学员', '成人', '朝珺教练', '是'],
+    ['2026-09-06', '15:30-16:30', '未转化学员', '青少年', '刘润扬教练', '否']
+  ],
+  'weekly report should expose current-week trial lesson conversion detail rows'
+);
+assert.deepStrictEqual(
+  leadDetailsSnapshot.sections.revenue.course.receiptRows.map(row => [row.date, row.student, row.type, row.product, row.amount, row.payMethod]),
+  [['2026-09-08', '新增收款学员', '成人', '成人1v1私教课', 3000, '微信']],
+  'weekly report should expose current-week course receipt detail rows'
+);
 const leadDetailsHtml = renderWeeklyBusinessReportHtml(leadDetailsSnapshot);
 assert.match(leadDetailsHtml, /本周新增线索明细[\s\S]*本周线索A[\s\S]*本周线索B/, 'weekly report should render current-week lead details');
+assert.match(leadDetailsHtml, /本周新增线索明细[\s\S]*需求产品[\s\S]*成人私教课[\s\S]*青少年体验课/, 'weekly report should render demand product in current-week lead details');
+assert.match(leadDetailsHtml, /2026-09-04 周五[\s\S]*2026-09-08 周二/, 'lead detail dates should include weekdays');
 assert.match(leadDetailsHtml, /lead-stage-tag[\s\S]*跟进中[\s\S]*lead-stage-tag[\s\S]*已约体验/, 'weekly report should render lead stages as quick-scan text tags');
+assert.match(leadDetailsHtml, /本周体验课转化明细[\s\S]*日期[\s\S]*时间[\s\S]*学员[\s\S]*类型[\s\S]*教练[\s\S]*是否付费转化[\s\S]*备注/, 'weekly report should render trial lesson conversion details with the requested columns');
+assert.match(leadDetailsHtml, /2026-09-05 周六[\s\S]*10:00-11:00[\s\S]*体验转化学员[\s\S]*成人[\s\S]*朝珺教练[\s\S]*是/, 'trial conversion detail should render paid conversion rows with weekday dates');
+assert.match(leadDetailsHtml, /2026-09-06 周日[\s\S]*15:30-16:30[\s\S]*未转化学员[\s\S]*青少年[\s\S]*刘润扬教练[\s\S]*否/, 'trial conversion detail should render non-conversion rows with weekday dates');
+assert.match(leadDetailsHtml, /data-edit-key="conversion\.trialConversionRows\.trial-schedule-paid\.remark"/, 'trial conversion remarks should use stable schedule id edit keys');
+assert.match(leadDetailsHtml, /2\.1 课程收款[\s\S]*新增收款明细表[\s\S]*2026-09-08 周二[\s\S]*新增收款学员[\s\S]*成人1v1私教课[\s\S]*3,000元/, 'course section should render current-week course receipt details');
+assert.match(leadDetailsHtml, /data-edit-key="course\.receiptRows\.course-receipt-detail\.remark"/, 'course receipt remarks should use stable receipt id edit keys');
+const editedDetailHtml = renderWeeklyBusinessReportHtml({
+  ...leadDetailsSnapshot,
+  publicEdits: {
+    'conversion.trialConversionRows.trial-schedule-paid.remark': '人工备注保留',
+    'course.receiptRows.course-receipt-detail.remark': '收款备注保留',
+    remark: '底部备注保留'
+  }
+});
+assert.match(editedDetailHtml, /收款备注保留[\s\S]*人工备注保留[\s\S]*底部备注保留/, 'manual table remarks and bottom report remark should survive rerendering from saved public edits');
 
 const lifetimeCutoffSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
@@ -1013,6 +1061,7 @@ assert.match(html, /<nav class="hidden md:flex items-center space-x-1 bg-black\/
 assert.match(html, /data-section="top-kpi-cards" class="lg:col-span-6 grid grid-cols-3 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border"[\s\S]*总收入[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总场地利用率[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总私教课人数[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight/, 'hero lifetime metrics should use the widened template KPI card without wrapping values');
 assert.match(html, /flex flex-wrap gap-3 pt-2[\s\S]*核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*上周/, 'weekly summary metrics should use the requested four metrics with previous-week comparison');
 assert.match(html, /data-section="court-utilization-heatmap"[\s\S]*\/\/ COURT UTILIZATION HEATMAP[\s\S]*每天利用率[\s\S]*<th class="py-2 text-left font-sans"[\s\S]*日期[\s\S]*08\.27[\s\S]*09\.03[\s\S]*cohort-cell[\s\S]*41%[\s\S]*72%[\s\S]*61%/, 'daily court utilization should render as a date heatmap with real daily values');
+assert.match(html, /08\.27 周四[\s\S]*08\.28 周五[\s\S]*09\.03 周四/, 'daily court utilization headers should include weekdays');
 assert.doesNotMatch(html, /USER RETENTION MATRIX|核心客群生命周期存留分析|起始批次|Cohort|>W1<|>W5</, 'daily court utilization must not keep retention cohort wording');
 assert.doesNotMatch(html, /\[contenteditable=true\]\{outline:/, 'editable elements must not show dashed outlines by default');
 assert.match(html, /\[data-editable="true"\]:focus\{[\s\S]*outline:1px dashed #72D94A/, 'editable dashed outline should only appear after click focus');
@@ -1034,6 +1083,8 @@ assert.doesNotMatch(html, /营业收入|本周营业收入|2\.2 订场收款（�
 assert.match(html, /12,000 元/, 'numbers should use thousands separators');
 assert.match(html, /会员订场[\s\S]*散客订场[\s\S]*课程订场[\s\S]*领导订场[\s\S]*内部使用[\s\S]*约球局/, 'HTML should render all standard court booking type rows');
 assert.match(html, /王教练/, 'HTML should render coach data rows');
+assert.match(requestedStructureHtml, /data-coach-lesson-details[\s\S]*2026-08-28 周五/, 'coach lesson detail dates should include weekdays');
+assert.match(html, /coachLessonDetailsOpen[\s\S]*querySelectorAll\('\[data-coach-lesson-details\]'\)[\s\S]*details\.open=coachLessonDetailsOpen[\s\S]*panels\.forEach/, 'coach lesson detail expanded state should be shared across coach tabs');
 assert.match(html, /小红书/, 'HTML should render lead source rows');
 
 const currentWeekHighlightSnapshot = buildWeeklyBusinessReportSnapshot({
@@ -1157,6 +1208,7 @@ assert.match(publicApiSource, /FLOWTENNIS WEEKLY/, 'public weekly report share p
 assert.match(weeklyRoutesSource, /PUBLIC_BASE_URL \|\| 'https:\/\/www\.flowtennis\.cn'/, 'weekly report share links should default to the public production domain');
 assert.match(weeklyRoutesSource, /res\.end\(renderWeeklyBusinessReportHtml\(report/, 'public route should always render with the current report template instead of serving stale stored HTML');
 assert.match(operationsPageSource, /includeWeeklyReportRaw[\s\S]*weeklyReportRaw/, 'weekly report payload should include raw source rows for report-specific metrics');
+assert.match(operationsSource, /OPERATIONS_LEAD_FIELDS[\s\S]*'demandProduct'/, 'weekly report raw lead rows must include demand product for the new lead detail table');
 assert.match(operationsPageSource, /weeklyReportRaw: includeWeeklyReportRaw \? \{[\s\S]*membershipPlans: scoped\.membershipPlans[\s\S]*membershipBenefitLedger: scoped\.membershipBenefitLedger[\s\S]*membershipAccountEvents: scoped\.membershipAccountEvents/s, 'weekly report raw payload should include complete membership read-model inputs');
 assert.match(operationsPageSource, /weeklyReportRaw: includeWeeklyReportRaw \? \{[\s\S]*courtAccountListIndexRows: baseRows\.courtAccountListIndexRows \|\| \[\]/, 'weekly report raw payload should include the court account list index rows for fast stored value metrics');
 assert.match(operationsSnapshotRunnerSource, /weeklyReportScopes: argv\.includes\('--weekly-report-scopes'\)/, 'operations snapshot runner should support weekly report snapshot scopes');
@@ -1202,6 +1254,26 @@ async function callPublicEditRoute() {
     res
   });
   return { handled, json, saved };
+}
+
+async function callWeeklyReportListWithUser(user) {
+  let json = null;
+  let statusCode = 200;
+  const routes = createWeeklyBusinessReportRoutes({
+    init: async () => {},
+    sendJson: (_res, value, code = 200) => { json = value; statusCode = code; return value; },
+    scan: async () => [{ ...snapshot, shareToken: 'list-token', status: 'success' }],
+    table: 'ft_weekly_business_reports'
+  });
+  const handled = await routes.handleAdmin({
+    path: '/weekly-business-reports',
+    method: 'GET',
+    body: {},
+    req: { headers: {} },
+    res: {},
+    user
+  });
+  return { handled, json, statusCode };
 }
 
 async function callListReportsWithOverlappingRows() {
@@ -1706,7 +1778,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, listResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, otherCampusListResult, listResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -1715,6 +1787,9 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callListReportsWithOverla
   assert.strictEqual(editResult.json.success, true, 'public weekly report edit route should save editable values');
   assert.strictEqual(editResult.saved.publicEdits['summary.totalIncome'], '44,072 元', 'public weekly report edits should persist saved values');
   assert.doesNotMatch(editResult.saved.publicEdits.bad, /[<>]/, 'public weekly report edits should strip HTML tags');
+  assert.strictEqual(mapoListResult.statusCode, 200, 'Mapo campus users should access the weekly report list route');
+  assert.strictEqual(mapoListResult.json.reports.length, 1, 'Mapo campus users should receive weekly report list rows');
+  assert.strictEqual(otherCampusListResult.statusCode, 403, 'non-Mapo campus users should not access the weekly report list route');
   assert.deepStrictEqual(listResult.map(row => row.id), [
     'weekly:顺义马坡:2026-09-04:2026-09-10',
     'weekly:顺义马坡:2026-08-27:2026-09-03'

@@ -57,18 +57,25 @@
     const profile=normalizeClientPermissionProfile(user||{});
     return profile.role==='admin'&&profile.dataScope==='all';
   }
+  function clientUserCanAccessWeeklyReports(user){
+    const profile=normalizeClientPermissionProfile(user||{});
+    return profile.role==='admin'&&clientUserCanAccessCampus(profile,'shunyi_mapo');
+  }
   function clientPageRequiresFullManagementAccess(page){
-    return ['finance','operations','weekly-reports','coaches','admin-users','campusmgr'].includes(String(page||'').trim());
+    return ['finance','operations','coaches','admin-users','campusmgr'].includes(String(page||'').trim());
   }
   function clientPageIsHiddenManagementView(page){
     return HIDDEN_MANAGEMENT_PAGES.includes(String(page||'').trim());
   }
   function clientUserCanOpenManagementPage(user,page){
+    page=String(page||'').trim();
+    if(page==='weekly-reports')return !clientPageIsHiddenManagementView(page)&&clientUserCanAccessWeeklyReports(user);
     return !clientPageIsHiddenManagementView(page)&&(!clientPageRequiresFullManagementAccess(page)||clientUserHasFullManagementAccess(user));
   }
   global.normalizeClientPermissionProfile=normalizeClientPermissionProfile;
   global.clientUserCanAccessCampus=clientUserCanAccessCampus;
   global.clientUserHasFullManagementAccess=clientUserHasFullManagementAccess;
+  global.clientUserCanAccessWeeklyReports=clientUserCanAccessWeeklyReports;
   global.clientPageRequiresFullManagementAccess=clientPageRequiresFullManagementAccess;
   global.clientPageIsHiddenManagementView=clientPageIsHiddenManagementView;
   global.clientUserCanOpenManagementPage=clientUserCanOpenManagementPage;

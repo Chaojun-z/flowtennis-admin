@@ -63,6 +63,12 @@ function userCanAccessCampus(user, campusId) {
   return !!value && profile.campusIds.includes(value);
 }
 
+function userCanAccessWeeklyReports(user) {
+  const profile = normalizePermissionProfile(user);
+  if (profile.role !== 'admin') return false;
+  return userCanAccessCampus(profile, 'shunyi_mapo');
+}
+
 module.exports = {
   FEATURE_PERMISSION_KEYS,
   ADMIN_DEFAULT_FEATURE_PERMISSIONS,
@@ -70,5 +76,6 @@ module.exports = {
   uniqueList,
   normalizePermissionProfile,
   userCanAccessCampus,
+  userCanAccessWeeklyReports,
   userHasFeaturePermission
 };

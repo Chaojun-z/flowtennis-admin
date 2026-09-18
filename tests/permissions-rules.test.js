@@ -5,6 +5,7 @@ const legacyMapoCode = ['ma', 'bao'].join('');
 assert.ok(permissions.normalizePermissionProfile, 'permission module should expose profile normalizer');
 assert.ok(permissions.userCanAccessCampus, 'permission module should expose campus access checker');
 assert.ok(permissions.userHasFeaturePermission, 'permission module should expose feature permission checker');
+assert.ok(permissions.userCanAccessWeeklyReports, 'permission module should expose weekly report access checker');
 
 assert.deepStrictEqual(
   permissions.normalizePermissionProfile({ id: 'admin', role: 'admin' }),
@@ -88,6 +89,24 @@ assert.strictEqual(
   permissions.userHasFeaturePermission({ role: 'editor', matchPermissions: ['match_ops'] }, 'match_ops'),
   true,
   'feature permission helper should read explicit match permissions'
+);
+
+assert.strictEqual(
+  permissions.userCanAccessWeeklyReports({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }),
+  true,
+  'Mapo campus scoped management users should access Mapo weekly reports'
+);
+
+assert.strictEqual(
+  permissions.userCanAccessWeeklyReports({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }),
+  false,
+  'non-Mapo campus scoped management users should not access Mapo weekly reports'
+);
+
+assert.strictEqual(
+  permissions.userCanAccessWeeklyReports({ role: 'editor', dataScope: 'campus', campusIds: ['shunyi_mapo'] }),
+  false,
+  'coach/editor users should not access management weekly reports'
 );
 
 console.log('permissions rules tests passed');
