@@ -1948,6 +1948,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(editResult.saved.publicEdits.remark, '原备注不可丢失', 'public weekly report edits should merge with existing remarks instead of replacing them');
   assert.doesNotMatch(editResult.saved.publicEdits.bad, /[<>]/, 'public weekly report edits should strip HTML tags');
   assert.match(apiSource, /weeklyBusinessReportRoutes\.handlePublic\(\{path,method,body,res\}\)/, 'public weekly report edit route should receive the parsed request body');
+  assert.ok(apiSource.indexOf('const body=req.body||{};') < apiSource.indexOf('weeklyBusinessReportRoutes.handlePublic({path,method,body,res})'), 'api should declare request body before public weekly report routes to keep login from crashing');
   assert.strictEqual(vm.runInNewContext(`${weeklyPageSource}\nweeklyReportHours(67.5)`), '67.5', 'weekly report list should preserve half-hour values');
   assert.strictEqual(mapoListResult.statusCode, 200, 'Mapo campus users should access the weekly report list route');
   assert.strictEqual(mapoListResult.json.reports.length, 1, 'Mapo campus users should receive weekly report list rows');

@@ -6945,6 +6945,7 @@ function parseLegacyCourtNotes(notes){
 module.exports = async (req, res) => {
   const path=(req.url||'').replace(/^\/api/,'').split('?')[0];
   const method=req.method;
+  const body=req.body||{};
   const startedAt=Date.now();
   if(res&&typeof res.on==='function')res.on('finish',()=>{console.log(`[api] ${method} ${path} ${res.statusCode} ${Date.now()-startedAt}ms`);});
   if(req.method==='OPTIONS'){applyCorsHeaders(req,res);return res.status(200).end();}
@@ -7009,7 +7010,6 @@ module.exports = async (req, res) => {
   }
   scheduleInitInBackground();
   const query=new URL(req.url||'/', 'http://local').searchParams;
-  const body=req.body||{};
   try{
     if(path==='/health')return sendJson(res,{status:'ok',time:new Date().toISOString()});
     if((path==='/official-account/callback'||path==='/wechat/official-callback')&&method==='GET'){
