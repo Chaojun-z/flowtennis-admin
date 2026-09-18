@@ -2840,6 +2840,12 @@ async function generateWeeklyBusinessReport({
   table = WEEKLY_REPORT_TABLE
 } = {}) {
   if (typeof loadOperationsPayload !== 'function') throw new Error('缺少周报数据读取器');
+  const snapshotUser = {
+    ...user,
+    role: 'admin',
+    dataScope: 'all',
+    campusIds: []
+  };
   await mkTable(table).catch(() => null);
   const scope = {
     campusName: WEEKLY_REPORT_CAMPUS_NAME,
@@ -2865,7 +2871,7 @@ async function generateWeeklyBusinessReport({
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
-    return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: generationMode === 'manual' }).then(payload => {
+    return loadOperationsSnapshot({ user: snapshotUser, scope: targetScope, allowRefreshing: generationMode === 'manual' }).then(payload => {
       if (!payload) return null;
       return payload;
     }).catch(err => {
@@ -2906,7 +2912,7 @@ async function generateWeeklyBusinessReport({
         dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
         metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
       };
-      const payload = await loadOperationsSnapshot({ user, scope: trendScope, allowRefreshing: generationMode === 'manual' }).catch(() => null);
+      const payload = await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: generationMode === 'manual' }).catch(() => null);
       if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
       if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) shouldLoadLiveTrendWindow = true;
     }

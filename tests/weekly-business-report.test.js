@@ -1368,6 +1368,39 @@ async function callSnapshotFirstGeneration() {
   return { result, savedRows, liveLoads, elapsedMs: Date.now() - startedAt };
 }
 
+async function callCampusScopedSnapshotGeneration() {
+  let liveLoads = 0;
+  let snapshotUser = null;
+  const savedRows = [];
+  const result = await generateWeeklyBusinessReport({
+    period,
+    generationMode: 'manual',
+    user: { id: 'mapo-operator', role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] },
+    baseUrl: 'https://www.flowtennis.cn',
+    mkTable: async () => {},
+    get: async () => ({ ...snapshot, id: 'weekly:顺义马坡:2026-08-27:2026-09-03', shareToken: 'campus-snapshot-token', status: 'success' }),
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    loadOperationsPayload: async () => {
+      liveLoads += 1;
+      throw new Error('校区权限账号不应触发周报慢速回源');
+    },
+    loadOperationsSnapshot: async ({ user: loadedUser, scope }) => {
+      snapshotUser = loadedUser;
+      if (scope?.dateRange?.startDate === period.startDate) return operationsPayloadWithRawFacts;
+      if (scope?.dateRange?.startDate === period.previousStartDate) return {
+        ...operationsPayloadWithRawFacts,
+        weeklyReportRaw: {
+          ...operationsPayloadWithRawFacts.weeklyReportRaw,
+          financeNormalizedRows: realDataHardGateFinanceRows.map(row => ({ ...row, businessDate: period.previousStartDate }))
+        }
+      };
+      if (!scope?.dateRange?.startDate) return { operations: { overview: { cards: { totalIncome: { value: 1000 } } } } };
+      return operationsPayloadWithRawFacts;
+    }
+  });
+  return { result, savedRows, liveLoads, snapshotUser };
+}
+
 async function callSnapshotWithoutRawFallbackGeneration() {
   let liveLoads = 0;
   const savedRows = [];
@@ -1802,7 +1835,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, otherCampusListResult, listResult, generationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callCampusScopedSnapshotGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callManualRegenerationWithoutSnapshot(), callTargetPeriodRegenerationRoute(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, otherCampusListResult, listResult, generationResult, campusGenerationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, rawlessZeroTrendResult, fallbackGenerationResult, missingSnapshotResult, targetPeriodResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -1822,6 +1855,10 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
   assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
+  assert.strictEqual(campusGenerationResult.liveLoads, 0, 'campus-scoped Mapo users should reuse the shared weekly snapshot without live fallback');
+  assert.strictEqual(campusGenerationResult.snapshotUser.dataScope, 'all', 'weekly snapshot reads should use the shared all-data scope');
+  assert.deepStrictEqual(campusGenerationResult.snapshotUser.campusIds, [], 'weekly snapshot reads should not create a campus-specific snapshot key');
+  assert.strictEqual(campusGenerationResult.result.shareToken, 'campus-snapshot-token', 'campus-scoped snapshot generation should preserve the existing share link');
   assert.ok(rawFallbackGenerationResult.liveLoads >= 2, 'weekly report snapshots without raw facts must fall back to the live source for current and previous facts');
   assert.strictEqual(rawFallbackGenerationResult.result.shareToken, 'raw-fallback-token', 'raw-less snapshot fallback should preserve the existing share link');
   assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.cashReceived.value, 49295.99, 'raw-less snapshot fallback must not save zero cash received');
