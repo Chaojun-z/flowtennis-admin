@@ -251,7 +251,7 @@ function buildWeeklyReportScopeArgs(args = {}, now = new Date()) {
   const campus = args.campus || '';
   return [
     ...resolveTrailingWeeklyPeriods(period, 8).map(item => ({ ...args, campus, campusName, startDate: item.startDate, endDate: item.endDate, view: 'weekly-report', includeWeeklyReportRaw: true })),
-    { ...args, campus, campusName, startDate: '', endDate: '', view: 'weekly-report', includeWeeklyReportRaw: false }
+    { ...args, campus, campusName, startDate: '', endDate: '', view: 'weekly-report', includeWeeklyReportRaw: true }
   ];
 }
 

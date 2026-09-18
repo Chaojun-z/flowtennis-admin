@@ -2865,7 +2865,9 @@ function weeklyPayloadReadyForScope(payload = {}, scope = {}) {
 }
 
 function weeklyPayloadHasFinanceFactsInPeriod(payload = {}, period = {}) {
-  return weeklyFinanceRows(payload?.weeklyReportRaw || {}, period).length > 0;
+  const raw = payload?.weeklyReportRaw || {};
+  if (!period?.startDate && !period?.endDate) return selectWeeklyFinanceSourceRows(raw).length > 0;
+  return weeklyFinanceRows(raw, period).length > 0;
 }
 
 function weeklyReportSnapshotNotReadyError(scopes = [], user = {}) {
@@ -2915,15 +2917,16 @@ async function generateWeeklyBusinessReport({
   const totalScope = {
     campusName: WEEKLY_REPORT_CAMPUS_NAME,
     view: WEEKLY_REPORT_OPERATIONS_VIEW,
-    includeWeeklyReportRaw: false,
+    includeWeeklyReportRaw: true,
     dateRange: {},
     metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME }
   };
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
-    return loadOperationsSnapshot({ user: snapshotUser, scope: targetScope, allowRefreshing: generationMode === 'manual' }).then(payload => {
+    return loadOperationsSnapshot({ user: snapshotUser, scope: targetScope, allowRefreshing: false }).then(payload => {
       if (!payload) return null;
+      if (payload.snapshot?.refreshing) return null;
       return payload;
     }).catch(err => {
       return null;
@@ -2954,7 +2957,7 @@ async function generateWeeklyBusinessReport({
       missingSnapshotScopes.push(previousScope);
     }
   }
-  if (!totalOperationsPayload) {
+  if (!weeklyPayloadReadyForScope(totalOperationsPayload, totalScope)) {
     if (allowLiveFallback) {
       totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
     } else {

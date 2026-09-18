@@ -66,7 +66,7 @@ function createWeeklyBusinessReportRoutes({
       period: targetPeriod,
       baseUrl: baseUrl(req || { headers: {} }),
       generationMode: mode,
-      allowLiveFallback: mode !== 'manual',
+      allowLiveFallback: true,
       table
     });
     if (mode === 'manual') {
