@@ -270,6 +270,9 @@ function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount
   },operationTrace);
   return row;
 }
+function normalizeSortedCourtHistory(history){
+  return normalizeCourtHistory(history).sort((a,b)=>courtHistorySortKey(a).localeCompare(courtHistorySortKey(b)));
+}
 function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule=null,courts=[],students=[],membershipAccounts=[],now=new Date().toISOString(),operator='',operationTrace=null}={}){
   const next={...(nextSchedule||{})};
   const previousCharges=scheduleStoredValueChargeSpecs(previousSchedule);
@@ -294,8 +297,8 @@ function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule
   const addRow=(court,row)=>{
     if(!court||!row||row.amount<=0)return;
     if(!originals.has(court.id))originals.set(court.id,court);
-    const current=updates.get(court.id)||{...court,history:normalizeCourtHistory(court.history)};
-    current.history=[...normalizeCourtHistory(current.history),row];
+    const current=updates.get(court.id)||{...court,history:normalizeSortedCourtHistory(court.history)};
+    current.history=[...current.history,row];
     updates.set(court.id,current);
     historyRows.push(row);
   };

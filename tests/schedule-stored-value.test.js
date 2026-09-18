@@ -121,6 +121,73 @@ const unlinkedCreated = rules.buildScheduleStoredValueCourtUpdate({
 assert.strictEqual(unlinkedCreated.schedule.storedValueCourtId, 'court-member-unlinked', 'unlinked member account should beat same-name old guest court');
 assert.strictEqual(unlinkedCreated.court.balance, 4600);
 
+const outOfOrderMemberCourt = {
+  id: 'court-out-of-order-ledger',
+  name: '秋明',
+  phone: '18600689666',
+  studentIds: ['stu-out-of-order-ledger'],
+  campus: 'shunyi_mapo',
+  cachedBalance: 3946,
+  history: [
+    { id: 'consume-before-recharge', date: '2026-07-28', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 112 },
+    { id: 'member-recharge-5000', date: '2026-07-28', type: '充值', category: '会员充值', payMethod: '会员充值', amount: 5000, bonusAmount: 498 },
+    { id: 'lesson-20260728', date: '2026-07-28', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 200 },
+    { id: 'lesson-20260729', date: '2026-07-29', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 200 },
+    { id: 'field-20260730', date: '2026-07-30', type: '消费', category: '会员订场', payMethod: '储值扣款', amount: 112 },
+    { id: 'lesson-20260801-a', date: '2026-08-01', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 200 },
+    { id: 'lesson-20260801-b', date: '2026-08-01', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 200 },
+    { id: 'field-20260802', date: '2026-08-02', type: '消费', category: '会员订场', payMethod: '储值扣款', amount: 176 },
+    { id: 'return-20260805', date: '2026-08-05', type: '冲正', category: '私教课', payMethod: '储值扣款', amount: 400 },
+    { id: 'field-20260807', date: '2026-08-07', type: '消费', category: '会员订场', payMethod: '储值扣款', amount: 176 },
+    { id: 'lesson-20260808', date: '2026-08-08', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 200 },
+    { id: 'field-20260816', date: '2026-08-16', type: '消费', category: '会员订场', payMethod: '储值扣款', amount: 176 },
+    { id: 'lesson-20260817', date: '2026-08-17', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 200 }
+  ]
+};
+const outOfOrderStudent = { id: 'stu-out-of-order-ledger', name: '秋明', phone: '18600689666' };
+const companionScheduleWithFieldFee = {
+  ...schedule,
+  id: 'sch-out-of-order-ledger',
+  courseType: '陪打',
+  studentIds: ['stu-out-of-order-ledger'],
+  studentName: '秋明',
+  paidAmount: 200,
+  requiresFieldFee: true,
+  fieldFeeAmount: 176,
+  fieldFeePayMethod: '储值卡'
+};
+const outOfOrderCreated = rules.buildScheduleStoredValueCourtUpdate({
+  previousSchedule: null,
+  nextSchedule: companionScheduleWithFieldFee,
+  courts: [outOfOrderMemberCourt],
+  students: [outOfOrderStudent],
+  membershipAccounts: [{ id: 'member-account-out-of-order-ledger', courtId: 'court-out-of-order-ledger', status: 'active' }],
+  now,
+  operator: '管理员',
+  operationTrace: { ...trace, operationId: 'op-out-of-order-ledger', batchId: 'batch-op-out-of-order-ledger' }
+});
+assert.strictEqual(outOfOrderCreated.schedule.storedValueCourtId, 'court-out-of-order-ledger');
+assert.strictEqual(outOfOrderCreated.schedule.storedValueAmount, 200);
+assert.strictEqual(outOfOrderCreated.schedule.storedValueFieldFeeCourtId, 'court-out-of-order-ledger');
+assert.strictEqual(outOfOrderCreated.schedule.storedValueFieldFeeAmount, 176);
+assert.strictEqual(outOfOrderCreated.historyRows.length, 2);
+assert.strictEqual(rules.computeCourtFinance(outOfOrderCreated.court).balance, 3570, 'stored-value schedule save should sort legacy same-day ledgers before replaying balance');
+
+assert.throws(
+  () => rules.buildScheduleStoredValueCourtUpdate({
+    previousSchedule: null,
+    nextSchedule: { ...companionScheduleWithFieldFee, id: 'sch-out-of-order-overdraft', paidAmount: 3800, fieldFeeAmount: 176 },
+    courts: [outOfOrderMemberCourt],
+    students: [outOfOrderStudent],
+    membershipAccounts: [{ id: 'member-account-out-of-order-ledger', courtId: 'court-out-of-order-ledger', status: 'active' }],
+    now,
+    operator: '管理员',
+    operationTrace: { ...trace, operationId: 'op-out-of-order-overdraft', batchId: 'batch-op-out-of-order-overdraft' }
+  }),
+  /余额不足/,
+  'stored-value schedule save should still reject a real overdraft after ledger sorting'
+);
+
 const aliasMemberCourt = {
   id: 'court-along',
   name: '周阿龙（Along）',
