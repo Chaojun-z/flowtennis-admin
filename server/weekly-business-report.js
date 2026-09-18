@@ -2865,7 +2865,6 @@ async function generateWeeklyBusinessReport({
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
-    if (generationMode === 'manual' && targetScope?.includeWeeklyReportRaw) return null;
     return loadOperationsSnapshot({ user, scope: targetScope, allowRefreshing: generationMode === 'manual' }).then(payload => {
       if (!payload) return null;
       return payload;

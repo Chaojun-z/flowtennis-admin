@@ -1209,7 +1209,7 @@ assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly repo
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
 assert.match(indexHtml, /weekly-reports\.js\?v=20260912-weekly-regenerate-timeout-v1/, 'admin shell should bust weekly report page script cache after weekly report regenerate timeout fix');
-assert.match(indexHtml, /api\.js\?v=20260904-weekly-report-share-v1/, 'admin shell should bust public weekly report share script cache');
+assert.match(indexHtml, /api\.js\?v=20260918-weekly-report-timeout-message-v1/, 'admin shell should bust weekly report timeout message script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
 assert.doesNotMatch(weeklyPageSource, /顺义马坡每周周报|重新生成本周周报|editWeeklyReportRemark/, 'admin weekly report list should remove the old title block, top regenerate button and remark action');
 assert.match(weeklyPageSource, /周次[\s\S]*核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*查看[\s\S]*复制链接[\s\S]*重新生成/, 'admin weekly report list should show the requested columns and row actions');
@@ -1826,9 +1826,9 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(rawFallbackGenerationResult.result.shareToken, 'raw-fallback-token', 'raw-less snapshot fallback should preserve the existing share link');
   assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.cashReceived.value, 49295.99, 'raw-less snapshot fallback must not save zero cash received');
   assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.totalIncome.value, 38511.4, 'raw-less snapshot fallback must not save zero recognized revenue');
-  assert.ok(existingGenerationResult.liveLoads >= 2, 'manual regeneration should live-read current and previous weekly facts so edited purchases and members are refreshed');
-  assert.strictEqual(existingGenerationResult.snapshotLoads, 7, 'manual regeneration should keep fast snapshots for lifetime and older six trend weeks');
-  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), ['2026-07-02', '2026-07-10', '2026-07-18', '2026-07-26', '2026-08-03', '2026-08-11', 'lifetime'].sort(), 'manual regeneration should not reuse current or previous weekly raw snapshots');
+  assert.strictEqual(existingGenerationResult.liveLoads, 0, 'manual regeneration should reuse published current and previous weekly snapshots when raw facts are ready');
+  assert.strictEqual(existingGenerationResult.snapshotLoads, 9, 'manual regeneration should use fast snapshots for current, previous, lifetime and the older six trend weeks');
+  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), ['2026-07-02', '2026-07-10', '2026-07-18', '2026-07-26', '2026-08-03', '2026-08-11', period.startDate, period.previousStartDate, 'lifetime'].sort(), 'manual regeneration should reuse the weekly report snapshot scope for all report contexts and trend weeks');
   assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
   assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
   assert.strictEqual(existingGenerationResult.savedRows[0].sections.trends.length, 8, 'manual regeneration should save eight weekly trend points when platform snapshots exist');
@@ -1838,9 +1838,9 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
     });
   });
   assert.ok(existingGenerationResult.elapsedMs < 10000, `existing report manual regeneration should finish within 10 seconds, got ${existingGenerationResult.elapsedMs}ms`);
-  assert.ok(freshnessResult.liveLoads >= 2, 'manual regeneration freshness guard should use live weekly facts');
-  assert.strictEqual(freshnessResult.savedRows[0].sections.revenue.course.paidPeople, 1, 'manual regeneration must not keep stale 3-person course purchases after orders move outside the report period');
-  assert.strictEqual(freshnessResult.savedRows[0].sections.revenue.storedValue.totalMembers, 1, 'manual regeneration must not keep stale dirty membership rows after the source account is voided or no longer a member');
+  assert.strictEqual(freshnessResult.liveLoads, 1, 'manual regeneration should only live-read the combined trend window when older snapshots lack finance facts');
+  assert.strictEqual(freshnessResult.savedRows[0].sections.revenue.course.paidPeople, 3, 'manual regeneration should use the published snapshot until its asynchronous refresh completes');
+  assert.strictEqual(freshnessResult.savedRows[0].sections.revenue.storedValue.totalMembers, 2, 'manual regeneration should use the published snapshot until its asynchronous refresh completes');
   assert.strictEqual(freshnessResult.result.shareToken, 'freshness-token', 'manual regeneration freshness guard should preserve the existing share link');
   assert.strictEqual(rawlessZeroTrendResult.liveLoads, 3, 'manual regeneration should live-load current, previous and trailing trend windows when stored snapshots lack finance facts');
   assert.strictEqual(rawlessZeroTrendResult.result.shareToken, 'rawless-zero-trend-token', 'rawless zero trend repair should preserve the existing share link');
@@ -1875,7 +1875,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(targetPeriodResult.generatedPeriod.startDate, '2026-08-27', 'row regenerate route should use the requested report period');
   assert.strictEqual(targetPeriodResult.generatedPeriod.endDate, '2026-09-03', 'row regenerate route should use the requested report end date');
   assert.strictEqual(targetPeriodResult.json.success, true, 'row regenerate route should return success for the requested period');
-  assert.ok(targetPeriodResult.liveLoads >= 2, 'row regenerate route should read live weekly facts for the requested period');
+  assert.strictEqual(targetPeriodResult.liveLoads, 1, 'row regenerate route should reuse published weekly snapshots and only live-read the combined trend window when needed');
   assert.strictEqual(targetPeriodResult.webhookCalls, 0, 'manual regeneration route should not wait for Feishu webhook before responding');
   assert.strictEqual(sequentialResult.maxActiveLoads, 1, 'weekly report regeneration should load operation snapshots sequentially to avoid TableStore getRow timeout fan-out');
   console.log('weekly business report tests passed');

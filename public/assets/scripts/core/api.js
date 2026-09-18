@@ -152,7 +152,7 @@ async function apiCall(method,path,body,timeoutMs=60000){
   }catch(e){
     // Chrome/Safari 对 AbortController 的报错文案不统一，这里统一成可读提示
     if(String(e?.name||'')==='AbortError'||String(e?.message||'').includes('aborted')){
-      throw new Error('请求超时：可能是数据库连接慢/无权限/网络不通，请稍后重试');
+      throw new Error('请求超时：服务器处理时间过长，请稍后重试');
     }
     throw e;
   }finally{
