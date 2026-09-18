@@ -107,7 +107,13 @@ async function regenerateWeeklyReport(id, attempt = 0, pendingToast = null) {
   }
   const toastHandle = pendingToast || toast('正在生成周报...', '', { sticky: true });
   try {
-    await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, 60000);
+    const result = await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, 60000);
+    if (result?.preparing && attempt < 30) {
+      toastHandle.update(`周报数据准备中，${Math.round((attempt + 1) * 5)} 秒后自动重试...`, '');
+      setTimeout(() => regenerateWeeklyReport(id, attempt + 1, toastHandle), 5000);
+      return;
+    }
+    if (!result?.success) throw new Error(result?.error || '周报生成失败');
     weeklyRegenerationJobs.delete(id);
     toastHandle.update('周报已生成', 'success');
     setTimeout(() => toastHandle.close(), 3000);

@@ -1254,7 +1254,7 @@ assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow sh
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260918-weekly-regenerate-async-v1/, 'admin shell should bust weekly report page script cache after weekly report async regeneration fix');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260918-weekly-regenerate-preparing-v2/, 'admin shell should bust weekly report page script cache after weekly report preparing-state fix');
 assert.match(indexHtml, /api\.js\?v=20260918-weekly-report-timeout-message-v1/, 'admin shell should bust weekly report timeout message script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
 assert.doesNotMatch(weeklyPageSource, /顺义马坡每周周报|重新生成本周周报|editWeeklyReportRemark/, 'admin weekly report list should remove the old title block, top regenerate button and remark action');
@@ -1265,6 +1265,8 @@ assert.match(weeklyPageSource, /toLocaleString\('zh-CN'[\s\S]*Asia\/Shanghai/, '
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');
 assert.match(weeklyPageSource, /sticky:\s*true/, 'manual regeneration should keep the loading toast visible until completion');
 assert.match(weeklyPageSource, /e\.status === 202[\s\S]*preparing[\s\S]*attempt < 30[\s\S]*setTimeout/, 'manual regeneration should retry after the server queues missing snapshots');
+assert.match(weeklyPageSource, /const result = await apiCall\('POST', '\/admin\/weekly-business-reports\/regenerate'[\s\S]*result\?\.preparing[\s\S]*setTimeout\(\(\) => regenerateWeeklyReport/, 'manual regeneration should treat preparing responses resolved by fetch as pending instead of success');
+assert.match(weeklyPageSource, /if \(!result\?\.success\) throw new Error\(result\?\.error \|\| '周报生成失败'\);[\s\S]*toastHandle\.update\('周报已生成'/, 'manual regeneration should only show success after an explicit successful response');
 assert.match(bootstrapSource, /'weekly-reports':'马坡周报'/, 'top page title should be renamed to Mapo weekly report');
 assert.match(componentsSource, /马坡周报/, 'sidebar and mobile navigation should be renamed to Mapo weekly report');
 assert.match(bootstrapSource, /options\.sticky/, 'toast helper should support sticky loading messages');
@@ -1282,7 +1284,7 @@ assert.match(operationsSource, /OPERATIONS_LEAD_FIELDS[\s\S]*'demandProduct'/, '
 assert.match(operationsPageSource, /weeklyReportRaw: includeWeeklyReportRaw \? \{[\s\S]*membershipPlans: scoped\.membershipPlans[\s\S]*membershipBenefitLedger: scoped\.membershipBenefitLedger[\s\S]*membershipAccountEvents: scoped\.membershipAccountEvents/s, 'weekly report raw payload should include complete membership read-model inputs');
 assert.match(operationsPageSource, /weeklyReportRaw: includeWeeklyReportRaw \? \{[\s\S]*courtAccountListIndexRows: baseRows\.courtAccountListIndexRows \|\| \[\]/, 'weekly report raw payload should include the court account list index rows for fast stored value metrics');
 assert.match(operationsSnapshotRunnerSource, /weeklyReportScopes: argv\.includes\('--weekly-report-scopes'\)/, 'operations snapshot runner should support weekly report snapshot scopes');
-assert.match(operationsSnapshotRunnerSource, /buildWeeklyReportScopeArgs[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: false/, 'weekly report snapshot runner should prebuild current, previous and lifetime scopes');
+assert.match(operationsSnapshotRunnerSource, /resolveTrailingWeeklyPeriods\(period, 8\)\.map[\s\S]*includeWeeklyReportRaw: true[\s\S]*includeWeeklyReportRaw: false/, 'weekly report snapshot runner should prebuild all eight trend weeks and lifetime scopes');
 assert.match(operationsSnapshotRunnerSource, /scanFirstRows: scope\?\.view === 'weekly-report'[\s\S]*storage\.getCachedScan\(table, weeklyReportScanOptions/, 'weekly report snapshot rebuild must use the offline full-read path instead of production first-row truncation');
 assert.match(operationsSnapshotWorkflow, /--weekly-report-scopes --skip-default-scope/, 'high-frequency operations snapshot workflow should prebuild weekly report scopes');
 assert.match(weeklyWorkflow, /Rebuild weekly report snapshots[\s\S]*--weekly-report-scopes --skip-default-scope[\s\S]*Trigger weekly business report/, 'weekly report workflow should rebuild weekly report snapshots before triggering the report endpoint');

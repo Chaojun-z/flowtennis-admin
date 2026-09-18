@@ -3026,6 +3026,7 @@ module.exports = {
   WEEKLY_REPORT_TABLE,
   weeklyReportStartDateForEndDate,
   resolveWeeklyBusinessReportPeriod,
+  resolveTrailingWeeklyPeriods,
   buildWeeklyBusinessReportSnapshot,
   renderWeeklyBusinessReportHtml,
   buildWeeklyBusinessReportFeishuText,

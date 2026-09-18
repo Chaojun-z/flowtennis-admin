@@ -18,7 +18,7 @@ const { createStorageServices } = require('../server/storage.js');
 const { DEFAULT_CAMPUSES } = require('../server/bootstrap.js');
 const { buildOperationsPagePayload, getOperationsPageScope } = require('../server/page-data/operations-page.js');
 const { COACH_DAILY_MONTH_PACK_VIEW, createOperationsSnapshotSync } = require('../server/page-data/operations-snapshot.js');
-const { WEEKLY_REPORT_CAMPUS_NAME, resolveWeeklyBusinessReportPeriod } = require('../server/weekly-business-report.js');
+const { WEEKLY_REPORT_CAMPUS_NAME, resolveWeeklyBusinessReportPeriod, resolveTrailingWeeklyPeriods } = require('../server/weekly-business-report.js');
 const { normalizeCampusValue, displayCampusName } = require('../public/assets/scripts/core/campus.js');
 
 const TABLES = {
@@ -250,8 +250,7 @@ function buildWeeklyReportScopeArgs(args = {}, now = new Date()) {
   const campusName = args.campusName || WEEKLY_REPORT_CAMPUS_NAME;
   const campus = args.campus || '';
   return [
-    { ...args, campus, campusName, startDate: period.startDate, endDate: period.endDate, view: 'weekly-report', includeWeeklyReportRaw: true },
-    { ...args, campus, campusName, startDate: period.previousStartDate, endDate: period.previousEndDate, view: 'weekly-report', includeWeeklyReportRaw: true },
+    ...resolveTrailingWeeklyPeriods(period, 8).map(item => ({ ...args, campus, campusName, startDate: item.startDate, endDate: item.endDate, view: 'weekly-report', includeWeeklyReportRaw: true })),
     { ...args, campus, campusName, startDate: '', endDate: '', view: 'weekly-report', includeWeeklyReportRaw: false }
   ];
 }
