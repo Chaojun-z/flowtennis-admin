@@ -68,8 +68,7 @@ function createWeeklyBusinessReportRoutes({
         period: targetPeriod,
         baseUrl: baseUrl(req || { headers: {} }),
         generationMode: mode,
-        allowLiveFallback: true,
-        forceFreshSource: true,
+        allowLiveFallback: false,
         table
       });
       const snapshot = await publishWeeklyBusinessReportDraft({

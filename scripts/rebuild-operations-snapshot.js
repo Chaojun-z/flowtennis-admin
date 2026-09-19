@@ -322,9 +322,10 @@ async function run(options = {}) {
     user,
     listCampusesWithDefaults,
     getCachedScan: (table, options = {}) => storage.getCachedScan(table, scope?.view === 'weekly-report' ? weeklyReportScanOptions(table, options) : options),
-    scanFirstRows: scope?.view === 'weekly-report'
-      ? (table, options = {}) => storage.getCachedScan(table, weeklyReportScanOptions(table, options))
-      : storage.scanFirstRows,
+    scanFirstRows: (table, options = {}) => storage.getCachedScan(
+      table,
+      scope?.view === 'weekly-report' ? weeklyReportScanOptions(table, options) : options
+    ),
     getScheduleListRows: null,
     isProductionRuntime: () => true,
     filterLoadAllForUser: helpers.filterLoadAllForUser,
