@@ -68,9 +68,6 @@ async function renderWeeklyReports() {
 }
 
 function weeklyReportRowHtml(row = {}) {
-  const regenerateAction = row.canRegenerate
-    ? `<span class="tms-action-link" onclick="regenerateWeeklyReport('${esc(row.id || '')}')">重新生成</span>`
-    : '<span class="tms-action-link" style="opacity:.45;cursor:not-allowed" title="后台正在准备可发布版本">准备中</span>';
   return `<tr>
     <td style="padding-left:20px">${renderStandardCellText(weeklyReportPeriodText(row), false)}</td>
     <td>${renderStandardCellText(weeklyReportWeekText(row), false)}</td>
@@ -82,7 +79,7 @@ function weeklyReportRowHtml(row = {}) {
     <td class="tms-sticky-r tms-action-cell" style="width:264px;padding-right:20px;text-align:right">
       <span class="tms-action-link" onclick="openWeeklyReport('${esc(row.shareUrl || '')}')">查看</span>
       <span class="tms-action-link" onclick="copyWeeklyReportLink('${esc(row.shareUrl || '')}')">复制链接</span>
-      ${regenerateAction}
+      <span class="tms-action-link" onclick="regenerateWeeklyReport('${esc(row.id || '')}')">重新生成</span>
     </td>
   </tr>`;
 }
@@ -105,7 +102,6 @@ async function copyWeeklyReportLink(url) {
 async function regenerateWeeklyReport(id) {
   const row = weeklyReportsRows.find(item => item.id === id);
   if (!row) return toast('周报不存在', 'error');
-  if (!row.canRegenerate) return toast('后台正在准备可发布版本，请稍后再试', 'error');
   if (weeklyRegenerationJobs.has(id)) return;
   weeklyRegenerationJobs.add(id);
   const toastHandle = toast('正在生成周报...', '', { sticky: true });
