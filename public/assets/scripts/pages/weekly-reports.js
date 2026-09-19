@@ -1,6 +1,8 @@
 let weeklyReportsRows = [];
 const weeklyRegenerationJobs = new Set();
-const WEEKLY_REPORT_REQUEST_TIMEOUT_MS = 60000;
+const WEEKLY_REPORT_REQUEST_TIMEOUT_MS = 10000;
+const WEEKLY_REPORT_RETRY_LIMIT = 12;
+const WEEKLY_REPORT_RETRY_DELAY_MS = 5000;
 
 function weeklyReportMoney(value) {
   return `¥${fmt(Number(value) || 0)}`;
@@ -106,9 +108,17 @@ async function regenerateWeeklyReport(id) {
   weeklyRegenerationJobs.add(id);
   const toastHandle = toast('正在生成周报...', '', { sticky: true });
   try {
-    const result = await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, WEEKLY_REPORT_REQUEST_TIMEOUT_MS);
+    let result = null;
+    for (let attempt = 0; attempt <= WEEKLY_REPORT_RETRY_LIMIT; attempt += 1) {
+      result = await apiCall('POST', '/admin/weekly-business-reports/regenerate', { reportId: row.id, period: row.period || {} }, WEEKLY_REPORT_REQUEST_TIMEOUT_MS);
+      if (!result?.preparing || attempt >= WEEKLY_REPORT_RETRY_LIMIT) break;
+      toastHandle.update(`周报数据准备中，正在重试（${attempt + 1}/${WEEKLY_REPORT_RETRY_LIMIT}）...`);
+      await new Promise(resolve => setTimeout(resolve, WEEKLY_REPORT_RETRY_DELAY_MS));
+    }
     if (result?.preparing) {
-      throw new Error(result?.error || '周报数据未准备好');
+      toastHandle.update(result?.error || '周报数据正在准备中，请稍后重试');
+      setTimeout(() => toastHandle.close(), 5000);
+      return;
     }
     if (!result?.success) throw new Error(result?.error || '周报生成失败');
     toastHandle.update('周报已生成', 'success');

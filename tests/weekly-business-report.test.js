@@ -1264,7 +1264,7 @@ assert.match(weeklyReportSource, /weeklyRawToBaseRows[\s\S]*courtAccountListInde
 assert.match(weeklyReportSource, /trendScope[\s\S]*allowRefreshing:\s*false/, 'trend metrics should never consume a snapshot that is already refreshing');
 assert.match(weeklyReportSource, /allowLiveFallback = true/, 'weekly report generation should support disabling synchronous live fallback');
 assert.match(weeklyRoutesSource, /publishWeeklyBusinessReportDraft/, 'manual weekly report regeneration should publish a prebuilt ready draft instead of generating live data in the request');
-assert.match(weeklyRoutesSource, /mode === 'manual'[\s\S]*forceFreshSource:\s*true/, 'manual weekly report regeneration must force one fresh source read');
+assert.match(weeklyRoutesSource, /mode === 'manual'[\s\S]*allowLiveFallback:\s*false/, 'manual weekly report regeneration must use prepared snapshots instead of synchronously scanning source tables');
 assert.doesNotMatch(weeklyRoutesSource, /mode === 'manual'[\s\S]*generateWeeklyBusinessReport/, 'manual weekly report regeneration must not call the slow live generation path');
 assert.match(apiSource, /loadOperationsSnapshot:operationsSnapshotSync\.loadSnapshot/, 'weekly report routes should receive the operations snapshot loader');
 assert.match(operationsPageSource, /baseRowsOverride = null[\s\S]*const baseRows = baseRowsOverride \|\| await loadBaseRows/, 'operations page payload should allow weekly report to reuse loaded base rows');
@@ -1278,9 +1278,9 @@ assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow sh
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260919-weekly-regenerate-fresh-source-v1/, 'admin shell should bust weekly report page script cache after fresh-source regeneration fix');
-assert.match(weeklyPageSource, /WEEKLY_REPORT_REQUEST_TIMEOUT_MS\s*=\s*60000/, 'weekly report regeneration requests should allow the approved 60-second generation window');
-assert.doesNotMatch(weeklyPageSource, /WEEKLY_REPORT_RETRY_LIMIT|setTimeout\(\(\) => regenerateWeeklyReport/, 'weekly report regeneration should never auto-retry');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260919-weekly-regenerate-snapshot-async-v1/, 'admin shell should bust weekly report page script cache after snapshot async regeneration fix');
+assert.match(weeklyPageSource, /WEEKLY_REPORT_REQUEST_TIMEOUT_MS\s*=\s*10000/, 'each weekly report regeneration request should have a bounded timeout');
+assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_LIMIT\s*=\s*12[\s\S]*WEEKLY_REPORT_RETRY_DELAY_MS\s*=\s*5000/, 'weekly report regeneration should retry queued snapshot preparation a bounded number of times');
 assert.match(indexHtml, /api\.js\?v=20260918-weekly-report-timeout-message-v1/, 'admin shell should bust weekly report timeout message script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
 assert.doesNotMatch(weeklyPageSource, /顺义马坡每周周报|重新生成本周周报|editWeeklyReportRemark/, 'admin weekly report list should remove the old title block, top regenerate button and remark action');
@@ -1291,8 +1291,8 @@ assert.match(weeklyPageSource, /weekly-report-table[\s\S]*width:100%;min-width:1
 assert.match(weeklyPageSource, /toLocaleString\('zh-CN'[\s\S]*Asia\/Shanghai/, 'admin weekly report list should format generated time in Beijing time');
 assert.match(weeklyPageSource, /copyWeeklyReportLink/, 'admin page should allow copying the share link');
 assert.match(weeklyPageSource, /sticky:\s*true/, 'manual regeneration should keep the loading toast visible until completion');
-assert.doesNotMatch(weeklyPageSource, /准备中|后台正在准备可发布版本|row\.canRegenerate/, 'admin weekly report list must not disable the regenerate action');
-assert.match(weeklyPageSource, /const result = await apiCall\('POST', '\/admin\/weekly-business-reports\/regenerate'[\s\S]*result\?\.preparing[\s\S]*throw new Error/, 'manual regeneration should treat an unready response as a failure instead of success');
+assert.doesNotMatch(weeklyPageSource, /后台正在准备可发布版本|row\.canRegenerate/, 'admin weekly report list must not disable the regenerate action');
+assert.match(weeklyPageSource, /for \(let attempt = 0; attempt <= WEEKLY_REPORT_RETRY_LIMIT[\s\S]*result = await apiCall\('POST', '\/admin\/weekly-business-reports\/regenerate'[\s\S]*result\?\.preparing[\s\S]*toastHandle\.update/, 'manual regeneration should poll an unready response and keep it out of the failure state');
 assert.match(weeklyPageSource, /if \(!result\?\.success\)[\s\S]*await renderWeeklyReports\(\);[\s\S]*catch/, 'manual regeneration should refresh the list only after success');
 assert.match(weeklyPageSource, /if \(!result\?\.success\) throw new Error\(result\?\.error \|\| '周报生成失败'\);[\s\S]*toastHandle\.update\('周报已生成'/, 'manual regeneration should only show success after an explicit successful response');
 assert.match(bootstrapSource, /'weekly-reports':'马坡周报'/, 'top page title should be renamed to Mapo weekly report');
@@ -2010,6 +2010,7 @@ async function callManualRegenerationPublishesReadyDraft() {
   const savedRows = [];
   let rebuiltDraft = draft;
   let liveLoads = 0;
+  let sourceScans = 0;
   let snapshotLoads = 0;
   let json = null;
   const startedAt = Date.now();
@@ -2036,13 +2037,14 @@ async function callManualRegenerationPublishesReadyDraft() {
     mkTable: async () => {},
     buildOperationsPayload: async ({ baseRowsOverride, forceFreshSource }) => {
       liveLoads += 1;
+      if (!baseRowsOverride) sourceScans += 1;
       if (forceFreshSource) assert.strictEqual(baseRowsOverride, undefined, '强制最新读取只能在第一步读取源数据');
       if (!forceFreshSource) assert.ok(baseRowsOverride, '同一次生成的派生指标必须复用同一批最新源数据');
       return operationsPayloadWithRawFacts;
     },
     loadOperationsSnapshot: async () => {
       snapshotLoads += 1;
-      throw new Error('手动重新生成不得读取旧快照');
+      return operationsPayloadWithRawFacts;
     },
     table: 'ft_weekly_business_reports'
   });
@@ -2054,11 +2056,12 @@ async function callManualRegenerationPublishesReadyDraft() {
     res: {},
     user: { role: 'admin' }
   });
-  return { json, savedRows, liveLoads, snapshotLoads, elapsedMs: Date.now() - startedAt };
+  return { json, savedRows, liveLoads, sourceScans, snapshotLoads, elapsedMs: Date.now() - startedAt };
 }
 
 async function callManualRegenerationWithoutReadyDraft() {
   let liveLoads = 0;
+  let sourceScans = 0;
   let snapshotLoads = 0;
   const savedRows = [];
   const rows = new Map();
@@ -2074,8 +2077,9 @@ async function callManualRegenerationWithoutReadyDraft() {
       rows.set(id, row);
     },
     mkTable: async () => {},
-    buildOperationsPayload: async ({ scope }) => {
+    buildOperationsPayload: async ({ scope, baseRowsOverride }) => {
       liveLoads += 1;
+      if (!baseRowsOverride) sourceScans += 1;
       if (scope?.dateRange?.startDate === period.previousStartDate) {
         return { operations: { overview: { cards: { totalIncome: { value: 100 } } } }, weeklyReportRaw: { financeNormalizedRows: realDataHardGateFinanceRows, schedule: realDataHardGateScheduleRows } };
       }
@@ -2083,7 +2087,7 @@ async function callManualRegenerationWithoutReadyDraft() {
     },
     loadOperationsSnapshot: async () => {
       snapshotLoads += 1;
-      return null;
+      return operationsPayloadWithRawFacts;
     },
     table: 'ft_weekly_business_reports'
   });
@@ -2095,7 +2099,7 @@ async function callManualRegenerationWithoutReadyDraft() {
     res: {},
     user: { role: 'admin' }
   });
-  return { json, liveLoads, snapshotLoads, savedRows, elapsedMs: Date.now() - startedAt };
+  return { json, liveLoads, sourceScans, snapshotLoads, savedRows, elapsedMs: Date.now() - startedAt };
 }
 
 async function callManualRegenerationRejectsInvalidDraft() {
@@ -2191,6 +2195,39 @@ async function callManualRegenerationWithoutSnapshot() {
     user: { role: 'admin' }
   });
   return { json, liveLoads, queuedScopes, savedRows };
+}
+
+async function callManualRegenerationQueuesInsteadOfScanning() {
+  let liveLoads = 0;
+  let queuedScopes = 0;
+  const queuedScopeRows = [];
+  const routes = createWeeklyBusinessReportRoutes({
+    init: async () => {},
+    sendJson: (_res, value, statusCode = 200) => ({ value, statusCode }),
+    get: async () => null,
+    put: async () => {},
+    mkTable: async () => {},
+    buildOperationsPayload: async () => {
+      liveLoads += 1;
+      throw new Error('手动重新生成不得同步扫描完整源表');
+    },
+    loadOperationsSnapshot: async () => null,
+    queueOperationsSnapshotRebuild: async ({ scope }) => {
+      queuedScopes += 1;
+      queuedScopeRows.push(scope);
+      return { queued: true };
+    },
+    table: 'ft_weekly_business_reports'
+  });
+  const response = await routes.handleAdmin({
+    path: '/admin/weekly-business-reports/regenerate',
+    method: 'POST',
+    body: { period },
+    req: { headers: {} },
+    res: {},
+    user: { role: 'admin' }
+  });
+  return { response, liveLoads, queuedScopes, queuedScopeRows };
 }
 
 async function callFailedRegenerationPreservesExistingRow() {
@@ -2352,7 +2389,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callCampusScopedSnapshotGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callLifetimeIncomeUsesCompleteRawFactsThroughCutoff(), callFastRegenerationFromLifetimeSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callDraftBuilderWritesReadyDraftOnly(), callManualRegenerationPublishesReadyDraft(), callManualRegenerationWithoutReadyDraft(), callManualRegenerationRejectsInvalidDraft(), callFailedRegenerationPreservesExistingRow(), callConcurrentHistoricalRegenerations(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, otherCampusListResult, listResult, generationResult, campusGenerationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, lifetimeCutoffResult, fastRegenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, draftBuilderResult, readyPublishResult, missingDraftResult, invalidDraftResult, failedRegenerationResult, concurrentHistoricalResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callCampusScopedSnapshotGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callLifetimeIncomeUsesCompleteRawFactsThroughCutoff(), callFastRegenerationFromLifetimeSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callDraftBuilderWritesReadyDraftOnly(), callManualRegenerationPublishesReadyDraft(), callManualRegenerationWithoutReadyDraft(), callManualRegenerationRejectsInvalidDraft(), callFailedRegenerationPreservesExistingRow(), callConcurrentHistoricalRegenerations(), callManualRegenerationQueuesInsteadOfScanning(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, otherCampusListResult, listResult, generationResult, campusGenerationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, lifetimeCutoffResult, fastRegenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, draftBuilderResult, readyPublishResult, missingDraftResult, invalidDraftResult, failedRegenerationResult, concurrentHistoricalResult, queuedRegenerationResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -2440,8 +2477,8 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(draftBuilderResult.savedRows[0].draftOf, 'weekly:顺义马坡:2026-08-27:2026-09-03', 'draft builder should link the draft to the formal report id');
   assert.strictEqual(readyPublishResult.json.statusCode, 200, 'manual regeneration with a ready draft should succeed');
   assert.strictEqual(readyPublishResult.json.value.success, true, 'manual regeneration should return explicit success after publishing the ready draft');
-  assert.ok(readyPublishResult.liveLoads >= 9, 'manual regeneration must read the latest source once and derive all report metrics from it');
-  assert.strictEqual(readyPublishResult.snapshotLoads, 0, 'manual regeneration must not read stale operations snapshots');
+  assert.strictEqual(readyPublishResult.sourceScans, 0, 'manual regeneration must not synchronously read the source tables');
+  assert.strictEqual(readyPublishResult.snapshotLoads, 3, 'manual regeneration should read the prepared current, previous and lifetime snapshots, then derive trends from the lifetime facts');
   assert.strictEqual(readyPublishResult.savedRows.length, 2, 'manual regeneration should save one validated draft and one formal weekly report row');
   const readyDraftRow = readyPublishResult.savedRows.find(row => row.status === 'ready');
   const readyPublishedRow = readyPublishResult.savedRows.find(row => row.status === 'success');
@@ -2457,19 +2494,25 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.ok(readyPublishResult.elapsedMs < 10000, `manual fresh regeneration should finish within 10 seconds in the test fixture, got ${readyPublishResult.elapsedMs}ms`);
   assert.strictEqual(missingDraftResult.json.statusCode, 200, 'manual regeneration without an existing ready draft should still succeed');
   assert.strictEqual(missingDraftResult.json.value.success, true, 'manual regeneration should auto-build and publish when the ready draft is missing');
-  assert.ok(missingDraftResult.liveLoads >= 1, 'missing ready draft should trigger a one-time draft build instead of disabling the button');
+  assert.strictEqual(missingDraftResult.sourceScans, 0, 'missing ready draft should build from prepared snapshots without synchronously scanning source tables');
   assert.ok(missingDraftResult.savedRows.some(row => row.id === 'weekly-draft:顺义马坡:2026-08-27:2026-09-03' && row.status === 'ready'), 'missing ready draft flow should save a validated ready draft');
   assert.ok(missingDraftResult.savedRows.some(row => row.id === 'weekly:顺义马坡:2026-08-27:2026-09-03' && row.status === 'success'), 'missing ready draft flow should publish the formal weekly report');
   assert.ok(missingDraftResult.elapsedMs < 10000, `manual regeneration without a ready draft should finish within 10 seconds in the hard gate, got ${missingDraftResult.elapsedMs}ms`);
-  assert.strictEqual(invalidDraftResult.json.statusCode, 500, 'manual regeneration should fail when the fresh source cannot be read, even if an old draft is present');
+  assert.strictEqual(invalidDraftResult.json.statusCode, 503, 'manual regeneration should fail when prepared snapshot data cannot be read');
   assert.doesNotMatch(String(invalidDraftResult.json.value.error || ''), /success/, 'fresh-source failure must not be reported as success');
   assert.strictEqual(invalidDraftResult.putCalls, 0, 'fresh-source failure must not publish or update generated time');
   assert.strictEqual(failedRegenerationResult.error?.code, 'WEEKLY_REPORT_SNAPSHOT_NOT_READY', 'failed regeneration should report that the source snapshot is not ready');
   assert.strictEqual(failedRegenerationResult.putCalls, 0, 'failed regeneration must not write a new report row or generated time');
   assert.strictEqual(failedRegenerationResult.existingGeneratedAt, '2026-09-18T14:13:00.000Z', 'failed regeneration must preserve the previous generated time');
-  assert.strictEqual(concurrentHistoricalResult.liveLoads, 3, 'three concurrent historical report regenerations should try one controlled build per request when no draft exists');
-  assert.strictEqual(concurrentHistoricalResult.queuedScopes, 0, 'three concurrent historical report regenerations must not queue background rebuilds');
-  assert.ok(concurrentHistoricalResult.responses.every(response => response.statusCode === 500), 'three concurrent historical report requests without any source data should fail without pretending success');
+  assert.strictEqual(queuedRegenerationResult.liveLoads, 0, 'manual regeneration must not synchronously scan complete source tables');
+  assert.ok(queuedRegenerationResult.queuedScopes > 0, 'manual regeneration should queue a snapshot rebuild when the prepared data is unavailable');
+  assert.strictEqual(queuedRegenerationResult.response.statusCode, 202, 'manual regeneration should return quickly while the snapshot is preparing');
+  assert.strictEqual(queuedRegenerationResult.response.value.preparing, true, 'manual regeneration should tell the client that data is preparing');
+  assert.strictEqual(queuedRegenerationResult.queuedScopeRows.length, 1, 'manual regeneration should queue one lifetime snapshot instead of multiple full rebuilds');
+  assert.ok(queuedRegenerationResult.queuedScopeRows[0].weeklyReportRawWindow, 'queued lifetime snapshot should include the bounded weekly report raw-data window');
+  assert.strictEqual(concurrentHistoricalResult.liveLoads, 0, 'three concurrent historical report regenerations must not scan live facts in the request');
+  assert.ok(concurrentHistoricalResult.queuedScopes > 0, 'three concurrent historical report regenerations should queue snapshot rebuilds');
+  assert.ok(concurrentHistoricalResult.responses.every(response => response.statusCode === 202 && response.value.preparing === true), 'three concurrent historical report requests should return preparation status');
   assert.ok(concurrentHistoricalResult.elapsedMs < 1000, `three concurrent historical report requests should return quickly, got ${concurrentHistoricalResult.elapsedMs}ms`);
   assert.strictEqual(sequentialResult.maxActiveLoads, 1, 'weekly report regeneration should load operation snapshots sequentially to avoid TableStore getRow timeout fan-out');
   console.log('weekly business report tests passed');

@@ -68,8 +68,7 @@ function createWeeklyBusinessReportRoutes({
         period: targetPeriod,
         baseUrl: baseUrl(req || { headers: {} }),
         generationMode: mode,
-        allowLiveFallback: true,
-        forceFreshSource: true,
+        allowLiveFallback: false,
         table
       });
       const snapshot = await publishWeeklyBusinessReportDraft({
@@ -107,6 +106,26 @@ function createWeeklyBusinessReportRoutes({
     const text = buildWeeklyBusinessReportFeishuText({ snapshot, status: 'success' });
     const notification = await sendWeeklyBusinessReportFeishuText({ text, webhook }).catch(err => ({ sent: false, error: String(err?.message || err) }));
     return { success: true, report: snapshot, notification };
+  }
+
+  async function queueManualPreparation(err, user) {
+    if (err?.code !== 'WEEKLY_REPORT_SNAPSHOT_NOT_READY' || typeof queueOperationsSnapshotRebuild !== 'function') return null;
+    const scopes = Array.isArray(err.scopes) ? err.scopes : [];
+    const lifetimeScope = scopes.find(scope => scope?.weeklyReportRawWindow && !scope?.dateRange?.startDate && !scope?.dateRange?.endDate);
+    const targetScopes = lifetimeScope ? [lifetimeScope] : scopes;
+    const queued = await Promise.all(targetScopes.map(scope => queueOperationsSnapshotRebuild({
+      user: err.snapshotUser || user,
+      scope,
+      reason: 'weekly-report-manual-regeneration'
+    }).catch(queueErr => ({ error: String(queueErr?.message || queueErr) }))));
+    const queuedCount = queued.filter(item => !item?.error).length;
+    return {
+      success: false,
+      preparing: true,
+      code: err.code,
+      error: '周报数据正在准备中，请稍后重试',
+      queuedScopes: queuedCount
+    };
   }
 
   async function handlePublic({ path, method, body, res } = {}) {
@@ -169,6 +188,8 @@ function createWeeklyBusinessReportRoutes({
       try {
         return sendJson(res, await runReport({ req, mode: 'manual', period: periodFromRequest(body) }));
       } catch (err) {
+        const preparing = await queueManualPreparation(err, user);
+        if (preparing) return sendJson(res, preparing, 202);
         return sendJson(res, { success: false, error: String(err?.message || err), code: err?.code || '' }, err.statusCode || 500);
       }
     }
