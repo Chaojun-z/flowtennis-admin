@@ -2285,6 +2285,29 @@ async function callManualRegenerationUsesFreshSource() {
   return { json, freshLoads, sourceScans, snapshotLoads, snapshotScopes };
 }
 
+async function callManualRegenerationUsesRefreshingLifetimeSnapshot() {
+  const savedRows = [];
+  let derivedLoads = 0;
+  const result = await generateWeeklyBusinessReport({
+    period,
+    generationMode: 'manual',
+    allowLiveFallback: false,
+    get: async () => null,
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    mkTable: async () => {},
+    loadOperationsPayload: async ({ baseRowsOverride }) => {
+      assert.ok(baseRowsOverride, 'refreshing lifetime snapshot should provide the in-memory raw base rows');
+      derivedLoads += 1;
+      return operationsPayloadWithRawFacts;
+    },
+    loadOperationsSnapshot: async ({ scope }) => {
+      if (!scope?.dateRange?.startDate) return { ...operationsPayloadWithRawFacts, snapshot: { refreshing: true } };
+      return null;
+    }
+  });
+  return { result, savedRows, derivedLoads };
+}
+
 async function callFailedRegenerationPreservesExistingRow() {
   const existingGeneratedAt = '2026-09-18T14:13:00.000Z';
   let putCalls = 0;
@@ -2444,7 +2467,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callCampusScopedSnapshotGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callLifetimeIncomeUsesCompleteRawFactsThroughCutoff(), callFastRegenerationFromLifetimeSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callDraftBuilderWritesReadyDraftOnly(), callManualRegenerationPublishesReadyDraft(), callManualRegenerationWithoutReadyDraft(), callManualRegenerationRejectsInvalidDraft(), callFailedRegenerationPreservesExistingRow(), callConcurrentHistoricalRegenerations(), callManualRegenerationQueuesInsteadOfScanning(), callManualRegenerationUsesFreshSource(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, otherCampusListResult, listResult, generationResult, campusGenerationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, lifetimeCutoffResult, fastRegenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, draftBuilderResult, readyPublishResult, missingDraftResult, invalidDraftResult, failedRegenerationResult, concurrentHistoricalResult, queuedRegenerationResult, freshSourceResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callCampusScopedSnapshotGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callLifetimeIncomeUsesCompleteRawFactsThroughCutoff(), callFastRegenerationFromLifetimeSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callDraftBuilderWritesReadyDraftOnly(), callManualRegenerationPublishesReadyDraft(), callManualRegenerationWithoutReadyDraft(), callManualRegenerationRejectsInvalidDraft(), callFailedRegenerationPreservesExistingRow(), callConcurrentHistoricalRegenerations(), callManualRegenerationQueuesInsteadOfScanning(), callManualRegenerationUsesFreshSource(), callManualRegenerationUsesRefreshingLifetimeSnapshot(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, otherCampusListResult, listResult, generationResult, campusGenerationResult, rawFallbackGenerationResult, existingGenerationResult, freshnessResult, lifetimeCutoffResult, fastRegenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, draftBuilderResult, readyPublishResult, missingDraftResult, invalidDraftResult, failedRegenerationResult, concurrentHistoricalResult, queuedRegenerationResult, freshSourceResult, refreshingLifetimeResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -2567,6 +2590,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(freshSourceResult.json.value.success, true, 'manual regeneration should not return a preparation failure when the fresh source is available');
   assert.strictEqual(freshSourceResult.sourceScans, 0, 'manual regeneration should not read source tables in the request');
   assert.strictEqual(freshSourceResult.snapshotLoads, 3, 'manual regeneration should use the prepared current, previous and lifetime snapshots');
+  assert.ok(refreshingLifetimeResult.derivedLoads >= 1, 'manual regeneration should derive report data from a refreshing lifetime raw snapshot');
   assert.strictEqual(concurrentHistoricalResult.liveLoads, 0, 'three concurrent historical report regenerations must not scan source tables');
   assert.strictEqual(concurrentHistoricalResult.queuedScopes, 0, 'historical report failures must not queue background preparation tasks');
   assert.ok(concurrentHistoricalResult.responses.every(response => response.statusCode === 503 && response.value.preparing === undefined), 'historical report failures should return controlled snapshot errors instead of preparation status');

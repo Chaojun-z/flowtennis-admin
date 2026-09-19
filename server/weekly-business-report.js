@@ -3119,9 +3119,10 @@ async function generateWeeklyBusinessReport({
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
-    return loadOperationsSnapshot({ user: snapshotUser, scope: targetScope, allowRefreshing: false }).then(payload => {
+    const allowRefreshing = generationMode === 'manual';
+    return loadOperationsSnapshot({ user: snapshotUser, scope: targetScope, allowRefreshing }).then(payload => {
       if (!payload) return null;
-      if (payload.snapshot?.refreshing) return null;
+      if (payload.snapshot?.refreshing && targetScope?.dateRange?.startDate) return null;
       return payload;
     }).catch(err => {
       return null;
