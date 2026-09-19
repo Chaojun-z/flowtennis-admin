@@ -59,41 +59,28 @@ function createWeeklyBusinessReportRoutes({
   async function runReport({ req, mode = 'auto', now = new Date(), period = null } = {}) {
     const targetPeriod = period || resolveWeeklyBusinessReportPeriod(now);
     if (mode === 'manual') {
-      let snapshot = null;
-      try {
-        snapshot = await publishWeeklyBusinessReportDraft({
-          get,
-          put,
-          mkTable,
-          period: targetPeriod,
-          baseUrl: baseUrl(req || { headers: {} }),
-          generationMode: mode,
-          table
-        });
-      } catch (err) {
-        if (err?.code !== 'WEEKLY_REPORT_DRAFT_NOT_READY') throw err;
-        await buildWeeklyBusinessReportDraft({
-          loadOperationsPayload: buildOperationsPayload,
-          loadOperationsSnapshot,
-          get,
-          put,
-          mkTable,
-          period: targetPeriod,
-          baseUrl: baseUrl(req || { headers: {} }),
-          generationMode: 'draft',
-          allowLiveFallback: true,
-          table
-        });
-        snapshot = await publishWeeklyBusinessReportDraft({
-          get,
-          put,
-          mkTable,
-          period: targetPeriod,
-          baseUrl: baseUrl(req || { headers: {} }),
-          generationMode: mode,
-          table
-        });
-      }
+      await buildWeeklyBusinessReportDraft({
+        loadOperationsPayload: buildOperationsPayload,
+        loadOperationsSnapshot,
+        get,
+        put,
+        mkTable,
+        period: targetPeriod,
+        baseUrl: baseUrl(req || { headers: {} }),
+        generationMode: mode,
+        allowLiveFallback: true,
+        forceFreshSource: true,
+        table
+      });
+      const snapshot = await publishWeeklyBusinessReportDraft({
+        get,
+        put,
+        mkTable,
+        period: targetPeriod,
+        baseUrl: baseUrl(req || { headers: {} }),
+        generationMode: mode,
+        table
+      });
       return { success: true, report: snapshot, notification: { skipped: true, reason: 'manual-regeneration' } };
     }
     await buildWeeklyBusinessReportDraft({

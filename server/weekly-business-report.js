@@ -2975,6 +2975,7 @@ function weeklyRawToBaseRows(raw = {}) {
     membershipBenefitLedger: raw.membershipBenefitLedger || [],
     membershipAccountEvents: raw.membershipAccountEvents || [],
     financialLedger: raw.financialLedger || [],
+    courtAccountListIndexRows: raw.courtAccountListIndexRows || [],
     coaches: raw.coaches || [],
     schedule: raw.schedule || [],
     feedbacks: raw.feedbacks || [],
@@ -3034,6 +3035,7 @@ async function generateWeeklyBusinessReport({
   baseUrl = 'https://www.flowtennis.cn',
   generationMode = 'auto',
   allowLiveFallback = true,
+  forceFreshSource = false,
   user = { id: 'weekly-report-system', role: 'admin', dataScope: 'all' },
   table = WEEKLY_REPORT_TABLE
 } = {}) {
@@ -3084,45 +3086,77 @@ async function generateWeeklyBusinessReport({
   let operationsPayload = null;
   let previousOperationsPayload = null;
   let totalOperationsPayload = null;
-  if (typeof loadOperationsSnapshot === 'function') {
-    operationsPayload = await loadSnapshotPayload(scope);
-    previousOperationsPayload = await loadSnapshotPayload(previousScope);
-    totalOperationsPayload = await loadSnapshotPayload(totalScope);
-  }
   const missingSnapshotScopes = [];
-  const totalSnapshotBaseRows = totalOperationsPayload?.weeklyReportRaw
-    ? weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw)
-    : null;
-  if (!weeklyPayloadReadyForScope(operationsPayload, scope)) {
-    if (totalSnapshotBaseRows) {
-      operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride: totalSnapshotBaseRows, weeklyReportLiveSource: true }).catch(() => null);
-    } else if (allowLiveFallback) {
-      operationsPayload = await loadOperationsPayload({ user, scope, weeklyReportLiveSource: true });
-    } else {
-      missingSnapshotScopes.push(scope);
+  let trendOperationsPayloads = [];
+  if (forceFreshSource) {
+    const freshPayload = await loadOperationsPayload({
+      user,
+      scope: totalScope,
+      weeklyReportLiveSource: true,
+      forceFreshSource: true
+    });
+    if (!freshPayload?.weeklyReportRaw || typeof freshPayload.weeklyReportRaw !== 'object' || !weeklyPayloadHasRawFacts(freshPayload)) {
+      throw weeklyReportSnapshotNotReadyError([totalScope], snapshotUser);
     }
-  }
-  const baseRowsOverride = operationsPayload?.weeklyReportRaw
-    ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw)
-    : totalSnapshotBaseRows;
-  if (!weeklyPayloadReadyForScope(previousOperationsPayload, previousScope)) {
-    if (baseRowsOverride) {
-      previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true });
-    } else if (allowLiveFallback) {
-      previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, weeklyReportLiveSource: true });
-    } else {
-      missingSnapshotScopes.push(previousScope);
+    const baseRowsOverride = weeklyRawToBaseRows(freshPayload.weeklyReportRaw);
+    const derivePayload = targetScope => loadOperationsPayload({
+      user,
+      scope: targetScope,
+      baseRowsOverride,
+      weeklyReportLiveSource: false
+    });
+    operationsPayload = await derivePayload(scope);
+    previousOperationsPayload = await derivePayload(previousScope);
+    totalOperationsPayload = await derivePayload(totalScope);
+    const trendPeriods = resolveTrailingWeeklyPeriods(period, 8)
+      .filter(item => `${item.startDate}:${item.endDate}` !== `${period.startDate}:${period.endDate}`)
+      .filter(item => `${item.startDate}:${item.endDate}` !== `${period.previousStartDate}:${period.previousEndDate}`);
+    trendOperationsPayloads = await Promise.all(trendPeriods.map(async trendPeriod => ({
+      period: trendPeriod,
+      payload: await derivePayload({
+        ...scope,
+        dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
+        metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
+      })
+    })));
+  } else {
+    if (typeof loadOperationsSnapshot === 'function') {
+      operationsPayload = await loadSnapshotPayload(scope);
+      previousOperationsPayload = await loadSnapshotPayload(previousScope);
+      totalOperationsPayload = await loadSnapshotPayload(totalScope);
     }
-  }
-  if (!weeklyPayloadReadyForScope(totalOperationsPayload, totalScope)) {
-    if (allowLiveFallback) {
-      totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
-    } else {
-      missingSnapshotScopes.push(totalScope);
+    const totalSnapshotBaseRows = totalOperationsPayload?.weeklyReportRaw
+      ? weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw)
+      : null;
+    if (!weeklyPayloadReadyForScope(operationsPayload, scope)) {
+      if (totalSnapshotBaseRows) {
+        operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride: totalSnapshotBaseRows, weeklyReportLiveSource: true }).catch(() => null);
+      } else if (allowLiveFallback) {
+        operationsPayload = await loadOperationsPayload({ user, scope, weeklyReportLiveSource: true });
+      } else {
+        missingSnapshotScopes.push(scope);
+      }
     }
-  }
-  const trendOperationsPayloads = [];
-  if (typeof loadOperationsSnapshot === 'function') {
+    const baseRowsOverride = operationsPayload?.weeklyReportRaw
+      ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw)
+      : totalSnapshotBaseRows;
+    if (!weeklyPayloadReadyForScope(previousOperationsPayload, previousScope)) {
+      if (baseRowsOverride) {
+        previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true });
+      } else if (allowLiveFallback) {
+        previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, weeklyReportLiveSource: true });
+      } else {
+        missingSnapshotScopes.push(previousScope);
+      }
+    }
+    if (!weeklyPayloadReadyForScope(totalOperationsPayload, totalScope)) {
+      if (allowLiveFallback) {
+        totalOperationsPayload = await loadOperationsPayload({ user, scope: totalScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
+      } else {
+        missingSnapshotScopes.push(totalScope);
+      }
+    }
+    if (typeof loadOperationsSnapshot === 'function') {
     const loadedTrendKeys = new Set([
       `${period.startDate}:${period.endDate}`,
       `${period.previousStartDate}:${period.previousEndDate}`
@@ -3162,6 +3196,7 @@ async function generateWeeklyBusinessReport({
       if (weeklyPayloadHasRawFacts(trendWindowPayload)) {
         trendOperationsPayloads.push({ period: trendWindowScope.dateRange, payload: trendWindowPayload });
       }
+    }
     }
   }
   if (missingSnapshotScopes.length) {

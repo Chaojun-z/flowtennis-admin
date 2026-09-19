@@ -1,6 +1,6 @@
 let weeklyReportsRows = [];
 const weeklyRegenerationJobs = new Set();
-const WEEKLY_REPORT_REQUEST_TIMEOUT_MS = 10000;
+const WEEKLY_REPORT_REQUEST_TIMEOUT_MS = 60000;
 
 function weeklyReportMoney(value) {
   return `¥${fmt(Number(value) || 0)}`;

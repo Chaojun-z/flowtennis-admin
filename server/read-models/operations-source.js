@@ -278,11 +278,12 @@ async function getOperationsWeeklyReportBaseRows({
   isProductionRuntime,
   mergeDuplicateLeadRows,
   getFinancePageSnapshotIfCached,
-  tables
+  tables,
+  forceFreshSource = false
 }) {
   const cacheKey = `${getOperationsRowsCacheKey(user)}:weekly-report`;
   const cached = operationsRowsCache.get(cacheKey);
-  if (cached && Date.now() - cached.createdAt < OPERATIONS_CACHE_TTL_MS) return cached.rows;
+  if (!forceFreshSource && cached && Date.now() - cached.createdAt < OPERATIONS_CACHE_TTL_MS) return cached.rows;
   const {
     T_LEADS,
     T_STUDENTS,

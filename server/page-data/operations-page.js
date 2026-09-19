@@ -138,7 +138,8 @@ async function buildOperationsPagePayload({
   getFinancePageSnapshot,
   getFinancePageSnapshotIfCached,
   tables,
-  baseRowsOverride = null
+  baseRowsOverride = null,
+  forceFreshSource = false
 }) {
   const isCoachView = scope?.view === 'coach';
   const isWeeklyReportView = scope?.view === 'weekly-report';
@@ -154,7 +155,8 @@ async function buildOperationsPagePayload({
     isProductionRuntime,
     mergeDuplicateLeadRows,
     getFinancePageSnapshotIfCached,
-    tables
+    tables,
+    forceFreshSource
   });
   const fullFinanceSnapshot = useGlobalFinanceSnapshot && typeof getFinancePageSnapshot === 'function'
     ? await getFinancePageSnapshot()

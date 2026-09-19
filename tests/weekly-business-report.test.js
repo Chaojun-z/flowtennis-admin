@@ -1252,15 +1252,18 @@ assert.match(weeklyReportSource, /weeklyRawToBaseRows[\s\S]*baseRowsOverride[\s\
 assert.match(weeklyReportSource, /generationMode === 'manual' && !allowLiveFallback && baseRowsOverride[\s\S]*loadOperationsSnapshot/, 'manual weekly report regeneration should avoid probing every trend snapshot when lifetime raw facts are available');
 assert.match(weeklyReportSource, /totalSnapshotBaseRows[\s\S]*baseRowsOverride: totalSnapshotBaseRows/, 'weekly report regeneration should derive period metrics from one complete lifetime snapshot');
 assert.match(weeklyReportSource, /loadOperationsSnapshot[\s\S]*allowRefreshing:\s*false/, 'weekly report regeneration should never consume a snapshot that is already refreshing');
+assert.match(weeklyReportSource, /forceFreshSource/, 'manual weekly report regeneration must explicitly request fresh source data');
+assert.match(weeklyReportSource, /weeklyRawToBaseRows[\s\S]*courtAccountListIndexRows/, 'fresh weekly report regeneration must keep all raw source rows needed for one-pass derivation');
 assert.match(weeklyReportSource, /trendScope[\s\S]*allowRefreshing:\s*false/, 'trend metrics should never consume a snapshot that is already refreshing');
 assert.match(weeklyReportSource, /allowLiveFallback = true/, 'weekly report generation should support disabling synchronous live fallback');
 assert.match(weeklyRoutesSource, /publishWeeklyBusinessReportDraft/, 'manual weekly report regeneration should publish a prebuilt ready draft instead of generating live data in the request');
+assert.match(weeklyRoutesSource, /mode === 'manual'[\s\S]*forceFreshSource:\s*true/, 'manual weekly report regeneration must force one fresh source read');
 assert.doesNotMatch(weeklyRoutesSource, /mode === 'manual'[\s\S]*generateWeeklyBusinessReport/, 'manual weekly report regeneration must not call the slow live generation path');
 assert.match(apiSource, /loadOperationsSnapshot:operationsSnapshotSync\.loadSnapshot/, 'weekly report routes should receive the operations snapshot loader');
 assert.match(operationsPageSource, /baseRowsOverride = null[\s\S]*const baseRows = baseRowsOverride \|\| await loadBaseRows/, 'operations page payload should allow weekly report to reuse loaded base rows');
 assert.match(operationsPageSource, /function compactWeeklyReportRaw[\s\S]*weeklyReportRaw: includeWeeklyReportRaw \? compactWeeklyReportRaw/, 'weekly report snapshots should keep lifetime finance facts but compact recent trend rows');
 assert.match(operationsSnapshotSource, /weeklyReportRawWindow/, 'weekly report lifetime snapshot should use a bounded raw-data window');
-assert.match(apiSource, /async function buildOperationsSnapshotPayload\(\{user,scope,baseRowsOverride,weeklyReportLiveSource=false\}\)/, 'operations payload wrapper should pass through reusable base rows and explicit weekly live fallback mode');
+assert.match(apiSource, /async function buildOperationsSnapshotPayload\(\{user,scope,baseRowsOverride,weeklyReportLiveSource=false,forceFreshSource=false\}\)/, 'operations payload wrapper should pass through reusable base rows and explicit weekly live fallback mode');
 assert.match(apiSource, /weeklyReportLiveSource&&scope\?\.view==='weekly-report'[\s\S]*scanFirstRows:useWeeklyReportFullRead\?weeklyReportFullScan:scanFirstRows[\s\S]*getScheduleListRows:useWeeklyReportFullRead\?null:getScheduleListRows/, 'weekly report live fallback should use full paged source reads without changing normal page reads');
 assert.match(operationsSource, /const OPERATIONS_WEEKLY_REPORT_SCHEDULE_FIELDS = \[[\s\S]*'confirmStatus'[\s\S]*'paidAmount'[\s\S]*'paymentAmount'[\s\S]*'payMethod'[\s\S]*'paymentChannel'[\s\S]*getOperationsWeeklyReportBaseRows[\s\S]*columns:\s*OPERATIONS_WEEKLY_REPORT_SCHEDULE_FIELDS/, 'weekly report source rows must read schedule payment fields for direct course receipts');
 assert.match(apiSource, /FEISHU_WEEKLY_BUSINESS_REPORT_WEBHOOK/, 'weekly report should use a dedicated Feishu webhook env');
@@ -1268,8 +1271,8 @@ assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow sh
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260918-weekly-regenerate-single-request-v4/, 'admin shell should bust weekly report page script cache after single-request regeneration fix');
-assert.match(weeklyPageSource, /WEEKLY_REPORT_REQUEST_TIMEOUT_MS\s*=\s*10000/, 'weekly report regeneration requests should fail fast within 10 seconds');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260919-weekly-regenerate-fresh-source-v1/, 'admin shell should bust weekly report page script cache after fresh-source regeneration fix');
+assert.match(weeklyPageSource, /WEEKLY_REPORT_REQUEST_TIMEOUT_MS\s*=\s*60000/, 'weekly report regeneration requests should allow the approved 60-second generation window');
 assert.doesNotMatch(weeklyPageSource, /WEEKLY_REPORT_RETRY_LIMIT|setTimeout\(\(\) => regenerateWeeklyReport/, 'weekly report regeneration should never auto-retry');
 assert.match(indexHtml, /api\.js\?v=20260918-weekly-report-timeout-message-v1/, 'admin shell should bust weekly report timeout message script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
@@ -1998,6 +2001,7 @@ function makeReadyWeeklyDraftRow(overrides = {}) {
 async function callManualRegenerationPublishesReadyDraft() {
   const draft = makeReadyWeeklyDraftRow();
   const savedRows = [];
+  let rebuiltDraft = draft;
   let liveLoads = 0;
   let snapshotLoads = 0;
   let json = null;
@@ -2006,7 +2010,7 @@ async function callManualRegenerationPublishesReadyDraft() {
     init: async () => {},
     sendJson: (_res, value, statusCode = 200) => { json = { statusCode, value }; return value; },
     get: async (_table, id) => {
-      if (id === draft.id) return draft;
+      if (id === draft.id) return rebuiltDraft;
       if (id === draft.draftOf) return {
         ...snapshot,
         id: draft.draftOf,
@@ -2018,15 +2022,20 @@ async function callManualRegenerationPublishesReadyDraft() {
       };
       return null;
     },
-    put: async (_table, _id, row) => { savedRows.push(row); },
+    put: async (_table, id, row) => {
+      savedRows.push(row);
+      if (id === draft.id) rebuiltDraft = row;
+    },
     mkTable: async () => {},
-    buildOperationsPayload: async () => {
+    buildOperationsPayload: async ({ baseRowsOverride, forceFreshSource }) => {
       liveLoads += 1;
-      throw new Error('点击重新生成不得现场读取经营事实');
+      if (forceFreshSource) assert.strictEqual(baseRowsOverride, undefined, '强制最新读取只能在第一步读取源数据');
+      if (!forceFreshSource) assert.ok(baseRowsOverride, '同一次生成的派生指标必须复用同一批最新源数据');
+      return operationsPayloadWithRawFacts;
     },
     loadOperationsSnapshot: async () => {
       snapshotLoads += 1;
-      throw new Error('点击重新生成不得现场读取经营快照');
+      throw new Error('手动重新生成不得读取旧快照');
     },
     table: 'ft_weekly_business_reports'
   });
@@ -2424,28 +2433,30 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(draftBuilderResult.savedRows[0].draftOf, 'weekly:顺义马坡:2026-08-27:2026-09-03', 'draft builder should link the draft to the formal report id');
   assert.strictEqual(readyPublishResult.json.statusCode, 200, 'manual regeneration with a ready draft should succeed');
   assert.strictEqual(readyPublishResult.json.value.success, true, 'manual regeneration should return explicit success after publishing the ready draft');
-  assert.strictEqual(readyPublishResult.liveLoads, 0, 'manual regeneration with a ready draft must not synchronously scan source facts');
-  assert.strictEqual(readyPublishResult.snapshotLoads, 0, 'manual regeneration with a ready draft must not read operations snapshots');
-  assert.strictEqual(readyPublishResult.savedRows.length, 1, 'manual regeneration should publish one formal weekly report row');
-  assert.strictEqual(readyPublishResult.savedRows[0].id, 'weekly:顺义马坡:2026-08-27:2026-09-03', 'manual regeneration should write the formal weekly report id');
-  assert.strictEqual(readyPublishResult.savedRows[0].shareToken, 'existing-token', 'manual regeneration should preserve the existing share link');
-  assert.strictEqual(readyPublishResult.savedRows[0].remark, '人工备注必须保留', 'manual regeneration should preserve saved private remarks');
-  assert.strictEqual(readyPublishResult.savedRows[0].publicEdits.remark, '公开编辑也必须保留', 'manual regeneration should preserve saved public edits');
-  assert.strictEqual(readyPublishResult.savedRows[0].sections.revenue.course.paidPeople, 3, 'private package buyer count should match the purchase list count');
-  assert.strictEqual(readyPublishResult.savedRows[0].sections.revenue.course.receiptRows.length, 3, 'private package purchase list should show the same three buyers');
-  assert.strictEqual(readyPublishResult.savedRows[0].summary.coachHours.value, 67.5, 'manual regeneration should preserve half-hour completed course hours');
-  assert.strictEqual(readyPublishResult.savedRows[0].lifetimeSummary.totalIncome.value, 7000, 'manual regeneration should publish lifetime income through report cutoff and exclude later receipts');
-  assert.notStrictEqual(readyPublishResult.savedRows[0].generatedAt, '2026-09-18T14:13:00.000Z', 'manual regeneration should update generated time only after successful publish');
-  assert.ok(readyPublishResult.elapsedMs < 10000, `manual ready-draft publish should finish within 10 seconds, got ${readyPublishResult.elapsedMs}ms`);
+  assert.ok(readyPublishResult.liveLoads >= 9, 'manual regeneration must read the latest source once and derive all report metrics from it');
+  assert.strictEqual(readyPublishResult.snapshotLoads, 0, 'manual regeneration must not read stale operations snapshots');
+  assert.strictEqual(readyPublishResult.savedRows.length, 2, 'manual regeneration should save one validated draft and one formal weekly report row');
+  const readyDraftRow = readyPublishResult.savedRows.find(row => row.status === 'ready');
+  const readyPublishedRow = readyPublishResult.savedRows.find(row => row.status === 'success');
+  assert.ok(readyDraftRow, 'manual regeneration should persist the newly validated draft');
+  assert.strictEqual(readyPublishedRow.id, 'weekly:顺义马坡:2026-08-27:2026-09-03', 'manual regeneration should write the formal weekly report id');
+  assert.strictEqual(readyPublishedRow.shareToken, 'existing-token', 'manual regeneration should preserve the existing share link');
+  assert.strictEqual(readyPublishedRow.remark, '人工备注必须保留', 'manual regeneration should preserve saved private remarks');
+  assert.strictEqual(readyPublishedRow.publicEdits.remark, '公开编辑也必须保留', 'manual regeneration should preserve saved public edits');
+  assert.strictEqual(readyPublishedRow.summary.cashReceived.value, 49295.99, 'manual regeneration should publish the latest weekly receipts');
+  assert.strictEqual(readyPublishedRow.summary.totalIncome.value, 38511.4, 'manual regeneration should publish the latest recognized revenue');
+  assert.strictEqual(readyPublishedRow.summary.coachHours.value, 80.5, 'manual regeneration should publish the latest completed hours');
+  assert.notStrictEqual(readyPublishedRow.generatedAt, '2026-09-18T14:13:00.000Z', 'manual regeneration should update generated time only after successful publish');
+  assert.ok(readyPublishResult.elapsedMs < 10000, `manual fresh regeneration should finish within 10 seconds in the test fixture, got ${readyPublishResult.elapsedMs}ms`);
   assert.strictEqual(missingDraftResult.json.statusCode, 200, 'manual regeneration without an existing ready draft should still succeed');
   assert.strictEqual(missingDraftResult.json.value.success, true, 'manual regeneration should auto-build and publish when the ready draft is missing');
   assert.ok(missingDraftResult.liveLoads >= 1, 'missing ready draft should trigger a one-time draft build instead of disabling the button');
   assert.ok(missingDraftResult.savedRows.some(row => row.id === 'weekly-draft:顺义马坡:2026-08-27:2026-09-03' && row.status === 'ready'), 'missing ready draft flow should save a validated ready draft');
   assert.ok(missingDraftResult.savedRows.some(row => row.id === 'weekly:顺义马坡:2026-08-27:2026-09-03' && row.status === 'success'), 'missing ready draft flow should publish the formal weekly report');
   assert.ok(missingDraftResult.elapsedMs < 10000, `manual regeneration without a ready draft should finish within 10 seconds in the hard gate, got ${missingDraftResult.elapsedMs}ms`);
-  assert.strictEqual(invalidDraftResult.json.statusCode, 422, 'manual regeneration should reject a ready draft that fails hard validation');
-  assert.strictEqual(invalidDraftResult.json.value.code, 'WEEKLY_REPORT_DRAFT_INVALID', 'invalid draft should expose a validation error code');
-  assert.strictEqual(invalidDraftResult.putCalls, 0, 'invalid draft must not publish or update generated time');
+  assert.strictEqual(invalidDraftResult.json.statusCode, 500, 'manual regeneration should fail when the fresh source cannot be read, even if an old draft is present');
+  assert.doesNotMatch(String(invalidDraftResult.json.value.error || ''), /success/, 'fresh-source failure must not be reported as success');
+  assert.strictEqual(invalidDraftResult.putCalls, 0, 'fresh-source failure must not publish or update generated time');
   assert.strictEqual(failedRegenerationResult.error?.code, 'WEEKLY_REPORT_SNAPSHOT_NOT_READY', 'failed regeneration should report that the source snapshot is not ready');
   assert.strictEqual(failedRegenerationResult.putCalls, 0, 'failed regeneration must not write a new report row or generated time');
   assert.strictEqual(failedRegenerationResult.existingGeneratedAt, '2026-09-18T14:13:00.000Z', 'failed regeneration must preserve the previous generated time');
