@@ -4185,7 +4185,7 @@ const {
   parseLessonValue,
   computeCourtFinance
 });
-async function buildOperationsSnapshotPayload({user,scope,baseRowsOverride,weeklyReportLiveSource=false,forceFreshSource=false}){
+async function buildOperationsSnapshotPayload({user,scope,baseRowsOverride,weeklyReportLiveSource=false,forceFreshSource=false,weeklyReportRawOnly=false}){
   const useWeeklyReportFullRead=weeklyReportLiveSource&&scope?.view==='weekly-report';
   const weeklyReportFullScan=(table,options={})=>getCachedScan(table,{...options,pageLimit:500,fresh:true});
   return buildOperationsPagePayload({
@@ -4204,7 +4204,8 @@ async function buildOperationsSnapshotPayload({user,scope,baseRowsOverride,weekl
     getFinancePageSnapshotIfCached,
     tables:{T_LEADS,T_LEAD_FOLLOWUPS,T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_FINANCIAL_LEDGER,T_COURT_ACCOUNT_LIST_INDEX,T_COACHES,T_USERS,T_SCHEDULE,T_FEEDBACKS},
     baseRowsOverride,
-    forceFreshSource
+    forceFreshSource,
+    weeklyReportRawOnly: weeklyReportRawOnly || (forceFreshSource && scope?.view === 'weekly-report')
   });
 }
 operationsSnapshotSync=createOperationsSnapshotSync({getCachedRow,put,mkTable,scanByIdPrefix,buildPayload:buildOperationsSnapshotPayload,tables:{

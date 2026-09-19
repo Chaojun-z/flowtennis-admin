@@ -123,6 +123,30 @@ function compactWeeklyReportRaw(raw = {}, scope = {}) {
   };
 }
 
+function buildWeeklyReportRawPayload(scoped = {}, baseRows = {}, scope = {}) {
+  return compactWeeklyReportRaw({
+    campuses: scoped.campuses,
+    leads: scoped.leads,
+    leadFollowups: scoped.leadFollowups,
+    students: scoped.students,
+    purchases: scoped.purchases,
+    entitlements: scoped.entitlements,
+    entitlementLedger: scoped.entitlementLedger,
+    courts: scoped.courts,
+    courtAccountListIndexRows: baseRows.courtAccountListIndexRows || [],
+    membershipOrders: scoped.membershipOrders,
+    membershipAccounts: scoped.membershipAccounts,
+    membershipPlans: scoped.membershipPlans,
+    membershipBenefitLedger: scoped.membershipBenefitLedger,
+    membershipAccountEvents: scoped.membershipAccountEvents,
+    financialLedger: scoped.financialLedger,
+    coaches: scoped.coaches,
+    schedule: scoped.schedule,
+    feedbacks: scoped.feedbacks,
+    financeNormalizedRows: scoped.financeNormalizedRows || []
+  }, scope);
+}
+
 async function buildOperationsPagePayload({
   scope,
   dateRange,
@@ -139,7 +163,8 @@ async function buildOperationsPagePayload({
   getFinancePageSnapshotIfCached,
   tables,
   baseRowsOverride = null,
-  forceFreshSource = false
+  forceFreshSource = false,
+  weeklyReportRawOnly = false
 }) {
   const isCoachView = scope?.view === 'coach';
   const isWeeklyReportView = scope?.view === 'weekly-report';
@@ -181,6 +206,29 @@ async function buildOperationsPagePayload({
     schedule: baseRows.schedule,
     feedbacks: baseRows.feedbacks
   }, user);
+  if (weeklyReportRawOnly) {
+    const financeScope = buildOperationsFinanceScope(scope, scoped.campuses || []);
+    const financeSnapshot = baseRows.cachedFinanceSnapshot || buildFinancePageSnapshot({
+      campuses: scoped.campuses,
+      students: scoped.students,
+      purchases: scoped.purchases,
+      entitlements: scoped.entitlements,
+      entitlementLedger: scoped.entitlementLedger,
+      courts: scoped.courts,
+      courtAccountListIndexRows: baseRows.courtAccountListIndexRows || [],
+      membershipOrders: scoped.membershipOrders,
+      membershipAccounts: scoped.membershipAccounts,
+      schedule: scoped.schedule
+    }, financeScope);
+    return {
+      campuses: scoped.campuses,
+      operations: {},
+      weeklyReportRaw: buildWeeklyReportRawPayload({
+        ...scoped,
+        financeNormalizedRows: financeSnapshot.financeNormalizedRows || []
+      }, baseRows, scope)
+    };
+  }
   const customerLifecycleRows=buildCustomerLifecycleRows(scoped);
 
   const financeScope = buildOperationsFinanceScope(scope, scoped.campuses || []);
@@ -211,26 +259,10 @@ async function buildOperationsPagePayload({
   return {
     campuses: scoped.campuses,
     operations: projectOperationsPagePayload({ operations }, scope?.view || '').operations,
-    weeklyReportRaw: includeWeeklyReportRaw ? compactWeeklyReportRaw({
-      campuses: scoped.campuses,
-      leads: scoped.leads,
-      leadFollowups: scoped.leadFollowups,
-      students: scoped.students,
-      purchases: scoped.purchases,
-      entitlements: scoped.entitlements,
-      entitlementLedger: scoped.entitlementLedger,
-      courts: scoped.courts,
-      courtAccountListIndexRows: baseRows.courtAccountListIndexRows || [],
-      membershipOrders: scoped.membershipOrders,
-      membershipAccounts: scoped.membershipAccounts,
-      membershipPlans: scoped.membershipPlans,
-      membershipBenefitLedger: scoped.membershipBenefitLedger,
-      membershipAccountEvents: scoped.membershipAccountEvents,
-      financialLedger: scoped.financialLedger,
-      coaches: scoped.coaches,
-      schedule: scoped.schedule,
+    weeklyReportRaw: includeWeeklyReportRaw ? buildWeeklyReportRawPayload({
+      ...scoped,
       financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows || []
-    }, scope) : undefined,
+    }, baseRows, scope) : undefined,
     generatedAt: operations.generatedAt
   };
 }

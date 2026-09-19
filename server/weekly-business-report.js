@@ -3137,32 +3137,30 @@ async function generateWeeklyBusinessReport({
       user,
       scope: totalScope,
       weeklyReportLiveSource: true,
-      forceFreshSource: true
+      forceFreshSource: true,
+      weeklyReportRawOnly: true
     });
     if (!freshPayload?.weeklyReportRaw || typeof freshPayload.weeklyReportRaw !== 'object' || !weeklyPayloadHasRawFacts(freshPayload)) {
       throw weeklyReportSnapshotNotReadyError([totalScope], snapshotUser);
     }
-    const baseRowsOverride = weeklyRawToBaseRows(freshPayload.weeklyReportRaw);
-    const derivePayload = targetScope => loadOperationsPayload({
-      user,
-      scope: targetScope,
-      baseRowsOverride,
-      weeklyReportLiveSource: false
+    const derivePayload = targetScope => ({
+      ...freshPayload,
+      scope: targetScope.dateRange || {}
     });
-    operationsPayload = await derivePayload(scope);
-    previousOperationsPayload = await derivePayload(previousScope);
-    totalOperationsPayload = await derivePayload(totalScope);
+    operationsPayload = derivePayload(scope);
+    previousOperationsPayload = derivePayload(previousScope);
+    totalOperationsPayload = derivePayload(totalScope);
     const trendPeriods = resolveTrailingWeeklyPeriods(period, 8)
       .filter(item => `${item.startDate}:${item.endDate}` !== `${period.startDate}:${period.endDate}`)
       .filter(item => `${item.startDate}:${item.endDate}` !== `${period.previousStartDate}:${period.previousEndDate}`);
-    trendOperationsPayloads = await Promise.all(trendPeriods.map(async trendPeriod => ({
+    trendOperationsPayloads = trendPeriods.map(trendPeriod => ({
       period: trendPeriod,
-      payload: await derivePayload({
+      payload: derivePayload({
         ...scope,
         dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
         metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
       })
-    })));
+    }));
   } else {
     if (typeof loadOperationsSnapshot === 'function') {
       operationsPayload = await loadSnapshotPayload(scope);
