@@ -1033,25 +1033,24 @@ function openCoachLateSettlementModal(month=today().slice(0,7)){
   const body=`<div class="late-settlement-head"><div class="tms-form-item"><label class="tms-form-label">月份</label><input class="finput tms-form-control" id="coachLateMonth" type="month" value="${esc(month)}" onchange="openCoachLateSettlementModal(this.value)"></div></div><div class="tms-readonly-panel late-settlement-summary"><div class="late-settlement-card"><div class="late-settlement-label">迟到次数</div><div class="late-settlement-value">${lateCount}<span> 次</span></div></div><div class="late-settlement-card"><div class="late-settlement-label">结算教练</div><div class="late-settlement-value">${rows.length}<span> 人</span></div></div><div class="late-settlement-card"><div class="late-settlement-label">承担合计</div><div class="late-settlement-value">¥${fmt(total)}</div></div></div><div class="tms-audit-note late-settlement-note">来自财务统一结算快照，排课页只展示统一结果。</div><div class="tms-table-card late-settlement-table"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">月份</th><th style="width:130px">教练</th><th>校区</th><th style="width:110px">已完成课时</th><th style="width:90px">迟到</th><th style="width:130px;text-align:right;padding-right:20px">承担金额</th></tr></thead><tbody>${rows.map(row=>`<tr><td style="padding-left:20px">${esc(row.month||month)}</td><td>${esc(coachName(row.coach)||'-')}</td><td>${esc(row.campusName||'—')}</td><td>${esc(lessonUnitsText(row.lessonUnits))} 节</td><td>${Number(row.lateCount)||0} 次</td><td style="text-align:right;padding-right:20px">¥${fmt(Number(row.lateFeeAmount)||0)}</td></tr>`).join('')||'<tr><td colspan="6"><div class="late-settlement-empty">本月暂无迟到记录</div></td></tr>'}</tbody></table></div></div>`;
   openStandardModal({title:'迟到月结',bodyHtml:body,actionsHtml:'<button class="tms-btn tms-btn-primary" onclick="closeModal()">关闭</button>',extraClass:'modal-wide late-settlement-modal'});
 }
+function addDaysToScheduleLocalDateTime(raw,days){const match=String(raw||'').trim().match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);if(!match)return raw;const pad=value=>String(value).padStart(2,'0'),dt=new Date(Number(match[1]),Number(match[2])-1,Number(match[3])+days,Number(match[4]),Number(match[5]),Number(match[6]||0));return Number.isNaN(dt.getTime())?raw:`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;}
 function buildRepeatScheduleSeeds(baseData){
-  const enabled=!!document.getElementById('sch_repeatEnabled')?.checked;
-  const weeks=Math.max(1,parseInt(document.getElementById('sch_repeatWeeks')?.value)||1);
+  const enabled=!!document.getElementById('sch_repeatEnabled')?.checked,weeks=Math.max(1,parseInt(document.getElementById('sch_repeatWeeks')?.value)||1);
   if(!enabled)return [baseData];
-  const makeShift=(raw,offset)=>{
-    const dt=new Date(String(raw||'').replace(' ','T'));
-    if(Number.isNaN(dt.getTime()))return raw;
-    dt.setDate(dt.getDate()+offset*7);
-    return dt.toISOString().slice(0,16).replace('T',' ');
-  };
-  return Array.from({length:weeks},(_,idx)=>({
-    ...baseData,
-    startTime:makeShift(baseData.startTime,idx),
-    endTime:makeShift(baseData.endTime,idx),
-    expectedStudentIds:baseData.expectedStudentIds,
-    absentStudentIds:baseData.absentStudentIds,
-    smallClassType:baseData.smallClassType,
-    scheduleSource:'循环排课'
-  }));
+  return Array.from({length:weeks},(_,idx)=>({...baseData,startTime:addDaysToScheduleLocalDateTime(baseData.startTime,idx*7),endTime:addDaysToScheduleLocalDateTime(baseData.endTime,idx*7),expectedStudentIds:baseData.expectedStudentIds,absentStudentIds:baseData.absentStudentIds,smallClassType:baseData.smallClassType,scheduleSource:'循环排课'}));
+}
+async function validateRepeatScheduleSeeds(seeds=[]){
+  const list=Array.isArray(seeds)?seeds:[]; if(list.length<=1)return;
+  for(let i=0;i<list.length;i++){
+    const seed=list[i]||{},packageRows=parseArr(seed.studentSettlementRows).filter(row=>String(row?.settlementType||'package')==='package'),explicitIds=packageRows.length?packageRows.map(row=>String(row.entitlementId||'').trim()).filter(Boolean):(String(seed.entitlementId||'').trim()?[String(seed.entitlementId).trim()]:[]);
+    if(seed.status==='已取消'||seed.coachLateFree||seed.settlementType!=='package'||!explicitIds.length)continue;
+    const res=await apiCall('POST','/entitlements/recommend',{studentIds:seed.studentIds,expectedStudentIds:seed.expectedStudentIds,courseType:seed.courseType,experienceType:seed.experienceType,smallClassType:seed.smallClassType,actualStudentCount:seed.actualStudentCount,coach:seed.coach,coachId:seed.coachId,campus:seed.campus,startTime:seed.startTime,endTime:seed.endTime,lessonCount:seed.lessonCount,status:seed.status,scheduleId:seed.id||''});
+    const options=Array.isArray(res?.options)?res.options:[];
+    const badId=explicitIds.find(id=>!options.some(option=>String(option.entitlementId||option.id||'')===id&&option.selectable!==false));
+    if(!badId)continue;
+    const option=options.find(item=>String(item.entitlementId||item.id||'')===badId),reason=option?scheduleEntitlementUnavailableReason([option]):scheduleEntitlementUnavailableReason(options);
+    throw new Error(`循环排课第 ${i+1} 节（${fmtDt(seed.startTime)} - ${String(fmtDt(seed.endTime)).slice(11)}）课包不可用：${reason}`);
+  }
 }
 async function refreshSchEntitlementOptions(){
   const sel=document.getElementById('sch_entitlement'),hint=document.getElementById('sch_ent_hint');
@@ -1238,12 +1237,12 @@ async function saveSchedule(){
       mergeScheduleSaveResult(result,editId);
     }else{
       const seeds=buildRepeatScheduleSeeds(data);
+      await validateRepeatScheduleSeeds(seeds);
       let warnings=[];
       for(let i=0;i<seeds.length;i++){
-        const currentSeed=seeds[i];
-        const currentResult=await apiCall('POST','/schedule',currentSeed);
-        mergeScheduleSaveResult(currentResult,'');
-        warnings=warnings.concat(currentResult?.warnings||[]);
+        const currentSeed=seeds[i]; let currentResult;
+        try{currentResult=await apiCall('POST','/schedule',currentSeed);}catch(error){const prefix=seeds.length>1?`循环排课第 ${i+1} 节（${fmtDt(currentSeed.startTime)} - ${String(fmtDt(currentSeed.endTime)).slice(11)}）保存失败：`:'';throw new Error(`${prefix}${scheduleSaveErrorText(error)}`);}
+        mergeScheduleSaveResult(currentResult,''); warnings=warnings.concat(currentResult?.warnings||[]);
         if(i===0)result=currentResult;
       }
       if(result)result.warnings=warnings;
@@ -1285,6 +1284,7 @@ function scheduleSaveErrorText(err){
     '课包余额不存在':'这个课包不可用，请重新选择课包',
     '课包余额不可用':'这个课包不可用，请重新选择课包',
     '课包剩余课时不足':'这个课包剩余课时不够，请换课包或减少课时',
+    '有学员没有可用课包':'有学员课包不可用，请检查课包余额、课程类型、校区、教练和上课时间',
     '关联班次不存在':'关联班次不存在，请重新选择班次',
     '该班次已取消，不能继续排课':'这个班次已经取消了，不能继续排课',
     '该班次已结课，不能继续排课':'这个班次已经结课了，不能继续排课',

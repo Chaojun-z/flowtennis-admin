@@ -14,7 +14,7 @@ const asyncAssertions = [];
 assert.doesNotThrow(() => new Function(scheduleSource), 'schedule.js should be valid JavaScript so renderSchedule is defined');
 assert.doesNotMatch(scheduleSource, /^(let|const) /m, 'schedule.js must stay repeatable because renderer recovery may load it more than once');
 assert.match(indexHtml, /state\.js\?v=20260913-stored-value-balance-v3/, 'state script version should force a fresh browser load after schedule renderer recovery asset updates');
-assert.match(indexHtml, /schedule\.js\?v=20260913-stored-value-balance-v3/, 'schedule script version should force a fresh browser load after stored-value balance fixes');
+assert.match(indexHtml, /schedule\.js\?v=20260919-repeat-local-time-v1/, 'schedule script version should force a fresh browser load after repeat scheduling fixes');
 assert.match(source, /schedule:\{required:\['renderSchedule'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC\]\}/, 'schedule page should recover if the browser keeps old broken schedule scripts');
 assert.match(source, /coachschedule:\{required:\['renderSchedule','renderCoachOps','scheduleLocationText','openScheduleDetail'\],scripts:\[SCHEDULE_HELPERS_RENDERER_SRC,SCHEDULE_SETTLEMENT_RENDERER_SRC,SCHEDULE_RENDERER_SRC,COACH_OPS_RENDERER_SRC\]\}/, 'coach schedule calendar should recover its schedule.js dependencies before rendering');
 assert.match(scheduleSource, /Object\.assign\(window,\{[\s\S]*renderSchedule[\s\S]*openScheduleDetail[\s\S]*scheduleLocationText[\s\S]*\}\)/, 'schedule.js should explicitly expose functions used by lazy recovery and calendar renderers');
@@ -105,6 +105,38 @@ assert.match(fnBody('openScheduleModal'), /id="sch_sourceLeadName" value="\$\{es
 assert.match(fnBody('scheduleSaveConfirmText'), /迟到免费/, 'schedule save confirm copy should show coach-late free status');
 assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /班次：/, 'schedule save confirm copy should not show obsolete class linkage copy');
 assert.match(fnBody('saveSchedule'), /buildRepeatScheduleSeeds\(/, 'saving schedules should fan out repeat seeds when enabled');
+assert.match(source, /async function validateRepeatScheduleSeeds\(/, 'repeat schedule save should preflight all generated schedules before writing any lesson');
+assert.match(fnBody('saveSchedule'), /const seeds=buildRepeatScheduleSeeds\(data\);[\s\S]*await validateRepeatScheduleSeeds\(seeds\);[\s\S]*for\(let i=0;i<seeds\.length;i\+\+\)/, 'repeat schedule save must validate all generated lessons before the first POST to avoid partial writes');
+assert.doesNotMatch(fnBody('buildRepeatScheduleSeeds'), /toISOString\(\)/, 'repeat schedule generation must not convert business local time through UTC');
+assert.match(fnBody('buildRepeatScheduleSeeds'), /addDaysToScheduleLocalDateTime\(/, 'repeat schedule generation should add weeks in local business time');
+{
+  const context = scheduleVmContext({
+    elements: {
+      sch_repeatEnabled: { checked: true },
+      sch_repeatWeeks: { value: '3' }
+    }
+  });
+  assert.strictEqual(typeof context.buildRepeatScheduleSeeds, 'function', 'repeat seed helper should be available in schedule VM');
+  const seeds = context.buildRepeatScheduleSeeds({
+    startTime: '2026-09-13 10:00',
+    endTime: '2026-09-13 11:00',
+    studentSettlementRows: [{ studentId: 'stu-bob', settlementType: 'package', entitlementId: 'ent-bootcamp' }]
+  });
+  assert.strictEqual(
+    JSON.stringify(seeds.map(row => [row.startTime, row.endTime])),
+    JSON.stringify([
+      ['2026-09-13 10:00', '2026-09-13 11:00'],
+      ['2026-09-20 10:00', '2026-09-20 11:00'],
+      ['2026-09-27 10:00', '2026-09-27 11:00']
+    ]),
+    'weekly repeat schedules must keep the selected local clock time instead of shifting to UTC'
+  );
+  assert.strictEqual(
+    JSON.stringify(seeds.map(row => row.studentSettlementRows?.[0]?.entitlementId)),
+    JSON.stringify(['ent-bootcamp', 'ent-bootcamp', 'ent-bootcamp']),
+    'weekly repeat schedules must preserve the selected student package binding'
+  );
+}
 assert.match(fnBody('saveSchedule'), /coachLateFree/, 'saving schedules should persist coach late fields');
 assert.match(fnBody('saveSchedule'), /sourceLeadId:document\.getElementById\('sch_sourceLeadId'\)\?\.value\|\|''/, 'schedule save should persist the source lead id');
 assert.match(fnBody('saveSchedule'), /isLeadCompanionSchedule=scheduleSourceValue==='线索陪打'/, 'lead companion schedules should have an explicit save branch');
@@ -113,6 +145,7 @@ assert.match(fnBody('saveSchedule'), /studentName:isLeadCompanionSchedule\?sourc
 assert.match(fnBody('saveSchedule'), /await appConfirm\(/, 'saving schedules should use app confirm instead of browser confirm');
 assert.doesNotMatch(fnBody('saveSchedule'), /window\.confirm\(/, 'saving schedules should not use browser confirm');
 assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-card/, 'schedule save confirm should render a structured confirmation card');
+assert.match(fnBody('scheduleSaveErrorText'), /有学员没有可用课包[\s\S]*有学员课包不可用，请检查课包余额、课程类型、校区、教练和上课时间/, 'missing package errors should be rewritten into actionable user-facing copy');
 assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-row[\s\S]*时间[\s\S]*学员[\s\S]*教练[\s\S]*场地[\s\S]*课程[\s\S]*结算方式/, 'schedule save confirm should keep all key fields as structured rows');
 assert.match(fnBody('scheduleSaveConfirmText'), /`\$\{day\} · \$\{startClock\} - \$\{endClock\}`/, 'schedule save confirm should show same-day time as date dot time range');
 assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /<strong>/, 'schedule save confirm should not force bold values');

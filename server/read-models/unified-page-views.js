@@ -390,7 +390,7 @@ function buildPurchaseUnifiedView({ purchases = [], packages = [], students = []
       maxStudents,
       classSizeLabel,
       campus: text(lifecycle.campus || row.campus || student.campus || parseArr(row.campusIds)[0] || parseArr(pkg.campusIds)[0]),
-      ownerCoach: text(row.ownerCoach || pkg.ownerCoach || lifecycle.formalCoach || lifecycle.owner),
+      ownerCoach: text(row.ownerCoach),
       amountPaid: money(row.finalAmount ?? row.amountPaid ?? row.actualAmount ?? row.paidAmount ?? row.amount),
       packageLessons,
       remainingLessons,

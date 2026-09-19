@@ -7,8 +7,12 @@ const snapshot = buildPurchaseUnifiedView({
     { id: 'stu-2', name: '学员B', type: '成人' }
   ],
   packages: [
-    { id: 'pkg-1', courseType: '私教课', maxStudents: 2, lessons: 10 },
+    { id: 'pkg-1', courseType: '私教课', maxStudents: 2, lessons: 10, ownerCoach: '课包默认教练' },
     { id: 'pkg-2', courseType: '小班课', standardCourseType: '小班课 / 训练营', maxStudents: 4, lessons: 10 }
+  ],
+  customerLifecycleRows: [
+    { studentId: 'stu-1', formalCoach: '生命周期教练', owner: '生命周期负责人' },
+    { studentId: 'stu-2', formalCoach: '林铭教练', owner: '林铭教练' }
   ],
   purchases: [
     { id: 'pur-1', studentId: 'stu-1', packageId: 'pkg-1', purchaseDate: '2026-06-01', amountPaid: 4500, packageLessons: 10, status: 'active' },
@@ -45,5 +49,7 @@ assert.strictEqual(smallRow.userType, '成人', 'purchase rows should not expose
 assert.strictEqual(smallRow.paidStatus, '-', 'non-private course purchases should not show paid status');
 assert.strictEqual(smallRow.inPeriodStatus, '-', 'non-private course purchases should not show in-period status');
 assert.strictEqual(privateAfterSmallRow.paidStatus, '首次', 'first private course purchase should stay first even after a non-private purchase');
+assert.strictEqual(row1.ownerCoach, '', 'purchase list owner coach must use the raw purchase ownerCoach, not package or lifecycle fallbacks');
+assert.strictEqual(smallRow.ownerCoach, '', 'unassigned small-group orders must stay unassigned for commission review instead of inheriting a later private coach');
 
 console.log('purchase unified view tests passed');
