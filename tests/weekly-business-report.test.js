@@ -1256,7 +1256,8 @@ assert.match(weeklyRoutesSource, /\/weekly-business-reports/, 'api should expose
 assert.match(weeklyReportSource, /includeWeeklyReportRaw:\s*true[\s\S]*dateRange:\s*\{\}[\s\S]*metricScope:\s*\{\s*campusName:\s*WEEKLY_REPORT_CAMPUS_NAME\s*\}/, 'weekly report lifetime summary should load complete raw facts for the report cutoff');
 assert.match(weeklyReportSource, /view:\s*WEEKLY_REPORT_OPERATIONS_VIEW[\s\S]*includeWeeklyReportRaw:\s*true/, 'weekly report should use a dedicated operations snapshot scope with raw report facts');
 assert.match(weeklyReportSource, /weeklyRawToBaseRows[\s\S]*baseRowsOverride[\s\S]*previousScope[\s\S]*baseRowsOverride[\s\S]*totalScope[\s\S]*baseRowsOverride/, 'weekly report regeneration should reuse one raw read for previous and lifetime metrics');
-assert.match(weeklyReportSource, /generationMode === 'manual' && !allowLiveFallback && baseRowsOverride[\s\S]*loadOperationsSnapshot/, 'manual weekly report regeneration should avoid probing every trend snapshot when lifetime raw facts are available');
+assert.match(weeklyReportSource, /const payload = canDeriveFromLifetime[\s\S]*loadOperationsPayload[\s\S]*loadOperationsSnapshot/, 'weekly report regeneration should derive trend metrics from lifetime raw facts before probing individual trend snapshots');
+assert.match(weeklyReportSource, /canDeriveFromLifetime/, 'weekly report regeneration should reuse a complete lifetime snapshot after it is published');
 assert.match(weeklyReportSource, /totalSnapshotBaseRows[\s\S]*baseRowsOverride: totalSnapshotBaseRows/, 'weekly report regeneration should derive period metrics from one complete lifetime snapshot');
 assert.match(weeklyReportSource, /loadOperationsSnapshot[\s\S]*allowRefreshing:\s*false/, 'weekly report regeneration should never consume a snapshot that is already refreshing');
 assert.match(weeklyReportSource, /forceFreshSource/, 'manual weekly report regeneration must explicitly request fresh source data');
@@ -1457,7 +1458,7 @@ async function callSnapshotFirstGeneration() {
 }
 
 async function callCampusScopedSnapshotGeneration() {
-  let liveLoads = 0;
+  let derivedLoads = 0;
   let snapshotUser = null;
   const savedRows = [];
   const result = await generateWeeklyBusinessReport({
@@ -1470,7 +1471,7 @@ async function callCampusScopedSnapshotGeneration() {
     put: async (_table, _id, row) => { savedRows.push(row); },
     loadOperationsPayload: async ({ scope: liveScope, baseRowsOverride }) => {
       assert.ok(baseRowsOverride, '校区权限账号应使用 lifetime 快照在内存中派生周报数据');
-      liveLoads += 1;
+      derivedLoads += 1;
       if (liveScope?.dateRange?.startDate === period.startDate) return operationsPayloadWithRawFacts;
       return {
         ...operationsPayloadWithRawFacts,
@@ -1497,7 +1498,7 @@ async function callCampusScopedSnapshotGeneration() {
       return operationsPayloadWithRawFacts;
     }
   });
-  return { result, savedRows, liveLoads, snapshotUser };
+  return { result, savedRows, derivedLoads, snapshotUser };
 }
 
 async function callSnapshotWithoutRawFallbackGeneration() {
@@ -1781,6 +1782,7 @@ async function callLifetimeIncomeUsesCompleteRawFactsThroughCutoff() {
 async function callFastRegenerationFromLifetimeSnapshot() {
   const savedRows = [];
   let derivedLoads = 0;
+  let snapshotLoads = 0;
   const raw = {
     campuses: [{ id: 'shunyi_mapo', name: '顺义马坡' }],
     financeNormalizedRows: ['2026-07-12', '2026-07-20', '2026-07-27', '2026-08-04', '2026-08-12', '2026-08-20', '2026-08-28', '2026-09-05'].map((businessDate, index) => ({
@@ -1825,11 +1827,12 @@ async function callFastRegenerationFromLifetimeSnapshot() {
       };
     },
     loadOperationsSnapshot: async ({ scope }) => {
+      snapshotLoads += 1;
       if (!scope?.dateRange?.startDate) return lifetimePayload;
       return null;
     }
   });
-  return { result, savedRows, derivedLoads };
+  return { result, savedRows, derivedLoads, snapshotLoads };
 }
 
 async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
@@ -2493,7 +2496,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(generationResult.result.shareToken, 'fast-token', 'snapshot-first generation should preserve the existing share link');
   assert.strictEqual(generationResult.savedRows.length, 1, 'snapshot-first generation should save one weekly report row');
   assert.ok(generationResult.elapsedMs < 10000, `snapshot-first generation should finish within 10 seconds, got ${generationResult.elapsedMs}ms`);
-  assert.strictEqual(campusGenerationResult.liveLoads, 0, 'campus-scoped Mapo users should reuse the prepared weekly snapshots without source-table fallback');
+  assert.ok(campusGenerationResult.derivedLoads >= 8, 'campus-scoped Mapo users should derive from the prepared lifetime snapshot without source-table fallback');
   assert.strictEqual(campusGenerationResult.snapshotUser.dataScope, 'all', 'weekly snapshot reads should use the shared all-data scope');
   assert.deepStrictEqual(campusGenerationResult.snapshotUser.campusIds, [], 'weekly snapshot reads should not create a campus-specific snapshot key');
   assert.strictEqual(campusGenerationResult.result.shareToken, 'campus-snapshot-token', 'campus-scoped snapshot generation should preserve the existing share link');
@@ -2501,9 +2504,9 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(rawFallbackGenerationResult.result.shareToken, 'raw-fallback-token', 'raw-less snapshot fallback should preserve the existing share link');
   assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.cashReceived.value, 49295.99, 'raw-less snapshot fallback must not save zero cash received');
   assert.strictEqual(rawFallbackGenerationResult.savedRows[0].summary.totalIncome.value, 38511.4, 'raw-less snapshot fallback must not save zero recognized revenue');
-  assert.strictEqual(existingGenerationResult.liveLoads, 0, 'manual regeneration should reuse published current and previous weekly snapshots when raw facts are ready');
-  assert.strictEqual(existingGenerationResult.snapshotLoads, 9, 'manual regeneration should use fast snapshots for current, previous, lifetime and the older six trend weeks');
-  assert.deepStrictEqual(existingGenerationResult.snapshotScopes.sort(), ['2026-07-02', '2026-07-10', '2026-07-18', '2026-07-26', '2026-08-03', '2026-08-11', period.startDate, period.previousStartDate, 'lifetime'].sort(), 'manual regeneration should reuse the weekly report snapshot scope for all report contexts and trend weeks');
+  assert.ok(existingGenerationResult.liveLoads >= 8, 'manual regeneration should derive current, previous, and trend metrics from the lifetime raw snapshot without source-table fallback');
+  assert.strictEqual(existingGenerationResult.snapshotLoads, 1, 'manual regeneration should read only the complete lifetime snapshot when raw facts are ready');
+  assert.deepStrictEqual(existingGenerationResult.snapshotScopes, ['lifetime'], 'manual regeneration should derive all report contexts from the lifetime snapshot');
   assert.strictEqual(existingGenerationResult.result.shareToken, 'existing-token', 'manual regeneration for an existing report should keep the share link');
   assert.strictEqual(existingGenerationResult.savedRows.length, 1, 'manual regeneration for an existing report should save the rerendered report');
   assert.strictEqual(existingGenerationResult.savedRows[0].publicEdits.remark, '重新生成也保留', 'manual regeneration should preserve saved public remarks');
@@ -2522,6 +2525,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.ok(lifetimeCutoffResult.liveScopes.includes('lifetime'), 'lifetime income should live-read complete raw facts when the lifetime snapshot has no raw rows');
   assert.strictEqual(fastRegenerationResult.savedRows.length, 1, 'complete lifetime snapshot should allow one-request regeneration without waiting for trend snapshots');
   assert.ok(fastRegenerationResult.derivedLoads >= 8, 'complete lifetime snapshot should derive current, previous and trend metrics in memory');
+  assert.strictEqual(fastRegenerationResult.snapshotLoads, 1, 'complete lifetime snapshot should not probe current, previous, or trend snapshot shards');
   assert.strictEqual(rawlessZeroTrendResult.liveLoads, 4, 'manual regeneration should live-load current, previous, lifetime and trailing trend windows when stored snapshots lack finance facts');
   assert.strictEqual(rawlessZeroTrendResult.result.shareToken, 'rawless-zero-trend-token', 'rawless zero trend repair should preserve the existing share link');
   assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.cashReceived.value, 49295.99, 'rawless current snapshot repair should rebuild weekly cash received from live facts');
@@ -2556,7 +2560,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(readyPublishResult.json.statusCode, 200, 'manual regeneration with a ready draft should succeed');
   assert.strictEqual(readyPublishResult.json.value.success, true, 'manual regeneration should return explicit success after publishing the ready draft');
   assert.strictEqual(readyPublishResult.sourceScans, 0, 'manual regeneration should not scan source tables in the request');
-  assert.strictEqual(readyPublishResult.snapshotLoads, 3, 'manual regeneration should read prepared current, previous and lifetime snapshots');
+  assert.strictEqual(readyPublishResult.snapshotLoads, 1, 'manual regeneration should read only the prepared lifetime snapshot when raw facts are ready');
   assert.strictEqual(readyPublishResult.savedRows.length, 2, 'manual regeneration should save one validated draft and one formal weekly report row');
   const readyDraftRow = readyPublishResult.savedRows.find(row => row.status === 'ready');
   const readyPublishedRow = readyPublishResult.savedRows.find(row => row.status === 'success');
@@ -2589,7 +2593,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(freshSourceResult.json.statusCode, 200, `manual regeneration should return success from prepared snapshots in one request: ${JSON.stringify(freshSourceResult.json)} scopes=${JSON.stringify(freshSourceResult.snapshotScopes)}`);
   assert.strictEqual(freshSourceResult.json.value.success, true, 'manual regeneration should not return a preparation failure when the fresh source is available');
   assert.strictEqual(freshSourceResult.sourceScans, 0, 'manual regeneration should not read source tables in the request');
-  assert.strictEqual(freshSourceResult.snapshotLoads, 3, 'manual regeneration should use the prepared current, previous and lifetime snapshots');
+  assert.strictEqual(freshSourceResult.snapshotLoads, 1, 'manual regeneration should use only the prepared lifetime snapshot when raw facts are ready');
   assert.ok(refreshingLifetimeResult.derivedLoads >= 1, 'manual regeneration should derive report data from a refreshing lifetime raw snapshot');
   assert.strictEqual(concurrentHistoricalResult.liveLoads, 0, 'three concurrent historical report regenerations must not scan source tables');
   assert.strictEqual(concurrentHistoricalResult.queuedScopes, 0, 'historical report failures must not queue background preparation tasks');

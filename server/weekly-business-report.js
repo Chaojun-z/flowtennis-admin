@@ -3131,6 +3131,8 @@ async function generateWeeklyBusinessReport({
   let operationsPayload = null;
   let previousOperationsPayload = null;
   let totalOperationsPayload = null;
+  let totalSnapshotBaseRows = null;
+  let canDeriveFromLifetime = false;
   const missingSnapshotScopes = [];
   let trendOperationsPayloads = [];
   if (forceFreshSource) {
@@ -3164,14 +3166,15 @@ async function generateWeeklyBusinessReport({
     }));
   } else {
     if (typeof loadOperationsSnapshot === 'function') {
-      // 生命周期快照正在刷新时，先复用这一份完整原始事实在内存中派生全部周报范围，
+      // 只要生命周期快照带有完整原始事实，就在内存中派生全部周报范围，
       // 避免当前周、上周和趋势快照重复读取大分片，触发请求超时。
       totalOperationsPayload = await loadSnapshotPayload(totalScope);
-      const canDeriveFromRefreshingLifetime = generationMode === 'manual'
-        && totalOperationsPayload?.snapshot?.refreshing === true
-        && weeklyPayloadHasRawFacts(totalOperationsPayload);
-      if (canDeriveFromRefreshingLifetime) {
-        const baseRowsOverride = weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw);
+      totalSnapshotBaseRows = totalOperationsPayload?.weeklyReportRaw
+        ? weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw)
+        : null;
+      canDeriveFromLifetime = Boolean(totalSnapshotBaseRows && weeklyPayloadHasRawFacts(totalOperationsPayload));
+      if (canDeriveFromLifetime) {
+        const baseRowsOverride = totalSnapshotBaseRows;
         operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
         previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
       } else {
@@ -3179,9 +3182,6 @@ async function generateWeeklyBusinessReport({
         previousOperationsPayload = await loadSnapshotPayload(previousScope);
       }
     }
-    const totalSnapshotBaseRows = totalOperationsPayload?.weeklyReportRaw
-      ? weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw)
-      : null;
     if (!weeklyPayloadReadyForScope(operationsPayload, scope)) {
       if (totalSnapshotBaseRows) {
         operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride: totalSnapshotBaseRows, weeklyReportLiveSource: true }).catch(() => null);
@@ -3224,12 +3224,14 @@ async function generateWeeklyBusinessReport({
         dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
         metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
       };
-      const payload = generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
-        ? null
-        : await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: false }).catch(() => null);
+      const payload = canDeriveFromLifetime
+        ? await loadOperationsPayload({ user, scope: trendScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null)
+        : generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
+          ? null
+          : await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: false }).catch(() => null);
       if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
       if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) {
-        const derivedPayload = generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
+        const derivedPayload = !canDeriveFromLifetime && generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
           ? await loadOperationsPayload({ user, scope: trendScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null)
           : null;
         if (weeklyPayloadHasFinanceFactsInPeriod(derivedPayload, trendPeriod)) {
