@@ -1611,7 +1611,7 @@ function buildWeeklyBusinessReportSnapshot({
   const financeSummary = buildWeeklyFinanceSummary(raw, period, previousRaw, operations, previous);
   const totalLeads = cardValue(operations, ['conversion', 'cards', 'totalLeads']);
   const reportSections = buildWeeklyReportSections(operations, previous, { period, raw, previousRaw, financeSummary, trendOperationsPayloads });
-  if (!reportSections.trends.length && Array.isArray(trendFallbackRows) && trendFallbackRows.length) {
+  if (Array.isArray(trendFallbackRows) && trendFallbackRows.length) {
     reportSections.trends = trendFallbackRows;
   }
   const utilizationRate = numberValue(reportSections.court?.utilizationRate ?? cardValue(operations, ['court', 'cards', 'utilizationRate']));

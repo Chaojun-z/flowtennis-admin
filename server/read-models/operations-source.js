@@ -21,6 +21,8 @@ const OPERATIONS_PURCHASE_FIELDS = [
   'courseType', 'status', 'purchaseDate', 'createdAt', 'amountPaid',
   'actualAmount', 'finalAmount', 'amount', 'price', 'packagePrice', 'systemAmount',
   'paidAmount', 'receivedAmount', 'cashDelta', 'payMethod',
+  'refundAmount', 'refundedAmount', 'refundCashAmount', 'refundDate', 'refundedAt',
+  'refundStatus', 'refundReason', 'refundNote', 'refundPayMethod', 'refundOperator', 'refundPayer',
   'coachPriceName', 'coachPriceSnapshot', 'coachNames', 'allowedCoaches', 'campusIds'
 ];
 const OPERATIONS_ENTITLEMENT_FIELDS = [
