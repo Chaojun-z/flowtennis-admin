@@ -3164,9 +3164,20 @@ async function generateWeeklyBusinessReport({
     }));
   } else {
     if (typeof loadOperationsSnapshot === 'function') {
-      operationsPayload = await loadSnapshotPayload(scope);
-      previousOperationsPayload = await loadSnapshotPayload(previousScope);
+      // 生命周期快照正在刷新时，先复用这一份完整原始事实在内存中派生全部周报范围，
+      // 避免当前周、上周和趋势快照重复读取大分片，触发请求超时。
       totalOperationsPayload = await loadSnapshotPayload(totalScope);
+      const canDeriveFromRefreshingLifetime = generationMode === 'manual'
+        && totalOperationsPayload?.snapshot?.refreshing === true
+        && weeklyPayloadHasRawFacts(totalOperationsPayload);
+      if (canDeriveFromRefreshingLifetime) {
+        const baseRowsOverride = weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw);
+        operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
+        previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
+      } else {
+        operationsPayload = await loadSnapshotPayload(scope);
+        previousOperationsPayload = await loadSnapshotPayload(previousScope);
+      }
     }
     const totalSnapshotBaseRows = totalOperationsPayload?.weeklyReportRaw
       ? weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw)
