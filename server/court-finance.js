@@ -586,9 +586,20 @@ function mergeCourtNotes(targetCourt,sourceCourt){
   const sourceNotes=String(sourceCourt?.notes||'').trim();
   return [...new Set([targetNotes,sourceNotes].filter(Boolean))].join('\n');
 }
+function courtHistoryClockValue(row){
+  const values=[row?.startTime,row?.recordedAt,row?.occurredAt,row?.createdAt];
+  for(const value of values){
+    const raw=String(value||'').trim();
+    const match=raw.match(/(?:^|\D)([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?/);
+    if(match)return `${match[1].padStart(2,'0')}:${match[2]}:${match[3]||'00'}`;
+  }
+  if(row?.type==='充值'||row?.type==='冲正')return '00:00:00';
+  if(row?.type==='消费'||row?.type==='退款')return '23:59:59';
+  return '';
+}
 function courtHistorySortKey(row){
   const typeOrder={充值:'0',消费:'1',退款:'2',冲正:'3'};
-  return `${String(row?.occurredDate||row?.date||'9999-12-31').slice(0,10)} ${String(row?.startTime||row?.recordedAt||row?.createdAt||'').slice(11,19)} ${typeOrder[row?.type]||'9'} ${String(row?.id||'')}`;
+  return `${String(row?.occurredDate||row?.date||'9999-12-31').slice(0,10)} ${courtHistoryClockValue(row)} ${typeOrder[row?.type]||'9'} ${String(row?.id||'')}`;
 }
 function mergeCourtRecords({targetCourt,sourceCourt,membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],now=new Date().toISOString()}={}){
   if(!targetCourt?.id||!sourceCourt?.id)throw new Error('请选择要合并的订场用户');

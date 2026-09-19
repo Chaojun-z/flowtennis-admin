@@ -129,8 +129,8 @@ const outOfOrderMemberCourt = {
   campus: 'shunyi_mapo',
   cachedBalance: 3946,
   history: [
-    { id: 'consume-before-recharge', date: '2026-07-28', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 112 },
-    { id: 'member-recharge-5000', date: '2026-07-28', type: '充值', category: '会员充值', payMethod: '会员充值', amount: 5000, bonusAmount: 498 },
+    { id: 'consume-before-recharge', date: '2026-07-28', startTime: '16:00', recordedAt: '2026-07-28 16:00:01', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 112 },
+    { id: 'member-recharge-5000', date: '2026-07-28', recordedAt: '2026-07-28 14:33:28', type: '充值', category: '会员充值', payMethod: '会员充值', amount: 5000, bonusAmount: 498 },
     { id: 'lesson-20260728', date: '2026-07-28', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 200 },
     { id: 'lesson-20260729', date: '2026-07-29', type: '消费', category: '私教课', payMethod: '储值扣款', amount: 200 },
     { id: 'field-20260730', date: '2026-07-30', type: '消费', category: '会员订场', payMethod: '储值扣款', amount: 112 },
