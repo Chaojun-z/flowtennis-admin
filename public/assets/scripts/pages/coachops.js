@@ -1566,5 +1566,4 @@ function renderFinanceSettlementSummary(){
     ['迟到记录',totalLateCount,'条'],
     ['承担场地费',`¥${fmt(totalLateFee)}`,'']
   ].map(([label,val,unit])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${val}${unit?`<span>${unit}</span>`:''}</div></div>`).join('');
-  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.coach,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(`${lessonUnitsText(row.lessonUnits)} 节`,false)}</td><td>${renderStandardCellText(`${row.lateCount} 条`,false)}</td><td>${financeAmountText(row.lateFeeAmount)}</td></tr>`).join(''):`<tr><td colspan="5"><div class="empty"><p>当前月份暂无教练结算记录</p></div></td></tr>`;
-}
+  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.coach,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(`${lessonUnitsText(row.lessonUnits)} 节`,false)}</td><td>${renderStandardCellText(`${row.lateCount} 条`,false)}</td><td>${financeAmountText(row.lateFeeAmount)}</td></tr>`).join(''):`<tr><td colspan="5"><div class="empty"><p>当前月份暂无教练结算记录</p></div></td></tr>`;}
