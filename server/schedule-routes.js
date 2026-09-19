@@ -3,7 +3,7 @@ function createScheduleRoutes(deps={}){
     init,sendJson,getScheduleListRows,filterLoadAllForUser,getCachedScan,getCoachScheduleRowsForUser,
     buildCoachRefs,timedEndpointMetric,assertCanWriteSchedule,uuidv4,buildOperationTrace,
     withOperationTrace,normalizeCoachLateInfo,normalizeScheduleFieldFee,parseArr,normalizeVenue,
-    timed,validateScheduleSave,assertScheduleEntitlementRequired,assertScheduleFieldFeeInput,
+    timed,validateScheduleSave,assertScheduleEntitlementRequired,assertScheduleEntitlementDeltasRequired,assertScheduleFieldFeeInput,
     withRequiredStorageTimeout,resolveScheduleEntitlementDeltas,assertScheduleEntitlementCapacity,
     scheduleStoredValuePaymentAmount,getFastStudentsRead,buildScheduleStoredValueCourtUpdate,
     put,scheduleLessonDelta,applyEntitlementDelta,applySmallGroupFreeAbsences,applyLessonDelta,
@@ -97,6 +97,7 @@ function createScheduleRoutes(deps={}){
             const entitlementDeltas=resolveScheduleEntitlementDeltas({...r,coachRefs},entitlementRows);
             r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
+            assertScheduleEntitlementDeltasRequired(r,entitlementDeltas);
             await assertScheduleEntitlementCapacity({...r,coachRefs},null);
             let storedValueUpdate={schedule:r,courts:[],originalCourts:[],historyRows:[]};
             if(scheduleStoredValuePaymentAmount(r)>0){
@@ -268,6 +269,7 @@ function createScheduleRoutes(deps={}){
             const nextEntDeltas=resolveScheduleEntitlementDeltas({...r,coachRefs},nextBaseRows);
             r.entitlementIds=nextEntDeltas.map(d=>d.entitlementId);
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
+            assertScheduleEntitlementDeltasRequired(r,nextEntDeltas);
             await assertScheduleEntitlementCapacity({...r,coachRefs},ex);
             let storedValueUpdate={schedule:r,courts:[],originalCourts:[],historyRows:[]};
             if(scheduleStoredValuePaymentAmount(ex)>0||scheduleStoredValuePaymentAmount(r)>0){

@@ -914,6 +914,23 @@ function assertScheduleEntitlementRequired(rec){
   if(!isPackageSettlementSchedule(rec))return;
   assertSmallGroupScheduleRules(rec);
 }
+function assertScheduleEntitlementDeltasRequired(rec,deltas=[]){
+  if(!isScheduleLessonCharged(rec))return;
+  const settlementRows=normalizeStudentSettlementRows(rec);
+  const packageRows=settlementRows.filter(row=>row.settlementType==='package');
+  const expectedStudentIds=(packageRows.length?packageRows.map(row=>row.studentId):parseArr(rec.studentIds))
+    .map(id=>String(id||'').trim()).filter(Boolean);
+  const validDeltas=(deltas||[]).filter(row=>String(row?.entitlementId||'').trim()&&Number(row?.delta||0)>0);
+  const expectedCount=expectedStudentIds.length||1;
+  if(validDeltas.length<expectedCount){
+    if(expectedCount>1)throw new Error('课包结算必须为每位实际上课学员关联课包');
+    throw new Error('课包结算必须关联可用课包');
+  }
+  const deltaStudentIds=new Set(validDeltas.map(row=>String(row?.studentId||'').trim()).filter(Boolean));
+  if(expectedStudentIds.length&&deltaStudentIds.size&&expectedStudentIds.some(id=>!deltaStudentIds.has(id))){
+    throw new Error(expectedStudentIds.length>1?'课包结算必须为每位实际上课学员关联课包':'课包结算必须关联实际上课学员的课包');
+  }
+}
 function confirmedSingleStudentSmallGroupSchedule(rec={}){
   return /笑逐/.test(String(rec.studentName||rec.notes||''));
 }
@@ -1911,7 +1928,7 @@ const handleScheduleRoutes=createScheduleRoutes({
   init,sendJson:routeSendJson,getScheduleListRows,filterLoadAllForUser,getCachedScan,getCoachScheduleRowsForUser,
   buildCoachRefs,timedEndpointMetric,assertCanWriteSchedule,uuidv4,buildOperationTrace,withOperationTrace,
   normalizeCoachLateInfo,normalizeScheduleFieldFee,parseArr,normalizeVenue,timed,validateScheduleSave,
-  assertScheduleEntitlementRequired,assertScheduleFieldFeeInput,withRequiredStorageTimeout,
+  assertScheduleEntitlementRequired,assertScheduleEntitlementDeltasRequired,assertScheduleFieldFeeInput,withRequiredStorageTimeout,
   resolveScheduleEntitlementDeltas,assertScheduleEntitlementCapacity,scheduleStoredValuePaymentAmount,
   getFastStudentsRead,buildScheduleStoredValueCourtUpdate,put,scheduleLessonDelta,applyEntitlementDelta,
   applySmallGroupFreeAbsences,applyLessonDelta,syncScheduleFieldFeeFinancialLedger,persistScheduleStoredValueCourts,
@@ -7365,6 +7382,7 @@ module.exports._test={
   buildPackageMergeUpdates,
   assertCanEditPurchaseWithLedger,
   assertScheduleEntitlementRequired,
+  assertScheduleEntitlementDeltasRequired,
   scheduleParticipantSummary,
   collectShunyiMapoSeedStaleRowIds,
   collectShunyiMapoSeedImportedLedgerReplacementIds,
