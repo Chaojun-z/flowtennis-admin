@@ -10,7 +10,8 @@ const SNAPSHOT_SCOPE_INDEX_ID = 'active:scope-index';
 const SNAPSHOT_SOURCE_MARKER_ID = 'active:source-marker';
 const SNAPSHOT_LAST_REBUILD_TASK_ID = '__last_operations_snapshot_rebuild__';
 const SNAPSHOT_REBUILD_TASK_PREFIX = 'pending:scope:';
-const SNAPSHOT_BUNDLE_INLINE_LIMIT = 1500 * 1000;
+// 周报快照分片必须小于接口单次请求时限；过大的分片会让 TableStore getRow 超时。
+const SNAPSHOT_BUNDLE_INLINE_LIMIT = 600 * 1000;
 
 function text(value) {
   return String(value || '').trim();
