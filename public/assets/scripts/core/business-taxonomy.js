@@ -8,6 +8,26 @@
   const PAYMENT_METHODS = ['储值卡', '微信', '支付宝', '现金', '转账', '大众点评券码', '抖音券码', '其他'];
   const PAYMENT_METHOD_OPTIONS = PAYMENT_METHODS.map(value => ({ value, label: value }));
   const STANDARD_BUSINESS_TYPE_OPTIONS = [
+    '课程服务 / 私教课',
+    '课程服务 / 体验课',
+    '课程服务 / 陪打服务费',
+    '课程服务 / 小班课',
+    '课程服务 / 小班课-随到随学',
+    '课程服务 / 小班课-训练营',
+    '场地服务 / 散客订场',
+    '场地服务 / 会员订场',
+    '场地服务 / 课程场地费',
+    '场地服务 / 陪打场地费',
+    '场地服务 / 领导订场',
+    '场地服务 / 内部使用',
+    '会员储值 / 会员充值',
+    '会员储值 / 会员赠送',
+    '会员储值 / 储值退款',
+    '商品及增值服务 / 发球机',
+    '商品及增值服务 / 租赁网球',
+    '商品及增值服务 / 网球线',
+    '商品及增值服务 / 穿线服务',
+    '商品及增值服务 / 其他商品',
     '储值',
     '课程 / 私教课',
     '课程 / 小班课 / 单次',
@@ -360,6 +380,10 @@
     const category = text(row && (row.category || row.sourceCategory || row.incomeType || row.sourceProject));
     const payment = normalizePaymentMethod(row && (row.paymentChannel || row.payMethod));
     const all = `${raw} ${category}`;
+    if (includesAny(all, ['发球机'])) return { level1: '商品及增值服务', level2: '发球机', level3: '', display: '商品及增值服务 / 发球机' };
+    if (includesAny(all, ['租赁网球', '租球'])) return { level1: '商品及增值服务', level2: '租赁网球', level3: '', display: '商品及增值服务 / 租赁网球' };
+    if (includesAny(all, ['网球线'])) return { level1: '商品及增值服务', level2: '网球线', level3: '', display: '商品及增值服务 / 网球线' };
+    if (includesAny(all, ['穿线'])) return { level1: '商品及增值服务', level2: '穿线服务', level3: '', display: '商品及增值服务 / 穿线服务' };
     if (raw === '会员储值' || raw === '储值' || includesAny(all, ['会员充值', '储值'])) {
       return { level1: '储值', level2: '', level3: '', display: '储值' };
     }
@@ -375,6 +399,62 @@
     const course = normalizeCourseType(row || {});
     const display = course.level2 ? `课程 / ${course.level1} / ${course.level2}` : `课程 / ${course.level1}`;
     return { level1: '课程', level2: course.level1, level3: course.level2, display };
+  }
+
+  function normalizeRevenueCategory(row) {
+    const raw = text(row && row.businessType);
+    const businessLevel1 = text(row && row.businessTypeLevel1);
+    const businessLevel2 = text(row && row.businessTypeLevel2);
+    const businessLevel3 = text(row && row.businessTypeLevel3);
+    const action = normalizeTransactionType(row || {});
+    const all = [
+      raw,
+      businessLevel1,
+      businessLevel2,
+      businessLevel3,
+      text(row && row.displayBusinessType),
+      text(row && row.category),
+      text(row && row.sourceCategory),
+      text(row && row.incomeType),
+      text(row && row.sourceProject),
+      text(row && row.packageName),
+      text(row && row.productName),
+      text(row && row.notes)
+    ].join(' ');
+    const result = (level1, level2, level3 = '') => ({
+      level1,
+      level2,
+      level3,
+      display: level3 ? `${level1} / ${level2} / ${level3}` : `${level1} / ${level2}`
+    });
+    if (includesAny(all, ['发球机'])) return result('商品及增值服务', '发球机');
+    if (includesAny(all, ['租赁网球', '租球'])) return result('商品及增值服务', '租赁网球');
+    if (includesAny(all, ['网球线'])) return result('商品及增值服务', '网球线');
+    if (includesAny(all, ['穿线'])) return result('商品及增值服务', '穿线服务');
+    if (businessLevel1 === '储值' || raw === '会员储值') {
+      if (action === '退款') return result('会员储值', '储值退款');
+      if (includesAny(all, ['赠送', '免费'])) return result('会员储值', '会员赠送');
+      return result('会员储值', '会员充值');
+    }
+    if (businessLevel1 === '场地' || ['会员订场', '散客订场', '课程订场', '约球局', '领导订场', '内部使用'].includes(raw)) {
+      let level2 = businessLevel2 || raw || '散客订场';
+      if (level2 === '课程订场') level2 = includesAny(all, ['陪打']) ? '陪打场地费' : '课程场地费';
+      return result('场地服务', level2);
+    }
+    if (businessLevel1 === '商品及增值服务') return result('商品及增值服务', businessLevel2 || raw || '其他商品');
+    if (includesAny(all, ['陪打'])) return result('课程服务', '陪打服务费');
+    const course = businessLevel1 === '课程' ? {
+      level1: businessLevel2 || '',
+      level2: businessLevel3 || ''
+    } : normalizeCourseType(row || {});
+    if (course.level1 === '陪打') return result('课程服务', '陪打服务费');
+    if (course.level1 === '体验课') return result('课程服务', '体验课', course.level2);
+    if (course.level1 === '小班课') {
+      if (course.level2 === '随到随学') return result('课程服务', '小班课-随到随学');
+      if (course.level2 === '训练营') return result('课程服务', '小班课-训练营');
+      return result('课程服务', '小班课', course.level2);
+    }
+    return result('课程服务', course.level1 || '私教课', course.level2);
   }
 
   function transactionAmount(row) {
@@ -457,6 +537,7 @@
     normalizeTransactionType,
     normalizeCourseType,
     normalizeBusinessType,
+    normalizeRevenueCategory,
     transactionAmount
   };
 });

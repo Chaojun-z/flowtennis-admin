@@ -26,6 +26,13 @@ function financeNeutralActionLabel(text=''){
 }
 function applyStandardFinanceFields(row){
   const business=businessTaxonomy.normalizeBusinessType(row);
+  const revenueCategory=businessTaxonomy.normalizeRevenueCategory({
+    ...row,
+    businessTypeLevel1:business.level1,
+    businessTypeLevel2:business.level2,
+    businessTypeLevel3:business.level3,
+    displayBusinessType:business.display
+  });
   const transactionType=businessTaxonomy.normalizeTransactionType(row);
   return {
     ...row,
@@ -34,6 +41,10 @@ function applyStandardFinanceFields(row){
     businessTypeLevel2:business.level2,
     businessTypeLevel3:business.level3,
     displayBusinessType:business.display,
+    revenueCategoryLevel1:revenueCategory.level1,
+    revenueCategoryLevel2:revenueCategory.level2,
+    revenueCategoryLevel3:revenueCategory.level3,
+    revenueCategoryDisplay:revenueCategory.display,
     normalizedPaymentMethod:businessTaxonomy.normalizePaymentMethod(row.paymentChannel||row.payMethod),
     transactionAmount:businessTaxonomy.transactionAmount(row)
   };
@@ -138,8 +149,11 @@ function financeRecognizedAmountForConsumeRow(row,entitlement,purchase){
 function scheduleDirectPaidAmount(row={}){
   return roundMoney(row.paidAmount||row.paymentAmount);
 }
+function isCompletedScheduleForFinance(row={}){
+  return ['已结束','已下课','已完成','completed','finished'].includes(String(row.status||'').trim());
+}
 function scheduleDirectRecognizedAmount(row={}){
-  if(String(row.confirmStatus||'').trim()==='待确认')return 0;
+  if(String(row.confirmStatus||'').trim()==='待确认'&&!isCompletedScheduleForFinance(row))return 0;
   return scheduleDirectPaidAmount(row);
 }
 function financeOperationTraceFields(source={}){
@@ -421,6 +435,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     if(studentRows.length){
       return studentRows.filter(row=>String(row?.settlementType||'').trim()==='direct'&&!isStoredValuePayMethod(row?.payMethod)&&roundMoney(row?.amount||row?.paidAmount)>0).map(row=>{
         const amount=roundMoney(row.amount||row.paidAmount);
+        const recognizedAmount=scheduleDirectRecognizedAmount({...item,paidAmount:amount,paymentAmount:amount,confirmStatus:row.confirmStatus||item.confirmStatus});
         const payMethod=String(row.payMethod||'').trim()||'—';
         const businessDate=financeBusinessDateTime(item.startTime,item.paidAt,item.paymentTime,item.createdAt);
         const courseLabel=item.courseType==='体验课'?(item.experienceType||'体验课'):(item.courseType||'课程');
@@ -436,7 +451,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
           businessType:'课程',
           action:'收款',
           cashDelta:amount,
-          recognizedRevenueDelta:amount,
+          recognizedRevenueDelta:recognizedAmount,
           deferredRevenueDelta:0,
           paymentChannel:payMethod,
           sourceDocument:`排课 ${item.id}`,
@@ -494,6 +509,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   });
   const scheduleFieldFeeRows=(schedule||[]).flatMap(item=>{
     if(!isBillableSchedule(item))return [];
+    const isCompanionFieldFee=String(`${item.courseType||''} ${item.incomeType||''} ${item.sourceProject||''} ${item.notes||''}`).includes('陪打');
+    const fieldFeeLabel=isCompanionFieldFee?'陪打场地费':'排课场地费';
     const studentRows=parseArr(item.studentSettlementRows||'[]');
     if(studentRows.length){
       return studentRows.filter(row=>String(row?.fieldFeeMode||'').trim()==='separate'&&!isStoredValuePayMethod(row?.fieldFeePayMethod)&&roundMoney(row?.fieldFeeAmount)>0).map(row=>{
@@ -515,7 +532,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
           deferredRevenueDelta:0,
           paymentChannel:row.fieldFeePayMethod||'—',
           sourceDocument:`排课 ${item.id}`,
-          notes:item.fieldFeeNote||item.fieldFeeReason||'排课场地费',
+          notes:item.fieldFeeNote||item.fieldFeeReason||fieldFeeLabel,
           incomeType:'课程订场',
           packageName:item.packageName||'',
           collector:operator,
@@ -525,7 +542,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
           totalLessons:0,
           usedLessons:0,
           remainingLessons:0,
-          sourceProject:`排课场地费 ${financeDateTimeText(item.startTime)}`,
+          sourceProject:`${fieldFeeLabel} ${financeDateTimeText(item.startTime)}`,
           debitTarget:'场地费'
         };
       });
@@ -548,7 +565,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         deferredRevenueDelta:0,
         paymentChannel:item.fieldFeePayMethod||'—',
         sourceDocument:`排课 ${item.id}`,
-        notes:item.fieldFeeNote||item.fieldFeeReason||'排课场地费',
+        notes:item.fieldFeeNote||item.fieldFeeReason||fieldFeeLabel,
         incomeType:'课程订场',
         packageName:item.packageName||'',
         collector:operator,
@@ -558,7 +575,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         totalLessons:0,
         usedLessons:0,
         remainingLessons:0,
-        sourceProject:`排课场地费 ${financeDateTimeText(item.startTime)}`,
+        sourceProject:`${fieldFeeLabel} ${financeDateTimeText(item.startTime)}`,
         debitTarget:'场地费'
       }];
     }

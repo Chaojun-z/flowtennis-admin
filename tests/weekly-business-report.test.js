@@ -256,6 +256,11 @@ assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.busine
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.courseConsumedRevenue, 1000, 'recognized cards should expose course consumed revenue');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.memberBookingConsumedRevenue, 120, 'recognized cards should expose member booking consumed revenue');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.guestBookingRevenue, 180, 'recognized cards should expose guest booking revenue');
+assert.strictEqual(requestedStructureSnapshot.sections.revenue.receipts.categoryRows.find(row => row.name === '课程服务')?.amount, 3000, 'receipt tree should group course receipts under course service');
+assert.strictEqual(requestedStructureSnapshot.sections.revenue.receipts.categoryRows.find(row => row.name === '场地服务')?.amount, 180, 'receipt tree should group guest booking receipts under field service');
+assert.strictEqual(requestedStructureSnapshot.sections.revenue.receipts.categoryRows.find(row => row.name === '会员储值')?.amount, 5000, 'receipt tree should separate membership top-up from recognized revenue');
+assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.categoryRows.find(row => row.name === '课程服务')?.amount, 1000, 'recognized tree should group course consumption under course service');
+assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.categoryRows.find(row => row.name === '场地服务')?.amount, 300, 'recognized tree should group member and guest booking revenue under field service');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.lessonPeople, 2, 'course section should expose weekly completed lesson people');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.completedHours, 3, 'course section should expose weekly completed coach course hours');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.typeRows.find(row => row.type === '成人')?.newAmount, 1000, 'adult course row should use current-week platform receipt facts');

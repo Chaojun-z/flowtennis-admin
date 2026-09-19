@@ -1072,6 +1072,64 @@ function financeSum(rows = [], key = '') {
   return numberValue(normalizeRows(rows).reduce((sum, row) => sum + (Number(row?.[key]) || 0), 0));
 }
 
+function revenueCategoryForFinanceRow(row = {}) {
+  if (row.revenueCategoryLevel1 || row.revenueCategoryLevel2) {
+    const level1 = String(row.revenueCategoryLevel1 || '').trim() || '其他';
+    const level2 = String(row.revenueCategoryLevel2 || '').trim() || '未分类';
+    const level3 = String(row.revenueCategoryLevel3 || '').trim();
+    return {
+      level1,
+      level2,
+      level3,
+      display: String(row.revenueCategoryDisplay || '').trim() || (level3 ? `${level1} / ${level2} / ${level3}` : `${level1} / ${level2}`)
+    };
+  }
+  return businessTaxonomy.normalizeRevenueCategory(row);
+}
+
+function buildRevenueCategoryRows(rows = [], amountKey = '') {
+  const level1Map = new Map();
+  normalizeRows(rows).forEach(row => {
+    const amount = Number(row?.[amountKey]) || 0;
+    if (!amount) return;
+    const category = revenueCategoryForFinanceRow(row);
+    const level1Key = category.level1 || '其他';
+    const level2Key = category.level2 || '未分类';
+    const level3Key = category.level3 || '';
+    const level1 = level1Map.get(level1Key) || { name: level1Key, amount: 0, children: new Map() };
+    const level2 = level1.children.get(level2Key) || { name: level2Key, amount: 0, children: new Map() };
+    level1.amount = numberValue(level1.amount + amount);
+    level2.amount = numberValue(level2.amount + amount);
+    if (level3Key) {
+      const level3 = level2.children.get(level3Key) || { name: level3Key, amount: 0 };
+      level3.amount = numberValue(level3.amount + amount);
+      level2.children.set(level3Key, level3);
+    }
+    level1.children.set(level2Key, level2);
+    level1Map.set(level1Key, level1);
+  });
+  const preferredLevel1 = ['课程服务', '场地服务', '会员储值', '商品及增值服务', '其他'];
+  const sortByPreferred = (a, b, order) => {
+    const ai = order.indexOf(a.name);
+    const bi = order.indexOf(b.name);
+    if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    return String(a.name).localeCompare(String(b.name), 'zh-CN');
+  };
+  return [...level1Map.values()]
+    .map(row => ({
+      name: row.name,
+      amount: numberValue(row.amount),
+      children: [...row.children.values()]
+        .map(child => ({
+          name: child.name,
+          amount: numberValue(child.amount),
+          children: [...child.children.values()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-CN'))
+        }))
+        .sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-CN'))
+    }))
+    .sort((a, b) => sortByPreferred(a, b, preferredLevel1));
+}
+
 function buildWeeklyFinanceSummary(raw = {}, period = {}, previousRaw = {}, operations = {}, previous = {}) {
   const currentRows = weeklyFinanceRows(raw, period);
   const previousRows = weeklyFinanceRows(previousRaw, { startDate: period.previousStartDate, endDate: period.previousEndDate });
@@ -1116,6 +1174,7 @@ function buildWeeklyFinanceSummary(raw = {}, period = {}, previousRaw = {}, oper
       courseAmount: hasFinanceRows ? financeSum(courseReceiptRows, 'cashDelta') : optionalCardNumber(operations.overview || {}, ['courseIncome']),
       bookingAmount: hasFinanceRows ? financeSum(bookingReceiptRows, 'cashDelta') : optionalCardNumber(operations.overview || {}, ['bookingIncome', 'courtIncome']),
       storedValueAmount: hasFinanceRows ? financeSum(storedValueReceiptRows, 'cashDelta') : optionalCardNumber(operations.overview || {}, ['storedValueIncome']),
+      categoryRows: buildRevenueCategoryRows(receiptRows, 'cashDelta'),
       compare: {
         totalAmount: compareValue(cashReceived, previousCashReceived),
         courseAmount: compareValue(hasFinanceRows ? financeSum(courseReceiptRows, 'cashDelta') : 0, hasPreviousFinanceRows ? financeSum(previousCourseReceiptRows, 'cashDelta') : 0),
@@ -1128,6 +1187,7 @@ function buildWeeklyFinanceSummary(raw = {}, period = {}, previousRaw = {}, oper
       courseConsumedRevenue: courseConsumedRevenue ?? optionalCardNumber(operations.overview || {}, ['courseRecognized']),
       memberBookingConsumedRevenue: hasFinanceRows ? financeSum(memberBookingRecognizedRows, 'recognizedRevenueDelta') : optionalCardNumber(operations.overview || {}, ['storedValueConsumed', 'membershipStoredValueConsumed']),
       guestBookingRevenue: hasFinanceRows ? financeSum(guestBookingRecognizedRows, 'recognizedRevenueDelta') : optionalCardNumber(operations.overview || {}, ['bookingRecognized', 'courtRecognized']),
+      categoryRows: buildRevenueCategoryRows(currentRecognizedRows, 'recognizedRevenueDelta'),
       compare: {
         businessRevenue: compareValue(businessRevenue, previousBusinessRevenue),
         courseConsumedRevenue: compareValue(courseConsumedRevenue ?? 0, previousCourseConsumedRevenue ?? 0),
@@ -2188,6 +2248,39 @@ function renderRows(rows = [], columns = [], { edits = {}, keyPrefix = '' } = {}
   }).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
+function renderRevenueCategoryPanel(title = '', rows = [], edits = {}, keyPrefix = '') {
+  const clean = normalizeRows(rows);
+  const body = clean.length ? clean.map((row, rowIndex) => `
+    <div class="py-3 border-b border-cyber-border/20 last:border-b-0">
+      <div class="flex items-center justify-between gap-4">
+        <span class="text-sm font-bold text-white">${editableText(edits, `${keyPrefix}.${rowIndex}.name`, row.name || '-')}</span>
+        <span class="font-mono text-sm text-cyber-volt whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.amount`, `${formatMetricValue(row.amount, '元')} 元`)}</span>
+      </div>
+      <div class="mt-2 space-y-1">
+        ${normalizeRows(row.children).map((child, childIndex) => `
+          <div class="flex items-center justify-between gap-4 text-xs text-cyber-muted">
+            <span>${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.name`, child.name || '-')}</span>
+            <span class="font-mono whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.amount`, `${formatMetricValue(child.amount, '元')} 元`)}</span>
+          </div>
+          ${normalizeRows(child.children).map((grandchild, grandchildIndex) => `
+            <div class="flex items-center justify-between gap-4 pl-4 text-[11px] text-cyber-darkMuted">
+              <span>${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.children.${grandchildIndex}.name`, grandchild.name || '-')}</span>
+              <span class="font-mono whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.children.${grandchildIndex}.amount`, `${formatMetricValue(grandchild.amount, '元')} 元`)}</span>
+            </div>
+          `).join('')}
+        `).join('')}
+      </div>
+    </div>
+  `).join('') : '<p class="empty">暂无数据</p>';
+  return `<section class="bg-cyber-card rounded-xl border border-cyber-border p-5">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, `${keyPrefix}.title`, title)}</h3>
+      <span class="text-xs font-mono text-cyber-muted">${editableText(edits, `${keyPrefix}.count`, `${clean.length} 类`)}</span>
+    </div>
+    ${body}
+  </section>`;
+}
+
 function renderStoredValueNewMembers(rows = [], edits = {}) {
   return `<div class="bg-cyber-card rounded-xl border border-cyber-border p-5">
     <div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${editableText(edits, 'storedValue.newMembers.title', '本周新增会员明细')}</h4><span class="text-xs font-mono text-cyber-muted">${editableText(edits, 'storedValue.newMembers.count', `${normalizeRows(rows).length} 人`)}</span></div>
@@ -2386,17 +2479,14 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
   </div>
 
   ${editableSectionTitle('revenue', '二、收入与收款', '// REVENUE')}
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     ${templateMetric('本周收款', revenue.receipts?.totalAmount, ' 元', revenue.receipts?.compare?.totalAmount, edits, 'receipts.totalAmount')}
-    ${templateMetric('本周课程收款', revenue.receipts?.courseAmount, ' 元', revenue.receipts?.compare?.courseAmount, edits, 'receipts.courseAmount')}
-    ${templateMetric('本周订场收款', revenue.receipts?.bookingAmount, ' 元', revenue.receipts?.compare?.bookingAmount, edits, 'receipts.bookingAmount')}
-    ${templateMetric('本周储值收款', revenue.receipts?.storedValueAmount, ' 元', revenue.receipts?.compare?.storedValueAmount, edits, 'receipts.storedValueAmount')}
-  </div>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     ${templateMetric('本周核销入账', revenue.recognized?.businessRevenue, ' 元', revenue.recognized?.compare?.businessRevenue, edits, 'recognized.businessRevenue')}
-    ${templateMetric('课程消耗收入', revenue.recognized?.courseConsumedRevenue, ' 元', revenue.recognized?.compare?.courseConsumedRevenue, edits, 'recognized.courseConsumedRevenue')}
-    ${templateMetric('会员订场消耗收入', revenue.recognized?.memberBookingConsumedRevenue, ' 元', revenue.recognized?.compare?.memberBookingConsumedRevenue, edits, 'recognized.memberBookingConsumedRevenue')}
-    ${templateMetric('散客订场收入', revenue.recognized?.guestBookingRevenue, ' 元', revenue.recognized?.compare?.guestBookingRevenue, edits, 'recognized.guestBookingRevenue')}
+    ${templateMetric('收款与核销差额', numberValue((Number(revenue.recognized?.businessRevenue) || 0) - (Number(revenue.receipts?.totalAmount) || 0)), ' 元', null, edits, 'revenue.cashRecognizedDelta')}
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    ${renderRevenueCategoryPanel('收款明细', revenue.receipts?.categoryRows || [], edits, 'receipts.categoryRows')}
+    ${renderRevenueCategoryPanel('核销入账明细', revenue.recognized?.categoryRows || [], edits, 'recognized.categoryRows')}
   </div>
 
   <h3 id="private-course" class="text-base font-bold text-white leading-snug scroll-mt-24">${editableText(edits, 'section.course.title', '2.1 课程收款')}</h3>

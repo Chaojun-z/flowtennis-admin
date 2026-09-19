@@ -34,6 +34,26 @@ assert.strictEqual(taxonomy.normalizeLeadConsultType('未说明需求'), '其他
 
 assert.deepStrictEqual(taxonomy.PAYMENT_METHODS, ['储值卡', '微信', '支付宝', '现金', '转账', '大众点评券码', '抖音券码', '其他']);
 assert.deepStrictEqual(taxonomy.STANDARD_BUSINESS_TYPE_OPTIONS.map(item => item.value), [
+  '课程服务 / 私教课',
+  '课程服务 / 体验课',
+  '课程服务 / 陪打服务费',
+  '课程服务 / 小班课',
+  '课程服务 / 小班课-随到随学',
+  '课程服务 / 小班课-训练营',
+  '场地服务 / 散客订场',
+  '场地服务 / 会员订场',
+  '场地服务 / 课程场地费',
+  '场地服务 / 陪打场地费',
+  '场地服务 / 领导订场',
+  '场地服务 / 内部使用',
+  '会员储值 / 会员充值',
+  '会员储值 / 会员赠送',
+  '会员储值 / 储值退款',
+  '商品及增值服务 / 发球机',
+  '商品及增值服务 / 租赁网球',
+  '商品及增值服务 / 网球线',
+  '商品及增值服务 / 穿线服务',
+  '商品及增值服务 / 其他商品',
   '储值',
   '课程 / 私教课',
   '课程 / 小班课 / 单次',
@@ -119,6 +139,36 @@ assert.deepStrictEqual(taxonomy.normalizeBusinessType({ businessType: '课程订
   level2: '课程订场',
   level3: '',
   display: '场地 / 课程订场'
+});
+assert.deepStrictEqual(taxonomy.normalizeBusinessType({ businessType: '发球机服务' }), {
+  level1: '商品及增值服务',
+  level2: '发球机',
+  level3: '',
+  display: '商品及增值服务 / 发球机'
+});
+assert.deepStrictEqual(taxonomy.normalizeRevenueCategory({ businessType: '课程', courseType: '陪打' }), {
+  level1: '课程服务',
+  level2: '陪打服务费',
+  level3: '',
+  display: '课程服务 / 陪打服务费'
+});
+assert.deepStrictEqual(taxonomy.normalizeRevenueCategory({ businessTypeLevel1: '课程', businessTypeLevel2: '私教课', notes: '9月1日，刘润扬，陪打' }), {
+  level1: '课程服务',
+  level2: '陪打服务费',
+  level3: '',
+  display: '课程服务 / 陪打服务费'
+});
+assert.deepStrictEqual(taxonomy.normalizeRevenueCategory({ businessType: '课程订场', sourceProject: '陪打场地费' }), {
+  level1: '场地服务',
+  level2: '陪打场地费',
+  level3: '',
+  display: '场地服务 / 陪打场地费'
+});
+assert.deepStrictEqual(taxonomy.normalizeRevenueCategory({ businessType: '发球机服务' }), {
+  level1: '商品及增值服务',
+  level2: '发球机',
+  level3: '',
+  display: '商品及增值服务 / 发球机'
 });
 
 console.log('business taxonomy tests passed');
