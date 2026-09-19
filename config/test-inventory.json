@@ -412,6 +412,11 @@
       "file": "tests/xiaoxiao-package-repair-script.test.js",
       "category": "operation-script",
       "reason": "历史运维/修数脚本测试，暂不进入默认发布门禁；后续触达对应脚本时必须专项运行或接入门禁。"
+    },
+    {
+      "file": "tests/repair-schedule-missing-entitlement-ledgers.test.js",
+      "category": "operation-script",
+      "reason": "排课课包流水修复脚本测试，已在本次严格验证中专项运行，暂不重复接入默认全量脚本。"
     }
   ]
 }

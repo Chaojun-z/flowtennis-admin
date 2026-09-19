@@ -107,6 +107,39 @@ assert.deepStrictEqual(
   'ledger context should keep both actual learner and package owner'
 );
 
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas(
+    {
+      ...authorizedSchedule,
+      courseType: '小班课',
+      studentSettlementRows: [{
+        studentId: 'student-brother',
+        settlementType: 'package',
+        entitlementId: 'ent-owner'
+      }]
+    },
+    [ownerEntitlement]
+  ),
+  [{ studentId: 'student-brother', entitlementId: 'ent-owner', delta: 1 }],
+  '按学员结算时应直接使用已选择的授权课包，不能只按实际上课学员名下课包重查'
+);
+
+assert.throws(
+  () => rules.resolveScheduleEntitlementDeltas(
+    {
+      ...authorizedSchedule,
+      courseType: '小班课',
+      studentSettlementRows: [{
+        studentId: 'student-brother',
+        settlementType: 'package'
+      }]
+    },
+    [ownerEntitlement]
+  ),
+  /有学员没有可用课包/,
+  '按学员结算没有绑定课包时仍必须拒绝保存'
+);
+
 assert.doesNotThrow(
   () => validateScheduleConflicts(
     { id: 's2', status: '已排课', startTime: '2026-07-24 12:00', endTime: '2026-07-24 13:00', campus: 'shunyi_mapo', venue: '2号场', coach: '教练乙', studentIds: ['student-brother'], allowLinkedVenueConflict: true },

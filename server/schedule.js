@@ -40,6 +40,7 @@ function normalizeStudentSettlementRows(rec){
   return parseArr(rec?.studentSettlementRows).map(row=>({
     studentId:String(row?.studentId||'').trim(),
     settlementType:String(row?.settlementType||'').trim()||scheduleSettlementType(rec),
+    entitlementId:String(row?.entitlementId||'').trim(),
     payMethod:String(row?.payMethod||'').trim(),
     amount:parseLessonValue(row?.amount||row?.paidAmount||0),
     fieldFeeMode:String(row?.fieldFeeMode||'').trim()||'none',

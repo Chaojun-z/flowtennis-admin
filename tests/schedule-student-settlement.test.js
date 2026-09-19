@@ -8,6 +8,7 @@ const settlementSource = fs.readFileSync(path.join(repoRoot, 'public', 'assets',
 const styles = fs.readFileSync(path.join(repoRoot, 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(repoRoot, 'public', 'index.html'), 'utf8');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api', 'index.js'), 'utf8');
+const { normalizeStudentSettlementRows: normalizeServerStudentSettlementRows } = require('../server/schedule');
 const {
   normalizeStudentSettlementRows,
   summarizeStudentSettlementRows,
@@ -15,6 +16,28 @@ const {
   buildInitialStudentSettlementRowsForSchedule,
   selectStudentSettlementEntitlement
 } = require('../public/assets/scripts/pages/schedule-settlement.js');
+
+assert.deepStrictEqual(
+  normalizeServerStudentSettlementRows({
+    studentSettlementRows: [{
+      studentId: 'student-bob',
+      settlementType: 'package',
+      entitlementId: 'entitlement-owner-package'
+    }]
+  }),
+  [{
+    studentId: 'student-bob',
+    settlementType: 'package',
+    entitlementId: 'entitlement-owner-package',
+    payMethod: '',
+    amount: 0,
+    fieldFeeMode: 'none',
+    fieldFeePayMethod: '',
+    fieldFeeAmount: 0,
+    note: ''
+  }],
+  'server settlement normalization must preserve the selected entitlement id'
+);
 
 function fnBody(name) {
   const start = scheduleSource.indexOf(`function ${name}(`);
