@@ -51,7 +51,7 @@ function enumerateTestDays(startDate, endDate) {
 }
 
 async function main() {
-  assert.ok(SNAPSHOT_BUNDLE_INLINE_LIMIT <= 600 * 1000, '经营快照分片不能超过接口单次读取的安全大小');
+  assert.ok(SNAPSHOT_BUNDLE_INLINE_LIMIT <= 300 * 1000, '经营快照分片不能超过接口单次读取的安全大小');
   const commonScopes = buildCommonScopeArgs(
     { write: true, view: 'coach', commonScopes: true },
     new Date('2026-09-02T04:00:00.000Z')
