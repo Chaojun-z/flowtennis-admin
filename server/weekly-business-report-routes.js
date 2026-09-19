@@ -1,7 +1,8 @@
 const {
   resolveWeeklyBusinessReportPeriod,
   weeklyReportStartDateForEndDate,
-  generateWeeklyBusinessReport,
+  buildWeeklyBusinessReportDraft,
+  publishWeeklyBusinessReportDraft,
   listWeeklyBusinessReports,
   findWeeklyBusinessReportByToken,
   updateWeeklyBusinessReportRemark,
@@ -25,8 +26,7 @@ function createWeeklyBusinessReportRoutes({
   table,
   webhook = '',
   publicBaseUrl = '',
-  isProductionRuntime = () => false,
-  manualGenerationTimeoutMs = 9000
+  isProductionRuntime = () => false
 } = {}) {
   function baseUrl(req) {
     return String(publicBaseUrl || process.env.PUBLIC_BASE_URL || 'https://www.flowtennis.cn').replace(/\/+$/, '');
@@ -58,7 +58,19 @@ function createWeeklyBusinessReportRoutes({
 
   async function runReport({ req, mode = 'auto', now = new Date(), period = null } = {}) {
     const targetPeriod = period || resolveWeeklyBusinessReportPeriod(now);
-    const generation = generateWeeklyBusinessReport({
+    if (mode === 'manual') {
+      const snapshot = await publishWeeklyBusinessReportDraft({
+        get,
+        put,
+        mkTable,
+        period: targetPeriod,
+        baseUrl: baseUrl(req || { headers: {} }),
+        generationMode: mode,
+        table
+      });
+      return { success: true, report: snapshot, notification: { skipped: true, reason: 'manual-regeneration' } };
+    }
+    await buildWeeklyBusinessReportDraft({
       loadOperationsPayload: buildOperationsPayload,
       loadOperationsSnapshot,
       get,
@@ -67,23 +79,18 @@ function createWeeklyBusinessReportRoutes({
       period: targetPeriod,
       baseUrl: baseUrl(req || { headers: {} }),
       generationMode: mode,
-      allowLiveFallback: mode !== 'manual',
-      deadlineAt: mode === 'manual' ? Date.now() + manualGenerationTimeoutMs : 0,
+      allowLiveFallback: true,
       table
     });
-    let timeoutHandle = null;
-    const timeout = new Promise((_, reject) => {
-      timeoutHandle = setTimeout(() => {
-        const err = new Error('周报生成超过 10 秒，未更新原生成时间');
-        err.code = 'WEEKLY_REPORT_GENERATION_TIMEOUT';
-        err.statusCode = 504;
-        reject(err);
-      }, manualGenerationTimeoutMs);
+    const snapshot = await publishWeeklyBusinessReportDraft({
+      get,
+      put,
+      mkTable,
+      period: targetPeriod,
+      baseUrl: baseUrl(req || { headers: {} }),
+      generationMode: mode,
+      table
     });
-    const snapshot = await Promise.race([generation, timeout]).finally(() => clearTimeout(timeoutHandle));
-    if (mode === 'manual') {
-      return { success: true, report: snapshot, notification: { skipped: true, reason: 'manual-regeneration' } };
-    }
     const text = buildWeeklyBusinessReportFeishuText({ snapshot, status: 'success' });
     const notification = await sendWeeklyBusinessReportFeishuText({ text, webhook }).catch(err => ({ sent: false, error: String(err?.message || err) }));
     return { success: true, report: snapshot, notification };

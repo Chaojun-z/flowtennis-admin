@@ -1437,6 +1437,10 @@ function buildReportId(period = {}) {
   return `weekly:${WEEKLY_REPORT_CAMPUS_NAME}:${period.startDate}:${period.endDate}`;
 }
 
+function buildReportDraftId(period = {}) {
+  return `weekly-draft:${WEEKLY_REPORT_CAMPUS_NAME}:${period.startDate}:${period.endDate}`;
+}
+
 function normalizeBaseUrl(baseUrl = '') {
   return String(baseUrl || 'https://www.flowtennis.cn').trim().replace(/\/+$/, '');
 }
@@ -1661,6 +1665,48 @@ function assertWeeklyBusinessReportNotContradictingFacts(snapshot = {}, { raw = 
     err.statusCode = 422;
     throw err;
   }
+}
+
+function weeklyReportDraftInvalid(message = '周报草稿数据校验失败') {
+  const err = new Error(message);
+  err.code = 'WEEKLY_REPORT_DRAFT_INVALID';
+  err.statusCode = 422;
+  return err;
+}
+
+function metricNumberAt(row = {}, path = []) {
+  let current = row;
+  for (const key of path) current = current?.[key];
+  return optionalNumber(current?.value ?? current);
+}
+
+function assertWeeklyBusinessReportDraftReady(row = {}, { period = row.period || {} } = {}) {
+  if (!row || row.status !== 'ready') {
+    const err = new Error('周报可发布版本未准备好');
+    err.code = 'WEEKLY_REPORT_DRAFT_NOT_READY';
+    err.statusCode = 409;
+    throw err;
+  }
+  const reportId = buildReportId(period);
+  if (row.draftOf && row.draftOf !== reportId) {
+    throw weeklyReportDraftInvalid('周报草稿和当前周报周期不一致');
+  }
+  const paidPeople = optionalNumber(row.sections?.revenue?.course?.paidPeople);
+  const purchaseListRows = normalizeRows(row.sections?.revenue?.course?.receiptRows);
+  if (paidPeople !== null && paidPeople > 0 && paidPeople !== purchaseListRows.length) {
+    throw weeklyReportDraftInvalid('周报草稿数据异常：私教课课包购买人数和购买名单不一致');
+  }
+  const coachHours = metricNumberAt(row, ['summary', 'coachHours']);
+  const completedHours = optionalNumber(row.sections?.revenue?.course?.completedHours);
+  if (coachHours !== null && completedHours !== null && numberValue(coachHours) !== numberValue(completedHours)) {
+    throw weeklyReportDraftInvalid('周报草稿数据异常：顶部课时数和课程完成课时不一致');
+  }
+  const totalIncome = metricNumberAt(row, ['summary', 'totalIncome']);
+  const recognizedRevenue = optionalNumber(row.sections?.revenue?.recognized?.businessRevenue);
+  if (totalIncome !== null && recognizedRevenue !== null && numberValue(totalIncome) !== numberValue(recognizedRevenue)) {
+    throw weeklyReportDraftInvalid('周报草稿数据异常：总收入和已入账收入口径不一致');
+  }
+  return true;
 }
 
 function rowLabel(row = {}, keys = [], fallback = '未记录') {
@@ -2829,7 +2875,7 @@ async function sendWeeklyBusinessReportFeishuText({ text = '', webhook = '', fet
   return { sent: true };
 }
 
-function reportView(row = {}) {
+function reportView(row = {}, { draft = null } = {}) {
   return {
     id: row.id,
     campusName: row.campusName || WEEKLY_REPORT_CAMPUS_NAME,
@@ -2840,6 +2886,9 @@ function reportView(row = {}) {
     status: row.status || 'success',
     shareUrl: row.shareUrl || '',
     remark: row.remark || '',
+    draftStatus: draft?.status || '',
+    draftReadyAt: draft?.readyAt || '',
+    canRegenerate: draft?.status === 'ready',
     summary: row.summary || {}
   };
 }
@@ -2852,10 +2901,16 @@ function isCanonicalWeeklyReportRow(row = {}) {
 
 async function listWeeklyBusinessReports({ scan, table = WEEKLY_REPORT_TABLE } = {}) {
   const rows = await scan(table).catch(() => []);
+  const readyDraftByReportId = new Map();
+  rows.forEach(row => {
+    if (!row || row.status !== 'ready') return;
+    const reportId = String(row.draftOf || '').trim();
+    if (reportId) readyDraftByReportId.set(reportId, row);
+  });
   return rows
-    .filter(row => row && row.status !== 'deleted' && isCanonicalWeeklyReportRow(row))
+    .filter(row => row && String(row.id || '').startsWith('weekly:') && row.status !== 'deleted' && isCanonicalWeeklyReportRow(row))
     .sort((a, b) => String(b.period?.endDate || b.generatedAt || '').localeCompare(String(a.period?.endDate || a.generatedAt || '')))
-    .map(reportView);
+    .map(row => reportView(row, { draft: readyDraftByReportId.get(String(row.id || '')) || null }));
 }
 
 async function findWeeklyBusinessReportByToken({ scan, token = '', table = WEEKLY_REPORT_TABLE } = {}) {
@@ -2979,20 +3034,10 @@ async function generateWeeklyBusinessReport({
   baseUrl = 'https://www.flowtennis.cn',
   generationMode = 'auto',
   allowLiveFallback = true,
-  deadlineAt = 0,
   user = { id: 'weekly-report-system', role: 'admin', dataScope: 'all' },
   table = WEEKLY_REPORT_TABLE
 } = {}) {
   if (typeof loadOperationsPayload !== 'function') throw new Error('缺少周报数据读取器');
-  const assertBeforeDeadline = () => {
-    if (deadlineAt && Date.now() >= deadlineAt) {
-      const err = new Error('周报生成超过 10 秒，未更新原生成时间');
-      err.code = 'WEEKLY_REPORT_GENERATION_TIMEOUT';
-      err.statusCode = 504;
-      throw err;
-    }
-  };
-  assertBeforeDeadline();
   const snapshotUser = {
     ...user,
     role: 'admin',
@@ -3132,7 +3177,6 @@ async function generateWeeklyBusinessReport({
     baseUrl,
     generationMode
   });
-  assertBeforeDeadline();
   assertWeeklyBusinessReportNotContradictingFacts(snapshot, { raw: operationsPayload.weeklyReportRaw || {}, period });
   const row = {
     ...snapshot,
@@ -3142,7 +3186,72 @@ async function generateWeeklyBusinessReport({
     html: ''
   };
   row.html = renderWeeklyBusinessReportHtml(row, { remark: row.remark || '' });
-  assertBeforeDeadline();
+  await put(table, row.id, row);
+  return row;
+}
+
+async function buildWeeklyBusinessReportDraft(options = {}) {
+  const period = options.period || resolveWeeklyBusinessReportPeriod();
+  let generatedRow = null;
+  const generated = await generateWeeklyBusinessReport({
+    ...options,
+    period,
+    generationMode: options.generationMode || 'draft',
+    put: async (_table, _id, row) => {
+      generatedRow = row;
+    }
+  });
+  const base = generatedRow || generated;
+  const draft = {
+    ...base,
+    id: buildReportDraftId(period),
+    draftOf: buildReportId(period),
+    status: 'ready',
+    readyAt: new Date().toISOString()
+  };
+  assertWeeklyBusinessReportDraftReady(draft, { period });
+  draft.html = renderWeeklyBusinessReportHtml(draft, { remark: draft.remark || '' });
+  await options.put(options.table || WEEKLY_REPORT_TABLE, draft.id, draft);
+  return draft;
+}
+
+async function publishWeeklyBusinessReportDraft({
+  get,
+  put,
+  mkTable = async () => {},
+  period = resolveWeeklyBusinessReportPeriod(),
+  baseUrl = 'https://www.flowtennis.cn',
+  table = WEEKLY_REPORT_TABLE,
+  generationMode = 'manual'
+} = {}) {
+  if (typeof get !== 'function' || typeof put !== 'function') throw new Error('缺少周报草稿发布读写器');
+  await mkTable(table).catch(() => null);
+  const reportId = buildReportId(period);
+  const draftId = buildReportDraftId(period);
+  const draft = await get(table, draftId).catch(() => null);
+  if (!draft) {
+    const err = new Error('周报可发布版本未准备好');
+    err.code = 'WEEKLY_REPORT_DRAFT_NOT_READY';
+    err.statusCode = 409;
+    throw err;
+  }
+  assertWeeklyBusinessReportDraftReady(draft, { period });
+  const existing = await get(table, reportId).catch(() => null);
+  const shareToken = existing?.shareToken || draft.shareToken || crypto.randomBytes(16).toString('hex');
+  const row = {
+    ...draft,
+    id: reportId,
+    draftOf: undefined,
+    status: 'success',
+    generationMode,
+    generatedAt: new Date().toISOString(),
+    shareToken,
+    shareUrl: `${normalizeBaseUrl(baseUrl)}/weekly-reports/${encodeURIComponent(shareToken)}`,
+    remark: existing?.remark || draft.remark || '',
+    publicEdits: existing?.publicEdits || draft.publicEdits || {},
+    readyAt: draft.readyAt || ''
+  };
+  row.html = renderWeeklyBusinessReportHtml(row, { remark: row.remark || '' });
   await put(table, row.id, row);
   return row;
 }
@@ -3150,6 +3259,7 @@ async function generateWeeklyBusinessReport({
 module.exports = {
   WEEKLY_REPORT_CAMPUS_NAME,
   WEEKLY_REPORT_TABLE,
+  buildReportDraftId,
   weeklyReportStartDateForEndDate,
   resolveWeeklyBusinessReportPeriod,
   resolveTrailingWeeklyPeriods,
@@ -3162,5 +3272,7 @@ module.exports = {
   findWeeklyBusinessReportByToken,
   updateWeeklyBusinessReportRemark,
   updateWeeklyBusinessReportPublicEdits,
+  buildWeeklyBusinessReportDraft,
+  publishWeeklyBusinessReportDraft,
   generateWeeklyBusinessReport
 };
