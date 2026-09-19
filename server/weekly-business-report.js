@@ -1595,6 +1595,7 @@ function buildWeeklyBusinessReportSnapshot({
   previousOperationsPayload = {},
   totalOperationsPayload = null,
   trendOperationsPayloads = [],
+  trendFallbackRows = [],
   shareToken = '',
   baseUrl = 'https://www.flowtennis.cn',
   generatedAt = new Date().toISOString(),
@@ -1610,6 +1611,9 @@ function buildWeeklyBusinessReportSnapshot({
   const financeSummary = buildWeeklyFinanceSummary(raw, period, previousRaw, operations, previous);
   const totalLeads = cardValue(operations, ['conversion', 'cards', 'totalLeads']);
   const reportSections = buildWeeklyReportSections(operations, previous, { period, raw, previousRaw, financeSummary, trendOperationsPayloads });
+  if (!reportSections.trends.length && Array.isArray(trendFallbackRows) && trendFallbackRows.length) {
+    reportSections.trends = trendFallbackRows;
+  }
   const utilizationRate = numberValue(reportSections.court?.utilizationRate ?? cardValue(operations, ['court', 'cards', 'utilizationRate']));
   const completedCourseHours = optionalNumber(reportSections.revenue?.course?.completedHours);
   const coachHours = numberValue(completedCourseHours ?? reportSections.coach?.totalHours ?? cardValue(operations, ['coach', 'cards', 'usedHours']));
@@ -3027,6 +3031,32 @@ function weeklyRawToBaseRows(raw = {}) {
   };
 }
 
+function weeklyRawForPeriod(raw = {}, period = {}) {
+  const filterRows = (rows, fields) => normalizeRows(rows).filter(row => {
+    const date = fields.map(field => String(row?.[field] || '').slice(0, 10)).find(value => /^\d{4}-\d{2}-\d{2}$/.test(value));
+    return !date || inPeriod(date, period);
+  });
+  const courts = normalizeRows(raw.courts).map(row => ({
+    ...row,
+    history: filterRows(row.history, ['date', 'startTime', 'createdAt', 'businessDate'])
+  })).filter(row => Array.isArray(row.history) && row.history.length);
+  return {
+    ...raw,
+    leads: filterRows(raw.leads, ['leadDate', 'createdAt', 'updatedAt']),
+    leadFollowups: filterRows(raw.leadFollowups, ['followupAt', 'createdAt']),
+    purchases: filterRows(raw.purchases, ['purchaseDate', 'paidAt', 'paymentTime', 'createdAt']),
+    entitlementLedger: filterRows(raw.entitlementLedger, ['relatedDate', 'sourceDate', 'createdAt']),
+    courts,
+    membershipOrders: filterRows(raw.membershipOrders, ['purchaseDate', 'paidAt', 'paymentTime', 'createdAt']),
+    membershipBenefitLedger: filterRows(raw.membershipBenefitLedger, ['relatedDate', 'createdAt']),
+    membershipAccountEvents: filterRows(raw.membershipAccountEvents, ['createdAt']),
+    financialLedger: filterRows(raw.financialLedger, ['businessDate', 'date', 'createdAt']),
+    schedule: filterRows(raw.schedule, ['startTime', 'date', 'createdAt']),
+    feedbacks: filterRows(raw.feedbacks, ['createdAt', 'updatedAt']),
+    financeNormalizedRows: filterRows(raw.financeNormalizedRows, ['businessDate', 'date', 'createdAt'])
+  };
+}
+
 function weeklyPayloadHasRawFacts(payload = {}) {
   const raw = payload?.weeklyReportRaw;
   if (!raw || typeof raw !== 'object') return false;
@@ -3117,6 +3147,7 @@ async function generateWeeklyBusinessReport({
     }
   };
   const existing = get ? await get(table, buildReportId(period)).catch(() => null) : null;
+  const reuseExistingTrends = generationMode === 'manual' && existing?.sections?.trends?.length >= 8;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
     const allowRefreshing = generationMode === 'manual';
@@ -3176,7 +3207,12 @@ async function generateWeeklyBusinessReport({
       if (canDeriveFromLifetime) {
         const baseRowsOverride = totalSnapshotBaseRows;
         operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
-        previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
+        // 上周和趋势只需要同一份原始事实，后续函数会按日期范围过滤，避免再次构建完整经营指标。
+        previousOperationsPayload = {
+          ...totalOperationsPayload,
+          operations: {},
+          scope: previousScope.dateRange
+        };
       } else {
         operationsPayload = await loadSnapshotPayload(scope);
         previousOperationsPayload = await loadSnapshotPayload(previousScope);
@@ -3191,9 +3227,11 @@ async function generateWeeklyBusinessReport({
         missingSnapshotScopes.push(scope);
       }
     }
-    const baseRowsOverride = operationsPayload?.weeklyReportRaw
-      ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw)
-      : totalSnapshotBaseRows;
+    const baseRowsOverride = canDeriveFromLifetime
+      ? totalSnapshotBaseRows
+      : operationsPayload?.weeklyReportRaw
+        ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw)
+        : totalSnapshotBaseRows;
     if (!weeklyPayloadReadyForScope(previousOperationsPayload, previousScope)) {
       if (baseRowsOverride) {
         previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true });
@@ -3210,7 +3248,14 @@ async function generateWeeklyBusinessReport({
         missingSnapshotScopes.push(totalScope);
       }
     }
-    if (typeof loadOperationsSnapshot === 'function') {
+    if (reuseExistingTrends) {
+      trendOperationsPayloads = [];
+    } else if (canDeriveFromLifetime) {
+      // 完整生命周期原始事实已经覆盖趋势窗口，直接交给趋势聚合器按周过滤。
+      trendOperationsPayloads = generationMode === 'manual' && existing?.sections?.trends?.length >= 8
+        ? []
+        : [{ period: {}, payload: { operations: {}, weeklyReportRaw: totalOperationsPayload.weeklyReportRaw } }];
+    } else if (typeof loadOperationsSnapshot === 'function') {
     const loadedTrendKeys = new Set([
       `${period.startDate}:${period.endDate}`,
       `${period.previousStartDate}:${period.previousEndDate}`
@@ -3230,6 +3275,7 @@ async function generateWeeklyBusinessReport({
           ? null
           : await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: false }).catch(() => null);
       if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
+      if (canDeriveFromLifetime && payload) continue;
       if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) {
         const derivedPayload = !canDeriveFromLifetime && generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
           ? await loadOperationsPayload({ user, scope: trendScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null)
@@ -3258,12 +3304,19 @@ async function generateWeeklyBusinessReport({
   if (missingSnapshotScopes.length) {
     throw weeklyReportSnapshotNotReadyError(missingSnapshotScopes, snapshotUser);
   }
+  if (canDeriveFromLifetime && operationsPayload?.weeklyReportRaw) {
+    operationsPayload = { ...operationsPayload, weeklyReportRaw: weeklyRawForPeriod(operationsPayload.weeklyReportRaw, period) };
+  }
+  if (canDeriveFromLifetime && previousOperationsPayload?.weeklyReportRaw) {
+    previousOperationsPayload = { ...previousOperationsPayload, weeklyReportRaw: weeklyRawForPeriod(previousOperationsPayload.weeklyReportRaw, previousScope.dateRange) };
+  }
   const snapshot = buildWeeklyBusinessReportSnapshot({
     period,
     operationsPayload,
     previousOperationsPayload,
     totalOperationsPayload,
     trendOperationsPayloads,
+    trendFallbackRows: reuseExistingTrends ? existing.sections.trends : [],
     shareToken: existing?.shareToken || '',
     baseUrl,
     generationMode
