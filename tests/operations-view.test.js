@@ -180,6 +180,9 @@ assert.match(functionBody(bootstrapSource, 'setCampus'), /if\(currentPage==='ope
 assert.match(componentsSource, /if\(currentPage==='operations'\)reloadOperationsPageDataWithInlineLoading\(\)/, 'operations page should reload aggregate data through inline skeletons when the global date filter changes');
 assert.match(stateSource, /async function reloadOperationsPageDataWithInlineLoading\(\)/, 'operations page should have a dedicated inline refresh path');
 assert.match(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S]*renderOperationsLoading\(\)[\s\S]*ensureDatasetsByName\(\['operationsPage'\],\{force:true\}\)/, 'operations inline refresh should show local skeleton and refresh only operations data');
+assert.match(stateSource, /function renderOperationsPageError\(/, 'operations page should render a visible error state when snapshot or API loading fails');
+assert.match(functionBody(stateSource, 'renderOperationsPageError'), /getElementById\('page-operations'\)[\s\S]*tms-table-error-state[\s\S]*loadPageDataAndRender\('operations',\{force:true\}\)/, 'operations error state should replace the skeleton and expose a retry action');
+assert.match(functionBody(stateSource, 'reloadOperationsPageDataWithInlineLoading'), /catch\(e\)[\s\S]*renderOperationsPageError\(String\(e\.message\|\|e\)\)/, 'operations inline refresh failure must not leave the skeleton stuck');
 assert.doesNotMatch(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S]{0,500}pageLoading/, 'operations inline refresh should not show the global loading overlay');
 assert.match(standardComponentsSource, /function renderStandardPageSkeleton\(/, 'standard components should expose a global page skeleton renderer');
 assert.match(standardComponentsSource, /function renderStandardSkeletonKpiCard\(/, 'global page skeleton should render metric cards with title, value and supporting lines');

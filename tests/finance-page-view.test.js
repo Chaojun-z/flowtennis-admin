@@ -47,6 +47,9 @@ assert.match(source,/id="financeSettlementPanel"/,'finance center should render 
 assert.match(source,/function setFinancePanel\(/,'finance center should expose tab switch logic');
 assert.match(source,/financePanel='ledger'/,'finance center should default to ledger tab');
 assert.match(source,/function renderFinanceCenter\(/,'finance center should expose page render logic');
+assert.match(source,/function renderFinancePageError\(/,'finance center should render a visible error state when finance data loading fails');
+assert.match(functionSource(source,'renderFinancePageError'),/getElementById\('page-finance'\)[\s\S]*tms-table-error-state[\s\S]*loadPageDataAndRender\('finance',\{force:true\}\)/,'finance error state should replace stale loading UI and expose a retry action');
+assert.match(source,/if\(pg==='finance'\)renderFinancePageError\(String\(e\.message\|\|e\)\)/,'finance data load failures should render the visible finance error state');
 assert.match(source,/function renderFinanceOverview\(/,'finance center should render summary stats inside ledger tab');
 assert.match(source,/function renderFinanceLedger\(/,'finance center should render ledger table');
 assert.match(source,/function renderFinanceRevenueReport\(/,'finance center should render revenue detail table');

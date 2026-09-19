@@ -1303,6 +1303,22 @@ function renderScheduleTableError(message){
   const el=document.getElementById('schTbody');
   if(el)el.innerHTML=`<tr><td colspan="12"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('schedule',{force:true})">重新加载</button></div></td></tr>`;
 }
+function renderOperationsPageError(message){
+  const host=document.getElementById('page-operations');
+  if(!host)return;
+  host.innerHTML=`<div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('operations',{force:true})">重新加载</button></div>`;
+}
+function renderFinancePageError(message){
+  const loading=document.getElementById('financeLedgerLoading');
+  if(loading)loading.style.display='none';
+  const ledgerPanel=document.getElementById('financeLedgerPanel');
+  const ready=document.getElementById('financeLedgerReady');
+  const host=ready||document.getElementById('page-finance');
+  if(!host)return;
+  if(ledgerPanel)ledgerPanel.style.display='';
+  ['financeRevenuePanel','financeRecognizedPanel','financeSettlementPanel'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  host.innerHTML=`<div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('finance',{force:true})">重新加载</button></div>`;
+}
 function renderCourtTableLoading(){
   renderTableSkeletonLoading('courtTbody',16,'订场用户加载中...');
 }
@@ -1891,6 +1907,8 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     if(isStudentListPage(pg)&&pg!=='students')renderStudentTableError(String(e.message||e));
     if(pg==='leads')renderLeadTableError(String(e.message||e));
     if(pg==='schedule')renderScheduleTableError(String(e.message||e));
+    if(pg==='operations')renderOperationsPageError(String(e.message||e));
+    if(pg==='finance')renderFinancePageError(String(e.message||e));
     if(pg==='courts')renderCourtTableError(String(e.message||e));
     if(pg==='memberships')renderTableBodyLoading('membershipTbody',11,'会员统一读模型加载失败，请稍后重试');
     toast('加载失败：'+e.message,'error');
@@ -1944,6 +1962,7 @@ async function reloadOperationsPageDataWithInlineLoading(){
   }catch(e){
     if(requestSeq!==operationsPageRequestSeq)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+    renderOperationsPageError(String(e.message||e));
     toast('加载失败：'+e.message,'error');
   }
 }
