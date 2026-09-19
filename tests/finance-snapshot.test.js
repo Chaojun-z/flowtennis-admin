@@ -1,6 +1,9 @@
 const assert = require('assert');
 const { _test } = require('../api/index.js');
-const { buildFinanceOverviewSummaryFromData } = require('../server/read-models/finance-summary.js');
+const {
+  buildFinanceOverviewSummaryFromData,
+  buildFinanceOverviewSummaryFromRows
+} = require('../server/read-models/finance-summary.js');
 
 const snapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
@@ -145,8 +148,10 @@ assert.strictEqual(refundedPurchaseReceipt.cashDelta, 4500, 'partially refunded 
 assert.strictEqual(refundedPurchaseRefund.action, '退款', 'purchase refund should create a standard finance refund row');
 assert.strictEqual(refundedPurchaseRefund.cashDelta, -1800, 'purchase refund should reduce standard finance cash by refund amount');
 assert.strictEqual(refundedPurchaseRefund.deferredRevenueDelta, -1800, 'purchase refund should reduce unfulfilled deferred revenue');
-assert.strictEqual(refundedPurchaseSnapshot.financeOverviewData.all.courseIncome, 2700, 'course income should be net of course refunds');
-assert.strictEqual(refundedPurchaseSnapshot.financeOverviewData.all.packageIncome, 2700, 'package income should be net of course refunds');
+assert.strictEqual(refundedPurchaseSnapshot.financeOverviewData.all.courseIncome, 4500, 'course income should include positive course receipts only');
+assert.strictEqual(refundedPurchaseSnapshot.financeOverviewData.all.packageIncome, 4500, 'package income should include positive package receipts only');
+assert.strictEqual(refundedPurchaseSnapshot.financeOverviewData.all.refundAmount, 1800, 'course refund should be reported separately');
+assert.strictEqual(refundedPurchaseSnapshot.financeOverviewData.all.netCashIncome, 2700, 'course net cash should subtract the refund');
 
 const personalRefundSnapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
@@ -929,5 +934,13 @@ const zeroStandardSummary = buildFinanceOverviewSummaryFromData({
 });
 assert.strictEqual(zeroStandardSummary.totalIncome, 0, 'standard zero cash should not fall back to legacy totalIncome');
 assert.strictEqual(zeroStandardSummary.bookingIncome, 0, 'standard zero booking income should not fall back to legacy courtIncome');
+
+const receiptAndRefundSummary = buildFinanceOverviewSummaryFromRows([
+  { id: 'receipt-1905000', businessType: '课程', action: '收款', cashDelta: 1905000 },
+  { id: 'refund-15000', businessType: '课程', action: '退款', cashDelta: -15000 }
+]);
+assert.strictEqual(receiptAndRefundSummary.totalIncome, 1905000, 'total income must only include positive receipt rows');
+assert.strictEqual(receiptAndRefundSummary.refundAmount, 15000, 'refund amount must be reported separately');
+assert.strictEqual(receiptAndRefundSummary.netCashIncome, 1890000, 'net cash income must subtract refunds from total income');
 
 console.log('finance snapshot tests passed');

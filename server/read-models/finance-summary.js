@@ -22,7 +22,8 @@ function financeCourseRows(rows = []) {
 
 function financePackageReceiptRows(rows = []) {
   return financeCourseRows(rows).filter(row => (
-    ['收款', '退款'].includes(String(row.action || row.transactionType || '')) &&
+    String(row.action || row.transactionType || '') === '收款' &&
+    Number(row.cashDelta) > 0 &&
     String(row.sourceDocument || '').startsWith('购买记录')
   ));
 }
@@ -52,6 +53,10 @@ function financeBookingRows(rows = []) {
 
 function financeReceiptRows(rows = []) {
   return (rows || []).filter(row => String(row.action || row.transactionType || '') === '收款' && Number(row.cashDelta) > 0);
+}
+
+function financeRefundRows(rows = []) {
+  return (rows || []).filter(row => String(row.action || row.transactionType || '') === '退款' && Number(row.cashDelta) < 0);
 }
 
 function financeDateKey(value) {
@@ -86,25 +91,34 @@ function financeRowsInScope(rows = [], scope = {}) {
 
 function buildFinanceOverviewAllFromRows(rows = [], scope = {}) {
   const businessRows = financeBusinessRows(financeRowsInScope(rows, scope));
+  const receiptRows = financeReceiptRows(businessRows);
+  const refundRows = financeRefundRows(businessRows);
   const courseRows = financeCourseRows(businessRows);
+  const courseReceiptRows = financeReceiptRows(courseRows);
   const bookingRows = financeBookingRows(businessRows);
+  const bookingReceiptRows = financeReceiptRows(bookingRows);
+  const storedValueReceiptRows = financeReceiptRows(financeStoredValueRows(businessRows));
+  const cash = sumFinanceRows(receiptRows, 'cashDelta');
+  const refundAmount = money(refundRows.reduce((sum, row) => sum + Math.abs(Number(row.cashDelta) || 0), 0));
   return {
-    cash: sumFinanceRows(businessRows, 'cashDelta'),
+    cash,
+    refundAmount,
+    netCashIncome: money(cash - refundAmount),
     recognized: sumFinanceRows(businessRows, 'recognizedRevenueDelta'),
     deferred: sumFinanceRows(businessRows, 'deferredRevenueDelta'),
-    courseIncome: sumFinanceRows(courseRows, 'cashDelta'),
+    courseIncome: sumFinanceRows(courseReceiptRows, 'cashDelta'),
     courseRecognized: sumFinanceRows(courseRows, 'recognizedRevenueDelta'),
     directCourseIncome: sumFinanceRows(financeDirectCourseRows(businessRows), 'cashDelta'),
     directCourseRecognized: sumFinanceRows(financeDirectCourseRows(businessRows), 'recognizedRevenueDelta'),
     packageIncome: sumFinanceRows(financePackageReceiptRows(businessRows), 'cashDelta'),
     packageRecognized: sumFinanceRows(financePackageRecognizedRows(businessRows), 'recognizedRevenueDelta'),
-    storedValueIncome: sumFinanceRows(financeStoredValueRows(businessRows), 'cashDelta'),
+    storedValueIncome: sumFinanceRows(storedValueReceiptRows, 'cashDelta'),
     storedValueConsumed: sumFinanceRows(financeStoredValueConsumedRows(businessRows), 'recognizedRevenueDelta'),
-    bookingIncome: sumFinanceRows(bookingRows, 'cashDelta'),
+    bookingIncome: sumFinanceRows(bookingReceiptRows, 'cashDelta'),
     bookingRecognized: sumFinanceRows(bookingRows, 'recognizedRevenueDelta'),
-    courtIncome: sumFinanceRows(bookingRows, 'cashDelta'),
+    courtIncome: sumFinanceRows(bookingReceiptRows, 'cashDelta'),
     courtRecognized: sumFinanceRows(bookingRows, 'recognizedRevenueDelta'),
-    tradeCount: financeReceiptRows(businessRows).length
+    tradeCount: receiptRows.length
   };
 }
 
@@ -136,6 +150,10 @@ function buildFinanceOverviewSummaryFromData(financeOverviewData = {}) {
   return {
     hasRows: Object.keys(all || {}).length > 0,
     totalIncome: financeNumber(financeOverviewData, ['cash', 'totalIncome']),
+    refundAmount: financeNumber(financeOverviewData, ['refundAmount']),
+    netCashIncome: financeNumber(financeOverviewData, ['netCashIncome']) || money(
+      financeNumber(financeOverviewData, ['cash', 'totalIncome']) - financeNumber(financeOverviewData, ['refundAmount'])
+    ),
     recognizedRevenue: financeNumber(financeOverviewData, ['recognized', 'recognizedRevenue']),
     pendingRevenue: financeNumber(financeOverviewData, ['deferred', 'pendingRevenue']),
     courseIncome: financeNumber(financeOverviewData, ['courseIncome']),
@@ -164,9 +182,14 @@ function buildFinanceOverviewSummaryFromRows(rows = []) {
 function mergeFinanceOverviewDataWithRows(baseOverviewData = {}, incrementRows = []) {
   const base = { ...(financeAll(baseOverviewData) || {}) };
   const delta = buildFinanceOverviewDataFromRows(incrementRows).all;
+  const baseCash = Number(base.cash ?? base.totalIncome) || 0;
+  const baseRefundAmount = Number(base.refundAmount) || 0;
+  const baseNetCashIncome = Number(base.netCashIncome ?? (baseCash - baseRefundAmount)) || 0;
   const all = {
     ...base,
-    cash: money((Number(base.cash ?? base.totalIncome) || 0) + delta.cash),
+    cash: money(baseCash + delta.cash),
+    refundAmount: money(baseRefundAmount + delta.refundAmount),
+    netCashIncome: money(baseNetCashIncome + delta.netCashIncome),
     recognized: money((Number(base.recognized ?? base.recognizedRevenue) || 0) + delta.recognized),
     deferred: money((Number(base.deferred ?? base.pendingRevenue) || 0) + delta.deferred),
     courseIncome: money((Number(base.courseIncome ?? base.packageIncome) || 0) + delta.courseIncome),

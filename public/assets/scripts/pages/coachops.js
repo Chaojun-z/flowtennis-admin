@@ -1048,6 +1048,8 @@ function financeStandardNumber(...keys){
 function financeStandardOverviewMetrics(){
   return {
     totalCash:financeStandardNumber('cash','totalIncome'),
+    refundAmount:financeStandardNumber('refundAmount'),
+    netCashIncome:financeStandardNumber('netCashIncome'),
     totalRecognized:financeStandardNumber('recognized','recognizedRevenue'),
     totalDeferred:financeStandardNumber('deferred','pendingRevenue'),
     courseIncome:financeStandardNumber('courseIncome'),
@@ -1458,6 +1460,8 @@ function renderFinanceOverview(){
   primaryHost.innerHTML=[
     {label:`${period}收款合计`,value:financeCardMoney(metrics.totalCash),caption:isCurrentPeriod?'本期实际收款合计':'累计实际收款合计'},
     {label:`${period}核销确收`,value:financeCardMoney(metrics.totalRecognized),caption:isCurrentPeriod?'本期已履约确认收入':'累计已履约确认收入'},
+    {label:'退款金额',value:financeCardMoney(metrics.refundAmount),caption:isCurrentPeriod?'本期有效退款':'累计有效退款'},
+    {label:'净实收',value:financeCardMoney(metrics.netCashIncome),caption:'总收入减退款金额'},
     {label:isCurrentPeriod?'本期会员储值':'会员储值',value:financeCardMoney(metrics.storedValueIncome),caption:`${isCurrentPeriod?'本期会员充值':'累计会员充值'}；${isCurrentPeriod?'储值消耗':'累计储值消耗'} ${financeCardMoney(metrics.storedValueRecognized)}`},
     {label:isCurrentPeriod?'本期散客订场':'散客订场',value:financeCardMoney(metrics.bookingIncome),caption:'散客订场为直接收款'},
     {label:isCurrentPeriod?'本期课程收款':'课程收款',value:financeCardMoney(metrics.courseIncome),caption:`${isCurrentPeriod?'本期课程及课包收款':'累计课程及课包收款'}；${isCurrentPeriod?'课程核销':'累计课程核销'} ${financeCardMoney(metrics.courseRecognized)}`}

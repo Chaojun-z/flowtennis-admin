@@ -987,17 +987,36 @@ function weeklyFinanceRows(raw = {}, period = {}) {
   return financeRowsForPeriod(selectWeeklyFinanceSourceRows(raw, period), period);
 }
 
-function lifetimeCashReceivedFromRaw(raw = {}, period = {}) {
+function lifetimeFinanceSummaryFromRaw(raw = {}, period = {}) {
   const endDate = String(period?.endDate || '').slice(0, 10);
   const normalizedRows = normalizeRows(raw.financeNormalizedRows);
   if (normalizedRows.length) {
     const overview = buildFinanceOverviewDataFromRows(normalizedRows, endDate ? { endDate } : {});
     const totalIncome = Number(overview?.all?.cash);
-    return Number.isFinite(totalIncome) ? numberValue(totalIncome) : null;
+    const refundAmount = Number(overview?.all?.refundAmount);
+    const netCashIncome = Number(overview?.all?.netCashIncome);
+    return Number.isFinite(totalIncome)
+      ? {
+        totalIncome: numberValue(totalIncome),
+        refundAmount: Number.isFinite(refundAmount) ? numberValue(refundAmount) : 0,
+        netCashIncome: Number.isFinite(netCashIncome) ? numberValue(netCashIncome) : numberValue(totalIncome)
+      }
+      : null;
   }
   const sourceRows = normalizeFinancialLedgerRows(raw);
   const scopedRows = financeRowsForPeriod(sourceRows, endDate ? { endDate } : {}, { campusScoped: false });
-  return scopedRows.length ? financeSum(scopedRows, 'cashDelta') : null;
+  if (!scopedRows.length) return null;
+  const totalIncome = financeSum(scopedRows.filter(isFinanceReceipt), 'cashDelta');
+  const refundAmount = financeSum(scopedRows.filter(isFinanceRefund).map(row => ({ cashDelta: Math.abs(Number(row.cashDelta) || 0) })), 'cashDelta');
+  return { totalIncome, refundAmount, netCashIncome: numberValue(totalIncome - refundAmount) };
+}
+
+function lifetimeCashReceivedFromRaw(raw = {}, period = {}) {
+  return lifetimeFinanceSummaryFromRaw(raw, period)?.totalIncome ?? null;
+}
+
+function lifetimeNetCashReceivedFromRaw(raw = {}, period = {}) {
+  return lifetimeFinanceSummaryFromRaw(raw, period)?.netCashIncome ?? null;
 }
 
 function financeAction(row = {}) {
@@ -1597,9 +1616,17 @@ function buildWeeklyBusinessReportSnapshot({
   const coachHoursCompare = completedCourseHours !== null && reportSections.revenue?.course?.compare?.completedHours
     ? reportSections.revenue.course.compare.completedHours
     : (reportSections.coach?.compare?.totalHours || compareMetric(coachHours, cardValue(previous, ['coach', 'cards', 'usedHours'])));
-  const lifetimeTotalIncome = lifetimeCashReceivedFromRaw(totalRaw, period)
+  const lifetimeFinanceSummary = lifetimeFinanceSummaryFromRaw(totalRaw, period)
+    ?? lifetimeFinanceSummaryFromRaw(raw, period);
+  const lifetimeTotalIncome = lifetimeFinanceSummary?.totalIncome
+    ?? lifetimeCashReceivedFromRaw(totalRaw, period)
     ?? lifetimeCashReceivedFromRaw(raw, period)
     ?? cardValue(totalOperations, ['overview', 'cards', 'totalIncome']);
+  const lifetimeNetCashIncome = lifetimeFinanceSummary?.netCashIncome
+    ?? lifetimeNetCashReceivedFromRaw(totalRaw, period)
+    ?? lifetimeNetCashReceivedFromRaw(raw, period)
+    ?? lifetimeTotalIncome;
+  const lifetimeRefundAmount = lifetimeFinanceSummary?.refundAmount ?? 0;
   const lifetimeCourtUtilizationRate = cardValue(totalOperations, ['court', 'cards', 'utilizationRate']) || utilizationRate;
   const lifetimePrivateCoursePeople = buildLifetimePrivateCoursePeople(totalRaw)
     || optionalCardNumber(totalOperations.overview || {}, ['courseIncomePeople', 'courseStudents'])
@@ -1616,6 +1643,8 @@ function buildWeeklyBusinessReportSnapshot({
     shareUrl: `${normalizeBaseUrl(baseUrl)}/weekly-reports/${encodeURIComponent(token)}`,
     lifetimeSummary: {
       totalIncome: { value: lifetimeTotalIncome },
+      refundAmount: { value: lifetimeRefundAmount },
+      netCashIncome: { value: lifetimeNetCashIncome },
       courtUtilizationRate: { value: lifetimeCourtUtilizationRate },
       privateCoursePeople: { value: lifetimePrivateCoursePeople }
     },
@@ -2297,23 +2326,37 @@ function renderRows(rows = [], columns = [], { edits = {}, keyPrefix = '' } = {}
 function renderRevenueCategoryPanel(title = '', rows = [], edits = {}, keyPrefix = '') {
   const clean = normalizeRows(rows);
   const body = clean.length ? clean.map((row, rowIndex) => `
-    <div class="py-3 border-b border-cyber-border/20 last:border-b-0">
+    <div class="revenue-category-level revenue-category-level-1 rounded-lg border border-cyber-border/60 bg-black/10 p-3">
       <div class="flex items-center justify-between gap-4">
-        <span class="text-sm font-bold text-white">${editableText(edits, `${keyPrefix}.${rowIndex}.name`, row.name || '-')}</span>
-        <span class="font-mono text-sm text-cyber-volt whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.amount`, `${formatMetricValue(row.amount, '元')} 元`)}</span>
+        <div class="flex min-w-0 items-center gap-2">
+          <span class="shrink-0 rounded border border-cyber-volt/40 bg-cyber-pillBg px-1.5 py-0.5 text-[10px] font-mono text-cyber-volt">一级</span>
+          <span class="truncate text-sm font-bold text-white">${editableText(edits, `${keyPrefix}.${rowIndex}.name`, row.name || '-')}</span>
+          <span class="hidden text-[10px] text-cyber-darkMuted sm:inline">一级合计</span>
+        </div>
+        <span class="font-mono text-sm font-bold text-cyber-volt whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.amount`, `${formatMetricValue(row.amount, '元')} 元`)}</span>
       </div>
-      <div class="mt-2 space-y-1">
+      <div class="mt-3 space-y-2 border-l-2 border-cyber-border pl-3 sm:pl-4">
         ${normalizeRows(row.children).map((child, childIndex) => `
-          <div class="flex items-center justify-between gap-4 text-xs text-cyber-muted">
-            <span>${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.name`, child.name || '-')}</span>
-            <span class="font-mono whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.amount`, `${formatMetricValue(child.amount, '元')} 元`)}</span>
-          </div>
-          ${normalizeRows(child.children).map((grandchild, grandchildIndex) => `
-            <div class="flex items-center justify-between gap-4 pl-4 text-[11px] text-cyber-darkMuted">
-              <span>${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.children.${grandchildIndex}.name`, grandchild.name || '-')}</span>
-              <span class="font-mono whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.children.${grandchildIndex}.amount`, `${formatMetricValue(grandchild.amount, '元')} 元`)}</span>
+          <div class="revenue-category-level revenue-category-level-2 rounded-md bg-cyber-pillBg/60 px-2.5 py-2">
+            <div class="flex items-center justify-between gap-4 text-xs text-cyber-muted">
+              <div class="flex min-w-0 items-center gap-2">
+                <span class="shrink-0 text-[10px] font-mono text-cyber-muted">二级</span>
+                <span class="truncate">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.name`, child.name || '-')}</span>
+              </div>
+              <span class="font-mono text-cyber-muted whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.amount`, `${formatMetricValue(child.amount, '元')} 元`)}</span>
             </div>
-          `).join('')}
+            ${normalizeRows(child.children).length ? `<div class="mt-2 space-y-1 border-l border-cyber-border/70 pl-3">
+              ${normalizeRows(child.children).map((grandchild, grandchildIndex) => `
+                <div class="flex items-center justify-between gap-4 text-[11px] text-cyber-darkMuted">
+                  <div class="flex min-w-0 items-center gap-2">
+                    <span class="shrink-0 font-mono text-[10px] text-cyber-darkMuted">三级</span>
+                    <span class="truncate">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.children.${grandchildIndex}.name`, grandchild.name || '-')}</span>
+                  </div>
+                  <span class="font-mono whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.children.${grandchildIndex}.amount`, `${formatMetricValue(grandchild.amount, '元')} 元`)}</span>
+                </div>
+              `).join('')}
+            </div>` : ''}
+          </div>
         `).join('')}
       </div>
     </div>
@@ -2321,8 +2364,9 @@ function renderRevenueCategoryPanel(title = '', rows = [], edits = {}, keyPrefix
   return `<section class="bg-cyber-card rounded-xl border border-cyber-border p-5">
     <div class="flex items-center justify-between mb-2">
       <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, `${keyPrefix}.title`, title)}</h3>
-      <span class="text-xs font-mono text-cyber-muted">${editableText(edits, `${keyPrefix}.count`, `${clean.length} 类`)}</span>
+      <span class="text-xs font-mono text-cyber-muted">${editableText(edits, `${keyPrefix}.count`, `${clean.length} 个一级类目`)}</span>
     </div>
+    <div class="mb-1 text-[11px] text-cyber-darkMuted">一级类目 <span class="mx-1 text-cyber-border">→</span> 二级项目 <span class="mx-1 text-cyber-border">→</span> 三级明细</div>
     ${body}
   </section>`;
 }
@@ -2510,7 +2554,7 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
       </div>
     </div>
     <div data-section="top-kpi-cards" class="lg:col-span-6 grid grid-cols-3 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border">
-      ${heroOverviewItem('总收入', lifetime.totalIncome?.value || 0, ' 元', '历史累计收入', edits, 'lifetime.totalIncome')}
+      ${heroOverviewItem('累计净实收', lifetime.netCashIncome?.value ?? lifetime.totalIncome?.value ?? 0, ' 元', `总收款 ${formatMetricValue(lifetime.totalIncome?.value || 0, '元')} 元；退款 ${formatMetricValue(lifetime.refundAmount?.value || 0, '元')} 元；截至 ${period.endDate || '-'}`, edits, 'lifetime.totalIncome')}
       ${heroOverviewItem('总场地利用率', lifetime.courtUtilizationRate?.value || 0, '%', '历史平均利用率', edits, 'lifetime.courtUtilizationRate')}
       ${heroOverviewItem('总私教课人数', lifetime.privateCoursePeople?.value || 0, ' 人', '累计私教学员数', edits, 'lifetime.privateCoursePeople')}
     </div>

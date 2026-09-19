@@ -118,7 +118,7 @@ assert.match(ledgerShell,/buttonsId:'financeLedgerPagerBtns'/,'ledger should kee
 assert.doesNotMatch(source,/financeLedgerFromHost|financeLedgerToHost|coachOpsRevenueFromHost|coachOpsRevenueToHost|coachOpsConsumeFromHost|coachOpsConsumeToHost/,'finance panels should remove local date filters and use the global top time filter');
 assert.doesNotMatch(source,/document\.getElementById\('financeLedgerFrom'\)|document\.getElementById\('coachOpsRevenueFrom'\)|document\.getElementById\('coachOpsConsumeFrom'\)/,'finance data rows should not read removed local date inputs');
 assert.doesNotMatch(source,/未入账明细/,'ledger should no longer show a second prepaid detail table');
-assert.match(source,/收款合计[\s\S]*核销确收[\s\S]*会员储值[\s\S]*散客订场[\s\S]*课程收款/,'ledger summary should show the five requested owner-facing finance metrics');
+assert.match(source,/收款合计[\s\S]*核销确收[\s\S]*退款金额[\s\S]*净实收[\s\S]*会员储值[\s\S]*散客订场[\s\S]*课程收款/,'ledger summary should show gross receipts, refunds, net cash, and the requested owner-facing finance metrics');
 assert.doesNotMatch(source,/散客单次课程|课包专项/,'ledger summary should merge direct course and package income into course income');
 assert.match(source,/课程及课包收款[\s\S]*课程核销/,'merged course summary card should explain course income and recognized revenue');
 assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/订场实收 \/ 核销|会员储值 \/ 消耗|financeInlineMoneyWithPercent/,'overview cards should not mix cash income with recognized/consumed amounts in the main value');
@@ -140,7 +140,7 @@ assert.match(functionSource(source,'renderFinanceOverview'),/const metrics=finan
 assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/financeCurrentMetrics\(financeLedgerRows\(\)\)|reduce\(/,'overview cards must not calculate from currently filtered frontend ledger rows');
 {
   const sandbox = {
-    financeOverviewData: { all: { cash: 1125, recognized: 625, deferred: 500, courseIncome: 1125, courseRecognized: 625, packageIncome: 1000, packageRecognized: 350, directCourseIncome: 125, directCourseRecognized: 100, storedValueIncome: 5000, storedValueConsumed: 240, bookingIncome: 300, bookingRecognized: 300, tradeCount: 4 } },
+    financeOverviewData: { all: { cash: 1125, refundAmount: 150, netCashIncome: 975, recognized: 625, deferred: 500, courseIncome: 1125, courseRecognized: 625, packageIncome: 1000, packageRecognized: 350, directCourseIncome: 125, directCourseRecognized: 100, storedValueIncome: 5000, storedValueConsumed: 240, bookingIncome: 300, bookingRecognized: 300, tradeCount: 4 } },
     result:null,
     Math,
     Number
@@ -150,6 +150,8 @@ assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/financeCurre
   assert.strictEqual(sandbox.result.directCourseRecognized, 100, 'direct course recognized should come from backend standard summary');
   assert.strictEqual(sandbox.result.courseIncome, 1125, 'course income should come from backend standard summary');
   assert.strictEqual(sandbox.result.totalCash, 1125, 'total cash should come from backend standard summary');
+  assert.strictEqual(sandbox.result.refundAmount, 150, 'refund amount should come from backend standard summary');
+  assert.strictEqual(sandbox.result.netCashIncome, 975, 'net cash income should come from backend standard summary');
   assert.strictEqual(sandbox.result.courseRecognized, 625, 'course recognized should come from backend standard summary');
   assert.strictEqual(sandbox.result.totalRecognized, 625, 'total recognized should come from backend standard summary');
 }

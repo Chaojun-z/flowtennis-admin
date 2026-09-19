@@ -166,7 +166,9 @@
   const COURT_FINANCE_BUSINESS_OPTIONS = COURT_FINANCE_BUSINESS_TYPES.map(value => ({ value, label: value }));
   const FINANCE_TRANSACTION_TYPE_OPTIONS = TRANSACTION_TYPES.map(value => ({ value, label: value }));
   const FINANCE_FIELD_DEFINITIONS = Object.freeze({
-    totalIncome: { label: '总收入', rule: '标准财务流水 cashDelta 的收入合计，对应 financeOverviewData.all.cash' },
+    totalIncome: { label: '总收入', rule: '有效正向收款流水 cashDelta 的合计，对应 financeOverviewData.all.cash' },
+    refundAmount: { label: '退款金额', rule: '有效退款流水 cashDelta 的绝对值合计，对应 financeOverviewData.all.refundAmount' },
+    netCashIncome: { label: '净实收', rule: '总收入减退款金额，对应 financeOverviewData.all.netCashIncome' },
     recognizedRevenue: { label: '已入账收入', rule: '标准财务流水 recognizedRevenueDelta 的确认收入合计，对应 financeOverviewData.all.recognized' },
     pendingRevenue: { label: '待履约收入', rule: '总收入减已入账收入后的待履约金额，对应 financeOverviewData.all.deferred' },
     storedValueIncome: { label: '会员储值收入', rule: 'businessType 为会员储值的标准财务流水 cashDelta 合计' },

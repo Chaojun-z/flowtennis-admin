@@ -263,6 +263,11 @@ assert.strictEqual(requestedStructureSnapshot.sections.revenue.receipts.category
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.receipts.categoryRows.find(row => row.name === '会员储值')?.amount, 5000, 'receipt tree should separate membership top-up from recognized revenue');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.categoryRows.find(row => row.name === '课程服务')?.amount, 1000, 'recognized tree should group course consumption under course service');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.categoryRows.find(row => row.name === '场地服务')?.amount, 300, 'recognized tree should group member and guest booking revenue under field service');
+const categoryHtml = renderWeeklyBusinessReportHtml(requestedStructureSnapshot);
+assert.match(categoryHtml, /一级类目[\s\S]*二级项目[\s\S]*三级明细/, 'revenue category panels should explain the three-level hierarchy');
+assert.match(categoryHtml, /class="[^"]*revenue-category-level-1/, 'revenue category panels should visually distinguish level one rows');
+assert.match(categoryHtml, /class="[^"]*revenue-category-level-2/, 'revenue category panels should visually distinguish level two rows');
+assert.match(categoryHtml, /累计净实收/, 'weekly lifetime card should identify the net cash metric');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.lessonPeople, 2, 'course section should expose weekly completed lesson people');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.completedHours, 3, 'course section should expose weekly completed coach course hours');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.typeRows.find(row => row.type === '成人')?.newAmount, 1000, 'adult course row should use current-week platform receipt facts');
@@ -1021,7 +1026,9 @@ const lifetimeNetSnapshot = buildWeeklyBusinessReportSnapshot({
   previousOperationsPayload: { operations: {}, weeklyReportRaw: {} },
   totalOperationsPayload: { operations: { overview: { cards: { totalIncome: { value: 989113.24 } } } } }
 });
-assert.strictEqual(lifetimeNetSnapshot.lifetimeSummary.totalIncome.value, 800, 'weekly report lifetime income should use net cash after refunds and exclude receipts after the report end date');
+assert.strictEqual(lifetimeNetSnapshot.lifetimeSummary.totalIncome.value, 1000, 'weekly report lifetime total income should use positive receipts and exclude receipts after the report end date');
+assert.strictEqual(lifetimeNetSnapshot.lifetimeSummary.refundAmount.value, 200, 'weekly report lifetime refund amount should be shown separately');
+assert.strictEqual(lifetimeNetSnapshot.lifetimeSummary.netCashIncome.value, 800, 'weekly report lifetime net cash should subtract refunds and exclude receipts after the report end date');
 
 const privatePurchaseListSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
@@ -1134,7 +1141,7 @@ assert.doesNotMatch(html, /#7CFF44/, 'weekly report should not keep the harsh ne
 assert.match(html, /<body class="bg-grid-pattern text-white font-sans min-h-screen antialiased flex flex-col pb-16">/, 'weekly report body should reuse the provided template shell classes');
 assert.match(html, /<header data-section="global-header" class="border-b border-cyber-border bg-cyber-black\/95 sticky top-0 z-50 backdrop-blur-md">/, 'weekly report header should reuse the provided template header structure');
 assert.match(html, /<nav class="hidden md:flex items-center space-x-1 bg-black\/40 p-1 rounded-lg border border-cyber-border"[\s\S]*href="#overview"[\s\S]*Dashboard[\s\S]*href="#revenue"[\s\S]*Revenue[\s\S]*href="#private-course"[\s\S]*Private Course[\s\S]*href="#court"[\s\S]*Court Usage[\s\S]*href="#coach"[\s\S]*Coach/, 'top navigation should mirror the template segmented menu and jump to report sections');
-assert.match(html, /data-section="top-kpi-cards" class="lg:col-span-6 grid grid-cols-3 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border"[\s\S]*总收入[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总场地利用率[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总私教课人数[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight/, 'hero lifetime metrics should use the widened template KPI card without wrapping values');
+assert.match(html, /data-section="top-kpi-cards" class="lg:col-span-6 grid grid-cols-3 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border"[\s\S]*累计净实收[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总场地利用率[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总私教课人数[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight/, 'hero lifetime metrics should show net cash and keep the widened template KPI card without wrapping values');
 assert.match(html, /flex flex-wrap gap-3 pt-2[\s\S]*核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*上周/, 'weekly summary metrics should use the requested four metrics with previous-week comparison');
 assert.match(html, /data-section="court-utilization-heatmap"[\s\S]*\/\/ COURT UTILIZATION HEATMAP[\s\S]*每天利用率[\s\S]*<th class="py-2 text-left font-sans"[\s\S]*日期[\s\S]*08\.27[\s\S]*09\.03[\s\S]*cohort-cell[\s\S]*41%[\s\S]*72%[\s\S]*61%/, 'daily court utilization should render as a date heatmap with real daily values');
 assert.match(html, /08\.27 周四[\s\S]*08\.28 周五[\s\S]*09\.03 周四/, 'daily court utilization headers should include weekdays');
