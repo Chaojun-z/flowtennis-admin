@@ -242,6 +242,74 @@ const sharedOwnerAuditRow = sharedOwner?.detailLessonRecordRows.find(row => row.
 assert.strictEqual(sharedOwnerAuditRow?.packageLessonProgressText, '第10/10节', '课包主人审计记录仍应按课包整体进度展示第 10/10 节');
 assert.strictEqual(sharedOwnerAuditRow?.packageRemainingAfterText, '剩0节', '课包主人审计记录应显示已扣课后的真实剩余，而不是预计剩余');
 
+const switchedPackageStudentId = 'student-switched-package';
+const switchedPackageOwnerId = 'student-switched-package-owner';
+const switchedPackageSchedules = [
+  ...Array.from({ length: 7 }, (_, index) => ({
+    id: `schedule-switched-own-${index + 1}`,
+    studentId: switchedPackageStudentId,
+    studentIds: [switchedPackageStudentId],
+    startTime: `2026-09-${String(index + 1).padStart(2, '0')} 10:00`,
+    status: '已结束',
+    courseType: '私教课',
+    lessonCount: 1,
+    entitlementId: 'ent-switched-own',
+    purchaseId: 'purchase-switched-own'
+  })),
+  ...Array.from({ length: 3 }, (_, index) => ({
+    id: `schedule-switched-authorized-${index + 1}`,
+    studentId: switchedPackageStudentId,
+    studentIds: [switchedPackageStudentId],
+    startTime: `2026-09-${String(index + 10).padStart(2, '0')} 10:00`,
+    status: '已结束',
+    courseType: '私教课',
+    lessonCount: 1,
+    entitlementId: 'ent-switched-owner',
+    purchaseId: 'purchase-switched-owner',
+    packageOwnerStudentId: switchedPackageOwnerId,
+    usedByStudentId: switchedPackageStudentId
+  }))
+];
+const switchedPackageResult = buildPlatformMetrics({
+  leads: [],
+  students: [
+    { id: switchedPackageStudentId, name: '切换课包学员' },
+    { id: switchedPackageOwnerId, name: '切换课包主人' }
+  ],
+  purchases: [
+    { id: 'purchase-switched-own', studentId: switchedPackageStudentId, packageName: '非黄金10课时', courseType: '私教课', packageLessons: 10, amountPaid: 3500, purchaseDate: '2026-05-19', status: 'active' },
+    { id: 'purchase-switched-owner', studentId: switchedPackageOwnerId, packageName: '黄金10课时', courseType: '私教课', packageLessons: 10, amountPaid: 4000, purchaseDate: '2026-05-19', status: 'active' }
+  ],
+  entitlements: [
+    { id: 'ent-switched-own', studentId: switchedPackageStudentId, purchaseId: 'purchase-switched-own', packageName: '非黄金10课时', courseType: '私教课', totalLessons: 10, remainingLessons: 3, usedLessons: 7, status: 'active' },
+    { id: 'ent-switched-owner', studentId: switchedPackageOwnerId, purchaseId: 'purchase-switched-owner', packageName: '黄金10课时', courseType: '私教课', totalLessons: 10, remainingLessons: 2, usedLessons: 8, status: 'active' }
+  ],
+  entitlementLedger: switchedPackageSchedules.map(schedule => ({
+    id: `ledger-${schedule.id}`,
+    scheduleId: schedule.id,
+    studentId: switchedPackageStudentId,
+    usedByStudentId: switchedPackageStudentId,
+    packageOwnerStudentId: schedule.packageOwnerStudentId || switchedPackageStudentId,
+    entitlementId: schedule.entitlementId,
+    purchaseId: schedule.purchaseId,
+    lessonDelta: -1,
+    relatedDate: schedule.startTime.slice(0, 10),
+    reason: schedule.packageOwnerStudentId ? '编辑排课消课（切换课包学员 使用 切换课包主人 的课包）' : '排课消课'
+  })),
+  schedule: switchedPackageSchedules,
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  now: new Date('2026-09-20 00:00:00')
+});
+const switchedPackageRow = switchedPackageResult.teachingStudentViews.historicalStudents
+  .find(row => row.studentId === switchedPackageStudentId);
+assert.strictEqual(
+  switchedPackageRow?.detailPackageBalanceText,
+  '3/10',
+  '授权借用的3节课不能覆盖本人事实课包余额3/10'
+);
+
 const groupData = {
   students: ['owner-a', 'owner-b', 'gift-user'].map(id => ({ id, name: id })),
   purchases: ['owner-a', 'owner-b'].map(id => ({ id: `p-${id}`, studentId: id, packageName: '10课时私教课', courseType: '私教课', packageLessons: 10, amountPaid: 4000 })),

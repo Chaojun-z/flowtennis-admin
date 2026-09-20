@@ -1573,7 +1573,10 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
     const summaryCompleted = round(summaryFields.completedLessons || 0, 1);
     const rawPackageConsumedLimit = options.includeTrial ? null : teachingStudentPackageConsumedUnits(packageFields);
     const ledgerPackageCompleted = options.includeTrial ? 0 : round(lessonRows
-      .filter(row => text(row.kind) === 'ledger' && !courseRowIsTrial(row) && !courseRowIsCompanion(row))
+      .filter(row => text(row.kind) === 'ledger'
+        && !courseRowIsTrial(row)
+        && !courseRowIsCompanion(row)
+        && !(row.countAsCompletedLesson !== false && teachingPaymentIsOtherPackageUsage(row, studentId)))
       .reduce((sum, row) => sum + Math.abs(Number(row.lessonDelta) || 0), 0), 1);
     const hasFreshLessonRows = lessonDetailMap.has(studentId);
     const packageConsumedLimit = rawPackageConsumedLimit === null
