@@ -97,16 +97,30 @@ assert.strictEqual(
   'Mapo campus scoped management users should access Mapo weekly reports'
 );
 
-assert.strictEqual(
-  permissions.userCanAccessWeeklyReports({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }),
-  false,
-  'non-Mapo campus scoped management users should not access Mapo weekly reports'
+assert.deepStrictEqual(
+  permissions.normalizePermissionProfile({ role: 'editor', dataScope: 'campus', campusIds: ['shunyi_mapo'] }),
+  {
+    role: 'editor',
+    systemType: 'coach',
+    dataScope: 'campus',
+    campusIds: ['shunyi_mapo'],
+    coachId: '',
+    coachName: '',
+    featurePermissions: []
+  },
+  'coach accounts with an explicit campus scope should keep that scope'
 );
 
 assert.strictEqual(
   permissions.userCanAccessWeeklyReports({ role: 'editor', dataScope: 'campus', campusIds: ['shunyi_mapo'] }),
+  true,
+  'Mapo campus scoped coach accounts should access Mapo weekly reports'
+);
+
+assert.strictEqual(
+  permissions.userCanAccessWeeklyReports({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }),
   false,
-  'coach/editor users should not access management weekly reports'
+  'non-Mapo campus scoped management users should not access Mapo weekly reports'
 );
 
 console.log('permissions rules tests passed');

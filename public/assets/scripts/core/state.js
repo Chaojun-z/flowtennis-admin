@@ -1738,9 +1738,10 @@ function clearLoadedData(){
 }
 function normalizeCurrentPageForRole(){
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
+  const canAccessWeeklyReports=typeof clientUserCanOpenManagementPage==='function'&&clientUserCanOpenManagementPage(currentUser,'weekly-reports');
   if(currentPage==='myschedule')currentPage='workbench';
   if(isCoach){
-    if(!['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='workbench';
+    if(!['workbench','postfeedback','mystudents','myclasses'].includes(currentPage)&&!(currentPage==='weekly-reports'&&canAccessWeeklyReports))currentPage='workbench';
     localStorage.setItem(PAGE_KEY,currentPage);
     campus='all';
     localStorage.setItem(CAMPUS_KEY,campus);
@@ -2118,9 +2119,10 @@ function buildCampusTabs(){
 function renderAll(){
   renderRoleShell();
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
+  const canAccessWeeklyReports=typeof clientUserCanOpenManagementPage==='function'&&clientUserCanOpenManagementPage(currentUser,'weekly-reports');
   if(currentPage==='myschedule')currentPage='workbench';
   currentPage=normalizeStudentListPage(currentPage);
-  if(isCoach&&!['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='workbench';
+  if(isCoach&&!['workbench','postfeedback','mystudents','myclasses'].includes(currentPage)&&!(currentPage==='weekly-reports'&&canAccessWeeklyReports))currentPage='workbench';
   else if(currentUser?.role==='admin'&&['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='package-students';
   else if(currentUser?.role==='admin'&&typeof clientUserCanOpenManagementPage==='function'&&!clientUserCanOpenManagementPage(currentUser,currentPage))currentPage='package-students';
   else if(currentUser?.role!=='admin'&&!isCoach){doLogout();return;}

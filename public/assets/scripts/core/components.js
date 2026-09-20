@@ -506,6 +506,7 @@ function renderSidebarShell(){
   return `<aside class="sidebar">
   <div class="sb-logo"><div class="sb-brand">${SHELL_THEME.brandName}</div><div class="sb-tagline">${SHELL_THEME.brandSubline}</div><button type="button" class="sidebar-toggle" onclick="toggleSidebarCollapsed()" aria-label="折叠菜单">${sidebarCollapseIcon(false)}${sidebarCollapseIcon(true)}</button></div>
   <div class="sb-menu-scroll">
+  ${weeklyReportHtml}
   <!-- 教练视角 -->
   <div id="sbCoachView" style="display:none">
   <div class="sb-sec">我的工作</div>
@@ -532,7 +533,6 @@ function renderSidebarShell(){
   <div class="sb-sec">产品与定价</div>
   <div class="sb-item" onclick="goPage('packages',this)">${sidebarIcon('packages')}课包产品</div>
   <div class="sb-item" onclick="goPage('membership-plans',this)">${sidebarIcon('membership-plans')}会员方案</div>
-  ${weeklyReportHtml}
   ${fullManagementHtml}
   </div>
   </div>

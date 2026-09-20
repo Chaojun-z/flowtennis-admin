@@ -17,7 +17,7 @@ function normalizeRole(role) {
 
 function normalizeDataScope(value, role, campusIds) {
   const raw = String(value || '').trim();
-  if (['all', 'campus', 'coach'].includes(raw)) return role === 'editor' ? 'coach' : raw;
+  if (['all', 'campus', 'coach'].includes(raw)) return role === 'editor' && raw === 'all' ? 'coach' : raw;
   if (role === 'editor') return 'coach';
   if (campusIds.length) return 'campus';
   return 'all';
@@ -65,8 +65,8 @@ function userCanAccessCampus(user, campusId) {
 
 function userCanAccessWeeklyReports(user) {
   const profile = normalizePermissionProfile(user);
-  if (profile.role !== 'admin') return false;
-  return userCanAccessCampus(profile, 'shunyi_mapo');
+  if (profile.dataScope === 'all') return true;
+  return profile.dataScope === 'campus' && userCanAccessCampus(profile, 'shunyi_mapo');
 }
 
 module.exports = {

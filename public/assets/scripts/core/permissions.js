@@ -15,7 +15,7 @@
   function normalizeClientRole(role){return String(role||'').trim()==='editor'?'editor':'admin';}
   function normalizeClientDataScope(value,role,campusIds){
     const raw=String(value||'').trim();
-    if(['all','campus','coach'].includes(raw))return role==='editor'?'coach':raw;
+    if(['all','campus','coach'].includes(raw))return role==='editor'&&raw==='all'?'coach':raw;
     if(role==='editor')return 'coach';
     if(campusIds.length)return 'campus';
     return 'all';
@@ -59,7 +59,7 @@
   }
   function clientUserCanAccessWeeklyReports(user){
     const profile=normalizeClientPermissionProfile(user||{});
-    return profile.role==='admin'&&clientUserCanAccessCampus(profile,'shunyi_mapo');
+    return profile.dataScope==='all'||(profile.dataScope==='campus'&&clientUserCanAccessCampus(profile,'shunyi_mapo'));
   }
   function clientPageRequiresFullManagementAccess(page){
     return ['finance','operations','coaches','admin-users','campusmgr'].includes(String(page||'').trim());

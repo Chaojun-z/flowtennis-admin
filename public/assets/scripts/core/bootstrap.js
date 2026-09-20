@@ -42,7 +42,8 @@ function goPage(pg,el,skipRender=false){
   const adminPages=['students','package-students','trial-students','leads','operations','weekly-reports','schedule','coachschedule','coachops','products','packages','purchases','finance','coaches','admin-users','courts','memberships','membership-orders','membership-ledger','membership-plans','prices','campusmgr','matches','third-party-sync'];
   const coachPages=['workbench','postfeedback','mystudents','myclasses'];
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
-  if(currentUser?.role!=='admin'&&adminPages.includes(pg))pg=isCoach?'workbench':'';
+  const canOpenWeeklyReports=pg==='weekly-reports'&&typeof clientUserCanOpenManagementPage==='function'&&clientUserCanOpenManagementPage(currentUser,pg);
+  if(currentUser?.role!=='admin'&&adminPages.includes(pg)&&!canOpenWeeklyReports)pg=isCoach?'workbench':'';
   if(currentUser?.role==='admin'&&coachPages.includes(pg))pg='package-students';
   if(currentUser?.role==='admin'&&typeof clientUserCanOpenManagementPage==='function'&&!clientUserCanOpenManagementPage(currentUser,pg))pg='package-students';
   if(!pg)return;

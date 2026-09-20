@@ -78,6 +78,18 @@ assert.match(
 );
 
 assert.match(
+  fnBody('goPage'),
+  /weekly-reports[\s\S]*clientUserCanOpenManagementPage\(currentUser,pg\)/,
+  'campus-scoped coach accounts should be able to switch to weekly reports'
+);
+
+assert.match(
+  fnBody('normalizeCurrentPageForRole'),
+  /clientUserCanOpenManagementPage\(currentUser,'weekly-reports'\)[\s\S]*weekly-reports/,
+  'campus-scoped coach accounts should retain weekly reports as the current page'
+);
+
+assert.match(
   fnBody('normalizeCurrentPageForRole'),
   /clientUserCanOpenManagementPage\(currentUser,currentPage\)/,
   'already logged-in users on a hidden page should be moved to an allowed page'
