@@ -590,13 +590,6 @@ function openScheduleLoadingDrawer(scheduleId='',message='排课详情加载中.
     modalClass:'modal modal-court modal-schedule-drawer'
   });
 }
-function scheduleRecordStudentIds(record={},fallback=[]){
-  const ids=parseArr(record?.studentIds).map(id=>String(id||'').trim()).filter(Boolean);
-  if(ids.length)return ids;
-  const legacyId=String(record?.studentId||record?.usedByStudentId||record?.authorizedStudentId||'').trim();
-  if(legacyId)return [legacyId];
-  return parseArr(fallback).map(id=>String(id||'').trim()).filter(Boolean);
-}
 function openScheduleModal(id,seed={}){
   (async()=>{
     if(id){

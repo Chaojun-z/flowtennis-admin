@@ -178,27 +178,17 @@ const coveredRecordResult = guard.evaluateChangeRecordCoverage({
 assert.strictEqual(coveredRecordResult.ok, true, coveredRecordResult.errors.join('\n'));
 
 const decisionDoc = fs.readFileSync(path.join(repoRoot, 'docs', 'prd', 'source', '14-变更记录与决策记录.md'), 'utf8');
-const governanceRecord = fs.readFileSync(path.join(repoRoot, 'docs', 'governance', 'change-records', '2026-09-09-学员课包写入后前端事实保护.md'), 'utf8');
-const decisionSyncResult = guard.evaluateDecisionSyncCoverage({
-  changedFiles: [
-    'package.json',
-    'public/assets/scripts/core/state.js',
-    'public/assets/scripts/pages/purchases.js',
-    'public/assets/scripts/pages/schedule.js',
-    'public/index.html',
-    'tests/index-asset-split.test.js',
-    'tests/purchase-drawer-view.test.js',
-    'tests/schedule-page-view.test.js',
-    'tests/schedule-student-settlement.test.js',
-    'tests/student-detail-mutation-freshness.test.js',
-    'tests/governance-automation-guard.test.js',
-    'docs/prd/source/14-变更记录与决策记录.md'
-  ],
-  records: [{ file: 'docs/governance/change-records/2026-09-09-学员课包写入后前端事实保护.md', content: governanceRecord }],
-  config,
-  decisionDoc
-});
+const recordFile = decisionDoc.match(/\| 关联变更记录 \| `([^`]+)`/)?.[1];
+const fileList = decisionDoc.match(/\| 触发文件 \| ([^\n]+)/)?.[1] || '';
+const changedFiles = [...fileList.matchAll(/`([^`]+)`/g)].map(match => match[1]);
+assert.ok(recordFile && changedFiles.length, 'PRD 必须记录当前变更记录及文件清单');
+const governanceRecord = fs.readFileSync(path.join(repoRoot, recordFile), 'utf8');
+const decisionSyncInput = { changedFiles, records: [{ file: recordFile, content: governanceRecord }], config, decisionDoc };
+const decisionSyncResult = guard.evaluateDecisionSyncCoverage(decisionSyncInput);
 assert.strictEqual(decisionSyncResult.ok, true, decisionSyncResult.errors.join('\n'));
+assert.strictEqual(guard.evaluateDecisionSyncCoverage({ ...decisionSyncInput,
+  decisionDoc: decisionDoc.replaceAll(recordFile, '缺少关联记录') }).ok, false,
+  '缺失当前变更记录时决策同步门禁必须拒绝');
 
 const exceptionApprovalResult = guard.evaluateExceptionApprovalCoverage({
   records: [{

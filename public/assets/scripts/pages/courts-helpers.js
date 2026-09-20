@@ -67,9 +67,9 @@ function courtBookingRecordsTableHtml(hist){
     minWidth:'660px',
     columns:[
       {label:'订场日期',key:'date',width:'90px',render:h=>h.bookingDate||h.occurredDate||h.date||'-'},
-      {label:'时间',key:'time',width:'150px',render:h=>h.startTime&&h.endTime?`${h.startTime}-${h.endTime}`:'-'},
-      {label:'场地',key:'venue',width:'70px',render:h=>h.venue||'-'},
-      {label:'类型',key:'category',width:'80px',render:h=>h.category||h.businessTypeLevel2||'-'},
+      {label:'时间',key:'time',width:'150px',render:h=>h.timeText||'未记录'},
+      {label:'场地',key:'venue',width:'70px',render:h=>h.venue||'未记录'},
+      {label:'类型',key:'category',width:'80px',render:h=>`${h.category||h.businessTypeLevel2||'-'}${h.type==='冲正'?'（冲正退回）':''}`},
       {label:'支付方式',key:'payMethod',width:'80px',render:h=>h.payMethod||'-'},
       {label:'金额',key:'amount',width:'70px',render:h=>`¥${fmt(Math.abs(parseFloat(h.amount)||0))}`},
       {label:'备注',key:'note',width:'120px',cellClassName:'membership-booking-note-cell',render:h=>courtBookingHumanNote(h)}

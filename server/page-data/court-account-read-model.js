@@ -1,6 +1,6 @@
 const MATCH_COURT_FINANCE_ACCOUNT_ID = 'match-court-finance';
 const DEFAULT_SAMPLE_SIZE = 10;
-const { enrichCourtBookingStructure } = require('../booking-structure-parser.js');
+const { enrichCourtBookingStructure, formatCourtBookingTimeRange } = require('../booking-structure-parser.js');
 const { normalizeCampusValue, displayCampusName, buildCampusNameMap } = require('../../public/assets/scripts/core/campus.js');
 
 function money(value) {
@@ -411,6 +411,7 @@ function bookingRowsForCourt(court) {
       bookingDate: courtHistoryBusinessDate(row),
       startTime: row.startTime || '',
       endTime: row.endTime || '',
+      timeText: formatCourtBookingTimeRange(row),
       venue: row.venue || '',
       type: row.type || '',
       category: row.category || '',

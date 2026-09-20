@@ -2,6 +2,38 @@ function cleanBookingText(value) {
   return String(value || '').trim();
 }
 
+function bookingTimeParts(value = '') {
+  let text = cleanBookingText(value);
+  if (/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(text)) {
+    const instant = Date.parse(text);
+    if (!Number.isFinite(instant)) return { date: '', clock: '' };
+    text = new Date(instant + 8 * 60 * 60 * 1000).toISOString().slice(0, 19);
+  }
+  const match = text.match(/^(?:(\d{4}-\d{2}-\d{2})[ T])?([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d(?:\.\d+)?)?$/);
+  return match ? { date: match[1] || '', clock: `${match[2].padStart(2, '0')}:${match[3]}` } : { date: '', clock: '' };
+}
+
+function normalizeCourtBookingTimes(row = {}) {
+  const start = bookingTimeParts(row.startTime);
+  const end = bookingTimeParts(row.endTime);
+  const date = cleanBookingText(row.date || row.occurredDate || row.bookingDate).slice(0, 10);
+  // 只有日期已明确且两端属于同一天，才去掉时间字段里的重复日期。
+  if (!date || !start.clock || !end.clock || (start.date && start.date !== date) || (end.date && end.date !== date)) return row;
+  return { ...row, startTime: start.clock, endTime: end.clock };
+}
+
+function formatCourtBookingTimeRange(row = {}) {
+  const start = bookingTimeParts(row.startTime);
+  const end = bookingTimeParts(row.endTime);
+  if (!start.clock && !end.clock) return '未记录';
+  const date = cleanBookingText(row.date || row.occurredDate || row.bookingDate).slice(0, 10);
+  const startDate = start.date || date;
+  const endDate = end.date || date;
+  const showDates = (startDate && endDate && startDate !== endDate) || (start.date && start.date !== date) || (end.date && end.date !== date);
+  const label = (part, day) => part.clock ? `${showDates && day ? `${day} ` : ''}${part.clock}` : '未记录';
+  return `${label(start, startDate)}–${label(end, endDate)}`;
+}
+
 function normalizeBookingClock(hour, minute = '0') {
   const h = parseInt(hour, 10);
   let m = String(minute || '0').trim();
@@ -51,8 +83,8 @@ function parseBookingTimeRangeFromText(text = '') {
     ranges.push(validBookingRange(normalizeBookingClock(match[1], match[2]), normalizeBookingClock(match[3], match[4])));
   }
   if (ranges.length) return mergeBookingRanges(ranges);
-  for (const match of source.matchAll(/(^|[^\d:])(\d{1,2})(?:[:：](\d{2}))?\s*[-~至到]\s*(\d{1,2})(?:[:：](\d{2}))?\s*点/g)) {
-    ranges.push(validBookingRange(normalizeBookingClock(match[2], match[3]), normalizeBookingClock(match[4], match[5])));
+  for (const match of source.matchAll(/(^|[^\d:])(\d{1,2})(?:[:：](\d{2}))?\s*[-~至到]\s*(\d{1,2})(?:[:：](\d{2}))?\s*点\s*(半|\d{1,2}\s*分?)?/g)) {
+    ranges.push(validBookingRange(normalizeBookingClock(match[2], match[3]), normalizeBookingClock(match[4], match[5] || match[6])));
   }
   if (ranges.length) return mergeBookingRanges(ranges);
   return { startTime: '', endTime: '' };
@@ -79,6 +111,8 @@ function parseBookingVenueFromText(text = '') {
   if (indoor) return `${Number(indoor[1])}号场`;
   const court = source.match(/(\d+)\s*号\s*场/);
   if (court) return `${Number(court[1])}号场`;
+  const chineseCourt = source.match(/(?<![一二三四五六七八九十百])([一二三四五六七八九十])\s*号\s*场/);
+  if (chineseCourt) return `${'一二三四五六七八九十'.indexOf(chineseCourt[1]) + 1}号场`;
   return '';
 }
 
@@ -114,17 +148,22 @@ function bookingStructureSourceText(row = {}) {
 
 function enrichCourtBookingStructure(row = {}) {
   const parsed = parseBookingStructureFromText(bookingStructureSourceText(row));
-  const startTime = cleanBookingText(row.startTime) || parsed.startTime;
-  const endTime = cleanBookingText(row.endTime) || parsed.endTime;
-  const venue = normalizeBookingVenue(row.venue || row.sourceVenue || row.sourceCourt || row.court || row.courtName) || parsed.venue;
+  const explicitRange = parseBookingTimeRangeFromText(row.timeRange);
+  const startTime = cleanBookingText(row.startTime) || explicitRange.startTime || parsed.startTime;
+  const endTime = cleanBookingText(row.endTime) || explicitRange.endTime || parsed.endTime;
+  // courtName 在历史导入中也表示账户姓名，只接受明确的场地编号。
+  const normalizedCourtName = normalizeBookingVenue(row.courtName);
+  const courtNameVenue = /^\d+号场$/.test(normalizedCourtName) ? normalizedCourtName
+    : /^(?:\d+|[一二三四五六七八九十])\s*号\s*场(?:地)?$/.test(cleanBookingText(row.courtName)) ? parseBookingVenueFromText(row.courtName) : '';
+  const venue = normalizeBookingVenue(row.venue || row.sourceVenue || row.sourceCourt || row.court) || parsed.venue || courtNameVenue;
   const date = cleanBookingText(row.date || row.occurredDate || row.businessDate || row.bookingDate || row.sourceDate) || parsed.date;
-  return {
+  return normalizeCourtBookingTimes({
     ...row,
     ...(date ? { date: cleanBookingText(row.date) || date, occurredDate: cleanBookingText(row.occurredDate) || date } : {}),
     ...(startTime ? { startTime } : {}),
     ...(endTime ? { endTime } : {}),
     ...(venue ? { venue } : {})
-  };
+  });
 }
 
 function missingCourtBookingStructure(row = {}) {
@@ -136,6 +175,8 @@ function missingCourtBookingStructure(row = {}) {
 }
 
 module.exports = {
+  normalizeCourtBookingTimes,
+  formatCourtBookingTimeRange,
   normalizeBookingVenue,
   parseBookingStructureFromText,
   enrichCourtBookingStructure,

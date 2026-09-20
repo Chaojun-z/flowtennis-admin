@@ -1,3 +1,10 @@
+function scheduleRecordStudentIds(record={},fallback=[]){
+  const ids=parseArr(record?.studentIds).map(id=>String(id||'').trim()).filter(Boolean);
+  if(ids.length)return ids;
+  const legacyId=String(record?.studentId||record?.usedByStudentId||record?.authorizedStudentId||'').trim();
+  if(legacyId)return [legacyId];
+  return parseArr(fallback).map(id=>String(id||'').trim()).filter(Boolean);
+}
 function scheduleStatusLabel(status){
   if(status==='已结束')return '已下课';
   if(status==='已排课')return '待上课';

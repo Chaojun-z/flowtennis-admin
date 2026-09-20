@@ -417,11 +417,22 @@ assert.doesNotMatch(
   'coach my students table should render numeric lesson count only'
 );
 
-assert.match(
-  fnBody('normalizeCurrentPageForRole'),
-  /if\(isCoach\)\{[\s\S]*if\(!\['workbench','postfeedback','mystudents','myclasses'\]\.includes\(currentPage\)\)currentPage='workbench'/,
-  'quiet sync should keep the current coach page instead of forcing workbench'
-);
+for (const [page, allowedWeeklyReports, expected] of [
+  ['workbench', false, 'workbench'], ['postfeedback', false, 'postfeedback'],
+  ['mystudents', false, 'mystudents'], ['myclasses', false, 'myclasses'],
+  ['weekly-reports', true, 'weekly-reports'], ['weekly-reports', false, 'workbench'],
+  ['finance', true, 'workbench'], ['myschedule', false, 'workbench']
+]) {
+  const saved = {};
+  const context = { currentUser: { role: 'editor', coachName: '测试教练' }, currentPage: page,
+    campus: 'mapo', PAGE_KEY: 'page', CAMPUS_KEY: 'campus',
+    localStorage: { setItem: (key, value) => { saved[key] = value; } },
+    clientUserCanOpenManagementPage: () => allowedWeeklyReports };
+  require('vm').runInNewContext(`${fnBody('normalizeCurrentPageForRole')}\nnormalizeCurrentPageForRole();`, context);
+  assert.strictEqual(context.currentPage, expected, `coach page ${page} should respect weekly report access`);
+  assert.strictEqual(saved.page, expected);
+  assert.strictEqual(saved.campus, 'all');
+}
 
 assert.doesNotMatch(
   `${fnBody('renderMyClasses')}\n${fnBody('openFeedbackModal')}`,

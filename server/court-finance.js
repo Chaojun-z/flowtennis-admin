@@ -1,5 +1,6 @@
 const defaultBusinessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { normalizeCampusValue } = require('../public/assets/scripts/core/campus.js');
+const { normalizeCourtBookingTimes } = require('./booking-structure-parser.js');
 
 const DEFAULT_ID_FACTORY=()=>`${Date.now()}-${Math.random().toString(16).slice(2)}`;
 function fallbackParseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
@@ -238,7 +239,7 @@ function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount
   const category=charge?.category||`排课${courseLabel}`;
   const sourceCategory=charge?.sourceCategory||'排课储值卡扣款';
   const sourceProject=charge?.sourceProject||`${courseLabel} ${String(schedule?.startTime||'').replace('T',' ').slice(0,16)}`;
-  const row=withOperationTrace({
+  const row=withOperationTrace(normalizeCourtBookingTimes({
     id:historyId,
     date:occurredDate,
     occurredDate,
@@ -267,7 +268,7 @@ function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount
     coach:schedule?.coach||'',
     operator:operator||schedule?.updatedBy||schedule?.createdBy||'系统记录',
     revenueBucket:'储值扣款'
-  },operationTrace);
+  }),operationTrace);
   return row;
 }
 function normalizeSortedCourtHistory(history){
