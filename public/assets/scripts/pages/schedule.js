@@ -590,6 +590,13 @@ function openScheduleLoadingDrawer(scheduleId='',message='排课详情加载中.
     modalClass:'modal modal-court modal-schedule-drawer'
   });
 }
+function scheduleRecordStudentIds(record={},fallback=[]){
+  const ids=parseArr(record?.studentIds).map(id=>String(id||'').trim()).filter(Boolean);
+  if(ids.length)return ids;
+  const legacyId=String(record?.studentId||record?.usedByStudentId||record?.authorizedStudentId||'').trim();
+  if(legacyId)return [legacyId];
+  return parseArr(fallback).map(id=>String(id||'').trim()).filter(Boolean);
+}
 function openScheduleModal(id,seed={}){
   (async()=>{
     if(id){
@@ -609,7 +616,7 @@ function openScheduleModal(id,seed={}){
     const courseTypeOptions=STANDARD_COURSE_TYPE_OPTIONS;
     const coachOptions=[{value:'',label:'— 选择 —'},...activeCoachNames().map(c=>({value:c,label:c}))];
     const campusOptions=[{value:'',label:'— 选择 —'},...campuses.map(c=>({value:c.code||c.id,label:campusOptionLabel(c)}))];
-    const selectedStudentIds=parseArr(rv(s,'studentIds','[]'));
+    const selectedStudentIds=scheduleRecordStudentIds(s||seed,seed.studentIds);
     const expectedStudentIds=parseArr(rv(s,'expectedStudentIds','[]')).length?parseArr(rv(s,'expectedStudentIds','[]')):selectedStudentIds;
     const startRaw=String(rv(s,'startTime',seed.startTime||'')).trim().replace(' ','T');
     const endRaw=String(rv(s,'endTime',seed.endTime||'')).trim().replace(' ','T');
@@ -626,7 +633,7 @@ function openScheduleModal(id,seed={}){
     const settlementType=rv(s,'settlementType',seed.settlementType||'package');
     const settlementOptions=FlowTennisBusinessTaxonomy.optionList('scheduleSettlementTypes');
     const initialStudentSettlementRows=typeof buildInitialStudentSettlementRowsForSchedule==='function'?buildInitialStudentSettlementRowsForSchedule(s||seed,selectedStudentIds,settlementType):parseArr(rv(s,'studentSettlementRows','[]'));
-    const hiddenFields=`<input type="hidden" id="sch_stuIds" value="${rv(s,'studentIds','[]')}"><input type="hidden" id="sch_expectedStuIds" value="${esc(JSON.stringify(expectedStudentIds))}"><input type="hidden" id="sch_studentSettlementRows" value="${esc(JSON.stringify(initialStudentSettlementRows))}"><input type="hidden" id="sch_scheduleSource" value="${scheduleSource}"><input type="hidden" id="sch_sourceLeadId" value="${esc(rv(s,'sourceLeadId',seed.sourceLeadId||''))}"><input type="hidden" id="sch_sourceLeadName" value="${esc(rv(s,'sourceLeadName',seed.sourceLeadName||seed.studentName||''))}"><input type="hidden" id="sch_skillLevelMin" value="${esc(rv(s,'skillLevelMin',seed.skillLevelMin||''))}"><input type="hidden" id="sch_skillLevelMax" value="${esc(rv(s,'skillLevelMax',seed.skillLevelMax||''))}"><input type="hidden" id="sch_specialTopic" value="${esc(rv(s,'specialTopic',seed.specialTopic||''))}"><input type="hidden" id="sch_courseDisplayName" value="${esc(rv(s,'courseDisplayName',seed.courseDisplayName||''))}"><input type="hidden" id="sch_status" value="${rv(s,'status','已排课')}"><input type="hidden" id="sch_cancelReason" value="${esc(rv(s,'cancelReason'))}">`;
+    const hiddenFields=`<input type="hidden" id="sch_stuIds" value="${esc(JSON.stringify(selectedStudentIds))}"><input type="hidden" id="sch_expectedStuIds" value="${esc(JSON.stringify(expectedStudentIds))}"><input type="hidden" id="sch_studentSettlementRows" value="${esc(JSON.stringify(initialStudentSettlementRows))}"><input type="hidden" id="sch_scheduleSource" value="${scheduleSource}"><input type="hidden" id="sch_sourceLeadId" value="${esc(rv(s,'sourceLeadId',seed.sourceLeadId||''))}"><input type="hidden" id="sch_sourceLeadName" value="${esc(rv(s,'sourceLeadName',seed.sourceLeadName||seed.studentName||''))}"><input type="hidden" id="sch_skillLevelMin" value="${esc(rv(s,'skillLevelMin',seed.skillLevelMin||''))}"><input type="hidden" id="sch_skillLevelMax" value="${esc(rv(s,'skillLevelMax',seed.skillLevelMax||''))}"><input type="hidden" id="sch_specialTopic" value="${esc(rv(s,'specialTopic',seed.specialTopic||''))}"><input type="hidden" id="sch_courseDisplayName" value="${esc(rv(s,'courseDisplayName',seed.courseDisplayName||''))}"><input type="hidden" id="sch_status" value="${rv(s,'status','已排课')}"><input type="hidden" id="sch_cancelReason" value="${esc(rv(s,'cancelReason'))}">`;
     const drawerActions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="${id?`openScheduleDetail('${s.id}')`:'closeModal()'}">取消</button><button type="button" class="schedule-detail-action primary" id="scheduleSaveBtn" onclick="saveSchedule()">保存修改</button></div>`;
     const existingFieldFeeAmount=parseFloat(rv(s,'fieldFeeAmount',seed.fieldFeeAmount||0))||0;
     const fieldFeeMode=existingFieldFeeAmount>0?'separate':(id?'none':scheduleDefaultFieldFeeMode(settlementType));

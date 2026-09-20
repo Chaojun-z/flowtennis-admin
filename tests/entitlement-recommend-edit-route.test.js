@@ -33,8 +33,18 @@ assert.match(
 );
 assert.match(
   routeSource,
-  /restoreEditingScheduleEntitlementRowsForRecommendation\(recommendationRows,body,currentSchedule,\{parseLessonValue,scheduleEntitlementDeltas\}\)/,
+  /restoreEditingScheduleEntitlementRowsForRecommendation\(recommendationRows,recommendationBody,currentSchedule,\{parseLessonValue,scheduleEntitlementDeltas\}\)/,
   'recommend route should restore the current schedule consumption before recommending packages'
+);
+assert.match(
+  routeSource,
+  /const recommendationStudentIds=\[\.\.\.new Set\(/,
+  'recommend route should derive student ids before loading own and authorized packages'
+);
+assert.match(
+  routeSource,
+  /currentSchedule\?\.studentId/,
+  'recommend route should fall back to the legacy single studentId when editing an old schedule'
 );
 
 console.log('entitlement recommend edit route tests passed');

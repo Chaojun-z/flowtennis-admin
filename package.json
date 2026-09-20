@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node scripts/dev-server.js",
     "test:schedule-package-binding": "node tests/schedule-package-binding-guard.test.js",
+    "test:entitlement-recommend-legacy-student-id": "node tests/entitlement-recommend-legacy-student-id.test.js",
     "test:cleanup-duplicate-schedule-xiaobing": "node tests/cleanup-duplicate-schedule-xiaobing.test.js",
     "test:repair-confirmed-used-up-schedule-ledgers": "node tests/repair-confirmed-used-up-schedule-ledgers.test.js",
     "test:repair-confirmed-direct-trial-schedules": "node tests/repair-confirmed-direct-trial-schedules.test.js",

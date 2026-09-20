@@ -314,6 +314,20 @@ assert.match(source, /function getScheduleTimeOptions\([\s\S]*h=7[\s\S]*h<=22[\s
 assert.match(source, /function handleScheduleStartTimeChange\([\s\S]*const mins=[\s\S]*scheduleAddMinutes\(start,mins\)[\s\S]*setStandardDropdownValue\('sch_endTime'/, 'selecting a start time should default end time from course duration rules');
 assert.match(fnBody('openScheduleModal'), /sch_repeatWeeksWrap[\s\S]*display:none/, 'repeat weeks should be hidden until weekly repeat is enabled');
 assert.match(source, /function toggleScheduleRepeatWeeks\([\s\S]*sch_repeatWeeksWrap[\s\S]*checked\?'':'none'/, 'weekly repeat checkbox should reveal the repeat weeks input only when checked');
+assert.match(source, /function scheduleRecordStudentIds\([\s\S]*record\?\.studentIds[\s\S]*record\?\.studentId/, 'schedule editing should support legacy records that only have studentId');
+{
+  const context = scheduleVmContext();
+  assert.strictEqual(
+    JSON.stringify(context.scheduleRecordStudentIds({ studentId: 'stu-legacy' }, [])),
+    JSON.stringify(['stu-legacy']),
+    'legacy schedules should recover their single studentId for editing'
+  );
+  assert.strictEqual(
+    JSON.stringify(context.scheduleRecordStudentIds({ studentIds: ['stu-current'], studentId: 'stu-legacy' }, [])),
+    JSON.stringify(['stu-current']),
+    'canonical studentIds should take precedence over legacy studentId'
+  );
+}
 assert.match(source, /function setScheduleCourseTypeReadonly\([\s\S]*pointerEvents=readonly\?'none':'auto'/, 'course type readonly helper should still exist for non-package states');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /setScheduleCourseTypeReadonly\(true\)/, 'auto package matching should not lock course type');
 assert.match(fnBody('applySchEntitlementOptions'), /setScheduleCoachFromEntitlement\(selected\)/, 'schedule entitlement recommendation should default the coach from the selected package owner');

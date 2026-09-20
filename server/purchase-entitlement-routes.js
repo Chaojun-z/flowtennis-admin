@@ -465,16 +465,22 @@ function createPurchaseEntitlementRoutes(deps={}){
     if(path==='/entitlements/recommend'&&method==='POST'){
       await init();
       const scheduleId=String(body.scheduleId||'').trim();
+      let currentSchedule=null;
+      if(scheduleId)currentSchedule=await get(T_SCHEDULE,scheduleId).catch(()=>null);
+      const requestedStudentIds=parseArr(body.studentIds).map(id=>String(id||'').trim()).filter(Boolean);
+      const recommendationStudentIds=[...new Set((requestedStudentIds.length
+        ? requestedStudentIds
+        : [body.studentId,...parseArr(currentSchedule?.studentIds),currentSchedule?.studentId,currentSchedule?.usedByStudentId,currentSchedule?.authorizedStudentId]
+      ).map(id=>String(id||'').trim()).filter(Boolean))];
+      const recommendationBody={...body,studentIds:recommendationStudentIds};
       const [ownRows,authorizedRows,coaches,users]=await Promise.all([
-        getIndexedActiveEntitlementsForStudents(parseArr(body.studentIds)),
-        authorizedRecommendationEntitlements(parseArr(body.studentIds),body.startTime),
+        getIndexedActiveEntitlementsForStudents(recommendationStudentIds),
+        authorizedRecommendationEntitlements(recommendationStudentIds,body.startTime),
         getCachedScan(T_COACHES).catch(()=>[]),
         getCachedScan(T_USERS).catch(()=>[])
       ]);
       let recommendationRows=[...ownRows,...authorizedRows];
-      let currentSchedule=null;
       if(scheduleId){
-        currentSchedule=await get(T_SCHEDULE,scheduleId).catch(()=>null);
         const oldEntitlementIds=parseArr(currentSchedule?.entitlementIds);
         if(currentSchedule?.entitlementId)oldEntitlementIds.push(currentSchedule.entitlementId);
         const missingIds=[...new Set(oldEntitlementIds.filter(id=>id&&!recommendationRows.some(row=>String(row.id||'')===String(id))))];
@@ -483,8 +489,8 @@ function createPurchaseEntitlementRoutes(deps={}){
           recommendationRows=[...recommendationRows,...extraRows];
         }
       }
-      recommendationRows=restoreEditingScheduleEntitlementRowsForRecommendation(recommendationRows,body,currentSchedule,{parseLessonValue,scheduleEntitlementDeltas});
-      return sendJson(res,recommendEntitlements(recommendationRows,{...body,coachRefs:buildCoachRefs({coaches,users})}));
+      recommendationRows=restoreEditingScheduleEntitlementRowsForRecommendation(recommendationRows,recommendationBody,currentSchedule,{parseLessonValue,scheduleEntitlementDeltas});
+      return sendJson(res,recommendEntitlements(recommendationRows,{...recommendationBody,coachRefs:buildCoachRefs({coaches,users})}));
     }
 
     const entManualM=path.match(/^\/entitlements\/(.+)\/manual-adjust$/);
