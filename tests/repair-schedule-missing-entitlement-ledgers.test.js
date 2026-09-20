@@ -1,7 +1,12 @@
 const assert = require('assert');
 
 const repair = require('../scripts/repair-schedule-missing-entitlement-ledgers-20260919.js');
+const rollback = require('../scripts/revert-voided-schedule-repair-20260919.js');
 const summaryCache = require('../server/read-models/student-teaching-summary-cache.js');
+
+const activeIndexSnapshot = { id: 'student-1', entitlementIds: ['ent-1'], operationId: 'before' };
+assert.strictEqual(rollback.indexRowNeedsRestore(activeIndexSnapshot, { ...activeIndexSnapshot }), false, '活跃课包索引与写前快照一致时不应重复恢复');
+assert.strictEqual(rollback.indexRowNeedsRestore({ ...activeIndexSnapshot, operationId: 'repair' }, activeIndexSnapshot), true, '索引残留本次操作标记时必须恢复写前快照');
 
 const deps = {
   resolveScheduleEntitlementDeltas(schedule, entitlements) {
@@ -89,6 +94,25 @@ const blocked = repair.buildPlan({
 }, deps, now);
 assert.strictEqual(blocked.repairable.length, 0, '直接收款和找不到课包的排课不得被误修');
 assert.strictEqual(blocked.blocked.length, 1, '找不到课包的排课必须进入阻塞清单');
+
+const voided = repair.buildPlan({
+  schedules: [schedule('voided-duplicate', 'ent-1', { status: 'voided' })],
+  entitlements: data.entitlements,
+  entitlementLedger: [],
+  authorizations: [],
+  activeEntitlementIndex: []
+}, deps, now);
+assert.strictEqual(voided.repairable.length, 0, '已作废排课不得补扣课包或生成消课流水');
+assert.strictEqual(voided.ledgerPuts.length, 0, '已作废排课不得生成消课流水');
+
+const voidedLegacyStatus = repair.buildPlan({
+  schedules: [schedule('voided-legacy-status', 'ent-1', { status: '', systemStatus: 'voided' })],
+  entitlements: data.entitlements,
+  entitlementLedger: [],
+  authorizations: [],
+  activeEntitlementIndex: []
+}, deps, now);
+assert.strictEqual(voidedLegacyStatus.repairable.length, 0, '兼容状态字段标记为作废时也不得补扣');
 
 assert.strictEqual(typeof repair.syncStudentTeachingSummaryForPlan, 'function', '必须提供教学摘要同步入口');
 

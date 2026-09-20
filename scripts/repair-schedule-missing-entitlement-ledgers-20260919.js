@@ -109,7 +109,8 @@ function lessonCountForRepair(row = {}) {
 }
 
 function occurredAndBillable(row = {}, now = new Date()) {
-  if (!row || text(row.status) === '已取消' || row.coachLateFree) return false;
+  const status = text(row.status || row.systemStatus).toLowerCase();
+  if (!row || ['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已取消', '已作废', '已删除'].includes(status) || row.coachLateFree) return false;
   const start = Date.parse(text(row.startTime).replace(' ', 'T'));
   return Number.isFinite(start) && start <= new Date(now).getTime();
 }
