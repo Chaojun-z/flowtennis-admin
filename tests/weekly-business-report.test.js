@@ -1185,7 +1185,7 @@ assert.doesNotMatch(html, /#7CFF44/, 'weekly report should not keep the harsh ne
 assert.match(html, /<body class="bg-grid-pattern text-white font-sans min-h-screen antialiased flex flex-col pb-16">/, 'weekly report body should reuse the provided template shell classes');
 assert.match(html, /<header data-section="global-header" class="border-b border-cyber-border bg-cyber-black\/95 sticky top-0 z-50 backdrop-blur-md">/, 'weekly report header should reuse the provided template header structure');
 assert.match(html, /<nav class="hidden md:flex items-center space-x-1 bg-black\/40 p-1 rounded-lg border border-cyber-border"[\s\S]*href="#overview"[\s\S]*Dashboard[\s\S]*href="#revenue"[\s\S]*Revenue[\s\S]*href="#private-course"[\s\S]*Private Course[\s\S]*href="#court"[\s\S]*Court Usage[\s\S]*href="#coach"[\s\S]*Coach/, 'top navigation should mirror the template segmented menu and jump to report sections');
-assert.match(html, /data-section="top-kpi-cards" class="lg:col-span-6 grid grid-cols-3 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border"[\s\S]*累计净实收[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总场地利用率[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总私教课人数[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight/, 'hero lifetime metrics should show net cash and keep the widened template KPI card without wrapping values');
+assert.match(html, /data-section="top-kpi-cards" class="lg:col-span-6 grid grid-cols-2 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border"[\s\S]*累计净实收[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight[\s\S]*总私教课人数[\s\S]*hero-kpi-value whitespace-nowrap text-3xl font-mono font-bold text-white tracking-tight/, 'hero lifetime metrics should show net cash and keep the widened template KPI card without wrapping values');
 assert.match(html, /flex flex-wrap gap-3 pt-2[\s\S]*核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时[\s\S]*上周/, 'weekly summary metrics should use the requested four metrics with previous-week comparison');
 assert.match(html, /data-section="court-utilization-heatmap"[\s\S]*\/\/ COURT UTILIZATION HEATMAP[\s\S]*每天利用率[\s\S]*<th class="py-2 text-left font-sans"[\s\S]*日期[\s\S]*08\.27[\s\S]*09\.03[\s\S]*cohort-cell[\s\S]*41%[\s\S]*72%[\s\S]*61%/, 'daily court utilization should render as a date heatmap with real daily values');
 assert.match(html, /08\.27 周四[\s\S]*08\.28 周五[\s\S]*09\.03 周四/, 'daily court utilization headers should include weekdays');
@@ -1197,7 +1197,13 @@ assert.doesNotMatch(weeklyReportSource, /buildCourtUtilizationMatrixRows|weeklyM
 assert.match(html, /chart-tooltip[\s\S]*data-tooltip/, 'charts and metrics should support hover tooltips');
 assert.match(html, /contenteditable="true"[\s\S]*save-edit/, 'weekly report should support direct editing and saving');
 assert.match(html, /data-edit-key="section.revenue.title"[\s\S]*data-edit-key="section.course.title"[\s\S]*data-edit-key="course.totalPeople.label"[\s\S]*data-edit-key="court.heatmap.title"[\s\S]*data-edit-key="conversion.source.0.source"/, 'weekly report should make section titles, metric labels, charts and table cells editable');
-assert.match(html, /总场地利用率/, 'hero should show lifetime court utilization label');
+assert.doesNotMatch(html, /总场地利用率|历史平均利用率|data-edit-key="lifetime\.courtUtilizationRate/, 'weekly report should hide unreliable lifetime court utilization');
+const legacyUtilizationHtml = renderWeeklyBusinessReportHtml({
+  ...snapshot,
+  lifetimeSummary: { ...snapshot.lifetimeSummary, courtUtilizationRate: { value: 49.9 } },
+  publicEdits: { 'lifetime.courtUtilizationRate': '49.9%' }
+});
+assert.doesNotMatch(legacyUtilizationHtml, /总场地利用率|历史平均利用率|data-edit-key="lifetime\.courtUtilizationRate/, 'stored lifetime values and public edits must not restore the hidden metric');
 assert.match(html, /总私教课人数/, 'hero should show lifetime private course people label');
 assert.match(html, /核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时/, 'top weekly metrics should use requested labels');
 assert.match(html, /\/\/ 核销入账[\s\S]*data-primary-label="核销入账"/, 'trend metric cards should use the template eyebrow position as the data card title');

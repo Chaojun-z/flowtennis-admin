@@ -2564,9 +2564,8 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
         ${summaryChip('完成课时', summary.coachHours?.value || 0, ' 小时', summary.coachHours?.compare, edits, 'summary.coachHours')}
       </div>
     </div>
-    <div data-section="top-kpi-cards" class="lg:col-span-6 grid grid-cols-3 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border">
+    <div data-section="top-kpi-cards" class="lg:col-span-6 grid grid-cols-2 gap-4 bg-cyber-card p-5 rounded-xl border border-cyber-border">
       ${heroOverviewItem('累计净实收', lifetime.netCashIncome?.value ?? lifetime.totalIncome?.value ?? 0, ' 元', `总收款 ${formatMetricValue(lifetime.totalIncome?.value || 0, '元')} 元；退款 ${formatMetricValue(lifetime.refundAmount?.value || 0, '元')} 元；截至 ${period.endDate || '-'}`, edits, 'lifetime.totalIncome')}
-      ${heroOverviewItem('总场地利用率', lifetime.courtUtilizationRate?.value || 0, '%', '历史平均利用率', edits, 'lifetime.courtUtilizationRate')}
       ${heroOverviewItem('总私教课人数', lifetime.privateCoursePeople?.value || 0, ' 人', '累计私教学员数', edits, 'lifetime.privateCoursePeople')}
     </div>
   </section>
