@@ -2327,51 +2327,56 @@ function renderRows(rows = [], columns = [], { edits = {}, keyPrefix = '' } = {}
   }).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
-function renderRevenueCategoryPanel(title = '', rows = [], edits = {}, keyPrefix = '') {
-  const clean = normalizeRows(rows);
-  const body = clean.length ? clean.map((row, rowIndex) => `
-    <div class="revenue-category-level revenue-category-level-1 rounded-lg border border-cyber-border/60 bg-black/10 p-3">
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex min-w-0 items-center gap-2">
-          <span class="shrink-0 rounded border border-cyber-volt/40 bg-cyber-pillBg px-1.5 py-0.5 text-[10px] font-mono text-cyber-volt">一级</span>
-          <span class="truncate text-sm font-bold text-white">${editableText(edits, `${keyPrefix}.${rowIndex}.name`, row.name || '-')}</span>
-          <span class="hidden text-[10px] text-cyber-darkMuted sm:inline">一级合计</span>
+function renderRevenueCategoryPanel(title = '', rows = [], edits = {}, keyPrefix = '', totalAmount = 0) {
+  // 保留原索引：已保存的编辑内容不能因为金额排序而串到其他项目。
+  const rankedRows = items => normalizeRows(items)
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => numberValue(b.row.amount) - numberValue(a.row.amount));
+  const clean = rankedRows(rows);
+  const total = numberValue(totalAmount);
+  const shareOf = amount => total > 0 ? percent(amount, total) : null;
+  const barWidth = amount => Math.max(0, Math.min(100, shareOf(amount) || 0));
+  const shades = ['bg-cyber-volt', 'bg-cyber-muted', 'bg-cyber-darkMuted'];
+  const body = clean.map(({ row, index: rowIndex }, rank) => {
+    const key = `${keyPrefix}.${rowIndex}`;
+    const share = shareOf(row.amount);
+    return `<details class="revenue-ranking-item border-t border-cyber-border"${rank === 0 ? ' open' : ''}>
+      <summary class="cursor-pointer py-4 rounded focus-visible:outline focus-visible:outline-1 focus-visible:outline-cyber-volt">
+        <div class="flex items-center gap-3">
+          <span class="revenue-ranking-chevron text-cyber-muted" aria-hidden="true">›</span>
+          <span class="min-w-0 flex-1 text-sm font-bold text-white">${editableText(edits, `${key}.name`, row.name || '-')}</span>
+          <span class="font-mono text-sm font-bold text-cyber-volt whitespace-nowrap">${editableText(edits, `${key}.amount`, `${formatMetricValue(row.amount, '元')} 元`)}</span>
+          <span class="w-16 shrink-0 text-right text-xs font-mono text-cyber-muted">${share === null ? '—' : `${share.toFixed(1)}%`}</span>
         </div>
-        <span class="font-mono text-sm font-bold text-cyber-volt whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.amount`, `${formatMetricValue(row.amount, '元')} 元`)}</span>
-      </div>
-      <div class="mt-3 space-y-2 border-l-2 border-cyber-border pl-3 sm:pl-4">
-        ${normalizeRows(row.children).map((child, childIndex) => `
-          <div class="revenue-category-level revenue-category-level-2 rounded-md bg-cyber-pillBg/60 px-2.5 py-2">
-            <div class="flex items-center justify-between gap-4 text-xs text-cyber-muted">
-              <div class="flex min-w-0 items-center gap-2">
-                <span class="shrink-0 text-[10px] font-mono text-cyber-muted">二级</span>
-                <span class="truncate">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.name`, child.name || '-')}</span>
-              </div>
-              <span class="font-mono text-cyber-muted whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.amount`, `${formatMetricValue(child.amount, '元')} 元`)}</span>
+        <div class="ml-5 mr-20 mt-3 h-1.5 bg-cyber-border rounded overflow-hidden" aria-hidden="true"><div class="h-full bg-cyber-volt rounded" style="width:${barWidth(row.amount)}%"></div></div>
+      </summary>
+      <div class="revenue-ranking-children ml-5 pb-4 space-y-2">
+        ${rankedRows(row.children).map(({ row: child, index: childIndex }) => {
+          const childKey = `${key}.children.${childIndex}`;
+          return `<div>
+            <div class="flex items-center justify-between gap-4 py-1 text-xs text-white">
+              <span>${editableText(edits, `${childKey}.name`, child.name || '-')}</span>
+              <span class="font-mono whitespace-nowrap">${editableText(edits, `${childKey}.amount`, `${formatMetricValue(child.amount, '元')} 元`)}</span>
             </div>
-            ${normalizeRows(child.children).length ? `<div class="mt-2 space-y-1 border-l border-cyber-border/70 pl-3">
-              ${normalizeRows(child.children).map((grandchild, grandchildIndex) => `
-                <div class="flex items-center justify-between gap-4 text-[11px] text-cyber-darkMuted">
-                  <div class="flex min-w-0 items-center gap-2">
-                    <span class="shrink-0 font-mono text-[10px] text-cyber-darkMuted">三级</span>
-                    <span class="truncate">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.children.${grandchildIndex}.name`, grandchild.name || '-')}</span>
-                  </div>
-                  <span class="font-mono whitespace-nowrap">${editableText(edits, `${keyPrefix}.${rowIndex}.children.${childIndex}.children.${grandchildIndex}.amount`, `${formatMetricValue(grandchild.amount, '元')} 元`)}</span>
-                </div>
-              `).join('')}
-            </div>` : ''}
-          </div>
-        `).join('')}
+            ${rankedRows(child.children).map(({ row: grandchild, index: grandchildIndex }) => `<div class="ml-3 flex items-center justify-between gap-4 py-1 text-xs text-cyber-muted">
+              <span>${editableText(edits, `${childKey}.children.${grandchildIndex}.name`, grandchild.name || '-')}</span>
+              <span class="font-mono whitespace-nowrap">${editableText(edits, `${childKey}.children.${grandchildIndex}.amount`, `${formatMetricValue(grandchild.amount, '元')} 元`)}</span>
+            </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
-    </div>
-  `).join('') : '<p class="empty">暂无数据</p>';
-  return `<section class="bg-cyber-card rounded-xl border border-cyber-border p-5">
-    <div class="flex items-center justify-between mb-2">
+    </details>`;
+  }).join('');
+  const hasNegative = clean.some(({ row }) => numberValue(row.amount) < 0);
+  return `<section data-revenue-ranking="${escapeHtml(keyPrefix)}" class="bg-cyber-card rounded-xl border border-cyber-border p-5">
+    <div class="flex items-center justify-between gap-3 mb-4">
       <h3 class="text-base font-bold text-white leading-snug">${editableText(edits, `${keyPrefix}.title`, title)}</h3>
-      <span class="text-xs font-mono text-cyber-muted">${editableText(edits, `${keyPrefix}.count`, `${clean.length} 个一级类目`)}</span>
+      <span class="text-xs text-cyber-muted">点击分类展开明细</span>
     </div>
-    <div class="mb-1 text-[11px] text-cyber-darkMuted">一级类目 <span class="mx-1 text-cyber-border">→</span> 二级项目 <span class="mx-1 text-cyber-border">→</span> 三级明细</div>
-    ${body}
+    <div class="flex items-center justify-between mb-4"><span class="text-xs text-cyber-muted">本周合计</span><span class="font-mono text-xl text-white">${formatMetricValue(total, '元')} <span class="text-xs text-cyber-muted">元</span></span></div>
+    ${total > 0 && !hasNegative && clean.length ? `<div class="flex gap-0.5 h-2 mb-5 rounded overflow-hidden bg-cyber-border" aria-hidden="true">${clean.map(({ row }, index) => `<span class="h-full shrink-0 ${shades[Math.min(index, shades.length - 1)]}" style="width:${barWidth(row.amount)}%"></span>`).join('')}</div>` : ''}
+    ${body || '<p class="empty">暂无数据</p>'}
+    <p class="mt-3 text-[11px] text-cyber-muted">${total > 0 ? `占比以本周${keyPrefix.startsWith('receipts.') ? '收款' : '核销入账'}总额为基数，四舍五入后合计可能不等于 100%。` : '本周总额不大于 0，占比暂不展示。'}${hasNegative && total > 0 ? '含负向冲减，部分占比可能小于 0 或超过 100%。' : ''}</p>
   </section>`;
 }
 
@@ -2540,6 +2545,8 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     .donut-wrap{display:flex;align-items:center;gap:20px}.donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:"";position:absolute;inset:35px;border-radius:50%;background:#111813}.legend{display:grid;gap:9px;font-size:13px}.legend span{display:flex;align-items:center;gap:8px;color:#889E8D}.legend i{width:10px;height:10px;border-radius:50%}
     .progress-list{display:grid;gap:14px}.progress-item div{display:flex;justify-content:space-between;color:#889E8D;font-size:12px;margin-bottom:6px}.progress-item strong{color:#D9E1DB;font-family:ui-monospace,SFMono-Regular,monospace}.progress-item i{display:block;height:10px;background:#18221B;border-radius:3px;overflow:hidden}.progress-item b{display:block;height:100%;background:#72D94A}
     .hero-kpi-value [data-editable="true"]{white-space:nowrap}
+    .revenue-ranking-item>summary{list-style:none}.revenue-ranking-item>summary::-webkit-details-marker{display:none}
+    .revenue-ranking-chevron{display:inline-block}.revenue-ranking-item[open]>summary .revenue-ranking-chevron{transform:rotate(90deg)}
     .coach-tab.is-active{border-color:#72D94A;background:#1E351A;color:#72D94A}
   </style>
 </head>
@@ -2579,8 +2586,8 @@ function renderWeeklyBusinessReportHtml(snapshot = {}, { remark = '' } = {}) {
     ${templateMetric('收款与核销差额', numberValue((Number(revenue.recognized?.businessRevenue) || 0) - (Number(revenue.receipts?.totalAmount) || 0)), ' 元', null, edits, 'revenue.cashRecognizedDelta')}
   </div>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    ${renderRevenueCategoryPanel('收款明细', revenue.receipts?.categoryRows || [], edits, 'receipts.categoryRows')}
-    ${renderRevenueCategoryPanel('核销入账明细', revenue.recognized?.categoryRows || [], edits, 'recognized.categoryRows')}
+    ${renderRevenueCategoryPanel('收款来源', revenue.receipts?.categoryRows || [], edits, 'receipts.categoryRows', revenue.receipts?.totalAmount)}
+    ${renderRevenueCategoryPanel('核销入账来源', revenue.recognized?.categoryRows || [], edits, 'recognized.categoryRows', revenue.recognized?.businessRevenue)}
   </div>
 
   <h3 id="private-course" class="text-base font-bold text-white leading-snug scroll-mt-24">${editableText(edits, 'section.course.title', '2.1 课程收款')}</h3>

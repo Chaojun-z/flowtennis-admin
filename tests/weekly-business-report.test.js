@@ -264,9 +264,53 @@ assert.strictEqual(requestedStructureSnapshot.sections.revenue.receipts.category
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.categoryRows.find(row => row.name === '课程服务')?.amount, 1000, 'recognized tree should group course consumption under course service');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.recognized.categoryRows.find(row => row.name === '场地服务')?.amount, 300, 'recognized tree should group member and guest booking revenue under field service');
 const categoryHtml = renderWeeklyBusinessReportHtml(requestedStructureSnapshot);
-assert.match(categoryHtml, /一级类目[\s\S]*二级项目[\s\S]*三级明细/, 'revenue category panels should explain the three-level hierarchy');
-assert.match(categoryHtml, /class="[^"]*revenue-category-level-1/, 'revenue category panels should visually distinguish level one rows');
-assert.match(categoryHtml, /class="[^"]*revenue-category-level-2/, 'revenue category panels should visually distinguish level two rows');
+function revenuePanel(html, prefix) {
+  return html.match(new RegExp(`<section data-revenue-ranking="${prefix.replace(/\./g, '\\.')}"[^>]*>([\\s\\S]*?)</section>`))?.[1] || '';
+}
+const receiptRanking = revenuePanel(categoryHtml, 'receipts.categoryRows');
+const recognizedRanking = revenuePanel(categoryHtml, 'recognized.categoryRows');
+assert.ok(receiptRanking && recognizedRanking, '收款与核销应各自展示来源排行榜');
+assert.ok(receiptRanking.indexOf('会员储值') < receiptRanking.indexOf('课程服务'), '收款大类应按金额降序排列');
+assert.match(recognizedRanking, /76\.9%/, '核销占比应使用核销总额，不能混用收款分母');
+assert.match(receiptRanking, /61\.1%/, '收款占比应使用本周收款总额');
+assert.strictEqual((receiptRanking.match(/<details[^>]* open>/g) || []).length, 1, '默认只展开金额最大的大类');
+assert.match(receiptRanking, /<details[^>]* open>[\s\S]*?会员储值/, '最大来源应默认展开');
+assert.doesNotMatch(receiptRanking, /一级类目|二级项目|三级明细|一级合计/, '排行榜应去掉重复层级标签');
+assert.match(categoryHtml, /volt: '#72D94A'/, '保留现有周报强调色');
+const rankingSourceBefore = JSON.stringify(requestedStructureSnapshot);
+renderWeeklyBusinessReportHtml(requestedStructureSnapshot);
+assert.strictEqual(JSON.stringify(requestedStructureSnapshot), rankingSourceBefore, '排序不得改变原始周报数据或编辑索引');
+const rankingSnapshot = JSON.parse(rankingSourceBefore);
+rankingSnapshot.sections.revenue.receipts.totalAmount = 1000;
+rankingSnapshot.sections.revenue.receipts.categoryRows = [
+  { name: '小额来源', amount: 100, children: [{ name: '父项', amount: 100, children: [{ name: '单次', amount: 100 }] }] },
+  { name: '主要来源', amount: 700, children: [{ name: '小项', amount: 200 }, { name: '大项', amount: 500 }] }
+];
+rankingSnapshot.publicEdits = {
+  'receipts.categoryRows.0.name': '保留的小额名称',
+  'receipts.categoryRows.0.children.0.children.0.name': '<单次编辑>',
+  'receipts.categoryRows.1.children.0.amount': '原有编辑金额'
+};
+const editedRanking = revenuePanel(renderWeeklyBusinessReportHtml(rankingSnapshot), 'receipts.categoryRows');
+assert.ok(editedRanking.indexOf('主要来源') < editedRanking.indexOf('保留的小额名称'), '排序后编辑内容仍应对应原始行');
+assert.ok(editedRanking.indexOf('大项') < editedRanking.indexOf('小项'), '展开后的项目也应按金额排序');
+assert.match(editedRanking, /70\.0%/, '占比分母必须用周报总额，不能改用已列分类小计');
+assert.match(editedRanking, /data-edit-key="receipts.categoryRows.1.children.0.amount"[^>]*>原有编辑金额/, '子项排序后仍保留原编辑键');
+assert.match(editedRanking, /&lt;单次编辑&gt;/, '三级明细保留且手工编辑应转义');
+for (const total of [0, -100]) {
+  rankingSnapshot.sections.revenue.receipts.totalAmount = total;
+  const panel = revenuePanel(renderWeeklyBusinessReportHtml(rankingSnapshot), 'receipts.categoryRows');
+  assert.doesNotMatch(panel, /NaN|Infinity|width:-/, '零值与负总额不得生成无效横条');
+  assert.match(panel, /占比暂不展示/, '总额不为正时应明确不展示占比');
+}
+rankingSnapshot.sections.revenue.receipts.totalAmount = 100;
+rankingSnapshot.sections.revenue.receipts.categoryRows = [{ name: '正向', amount: 150 }, { name: '冲减', amount: -50 }];
+const signedRanking = revenuePanel(renderWeeklyBusinessReportHtml(rankingSnapshot), 'receipts.categoryRows');
+assert.match(signedRanking, /150\.0%/, '应保留含冲减时超过 100% 的真实占比');
+assert.match(signedRanking, /-50\.0%/, '负向金额不能被隐藏或改成正数');
+assert.doesNotMatch(signedRanking, /width:(?:150|-50)%/, '横条宽度必须限制在有效范围');
+rankingSnapshot.sections.revenue.receipts.categoryRows = [];
+assert.match(revenuePanel(renderWeeklyBusinessReportHtml(rankingSnapshot), 'receipts.categoryRows'), /暂无数据/, '空分类应有明确空态');
 assert.match(categoryHtml, /累计净实收/, 'weekly lifetime card should identify the net cash metric');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.lessonPeople, 2, 'course section should expose weekly completed lesson people');
 assert.strictEqual(requestedStructureSnapshot.sections.revenue.course.completedHours, 3, 'course section should expose weekly completed coach course hours');
