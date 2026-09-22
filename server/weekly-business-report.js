@@ -3208,7 +3208,15 @@ async function generateWeeklyBusinessReport({
       totalSnapshotBaseRows = totalOperationsPayload?.weeklyReportRaw
         ? weeklyRawToBaseRows(totalOperationsPayload.weeklyReportRaw)
         : null;
-      canDeriveFromLifetime = Boolean(totalSnapshotBaseRows && weeklyPayloadHasRawFacts(totalOperationsPayload));
+      // 排课是教练经营、课程订场时长和上课人数的共同事实源。
+      // 生命周期快照即使财务事实完整，只要排课数组为空，就不能当作完整周报快照继续派生，
+      // 否则会把真实课程静默算成 0；此时应读取对应周的专用快照或走受控兜底。
+      canDeriveFromLifetime = Boolean(
+        totalSnapshotBaseRows
+        && weeklyPayloadHasRawFacts(totalOperationsPayload)
+        && Array.isArray(totalOperationsPayload.weeklyReportRaw?.schedule)
+        && totalOperationsPayload.weeklyReportRaw.schedule.length > 0
+      );
       if (canDeriveFromLifetime) {
         const baseRowsOverride = totalSnapshotBaseRows;
         operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null);
@@ -3224,7 +3232,7 @@ async function generateWeeklyBusinessReport({
       }
     }
     if (!weeklyPayloadReadyForScope(operationsPayload, scope)) {
-      if (totalSnapshotBaseRows) {
+      if (canDeriveFromLifetime && totalSnapshotBaseRows) {
         operationsPayload = await loadOperationsPayload({ user, scope, baseRowsOverride: totalSnapshotBaseRows, weeklyReportLiveSource: true }).catch(() => null);
       } else if (allowLiveFallback) {
         operationsPayload = await loadOperationsPayload({ user, scope, weeklyReportLiveSource: true });
@@ -3236,7 +3244,7 @@ async function generateWeeklyBusinessReport({
       ? totalSnapshotBaseRows
       : operationsPayload?.weeklyReportRaw
         ? weeklyRawToBaseRows(operationsPayload.weeklyReportRaw)
-        : totalSnapshotBaseRows;
+        : null;
     if (!weeklyPayloadReadyForScope(previousOperationsPayload, previousScope)) {
       if (baseRowsOverride) {
         previousOperationsPayload = await loadOperationsPayload({ user, scope: previousScope, baseRowsOverride, weeklyReportLiveSource: true });

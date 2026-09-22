@@ -1920,6 +1920,49 @@ async function callFastRegenerationFromLifetimeSnapshot() {
   return { result, savedRows, derivedLoads, snapshotLoads };
 }
 
+async function callRegenerationFallsBackWhenLifetimeScheduleIsEmpty() {
+  const savedRows = [];
+  const snapshotScopes = [];
+  const lifetimePayload = {
+    operations: { overview: { cards: { totalIncome: { value: 999999 } } } },
+    weeklyReportRaw: {
+      ...operationsPayloadWithRawFacts.weeklyReportRaw,
+      schedule: []
+    }
+  };
+  const existing = {
+    ...snapshot,
+    shareToken: 'empty-lifetime-schedule-token',
+    sections: {
+      trends: Array.from({ length: 8 }, (_, index) => ({
+        label: `trend-${index}`,
+        businessRevenue: 1,
+        cashReceived: 1,
+        courtUtilizationRate: 1,
+        coachHours: 1
+      }))
+    }
+  };
+  const result = await generateWeeklyBusinessReport({
+    period,
+    generationMode: 'manual',
+    allowLiveFallback: false,
+    get: async () => existing,
+    put: async (_table, _id, row) => { savedRows.push(row); },
+    mkTable: async () => {},
+    loadOperationsPayload: async ({ baseRowsOverride }) => {
+      assert.fail(`空排课生命周期快照不应触发源表兜底，收到 baseRowsOverride=${Boolean(baseRowsOverride)}`);
+    },
+    loadOperationsSnapshot: async ({ scope }) => {
+      const startDate = scope?.dateRange?.startDate || 'lifetime';
+      snapshotScopes.push(startDate);
+      if (startDate === 'lifetime') return lifetimePayload;
+      return operationsPayloadWithRawFacts;
+    }
+  });
+  return { result, savedRows, snapshotScopes };
+}
+
 async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
   let liveLoads = 0;
   const savedRows = [];
@@ -2608,7 +2651,7 @@ async function callSequentialSnapshotGeneration() {
   return { maxActiveLoads };
 }
 
-Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'editor', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callCampusScopedSnapshotGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callExistingEightWeekTrendReuse(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callLifetimeIncomeUsesCompleteRawFactsThroughCutoff(), callFastRegenerationFromLifetimeSnapshot(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callDraftBuilderWritesReadyDraftOnly(), callManualRegenerationPublishesReadyDraft(), callManualRegenerationWithoutReadyDraft(), callManualRegenerationRejectsInvalidDraft(), callFailedRegenerationPreservesExistingRow(), callConcurrentHistoricalRegenerations(), callManualRegenerationQueuesInsteadOfScanning(), callManualRegenerationAutoPreparesSnapshots(), callManualRegenerationUsesFreshSource(), callManualRegenerationUsesRefreshingLifetimeSnapshot(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, editorMapoListResult, otherCampusListResult, listResult, generationResult, campusGenerationResult, rawFallbackGenerationResult, existingGenerationResult, existingEightWeekResult, freshnessResult, lifetimeCutoffResult, fastRegenerationResult, rawlessZeroTrendResult, fallbackGenerationResult, draftBuilderResult, readyPublishResult, missingDraftResult, invalidDraftResult, failedRegenerationResult, concurrentHistoricalResult, queuedRegenerationResult, autoPrepareResult, freshSourceResult, refreshingLifetimeResult, sequentialResult]) => {
+Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'editor', dataScope: 'campus', campusIds: ['shunyi_mapo'] }), callWeeklyReportListWithUser({ role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] }), callListReportsWithOverlappingRows(), callSnapshotFirstGeneration(), callCampusScopedSnapshotGeneration(), callSnapshotWithoutRawFallbackGeneration(), callExistingReportManualRegeneration(), callExistingEightWeekTrendReuse(), callManualRegenerationIgnoresStaleCurrentSnapshot(), callLifetimeIncomeUsesCompleteRawFactsThroughCutoff(), callFastRegenerationFromLifetimeSnapshot(), callRegenerationFallsBackWhenLifetimeScheduleIsEmpty(), callManualRegenerationRepairsRawlessZeroTrendSnapshots(), callSnapshotFailureLiveFallbackGeneration(), callDraftBuilderWritesReadyDraftOnly(), callManualRegenerationPublishesReadyDraft(), callManualRegenerationWithoutReadyDraft(), callManualRegenerationRejectsInvalidDraft(), callFailedRegenerationPreservesExistingRow(), callConcurrentHistoricalRegenerations(), callManualRegenerationQueuesInsteadOfScanning(), callManualRegenerationAutoPreparesSnapshots(), callManualRegenerationUsesFreshSource(), callManualRegenerationUsesRefreshingLifetimeSnapshot(), callSequentialSnapshotGeneration()]).then(([result, editResult, mapoListResult, editorMapoListResult, otherCampusListResult, listResult, generationResult, campusGenerationResult, rawFallbackGenerationResult, existingGenerationResult, existingEightWeekResult, freshnessResult, lifetimeCutoffResult, fastRegenerationResult, emptyLifetimeScheduleResult, rawlessZeroTrendResult, fallbackGenerationResult, draftBuilderResult, readyPublishResult, missingDraftResult, invalidDraftResult, failedRegenerationResult, concurrentHistoricalResult, queuedRegenerationResult, autoPrepareResult, freshSourceResult, refreshingLifetimeResult, sequentialResult]) => {
   assert.strictEqual(result.handled, true, 'public weekly report HTML route should be handled before login auth');
   assert.strictEqual(result.statusCode, 200, 'public weekly report HTML route should return HTML without login');
   assert.match(result.html, /二、收入与收款/, 'public weekly report route should upgrade legacy stored HTML to the current report template');
@@ -2668,6 +2711,9 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.strictEqual(fastRegenerationResult.savedRows.length, 1, 'complete lifetime snapshot should allow one-request regeneration without waiting for trend snapshots');
   assert.ok(fastRegenerationResult.derivedLoads >= 1, 'complete lifetime snapshot should derive current metrics and trends in memory');
   assert.strictEqual(fastRegenerationResult.snapshotLoads, 1, 'complete lifetime snapshot should not probe current, previous, or trend snapshot shards');
+  assert.deepStrictEqual(emptyLifetimeScheduleResult.snapshotScopes.slice(0, 3), ['lifetime', period.startDate, period.previousStartDate], 'lifetime snapshot without排课事实 must fall back to current and previous weekly snapshots');
+  assert.ok(emptyLifetimeScheduleResult.savedRows[0].sections.coach.totalHours > 0, 'lifetime snapshot without排课事实 must not publish zero coach hours');
+  assert.ok(emptyLifetimeScheduleResult.savedRows[0].sections.court.usageRows.find(row => row.key === 'course')?.hours > 0, 'lifetime snapshot without排课事实 must not publish zero course court hours');
   assert.strictEqual(rawlessZeroTrendResult.liveLoads, 4, 'manual regeneration should live-load current, previous, lifetime and trailing trend windows when stored snapshots lack finance facts');
   assert.strictEqual(rawlessZeroTrendResult.result.shareToken, 'rawless-zero-trend-token', 'rawless zero trend repair should preserve the existing share link');
   assert.strictEqual(rawlessZeroTrendResult.savedRows[0].summary.cashReceived.value, 49295.99, 'rawless current snapshot repair should rebuild weekly cash received from live facts');
