@@ -1789,6 +1789,8 @@ FlowTennis 只保留三类转化观察口径：课程总漏斗、体验课上课
 | WEEKLY_MAPO_BOOKING_RECEIPT | 本周订场收款 | 本周散客订场和约球局有效收款金额 | 财务标准流水中散客订场、约球局收款 `cashDelta` | 已固化 |
 | WEEKLY_MAPO_STORED_VALUE_RECEIPT | 本周储值收款 | 本周会员储值有效收款金额 | 财务标准流水中会员储值收款 `cashDelta` | 已固化 |
 | WEEKLY_MAPO_COURSE_RECOGNIZED | 课程消耗收入 | 本周课程完成服务后确认的收入 | 财务标准流水中课程类 `recognizedRevenueDelta` | 已固化 |
+| WEEKLY_MAPO_PRIVATE_COURSE_TOTALS | 私教课顶部四项 | 截至报告结束日的私教正式课累计人数、累计收款、累计消耗收入和在期人数；不得使用当前周原始数据代替 | 购买事实、财务标准流水、在期权益读模型 | 已固化 |
+| WEEKLY_MAPO_COURT_USAGE_HOURS | 场地使用时长 | 本周实际使用的收费场地小时数，不包含 `内部使用` 和 `领导订场` | 场地使用事实、课程排课事实、财务标准流水 | 已固化 |
 | WEEKLY_MAPO_MEMBER_BOOKING_RECOGNIZED | 会员订场消耗收入 | 本周会员储值订场完成后确认的收入 | 财务标准流水中会员订场 `recognizedRevenueDelta` | 已固化 |
 | WEEKLY_MAPO_GUEST_BOOKING_RECOGNIZED | 散客订场收入 | 本周散客订场和约球局完成后确认的收入 | 财务标准流水中散客订场、约球局 `recognizedRevenueDelta` | 已固化 |
 

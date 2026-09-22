@@ -57,9 +57,9 @@ async function renderWeeklyReports() {
         <div class="tms-table-card">
           <div class="tms-table-wrapper">
             <table class="tms-table weekly-report-table" style="width:100%;min-width:1180px;table-layout:fixed">
-              <colgroup><col style="width:220px"><col style="width:88px"><col style="width:156px"><col style="width:120px"><col style="width:120px"><col style="width:116px"><col style="width:96px"><col style="width:264px"></colgroup>
-              <thead><tr><th style="padding-left:20px">周期</th><th>周次</th><th>生成时间</th><th>核销入账</th><th>本周收款</th><th>场地利用率</th><th>完成课时</th><th class="tms-sticky-r" style="width:264px;padding-right:20px;text-align:right">操作</th></tr></thead>
-              <tbody>${weeklyReportsRows.length ? weeklyReportsRows.map(weeklyReportRowHtml).join('') : '<tr><td colspan="8"><div class="tms-empty-state"><div class="tms-empty-title">暂无周报</div></div></td></tr>'}</tbody>
+              <colgroup><col style="width:210px"><col style="width:82px"><col style="width:150px"><col style="width:120px"><col style="width:120px"><col style="width:100px"><col style="width:132px"><col style="width:108px"><col style="width:264px"></colgroup>
+              <thead><tr><th style="padding-left:20px">周期</th><th>周次</th><th>生成时间</th><th>本周收款</th><th>核销入账</th><th>完成课时</th><th>场地使用时长</th><th>场地利用率</th><th class="tms-sticky-r" style="width:264px;padding-right:20px;text-align:right">操作</th></tr></thead>
+              <tbody>${weeklyReportsRows.length ? weeklyReportsRows.map(weeklyReportRowHtml).join('') : '<tr><td colspan="9"><div class="tms-empty-state"><div class="tms-empty-title">暂无周报</div></div></td></tr>'}</tbody>
             </table>
           </div>
         </div>
@@ -74,10 +74,11 @@ function weeklyReportRowHtml(row = {}) {
     <td style="padding-left:20px">${renderStandardCellText(weeklyReportPeriodText(row), false)}</td>
     <td>${renderStandardCellText(weeklyReportWeekText(row), false)}</td>
     <td>${renderStandardCellText(weeklyReportGeneratedAtText(row.generatedAt), false)}</td>
-    <td>${weeklyReportMoney(weeklyReportSummaryValue(row, 'totalIncome'))}</td>
     <td>${weeklyReportMoney(weeklyReportSummaryValue(row, 'cashReceived'))}</td>
-    <td>${fmt(weeklyReportSummaryValue(row, 'courtUtilizationRate'))}%</td>
+    <td>${weeklyReportMoney(weeklyReportSummaryValue(row, 'totalIncome'))}</td>
     <td>${weeklyReportHours(weeklyReportSummaryValue(row, 'coachHours'))}</td>
+    <td>${weeklyReportHours(weeklyReportSummaryValue(row, 'courtUsageHours'))}</td>
+    <td>${fmt(weeklyReportSummaryValue(row, 'courtUtilizationRate'))}%</td>
     <td class="tms-sticky-r tms-action-cell" style="width:264px;padding-right:20px;text-align:right">
       <span class="tms-action-link" onclick="openWeeklyReport('${esc(row.shareUrl || '')}')">查看</span>
       <span class="tms-action-link" onclick="copyWeeklyReportLink('${esc(row.shareUrl || '')}')">复制链接</span>

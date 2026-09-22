@@ -1610,7 +1610,21 @@ function buildWeeklyBusinessReportSnapshot({
   const token = String(shareToken || crypto.randomBytes(16).toString('hex')).trim();
   const financeSummary = buildWeeklyFinanceSummary(raw, period, previousRaw, operations, previous);
   const totalLeads = cardValue(operations, ['conversion', 'cards', 'totalLeads']);
-  const reportSections = buildWeeklyReportSections(operations, previous, { period, raw, previousRaw, financeSummary, trendOperationsPayloads });
+  const hasLifetimeCourseFacts = [
+    totalRaw.purchases,
+    totalRaw.entitlements,
+    totalRaw.financeNormalizedRows,
+    totalRaw.financialLedger
+  ].some(rows => Array.isArray(rows) && rows.length > 0);
+  const lifetimeRaw = hasLifetimeCourseFacts ? totalRaw : raw;
+  const reportSections = buildWeeklyReportSections(operations, previous, {
+    period,
+    raw,
+    previousRaw,
+    lifetimeRaw,
+    financeSummary,
+    trendOperationsPayloads
+  });
   if (Array.isArray(trendFallbackRows) && trendFallbackRows.length) {
     reportSections.trends = trendFallbackRows;
   }
@@ -1914,6 +1928,7 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
   const period = context.period || {};
   const raw = context.raw || {};
   const previousRaw = context.previousRaw || {};
+  const lifetimeRaw = context.lifetimeRaw || raw;
   const weeklyFinance = context.financeSummary || buildWeeklyFinanceSummary(raw, period, previousRaw, operations, previous);
   const overview = operations.overview || {};
   const prevOverview = previous.overview || {};
@@ -1929,6 +1944,13 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
   const prevStoredValueAmount = findRevenueMixValue(prevRevenueMix, ['会员储值']) ?? optionalCardNumber(prevOverview, ['storedValueIncome']);
   const rawStoredValue = raw.membershipOrders || raw.membershipAccounts || raw.courtAccountListIndexRows ? buildStoredValueFromRaw(raw, period, previousRaw) : null;
   const rawCourseRevenue = raw.purchases || raw.entitlements || raw.financeNormalizedRows || raw.schedule ? buildCourseRevenueFromRaw(raw, period, previousRaw) : null;
+  const lifetimeCourseRevenue = lifetimeRaw.purchases || lifetimeRaw.entitlements || lifetimeRaw.financeNormalizedRows || lifetimeRaw.schedule
+    ? buildCourseRevenueFromRaw(lifetimeRaw, { endDate: period.endDate }, {})
+    : null;
+  const hasLifetimePurchases = normalizeRows(lifetimeRaw.purchases).length > 0;
+  const hasLifetimeEntitlements = normalizeRows(lifetimeRaw.entitlements).length > 0;
+  const hasLifetimeCourseFinance = normalizeRows(lifetimeRaw.financeNormalizedRows).some(isCourseFinanceRow)
+    || normalizeRows(lifetimeRaw.financialLedger).some(isCourseFinanceRow);
   const courseAmount = findRevenueMixValue(revenueMix, ['课程']) ?? optionalCardNumber(overview, ['courseIncome']);
   const prevCourseAmount = findRevenueMixValue(prevRevenueMix, ['课程']) ?? optionalCardNumber(prevOverview, ['courseIncome']);
   const courseConsumedAmount = optionalCardNumber(overview, ['courseRecognized']);
@@ -1980,10 +2002,11 @@ function buildWeeklyReportSections(operations = {}, previous = {}, context = {})
         typeRows: rawStoredValue?.typeRows ?? (storedValueAmount === null ? [] : [{ type: '会员储值', amount: storedValueAmount, share: percent(storedValueAmount, cardNumber(overview, ['totalIncome'])) }])
       },
       course: {
-        totalPeople: rawCourseRevenue?.totalPeople ?? optionalCardNumber(overview, ['courseIncomePeople', 'courseStudents']),
-        activePrivatePackagePeople: rawCourseRevenue?.activePrivatePackagePeople ?? null,
-        totalAmount: rawCourseRevenue?.totalAmount ?? courseAmount,
-        totalConsumedAmount: rawCourseRevenue?.totalConsumedAmount || courseConsumedAmount,
+        // 顶部四项是截至报告结束日的累计值，不能复用本周 rawCourseRevenue。
+        totalPeople: (hasLifetimePurchases ? lifetimeCourseRevenue?.totalPeople : rawCourseRevenue?.totalPeople) ?? optionalCardNumber(overview, ['courseIncomePeople', 'courseStudents']),
+        activePrivatePackagePeople: (hasLifetimeEntitlements ? lifetimeCourseRevenue?.activePrivatePackagePeople : rawCourseRevenue?.activePrivatePackagePeople) ?? null,
+        totalAmount: (hasLifetimePurchases ? lifetimeCourseRevenue?.totalAmount : rawCourseRevenue?.totalAmount) ?? courseAmount,
+        totalConsumedAmount: (hasLifetimeCourseFinance ? lifetimeCourseRevenue?.totalConsumedAmount : rawCourseRevenue?.totalConsumedAmount) ?? courseConsumedAmount,
         totalRepeatRate: rawCourseRevenue?.totalRepeatRate ?? optionalCardNumber(overview, ['courseRepeatRate', 'packageRepeatRate']),
         paidPeople: rawCourseRevenue?.paidPeople ?? optionalCardNumber(overview, ['paidCoursePeople', 'newCourseIncomePeople', 'newCourseStudents']),
         newPeople: rawCourseRevenue?.newPeople ?? optionalCardNumber(overview, ['newCourseIncomePeople', 'newCourseStudents']),

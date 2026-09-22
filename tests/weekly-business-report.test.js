@@ -619,6 +619,45 @@ assert.notStrictEqual(rawSnapshot.sections.coach.rows[0].lessonRows[0].student, 
 assert.strictEqual(rawSnapshot.sections.conversion.trialDeals, 1, 'conversion top trial deals should equal source row total');
 assert.ok(rawSnapshot.sections.conversion.sourceRows.find(row => row.source === '抖音' && row.leads === 0), 'conversion source table should include standard zero-value sources');
 
+const cumulativeCourseScopeSnapshot = buildWeeklyBusinessReportSnapshot({
+  period: nextPeriod,
+  operationsPayload: {
+    operations: { overview: { cards: { totalIncome: { value: 1 }, recognizedRevenue: { value: 1 } } } },
+    weeklyReportRaw: {
+      purchases: [{ id: 'week37-purchase', studentId: 'week37-student', courseType: '私教课', packageName: '1v1私教课', amountPaid: 5500, purchaseDate: '2026-09-05', status: 'active', campus: 'shunyi_mapo' }],
+      entitlements: [{ id: 'week37-entitlement', studentId: 'week37-student', courseType: '私教课', remainingLessons: 8, validUntil: '2026-12-31', status: 'active', campus: 'shunyi_mapo' }],
+      financeNormalizedRows: [{ id: 'week37-consume', businessDate: '2026-09-06', businessType: '课程', action: '消耗', recognizedRevenueDelta: 2000, campusName: '顺义马坡' }]
+    }
+  },
+  previousOperationsPayload: { operations: {}, weeklyReportRaw: {} },
+  totalOperationsPayload: {
+    operations: {},
+    weeklyReportRaw: {
+      purchases: [
+        { id: 'older-purchase', studentId: 'older-student', courseType: '私教课', packageName: '1v1私教课', amountPaid: 4500, purchaseDate: '2026-08-20', status: 'active', campus: 'shunyi_mapo' },
+        { id: 'week37-purchase', studentId: 'week37-student', courseType: '私教课', packageName: '1v1私教课', amountPaid: 5500, purchaseDate: '2026-09-05', status: 'active', campus: 'shunyi_mapo' }
+      ],
+      entitlements: [
+        { id: 'older-entitlement', studentId: 'older-student', courseType: '私教课', remainingLessons: 3, validUntil: '2026-12-31', status: 'active', campus: 'shunyi_mapo' },
+        { id: 'week37-entitlement', studentId: 'week37-student', courseType: '私教课', remainingLessons: 8, validUntil: '2026-12-31', status: 'active', campus: 'shunyi_mapo' }
+      ],
+      financeNormalizedRows: [
+        { id: 'older-consume', businessDate: '2026-08-25', businessType: '课程', action: '消耗', recognizedRevenueDelta: 1000, campusName: '顺义马坡' },
+        { id: 'week37-consume', businessDate: '2026-09-06', businessType: '课程', action: '消耗', recognizedRevenueDelta: 2000, campusName: '顺义马坡' }
+      ]
+    }
+  },
+  shareToken: 'token-cumulative-course-scope',
+  baseUrl: 'https://www.flowtennis.cn'
+});
+assert.strictEqual(cumulativeCourseScopeSnapshot.sections.revenue.course.totalPeople, 2, 'course top people must use lifetime facts instead of current-week purchases');
+assert.strictEqual(cumulativeCourseScopeSnapshot.sections.revenue.course.totalAmount, 10000, 'course top amount must use lifetime purchases instead of current-week amount');
+assert.strictEqual(cumulativeCourseScopeSnapshot.sections.revenue.course.totalConsumedAmount, 3000, 'course top consumed amount must use lifetime recognized revenue');
+assert.strictEqual(cumulativeCourseScopeSnapshot.sections.revenue.course.activePrivatePackagePeople, 2, 'course top active people must use entitlements as of report end');
+assert.strictEqual(cumulativeCourseScopeSnapshot.sections.revenue.course.paidPeople, 1, 'course weekly paid people must remain current-week data');
+assert.strictEqual(cumulativeCourseScopeSnapshot.sections.revenue.course.newAmount, 5500, 'course weekly sales amount must remain current-week data');
+assert.strictEqual(cumulativeCourseScopeSnapshot.sections.revenue.course.consumedAmount, 2000, 'course weekly consumed amount must remain current-week data');
+
 const storedValueReadModelSnapshot = buildWeeklyBusinessReportSnapshot({
   period,
   operationsPayload: {
@@ -1329,14 +1368,15 @@ assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow sh
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260922-weekly-regenerate-auto-prepare-v2/, 'admin shell should bust weekly report page script cache after automatic snapshot preparation fix');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260922-weekly-cumulative-metrics-and-court-hours-v1/, 'admin shell should bust weekly report page script cache after cumulative metric and court hours fix');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_REQUEST_TIMEOUT_MS\s*=\s*10000/, 'each weekly report regeneration request should have a bounded timeout');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_LIMIT\s*=\s*120/, 'weekly report regeneration should retry automatic snapshot preparation for the background rebuild window');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_DELAY_MS\s*=\s*5000/, 'weekly report regeneration should wait between automatic snapshot preparation retries');
 assert.match(indexHtml, /api\.js\?v=20260918-weekly-report-timeout-message-v1/, 'admin shell should bust weekly report timeout message script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
 assert.doesNotMatch(weeklyPageSource, /顺义马坡每周周报|重新生成本周周报|editWeeklyReportRemark/, 'admin weekly report list should remove the old title block, top regenerate button and remark action');
-assert.match(weeklyPageSource, /周次[\s\S]*核销入账[\s\S]*本周收款[\s\S]*场地利用率[\s\S]*完成课时/, 'admin weekly report list should show the requested columns');
+assert.match(weeklyPageSource, /周期[\s\S]*周次[\s\S]*生成时间[\s\S]*本周收款[\s\S]*核销入账[\s\S]*完成课时[\s\S]*场地使用时长[\s\S]*场地利用率[\s\S]*操作/, 'admin weekly report list should show the requested columns in order');
+assert.match(weeklyPageSource, /weeklyReportSummaryValue\(row, 'courtUsageHours'\)/, 'admin weekly report list should show court usage hours excluding internal usage');
 assert.match(weeklyPageSource, /查看[\s\S]*复制链接[\s\S]*重新生成/, 'admin weekly report list should keep regenerate clickable');
 assert.doesNotMatch(weeklyPageSource, /营业收入/, 'admin weekly report list should rename revenue copy to recognized revenue');
 assert.match(weeklyPageSource, /weekly-report-table[\s\S]*width:100%;min-width:1180px[\s\S]*table-layout:fixed/, 'admin weekly report list should fill the card while keeping compact fixed column widths');
