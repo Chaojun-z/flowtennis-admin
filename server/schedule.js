@@ -93,8 +93,9 @@ function scheduleLessonChargeStatus(rec,ledger=[]){
   const used=(ledger||[]).some(l=>l.scheduleId===rec.id&&l.entitlementId===rec.entitlementId&&parseLessonValue(l.lessonDelta)<0);
   return used?'已扣课':'扣课异常';
 }
-function assertCanWriteSchedule(user){
+function assertCanWriteSchedule(user,context={}){
   if(user?.role==='admin')return;
+  if(context?.source==='agent-confirm'&&context?.agentWriteAllowed===true&&user?.role==='operator')return;
   throw new Error('无权限');
 }
 function shareStudent(a,b){

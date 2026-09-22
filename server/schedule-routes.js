@@ -70,16 +70,16 @@ function createScheduleRoutes(deps={}){
     return result;
   }
 
-  return async function handleScheduleRoutes({path,method,body,user,res}){
+  return async function handleScheduleRoutes({path,method,body,user,res,requestContext={}}){
     if(path==='/schedule'){
       await init();
       if(method==='GET'){if(user.role==='admin'){const rows=await getScheduleListRows();return sendJson(res,filterLoadAllForUser({schedule:rows},user).schedule);}const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);return sendJson(res,await getCoachScheduleRowsForUser(user,buildCoachRefs({coaches,users})));}
       if(method==='POST'){
         return timedEndpointMetric('schedule.save',async()=>{
-          try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
+          try{assertCanWriteSchedule(user,requestContext);}catch(e){return sendJson(res,{error:e.message},403);}
           const id=uuidv4();
           const now=new Date().toISOString();
-          const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now});
+          const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now,operationId:requestContext.operationId||''});
           const linkedScheduleGroupId=body.allowLinkedVenueConflict?String(body.linkedScheduleGroupId||id).trim():'';
           const r=normalizeScheduleAuthorizedUseFields(withOperationTrace({...body,...normalizeCoachLateInfo(body),...normalizeScheduleFieldFee(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',allowLinkedVenueConflict:!!body.allowLinkedVenueConflict,linkedScheduleGroupId,createdBy:user.name,createdAt:now,updatedAt:now},operationTrace));
           let validation;

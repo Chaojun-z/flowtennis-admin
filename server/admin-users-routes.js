@@ -12,7 +12,8 @@ function createAdminUserRoutes(deps={}){
       await init();
       const{id,name,password,role,coachId,coachName}=body;
       if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);
-      const nextRole=role||'editor';
+      const requestedRole=String(role||'editor').trim();
+      const nextRole=['admin','editor','operator'].includes(requestedRole)?requestedRole:'editor';
       const hashed=await bcrypt.hash(password,10);
       const nextCoachName=coachName||(nextRole==='editor'?name:'');
       const phone=assertPhone(body.phone||'');
@@ -28,7 +29,8 @@ function createAdminUserRoutes(deps={}){
       if(!id)return sendJson(res,{error:'缺少用户ID'},400);
       const u=await get(T_USERS,id);
       if(!u)return sendJson(res,{error:'用户不存在'},404);
-      const nextRole=String(body.role||u.role||'editor').trim()==='admin'?'admin':'editor';
+      const requestedRole=String(body.role||u.role||'editor').trim();
+      const nextRole=['admin','editor','operator'].includes(requestedRole)?requestedRole:'editor';
       let updates={...u,role:nextRole,coachId:nextRole==='editor'?(coachId||''):'',status:status||u.status||'active'};
       if(body.name)updates.name=body.name;
       if(Object.prototype.hasOwnProperty.call(body,'phone'))updates.phone=assertPhone(body.phone||'');

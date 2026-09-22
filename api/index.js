@@ -20,6 +20,7 @@ const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics
 const { createAuthServices } = require('../server/auth');
 const { createStorageServices } = require('../server/storage');
 const { createAuthRoutes } = require('../server/auth-routes');
+const { createAgentRoutes } = require('../server/agent-routes');
 const { createCourtAccountListIndexSync } = require('../server/page-data/court-account-list-index.js');
 const { createCourtAccountListSnapshotSync } = require('../server/page-data/court-account-list-snapshot.js');
 const { createScheduleListSnapshotSync } = require('../server/page-data/schedule-list-snapshot.js');
@@ -106,12 +107,12 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'legacy-coach-tianhao',name:'天昊'},
   {id:'老吴',name:'刘润扬教练'}
 ];
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_AUTHORIZATIONS='ft_entitlement_authorizations',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_COURT_ACCOUNT_LIST_INDEX='ft_court_account_list_index',T_COURT_ACCOUNT_LIST_INDEX_TASKS='ft_court_account_list_index_tasks',T_COURT_ACCOUNT_LIST_SNAPSHOT='ft_court_account_list_snapshot',T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS='ft_court_account_list_snapshot_tasks',T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot',T_SCHEDULE_LIST_SNAPSHOT_TASKS='ft_schedule_list_snapshot_tasks',T_OPERATIONS_SNAPSHOT='ft_operations_snapshot',T_OPERATIONS_SNAPSHOT_TASKS='ft_operations_snapshot_tasks',T_WEEKLY_BUSINESS_REPORTS=WEEKLY_REPORT_TABLE,T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_SCHEDULE_CONFLICT_INDEX='ft_schedule_conflict_index',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_AUTHORIZATIONS='ft_entitlement_authorizations',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_COURT_ACCOUNT_LIST_INDEX='ft_court_account_list_index',T_COURT_ACCOUNT_LIST_INDEX_TASKS='ft_court_account_list_index_tasks',T_COURT_ACCOUNT_LIST_SNAPSHOT='ft_court_account_list_snapshot',T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS='ft_court_account_list_snapshot_tasks',T_SCHEDULE_LIST_SNAPSHOT='ft_schedule_list_snapshot',T_SCHEDULE_LIST_SNAPSHOT_TASKS='ft_schedule_list_snapshot_tasks',T_OPERATIONS_SNAPSHOT='ft_operations_snapshot',T_OPERATIONS_SNAPSHOT_TASKS='ft_operations_snapshot_tasks',T_WEEKLY_BUSINESS_REPORTS=WEEKLY_REPORT_TABLE,T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_STUDENT_TEACHING_SUMMARY='ft_student_teaching_summary',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches',T_FEISHU_SCHEDULE_SYNC='ft_feishu_schedule_sync',T_FEISHU_SCHEDULE_TASKS='ft_feishu_schedule_tasks',T_AGENT_SCHEDULE_PREVIEWS='ft_agent_schedule_previews',T_AGENT_OPERATIONS='ft_agent_operations';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS,T_SCHEDULE_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT_TASKS,T_OPERATIONS_SNAPSHOT,T_OPERATIONS_SNAPSHOT_TASKS,T_WEEKLY_BUSINESS_REPORTS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_SCHEDULE_CONFLICT_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_STUDENT_TEACHING_SUMMARY,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,T_FEISHU_SCHEDULE_SYNC,T_FEISHU_SCHEDULE_TASKS,T_COURT_ACCOUNT_LIST_INDEX,T_COURT_ACCOUNT_LIST_INDEX_TASKS,T_COURT_ACCOUNT_LIST_SNAPSHOT,T_COURT_ACCOUNT_LIST_SNAPSHOT_TASKS,T_SCHEDULE_LIST_SNAPSHOT,T_SCHEDULE_LIST_SNAPSHOT_TASKS,T_OPERATIONS_SNAPSHOT,T_OPERATIONS_SNAPSHOT_TASKS,T_WEEKLY_BUSINESS_REPORTS,T_AGENT_SCHEDULE_PREVIEWS,T_AGENT_OPERATIONS,...MEMBERSHIP_TABLES];
 const HOT_SCAN_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -4470,6 +4471,38 @@ const handleAuthRoutes=createAuthRoutes({
   fetchWechatSession,extractWechatOpenId,getWechatUserByOpenId,
   get,put,bcrypt,bindWechatUserWithIndex,T_USERS
 });
+const handleAgentRoutes=createAgentRoutes({
+  sendJson:routeSendJson,
+  getCachedScan,
+  getFastStudentsRead,
+  get,
+  put,
+  putIfAbsent,
+  mkTable,
+  createSchedule:(body,user,requestContext)=>callInternalJsonRoute(handleScheduleRoutes,{path:'/schedule',method:'POST',body,user,requestContext}),
+  validateScheduleSave,
+  resolveScheduleEntitlementDeltas,
+  assertScheduleEntitlementRequired,
+  assertScheduleEntitlementDeltasRequired,
+  assertScheduleEntitlementCapacity,
+  assertScheduleFieldFeeInput,
+  buildCoachRefs,
+  uuidv4,
+  getScheduleListRows,
+  listCampusesWithDefaults,
+  tables:{
+    leads:T_LEADS,
+    students:T_STUDENTS,
+    schedule:T_SCHEDULE,
+    users:T_USERS,
+    entitlements:T_ENTITLEMENTS,
+    campuses:T_CAMPUSES,
+    coaches:T_COACHES,
+    courts:T_COURTS,
+    previews:T_AGENT_SCHEDULE_PREVIEWS,
+    operations:T_AGENT_OPERATIONS
+  }
+});
 const handleMatchRoutes=createMatchRoutes({
   sendJson:routeSendJson,uuidv4,MATCH_MINIPROGRAM_SECRET,isProductionRuntime,fetchWechatSession,extractWechatOpenId,
   getMatchSqlPool,buildMatchUserToken,canMatchUserCreate,ensureMatchUserResponse,
@@ -7147,6 +7180,10 @@ module.exports = async (req, res) => {
     if(await weeklyBusinessReportRoutes.handleCron({path,method,req,res}))return;
     if(path==='/cron/third-party-sync-center'&&await handleThirdPartySyncCenterRoutes({path,method,body,req,res,query}))return;if(await handleFeishuScheduleSyncRoutes({path,method,body,req,res,query}))return;
     if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;
+    if(path.startsWith('/agent/v1/')){
+      const anonymousAgentUser=authUser(req);
+      if(!anonymousAgentUser)return handleAgentRoutes({path,method,body,user:null,req,res,query});
+    }
     if(await handleMatchRoutes({path,method,body,req,res,query}))return;
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
     if(user.type==='match_user')return sendJson(res,{error:'无管理端权限'},403);
@@ -7156,6 +7193,7 @@ module.exports = async (req, res) => {
     if(process.env.DEBUG_COURT_SNAPSHOT_TIMING==='true')console.log(`[court-snapshot-debug] auth-user ${Date.now()-authTimingStartedAt}ms`);
     user=mergeStoredAuthUser(user,storedAuthUser);
     try{assertAuthUserActive(user);}catch(e){return sendJson(res,{error:e.message},403);}
+    if(await handleAgentRoutes({path,method,body,user,req,res,query}))return;
     if(await handlePackageBoardRoutes({path,method,body,user,res}))return;
     if(await handleMatchRoutes({path,method,body,req,res,user,query}))return;if(await handleThirdPartySyncCenterRoutes({path,method,body,user,req,res,query}))return;
     if(await handleAdminUserRoutes({path,method,body,user,res}))return;

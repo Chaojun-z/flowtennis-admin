@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "test:agent-routes": "node tests/agent-routes.test.js",
+    "test:agent-schedule-write": "node tests/agent-schedule-write.test.js",
+    "pretest": "npm run test:agent-routes && npm run test:agent-schedule-write",
     "dev": "node scripts/dev-server.js",
     "test:schedule-package-binding": "node tests/schedule-package-binding-guard.test.js",
     "test:entitlement-recommend-legacy-student-id": "node tests/entitlement-recommend-legacy-student-id.test.js",
