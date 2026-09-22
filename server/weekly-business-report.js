@@ -3169,6 +3169,7 @@ async function generateWeeklyBusinessReport({
   let totalOperationsPayload = null;
   let totalSnapshotBaseRows = null;
   let canDeriveFromLifetime = false;
+  let lifetimeSnapshotMissingSchedule = false;
   const missingSnapshotScopes = [];
   let trendOperationsPayloads = [];
   if (forceFreshSource) {
@@ -3216,6 +3217,12 @@ async function generateWeeklyBusinessReport({
         && weeklyPayloadHasRawFacts(totalOperationsPayload)
         && Array.isArray(totalOperationsPayload.weeklyReportRaw?.schedule)
         && totalOperationsPayload.weeklyReportRaw.schedule.length > 0
+      );
+      lifetimeSnapshotMissingSchedule = Boolean(
+        totalOperationsPayload?.weeklyReportRaw
+        && weeklyPayloadHasRawFacts(totalOperationsPayload)
+        && Array.isArray(totalOperationsPayload.weeklyReportRaw.schedule)
+        && totalOperationsPayload.weeklyReportRaw.schedule.length === 0
       );
       if (canDeriveFromLifetime) {
         const baseRowsOverride = totalSnapshotBaseRows;
@@ -3269,50 +3276,63 @@ async function generateWeeklyBusinessReport({
         ? []
         : [{ period: {}, payload: { operations: {}, weeklyReportRaw: totalOperationsPayload.weeklyReportRaw } }];
     } else if (typeof loadOperationsSnapshot === 'function') {
-    const loadedTrendKeys = new Set([
-      `${period.startDate}:${period.endDate}`,
-      `${period.previousStartDate}:${period.previousEndDate}`
-    ]);
-    const trendPeriods = resolveTrailingWeeklyPeriods(period, 8)
-      .filter(item => !loadedTrendKeys.has(`${item.startDate}:${item.endDate}`));
-    let shouldLoadLiveTrendWindow = false;
-    for (const trendPeriod of trendPeriods) {
-      const trendScope = {
-        ...scope,
-        dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
-        metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
-      };
-      const payload = canDeriveFromLifetime
-        ? await loadOperationsPayload({ user, scope: trendScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null)
-        : generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
-          ? null
-          : await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: false }).catch(() => null);
-      if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
-      if (canDeriveFromLifetime && payload) continue;
-      if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) {
-        const derivedPayload = !canDeriveFromLifetime && generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
+      const loadedTrendKeys = new Set([
+        `${period.startDate}:${period.endDate}`,
+        `${period.previousStartDate}:${period.previousEndDate}`
+      ]);
+      const trendPeriods = resolveTrailingWeeklyPeriods(period, 8)
+        .filter(item => !loadedTrendKeys.has(`${item.startDate}:${item.endDate}`));
+      let shouldLoadLiveTrendWindow = false;
+      for (const trendPeriod of trendPeriods) {
+        const trendScope = {
+          ...scope,
+          dateRange: { startDate: trendPeriod.startDate, endDate: trendPeriod.endDate },
+          metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriod.startDate, endDate: trendPeriod.endDate }
+        };
+        const payload = canDeriveFromLifetime
           ? await loadOperationsPayload({ user, scope: trendScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null)
-          : null;
-        if (weeklyPayloadHasFinanceFactsInPeriod(derivedPayload, trendPeriod)) {
-          trendOperationsPayloads.push({ period: trendPeriod, payload: derivedPayload });
-        } else {
-          shouldLoadLiveTrendWindow = true;
-          if (!allowLiveFallback) missingSnapshotScopes.push(trendScope);
+          : generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
+            ? null
+            : await loadOperationsSnapshot({ user: snapshotUser, scope: trendScope, allowRefreshing: false }).catch(() => null);
+        if (payload) trendOperationsPayloads.push({ period: trendPeriod, payload });
+        if (canDeriveFromLifetime && payload) continue;
+        if (!weeklyPayloadHasFinanceFactsInPeriod(payload, trendPeriod)) {
+          const derivedPayload = !canDeriveFromLifetime && generationMode === 'manual' && !allowLiveFallback && baseRowsOverride
+            ? await loadOperationsPayload({ user, scope: trendScope, baseRowsOverride, weeklyReportLiveSource: true }).catch(() => null)
+            : null;
+          if (weeklyPayloadHasFinanceFactsInPeriod(derivedPayload, trendPeriod)) {
+            trendOperationsPayloads.push({ period: trendPeriod, payload: derivedPayload });
+          } else {
+            shouldLoadLiveTrendWindow = true;
+            if (!allowLiveFallback) missingSnapshotScopes.push(trendScope);
+          }
+        }
+      }
+      if (allowLiveFallback && generationMode === 'manual' && shouldLoadLiveTrendWindow && trendPeriods.length) {
+        const trendWindowScope = {
+          ...scope,
+          dateRange: { startDate: trendPeriods[0].startDate, endDate: period.endDate },
+          metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriods[0].startDate, endDate: period.endDate }
+        };
+        const trendWindowPayload = await loadOperationsPayload({ user, scope: trendWindowScope, weeklyReportLiveSource: true }).catch(() => null);
+        if (weeklyPayloadHasRawFacts(trendWindowPayload)) {
+          trendOperationsPayloads.push({ period: trendWindowScope.dateRange, payload: trendWindowPayload });
         }
       }
     }
-    if (allowLiveFallback && generationMode === 'manual' && shouldLoadLiveTrendWindow && trendPeriods.length) {
-      const trendWindowScope = {
-        ...scope,
-        dateRange: { startDate: trendPeriods[0].startDate, endDate: period.endDate },
-        metricScope: { campusName: WEEKLY_REPORT_CAMPUS_NAME, startDate: trendPeriods[0].startDate, endDate: period.endDate }
-      };
-      const trendWindowPayload = await loadOperationsPayload({ user, scope: trendWindowScope, weeklyReportLiveSource: true }).catch(() => null);
-      if (weeklyPayloadHasRawFacts(trendWindowPayload)) {
-        trendOperationsPayloads.push({ period: trendWindowScope.dateRange, payload: trendWindowPayload });
-      }
-    }
-    }
+  }
+  if (lifetimeSnapshotMissingSchedule) {
+    const derivePeriodPayloadFromSnapshot = async (payload, targetScope) => {
+      if (!payload?.weeklyReportRaw || typeof loadOperationsPayload !== 'function') return null;
+      return loadOperationsPayload({
+        user,
+        scope: targetScope,
+        baseRowsOverride: weeklyRawToBaseRows(payload.weeklyReportRaw),
+        weeklyReportLiveSource: true
+      }).catch(() => null);
+    };
+    operationsPayload = await derivePeriodPayloadFromSnapshot(operationsPayload, scope);
+    previousOperationsPayload = await derivePeriodPayloadFromSnapshot(previousOperationsPayload, previousScope);
   }
   if (missingSnapshotScopes.length) {
     throw weeklyReportSnapshotNotReadyError(missingSnapshotScopes, snapshotUser);

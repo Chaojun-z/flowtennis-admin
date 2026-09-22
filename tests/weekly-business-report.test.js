@@ -1923,6 +1923,7 @@ async function callFastRegenerationFromLifetimeSnapshot() {
 async function callRegenerationFallsBackWhenLifetimeScheduleIsEmpty() {
   const savedRows = [];
   const snapshotScopes = [];
+  let derivedLoads = 0;
   const lifetimePayload = {
     operations: { overview: { cards: { totalIncome: { value: 999999 } } } },
     weeklyReportRaw: {
@@ -1951,7 +1952,15 @@ async function callRegenerationFallsBackWhenLifetimeScheduleIsEmpty() {
     put: async (_table, _id, row) => { savedRows.push(row); },
     mkTable: async () => {},
     loadOperationsPayload: async ({ baseRowsOverride }) => {
-      assert.fail(`空排课生命周期快照不应触发源表兜底，收到 baseRowsOverride=${Boolean(baseRowsOverride)}`);
+      derivedLoads += 1;
+      assert.ok(baseRowsOverride, '专用周快照必须先转成内存原始事实再按周计算');
+      return {
+        ...operationsPayloadWithRawFacts,
+        weeklyReportRaw: {
+          ...operationsPayloadWithRawFacts.weeklyReportRaw,
+          purchases: [{ id: 'period-purchase', studentId: 'period-student', courseType: '私教课', amountPaid: 1000, purchaseDate: period.startDate, status: 'active', campus: 'shunyi_mapo' }]
+        }
+      };
     },
     loadOperationsSnapshot: async ({ scope }) => {
       const startDate = scope?.dateRange?.startDate || 'lifetime';
@@ -1960,7 +1969,7 @@ async function callRegenerationFallsBackWhenLifetimeScheduleIsEmpty() {
       return operationsPayloadWithRawFacts;
     }
   });
-  return { result, savedRows, snapshotScopes };
+  return { result, savedRows, snapshotScopes, derivedLoads };
 }
 
 async function callManualRegenerationRepairsRawlessZeroTrendSnapshots() {
@@ -2712,6 +2721,8 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.ok(fastRegenerationResult.derivedLoads >= 1, 'complete lifetime snapshot should derive current metrics and trends in memory');
   assert.strictEqual(fastRegenerationResult.snapshotLoads, 1, 'complete lifetime snapshot should not probe current, previous, or trend snapshot shards');
   assert.deepStrictEqual(emptyLifetimeScheduleResult.snapshotScopes.slice(0, 3), ['lifetime', period.startDate, period.previousStartDate], 'lifetime snapshot without排课事实 must fall back to current and previous weekly snapshots');
+  assert.ok(emptyLifetimeScheduleResult.derivedLoads >= 2, '专用周快照必须先按当前周范围派生经营数据');
+  assert.strictEqual(emptyLifetimeScheduleResult.savedRows[0].sections.revenue.course.totalPeople, 1, '专用周快照派生后购课人数必须按当前周统计');
   assert.ok(emptyLifetimeScheduleResult.savedRows[0].sections.coach.totalHours > 0, 'lifetime snapshot without排课事实 must not publish zero coach hours');
   assert.ok(emptyLifetimeScheduleResult.savedRows[0].sections.court.usageRows.find(row => row.key === 'course')?.hours > 0, 'lifetime snapshot without排课事实 must not publish zero course court hours');
   assert.strictEqual(rawlessZeroTrendResult.liveLoads, 4, 'manual regeneration should live-load current, previous, lifetime and trailing trend windows when stored snapshots lack finance facts');
