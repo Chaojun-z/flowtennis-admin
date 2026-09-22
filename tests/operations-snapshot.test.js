@@ -490,6 +490,13 @@ async function main() {
   assert.strictEqual(processed.processed, 1, 'cron 处理器必须能消费待处理经营快照任务');
   assert.strictEqual(tableRows.get(queued.taskId).status, 'done', '待处理任务跑完后必须标记完成，避免页面一直卡在生成中');
 
+  const weeklyScope = { ...augustScope, view: 'weekly-report', includeWeeklyReportRaw: true };
+  const weeklyQueued = await sync.enqueueRebuildTask({ user, scope: weeklyScope, reason: 'weekly-report-manual-regeneration' });
+  const coachQueued = await sync.enqueueRebuildTask({ user, scope: { ...augustScope, startDate: '2026-08-15', endDate: '2026-08-21' }, reason: 'page-miss' });
+  await sync.processQueuedRebuilds({ limit: 1 });
+  assert.strictEqual(tableRows.get(weeklyQueued.taskId).status, 'done', '队列处理器必须优先消费周报任务，避免特殊历史周报被其他快照任务长期阻塞');
+  assert.strictEqual(tableRows.get(coachQueued.taskId).status, 'pending', '周报任务优先时普通教练快照任务应留在队列中');
+
   await sync.recordSourceChange({ sourceTable: 'ft_schedule', op: 'put', id: 'schedule-1' });
   assert.ok(
     writes.some(row => row.id === taskIdForScopeKey(julyKey) && row.row.status === 'pending'),

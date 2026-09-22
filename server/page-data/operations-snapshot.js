@@ -974,6 +974,10 @@ function createOperationsSnapshotSync(deps = {}) {
       if (includeFailed && status === 'failed') return true;
       if (status === 'running') return timestampMs(row.updatedAt) < staleRunningCutoff;
       return false;
+    }).sort((left, right) => {
+      const leftPriority = text(left.scope?.view) === 'weekly-report' ? 0 : 1;
+      const rightPriority = text(right.scope?.view) === 'weekly-report' ? 0 : 1;
+      return leftPriority - rightPriority || timestampMs(left.updatedAt) - timestampMs(right.updatedAt);
     }).slice(0, Math.max(1, Math.min(parseInt(limit, 10) || 3, 10)));
     const tasks = [];
     for (const row of candidates) {
