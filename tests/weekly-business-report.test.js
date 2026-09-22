@@ -2724,6 +2724,7 @@ Promise.all([callPublicRoute(), callPublicEditRoute(), callWeeklyReportListWithU
   assert.ok(emptyLifetimeScheduleResult.derivedLoads >= 2, '专用周快照必须先按当前周范围派生经营数据');
   assert.strictEqual(emptyLifetimeScheduleResult.savedRows[0].sections.revenue.course.totalPeople, 1, '专用周快照派生后购课人数必须按当前周统计');
   assert.ok(emptyLifetimeScheduleResult.savedRows[0].sections.coach.totalHours > 0, 'lifetime snapshot without排课事实 must not publish zero coach hours');
+  assert.strictEqual(emptyLifetimeScheduleResult.savedRows[0].sections.coach.totalHours, emptyLifetimeScheduleResult.savedRows[0].sections.revenue.course.completedHours, '教练经营完成课时必须与课程上课课时共用去重后的排课事实');
   assert.ok(emptyLifetimeScheduleResult.savedRows[0].sections.court.usageRows.find(row => row.key === 'course')?.hours > 0, 'lifetime snapshot without排课事实 must not publish zero course court hours');
   assert.strictEqual(rawlessZeroTrendResult.liveLoads, 4, 'manual regeneration should live-load current, previous, lifetime and trailing trend windows when stored snapshots lack finance facts');
   assert.strictEqual(rawlessZeroTrendResult.result.shareToken, 'rawless-zero-trend-token', 'rawless zero trend repair should preserve the existing share link');

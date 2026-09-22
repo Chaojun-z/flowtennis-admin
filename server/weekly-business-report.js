@@ -746,7 +746,7 @@ function buildCoachFromSchedules(raw = {}, period = {}, previousRaw = {}) {
   const previousPeriod = { startDate: period.previousStartDate, endDate: period.previousEndDate };
   const build = (rows = [], targetPeriod = {}, nameMap = studentNameMap) => {
     const map = new Map();
-    normalizeRows(rows).filter(row => isValidSchedule(row, targetPeriod) && isCompletedCalendarSchedule(row)).forEach(row => {
+    dedupeScheduleRows(rows).filter(row => isValidSchedule(row, targetPeriod) && isCompletedCalendarSchedule(row)).forEach(row => {
       const clean = cleanCoachName(row.coach || row.coachName);
       if (!clean || clean === '小鹿' || (activeNames.size && !activeNames.has(clean))) return;
       const coach = normalizeCoachDisplayName(clean);
