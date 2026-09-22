@@ -982,10 +982,63 @@ function rawRecordToSourceRecord(row = {}) {
   };
 }
 
-function prechecksFromRawRecordsForBatch({ batchId = '', rawRecords = [], fallbackPrechecks = [], now = new Date().toISOString(), pricePlans = [] } = {}) {
+function importedSourceIds(importResults = []) {
+  return new Set((importResults || []).flatMap(result => (result.writtenIds || []).map(row => cleanText(row.sourceRecordId))).filter(Boolean));
+}
+
+function successfulBookingKeysFromHistory({ rawRecords = [], importResults = [], excludeBatchId = '' } = {}) {
+  const importedIds = importedSourceIds(importResults);
+  return new Set((rawRecords || [])
+    .filter(row => String(row.batchId || '') !== String(excludeBatchId || ''))
+    .map(row => ({ row, source: rawRecordToSourceRecord(row) }))
+    .filter(({ row, source }) => importedIds.has(recordSourceId(source)) && normalizeSourceType(source.sourceType) !== 'member-ledger')
+    .map(({ source }) => uniqueBookingKey(source))
+    .filter(Boolean));
+}
+
+function latestImportResultByBatch(importResults = []) {
+  const map = new Map();
+  for (const result of importResults || []) {
+    const batchId = cleanText(result.batchId);
+    if (!batchId) continue;
+    const current = map.get(batchId);
+    if (!current || String(result.importedAt || result.createdAt || '').localeCompare(String(current.importedAt || current.createdAt || '')) >= 0) map.set(batchId, result);
+  }
+  return map;
+}
+
+function failedThirdPartySyncRanges({ batches = [], importResults = [], now = new Date() } = {}) {
+  const latestResults = latestImportResultByBatch(importResults);
+  const byRange = new Map();
+  for (const batch of batches || []) {
+    const rangeStart = cleanText(batch.rangeStart);
+    const rangeEnd = cleanText(batch.rangeEnd);
+    if (!rangeStart || !rangeEnd) continue;
+    const key = `${rangeStart}|${rangeEnd}`;
+    const current = byRange.get(key);
+    const result = latestResults.get(cleanText(batch.batchId || batch.id));
+    const candidate = { batch, result };
+    if (!current || String(batch.pulledAt || batch.createdAt || '').localeCompare(String(current.batch.pulledAt || current.batch.createdAt || '')) >= 0) byRange.set(key, candidate);
+  }
+  const ranges = [];
+  for (const { batch, result } of byRange.values()) {
+    const failed = result ? ['failed', 'partial_failed'].includes(cleanText(result.status)) : cleanText(batch.status) === 'failed';
+    if (failed) ranges.push({ rangeStart: batch.rangeStart, rangeEnd: batch.rangeEnd });
+  }
+  const current = defaultDailyRange(now);
+  const seen = new Set();
+  return [current, ...ranges].filter(range => {
+    const key = `${range.rangeStart}|${range.rangeEnd}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function prechecksFromRawRecordsForBatch({ batchId = '', rawRecords = [], fallbackPrechecks = [], now = new Date().toISOString(), pricePlans = [], existingBookingKeys = new Set() } = {}) {
   const scopedRaw = (rawRecords || []).filter(row => String(row.batchId || '') === String(batchId || ''));
   if (!batchId || !scopedRaw.length) return (fallbackPrechecks || []).filter(row => !batchId || String(row.batchId || '') === String(batchId));
-  return precheckThirdPartyRecords(scopedRaw.map(rawRecordToSourceRecord), { batchId, now, pricePlans }).items;
+  return precheckThirdPartyRecords(scopedRaw.map(rawRecordToSourceRecord), { batchId, now, pricePlans, existingBookingKeys }).items;
 }
 
 function refreshPrechecksFromRawRecords({ rawRecords = [], fallbackPrechecks = [], now = new Date().toISOString(), pricePlans = [] } = {}) {
@@ -2654,12 +2707,27 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     tablesReady = true;
   }
 
+  async function recordCronSyncFailure({ rangeStart = '', rangeEnd = '', error = '', failedAt = now() } = {}) {
+    const dateKey = cleanText(rangeStart).slice(0, 10).replace(/-/g, '');
+    const batchId = `cxe-sync-failure-${dateKey || 'unknown'}`;
+    const batch = buildThirdPartySyncBatch({ id: batchId, rangeStart, rangeEnd, now: failedAt, counts: { totalSourceCount: 0, cronFailureCount: 1 }, financeImpact: {} });
+    await put(T_THIRD_PARTY_SYNC_BATCHES, batchId, {
+      ...batch,
+      status: 'failed',
+      failureAt: failedAt,
+      failureReason: cleanText(error) || '第三方同步请求失败',
+      createdBy: 'daily-auto-sync'
+    });
+    return { batchId, rangeStart, rangeEnd, error: cleanText(error) || '第三方同步请求失败' };
+  }
+
   async function pullAndPrecheck({ rangeStart, rangeEnd, operator = 'system' } = {}) {
     await ensureTables();
     const pulledAt = now();
     const batchId = `cxe-sync-${String(rangeStart).slice(0, 10).replace(/-/g, '')}-${uuidv4()}`;
-    const [previousRawRecords, pricePlans, courtRows, membershipAccountRows, memberLedgerTasks] = await Promise.all([
+    const [previousRawRecords, previousImportResults, pricePlans, courtRows, membershipAccountRows, memberLedgerTasks] = await Promise.all([
       getCachedScan(T_THIRD_PARTY_SYNC_RAW_RECORDS).catch(() => []),
+      getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => []),
       getCachedScan(tables.T_PRICE_PLANS || T_PRICE_PLANS).catch(() => []),
       getCachedScan(tables.T_COURTS || T_COURTS).catch(() => []),
       getCachedScan(tables.T_MEMBERSHIP_ACCOUNTS || T_MEMBERSHIP_ACCOUNTS).catch(() => []),
@@ -2671,12 +2739,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       ...scopedRecords,
       ...(fetched.gaps || []).map(gap => ({ sourceType: `${gap}-gap`, thirdPartyId: `${gap}-gap`, riskReason: '会员流水批量接口缺口' }))
     ];
-    const existingBookingKeys = new Set(previousRawRecords
-      .filter(row => String(row.batchId || '') !== String(batchId))
-      .map(rawRecordToSourceRecord)
-      .filter(record => normalizeSourceType(record.sourceType) !== 'member-ledger')
-      .map(uniqueBookingKey)
-      .filter(Boolean));
+    const existingBookingKeys = successfulBookingKeysFromHistory({ rawRecords: previousRawRecords, importResults: previousImportResults, excludeBatchId: batchId });
     const precheck = precheckThirdPartyRecords(sourceRecords, { batchId, now: pulledAt, pricePlans, existingBookingKeys });
     const changes = buildThirdPartyChangeRows({ sourceRecords, previousRawRecords, batchId, now: pulledAt });
     const financeImpact = precheck.items.reduce((acc, item) => ({
@@ -2769,7 +2832,8 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       err.statusCode = 404;
       throw err;
     }
-    const currentPrechecks = prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks: prechecks, now: importedAt, pricePlans });
+    const existingBookingKeys = successfulBookingKeysFromHistory({ rawRecords, importResults, excludeBatchId: batchId });
+    const currentPrechecks = prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks: prechecks, now: importedAt, pricePlans, existingBookingKeys });
     const [scheduleRows, coachRows, studentRows, courtRows, membershipAccountRows, financialLedgerRows] = await Promise.all([
       getCachedScan(tables.T_SCHEDULE || T_SCHEDULE).catch(() => []),
       getCachedScan(tables.T_COACHES || T_COACHES).catch(() => []),
@@ -2901,26 +2965,54 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     if (path === '/cron/third-party-sync-center' && method === 'GET') {
       if (!requireCronAccess(req, env)) return sendJson(res, { error: '无权限' }, 401);
       await init();
-      const range = defaultDailyRange(new Date(now()));
-      const pulled = await pullAndPrecheck({ ...range, operator: 'daily-auto-sync' });
-      const autoImport = await runImportForBatch({ batchId: pulled.batch.batchId, operator: 'daily-auto-sync', importedAt: now() });
-      const alerts = await createImportAlerts({ batchId: pulled.batch.batchId, plan: autoImport.plan, changes: pulled.changes, result: autoImport.result, operator: 'daily-auto-sync', nowValue: now() });
-      const actionableAlerts = alerts.filter(row => {
-        if (/会员流水批量接口缺口/.test(cleanText(row.reason))) return false;
-        if (normalizeSourceType(row.sourceType) === 'member') return false;
-        if (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue) return false;
-        return true;
-      });
-      const technicalFailed = shouldFailCronForImportResult(autoImport.result);
-      const needsAttention = actionableAlerts.length > 0 || ['partial_completed', 'paused'].includes(cleanText(autoImport.result.status));
-      let notification = null;
-      try {
-        notification = await notifyThirdPartySyncResult({ type: technicalFailed ? 'failure' : needsAttention ? 'needs_attention' : 'success', batch: pulled.batch, result: autoImport.result, alerts, env });
-      } catch (err) {
-        notification = { sent: false, error: err.message || '飞书通知失败' };
+      const [batches, importResults] = await Promise.all([
+        getCachedScan(T_THIRD_PARTY_SYNC_BATCHES).catch(() => []),
+        getCachedScan(T_THIRD_PARTY_SYNC_IMPORT_RESULTS).catch(() => [])
+      ]);
+      const ranges = failedThirdPartySyncRanges({ batches, importResults, now: new Date(now()) });
+      const runs = [];
+      let lastPulled = null;
+      let lastAutoImport = null;
+      let lastAlerts = [];
+      let lastNotification = null;
+      let technicalFailed = false;
+      for (const range of ranges) {
+        try {
+          const pulled = await pullAndPrecheck({ ...range, operator: 'daily-auto-sync' });
+          const autoImport = await runImportForBatch({ batchId: pulled.batch.batchId, operator: 'daily-auto-sync', importedAt: now() });
+          const alerts = await createImportAlerts({ batchId: pulled.batch.batchId, plan: autoImport.plan, changes: pulled.changes, result: autoImport.result, operator: 'daily-auto-sync', nowValue: now() });
+          const actionableAlerts = alerts.filter(row => {
+            if (/会员流水批量接口缺口/.test(cleanText(row.reason))) return false;
+            if (normalizeSourceType(row.sourceType) === 'member') return false;
+            if (/^第三方变更/.test(cleanText(row.reason)) && !row.date && !row.venue) return false;
+            return true;
+          });
+          const runFailed = shouldFailCronForImportResult(autoImport.result);
+          technicalFailed = technicalFailed || runFailed;
+          try {
+            lastNotification = await notifyThirdPartySyncResult({ type: runFailed ? 'failure' : actionableAlerts.length || ['partial_completed', 'paused'].includes(cleanText(autoImport.result.status)) ? 'needs_attention' : 'success', batch: pulled.batch, result: autoImport.result, alerts, env });
+          } catch (err) {
+            lastNotification = { sent: false, error: err.message || '飞书通知失败' };
+          }
+          lastPulled = pulled;
+          lastAutoImport = autoImport;
+          lastAlerts = alerts;
+          runs.push({ range, batch: pulled.batch, result: autoImport.result, alerts });
+        } catch (err) {
+          technicalFailed = true;
+          const failure = await recordCronSyncFailure({ ...range, error: err.message || '第三方同步请求失败' });
+          runs.push({ range, failure });
+          lastNotification = { sent: false, error: err.message || '第三方同步请求失败' };
+        }
       }
-      const payload = { ...pulled, autoImport, alerts, notification };
-      if (technicalFailed) return sendJson(res, { ...payload, error: '第三方同步导入失败，已生成报警' }, 500);
+      const payload = {
+        ...(lastPulled || {}),
+        autoImport: lastAutoImport || { result: { status: 'failed', failed: runs.map(run => run.failure).filter(Boolean) } },
+        alerts: lastAlerts,
+        notification: lastNotification,
+        runs
+      };
+      if (technicalFailed) return sendJson(res, { ...payload, error: '第三方同步存在失败批次，已记录并将在后续任务自动补拉' }, 500);
       return sendJson(res, payload);
     }
     if (!path.startsWith('/third-party-sync')) return false;
@@ -3034,7 +3126,8 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         getCachedScan(tables.T_PRICE_PLANS || T_PRICE_PLANS).catch(() => []),
         getCachedScan(tables.T_FINANCIAL_LEDGER || T_FINANCIAL_LEDGER).catch(() => [])
       ]);
-      const currentPrechecks = prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks: prechecks, now: now(), pricePlans });
+      const existingBookingKeys = successfulBookingKeysFromHistory({ rawRecords, importResults, excludeBatchId: batchId });
+      const currentPrechecks = prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks: prechecks, now: now(), pricePlans, existingBookingKeys });
       const bookingTargets = buildNamedBookingTargets(currentPrechecks, courtRows, membershipAccountRows);
       return sendJson(res, { plan: buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults, bookingTargets, existingCourtRows: courtRows, existingFinancialLedgerRows: financialLedgerRows }) });
     }
@@ -3075,6 +3168,8 @@ module.exports = {
   fetchChangxiaoerData,
   fetchMemberLedgerExportRowsForMembers,
   defaultDailyRange,
+  successfulBookingKeysFromHistory,
+  failedThirdPartySyncRanges,
   THIRD_PARTY_SYNC_TABLES,
   T_THIRD_PARTY_SYNC_BATCHES,
   T_THIRD_PARTY_SYNC_RAW_RECORDS,

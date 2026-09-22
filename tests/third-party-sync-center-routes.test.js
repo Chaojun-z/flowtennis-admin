@@ -9,7 +9,9 @@ const {
   buildThirdPartySyncNotificationText,
   defaultNotifyThirdPartySyncResult,
   fetchChangxiaoerData,
-  defaultDailyRange
+  defaultDailyRange,
+  successfulBookingKeysFromHistory,
+  failedThirdPartySyncRanges
 } = require('../server/third-party-sync-center-routes');
 
 function createRes() {
@@ -109,6 +111,26 @@ assert.deepStrictEqual(
   defaultDailyRange(new Date('2026-07-29T16:00:00.000Z')),
   { rangeStart: '2026-07-29 00:00:00', rangeEnd: '2026-07-30 00:00:00' },
   'daily auto sync should only cover the previous Beijing business day'
+);
+
+const retryRanges = failedThirdPartySyncRanges({
+  now: new Date('2026-09-22T00:30:00+08:00'),
+  batches: [
+    { batchId: 'failed-2026-09-20', status: 'paused', rangeStart: '2026-09-20 00:00:00', rangeEnd: '2026-09-21 00:00:00', pulledAt: '2026-09-21T02:00:00+08:00' },
+    { batchId: 'success-2026-09-19', status: 'completed', rangeStart: '2026-09-19 00:00:00', rangeEnd: '2026-09-20 00:00:00', pulledAt: '2026-09-20T02:00:00+08:00' }
+  ],
+  importResults: [{ batchId: 'failed-2026-09-20', status: 'failed', importedAt: '2026-09-21T02:05:00+08:00' }]
+});
+assert.ok(retryRanges.some(row => row.rangeStart === '2026-09-20 00:00:00'), 'daily sync should include the date range of a failed prior batch');
+assert.ok(!retryRanges.some(row => row.rangeStart === '2026-09-19 00:00:00'), 'completed prior batches should not be pulled again');
+const retryRaw = [
+  { batchId: 'failed-batch', sourceType: 'order', thirdPartyId: 'FAILED-1', rawJson: { sourceType: 'order', thirdPartyId: 'FAILED-1', bookingDate: '2026-09-20', venue: '1号场', startTime: '10:00', endTime: '11:00' } },
+  { batchId: 'success-batch', sourceType: 'order', thirdPartyId: 'SUCCESS-1', rawJson: { sourceType: 'order', thirdPartyId: 'SUCCESS-1', bookingDate: '2026-09-20', venue: '2号场', startTime: '10:00', endTime: '11:00' } }
+];
+assert.deepStrictEqual(
+  [...successfulBookingKeysFromHistory({ rawRecords: retryRaw, importResults: [{ batchId: 'success-batch', writtenIds: [{ sourceRecordId: 'SUCCESS-1' }] }] })],
+  ['2026-09-20|2号场|10:00|11:00'],
+  'retry prechecks should skip only previously written bookings and leave failed bookings eligible'
 );
 
 const precheck = precheckThirdPartyRecords([
