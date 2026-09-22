@@ -142,6 +142,43 @@ assert.strictEqual(parsedStructPrecheck.endTime, '13:00', 'third-party sync shou
 assert.strictEqual(parsedStructPrecheck.venue, '2号场', 'third-party sync should recover venue from indoor-court remark text');
 assert.strictEqual(parsedStructPrecheck.recommendedType, 'auto_import', 'recoverable structure fields should not become manual confirmation');
 
+const nestedRemarkPrecheck = precheckThirdPartyRecords([
+  {
+    sourceType: 'lock',
+    thirdPartyId: 'nested-remark-1',
+    bookingDate: '2026-09-20',
+    venue: '1号场',
+    startTime: '10:00',
+    endTime: '11:00',
+    orderInfo: [{ priceBasicsInfo: { remark: '孙老师 订场' } }],
+    amount: 220
+  }
+], { batchId: 'nested-remark' }).items[0];
+assert.strictEqual(nestedRemarkPrecheck.remark, '孙老师 订场', 'nested third-party order remarks should be surfaced to operators');
+assert.strictEqual(nestedRemarkPrecheck.recommendedType, 'auto_import', '孙老师 bookings should be auto-imported');
+assert.strictEqual(nestedRemarkPrecheck.suggestedFinalType, '赠送订场', '孙老师 bookings should be zero-income gifts');
+assert.strictEqual(nestedRemarkPrecheck.amount, 0, '孙老师 bookings should override any third-party amount to zero');
+
+const matchPrecheck = precheckThirdPartyRecords([
+  { sourceType: 'lock', thirdPartyId: 'match-1', bookingDate: '2026-09-20', venue: '2号场', startTime: '18:00', endTime: '20:00', remark: '约球活动', amount: 300 }
+], { batchId: 'match-rule' }).items[0];
+assert.strictEqual(matchPrecheck.businessCategory, '约球', 'match bookings should use the 约球 business category');
+assert.strictEqual(matchPrecheck.suggestedFinalType, '畅打活动', 'match bookings should reuse the activity import destination');
+assert.strictEqual(matchPrecheck.recommendedType, 'auto_import', 'match bookings should not require daily manual confirmation');
+assert.strictEqual(
+  precheckThirdPartyRecords([
+    { sourceType: 'order', orderNo: 'cross-batch-dup', bookingDate: '2026-09-20', venue: '2号场', startTime: '18:00', endTime: '20:00', amount: 300 }
+  ], { batchId: 'cross-batch', existingBookingKeys: new Set(['2026-09-20|2号场|18:00|20:00']) }).items[0].recommendedType,
+  'duplicate_skip',
+  'exact bookings already seen in an earlier sync batch should be skipped automatically'
+);
+const matchPlan = buildThirdPartyImportPlan({
+  batchId: 'match-rule',
+  prechecks: [matchPrecheck],
+  bookingTargets: new Map([['match-1', { kind: 'match', finalType: '畅打活动', businessCategory: '约球', bookingCustomerName: 'Mira（运营代订）', bindTargetId: 'mira-1', amount: 300 }]])
+});
+assert.ok(matchPlan.importable.some(item => item.businessCategory === '约球' && item.bindTargetId === 'mira-1'), 'match import plans should bind to the Mira operator booking account');
+
 const historicalRulePrecheck = precheckThirdPartyRecords([
   { id: 'coach-lock', sourceType: 'lock', bookingDate: '2026-07-30', venue: '1号场', startTime: '12:00', endTime: '13:00', customerName: '晓哲', remark: '晓哲 定场', amount: 176 },
   { id: 'xiaozhe-discount-lock', sourceType: 'lock', bookingDate: '2026-08-27', venue: '1号场', startTime: '13:00', endTime: '15:00', customerName: '马坡运营', operatorName: '马坡运营', phone: '13651248523', remark: '晓哲和师妹', amount: 280 },
@@ -183,7 +220,7 @@ assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'mac
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'machine-free-booking-lock' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '散客微信转账订场' && /免费赠送/.test(item.plannedAction)), 'booking plus free ball-machine gift should import as booking without manual split');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'machine-split-lock' && item.recommendedType === 'auto_import' && item.amountBreakdown?.bookingAmount === 120 && item.amountBreakdown?.serviceAmount === 80), 'ball-machine locks should auto import when booking and service fees are explicit');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'companion-split-lock' && item.recommendedType === 'auto_import' && item.amountBreakdown?.bookingAmount === 100 && item.amountBreakdown?.serviceAmount === 300), 'companion locks should auto import when booking and companion fees are explicit');
-assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'changda-lock' && item.businessCategory === '畅打活动' && item.recommendedType === 'auto_import'), 'changda locks should automatically create an activity occupancy destination');
+assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'changda-lock' && item.businessCategory === '约球' && item.recommendedType === 'auto_import'), 'changda locks should automatically create a match occupancy destination');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'leader-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), 'leader/internal usage locks should be classified as internal occupancy');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'decorating-lock' && item.businessCategory === '内部占用' && item.recommendedType === 'auto_import'), 'decorating locks should be classified as internal occupancy');
 assert.ok(historicalRulePrecheck.items.some(item => item.sourceRecordId === 'activity-lock' && item.businessCategory === '运营活动' && item.recommendedType === 'auto_import' && item.suggestedFinalType === '运营活动'), 'operator activity locks should be classified as zero-income activity occupancy');
@@ -768,6 +805,19 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     importResults: []
   });
   assert.strictEqual(auditedMemberPlan.importable.length, 1, 'member stored-value booking should be importable when it comes from the member ledger audit chain');
+  const duplicateMemberPlan = buildThirdPartyImportPlan({
+    batchId: 'member-ledger-precheck',
+    prechecks: [memberLedgerDebitPrecheck],
+    confirmations: [],
+    importResults: [],
+    existingCourtRows: [{
+      id: 'court-member-a',
+      name: '会员A',
+      phone: '13900000000',
+      history: [{ type: '消费', payMethod: '储值扣款', amount: 80, occurredDate: '2026-07-30', venue: '2号场', startTime: '10:00', endTime: '11:00' }]
+    }]
+  });
+  assert.ok(duplicateMemberPlan.skipped.some(item => /不重复扣款/.test(item.reason)), 'existing member stored-value history should suppress duplicate deductions');
   assert.ok(auditedMemberPlan.importable[0].targetTables.includes('ft_courts'), 'member ledger booking should write court booking history');
   assert.ok(auditedMemberPlan.importable[0].targetTables.includes('ft_financial_ledger'), 'member ledger booking should write recognized finance ledger');
   const confirmedCompanionPlan = buildThirdPartyImportPlan({
