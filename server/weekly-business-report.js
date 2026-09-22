@@ -3156,10 +3156,9 @@ async function generateWeeklyBusinessReport({
   const reuseExistingTrends = generationMode === 'manual' && existing?.sections?.trends?.length >= 8;
   const loadSnapshotPayload = async targetScope => {
     if (typeof loadOperationsSnapshot !== 'function') return null;
-    const allowRefreshing = generationMode === 'manual';
-    return loadOperationsSnapshot({ user: snapshotUser, scope: targetScope, allowRefreshing }).then(payload => {
+    return loadOperationsSnapshot({ user: snapshotUser, scope: targetScope, allowRefreshing: false }).then(payload => {
       if (!payload) return null;
-      if (payload.snapshot?.refreshing && targetScope?.dateRange?.startDate) return null;
+      if (payload.snapshot?.refreshing) return null;
       return payload;
     }).catch(err => {
       return null;
