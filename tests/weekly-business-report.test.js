@@ -22,6 +22,7 @@ const weeklyRoutesSource = fs.readFileSync(path.join(repoRoot, 'server/weekly-bu
 const weeklyWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/weekly-business-report.yml'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8');
 const weeklyPageSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/pages/weekly-reports.js'), 'utf8');
+const pagesStyleSource = fs.readFileSync(path.join(repoRoot, 'public/assets/styles/pages.css'), 'utf8');
 const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/state.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/bootstrap.js'), 'utf8');
 const componentsSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/components.js'), 'utf8');
@@ -1368,7 +1369,7 @@ assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow sh
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260922-weekly-list-font-and-action-width-v1/, 'admin shell should bust weekly report page script cache after weekly list font and action width fix');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260922-weekly-list-all-fonts-12px-v1/, 'admin shell should bust weekly report page script cache after weekly list font fix');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_REQUEST_TIMEOUT_MS\s*=\s*10000/, 'each weekly report regeneration request should have a bounded timeout');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_LIMIT\s*=\s*120/, 'weekly report regeneration should retry automatic snapshot preparation for the background rebuild window');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_DELAY_MS\s*=\s*5000/, 'weekly report regeneration should wait between automatic snapshot preparation retries');
@@ -1394,6 +1395,7 @@ assert.match(bootstrapSource, /options\.sticky/, 'toast helper should support st
 assert.doesNotMatch(weeklyPageSource, /tms-toolbar/, 'admin page should not render the removed weekly report title toolbar');
 assert.match(weeklyPageSource, /width:190px[\s\S]*tms-action-link[\s\S]*重新生成/, 'admin page action column should fit all row actions without covering utilization');
 assert.match(weeklyPageSource, /weekly-report-table[\s\S]*font-size:12px/, 'admin weekly report list should use 12px text');
+assert.match(pagesStyleSource, /\.weekly-report-table[\s\S]*font-size:12px!important/, 'admin weekly report list inner text should override the global 13px cell text style');
 assert.strictEqual((stateSource.match(/renderWeeklyReports\(\)/g) || []).length, 1, 'weekly reports page should render once per page data render');
 assert.match(stateSource, /currentPage==='weekly-reports'\)return/, 'weekly report admin page should not auto-refresh on focus, visibility, or interval sync');
 assert.doesNotMatch(weeklyPageSource, /订单ID|线索ID|流水ID/, 'admin page should not expose single-record detail labels');

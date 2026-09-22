@@ -520,6 +520,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-table td.tms-action-cell{display:table-cell}
 .tms-action-cell .tms-action-link{margin-left:6px}
 .tms-action-link-strong{color:#C06031!important}
+.weekly-report-table,.weekly-report-table th,.weekly-report-table td,.weekly-report-table .tms-cell-text,.weekly-report-table .tms-action-link,.weekly-report-table .tms-empty-title,.weekly-report-table .tms-empty-desc{font-size:12px!important}
 .tms-toolbar-secondary-actions{display:flex;align-items:center;gap:8px}
 .tms-toolbar-secondary-btn{border:0;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:500;color:#78716C;background:transparent;cursor:pointer;transition:background-color 150ms ease-in-out,color 150ms ease-in-out,transform 150ms ease-in-out;font-family:inherit;line-height:20px}
 .tms-toolbar-secondary-btn::before{content:"";width:16px;height:16px;flex:0 0 16px;background:currentColor}
