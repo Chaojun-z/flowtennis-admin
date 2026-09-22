@@ -1368,7 +1368,7 @@ assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow sh
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260922-weekly-cumulative-metrics-and-court-hours-v1/, 'admin shell should bust weekly report page script cache after cumulative metric and court hours fix');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260922-weekly-list-font-and-action-width-v1/, 'admin shell should bust weekly report page script cache after weekly list font and action width fix');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_REQUEST_TIMEOUT_MS\s*=\s*10000/, 'each weekly report regeneration request should have a bounded timeout');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_LIMIT\s*=\s*120/, 'weekly report regeneration should retry automatic snapshot preparation for the background rebuild window');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_DELAY_MS\s*=\s*5000/, 'weekly report regeneration should wait between automatic snapshot preparation retries');
@@ -1392,7 +1392,8 @@ assert.match(bootstrapSource, /'weekly-reports':'马坡周报'/, 'top page title
 assert.match(componentsSource, /马坡周报/, 'sidebar and mobile navigation should be renamed to Mapo weekly report');
 assert.match(bootstrapSource, /options\.sticky/, 'toast helper should support sticky loading messages');
 assert.doesNotMatch(weeklyPageSource, /tms-toolbar/, 'admin page should not render the removed weekly report title toolbar');
-assert.match(weeklyPageSource, /width:264px[\s\S]*tms-action-link[\s\S]*重新生成/, 'admin page action column should be wide enough to show all row actions');
+assert.match(weeklyPageSource, /width:190px[\s\S]*tms-action-link[\s\S]*重新生成/, 'admin page action column should fit all row actions without covering utilization');
+assert.match(weeklyPageSource, /weekly-report-table[\s\S]*font-size:12px/, 'admin weekly report list should use 12px text');
 assert.strictEqual((stateSource.match(/renderWeeklyReports\(\)/g) || []).length, 1, 'weekly reports page should render once per page data render');
 assert.match(stateSource, /currentPage==='weekly-reports'\)return/, 'weekly report admin page should not auto-refresh on focus, visibility, or interval sync');
 assert.doesNotMatch(weeklyPageSource, /订单ID|线索ID|流水ID/, 'admin page should not expose single-record detail labels');
