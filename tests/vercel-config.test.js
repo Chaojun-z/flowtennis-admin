@@ -42,7 +42,8 @@ assert.match(thirdPartySyncWorkflow, /workflow_dispatch:/, '场小二订场数�
 assert.match(thirdPartySyncWorkflow, /\/api\/cron\/third-party-sync-center/, '场小二手动检查仍应能触发同步中心接口');
 assert.match(operationsSnapshotWorkflow, /cron: '5,20,35,50 \* \* \* \*'/, '经营分析快照应由 GitHub Actions 高频重建');
 assert.match(operationsSnapshotWorkflow, /node scripts\/rebuild-operations-snapshot\.js --write --view coach/, '经营分析教练人效快照 workflow 应优先重建轻量教练视图');
-assert.doesNotMatch(operationsSnapshotWorkflow, /--process-queued/, '经营分析教练人效主刷新链路不应被历史队列拖慢');
+const operationsSnapshotMainRefresh = operationsSnapshotWorkflow.split('      - name: Process queued snapshot rebuilds')[0];
+assert.doesNotMatch(operationsSnapshotMainRefresh, /--process-queued/, '经营分析教练人效主刷新链路不应被历史队列拖慢');
 assert.match(operationsSnapshotWorkflow, /DIAG_TOKEN:\s*\$\{\{\s*secrets\.DIAG_TOKEN\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/, '经营分析快照 workflow should reuse FLOWTENNIS_ADMIN_TOKEN when DIAG_TOKEN is not configured');
 const matchKeepaliveWorkflow = fs.readFileSync(matchKeepaliveWorkflowPath, 'utf8');
 assert.match(matchKeepaliveWorkflow, /cron: '0 2 \* \* \*'/, '约球 Supabase 保活应每天北京时间 10:00 触发');
