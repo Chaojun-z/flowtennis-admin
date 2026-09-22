@@ -1254,8 +1254,8 @@ function buildCourtUsageFromRaw(raw = {}, period = {}, previousRaw = {}) {
   const previousHistoryRows = courtHistoryRows(previousRaw, previousPeriod);
   const historyUsageRows = dedupeCourtHistoryUsage(historyRows);
   const previousHistoryUsageRows = dedupeCourtHistoryUsage(previousHistoryRows);
-  const scheduleRows = courseScheduleRows(raw, period);
-  const previousScheduleRows = courseScheduleRows(previousRaw, previousPeriod);
+  const scheduleRows = dedupeScheduleRows(courseScheduleRows(raw, period));
+  const previousScheduleRows = dedupeScheduleRows(courseScheduleRows(previousRaw, previousPeriod));
   const courtFinanceRow = row => /场地|订场|约球|内部使用|领导/.test(String(`${row.businessType || ''} ${row.displayBusinessType || ''} ${row.category || ''}`));
   const financeRows = weeklyFinanceRows(raw, period).filter(courtFinanceRow);
   const previousFinanceRows = weeklyFinanceRows(previousRaw, previousPeriod).filter(courtFinanceRow);
