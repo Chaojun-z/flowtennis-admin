@@ -1,7 +1,7 @@
 let weeklyReportsRows = [];
 const weeklyRegenerationJobs = new Set();
 const WEEKLY_REPORT_REQUEST_TIMEOUT_MS = 10000;
-const WEEKLY_REPORT_RETRY_LIMIT = 12;
+const WEEKLY_REPORT_RETRY_LIMIT = 120;
 const WEEKLY_REPORT_RETRY_DELAY_MS = 5000;
 
 function weeklyReportMoney(value) {
@@ -120,7 +120,11 @@ async function regenerateWeeklyReport(id) {
       toastHandle.update(`周报数据准备中，${Math.round((attempt + 1) * WEEKLY_REPORT_RETRY_DELAY_MS / 1000)} 秒后自动重试...`);
       await new Promise(resolve => setTimeout(resolve, WEEKLY_REPORT_RETRY_DELAY_MS));
     }
-    if (result?.preparing) throw new Error(result?.error || '周报数据仍在准备中，请稍后重试');
+    if (result?.preparing) {
+      toastHandle.update('周报数据已进入后台准备，完成后可再次点击重新生成', 'warning');
+      setTimeout(() => toastHandle.close(), 5000);
+      return;
+    }
     if (!result?.success) throw new Error(result?.error || '周报生成失败');
     toastHandle.update('周报已生成', 'success');
     setTimeout(() => toastHandle.close(), 3000);

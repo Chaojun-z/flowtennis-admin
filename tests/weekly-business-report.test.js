@@ -1329,9 +1329,9 @@ assert.match(weeklyWorkflow, /cron: '23 18 \* \* 4'/, 'weekly report workflow sh
 assert.match(weeklyWorkflow, /\/api\/cron\/weekly-business-report/, 'weekly report workflow should trigger the cron endpoint');
 assert.match(indexHtml, /page-weekly-reports/, 'admin shell should include the weekly report page');
 assert.match(indexHtml, /pages\/weekly-reports\.js/, 'admin shell should load the weekly report page script');
-assert.match(indexHtml, /weekly-reports\.js\?v=20260922-weekly-regenerate-auto-prepare-v1/, 'admin shell should bust weekly report page script cache after automatic snapshot preparation fix');
+assert.match(indexHtml, /weekly-reports\.js\?v=20260922-weekly-regenerate-auto-prepare-v2/, 'admin shell should bust weekly report page script cache after automatic snapshot preparation fix');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_REQUEST_TIMEOUT_MS\s*=\s*10000/, 'each weekly report regeneration request should have a bounded timeout');
-assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_LIMIT\s*=\s*12/, 'weekly report regeneration should retry automatic snapshot preparation a bounded number of times');
+assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_LIMIT\s*=\s*120/, 'weekly report regeneration should retry automatic snapshot preparation for the background rebuild window');
 assert.match(weeklyPageSource, /WEEKLY_REPORT_RETRY_DELAY_MS\s*=\s*5000/, 'weekly report regeneration should wait between automatic snapshot preparation retries');
 assert.match(indexHtml, /api\.js\?v=20260918-weekly-report-timeout-message-v1/, 'admin shell should bust weekly report timeout message script cache');
 assert.match(indexHtml, /weekly-report-share-shell[\s\S]*#loginPage\{display:none!important\}/, 'public weekly report shell should hide the login card before app scripts load');
