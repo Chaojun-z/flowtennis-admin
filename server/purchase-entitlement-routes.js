@@ -39,6 +39,25 @@ function createPurchaseEntitlementRoutes(deps={}){
   const nextUuid=typeof uuidv4==='function'
     ? ()=>uuidv4()
     : ()=>require('crypto').randomUUID();
+  const summaryWriteOptions={skipStudentTeachingSummaryRefresh:true};
+
+  async function syncPurchaseSummary({purchase,previousPurchase=null,entitlements=[],student=null,operationId=''}){
+    if(typeof syncStudentTeachingSummaryDelta!=='function')return {synced:false,reason:'not-configured'};
+    const changes={
+      changedPurchases:[purchase],
+      previousPurchases:previousPurchase?[previousPurchase]:[],
+      changedEntitlements:entitlements,
+      changedStudents:student?[student]:[],
+      operationId,
+      now:new Date()
+    };
+    let result=await syncStudentTeachingSummaryDelta(changes).catch(error=>({synced:false,reason:'sync-failed',error:String(error?.message||error)}));
+    if(!result?.synced)result=await syncStudentTeachingSummaryDelta(changes).catch(error=>({synced:false,reason:'sync-failed',error:String(error?.message||error)}));
+    if(!result?.synced&&typeof queueStudentTeachingSummaryRefresh==='function'){
+      await queueStudentTeachingSummaryRefresh(T_PURCHASES,{attrs:purchase,writeReason:'purchase-delta-fallback'}).catch(()=>null);
+    }
+    return result||{synced:false,reason:'sync-failed'};
+  }
 
   function authorizationIsActive(row={},date=''){
     if(String(row.status||'active')!=='active')return false;
@@ -245,9 +264,10 @@ function createPurchaseEntitlementRoutes(deps={}){
         const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name,operationTrace});
         const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,nextUuid(),now);
         const benefitLedgerRows=buildPurchaseGiftBenefitRows({purchase,student,user,operationTrace,now,idFactory:uuidv4});
-        await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement,{benefitTable:T_MEMBERSHIP_BENEFIT_LEDGER,benefitRows:benefitLedgerRows});
+        await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement,{benefitTable:T_MEMBERSHIP_BENEFIT_LEDGER,benefitRows:benefitLedgerRows,writeOptions:summaryWriteOptions});
         await syncStudentActiveEntitlementIndexes(null,entitlement);
-        return sendJson(res,{purchase,entitlement,benefitLedgerRows});
+        const summarySync=await syncPurchaseSummary({purchase,entitlements:[entitlement],student,operationId:operationTrace.operationId});
+        return sendJson(res,{purchase,entitlement,benefitLedgerRows,summarySync});
       }
     }
 
@@ -263,12 +283,13 @@ function createPurchaseEntitlementRoutes(deps={}){
         const ledger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
         const now=new Date().toISOString();
         if(purchaseHasEntitlementLedger(id,ents,ledger)){
+          const operationTrace=buildOperationTrace({operationType:'package-purchase-edit',operator:user.name||old.operator||'',now});
           const finalAmount=body.amountPaid!==undefined?Math.round((Number(body.amountPaid)||0)*100)/100:Math.round((Number(old.finalAmount??old.amountPaid)||0)*100)/100;
           const systemAmount=Math.round((Number(old.systemAmount??old.packagePrice)||0)*100)/100;
           const priceOverridden=systemAmount!==finalAmount;
           const overrideReason=body.overrideReason!==undefined?String(body.overrideReason||'').trim():(priceOverridden?String(old.overrideReason||'').trim():'');
           if(priceOverridden&&!overrideReason)return sendJson(res,{error:'请填写改价原因'},400);
-          const r={
+          const r=withOperationTrace({
             ...old,
             purchaseDate:body.purchaseDate!==undefined?body.purchaseDate:old.purchaseDate,
             ownerCoach:body.ownerCoach!==undefined?body.ownerCoach:old.ownerCoach,
@@ -279,10 +300,11 @@ function createPurchaseEntitlementRoutes(deps={}){
             payMethod:normalizePurchasePayMethod?normalizePurchasePayMethod(body.payMethod!==undefined?body.payMethod:old.payMethod):(body.payMethod!==undefined?body.payMethod:old.payMethod),
             notes:body.notes!==undefined?body.notes:old.notes,
             updatedAt:now
-          };
+          },operationTrace);
           assertCanEditPurchaseWithLedger(old,r,ents,ledger);
-          await put(T_PURCHASES,id,r);
-          return sendJson(res,{purchase:r,entitlements:[]});
+          await put(T_PURCHASES,id,r,summaryWriteOptions);
+          const summarySync=await syncPurchaseSummary({purchase:r,previousPurchase:old,entitlements:ents,operationId:operationTrace.operationId});
+          return sendJson(res,{purchase:r,entitlements:[],summarySync});
         }
         const nextPackageId=body.packageId||old.packageId;
         const purchaseDate=body.purchaseDate||old.purchaseDate||new Date().toISOString().slice(0,10);
@@ -293,16 +315,17 @@ function createPurchaseEntitlementRoutes(deps={}){
         if(!student)return sendJson(res,{error:'学员不存在'},404);
         const operationTrace=buildOperationTrace({operationType:'package-purchase-edit',operator:user.name||old.operator||'',now});
         const r=buildPurchaseRecord(pkg,{...old,...body,id,createdAt:old.createdAt,purchaseDate},student,{id,now,operator:old.operator||user.name,operationTrace});
-        await put(T_PURCHASES,id,r);
+        await put(T_PURCHASES,id,r,summaryWriteOptions);
         const synced=[];
         try{
           for(const ent of ents){
             const next=withOperationTrace(syncEntitlementFromPurchase(pkg,r,student,ent,now),operationTrace);
-            await put(T_ENTITLEMENTS,ent.id,next);
+            await put(T_ENTITLEMENTS,ent.id,next,summaryWriteOptions);
             await syncStudentActiveEntitlementIndexes(ent,next);
             synced.push(next);
           }
-          return sendJson(res,{purchase:r,entitlements:synced});
+          const summarySync=await syncPurchaseSummary({purchase:r,previousPurchase:old,entitlements:synced,student,operationId:operationTrace.operationId});
+          return sendJson(res,{purchase:r,entitlements:synced,summarySync});
         }catch(err){
           await put(T_PURCHASES,id,old).catch(()=>null);
           for(const ent of ents)await put(T_ENTITLEMENTS,ent.id,ent).catch(()=>null);
@@ -317,15 +340,17 @@ function createPurchaseEntitlementRoutes(deps={}){
         const old=await get(T_PURCHASES,id).catch(()=>null);
         for(const ent of ents.filter(e=>e.purchaseId===id)){
           const nextEnt=withOperationTrace({...ent,status:'voided',updatedAt:now},operationTrace);
-          await put(T_ENTITLEMENTS,ent.id,nextEnt);
+          await put(T_ENTITLEMENTS,ent.id,nextEnt,summaryWriteOptions);
           await syncStudentActiveEntitlementIndexes(ent,nextEnt);
           const event=withOperationTrace({id:nextUuid(),entitlementId:ent.id,studentId:ent.studentId||'',purchaseId:id,lessonDelta:0,action:'void_purchase',reason:body.reason||'购买记录作废',operator:user.name||'',createdAt:now},operationTrace);
-          await put(T_ENTITLEMENT_LEDGER,event.id,event);
+          await put(T_ENTITLEMENT_LEDGER,event.id,event,summaryWriteOptions);
         }
         const voidBenefitRows=old?buildPurchaseGiftVoidRows({purchase:old,benefitLedger,user,operationTrace,now,idFactory:uuidv4}):[];
-        for(const row of voidBenefitRows)await put(T_MEMBERSHIP_BENEFIT_LEDGER,row.id,row);
-        if(old)await put(T_PURCHASES,id,withOperationTrace({...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now},operationTrace));
-        return sendJson(res,{success:true,benefitLedgerRows:voidBenefitRows});
+        for(const row of voidBenefitRows)await put(T_MEMBERSHIP_BENEFIT_LEDGER,row.id,row,summaryWriteOptions);
+        const voidedPurchase=old?withOperationTrace({...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now},operationTrace):null;
+        if(voidedPurchase)await put(T_PURCHASES,id,voidedPurchase,summaryWriteOptions);
+        const summarySync=voidedPurchase?await syncPurchaseSummary({purchase:voidedPurchase,previousPurchase:old,entitlements:ents.filter(e=>e.purchaseId===id).map(e=>({...e,status:'voided'})),operationId:operationTrace.operationId}):null;
+        return sendJson(res,{success:true,benefitLedgerRows:voidBenefitRows,summarySync});
       }
     }
 

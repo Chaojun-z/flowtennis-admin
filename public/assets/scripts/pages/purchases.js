@@ -965,7 +965,7 @@ async function savePurchaseEdit(id){
   const data={studentId:document.getElementById('pur_edit_studentId')?.value||'',packageId:document.getElementById('pur_edit_packageId')?.value||'',ownerCoach:document.getElementById('pur_edit_ownerCoach')?.value||'',allowedCoaches:[...document.querySelectorAll('.pur-edit-allowed-coach-cb:checked')].map(cb=>cb.value),purchaseDate:document.getElementById('pur_edit_purchaseDate')?.value||'',amountPaid:parseFloat(document.getElementById('pur_edit_amountPaid')?.value)||0,overrideReason:document.getElementById('pur_edit_overrideReason')?.value.trim()||'',payMethod:document.getElementById('pur_edit_payMethod')?.value||'',notes:document.getElementById('pur_edit_notes')?.value.trim()||''};
   const systemAmount=Number(document.getElementById('pur_edit_systemAmount')?.value)||0;
   if(systemAmount!==Number(data.amountPaid||0)&&!data.overrideReason){toast('请填写改价原因','warn');if(btn){btn.disabled=false;btn.textContent='保存';}return;}
-  await runStandardMutation(btn,async()=>{
+  const saved=await runStandardMutation(btn,async()=>{
     const res=await apiCall('PUT','/purchases/'+id,data);
     if(res.purchase){
       const i=purchases.findIndex(x=>x.id===id);
@@ -978,7 +978,7 @@ async function savePurchaseEdit(id){
       });
     }
     if(typeof markReadModelsStale==='function')markReadModelsStale();
-    return {studentId:String(res?.purchase?.studentId||data.studentId||oldPurchase.studentId||'').trim()};
+    return {studentId:String(res?.purchase?.studentId||data.studentId||oldPurchase.studentId||'').trim(),summarySync:res.summarySync};
   },{
     successText:'购买记录已更新',
     closeOnSuccess:true,
@@ -999,6 +999,7 @@ async function savePurchaseEdit(id){
       }
     }
   });
+  if(saved?.summarySync?.synced===false)toast('购买记录已更新，但学员摘要同步失败，请联系管理员核对','warn');
 }
 function openPurchaseVoidModal(id){
   if(ensureFullPurchaseData(id,()=>openPurchaseVoidModal(id)))return;
@@ -1038,13 +1039,13 @@ async function voidPurchase(id){
   const reason=document.getElementById('pur_void_reason')?.value.trim()||'';
   if(!reason){toast('请填写作废原因','warn');return;}
   const oldPurchase=purchases.find(x=>x.id===id)||{};
-  await runStandardMutation('purchaseVoidBtn',async()=>{
+  const saved=await runStandardMutation('purchaseVoidBtn',async()=>{
     const result=await apiCall('DELETE','/purchases/'+id,{reason});
     patchPurchaseVoidResult(id,reason);
     const rows=Array.isArray(result?.benefitLedgerRows)?result.benefitLedgerRows:[];
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
     if(typeof markReadModelsStale==='function')markReadModelsStale();
-    return {studentId:String(result?.purchase?.studentId||oldPurchase.studentId||'').trim()};
+    return {studentId:String(result?.purchase?.studentId||oldPurchase.studentId||'').trim(),summarySync:result.summarySync};
   },{
     loadingText:'作废中…',
     errorPrefix:'作废失败',
@@ -1067,6 +1068,7 @@ async function voidPurchase(id){
       }
     }
   });
+  if(saved?.summarySync?.synced===false)toast('购买记录已作废，但学员摘要同步失败，请联系管理员核对','warn');
 }
 async function savePurchase(){
   const studentId=document.getElementById('pur_studentId').value;
@@ -1077,13 +1079,14 @@ async function savePurchase(){
   const data={studentId,packageId,ownerCoach:document.getElementById('pur_ownerCoach')?.value||'',allowedCoaches:[...document.querySelectorAll('.pur-allowed-coach-cb:checked')].map(cb=>cb.value),purchaseDate:document.getElementById('pur_purchaseDate').value,amountPaid:parseFloat(document.getElementById('pur_amountPaid').value)||0,overrideReason:document.getElementById('pur_overrideReason')?.value.trim()||'',payMethod:document.getElementById('pur_payMethod').value,giftLessons:parseFloat(document.getElementById('pur_giftLessons')?.value)||0,courtBookingGiftCount:parseInt(document.getElementById('pur_courtBookingGiftCount')?.value)||0,ballMachineGiftCount:parseInt(document.getElementById('pur_ballMachineGiftCount')?.value)||0,giftReason:document.getElementById('pur_giftReason')?.value.trim()||'',notes:document.getElementById('pur_notes').value.trim()};
   const systemAmount=Number(document.getElementById('pur_systemAmount')?.value)||0;
   if(systemAmount!==Number(data.amountPaid||0)&&!data.overrideReason){toast('请填写改价原因','warn');if(btn){btn.disabled=false;btn.textContent='保存';}return;}
-  await runStandardMutation(btn,async()=>{
+  const saved=await runStandardMutation(btn,async()=>{
     const res=await apiCall('POST','/purchases',data);
     if(res.purchase)purchases.unshift(res.purchase);
     if(res.entitlement)entitlements.unshift(res.entitlement);
     if(Array.isArray(res.benefitLedgerRows))res.benefitLedgerRows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
     if(typeof mergeStudentDetailPurchaseResult==='function')mergeStudentDetailPurchaseResult(res);
     if(typeof markLearningDataStale==='function')markLearningDataStale();
+    return res;
   },{
     successText:'购买成功',
     closeOnSuccess:true,
@@ -1102,6 +1105,7 @@ async function savePurchase(){
       }).catch(e=>console.warn('purchase background refresh failed',e));
     }
   });
+  if(saved?.summarySync?.synced===false)toast('课包已保存，但学员摘要同步失败，请联系管理员核对','warn');
 }
 function focusPurchaseByPackage(packageId,ownerCoach=''){
   clearPurchasePageFiltersForPackageFocus();

@@ -387,6 +387,9 @@ const studentTeachingSummaryCache=createStudentTeachingSummaryCache({
   getCachedScan,getCachedRow,mkTable,put,del
 });
 queueStudentTeachingSummaryRefresh=studentTeachingSummaryCache.queueStudentTeachingSummaryRefresh;
+const syncStudentTeachingSummaryDeltaForProduction=changes=>syncStudentTeachingSummaryDelta({
+  tableName:T_STUDENT_TEACHING_SUMMARY,getCachedRow:get,put,...changes
+});
 function getMatchSqlPool(){
   if(!MATCH_DATABASE_URL)throw new Error('缺少 MATCH_DATABASE_URL 或 DATABASE_URL，约球真实数据不能使用 mock 或 TableStore');
   if(!matchSqlPool)matchSqlPool=new Pool({connectionString:MATCH_DATABASE_URL,ssl:process.env.MATCH_DATABASE_SSL==='true'?{rejectUnauthorized:false}:undefined});
@@ -749,7 +752,7 @@ const handleMembershipRoutes=createMembershipRoutes({
 const handleStudentRoutes=createStudentRoutes({init,sendJson:routeSendJson,getFastStudentsRead,getCachedScan,scan,filterLoadAllForUser,buildCoachRefs,
   assertStudentWriteAccess,uuidv4,assertPhone,put,get,buildStudentReminderBindToken,buildStudentReminderLinkUpdate,
   normalizeStudentReminderMode,normalizeStudentReminderCustomHours,buildStudentOfficialAccountUnboundUpdate,
-  applyStudentIdentityUpdate,deleteStudentCascade,syncStudentProfileToTeachingSummary:student=>upsertStudentProfileIntoTeachingSummary({tableName:T_STUDENT_TEACHING_SUMMARY,student,getCachedRow,put,now:new Date(),logger:console}),T_STUDENTS,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS});
+  applyStudentIdentityUpdate,deleteStudentCascade,syncStudentProfileToTeachingSummary:student=>upsertStudentProfileIntoTeachingSummary({tableName:T_STUDENT_TEACHING_SUMMARY,student,getCachedRow:get,put,now:new Date(),logger:console}),T_STUDENTS,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS});
 const handleFeedbackRoutes=createFeedbackRoutes({init,sendJson:routeSendJson,withTimeout,getCachedScan,filterLoadAllForUser,
   timedEndpointMetric,uuidv4,get,buildCoachRefs,assertCanWriteFeedback,buildFeedbackRecord,putFeedback,
   T_FEEDBACKS,T_SCHEDULE,T_COACHES,T_USERS});
@@ -783,7 +786,7 @@ const handlePurchaseEntitlementRoutes=createPurchaseEntitlementRoutes({
   validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,buildStudentBenefitLedgerRecord,
   assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
   buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,normalizePurchasePayMethod,
-  validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,syncStudentTeachingSummaryDelta,refreshStudentTeachingSummaryRows:studentTeachingSummaryCache.refreshStudentTeachingSummaryRows,queueStudentTeachingSummaryRefresh,
+  validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,syncStudentTeachingSummaryDelta:syncStudentTeachingSummaryDeltaForProduction,refreshStudentTeachingSummaryRows:studentTeachingSummaryCache.refreshStudentTeachingSummaryRows,queueStudentTeachingSummaryRefresh,
   T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_AUTHORIZATIONS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
 });
 const {buildWorkbenchStats,resolveWorkbenchState,decorateWorkbenchScheduleRows,workbenchStudentPackageSummary,workbenchCampusName}=createWorkbenchReadModel({
@@ -949,15 +952,16 @@ function assertSmallGroupScheduleRules(rec){
 }
 async function writePurchaseAndEntitlementAtomic(store,purchaseTable,entitlementTable,purchase,entitlement,options={}){
   const benefitTable=options.benefitTable||'';
+  const writeOptions=options.writeOptions||{};
   const benefitRows=Array.isArray(options.benefitRows)?options.benefitRows.filter(Boolean):[];
   const writtenBenefits=[];
   let entitlementWritten=false;
-  await store.put(purchaseTable,purchase.id,purchase);
+  await store.put(purchaseTable,purchase.id,purchase,writeOptions);
   try{
-    const result=await store.put(entitlementTable,entitlement.id,entitlement);
+    const result=await store.put(entitlementTable,entitlement.id,entitlement,writeOptions);
     entitlementWritten=true;
     for(const row of benefitRows){
-      await store.put(benefitTable,row.id,row);
+      await store.put(benefitTable,row.id,row,writeOptions);
       writtenBenefits.push(row);
     }
     return result;
@@ -1933,7 +1937,7 @@ const handleScheduleRoutes=createScheduleRoutes({
   resolveScheduleEntitlementDeltas,assertScheduleEntitlementCapacity,scheduleStoredValuePaymentAmount,
   getFastStudentsRead,buildScheduleStoredValueCourtUpdate,put,scheduleLessonDelta,applyEntitlementDelta,
   applySmallGroupFreeAbsences,applyLessonDelta,syncScheduleFieldFeeFinancialLedger,persistScheduleStoredValueCourts,
-  syncCoachScheduleIndexes,syncScheduleConflictIndexes,del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,syncStudentTeachingSummaryDelta,refreshStudentTeachingSummaryRows:studentTeachingSummaryCache.refreshStudentTeachingSummaryRows,queueStudentTeachingSummaryRefresh,scheduleListSnapshotSync,
+  syncCoachScheduleIndexes,syncScheduleConflictIndexes,del,rollbackScheduleStoredValueCourts,rollbackSmallGroupFreeAbsences,syncStudentTeachingSummaryDelta:syncStudentTeachingSummaryDeltaForProduction,refreshStudentTeachingSummaryRows:studentTeachingSummaryCache.refreshStudentTeachingSummaryRows,queueStudentTeachingSummaryRefresh,scheduleListSnapshotSync,
   scheduleSaveErrorStatus,get,withTimeout,scanFeedbacks,assertScheduleEditableAfterFeedback,scan,
   scheduleEntitlementDeltas,restoreSmallGroupFreeAbsenceLedgerRows,parseLessonValue,returnEntitlementFreeAbsence,
   diffScheduleEntitlementDeltas,effectiveScheduleStatus,assertCanDeleteSchedule,
@@ -6795,7 +6799,7 @@ async function deleteStudentCascade(studentId,{
   loadReferenceData=loadStudentDeleteReferenceData,
   deleteStudentRow=targetId=>del(T_STUDENTS,targetId),
   deleteActiveEntitlementIndex=targetId=>del(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,targetId).catch(()=>null),
-  deleteTeachingSummaryRow=targetId=>deleteStudentFromTeachingSummary({tableName:T_STUDENT_TEACHING_SUMMARY,studentId:targetId,getCachedRow,put,del,now:new Date(),logger:console}).catch(()=>null),
+  deleteTeachingSummaryRow=targetId=>deleteStudentFromTeachingSummary({tableName:T_STUDENT_TEACHING_SUMMARY,studentId:targetId,getCachedRow:get,put,del,now:new Date(),logger:console}).catch(()=>null),
   updateLeadRow=row=>put(T_LEADS,row.id,row),
   updateLeadFollowupRow=row=>put(T_LEAD_FOLLOWUPS,row.id,row),
   archiveStudentRow=(targetId,row)=>put(T_STUDENTS,targetId,row)

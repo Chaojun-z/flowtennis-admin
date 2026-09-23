@@ -636,11 +636,11 @@ function summaryDeltaPackageDate(row = {}) {
   return String(row.purchaseDate || row.businessDate || row.validFrom || row.createdAt || '').trim().slice(0, 10);
 }
 
-function summaryDeltaPackageRow(entitlement = {}, existing = {}) {
+function summaryDeltaPackageRow(entitlement = {}, existing = {}, purchase = {}) {
   const totalLessons = Number(entitlement.totalLessons ?? existing.totalLessons) || 0;
   const remainingLessons = Number(entitlement.remainingLessons ?? existing.remainingLessons) || 0;
   const usedLessons = Number(entitlement.usedLessons ?? Math.max(0, totalLessons - remainingLessons)) || 0;
-  const status = String(entitlement.status || existing.status || 'active').trim();
+  const status = String(purchase.status || entitlement.status || existing.status || 'active').trim();
   const statusText = ['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status)
     ? '已作废'
     : (remainingLessons <= 0 ? '已用完' : '正常');
@@ -655,8 +655,9 @@ function summaryDeltaPackageRow(entitlement = {}, existing = {}) {
     remainingLessons,
     totalLessons,
     usedLessons,
-    purchaseDate: summaryDeltaPackageDate(entitlement) || String(existing.purchaseDate || '').trim(),
+    purchaseDate: summaryDeltaPackageDate(purchase) || summaryDeltaPackageDate(entitlement) || String(existing.purchaseDate || '').trim(),
     statusText,
+    paidAmount: Number(purchase.finalAmount ?? purchase.amountPaid ?? existing.paidAmount ?? 0) || 0,
     unit: summaryDeltaPackageUnit(entitlement),
     ownerCoach: String(entitlement.ownerCoach || existing.ownerCoach || '').trim(),
     packageOwnerStudentId: String(entitlement.packageOwnerStudentId || existing.packageOwnerStudentId || entitlement.studentId || '').trim(),
@@ -666,21 +667,24 @@ function summaryDeltaPackageRow(entitlement = {}, existing = {}) {
   };
 }
 
-function summaryDeltaPatchPackageRows(rows = [], entitlementsById = new Map(), studentId = '') {
+function summaryDeltaPatchPackageRows(rows = [], entitlementsById = new Map(), studentId = '', purchasesById = new Map()) {
   const sourceRows = Array.isArray(rows) ? rows : [];
   const matched = new Set();
   const next = sourceRows.map(row => {
     const entitlementId = String(row?.entitlementId || '').trim();
     const entitlement = entitlementsById.get(entitlementId);
-    if (!entitlement) return row;
+    const purchase = purchasesById.get(String(row?.purchaseId || entitlement?.purchaseId || '').trim()) || {};
+    if (!entitlement) return Object.keys(purchase).length ? { ...row, paidAmount: Number(purchase.finalAmount ?? purchase.amountPaid ?? row.paidAmount ?? 0) || 0, purchaseDate: summaryDeltaPackageDate(purchase) || row.purchaseDate } : row;
     matched.add(entitlementId);
-    return summaryDeltaPackageRow(entitlement, row);
-  });
+    if (!summaryDeltaStudentIds(entitlement).includes(studentId) || !summaryDeltaScheduleIsActive(entitlement) || !summaryDeltaScheduleIsActive(purchase)) return null;
+    return summaryDeltaPackageRow(entitlement, row, purchase);
+  }).filter(Boolean).filter(row => summaryDeltaScheduleIsActive(purchasesById.get(String(row.purchaseId || '').trim()) || {}));
   entitlementsById.forEach((entitlement, entitlementId) => {
     const ownerId = String(entitlement.studentId || '').trim();
     const usedById = String(entitlement.usedByStudentId || entitlement.authorizedStudentId || '').trim();
-    if (matched.has(entitlementId) || (ownerId !== studentId && usedById !== studentId)) return;
-    next.push(summaryDeltaPackageRow(entitlement, { studentId }));
+    const purchase = purchasesById.get(String(entitlement.purchaseId || '').trim()) || {};
+    if (matched.has(entitlementId) || (ownerId !== studentId && usedById !== studentId) || !summaryDeltaScheduleIsActive(entitlement) || !summaryDeltaScheduleIsActive(purchase)) return;
+    next.push(summaryDeltaPackageRow(entitlement, { studentId }, purchase));
   });
   return next;
 }
@@ -800,6 +804,8 @@ function summaryDeltaPatchRow(base = {}, {
   previousSchedule = null,
   nextSchedule = null,
   changedEntitlements = [],
+  changedPurchases = [],
+  previousPurchases = [],
   changedLedgers = [],
   studentId = '',
   now = new Date()
@@ -881,6 +887,7 @@ function summaryDeltaPatchRow(base = {}, {
       .filter(row => row && String(row.id || '').trim())
       .map(row => [String(row.id).trim(), row])
   );
+  const purchaseMap = new Map(changedPurchases.filter(Boolean).map(row => [String(row.id || '').trim(), row]));
   const existingDetailPackages = parseArr(base.detailPackageOrderRows);
   const existingListPackages = parseArr(base.packageListRows);
   const hasPackageFacts = existingDetailPackages.length
@@ -889,12 +896,14 @@ function summaryDeltaPatchRow(base = {}, {
   const detailPackageRows = summaryDeltaPatchPackageRows(
     existingDetailPackages.length ? existingDetailPackages : existingListPackages,
     entitlementMap,
-    studentId
+    studentId,
+    purchaseMap
   );
   const listPackageRows = summaryDeltaPatchPackageRows(
     existingListPackages.length ? existingListPackages : detailPackageRows,
     entitlementMap,
-    studentId
+    studentId,
+    purchaseMap
   );
   const packageFields = hasPackageFacts ? summaryDeltaPackageFields(detailPackageRows, listPackageRows, base) : {};
   const addedCompletedUnits = addedLessonRows.reduce((sum, row) => {
@@ -917,6 +926,26 @@ function summaryDeltaPatchRow(base = {}, {
   const isHistorical = !!base.isHistoricalStudentRoster || !!base.hasStudentProfile || completedLessons > 0 || Number(packageFields.packageBalanceTotal) > 0;
   const isActive = packageBalanceRemaining > 0
     || (!!detailRecentLessonDate && summaryDeltaDateMs(detailRecentLessonDate) >= summaryDeltaDateMs(new Date(nowDate.getTime() - 90 * 86400000)));
+  const oldPurchases = new Map(previousPurchases.filter(Boolean).map(row => [String(row.id || '').trim(), row]));
+  const existingPurchaseIds = new Set([...existingDetailPackages, ...existingListPackages].map(row => String(row?.purchaseId || '').trim()).filter(Boolean));
+  const purchaseAmount = row => Number(row?.finalAmount ?? row?.amountPaid ?? row?.paidAmount ?? 0) || 0;
+  const purchaseIsFormal = row => row && !summaryDeltaIsTrial(row) && !summaryDeltaIsCompanion(row);
+  let coursePurchaseCount = Number(base.coursePurchaseCount) || 0;
+  let cumulativeCoursePaidAmount = Number(base.cumulativeCoursePaidAmount) || 0;
+  changedPurchases.forEach(row => {
+    const purchaseId = String(row.id || '').trim();
+    const old = oldPurchases.get(purchaseId);
+    const oldActive = !!old && existingPurchaseIds.has(purchaseId) && String(old.studentId || '').trim() === studentId && summaryDeltaScheduleIsActive(old);
+    const newActive = String(row.studentId || '').trim() === studentId && summaryDeltaScheduleIsActive(row);
+    if (!old && existingPurchaseIds.has(purchaseId)) return;
+    if (purchaseIsFormal(row) || purchaseIsFormal(old)) coursePurchaseCount += Number(newActive && purchaseIsFormal(row)) - Number(oldActive && purchaseIsFormal(old));
+    cumulativeCoursePaidAmount += (newActive ? purchaseAmount(row) : 0) - (oldActive ? purchaseAmount(old) : 0);
+  });
+  coursePurchaseCount = Math.max(0, coursePurchaseCount);
+  cumulativeCoursePaidAmount = Math.max(0, Math.round(cumulativeCoursePaidAmount * 100) / 100);
+  const formalPurchaseDates = detailPackageRows.filter(row => !summaryDeltaIsTrial(row) && !summaryDeltaIsCompanion(row))
+    .map(row => String(row.purchaseDate || '').slice(0, 10)).filter(Boolean).sort();
+  const hasFormalPurchase = coursePurchaseCount > 0 || formalPurchaseDates.length > 0;
   const nextRow = {
     ...base,
     ...packageFields,
@@ -929,6 +958,18 @@ function summaryDeltaPatchRow(base = {}, {
     hasFormalAttended: completedLessons > 0,
     isHistoricalStudentRoster: isHistorical,
     isActiveStudentRoster: isActive,
+    ...(changedPurchases.length ? {
+      studentStage: hasFormalPurchase ? 'formal' : (hasTrialAttended ? 'trial' : 'student'),
+      hasCourseConversion: hasFormalPurchase,
+      coursePurchaseCount,
+      courseDealPath: coursePurchaseCount > 1 ? '老客续费' : (hasFormalPurchase ? (hasTrialAttended ? '体验转化' : '直接成交') : ''),
+      courseFirstPurchaseAt: formalPurchaseDates[0] || (hasFormalPurchase ? String(base.courseFirstPurchaseAt || '') : ''),
+      conversionAt: formalPurchaseDates[0] || (hasFormalPurchase ? String(base.conversionAt || '') : ''),
+      cumulativeCoursePaidAmount,
+      cumulativeCoursePaidText: `¥${cumulativeCoursePaidAmount.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}`,
+      paymentModeLabel: hasFormalPurchase ? '课包学员' : base.paymentModeLabel,
+      packageStatusLabel: detailPackageRows.length ? (packageBalanceRemaining > 2 ? '课包有余额' : (packageBalanceRemaining > 0 ? '课包即将耗尽' : '课包已用完')) : '未买过课包'
+    } : {}),
     teachingLessonDetailSourceVersion: TEACHING_LESSON_DETAIL_SOURCE_VERSION,
     summaryUpdatedAt: nowDate.toISOString(),
     updatedAt: nowDate.toISOString()
@@ -956,6 +997,9 @@ async function syncStudentTeachingSummaryDelta({
   previousSchedule = null,
   nextSchedule = null,
   changedEntitlements = [],
+  changedPurchases = [],
+  previousPurchases = [],
+  changedStudents = [],
   changedLedgers = [],
   now = new Date(),
   operationId = '',
@@ -970,22 +1014,30 @@ async function syncStudentTeachingSummaryDelta({
     const meta = await getCachedRow(tableName, STUDENT_TEACHING_SUMMARY_META_ID).catch(() => null);
     const activeVersion = String(meta?.activeVersion || '').trim();
     if (!isReadyStudentTeachingSummaryMeta(meta) || !activeVersion) return { synced: false, reason: 'summary-not-ready' };
+    if (operationId && String(meta.sourceId || '') === String(operationId)) return { synced: true, activeVersion, idempotent: true };
     const currentBundle = await getCachedRow(tableName, buildStudentTeachingSummaryBundleId(activeVersion)).catch(() => null);
     const currentRows = summaryDeltaSafeBundleRows(currentBundle);
     if (!currentRows) return { synced: false, reason: 'bundle-not-ready' };
     if (Number(meta.rowCount) !== currentRows.length) return { synced: false, reason: 'row-count-mismatch' };
-    const affectedIds = summaryDeltaStudentIds(previousSchedule, nextSchedule, ...changedEntitlements, ...changedLedgers);
+    const affectedIds = uniqueStudentIds([
+      ...summaryDeltaStudentIds(previousSchedule, nextSchedule, ...changedEntitlements, ...changedPurchases, ...previousPurchases, ...changedLedgers),
+      ...changedStudents.map(row => row?.id || row?.studentId)
+    ]);
     if (!affectedIds.length) return { synced: true, affectedStudentIds: [], rowCount: currentRows.length };
     const currentById = new Map(currentRows.map(row => [String(row?.studentId || row?.id || '').trim(), row]));
-    const missing = affectedIds.filter(studentId => !currentById.has(studentId));
+    const studentProfiles = new Map(changedStudents.filter(Boolean).map(row => [String(row.id || row.studentId || '').trim(), row]));
+    const missing = affectedIds.filter(studentId => !currentById.has(studentId) && !studentProfiles.has(studentId));
     if (missing.length) return { synced: false, reason: `summary-row-missing:${missing.join(',')}` };
-    const patchedRows = currentRows.map(row => {
+    const rowsToPatch = [...currentRows, ...affectedIds.filter(studentId => !currentById.has(studentId)).map(studentId => compactStudentProfileSummaryRow(studentProfiles.get(studentId), now))];
+    const patchedRows = rowsToPatch.map(row => {
       const studentId = String(row?.studentId || row?.id || '').trim();
       if (!affectedIds.includes(studentId)) return row;
       return summaryDeltaPatchRow(row, {
         previousSchedule,
         nextSchedule,
         changedEntitlements,
+        changedPurchases,
+        previousPurchases,
         changedLedgers,
         studentId,
         now
@@ -1009,7 +1061,7 @@ async function syncStudentTeachingSummaryDelta({
       activeVersion: version,
       previousActiveVersion: activeVersion,
       sourceTable: String(meta.sourceTable || 'student-teaching-summary'),
-      sourceOp: 'schedule-delta',
+      sourceOp: changedPurchases.length ? 'purchase-delta' : 'schedule-delta',
       sourceId: String(operationId || nextSchedule?.id || previousSchedule?.id || '').trim(),
       sourceSnapshotAt: now.toISOString(),
       completedAt: now.toISOString(),
