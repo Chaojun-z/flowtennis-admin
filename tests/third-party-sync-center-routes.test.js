@@ -374,6 +374,17 @@ const memberLedgerRefundPrecheck = precheckThirdPartyRecords([
   { sourceType: 'member-ledger', ledgerId: 'ML-REFUND-1', memberId: 'cxe-member-1', memberName: '会员A', memberPhone: '13900000000', transactionTime: '2026-07-30 18:00:00', transactionType: '会员储值退款 支出', amount: '-100.00', balanceAfter: 20 }
 ], { batchId: 'member-ledger-refund', now: '2026-07-30T00:00:00+08:00' }).items[0];
 assert.strictEqual(memberLedgerRefundPrecheck.suggestedFinalType, '会员储值退款', 'member cash refund ledger should not be treated as a booking debit that requires court structure');
+const partialRefunds = precheckThirdPartyRecords([
+  { sourceType: 'member-ledger', ledgerId: 'ONE-ORDER', memberId: 'cxe-member-1', transactionTime: '2026-09-17 20:11:33', transactionType: '订场 收入(部分退款)', amount: '+63.00', balanceAfter: 1410 },
+  { sourceType: 'member-ledger', ledgerId: 'ONE-ORDER', memberId: 'cxe-member-1', transactionTime: '2026-09-17 20:11:54', transactionType: '订场 收入(部分退款)', amount: '+63.00', balanceAfter: 1473 }
+], { batchId: 'partial-refunds' }).items;
+assert.notStrictEqual(partialRefunds[0].sourceRecordId, partialRefunds[1].sourceRecordId, 'two partial refunds of one order need separate event identities');
+const partialRefundPlan = buildThirdPartyImportPlan({
+  batchId: 'partial-refunds', prechecks: partialRefunds, confirmations: [], importResults: [],
+  existingCourtRows: [{ history: [{ type: '冲正', thirdPartyMemberId: 'cxe-member-1', recordedAt: '2026-09-17 20:11:33', amount: 63 }] }]
+});
+assert.strictEqual(partialRefundPlan.importable.length, 1, 'only the missing second partial refund should be imported');
+assert.strictEqual(partialRefundPlan.importable[0].recordedAt, '2026-09-17 20:11:54');
 
 const notificationText = buildThirdPartySyncNotificationText({
   type: 'success',
@@ -827,6 +838,28 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     importResults: []
   });
   assert.strictEqual(auditedMemberPlan.importable.length, 1, 'member stored-value booking should be importable when it comes from the member ledger audit chain');
+  const pairedOrder = { ...memberLedgerDebitPrecheck, sourceType: 'order', suggestedFinalType: '散客微信转账订场' };
+  const pairedPlan = buildThirdPartyImportPlan({
+    batchId: 'member-ledger-precheck',
+    prechecks: [pairedOrder, memberLedgerDebitPrecheck],
+    confirmations: [],
+    importResults: []
+  });
+  assert.strictEqual(pairedPlan.importable.length, 1, 'one booking represented by an order and member ledger must import only once');
+  assert.strictEqual(pairedPlan.importable[0].sourceType, 'member-ledger', 'member ledger must take priority over the ordinary order');
+  assert.ok(pairedPlan.skipped.some(row => row.sourceType === 'order' && /会员流水为准/.test(row.reason)));
+  const priorOrderOnly = [{ status: 'partial_completed', writtenIds: [{ table: 'ft_courts', sourceRecordId: memberLedgerDebitPrecheck.sourceRecordId }] }];
+  const retryMemberPlan = buildThirdPartyImportPlan({
+    batchId: 'member-ledger-precheck', prechecks: [memberLedgerDebitPrecheck], confirmations: [], importResults: priorOrderOnly
+  });
+  assert.strictEqual(retryMemberPlan.importable.length, 1, 'legacy ordinary order write must not mark a member ledger as imported');
+  const crossBatchOrderPlan = buildThirdPartyImportPlan({
+    batchId: 'later-order',
+    prechecks: [{ ...pairedOrder, batchId: 'later-order' }],
+    confirmations: [], importResults: [],
+    memberLedgerBookingSourceIds: new Set([memberLedgerDebitPrecheck.sourceRecordId])
+  });
+  assert.strictEqual(crossBatchOrderPlan.importable.length, 0, 'next-day ordinary order must not overwrite a known member ledger booking');
   const duplicateMemberPlan = buildThirdPartyImportPlan({
     batchId: 'member-ledger-precheck',
     prechecks: [memberLedgerDebitPrecheck],
@@ -972,6 +1005,30 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
   assert.ok(scans.ft_financial_ledger.some(row => row.sourceId === 'MEMBER-NAMED-LOCK' && row.businessType === '会员订场' && row.cashDelta === 0 && row.recognizedRevenueDelta === 9600 && row.deferredRevenueDelta === -9600), 'named member booking should write stored-value finance ledger');
   assert.ok(scans.ft_financial_ledger.some(row => row.sourceId === 'GUEST-NAMED-LOCK' && row.businessType === '散客订场' && row.cashDelta === 12000 && row.recognizedRevenueDelta === 12000), 'named guest booking should write ordinary cash finance ledger');
 
+  scans.ft_third_party_sync_batches.push({ id: 'low-balance-lock-batch', batchId: 'low-balance-lock-batch', status: 'prechecked' });
+  scans.ft_third_party_sync_raw_records.push({
+    id: 'low-balance-lock-raw', batchId: 'low-balance-lock-batch', sourceType: 'lock', thirdPartyId: 'LOW-BALANCE-LOCK',
+    rawJson: { sourceType: 'lock', thirdPartyId: 'LOW-BALANCE-LOCK', bookingDate: '2026-09-21', venue: '3号场', startTime: '10:00', endTime: '11:00', customerName: '马坡运营', remark: 'W.Jing 定场', amount: 220 }
+  });
+  scans.ft_courts.push({ id: 'court-low-balance', name: 'W.Jing', balance: 51, history: [] });
+  scans.ft_membership_accounts.push({ id: 'account-low-balance', courtId: 'court-low-balance', courtName: 'W.Jing', status: 'active', discountRate: 0.9 });
+  const lowBalancePlan = await call(handler, { path: '/third-party-sync/import-plan', method: 'POST', body: { batchId: 'low-balance-lock-batch' } });
+  assert.ok(lowBalancePlan.body.plan.blocked.some(row => row.sourceRecordId === 'LOW-BALANCE-LOCK' && /会员余额不足/.test(row.reason)), 'insufficient member balance should require payment confirmation before import');
+
+  scans.ft_third_party_sync_batches.push({ id: 'swap-lock-batch', batchId: 'swap-lock-batch', status: 'prechecked' });
+  scans.ft_third_party_sync_raw_records.push({
+    id: 'swap-lock-raw', batchId: 'swap-lock-batch', sourceType: 'lock', thirdPartyId: 'SWAP-LOCK',
+    rawJson: { sourceType: 'lock', thirdPartyId: 'SWAP-LOCK', bookingDate: '2026-09-12', venue: '4号场', startTime: '12:00', endTime: '14:00', customerName: '马坡运营', remark: '赵晶定场', amount: 280 }
+  });
+  scans.ft_courts.push({ id: 'court-swap', name: '赵晶', history: [
+    { id: 'swap-deposit', date: '2026-09-01', type: '充值', amount: 500, payMethod: '微信转账' },
+    { id: 'paid-three-court', date: '2026-09-10', type: '消费', category: '订场', payMethod: '储值扣款', amount: 352,
+      venue: '3号场', startTime: '12:00', endTime: '14:00', note: '2026-09-12 / 室内3号' }
+  ] });
+  scans.ft_membership_accounts.push({ id: 'account-swap', courtId: 'court-swap', courtName: '赵晶', status: 'active', discountRate: 0.8 });
+  const swapPlan = await call(handler, { path: '/third-party-sync/import-plan', method: 'POST', body: { batchId: 'swap-lock-batch' } });
+  assert.ok(swapPlan.body.plan.blocked.some(row => row.sourceRecordId === 'SWAP-LOCK' && /换场占位/.test(row.reason)), 'operator lock overlapping a paid booking on another court needs review, not another member debit');
+
   scans.ft_third_party_sync_batches.push({ id: 'member-ledger-booking-batch', batchId: 'member-ledger-booking-batch', status: 'prechecked', counts: { totalSourceCount: 1 } });
   scans.ft_third_party_sync_prechecks.push(...precheckThirdPartyRecords([
     {
@@ -993,6 +1050,7 @@ assert.doesNotMatch(notificationText, /cxe-sync-technical-id|531449/, 'notificat
     body: { batchId: 'member-ledger-booking-batch' }
   });
   assert.strictEqual(memberLedgerBookingRes.body.result.status, 'completed', 'member ledger booking should import when it has a unique account and after-balance matches');
+  assert.ok(memberLedgerBookingRes.body.result.writtenIds.every(row => row.sourceType === 'member-ledger'), 'written rows must preserve source type for safe retries');
   const memberLedgerHistory = scans.ft_courts.find(row => row.id === 'court-1').history.find(row => row.sourceRecordId === 'ML-BOOKING-1');
   assert.strictEqual(memberLedgerHistory.payMethod, '储值扣款', 'member ledger booking should write stored-value payment history');
   assert.strictEqual(memberLedgerHistory.venue, '2号场', 'member ledger booking should keep structured court venue');

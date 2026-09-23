@@ -178,4 +178,18 @@ assert.strictEqual(companionFieldFee.cashDelta, 112);
 assert.strictEqual(companionFieldFee.revenueCategoryDisplay, '场地服务 / 陪打场地费', '陪打场地费必须单独进入场地服务');
 assert.strictEqual(companionFieldFee.sourceDocument, companionServiceFee.sourceDocument, '陪打两笔流水必须保留同一个排课来源');
 
+const courtSwapSnapshot = _test.buildFinancePageSnapshot({
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
+  courts: [{ id: 'court-swap', name: '赵晶', campus: 'shunyi_mapo', history: [
+    { id: 'paid-three', date: '2026-09-12', type: '消费', category: '订场', payMethod: '储值扣款',
+      amount: 352, venue: '3号场', startTime: '12:00', endTime: '14:00' },
+    { id: 'swap-four', date: '2026-09-12', type: '消费', category: '内部占用', payMethod: '不涉及支付',
+      amount: 0, venue: '4号场', startTime: '12:00', endTime: '14:00', note: '换场占位，无额外收款' }
+  ] }]
+});
+const courtSwapRows = courtSwapSnapshot.financeNormalizedRows.filter(row => row.customer === '赵晶' && row.businessDate === '2026-09-12');
+assert.strictEqual(courtSwapRows.filter(row => Number(row.recognizedRevenueDelta || 0) > 0).length, 1, '换场后同一时段只能有一笔正收入');
+assert.strictEqual(courtSwapRows.reduce((sum, row) => sum + Number(row.recognizedRevenueDelta || 0), 0), 352, '换场占位不能增加已入账收入');
+assert.strictEqual(courtSwapRows.reduce((sum, row) => sum + Number(row.cashDelta || 0), 0), 0, '会员储值支付和换场占位不能虚增微信实收');
+
 console.log('finance standard ledger tests passed');

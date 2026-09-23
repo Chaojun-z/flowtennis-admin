@@ -107,7 +107,12 @@ function isSyncGapSourceType(sourceType = '') {
 }
 
 function recordSourceId(record = {}, index = 0) {
-  return cleanText(record.thirdPartyId || record.orderNo || record.orderId || record.ledgerId || record.flowId || record.serialNo || record.transactionNo || record.id || record.sourceId) || `generated-${stableHash(record).slice(0, 16)}-${index}`;
+  const sourceId = cleanText(record.thirdPartyId || record.orderNo || record.orderId || record.ledgerId || record.flowId || record.serialNo || record.transactionNo || record.id || record.sourceId) || `generated-${stableHash(record).slice(0, 16)}-${index}`;
+  if (normalizeSourceType(record.sourceType) === 'member-ledger' && /部分退款/.test(cleanText(record.transactionType || record.businessType))) {
+    if (/-refund-[a-f0-9]{12}$/.test(sourceId)) return sourceId;
+    return `${sourceId}-refund-${stableHash({ recordedAt: memberLedgerRecordedAt(record), amount: record.amount, balanceAfter: memberLedgerBalanceAfter(record) }).slice(0, 12)}`;
+  }
+  return sourceId;
 }
 
 function orderInfoItems(record = {}) {
@@ -782,7 +787,16 @@ function latestConfirmationFor(precheck = {}, confirmations = []) {
 function isAlreadyImported(precheck = {}, importResults = []) {
   return (importResults || []).some(result =>
     ['completed', 'partial_completed', 'partial_failed'].includes(String(result.status || '')) &&
-    (result.writtenIds || []).some(row => String(row.sourceRecordId || '') === String(precheck.sourceRecordId || ''))
+    (() => {
+      const writes = (result.writtenIds || []).filter(row => String(row.sourceRecordId || '') === String(precheck.sourceRecordId || ''));
+      if (writes.some(row => row.sourceType)) return writes.some(row => row.sourceType === precheck.sourceType);
+      // 旧批次未记录来源类型；会员流水一定写会员账户，普通订单不会。
+      if (precheck.sourceType === 'member-ledger') return writes.some(row => row.table === T_MEMBERSHIP_ACCOUNTS);
+      if (precheck.sourceType === 'order' && writes.some(row => row.table === T_MEMBERSHIP_ACCOUNTS)) {
+        return writes.filter(row => row.table === T_COURTS).length > 1;
+      }
+      return writes.length > 0;
+    })()
   );
 }
 
@@ -900,12 +914,32 @@ function existingMemberFinancialLedger(item = {}, ledgerRows = []) {
   });
 }
 
-function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations = [], importResults = [], bookingTargets = new Map(), existingCourtRows = [], existingFinancialLedgerRows = [] } = {}) {
+function existingMemberLedgerRefund(item = {}, courts = []) {
+  if (item.sourceType !== 'member-ledger' || item.suggestedFinalType !== '会员订场取消退回') return false;
+  return (courts || []).some(court => (court.history || []).some(row =>
+    row.type === '冲正' && cleanText(row.thirdPartyMemberId) === cleanText(item.thirdPartyMemberId) &&
+    cleanText(row.recordedAt) === cleanText(item.recordedAt) && Math.abs(Number(row.amount || 0) - Number(item.amount || 0)) <= 0.01
+  ));
+}
+
+function buildThirdPartyImportPlan({ batchId = '', prechecks = [], confirmations = [], importResults = [], bookingTargets = new Map(), existingCourtRows = [], existingFinancialLedgerRows = [], memberLedgerBookingSourceIds = new Set() } = {}) {
   const scoped = (prechecks || []).filter(row => !batchId || String(row.batchId || '') === String(batchId));
   const plan = { batchId, importable: [], blocked: [], skipped: [], informational: [], counts: { importable: 0, blocked: 0, skipped: 0, informational: 0 } };
+  const memberBookingIds = new Set([
+    ...memberLedgerBookingSourceIds,
+    ...scoped.filter(row => row.sourceType === 'member-ledger' && row.suggestedFinalType === '会员余额订场').map(row => cleanText(row.sourceRecordId))
+  ]);
   for (const precheck of scoped) {
     const sourceRecordId = cleanText(precheck.sourceRecordId);
     const bookingTarget = bookingTargets instanceof Map ? bookingTargets.get(sourceRecordId) : bookingTargets?.[sourceRecordId];
+    if (precheck.sourceType === 'order' && memberBookingIds.has(sourceRecordId)) {
+      plan.skipped.push({ ...precheck, sourceRecordId, reason: '会员余额订场以会员流水为准，不重复按普通订单导入' });
+      continue;
+    }
+    if (existingMemberLedgerRefund(precheck, existingCourtRows)) {
+      plan.skipped.push({ ...precheck, sourceRecordId, reason: '相同时间的会员退款流水已入账' });
+      continue;
+    }
     if (precheck.sourceType === 'member') {
       plan.informational.push({ ...precheck, sourceRecordId, reason: '会员资料仅同步留档，不进入订场导入' });
       continue;
@@ -980,6 +1014,14 @@ function rawRecordToSourceRecord(row = {}) {
     sourceType: raw.sourceType || row.sourceType,
     thirdPartyId: raw.thirdPartyId || row.thirdPartyId || row.sourceRecordId
   };
+}
+
+function memberLedgerBookingSourceIdsFromRawRecords(rawRecords = []) {
+  return new Set((rawRecords || [])
+    .filter(row => normalizeSourceType(row.sourceType) === 'member-ledger')
+    .map(rawRecordToSourceRecord)
+    .filter(record => classifyMemberLedgerRecord(record).suggestedFinalType === '会员余额订场')
+    .map(record => recordSourceId(record)));
 }
 
 function importedSourceIds(importResults = []) {
@@ -1415,7 +1457,20 @@ function resolveNamedBookingTarget(item = {}, courts = [], accounts = []) {
   const court = matched.court;
   const account = court ? (accounts || []).find(row => activeMembershipAccount(row) && cleanText(row.courtId) === cleanText(court.id)) : null;
   if (account) {
+    const sameTimeOtherCourt = (court.history || []).some(row => {
+      const rowText = `${cleanText(row.date)} ${cleanText(row.note)} ${cleanText(row.sourceProject)}`;
+      return row.type === '消费' && /订场/.test(cleanText(row.category)) && /储值/.test(cleanText(row.payMethod)) &&
+        rowText.includes(cleanText(item.date)) && cleanText(row.startTime) === cleanText(item.startTime) &&
+        cleanText(row.endTime) === cleanText(item.endTime) && cleanText(row.venue) !== cleanText(item.venue);
+    });
+    if (sameTimeOtherCourt) {
+      return { blockReason: '会员同一时段已有其他场地的付费订单，请确认是否为换场占位', bookingCustomerName: name };
+    }
     const discountRate = activeDiscountRate(account);
+    const memberAmount = Math.round(amount * discountRate * 100) / 100;
+    if (courtStoredValueBalance(court) + 0.01 < memberAmount) {
+      return { blockReason: `会员余额不足：当前 ${courtStoredValueBalance(court)}，需扣 ${memberAmount}；请确认付款方式`, bookingCustomerName: name };
+    }
     return {
       kind: 'member',
       finalType: '会员余额订场',
@@ -1423,7 +1478,7 @@ function resolveNamedBookingTarget(item = {}, courts = [], accounts = []) {
       bookingCustomerName: name,
       bindTargetId: court.id,
       membershipAccountId: account.id,
-      amount: Math.round(amount * discountRate * 100) / 100,
+      amount: memberAmount,
       discountRate
     };
   }
@@ -2843,7 +2898,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       getCachedScan(tables.T_FINANCIAL_LEDGER || T_FINANCIAL_LEDGER).catch(() => [])
     ]);
     const bookingTargets = buildNamedBookingTargets(currentPrechecks, courtRows, membershipAccountRows);
-    let plan = buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults, bookingTargets, existingCourtRows: courtRows, existingFinancialLedgerRows: financialLedgerRows });
+    let plan = buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults, bookingTargets, existingCourtRows: courtRows, existingFinancialLedgerRows: financialLedgerRows, memberLedgerBookingSourceIds: memberLedgerBookingSourceIdsFromRawRecords(rawRecords) });
     plan = applyScheduleSafetyToImportPlan(plan, { schedules: scheduleRows, coaches: coachRows, students: studentRows });
     const operationId = `third-party-sync-import-${uuidv4()}`;
     const trace = buildImportTrace({ batchId, operationId, operator, now: importedAt });
@@ -2855,7 +2910,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
     for (const item of plan.importable) {
       try {
         const rows = await writeImportItem(item, { getCachedScan, getCachedRow, put, uuidv4, normalizeCourtRecord, now: importedAt, trace, tables, courtAccountListIndexSync, scheduleListSnapshotSync });
-        writtenIds.push(...(rows || []));
+        writtenIds.push(...(rows || []).map(row => ({ ...row, sourceType: item.sourceType })));
       } catch (err) {
         failed.push({ sourceRecordId: item.sourceRecordId, reason: err.message || '导入失败' });
       }
@@ -3040,7 +3095,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
         : refreshedPrechecks;
       const currentImportResults = latestBatchId ? importResults.filter(row => String(row.batchId || '') === latestBatchId) : importResults;
       const currentChanges = latestBatchId ? changes.filter(row => String(row.batchId || '') === latestBatchId) : changes;
-      const currentPlan = latestBatchId ? buildThirdPartyImportPlan({ batchId: latestBatchId, prechecks: currentPrechecks, confirmations, importResults }) : null;
+      const currentPlan = latestBatchId ? buildThirdPartyImportPlan({ batchId: latestBatchId, prechecks: currentPrechecks, confirmations, importResults, memberLedgerBookingSourceIds: memberLedgerBookingSourceIdsFromRawRecords(rawRecords) }) : null;
       const currentAlertsRaw = latestBatchId ? alerts.filter(row => String(row.batchId || '') === latestBatchId) : alerts;
       const currentAlerts = currentPlan ? filterAlertsForCurrentPlan(currentAlertsRaw, currentPlan) : currentAlertsRaw;
       const currentRollbacks = latestBatchId ? rollbacks.filter(row => String(row.batchId || '') === latestBatchId) : rollbacks;
@@ -3129,7 +3184,7 @@ function createThirdPartySyncCenterRoutes(deps = {}) {
       const existingBookingKeys = successfulBookingKeysFromHistory({ rawRecords, importResults, excludeBatchId: batchId });
       const currentPrechecks = prechecksFromRawRecordsForBatch({ batchId, rawRecords, fallbackPrechecks: prechecks, now: now(), pricePlans, existingBookingKeys });
       const bookingTargets = buildNamedBookingTargets(currentPrechecks, courtRows, membershipAccountRows);
-      return sendJson(res, { plan: buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults, bookingTargets, existingCourtRows: courtRows, existingFinancialLedgerRows: financialLedgerRows }) });
+      return sendJson(res, { plan: buildThirdPartyImportPlan({ batchId, prechecks: currentPrechecks, confirmations, importResults, bookingTargets, existingCourtRows: courtRows, existingFinancialLedgerRows: financialLedgerRows, memberLedgerBookingSourceIds: memberLedgerBookingSourceIdsFromRawRecords(rawRecords) }) });
     }
     if (path === '/third-party-sync/import' && method === 'POST') {
       const batchId = cleanText(body.batchId);
