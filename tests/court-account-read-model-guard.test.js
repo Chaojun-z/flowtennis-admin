@@ -65,6 +65,40 @@ assert.strictEqual(duplicateRechargeView.items[0].balance, 5146, '会员余额�
 assert.strictEqual(duplicateRechargeView.items[0].totalDeposit, 5000, '会员累计充值应排除已作废重复充值订单');
 assert.strictEqual(duplicateRechargeView.summary.membershipFinanceSummary.pendingAmount, 5146, '会员列表顶部余额汇总也应排除已作废重复充值并扣减排课储值消费');
 
+const returnedBalanceView = buildCourtAccountListViewFromData({
+  campuses: [{ code: 'shunyi_mapo', name: '马坡' }],
+  students: [],
+  courts: [{
+    id: 'court-returned-balance',
+    name: '余额返还会员',
+    campus: 'shunyi_mapo',
+    cachedBalance: 25,
+    cachedTotalDeposit: 1748,
+    history: [
+      { id: 'opening', date: '2026-04-27', type: '充值', category: '会员充值', payMethod: '会员充值', amount: 1748, bonusAmount: 166 },
+      { id: 'spent-before', date: '2026-07-08', type: '消费', category: '订场', payMethod: '储值扣款', amount: 1836 },
+      { id: 'repair-booking', date: '2026-08-03', type: '消费', category: '订场', payMethod: '储值扣款', amount: 100 },
+      { id: 'balance-return', date: '2026-08-03', type: '充值', category: '会员余额返还/冲正', payMethod: '余额返还', amount: 0, bonusAmount: 100 },
+      { id: 'booking-reversal', date: '2026-08-03', type: '冲正', category: '订场', payMethod: '储值扣款', amount: 100 },
+      { id: 'spent-after', date: '2026-08-07', type: '消费', category: '订场', payMethod: '储值扣款', amount: 153 }
+    ]
+  }],
+  membershipAccounts: [{ id: 'account-returned-balance', courtId: 'court-returned-balance', status: 'active' }],
+  membershipOrders: [{
+    id: 'active-opening-order',
+    courtId: 'court-returned-balance',
+    membershipAccountId: 'account-returned-balance',
+    status: 'active',
+    rechargeAmount: 1748,
+    bonusAmount: 166,
+    purchaseDate: '2026-04-27'
+  }],
+  membershipPlans: []
+});
+assert.strictEqual(returnedBalanceView.items[0].balance, 25, '会员余额返还只应加回可用余额，不能因订单口径漏算成负数');
+assert.strictEqual(returnedBalanceView.items[0].totalDeposit, 1748, '会员余额返还不应增加累计充值收入');
+assert.strictEqual(returnedBalanceView.summary.membershipFinanceSummary.bonusAmount, 166, '会员余额返还不应增加会员赠送金额');
+
 assert.strictEqual(typeof createCourtAccountListViewLoader, 'function', '订场用户读模型模块应导出 createCourtAccountListViewLoader');
 assert.strictEqual(typeof createCourtAccountListCompareLoader, 'function', '订场用户读模型模块应导出 createCourtAccountListCompareLoader');
 

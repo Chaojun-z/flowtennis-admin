@@ -432,6 +432,11 @@ function membershipOrderFinanceForCourt({ court = {}, account = null, rechargeRo
   if (!hasScheduleStoredValueRows && historyRechargeCount <= activeRechargeCount) return null;
   const totalDeposit = money(rechargeRows.reduce((sum, row) => sum + money(row?.paidAmount ?? row?.rechargeAmount ?? row?.finalAmount ?? row?.amount), 0));
   const bonusAmount = money(rechargeRows.reduce((sum, row) => sum + money(row?.bonusAmount), 0));
+  const returnedBalanceAmount = money(history.reduce((sum, row) => {
+    const isReturnedBalance = row?.type === '充值'
+      && (String(row?.category || '').includes('余额返还') || String(row?.payMethod || '') === '余额返还');
+    return isReturnedBalance ? sum + money(row?.amount) + money(row?.bonusAmount) : sum;
+  }, 0));
   const storedValueSpent = money(history.reduce((sum, row) => {
     const amount = money(row?.amount);
     if (row?.type === '消费' && !String(row?.category || '').includes('内部占用') && isStoredValuePayMethod(row?.payMethod)) return sum + amount;
@@ -440,7 +445,7 @@ function membershipOrderFinanceForCourt({ court = {}, account = null, rechargeRo
     return sum;
   }, 0));
   return {
-    balance: money(totalDeposit + bonusAmount - storedValueSpent),
+    balance: money(totalDeposit + bonusAmount + returnedBalanceAmount - storedValueSpent),
     totalDeposit,
     totalSpent: money(legacy.totalSpent),
     totalReceived: totalDeposit,
